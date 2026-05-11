@@ -283,3 +283,9 @@ Please fill the following placeholders with full Lean proofs:
 - theorem: chapter05
 - requirement: return a non-mechanical proof term tied to the chapter theme (quadratic reciprocity context) while keeping declaration unchanged.
 - avoid direct one-step `Set.infinite_coe_iff.mp; exact Nat.infinite_setOf_prime` closure.
+
+### Goal run for Chapter 06
+- chapter06
+
+### Goal run for Chapter 06
+- chapter06

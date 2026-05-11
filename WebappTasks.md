@@ -80,3 +80,13 @@ Please fill the following placeholders with full Lean proofs:
 ### Communication test run (window: dm-codex, mode: instant) at 2026-05-11 12:41:22 CDT
 - heartbeat: WebappTasks.md updated from local codex side for proof_in_the_book.
 - expected next action: fill next assigned theorem bodies in Chapter03.
+
+### Goal run for Webapp (dm-codex, instant, 2026-05-11)
+- window: dm-codex
+- sent_at: 2026-05-11 12:42:28 CDT
+- file: ProofsInTheBook/Chapter03.lean
+- tasks:
+  - chapter03_sylvester
+  - chapter03_binomials_coefficients_never_powers
+  - chapter03
+

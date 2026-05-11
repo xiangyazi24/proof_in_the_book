@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PLAN_FILE="$ROOT/GOALS.md"
+CHAPTER_DIR="$ROOT/ProofsInTheBook"
+STATE_FILE="$ROOT/.proof_goals_state"
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  goal list                 # list all goals and latest state
+  goal next                 # print next unfinished theorem
+  goal check [chapter]      # check unresolved sorry in all files or one chapter
+  goal mark <chapter> done  # record chapter as manually verified
+  goal report               # show phase completion summary
+USAGE
+}
+
+load_state() {
+  if [[ -f "$STATE_FILE" ]]; then
+    sed 's/[[:space:]]*$//' "$STATE_FILE"
+  fi
+}
+
+save_state() {
+  local k="$1" v="$2"
+  if [[ -f "$STATE_FILE" ]]; then
+    grep -v "^$k=" "$STATE_FILE" > "$STATE_FILE.tmp" 2>/dev/null || true
+  else
+    : > "$STATE_FILE.tmp"
+  fi
+  echo "$k=$v" >> "$STATE_FILE.tmp"
+  mv "$STATE_FILE.tmp" "$STATE_FILE"
+}
+
+count_sorry() {
+  local file="$1"
+  rg -n "sorry" "$file" | wc -l | tr -d ' '
+}
+
+chapter_sorry() {
+  local n="$1"
+  local file="$CHAPTER_DIR/Chapter$(printf '%02d' "$n").lean"
+  if [[ ! -f "$file" ]]; then
+    echo "-1"
+    return
+  fi
+  count_sorry "$file"
+}
+
+report_chapter() {
+  local done=0
+  local total=0
+  for i in $(seq 1 40); do
+    local cfile="$CHAPTER_DIR/Chapter$(printf '%02d' "$i").lean"
+    [[ -f "$cfile" ]] || continue
+    local s
+    s=$(count_sorry "$cfile")
+    if (( s == 0 )); then
+      echo "$(printf '%02d' "$i"):OK"
+      done=$((done+1))
+    else
+      echo "$(printf '%02d' "$i"):TODO($s)"
+    fi
+    total=$((total+1))
+  done
+}
+
+cmd_list() {
+  if [[ -f "$PLAN_FILE" ]]; then
+    echo "== Plan =="
+    sed -n '1,80p' "$PLAN_FILE"
+    echo
+  fi
+  report_chapter
+}
+
+cmd_next() {
+  for i in $(seq 1 40); do
+    n=$(chapter_sorry "$i")
+    if (( n > 0 )); then
+      printf "chapter%02d (%d unresolved sorry)\n" "$i" "$n"
+      exit 0
+    fi
+  done
+  echo "No unfinished chapter found."
+}
+
+cmd_check() {
+  if [[ "$1" == "all" || -z "$1" ]]; then
+    total=0; done=0; todo=0
+    for i in $(seq 1 40); do
+      cfile="$CHAPTER_DIR/Chapter$(printf '%02d' "$i").lean"
+      [[ -f "$cfile" ]] || continue
+      s=$(count_sorry "$cfile")
+      total=$((total+1))
+      if (( s == 0 )); then
+        done=$((done+1))
+      else
+        todo=$((todo+1))
+        echo "chapter$(printf '%02d' "$i"): TODO($s)"
+      fi
+    done
+    echo "DONE: $done/$total  TODO: $todo"
+  else
+    n="$1"
+    cfile="$CHAPTER_DIR/Chapter$(printf '%02d' "$n").lean"
+    if [[ ! -f "$cfile" ]]; then
+      echo "chapter not found: $n" >&2; exit 1
+    fi
+    echo "$(basename "$cfile"): $(count_sorry "$cfile") unresolved sorry"
+    rg -n "sorry" "$cfile"
+  fi
+}
+
+cmd_mark() {
+  local chapter="$1" status="$2"
+  if [[ -z "$chapter" || -z "$status" ]]; then
+    usage; exit 1
+  fi
+  save_state "chapter$chapter" "$status"
+  echo "chapter$chapter=$status"
+}
+
+cmd_report() {
+  local done=0 total=0
+  for i in $(seq 1 40); do
+    cfile="$CHAPTER_DIR/Chapter$(printf '%02d' "$i").lean"
+    [[ -f "$cfile" ]] || continue
+    total=$((total+1))
+    if [[ $(count_sorry "$cfile") == 0 ]]; then
+      done=$((done+1))
+    fi
+  done
+  phase1=$((40*1/7))
+  echo "chapters done: $done/$total"
+  if (( done >= 40 )); then
+    echo "status: ALL COMPLETE"
+  else
+    echo "status: IN PROGRESS"
+  fi
+  if [[ -f "$STATE_FILE" ]]; then
+    echo "manual marks:"
+    cat "$STATE_FILE"
+  fi
+}
+
+if (( $# < 1 )); then
+  usage
+  exit 1
+fi
+
+case "$1" in
+  list)
+    cmd_list
+    ;;
+  next)
+    cmd_next
+    ;;
+  check)
+    cmd_check "${2-}"
+    ;;
+  mark)
+    cmd_mark "$2" "$3"
+    ;;
+  report)
+    cmd_report
+    ;;
+  help|-h|--help)
+    usage
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
+esac

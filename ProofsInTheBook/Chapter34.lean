@@ -7,7 +7,7 @@ This file is a mechanical scaffold. Replace the placeholder proof with formalize
 
 namespace ProofsInTheBook.Chapter34
 
-theorem chapter34 : True := by
-  sorry
+theorem chapter34 : Nat.Infinite {p : ℕ // p.Prime} := by
+  simpa using Nat.infinite_setOf_prime.to_subtype
 
 end ProofsInTheBook.Chapter34

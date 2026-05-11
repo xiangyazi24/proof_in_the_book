@@ -366,3 +366,8 @@ Please fill the following placeholders with full Lean proofs:
 
 ### Changelog
 - chapter01:  proof replaced via webapp-supplied body and chapter01 milestone moved to done. Webapp requests for chapter02 are next.
+### Formalization reset: book-style rewrite required for Chapter01
+- task scope: chapter01_euclid, chapter01_fermat_coprime
+- action: replaced current short proofs with explicit TODO skeletons (no direct Mathlib theorem closures).
+- state: .proof_goals_state set current_chapter=1
+

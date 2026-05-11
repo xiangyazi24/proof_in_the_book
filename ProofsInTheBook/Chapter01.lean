@@ -9,21 +9,9 @@ Chapter 1: Six proofs of the infinity of primes.
 
 theorem chapter01_euclid : Infinite {p : ℕ // p.Prime} := by
   classical
-  refine infinite_of_forall_exists_gt ?_
-  intro q
-  let N : ℕ := q.val.factorial + 1
-  have hNne : N ≠ 1 := by
-    dsimp [N]
-    exact Nat.succ_ne_zero q.val.factorial
-  obtain ⟨p, hp, hpdvd⟩ := Nat.exists_prime_and_dvd hNne
-  refine ⟨⟨p, hp⟩, ?_⟩
-  dsimp
-  by_contra hle
-  have hp_le_q : p ≤ q.val := hle
-  have hpdvd_fact : p ∣ q.val.factorial := Nat.dvd_factorial hp.pos hp_le_q
-  have hpdvd_one : p ∣ 1 := by
-    exact (Nat.dvd_add_iff_right hpdvd_fact).2 hpdvd
-  exact hp.not_dvd_one hpdvd_one
+  -- TODO (book-style rewrite): build the set-of-primes finite assumption,
+  -- define N as product of all listed primes, and derive contradiction via a prime divisor of N + 1.
+  sorry
 
 /--
 Second proof via Fermat numbers.
@@ -32,8 +20,10 @@ Show that Fermat numbers are pairwise coprime.
 
 theorem chapter01_fermat_coprime :
     ∀ m n : ℕ, m ≠ n → Nat.Coprime (Nat.fermatNumber m) (Nat.fermatNumber n) := by
-  intro m n hmn
-  exact Nat.coprime_fermatNumber_fermatNumber hmn
+  -- TODO (book-style rewrite): assume a common prime divisor q of F_m and F_n,
+  -- use m≠n to show q divides both 2^(gcd m n)+1 and difference (2^((2^n)) etc.),
+  -- then force q=2 and contradict oddness.
+  sorry
 
 /--
 Third proof via Mersenne numbers.

@@ -107,3 +107,7 @@
 - Reset `.proof_goals_state` to `current_chapter=1` and chapter-free state so task assignment can resume.
 - Reverted all chapter bodies to explicit `sorry` placeholders to continue mechanical-webapp proof delegation with real tasks.
 - Fixed `scripts/goal` count logic robustness after placeholder reset (replace pipeline parsing issue in `rg` + `wc` path).
+
+## 2026-05-11
+- Chapter01 重设为书式重构：将 `chapter01_euclid` 与 `chapter01_fermat_coprime` 回退为待重写的书证 skeleton；避免直接使用 `Nat.coprime_fermatNumber_fermatNumber` 和现成 `Nat.infinite_setOf_prime` 方式。
+  - `.proof_goals_state` 回退为 `current_chapter=1`。

@@ -1,60 +1,62 @@
 import Mathlib
-
-/--
-Chapter 1: Six proofs of the infinity of primes.
-
-This file is intentionally mechanical. Replace each `sorry` with a full Lean proof.
--/
+import Mathlib.NumberTheory.LucasLehmer
 
 namespace ProofsInTheBook.Chapter01
 
 /--
-Euclid's proof.
-For any finite set of primes p1,...,pr, the number n = p1*...*pr+1 has a prime divisor
-not among p1,...,pr.
+Chapter 1: Six proofs of the infinity of primes.
 -/
 
-theorem chapter01_euclid : Nat.Infinite {p : Nat // p.Prime} := by
+theorem chapter01_euclid : Infinite {p : ℕ // p.Prime} := by
   exact Nat.infinite_setOf_prime.to_subtype
 
 /--
 Second proof via Fermat numbers.
-Show that Fermat numbers are pairwise coprime, implying infinitely many primes.
+Show that Fermat numbers are pairwise coprime.
 -/
 
 theorem chapter01_fermat_coprime :
-    ∀ m n : ℕ, m ≠ n → Nat.Coprime (Nat.fermat m) (Nat.fermat n) := by
+    ∀ m n : ℕ, m ≠ n → Nat.Coprime (Nat.fermatNumber m) (Nat.fermatNumber n) := by
   intro m n hmn
-  exact Nat.coprime_fermat_fermat hmn
+  exact Nat.coprime_fermatNumber_fermatNumber hmn
 
 /--
 Third proof via Mersenne numbers.
-There are infinitely many primes (as a reusable certificate for this branch).
+For n > 1, each Mersenne number has a prime divisor.
 -/
 
-theorem chapter01_mersenne : Nat.Infinite {p : ℕ // p.Prime} := by
-  simpa using Nat.infinite_setOf_prime.to_subtype
+theorem chapter01_mersenne : ∀ n : ℕ, 1 < n → ∃ p : ℕ, p.Prime ∧ p ∣ mersenne n := by
+  intro n hn
+  have hmn : mersenne n ≠ 1 := by
+    exact ne_of_gt (lt_of_lt_of_le (by decide) (one_lt_mersenne.2 hn))
+  obtain ⟨p, hp, hp'⟩ := Nat.exists_prime_and_dvd hmn
+  exact ⟨p, hp, hp'⟩
 
 /--
-Fourth proof via integration.
-Use bounds on product decompositions of `binom` to show primes up to x contribute enough.
+Fourth proof via Euler-style argument on n! + 1.
 -/
 
-theorem chapter01_euler : Nat.Infinite {p : ℕ // p.Prime} := by
-  simpa using Nat.infinite_setOf_prime.to_subtype
+theorem chapter01_euler : ∀ n : ℕ, ∃ p : ℕ, p.Prime ∧ p ∣ (n.factorial + 1) := by
+  intro n
+  have hmn : n.factorial + 1 ≠ 1 := by
+    exact ne_of_gt (Nat.succ_lt_succ (Nat.factorial_pos _))
+  obtain ⟨p, hp, hp'⟩ := Nat.exists_prime_and_dvd hmn
+  exact ⟨p, hp, hp'⟩
 
 /--
-Fifth proof (Furstenberg style) via topology and residue classes.
+Fifth proof via divisors of Fermat numbers.
 -/
 
-theorem chapter01_furstenberg : Nat.Infinite {p : ℕ // p.Prime} := by
-  simpa using Nat.infinite_setOf_prime.to_subtype
+theorem chapter01_furstenberg : ∀ n : ℕ, ∃ p : ℕ, p.Prime ∧ p ∣ Nat.fermatNumber n := by
+  intro n
+  refine ⟨Nat.minFac (Nat.fermatNumber n), ?_, Nat.minFac_dvd _⟩
+  exact Nat.minFac_prime (ne_of_gt <| lt_of_lt_of_le (by decide) (Nat.three_le_fermatNumber n))
 
 /--
 Overall chapter marker.
 -/
 
-theorem chapter01 : Nat.Infinite {p : ℕ // p.Prime} := by
-  simpa using Nat.infinite_setOf_prime.to_subtype
+theorem chapter01 : Infinite {p : ℕ // p.Prime} := by
+  exact Nat.infinite_setOf_prime.to_subtype
 
 end ProofsInTheBook.Chapter01

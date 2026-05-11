@@ -111,18 +111,30 @@ chapter_task_list() {
       cur=a[1]
       done[cur]=0
     }
-    cur != "" && done[cur]==0 && (
-      $0 ~ /(^|[^A-Za-z0-9_])sorry([^A-Za-z0-9_]|$)/ ||
-      index($0, "Nat.Infinite {p : ℕ // p.Prime}") > 0 ||
-      index($0, "Nat.Infinite {p : Nat // p.Prime}") > 0 ||
-      index($0, "Set.Infinite {p : ℕ // p.Prime}") > 0 ||
-      index($0, "Set.Infinite {p : Nat // p.Prime}") > 0 ||
-      index($0, "simpa using Nat.infinite_setOf_prime.to_subtype") > 0
-    ) {
+    cur != "" && done[cur]==0 &&
+      ($0 ~ /(^|[^A-Za-z0-9_])sorry([^A-Za-z0-9_]|$)/ ||
+       index($0, "Nat.Infinite {p : ℕ // p.Prime}") > 0 ||
+       index($0, "Nat.Infinite {p : Nat // p.Prime}") > 0 ||
+       index($0, "Set.Infinite {p : ℕ // p.Prime}") > 0 ||
+       index($0, "Set.Infinite {p : Nat // p.Prime}") > 0 ||
+       index($0, "simpa using Nat.infinite_setOf_prime.to_subtype") > 0) {
       print cur
       done[cur]=1
     }
   ' "$file"
+}
+
+expected_tasks_for_chapter() {
+  local ch="$1"
+  case "$ch" in
+    3)
+      echo "chapter03_sylvester"
+      echo "chapter03_binomials_coefficients_never_powers"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
 }
 
 next_chapter() {
@@ -219,7 +231,13 @@ cmd_run() {
   fi
 
   local tasks
+  local placeholder_count
+  placeholder_count=$(count_placeholder "$file")
   tasks=$(chapter_task_list "$file" | head -n "$max")
+
+  if [[ "$chapter" == "3" && "$placeholder_count" -gt 0 ]]; then
+    tasks=$(expected_tasks_for_chapter "$chapter" | head -n "$max")
+  fi
   if [[ -z "$tasks" ]]; then
     echo "No named theorems with pending placeholders/sorry found in chapter ${chapter}."
     exit 0

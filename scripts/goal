@@ -62,6 +62,18 @@ count_sorry() {
   printf '%s\n' "$cnt"
 }
 
+count_true_stub() {
+  local file="$1"
+  local cnt
+  cnt=$(awk 'BEGIN{c=0}
+    /^[[:space:]]*(theorem|lemma|example)[[:space:]]+/ { line=$0 }
+    line ~ /:[[:space:]]*True[[:space:]]*:=/ { c++ }
+    { line="" }
+    END { print c+0 }
+  ' "$file")
+  printf '%s\n' "$cnt"
+}
+
 chapter_file() {
   printf '%s/Chapter%02d.lean' "$CHAPTER_DIR" "$1"
 }
@@ -223,12 +235,13 @@ cmd_check() {
       f=$(chapter_file "$i")
       [[ -f "$f" ]] || continue
       s=$(count_sorry "$f")
+      t=$(count_true_stub "$f")
       total=$((total + 1))
-      if (( s == 0 )); then
+      if (( s == 0 && t == 0 )); then
         done=$((done + 1))
       else
         todo=$((todo + 1))
-        echo "chapter$(printf '%02d' "$i"): TODO($s)"
+        echo "chapter$(printf '%02d' "$i"): TODO(sorry=$s, true-stub=$t)"
       fi
     done
     echo "DONE:$done/"$total " TODO:$todo"
@@ -240,8 +253,10 @@ cmd_check() {
       exit 1
     fi
     n_s=$(count_sorry "$f")
-    echo "chapter$(printf '%02d' "$n"): $n_s"
+    n_t=$(count_true_stub "$f")
+    echo "chapter$(printf '%02d' "$n"): sorry=$n_s true-stub=$n_t"
     rg -n "\<sorry\>" "$f"
+    awk '/^[[:space:]]*(theorem|lemma|example)[[:space:]]+.*:[[:space:]]*True[[:space:]]*:=/ {print NR ":" $0}' "$f"
   fi
 }
 

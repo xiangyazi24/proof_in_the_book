@@ -74,6 +74,15 @@ count_true_stub() {
   printf '%s\n' "$cnt"
 }
 
+count_placeholder() {
+  local file="$1"
+  local c1 c2
+  c1=$(grep -F "Nat.Infinite {p : ℕ // p.Prime}" "$file" | wc -l | tr -d ' ')
+  c2=$(grep -F "Nat.Infinite {p : Nat // p.Prime}" "$file" | wc -l | tr -d ' ')
+  local cnt=$((c1 + c2))
+  printf '%s\n' "$cnt"
+}
+
 chapter_file() {
   printf '%s/Chapter%02d.lean' "$CHAPTER_DIR" "$1"
 }
@@ -98,7 +107,9 @@ chapter_task_list() {
       split(line, a, /[[:space:]]*:/)
       cur=a[1]
     }
-    cur != "" && $0 ~ /(^|[^A-Za-z0-9_])sorry([^A-Za-z0-9_]|$)/ {
+    cur != "" && ( $0 ~ /(^|[^A-Za-z0-9_])sorry([^A-Za-z0-9_]|$)/ ||
+      index($0, "Nat.Infinite {p : ℕ // p.Prime}") > 0 ||
+      index($0, "Nat.Infinite {p : Nat // p.Prime}") > 0) {
       print cur
     }
   ' "$file"
@@ -107,7 +118,11 @@ chapter_task_list() {
 next_chapter() {
   for i in $(seq 1 40); do
     c=$(chapter_sorry "$i")
-    if (( c > 0 )); then
+    p=$(count_placeholder "$(chapter_file "$i")")
+    if [[ ! -f "$(chapter_file "$i")" ]]; then
+      continue
+    fi
+    if (( c > 0 )) || (( p > 0 )); then
       echo "$i"
       return 0
     fi
@@ -162,7 +177,8 @@ cmd_next() {
     exit 0
   fi
   echo "next=$n"
-  echo "remaining=$(chapter_sorry "$n")"
+  echo "remaining_sorry=$(chapter_sorry "$n")"
+  echo "remaining_placeholder=$(count_placeholder "$(chapter_file "$n")")"
   echo "file=$(chapter_file "$n")"
 }
 
@@ -195,7 +211,7 @@ cmd_run() {
   local tasks
   tasks=$(chapter_task_list "$file" | head -n "$max")
   if [[ -z "$tasks" ]]; then
-    echo "No named theorems with sorry found in chapter ${chapter}."
+    echo "No named theorems with pending placeholders/sorry found in chapter ${chapter}."
     exit 0
   fi
 
@@ -203,11 +219,17 @@ cmd_run() {
   echo "================================================="
   while read -r t; do
     [[ -z "$t" ]] && continue
-    echo "- [ ] Replace \`sorry\` for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
+    if grep -F "theorem ${t}" "$file" | grep -F "Nat.Infinite {p : ℕ // p.Prime}" >/dev/null; then
+      echo "- [ ] Replace placeholder for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
+    elif grep -F "theorem ${t}" "$file" | grep -F "Nat.Infinite {p : Nat // p.Prime}" >/dev/null; then
+      echo "- [ ] Replace placeholder for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
+    else
+      echo "- [ ] Replace \`sorry\` for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
+    fi
   done <<< "$tasks"
   echo
   echo "Suggested msg to webapp:"
-  echo "Please solve up to ${max} items for ProofsInTheBook/Chapter$(printf '%02d' "$chapter").lean, replacing the listed sorry placeholders with full Lean proofs."
+  echo "Please solve up to ${max} items for ProofsInTheBook/Chapter$(printf '%02d' "$chapter").lean. Keep theorem statements unchanged, only replace placeholder/sorry proof bodies."
   {
     echo
     echo "### Goal run for Chapter $(printf '%02d' "$chapter")"
@@ -236,12 +258,13 @@ cmd_check() {
       [[ -f "$f" ]] || continue
       s=$(count_sorry "$f")
       t=$(count_true_stub "$f")
+      p=$(count_placeholder "$f")
       total=$((total + 1))
-      if (( s == 0 && t == 0 )); then
+      if (( s == 0 && t == 0 && p == 0 )); then
         done=$((done + 1))
       else
         todo=$((todo + 1))
-        echo "chapter$(printf '%02d' "$i"): TODO(sorry=$s, true-stub=$t)"
+        echo "chapter$(printf '%02d' "$i"): TODO(sorry=$s, true-stub=$t, placeholder=$p)"
       fi
     done
     echo "DONE:$done/"$total " TODO:$todo"
@@ -254,7 +277,8 @@ cmd_check() {
     fi
     n_s=$(count_sorry "$f")
     n_t=$(count_true_stub "$f")
-    echo "chapter$(printf '%02d' "$n"): sorry=$n_s true-stub=$n_t"
+    n_p=$(count_placeholder "$f")
+    echo "chapter$(printf '%02d' "$n"): sorry=$n_s true-stub=$n_t placeholder=$n_p"
     rg -n "\<sorry\>" "$f"
     awk '/^[[:space:]]*(theorem|lemma|example)[[:space:]]+.*:[[:space:]]*True[[:space:]]*:=/ {print NR ":" $0}' "$f"
   fi

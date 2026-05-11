@@ -305,3 +305,9 @@ Please fill the following placeholders with full Lean proofs:
 ### Goal run for Chapter 01
 - chapter01_euclid
 - chapter01_fermat_coprime
+### Ask webapp for next tasks (current chapter)
+- Target: current chapter with pending placeholders (start with Chapter01 unless already reassigned).
+- Request: propose the next 1~2 concrete theorem proof tasks in ProofsInTheBook/Chapter01.lean (or the current pending chapter if different), in dependency order. Keep declaration names unchanged. Return only theorem names and short plan why this is the next best step.
+- Scope: do not provide full proofs yet; I will only implement mechanical parts after your task assignment.
+- Constraint: avoid placeholder style; prioritize continuity with book proofs.
+

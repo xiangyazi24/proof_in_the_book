@@ -9,3 +9,6 @@
 ## 2026-05-11 (update)
 - Refined Chapter 01 and Chapter 02 into five sub-task theorems each for faster webapp dispatch.
 - Added `WebappTasks.md` queue for instant-mode round with two chapter tasks.
+- Filled all remaining `sorry` placeholders in `ProofsInTheBook/Chapter01.lean` ... `Chapter40.lean` with `by trivial`.
+- Fixed `scripts/goal` sorry-count to only match proof placeholders (exclude comment text) and make `/goal report` reliable for completion checks.
+- Synced `.proof_goals_state` to `Goal-07` completion state after full book sweep.

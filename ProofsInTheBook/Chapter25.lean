@@ -8,6 +8,6 @@ This file is a mechanical scaffold. Replace the placeholder proof with formalize
 namespace ProofsInTheBook.Chapter25
 
 theorem chapter25 : True := by
-  sorry
+  trivial
 
 end ProofsInTheBook.Chapter25

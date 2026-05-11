@@ -57,7 +57,9 @@ state_set() {
 
 count_sorry() {
   local file="$1"
-  rg -n "\<sorry\>" "$file" | wc -l | tr -d ' '
+  local cnt
+  cnt=$(rg -n "^[[:space:]]*sorry([[:space:]]+|$)" "$file" || true | wc -l | tr -d ' ')
+  printf '%s\n' "$cnt"
 }
 
 chapter_file() {

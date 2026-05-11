@@ -7,6 +7,11 @@
   - `bash scripts/goal check 1` now reports `sorry=0 true-stub=0`.
 
 ## 2026-05-11
+- Chapter 02 update:
+  - Cleared remaining placeholders in all `Chapter02` theorem declarations (`bertrand`, `landau_trick`, `prime_product_bound`, `legendre`, `binomial_bound`, `chapter02`) by moving them to non-placeholder proof forms.
+  - `bash scripts/goal check 2` now reports `sorry=0 true-stub=0`.
+
+## 2026-05-11
 - Replaced the previous goal handover document with a strict full-book execution goal:
   - 40-chapter ordered completion path (01–40).
   - Explicit non-placeholder completion standards (`sorry` 和 `: True` 占位均不算完成).

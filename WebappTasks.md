@@ -44,3 +44,7 @@ Please fill the following placeholders with full Lean proofs:
 ### Goal run for Chapter 01
 - chapter01_mersenne
 - chapter01_euler
+
+### Goal run for Chapter 02
+- chapter02_bertrand
+- chapter02_landau_trick

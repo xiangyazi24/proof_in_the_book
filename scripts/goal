@@ -5,164 +5,319 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PLAN_FILE="$ROOT/GOALS.md"
 CHAPTER_DIR="$ROOT/ProofsInTheBook"
 STATE_FILE="$ROOT/.proof_goals_state"
+TASK_FILE="$ROOT/WebappTasks.md"
 
 usage() {
   cat <<'USAGE'
 Usage:
-  goal list                 # list all goals and latest state
-  goal next                 # print next unfinished theorem
-  goal check [chapter]      # check unresolved sorry in all files or one chapter
-  goal mark <chapter> done  # record chapter as manually verified
-  goal report               # show phase completion summary
+  goal init                         # initialize state
+  goal stage                        # show current phase and next range
+  goal next                         # show next chapter still containing sorry
+  goal run [--chapter N] [--max M]  # emit 1~2 task prompts for webapp
+  goal check [all|N]                # scan one chapter or all chapters for sorry
+  goal mark <N> done                # mark chapter done in state
+  goal build                        # run a quick build sanity check
+  goal report                       # completion summary
 USAGE
 }
 
-load_state() {
-  if [[ -f "$STATE_FILE" ]]; then
-    sed 's/[[:space:]]*$//' "$STATE_FILE"
+ensure_state() {
+  if [[ ! -f "$STATE_FILE" ]]; then
+    printf 'phase=1\ncurrent_chapter=1\n\n' > "$STATE_FILE"
   fi
 }
 
-save_state() {
-  local k="$1" v="$2"
-  if [[ -f "$STATE_FILE" ]]; then
-    grep -v "^$k=" "$STATE_FILE" > "$STATE_FILE.tmp" 2>/dev/null || true
+state_get() {
+  local key="$1"
+  local default="${2:-}"
+  ensure_state
+  local value
+  value=$(awk -F= -v k="$key" '$1==k {print $2}' "$STATE_FILE" | head -n1)
+  if [[ -n "$value" ]]; then
+    printf '%s\n' "$value"
   else
-    : > "$STATE_FILE.tmp"
+    printf '%s\n' "$default"
   fi
-  echo "$k=$v" >> "$STATE_FILE.tmp"
-  mv "$STATE_FILE.tmp" "$STATE_FILE"
+}
+
+state_set() {
+  local key="$1" val="$2"
+  ensure_state
+  local tmp="$STATE_FILE.tmp"
+  awk -F= -v k="$key" -v v="$val" '
+    BEGIN { done=0 }
+    $1==k { print k"="v; done=1; next }
+    { print }
+    END {
+      if(!done) print k"="v
+    }
+  ' "$STATE_FILE" > "$tmp"
+  mv "$tmp" "$STATE_FILE"
 }
 
 count_sorry() {
   local file="$1"
-  rg -n "sorry" "$file" | wc -l | tr -d ' '
+  rg -n "\<sorry\>" "$file" | wc -l | tr -d ' '
+}
+
+chapter_file() {
+  printf '%s/Chapter%02d.lean' "$CHAPTER_DIR" "$1"
 }
 
 chapter_sorry() {
-  local n="$1"
-  local file="$CHAPTER_DIR/Chapter$(printf '%02d' "$n").lean"
+  local chapter="$1"
+  local file
+  file=$(chapter_file "$chapter")
   if [[ ! -f "$file" ]]; then
-    echo "-1"
+    echo -1
     return
   fi
   count_sorry "$file"
 }
 
-report_chapter() {
-  local done=0
-  local total=0
-  for i in $(seq 1 40); do
-    local cfile="$CHAPTER_DIR/Chapter$(printf '%02d' "$i").lean"
-    [[ -f "$cfile" ]] || continue
-    local s
-    s=$(count_sorry "$cfile")
-    if (( s == 0 )); then
-      echo "$(printf '%02d' "$i"):OK"
-      done=$((done+1))
-    else
-      echo "$(printf '%02d' "$i"):TODO($s)"
-    fi
-    total=$((total+1))
-  done
+chapter_task_list() {
+  local file="$1"
+  awk '
+    /^[[:space:]]*(theorem|lemma|example)[[:space:]]+/ {
+      line=$0
+      sub(/^[[:space:]]*(theorem|lemma|example)[[:space:]]+/, "", line)
+      split(line, a, /[[:space:]]*:/)
+      cur=a[1]
+    }
+    cur != "" && $0 ~ /(^|[^A-Za-z0-9_])sorry([^A-Za-z0-9_]|$)/ {
+      print cur
+    }
+  ' "$file"
 }
 
-cmd_list() {
-  if [[ -f "$PLAN_FILE" ]]; then
-    echo "== Plan =="
-    sed -n '1,80p' "$PLAN_FILE"
-    echo
+next_chapter() {
+  for i in $(seq 1 40); do
+    c=$(chapter_sorry "$i")
+    if (( c > 0 )); then
+      echo "$i"
+      return 0
+    fi
+  done
+  echo "0"
+}
+
+stage_from_chapter() {
+  local ch="$1"
+  if (( ch == 0 )); then
+    echo 7
+  elif (( ch <= 10 )); then
+    echo 3
+  elif (( ch <= 20 )); then
+    echo 4
+  elif (( ch <= 30 )); then
+    echo 5
+  else
+    echo 6
   fi
-  report_chapter
+}
+
+cmd_init() {
+  printf 'phase=1\ncurrent_chapter=1\n\n' > "$STATE_FILE"
+  echo "Initialized goal state: phase=1, current_chapter=1"
+}
+
+cmd_stage() {
+  ensure_state
+  local current
+  current=$(state_get current_chapter 1)
+  local phase
+  phase=$(stage_from_chapter "$current")
+  echo "phase=Goal-0${phase}"
+  echo "current_chapter=${current}"
+  case "$phase" in
+    1) echo "Goal-01 工程稳态" ;;
+    3) echo "Goal-03: 章节 1..10" ;;
+    4) echo "Goal-04: 章节 11..20" ;;
+    5) echo "Goal-05: 章节 21..30" ;;
+    6) echo "Goal-06: 章节 31..40" ;;
+    7) echo "Goal-07: 全书收敛" ;;
+  esac
 }
 
 cmd_next() {
-  for i in $(seq 1 40); do
-    n=$(chapter_sorry "$i")
-    if (( n > 0 )); then
-      printf "chapter%02d (%d unresolved sorry)\n" "$i" "$n"
-      exit 0
-    fi
-  done
-  echo "No unfinished chapter found."
+  local n
+  n=$(next_chapter)
+  if [[ "$n" == "0" ]]; then
+    echo "next=0"
+    echo "status=complete"
+    exit 0
+  fi
+  echo "next=$n"
+  echo "remaining=$(chapter_sorry "$n")"
+  echo "file=$(chapter_file "$n")"
+}
+
+cmd_run() {
+  local chapter=${1:-}
+  local max=${2:-2}
+
+  if [[ -z "$chapter" ]]; then
+    chapter=$(next_chapter)
+  fi
+  if [[ "$chapter" == "0" ]]; then
+    echo "No pending chapters."
+    exit 0
+  fi
+
+  local file
+  file=$(chapter_file "$chapter")
+  if [[ ! -f "$file" ]]; then
+    echo "chapter file not found: $file" >&2
+    exit 1
+  fi
+
+  if (( max < 1 )); then
+    max=1
+  fi
+  if (( max > 2 )); then
+    max=2
+  fi
+
+  local tasks
+  tasks=$(chapter_task_list "$file" | head -n "$max")
+  if [[ -z "$tasks" ]]; then
+    echo "No named theorems with sorry found in chapter ${chapter}."
+    exit 0
+  fi
+
+  echo "Round for Chapter ${chapter}: send these $(echo "$tasks" | wc -l) tasks (max ${max})"
+  echo "================================================="
+  while read -r t; do
+    [[ -z "$t" ]] && continue
+    echo "- [ ] Replace \`sorry\` for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
+  done <<< "$tasks"
+  echo
+  echo "Suggested msg to webapp:"
+  echo "Please solve up to ${max} items for ProofsInTheBook/Chapter$(printf '%02d' "$chapter").lean, replacing the listed sorry placeholders with full Lean proofs."
+  {
+    echo
+    echo "### Goal run for Chapter $(printf '%02d' "$chapter")"
+    while read -r t; do
+      [[ -z "$t" ]] && continue
+      echo "- ${t}"
+    done <<< "$tasks"
+  } >> "$TASK_FILE"
+
+  echo
+  echo "Appended tasks to $(basename "$TASK_FILE") for traceability."
 }
 
 cmd_check() {
-  if [[ "$1" == "all" || -z "$1" ]]; then
-    total=0; done=0; todo=0
+  local scope="all"
+  if [[ $# -ge 1 && "$1" != "" ]]; then
+    scope="$1"
+  fi
+
+  if [[ "$scope" == "all" ]]; then
+    total=0
+    done=0
+    todo=0
     for i in $(seq 1 40); do
-      cfile="$CHAPTER_DIR/Chapter$(printf '%02d' "$i").lean"
-      [[ -f "$cfile" ]] || continue
-      s=$(count_sorry "$cfile")
-      total=$((total+1))
+      f=$(chapter_file "$i")
+      [[ -f "$f" ]] || continue
+      s=$(count_sorry "$f")
+      total=$((total + 1))
       if (( s == 0 )); then
-        done=$((done+1))
+        done=$((done + 1))
       else
-        todo=$((todo+1))
+        todo=$((todo + 1))
         echo "chapter$(printf '%02d' "$i"): TODO($s)"
       fi
     done
-    echo "DONE: $done/$total  TODO: $todo"
+    echo "DONE:$done/"$total " TODO:$todo"
   else
-    n="$1"
-    cfile="$CHAPTER_DIR/Chapter$(printf '%02d' "$n").lean"
-    if [[ ! -f "$cfile" ]]; then
-      echo "chapter not found: $n" >&2; exit 1
+    local n="$scope"
+    f=$(chapter_file "$n")
+    if [[ ! -f "$f" ]]; then
+      echo "chapter file not found: $n" >&2
+      exit 1
     fi
-    echo "$(basename "$cfile"): $(count_sorry "$cfile") unresolved sorry"
-    rg -n "sorry" "$cfile"
+    n_s=$(count_sorry "$f")
+    echo "chapter$(printf '%02d' "$n"): $n_s"
+    rg -n "\<sorry\>" "$f"
   fi
 }
 
 cmd_mark() {
-  local chapter="$1" status="$2"
-  if [[ -z "$chapter" || -z "$status" ]]; then
-    usage; exit 1
+  local n="$1"
+  local status="$2"
+  state_set "chapter$n" "$status"
+  state_set current_chapter "$((n+1))"
+  echo "chapter $n marked $status"
+}
+
+cmd_build() {
+  if ! command -v lake >/dev/null 2>&1; then
+    echo "lake not found. Skip build check."
+    exit 0
   fi
-  save_state "chapter$chapter" "$status"
-  echo "chapter$chapter=$status"
+  (cd "$ROOT" && lake env lean -v >/dev/null 2>&1 && lake build)
 }
 
 cmd_report() {
-  local done=0 total=0
-  for i in $(seq 1 40); do
-    cfile="$CHAPTER_DIR/Chapter$(printf '%02d' "$i").lean"
-    [[ -f "$cfile" ]] || continue
-    total=$((total+1))
-    if [[ $(count_sorry "$cfile") == 0 ]]; then
-      done=$((done+1))
-    fi
-  done
-  phase1=$((40*1/7))
-  echo "chapters done: $done/$total"
-  if (( done >= 40 )); then
-    echo "status: ALL COMPLETE"
-  else
-    echo "status: IN PROGRESS"
-  fi
+  cmd_check all
+  echo "phase-state:" 
+  cmd_stage
+  echo
+  echo "state-markers:" 
   if [[ -f "$STATE_FILE" ]]; then
-    echo "manual marks:"
     cat "$STATE_FILE"
   fi
 }
 
-if (( $# < 1 )); then
+if (( $# == 0 )); then
   usage
   exit 1
 fi
 
-case "$1" in
-  list)
-    cmd_list
+cmd="$1"; shift || true
+case "$cmd" in
+  init)
+    cmd_init
+    ;;
+  stage)
+    cmd_stage
     ;;
   next)
     cmd_next
     ;;
+  run)
+    CH=""
+    MAX="2"
+    while (( $# > 0 )); do
+      case "$1" in
+        --chapter)
+          CH="$2"; shift 2 ;;
+        --max)
+          MAX="$2"; shift 2 ;;
+        *)
+          if [[ -z "$CH" ]]; then
+            CH="$1"; shift
+          else
+            shift
+          fi
+          ;;
+      esac
+    done
+    cmd_run "$CH" "$MAX"
+    ;;
   check)
-    cmd_check "${2-}"
+    cmd_check "${1:-all}"
     ;;
   mark)
-    cmd_mark "$2" "$3"
+    if [[ $# -lt 2 ]]; then
+      echo "mark needs <N> done" >&2
+      exit 1
+    fi
+    cmd_mark "$1" "$2"
+    ;;
+  build)
+    cmd_build
     ;;
   report)
     cmd_report

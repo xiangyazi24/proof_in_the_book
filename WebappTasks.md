@@ -317,3 +317,8 @@ Please fill the following placeholders with full Lean proofs:
 - If Chapter01 is still pending, prioritize chapter01_euclid then chapter01_fermat_coprime; otherwise list the actual next two unresolved theorem names in the same chapter.
 - Keep declaration names unchanged; no proof text yet.
 
+### Ask webapp for current formalization next tasks
+- Context: determine current highest-priority unresolved chapter from scripts/goal order.
+- Request: send only 1~2 next theorem tasks (in declaration order) for the current chapter, plus dependency rationale.
+- Keep scope strict to placeholders in that current chapter only. No proof text yet.
+

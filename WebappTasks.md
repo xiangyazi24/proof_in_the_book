@@ -102,3 +102,8 @@ Please fill the following placeholders with full Lean proofs:
 - channel: dm-codex
 - note: previous attempt was sent to q-series; this is corrective route
 - action: solve Chapter03 with local grow block and return proof terms only
+
+### DM-codex timestamp test (2026-05-11)
+- sent_at: 2026-05-11 12:49:42 CDT
+- task_id: c7885062
+- note: endpoint /api/ask with channel=dm-codex

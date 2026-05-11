@@ -337,3 +337,9 @@ Please fill the following placeholders with full Lean proofs:
 - constraints: keep declaration unchanged; full proof body only; avoid trivial/placeholder closure
 - status: sent
 
+### Webapp reply (task 71545eb9) - insufficient quality
+- task_id: 71545eb9
+- status: completed
+- answer: 'leanby  apply Set.infinite_coe_iff.mp  exact Nat.infinite_setOf_prime; intro m n hmn  exact Nat.coprime_fermatNumber_fermatNumber hmn'
+- assessment: not acceptable (placeholder-style / likely invalid Lean body formatting)
+

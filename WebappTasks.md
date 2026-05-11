@@ -264,3 +264,10 @@ Please fill the following placeholders with full Lean proofs:
   - For `chapter03_sylvester`, expand the existence argument from Sylvester-style inequalities on binomial coefficients and explicit prime growth reasoning.
   - For `chapter03_binomials_coefficients_never_powers`, keep full shape with quantified `k l m n`, conditions `2 ≤ l`, `4 ≤ k`, `k ≤ n - 4`, and justify contradiction at the valuation level or via valuation bound lemmas.
   - Return only replacement proof bodies, declarations unchanged.
+
+### Chapter 04 follow-up (non-mechanical)
+- file: ProofsInTheBook/Chapter04.lean
+- theorem: chapter04
+- request: provide a book-style proof body that does not directly collapse via `Set.infinite_coe_iff.mp` + `Nat.infinite_setOf_prime`.
+- Keep declaration unchanged; no helper axioms.
+- If no direct textbook lemma exists, include an explicit chain showing how chapter-04 sub-lemma assumptions imply infinitely many primes in the relevant representation framework.

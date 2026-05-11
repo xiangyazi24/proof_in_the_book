@@ -1,6 +1,11 @@
 # Changelog
 
 ## 2026-05-11
+- 重写 `GOALS.md` 为“重启版完整长期目标”：明确禁止语义占位替代、分阶段里程碑、40 章书-命题对齐清单、以及每轮 `/goal` 1–2 项执行约束。
+- 明确约束：所有章节必须按书证明路径逐步重写，`scripts/goal check` 的三项指标（`sorry`/`true-stub`/`placeholder`）同时为 0 才允许 `mark`。
+- 新增章节-书名对照表，作为后续 `/goal` 任务验收与人工复核依据。
+
+## 2026-05-11
 - Rewrote `GOALS.md` into a full long-run `/goal` execution plan for all 40 chapters with explicit completion standards.
 - Added strict per-round constraints (`max 2` tasks, check-before-run, chapter-scoped completion gates, and required logging in `WebappTasks.md` + `Changelog.md`).
 - Replaced chapter-task inventory so current flow is 1) book-aligned semantic goals, 2) mechanical file updates, 3) commit/push traceability.

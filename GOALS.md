@@ -1,107 +1,153 @@
-# `/goal` 长期执行目标（全书 Lean formalization）
+# `/goal` 长期执行目标（全书 Lean formalization 重启版）
 
-## 1. 总目标
+## 1. 目标定义（唯一）
 
-把 `ProofsInTheBook/` 的 40 章全部改为：
+把 `ProofsInTheBook/` 中 40 章改写为《Proofs from THE BOOK》对应章节的形式化版本：
 
-- 按《Proofs from THE BOOK》原定理命名或语义对应命名写出 Lean 语句；
-- 每条定理都使用书中的证明路线（不允许“替换成`Nat.Infinite {p : ℕ // p.Prime}`”这类语义迁移）；
-- 通过 `/goal` 自动检查和人工语义复核后稳定完成；
-- 全部任务要连续可追踪：`instant` / `extend` 之间可切换，但不得阻塞 `/goal` 流转。
+- 逐章采用书中的定理陈述（章节语义与书名对齐）。
+- 逐步写出书中的证明路径；不允许用与书结论不等价的“占位替换”收尾。
+- `/goal` 只处理书级证明任务，不处理流程管理之外的技巧性重构。
 
-## 2. 书级完成标准（每章）
+## 2. 硬性完成标准（每章）
 
-- `bash scripts/goal check N` 返回：
-  - `sorry=0`
-  - `true-stub=0`
-  - `placeholder=0`
-- 该章声明和子定理名存在于 `scripts/goal` 报告出的任务集合中；
-- 本轮目标必须与书章标题对齐（见章节清单）；
-- `/goal mark N done` 后立即提交并 push，且在 `WebappTasks.md`、`Changelog.md` 写明本轮完成项和通信状态（含窗口/模式）。
+一个章节在 `scripts/goal check N` 中必须满足：
 
-## 3. 执行纪律（硬约束）
+- `sorry = 0`
+- `true-stub = 0`
+- `placeholder = 0`
 
-- 每轮只做 1–2 个任务：
-  - `bash scripts/goal run --chapter N --max 2`
-- 每轮只改本轮任务相关文件；
-- 先 `bash scripts/goal check N`；若不通过，暂停本轮并回到本地修正；
-- 第三次失败后，向我汇报并申请切到 `extend` 或 `pro extend`；
-- 每轮必须在 `WebappTasks.md` 记录“请求→返回”，并用 `Changelog.md`记录时间戳级别变更；
-- 任何提交必须包含：
-  - 修改的 `ProofsInTheBook/ChapterXX.lean`；
-  - 若是任务流转更新，`WebappTasks.md` 与 `Changelog.md` 对应追加条目。
+并且该章必须包含与书证明链条一致的关键主命题与子命题定义。
 
-## 4. 全书执行里程碑
+## 3. 禁止行为（硬规则）
 
-- M0 统一语义对齐：逐章清理“占位语义”并绑定书章标题。
-- M1 章节级基线（01–10）：完成已分拆子目标的 01–03；其余 04–10 转为书命题+主定理。
-- M2 结构统一（11–20）：每章至少保留一本体证明结构的关键子目标再汇总到 `chapterXX`。
-- M3 结构统一（21–30）：同 M2。
-- M4 汇总收口（31–40）：完成语义一致性抽检（标题/命题方向/证明策略）。
-- M5 终检：`bash scripts/goal check all` 显示 `DONE:40/40` 且附一轮人工抽检日志。
+以下写法在目标定理层面一律不视为完成：
 
-## 5. 全书任务清单（按书章节）
+- 目标语句直接或间接写成 `Nat.Infinite {p : ℕ // p.Prime}`。
+- 目标使用 `simpa using Nat.infinite_setOf_prime.to_subtype` 等“直接替换”收束。
+- `by` 块里无实质内容或以数学语义转译代替书上结论。
 
-### Part A：01–10
-1. `Chapter01.lean`：`chapter01_euclid`, `chapter01_fermat_coprime`, `chapter01_mersenne`, `chapter01_euler`, `chapter01_furstenberg`, `chapter01`
-2. `Chapter02.lean`：`chapter02_bertrand`, `chapter02_landau_trick`, `chapter02_prime_product_bound`, `chapter02_legendre`, `chapter02_binomial_bound`, `chapter02`
-3. `Chapter03.lean`：`chapter03_sylvester`, `chapter03_binomials_coefficients_never_powers`, `chapter03`
-4. `Chapter04.lean`：`chapter04`（two-square representation chapter goal）
-5. `Chapter05.lean`：`chapter05`（quadratic reciprocity chapter goal）
-6. `Chapter06.lean`：`chapter06`（finite division rings to fields chapter goal）
-7. `Chapter07.lean`：`chapter07`（irrationality chapter goal）
-8. `Chapter08.lean`：`chapter08`（Basel sum chapter goal）
-9. `Chapter09.lean`：`chapter09`（Hilbert third problem chapter goal）
-10. `Chapter10.lean`：`chapter10`（lines/graph decompositions chapter goal）
+可接受的 `Nat.infinite_setOf_prime` 用法：
 
-### Part B：11–20
-11. `Chapter11.lean`：`chapter11`
-12. `Chapter12.lean`：`chapter12`
-13. `Chapter13.lean`：`chapter13`
-14. `Chapter14.lean`：`chapter14`
-15. `Chapter15.lean`：`chapter15`
-16. `Chapter16.lean`：`chapter16`
-17. `Chapter17.lean`：`chapter17`
-18. `Chapter18.lean`：`chapter18`
-19. `Chapter19.lean`：`chapter19`
-20. `Chapter20.lean`：`chapter20`
+- 作为章节证明中的辅助 lemma。
+- 不得取代对应章节的书级主定理。
 
-### Part C：21–30
-21. `Chapter21.lean`：`chapter21`
-22. `Chapter22.lean`：`chapter22`
-23. `Chapter23.lean`：`chapter23`
-24. `Chapter24.lean`：`chapter24`
-25. `Chapter25.lean`：`chapter25`
-26. `Chapter26.lean`：`chapter26`
-27. `Chapter27.lean`：`chapter27`
-28. `Chapter28.lean`：`chapter28`
-29. `Chapter29.lean`：`chapter29`
-30. `Chapter30.lean`：`chapter30`
+## 4. `/goal` 流程（每轮固定）
 
-### Part D：31–40
-31. `Chapter31.lean`：`chapter31`
-32. `Chapter32.lean`：`chapter32`
-33. `Chapter33.lean`：`chapter33`
-34. `Chapter34.lean`：`chapter34`
-35. `Chapter35.lean`：`chapter35`
-36. `Chapter36.lean`：`chapter36`
-37. `Chapter37.lean`：`chapter37`
-38. `Chapter38.lean`：`chapter38`
-39. `Chapter39.lean`：`chapter39`
-40. `Chapter40.lean`：`chapter40`
+每一轮只处理 1–2 个任务，全部依照以下顺序执行：
 
-## 6. 里程碑命令（固定）
+1. `bash scripts/goal run --chapter N --max 2`
+2. 对每个任务写 Lean 证明代码。
+3. `bash scripts/goal check N`
+4. 通过后：`bash scripts/goal mark N done`
+5. 及时提交并 push。
 
-```bash
-bash scripts/goal next
-bash scripts/goal run --chapter N --max 2
-bash scripts/goal check N
-bash scripts/goal mark N done
-bash scripts/goal report
-```
+失败规则：
 
-- `next`：查找下一待做章节；
-- `run`：生成本轮 1–2 个任务；
-- `check`：确认入场门槛；
-- `mark`：每次提交前后要成对执行；
-- `report`：每 2–3 轮做一次全局里程碑复盘。 
+- 当单轮任务第三次连续未过检查，向我报告并申请切 `extend` 或 `pro extend`。
+- 任务失败时先停止该轮，不能跳题。
+
+## 5. 书章目标清单（40 章）
+
+### Part 1：01–10
+- 01: `chapter01_euclid`, `chapter01_fermat_coprime`, `chapter01_mersenne`, `chapter01_euler`, `chapter01_furstenberg`, `chapter01`
+- 02: `chapter02_bertrand`, `chapter02_landau_trick`, `chapter02_prime_product_bound`, `chapter02_legendre`, `chapter02_binomial_bound`, `chapter02`
+- 03: `chapter03_sylvester`, `chapter03_binomials_coefficients_never_powers`, `chapter03`
+- 04: `chapter04`
+- 05: `chapter05`
+- 06: `chapter06`
+- 07: `chapter07`
+- 08: `chapter08`
+- 09: `chapter09`
+- 10: `chapter10`
+
+### Part 2：11–20
+- 11: `chapter11`
+- 12: `chapter12`
+- 13: `chapter13`
+- 14: `chapter14`
+- 15: `chapter15`
+- 16: `chapter16`
+- 17: `chapter17`
+- 18: `chapter18`
+- 19: `chapter19`
+- 20: `chapter20`
+
+### Part 3：21–30
+- 21: `chapter21`
+- 22: `chapter22`
+- 23: `chapter23`
+- 24: `chapter24`
+- 25: `chapter25`
+- 26: `chapter26`
+- 27: `chapter27`
+- 28: `chapter28`
+- 29: `chapter29`
+- 30: `chapter30`
+
+### Part 4：31–40
+- 31: `chapter31`
+- 32: `chapter32`
+- 33: `chapter33`
+- 34: `chapter34`
+- 35: `chapter35`
+- 36: `chapter36`
+- 37: `chapter37`
+- 38: `chapter38`
+- 39: `chapter39`
+- 40: `chapter40`
+
+每个章节必须至少包含一个“书名对应的命题主声明”。
+
+## 6. 里程碑（硬约束）
+
+- M0：第一轮后 `goal` 只保留书命题，不包含占位证明。
+- M1：01–10 全部 `check` 无警告。
+- M2：11–20 全部 `check` 无警告。
+- M3：21–30 全部 `check` 无警告。
+- M4：31–40 全部 `check` 无警告。
+- M5：`bash scripts/goal check all` 显示 `DONE:40/40`。
+
+里程碑时执行 `bash scripts/goal report`，输出给我并记录。
+
+## 7. 章节到书标题映射（执行对齐）
+
+- Chapter 01: Six proofs of the infinity of primes
+- Chapter 02: Bertrand's postulate
+- Chapter 03: Binomial coefficients are (almost) never powers
+- Chapter 04: Representing numbers as sums of two squares
+- Chapter 05: The law of quadratic reciprocity
+- Chapter 06: Every finite division ring is a field
+- Chapter 07: Some irrational numbers
+- Chapter 08: Three times pi^2 / 6
+- Chapter 09: Hilbert's third problem: decomposing polyhedra
+- Chapter 10: Lines in the plane and decompositions of graphs
+- Chapter 11: The slope problem
+- Chapter 12: Three applications of Euler's formula
+- Chapter 13: Cauchy's rigidity theorem
+- Chapter 14: Touching simplices
+- Chapter 15: Every large point set has an obtuse angle
+- Chapter 16: Borsuk's conjecture
+- Chapter 17: Sets, functions, and the continuum hypothesis
+- Chapter 18: In praise of inequalities
+- Chapter 19: The fundamental theorem of algebra
+- Chapter 20: One square and an odd number of triangles
+- Chapter 21: A theorem of Pólya on polynomials
+- Chapter 22: On a lemma of Littlewood and Offord
+- Chapter 23: Cotangent and the Herglotz trick
+- Chapter 24: Buffon's needle problem
+- Chapter 25: Pigeon-hole and double counting
+- Chapter 26: Tiling rectangles
+- Chapter 27: Three famous theorems on finite sets
+- Chapter 28: Shuffling cards
+- Chapter 29: Lattice paths and determinants
+- Chapter 30: Cayley's formula for the number of trees
+- Chapter 31: Identities versus bijections
+- Chapter 32: Completing Latin squares
+- Chapter 33: The Dinitz problem
+- Chapter 34: Five-coloring plane graphs
+- Chapter 35: How to guard a museum
+- Chapter 36: Turan's graph theorem
+- Chapter 37: Communicating without errors
+- Chapter 38: The chromatic number of Kneser graphs
+- Chapter 39: Of friends and politicians
+- Chapter 40: Probability makes counting (sometimes) easy

@@ -96,3 +96,9 @@ Please fill the following placeholders with full Lean proofs:
 - channel: q-series
 - task_id: efb5f8e0
 - reason: front-end currently reads q-series
+
+### Communication re-route (window: dm-codex) at 2026-05-11 12:48:19 CDT
+- task_id: 591d92f2
+- channel: dm-codex
+- note: previous attempt was sent to q-series; this is corrective route
+- action: solve Chapter03 with local grow block and return proof terms only

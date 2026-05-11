@@ -322,3 +322,10 @@ Please fill the following placeholders with full Lean proofs:
 - Request: send only 1~2 next theorem tasks (in declaration order) for the current chapter, plus dependency rationale.
 - Keep scope strict to placeholders in that current chapter only. No proof text yet.
 
+### Current formalization next-task reply (dm-codex)
+- task_id: d1f03971
+- requested: current next tasks by scripts/goal order
+- response:
+  - chapter01_euclid: scripts/goal 固定顺序第 1 项，作为 Chapter01 基础无限素数证明，后续 chapter01 收束依赖它
+  - chapter01_fermat_coprime: scripts/goal 固定顺序第 2 项，第二个书上方向，独立于 Euclid，且应在 chapter01 前完成
+

@@ -4,9 +4,12 @@
 
 在 `~/repos/proof_in_the_book` 中完成全书 40 章按书重建的 Lean 形式化：
 
-- 章节声明不得被替换（`theorem` 名称不变）
-- 命题主体必须对应书内命题结构，不能以 `Nat.Infinite {p : ℕ // p.Prime}` 作为书命题替代
-- `/goal` 统一以静态指标 `sorry / true-stub / placeholder` 作为唯一完成判定
+- 章节声明不得替换（`theorem` 名称和声明体不变）
+- 机械化证明不可代替书上证明：`chapterNN` 的任务是“按书题意重写其对应证明”，而不是把所有章都留在
+  `apply Set.infinite_coe_iff.mp; exact Nat.infinite_setOf_prime` 这类骨架上
+- `/goal` 统一以 `sorry / true-stub / placeholder` 为完成判定；placeholder 必须覆盖：
+  - 命题直接是 `Infinite {p : ℕ // p.Prime}` 但用固定骨架直接闭合
+  - `to_subtype`、`simpa using Nat.infinite_setOf_prime` 等机械闭合
 - 所有工作需 commit + push 供 webapp 读取
 
 ## 全局验收标准

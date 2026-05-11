@@ -203,3 +203,11 @@ Please fill the following placeholders with full Lean proofs:
 
 ### Goal run for Chapter 04
 - chapter04
+
+### Goal run for Chapter 01
+- chapter01_euclid
+- chapter01_fermat_coprime
+
+### Goal run for Chapter 01
+- chapter01_euclid
+- chapter01_fermat_coprime

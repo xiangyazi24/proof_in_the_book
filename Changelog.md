@@ -1,6 +1,13 @@
 # Changelog
 
 ## 2026-05-11
+- 修复 `scripts/goal` 的 placeholder 审核逻辑：
+  - 将 `apply Set.infinite_coe_iff.mp` + `exact Nat.infinite_setOf_prime` 这类机械骨架证明计入 placeholder。
+  - 使 `bash scripts/goal check all` 不再把 Chapter04–40 的“默认填充”误判为完成。
+- 回退 `.proof_goals_state` 到真实的执行起点（`current_chapter=4`），准备下一轮按章继续从 `goal run --max 2` 下发任务。
+- 明确 `GOALS.md`：不可再以统一骨架替代书内证明；`goal` 以可追溯任务+脚本指标驱动。
+
+## 2026-05-11
 - 重写 `GOALS.md` 为全书执行版 long-run 目标（按章节清单、阶段、验收门槛、失败策略）：
   - 目标文件可直接驱动 `/goal` 的 01–40 分阶段执行
   - 明确每轮 1–2 项、`run/check/mark/report` 的固定顺序

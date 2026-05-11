@@ -76,14 +76,17 @@ count_true_stub() {
 
 count_placeholder() {
   local file="$1"
-  local c1 c2 c3 c4 c5 c6
-  c1=$(rg -c "Nat\\.Infinite \\{p : ℕ // p.Prime\\}" "$file")
-  c2=$(rg -c "Nat\\.Infinite \\{p : Nat // p.Prime\\}" "$file")
-  c3=$(rg -c "Set\\.Infinite \\{p : ℕ // p.Prime\\}" "$file")
-  c4=$(rg -c "Set\\.Infinite \\{p : Nat // p.Prime\\}" "$file")
-  c5=$(rg -c "simpa using Nat\\.infinite_setOf_prime\\.to_subtype" "$file")
-  c6=$(rg -c "exact Nat\\.infinite_setOf_prime\\.to_subtype" "$file")
-  local cnt=$((c1 + c2 + c3 + c4 + c5 + c6))
+  local c1 c2 c3 c4 c5 c6 c7 c8 c9
+  c1=$(rg -c "Nat\\.Infinite \\{p : ℕ // p.Prime\\}" "$file" || true)
+  c2=$(rg -c "Nat\\.Infinite \\{p : Nat // p.Prime\\}" "$file" || true)
+  c3=$(rg -c "Set\\.Infinite \\{p : ℕ // p.Prime\\}" "$file" || true)
+  c4=$(rg -c "Set\\.Infinite \\{p : Nat // p.Prime\\}" "$file" || true)
+  c5=$(rg -c "simpa using Nat\\.infinite_setOf_prime\\.to_subtype" "$file" || true)
+  c6=$(rg -c "exact Nat\\.infinite_setOf_prime\\.to_subtype" "$file" || true)
+  c7=$(rg -c -U "theorem [A-Za-z0-9_]+[^\\n]*:.*Infinite \\{p : ℕ // p\\.Prime\\} := by\\n\\s*apply Set\\.infinite_coe_iff\\.mp\\n\\s*exact Nat\\.infinite_setOf_prime" "$file" || true)
+  c8=$(rg -c -U "theorem [A-Za-z0-9_]+[^\\n]*:.*Infinite \\{p : Nat // p\\.Prime\\} := by\\n\\s*apply Set\\.infinite_coe_iff\\.mp\\n\\s*exact Nat\\.infinite_setOf_prime" "$file" || true)
+  c9=$(rg -c -U "theorem [A-Za-z0-9_]+[^\\n]*:.*Infinite \\{p : ℕ // p\\.Prime\\} := by\\n\\s*apply Set\\.infinite_coe_iff\\.mp\\n\\s*simpa using Nat\\.infinite_setOf_prime" "$file" || true)
+  local cnt=$((c1 + c2 + c3 + c4 + c5 + c6 + c7 + c8 + c9))
   printf '%s\n' "$cnt"
 }
 
@@ -252,15 +255,9 @@ cmd_run() {
   local tasks
   local placeholder_count
   placeholder_count=$(count_placeholder "$file")
-  tasks=$(chapter_task_list "$file" | head -n "$max")
 
-  if [[ "$chapter" == "3" && "$placeholder_count" -gt 0 ]]; then
+  if [[ "$chapter" == "1" || "$chapter" == "2" || "$chapter" == "3" || "$placeholder_count" -gt 0 ]]; then
     tasks=$(expected_tasks_for_chapter "$chapter" | head -n "$max")
-  elif [[ "$chapter" == "1" || "$chapter" == "2" || "$placeholder_count" -eq 0 ]]; then
-    tasks=$(chapter_task_list "$file" | head -n "$max")
-    if [[ -z "$tasks" ]]; then
-      tasks=$(expected_tasks_for_chapter "$chapter" | head -n "$max")
-    fi
   else
     tasks=$(chapter_task_list "$file" | head -n "$max")
   fi
@@ -276,7 +273,9 @@ cmd_run() {
   echo "================================================="
   while read -r t; do
     [[ -z "$t" ]] && continue
-    if rg -q "theorem ${t}[[:space:]]*:\\s*.*Nat\\.Infinite \\{p : ℕ // p.Prime\\}" "$file"; then
+    if rg -q -U "theorem ${t}[^\\n]*:.*(Nat|Set)\\.Infinite \\{p : ℕ // p\\.Prime\\} := by\\n\\s*apply Set\\.infinite_coe_iff\\.mp\\n\\s*(exact|simpa using) Nat\\.infinite_setOf_prime" "$file"; then
+      echo "- [ ] Replace placeholder proof for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
+    elif rg -q "theorem ${t}[[:space:]]*:\\s*.*Nat\\.Infinite \\{p : ℕ // p.Prime\\}" "$file"; then
       echo "- [ ] Replace placeholder for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
     elif rg -q "theorem ${t}[[:space:]]*:\\s*.*Nat\\.Infinite \\{p : Nat // p.Prime\\}" "$file"; then
       echo "- [ ] Replace placeholder for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
@@ -289,7 +288,7 @@ cmd_run() {
     elif rg -q "theorem ${t}[[:space:]]*:\\s*.*exact Nat\\.infinite_setOf_prime\\.to_subtype" "$file"; then
       echo "- [ ] Replace placeholder for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
     else
-      echo "- [ ] Replace \`sorry\` for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
+      echo "- [ ] Replace \`sorry/placeholder\` for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
     fi
   done <<< "$tasks"
   echo

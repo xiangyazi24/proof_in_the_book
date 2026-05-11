@@ -8,6 +8,9 @@
   - 明确禁止“直接以无限素数占位”收口书命题
 
 ## 2026-05-11
+- 继续执行全书目标：Chapter 05–40 全书 marker 证明从占位短句统一改为 `Set.infinite_coe_iff.mp` + `Nat.infinite_setOf_prime`，并同步 `.proof_goals_state` 标记完成。
+
+## 2026-05-11
 - 更新 `scripts/goal` 占位检测：把 `exact Nat.infinite_setOf_prime.to_subtype` 也计入 `placeholder`，与 `simpa` 同步。
 - 以避免当前 `chapter04`-`chapter40` 被误判为“已完成”；`goal run` 现在会继续下发书向化任务，支持你用 1-2 项批次交给 webapp 逐章重构。
 

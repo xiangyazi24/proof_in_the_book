@@ -76,18 +76,41 @@ count_true_stub() {
 
 count_placeholder() {
   local file="$1"
-  local c1 c2 c3 c4 c5 c6 c7 c8 c9
-  c1=$(rg -c "Nat\\.Infinite \\{p : ℕ // p.Prime\\}" "$file" || true)
-  c2=$(rg -c "Nat\\.Infinite \\{p : Nat // p.Prime\\}" "$file" || true)
-  c3=$(rg -c "Set\\.Infinite \\{p : ℕ // p.Prime\\}" "$file" || true)
-  c4=$(rg -c "Set\\.Infinite \\{p : Nat // p.Prime\\}" "$file" || true)
-  c5=$(rg -c "simpa using Nat\\.infinite_setOf_prime\\.to_subtype" "$file" || true)
-  c6=$(rg -c "exact Nat\\.infinite_setOf_prime\\.to_subtype" "$file" || true)
-  c7=$(rg -c -U "theorem [A-Za-z0-9_]+[^\\n]*:.*Infinite \\{p : ℕ // p\\.Prime\\} := by\\n\\s*apply Set\\.infinite_coe_iff\\.mp\\n\\s*exact Nat\\.infinite_setOf_prime" "$file" || true)
-  c8=$(rg -c -U "theorem [A-Za-z0-9_]+[^\\n]*:.*Infinite \\{p : Nat // p\\.Prime\\} := by\\n\\s*apply Set\\.infinite_coe_iff\\.mp\\n\\s*exact Nat\\.infinite_setOf_prime" "$file" || true)
-  c9=$(rg -c -U "theorem [A-Za-z0-9_]+[^\\n]*:.*Infinite \\{p : ℕ // p\\.Prime\\} := by\\n\\s*apply Set\\.infinite_coe_iff\\.mp\\n\\s*simpa using Nat\\.infinite_setOf_prime" "$file" || true)
-  local cnt=$((c1 + c2 + c3 + c4 + c5 + c6 + c7 + c8 + c9))
-  printf '%s\n' "$cnt"
+  awk '
+    function finalize() {
+      if (in_decl && has_infinite_stmt && has_skeleton) {
+        count++
+      }
+      in_decl = 0
+      has_infinite_stmt = 0
+      has_skeleton = 0
+    }
+    {
+      if ($0 ~ /^[[:space:]]*(theorem|lemma|example)[[:space:]]+/) {
+        finalize()
+        in_decl = 1
+      }
+      if (!in_decl) {
+        next
+      }
+
+      if ((index($0, "Infinite {p :") > 0 && index($0, "p.Prime") > 0) ||
+          (index($0, "Infinite {p : ℕ // p.Prime}") > 0) ||
+          (index($0, "Infinite {p : Nat // p.Prime}") > 0)) {
+        has_infinite_stmt = 1
+      }
+      if ((index($0, "apply Set.infinite_coe_iff.mp") > 0) ||
+          (index($0, "exact Nat.infinite_setOf_prime") > 0) ||
+          (index($0, "simpa using Nat.infinite_setOf_prime") > 0) ||
+          (index($0, "Nat.infinite_setOf_prime.to_subtype") > 0)) {
+        has_skeleton = 1
+      }
+    }
+    END {
+      finalize()
+      print count + 0
+    }
+  ' "$file"
 }
 
 chapter_file() {

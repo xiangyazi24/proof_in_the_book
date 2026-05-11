@@ -217,3 +217,6 @@ Please fill the following placeholders with full Lean proofs:
 
 ### Goal run for Chapter 05
 - chapter05
+
+### Goal run for Chapter 04
+- chapter04

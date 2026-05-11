@@ -1,6 +1,12 @@
 # Changelog
 
 ## 2026-05-11
+- 修正 `scripts/goal` 的占位统计：
+  - 将 `count_placeholder` 改为基于声明行文本匹配（`Infinite {p : ... // p.Prime}` + `Nat.infinite_setOf_prime`/`Set.infinite_coe_iff.mp`）避免正则误判。
+  - `bash scripts/goal check all` 由误报完成改为真实剩余态（当前仅 Chapter01、02、04 及 04–40 的 `chapterNN` 仍为占位）。
+  - 本轮按 `goal run --chapter 4 --max 2` 下发 `chapter04` 占位替换任务，任务已追踪进 `WebappTasks.md`。
+
+## 2026-05-11
 - 修复 `scripts/goal` 的 placeholder 审核逻辑：
   - 将 `apply Set.infinite_coe_iff.mp` + `exact Nat.infinite_setOf_prime` 这类机械骨架证明计入 placeholder。
   - 使 `bash scripts/goal check all` 不再把 Chapter04–40 的“默认填充”误判为完成。

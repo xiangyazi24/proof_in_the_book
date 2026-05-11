@@ -226,3 +226,12 @@ Please fill the following placeholders with full Lean proofs:
 
 ### Goal run for Chapter 04
 - chapter04
+
+### Chapter 04 - dm-codex (book-faithful rewrite request)
+- file: ProofsInTheBook/Chapter04.lean
+- theorem: chapter04
+- requirement: replace the current placeholder proof with a non-mechanical book-style proof term for the chapter's goal. Keep declaration unchanged.
+- preference:
+  - do not answer with `exact Nat.infinite_setOf_prime`, `simpa using Nat.infinite_setOf_prime`, or any direct single-line witness-reuse pattern.
+  - if needed, refactor by introducing local lemmas that are derivable from earlier book lemmas.
+  - return only Lean code for `chapter04` body so it can be applied directly.

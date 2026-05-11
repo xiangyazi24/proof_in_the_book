@@ -90,3 +90,9 @@ Please fill the following placeholders with full Lean proofs:
   - chapter03_binomials_coefficients_never_powers
   - chapter03
 
+
+### Channel sync fallback (window mismatch check, 2026-05-11)
+- sent_at: 2026-05-11 12:44:16 CDT
+- channel: q-series
+- task_id: efb5f8e0
+- reason: front-end currently reads q-series

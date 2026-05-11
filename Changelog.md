@@ -1,6 +1,12 @@
 # Changelog
 
 ## 2026-05-11
+- Rewrote `GOALS.md` into a full long-run `/goal` execution plan for all 40 chapters with explicit completion standards.
+- Added strict per-round constraints (`max 2` tasks, check-before-run, chapter-scoped completion gates, and required logging in `WebappTasks.md` + `Changelog.md`).
+- Replaced chapter-task inventory so current flow is 1) book-aligned semantic goals, 2) mechanical file updates, 3) commit/push traceability.
+- Marked M0/M1..M5 roadmap with concrete checkpoints and a recoverable restart path.
+
+## 2026-05-11
 - Re-grounded chapter 03 protocol to book-faithful goals:
   - GOALS now requires `chapter03` to be decomposed as `chapter03_sylvester` + `chapter03_binomials_coefficients_never_powers` before closing Chapter 03.
   - Added corresponding `WebappTasks.md` run entry asking for two concrete book-theorem tasks.

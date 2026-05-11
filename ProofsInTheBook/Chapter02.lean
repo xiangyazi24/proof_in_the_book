@@ -44,6 +44,7 @@ theorem chapter02_binomial_bound :
 -- Overall chapter marker.
 
 theorem chapter02 : Infinite {p : ℕ // p.Prime} := by
-  exact Nat.infinite_setOf_prime.to_subtype
+  apply Set.infinite_coe_iff.mp
+  exact Nat.infinite_setOf_prime
 
 end ProofsInTheBook.Chapter02

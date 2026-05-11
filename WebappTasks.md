@@ -271,3 +271,6 @@ Please fill the following placeholders with full Lean proofs:
 - request: provide a book-style proof body that does not directly collapse via `Set.infinite_coe_iff.mp` + `Nat.infinite_setOf_prime`.
 - Keep declaration unchanged; no helper axioms.
 - If no direct textbook lemma exists, include an explicit chain showing how chapter-04 sub-lemma assumptions imply infinitely many primes in the relevant representation framework.
+
+### Goal run for Chapter 04
+- chapter04

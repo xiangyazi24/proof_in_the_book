@@ -1,4 +1,10 @@
 ## 2026-05-11
+- 方向纠偏：Chapter01 只保留书式证明骨架，不再接收任何“直接收口”短证。
+  - `chapter01_euclid` 改回反设有限素数集、构造积 N、取 `N + 1` 素因子 `q`、推出 `q ∣ N` 与 `q ∣ N+1` 进而矛盾的结构，等待逐步补齐细节。
+  - `chapter01_fermat_coprime` 改回展开 Fermat 数互质证明（展开共因子整除差分、`2` 相关结论、与奇偶矛盾），不再调用 `Nat.coprime_fermatNumber_fermatNumber` 收口。
+  - 保持 `.proof_goals_state` 的 `current_chapter=1`，章节未标记完成，便于按任务分发给 webapp 与本地逐步实施。
+
+## 2026-05-11
 - Chapter01 milestone advanced: applied book-style `chapter01_euclid` proof from webapp task `c1d9d992` and marked chapter01 complete in `.proof_goals_state`.
 - Chapter02 follow-up: requested and accepted chapter02 proof tasks (`chapter02_bertrand`, `chapter02_landau_trick`) from webapp task `3cf9f173`.
 

@@ -311,3 +311,9 @@ Please fill the following placeholders with full Lean proofs:
 - Scope: do not provide full proofs yet; I will only implement mechanical parts after your task assignment.
 - Constraint: avoid placeholder style; prioritize continuity with book proofs.
 
+### Ask webapp retry: unify chapter planning
+- Current pending scope is Chapter01 (or next unresolved chapter if Chapter01 already assigned).
+- Please return exactly the next 1~2 concrete theorem names to work on, in dependency order, with 1-line reason for order.
+- If Chapter01 is still pending, prioritize chapter01_euclid then chapter01_fermat_coprime; otherwise list the actual next two unresolved theorem names in the same chapter.
+- Keep declaration names unchanged; no proof text yet.
+

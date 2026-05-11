@@ -1,6 +1,13 @@
 # Changelog
 
 ## 2026-05-11
+- Replaced the previous goal handover document with a strict full-book execution goal:
+  - 40-chapter ordered completion path (01–40).
+  - Explicit non-placeholder completion standards (`sorry` 和 `: True` 占位均不算完成).
+  - `/goal` 执行 loop with chapter-by-chapter check/mark/build requirements.
+  - Default 1–2 task per round discipline and communication constraints for `dm-codex`.
+
+## 2026-05-11
 - Initialized Lean scaffold for `proof_in_the_book`.
 - Added chapter skeleton files `ProofsInTheBook/Chapter01.lean` ... `ProofsInTheBook/Chapter40.lean`.
 - Added `ProofsInTheBook.lean` root import that re-exports all chapter modules.

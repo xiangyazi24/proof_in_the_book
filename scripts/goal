@@ -130,9 +130,26 @@ expected_tasks_for_chapter() {
     3)
       echo "chapter03_sylvester"
       echo "chapter03_binomials_coefficients_never_powers"
+      echo "chapter03"
+      ;;
+    1)
+      echo "chapter01_euclid"
+      echo "chapter01_fermat_coprime"
+      echo "chapter01_mersenne"
+      echo "chapter01_euler"
+      echo "chapter01_furstenberg"
+      echo "chapter01"
+      ;;
+    2)
+      echo "chapter02_bertrand"
+      echo "chapter02_landau_trick"
+      echo "chapter02_prime_product_bound"
+      echo "chapter02_legendre"
+      echo "chapter02_binomial_bound"
+      echo "chapter02"
       ;;
     *)
-      return 1
+      printf "chapter%02d\n" "$ch"
       ;;
   esac
 }
@@ -237,9 +254,19 @@ cmd_run() {
 
   if [[ "$chapter" == "3" && "$placeholder_count" -gt 0 ]]; then
     tasks=$(expected_tasks_for_chapter "$chapter" | head -n "$max")
+  elif [[ "$chapter" == "1" || "$chapter" == "2" || "$placeholder_count" -eq 0 ]]; then
+    tasks=$(chapter_task_list "$file" | head -n "$max")
+    if [[ -z "$tasks" ]]; then
+      tasks=$(expected_tasks_for_chapter "$chapter" | head -n "$max")
+    fi
+  else
+    tasks=$(chapter_task_list "$file" | head -n "$max")
   fi
   if [[ -z "$tasks" ]]; then
-    echo "No named theorems with pending placeholders/sorry found in chapter ${chapter}."
+    tasks=$(expected_tasks_for_chapter "$chapter" | head -n "$max")
+  fi
+  if [[ -z "$tasks" ]]; then
+    echo "No named theorem tasks found in chapter ${chapter}."
     exit 0
   fi
 

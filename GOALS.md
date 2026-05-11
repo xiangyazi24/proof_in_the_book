@@ -1,115 +1,108 @@
-# `/goal` 长期执行目标（全书 Lean formalization 重启版）
+# `/goal` 长期执行目标（全书 Lean 形式化）
 
-## 1. 目标定义（唯一）
+本文件是 `/goal` 脚本的“执行目标文件”，目标是把
+`ProofsInTheBook/` 的 40 章全部改为按书证明确切结构的 Lean 证明。
 
-把 `ProofsInTheBook/` 中 40 章改写为《Proofs from THE BOOK》对应章节的形式化版本：
+## 0. 约束与完成标准
 
-- 逐章采用书中的定理陈述（章节语义与书名对齐）。
-- 逐步写出书中的证明路径；不允许用与书结论不等价的“占位替换”收尾。
-- `/goal` 只处理书级证明任务，不处理流程管理之外的技巧性重构。
+- 只通过 `/goal` 检查结果决定章节完成（不接受手工口头确认）。
+- 每章在 `/goal check N` 的三项计数都必须为 0：
+  - `sorry`
+  - `true-stub`
+  - `placeholder`
+- 禁止以“替换命题本身”收束：
+  - 章节主命题不能直接写成 `Nat.Infinite {p : ℕ // p.Prime}` 作为结论收尾。
+  - `simpa using Nat.infinite_setOf_prime.to_subtype` 仅可作为辅助定理，不可作为书命题主结论。
+- 每个章节必须至少保留一条对应书命题主声明（如 `chapter03`）。
+- `/goal` 每轮只处理 **1–2 个未完成定理**。
+- 连续 3 次失败（同一轮 3 次）必须暂停并向我说明，必要时切到 extend/pro extend。
 
-## 2. 硬性完成标准（每章）
-
-一个章节在 `scripts/goal check N` 中必须满足：
-
-- `sorry = 0`
-- `true-stub = 0`
-- `placeholder = 0`
-
-并且该章必须包含与书证明链条一致的关键主命题与子命题定义。
-
-## 3. 禁止行为（硬规则）
-
-以下写法在目标定理层面一律不视为完成：
-
-- 目标语句直接或间接写成 `Nat.Infinite {p : ℕ // p.Prime}`。
-- 目标使用 `simpa using Nat.infinite_setOf_prime.to_subtype` 等“直接替换”收束。
-- `by` 块里无实质内容或以数学语义转译代替书上结论。
-
-可接受的 `Nat.infinite_setOf_prime` 用法：
-
-- 作为章节证明中的辅助 lemma。
-- 不得取代对应章节的书级主定理。
-
-## 4. `/goal` 流程（每轮固定）
-
-每一轮只处理 1–2 个任务，全部依照以下顺序执行：
+## 1. `/goal` 固定执行流程
 
 1. `bash scripts/goal run --chapter N --max 2`
-2. 对每个任务写 Lean 证明代码。
-3. `bash scripts/goal check N`
-4. 通过后：`bash scripts/goal mark N done`
-5. 及时提交并 push。
+2. 对 Webapp 回传的目标按“声明不变、替换证明体”实现。
+3. 我方本地把回传结果应用后，必要时做最小结构性清理。
+4. `bash scripts/goal check N`，确认 0/0/0 后再继续。
+5. `bash scripts/goal mark N done`。
+6. 每完成一个 `chapter` 都提交并 push，确保 Webapp 可见。
+7. 每次阶段转换后执行 `bash scripts/goal report`，我会在对话中记录里程碑。
 
-失败规则：
+## 2. 阶段计划
 
-- 当单轮任务第三次连续未过检查，向我报告并申请切 `extend` 或 `pro extend`。
-- 任务失败时先停止该轮，不能跳题。
+- 阶段 A：初始化与第一轮任务
+  - 目标：启动 `goal`，确认 01–03 的书目标命名和提交流程稳定。
+- 阶段 B：第 1 段（01–10）
+  - 目标：完成并通过 01–10 的 check。
+- 阶段 C：第 2 段（11–20）
+- 阶段 D：第 3 段（21–30）
+- 阶段 E：第 4 段（31–40）
+- 阶段 F：全书收敛（`check all` = `DONE:40/40`）。
 
-## 5. 书章目标清单（40 章）
+## 3. 全书任务清单（固定执行顺序）
 
-### Part 1：01–10
-- 01: `chapter01_euclid`, `chapter01_fermat_coprime`, `chapter01_mersenne`, `chapter01_euler`, `chapter01_furstenberg`, `chapter01`
-- 02: `chapter02_bertrand`, `chapter02_landau_trick`, `chapter02_prime_product_bound`, `chapter02_legendre`, `chapter02_binomial_bound`, `chapter02`
-- 03: `chapter03_sylvester`, `chapter03_binomials_coefficients_never_powers`, `chapter03`
-- 04: `chapter04`
-- 05: `chapter05`
-- 06: `chapter06`
-- 07: `chapter07`
-- 08: `chapter08`
-- 09: `chapter09`
-- 10: `chapter10`
+- Chapter 01 `chapter01_euclid`
+- Chapter 01 `chapter01_fermat_coprime`
+- Chapter 01 `chapter01_mersenne`
+- Chapter 01 `chapter01_euler`
+- Chapter 01 `chapter01_furstenberg`
+- Chapter 01 `chapter01`
+- Chapter 02 `chapter02_bertrand`
+- Chapter 02 `chapter02_landau_trick`
+- Chapter 02 `chapter02_prime_product_bound`
+- Chapter 02 `chapter02_legendre`
+- Chapter 02 `chapter02_binomial_bound`
+- Chapter 02 `chapter02`
+- Chapter 03 `chapter03_sylvester`
+- Chapter 03 `chapter03_binomials_coefficients_never_powers`
+- Chapter 03 `chapter03`
+- Chapter 04 `chapter04`
+- Chapter 05 `chapter05`
+- Chapter 06 `chapter06`
+- Chapter 07 `chapter07`
+- Chapter 08 `chapter08`
+- Chapter 09 `chapter09`
+- Chapter 10 `chapter10`
+- Chapter 11 `chapter11`
+- Chapter 12 `chapter12`
+- Chapter 13 `chapter13`
+- Chapter 14 `chapter14`
+- Chapter 15 `chapter15`
+- Chapter 16 `chapter16`
+- Chapter 17 `chapter17`
+- Chapter 18 `chapter18`
+- Chapter 19 `chapter19`
+- Chapter 20 `chapter20`
+- Chapter 21 `chapter21`
+- Chapter 22 `chapter22`
+- Chapter 23 `chapter23`
+- Chapter 24 `chapter24`
+- Chapter 25 `chapter25`
+- Chapter 26 `chapter26`
+- Chapter 27 `chapter27`
+- Chapter 28 `chapter28`
+- Chapter 29 `chapter29`
+- Chapter 30 `chapter30`
+- Chapter 31 `chapter31`
+- Chapter 32 `chapter32`
+- Chapter 33 `chapter33`
+- Chapter 34 `chapter34`
+- Chapter 35 `chapter35`
+- Chapter 36 `chapter36`
+- Chapter 37 `chapter37`
+- Chapter 38 `chapter38`
+- Chapter 39 `chapter39`
+- Chapter 40 `chapter40`
 
-### Part 2：11–20
-- 11: `chapter11`
-- 12: `chapter12`
-- 13: `chapter13`
-- 14: `chapter14`
-- 15: `chapter15`
-- 16: `chapter16`
-- 17: `chapter17`
-- 18: `chapter18`
-- 19: `chapter19`
-- 20: `chapter20`
+## 4. 里程碑与验收
 
-### Part 3：21–30
-- 21: `chapter21`
-- 22: `chapter22`
-- 23: `chapter23`
-- 24: `chapter24`
-- 25: `chapter25`
-- 26: `chapter26`
-- 27: `chapter27`
-- 28: `chapter28`
-- 29: `chapter29`
-- 30: `chapter30`
-
-### Part 4：31–40
-- 31: `chapter31`
-- 32: `chapter32`
-- 33: `chapter33`
-- 34: `chapter34`
-- 35: `chapter35`
-- 36: `chapter36`
-- 37: `chapter37`
-- 38: `chapter38`
-- 39: `chapter39`
-- 40: `chapter40`
-
-每个章节必须至少包含一个“书名对应的命题主声明”。
-
-## 6. 里程碑（硬约束）
-
-- M0：第一轮后 `goal` 只保留书命题，不包含占位证明。
-- M1：01–10 全部 `check` 无警告。
-- M2：11–20 全部 `check` 无警告。
-- M3：21–30 全部 `check` 无警告。
-- M4：31–40 全部 `check` 无警告。
+- M0：`/goal run` 在 01 起不再下发“直接 `simpa using Nat.infinite_setOf_prime.to_subtype` 的替代任务。
+- M1：01–10 全部 `check` 通过。
+- M2：11–20 全部 `check` 通过。
+- M3：21–30 全部 `check` 通过。
+- M4：31–40 全部 `check` 通过。
 - M5：`bash scripts/goal check all` 显示 `DONE:40/40`。
 
-里程碑时执行 `bash scripts/goal report`，输出给我并记录。
-
-## 7. 章节到书标题映射（执行对齐）
+## 5. 章节与书标题对照（仅用于任务语义）
 
 - Chapter 01: Six proofs of the infinity of primes
 - Chapter 02: Bertrand's postulate

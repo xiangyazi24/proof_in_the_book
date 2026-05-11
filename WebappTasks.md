@@ -122,3 +122,67 @@ Please fill the following placeholders with full Lean proofs:
 
 ### Goal run for Chapter 04
 - chapter04
+
+### Goal run for Chapter 04
+- chapter04
+
+### DM-codex follow-up (complete repo context, 2026-05-11)
+- channel: dm-codex
+- commit: 614512b
+- repo: /Users/huangx/repos/proof_in_the_book
+- message: We have an issue where the bridge previously used wrong window names. Please treat this task as authoritative.
+- project files in repo:
+  - ProofsInTheBook/Chapter01.lean
+  - ProofsInTheBook/Chapter02.lean
+  - ProofsInTheBook/Chapter03.lean
+  - ProofsInTheBook/Chapter04.lean
+  - ProofsInTheBook/Chapter05.lean
+  - ProofsInTheBook/Chapter06.lean
+  - ProofsInTheBook/Chapter07.lean
+  - ProofsInTheBook/Chapter08.lean
+  - ProofsInTheBook/Chapter09.lean
+  - ProofsInTheBook/Chapter10.lean
+  - ProofsInTheBook/Chapter11.lean
+  - ProofsInTheBook/Chapter12.lean
+  - ProofsInTheBook/Chapter13.lean
+  - ProofsInTheBook/Chapter14.lean
+  - ProofsInTheBook/Chapter15.lean
+  - ProofsInTheBook/Chapter16.lean
+  - ProofsInTheBook/Chapter17.lean
+  - ProofsInTheBook/Chapter18.lean
+  - ProofsInTheBook/Chapter19.lean
+  - ProofsInTheBook/Chapter20.lean
+  - ProofsInTheBook/Chapter21.lean
+  - ProofsInTheBook/Chapter22.lean
+  - ProofsInTheBook/Chapter23.lean
+  - ProofsInTheBook/Chapter24.lean
+  - ProofsInTheBook/Chapter25.lean
+  - ProofsInTheBook/Chapter26.lean
+  - ProofsInTheBook/Chapter27.lean
+  - ProofsInTheBook/Chapter28.lean
+  - ProofsInTheBook/Chapter29.lean
+  - ProofsInTheBook/Chapter30.lean
+  - ProofsInTheBook/Chapter31.lean
+  - ProofsInTheBook/Chapter32.lean
+  - ProofsInTheBook/Chapter33.lean
+  - ProofsInTheBook/Chapter34.lean
+  - ProofsInTheBook/Chapter35.lean
+  - ProofsInTheBook/Chapter36.lean
+  - ProofsInTheBook/Chapter37.lean
+  - ProofsInTheBook/Chapter38.lean
+  - ProofsInTheBook/Chapter39.lean
+  - ProofsInTheBook/Chapter40.lean
+  - ProofsInTheBook.lean
+  - GOALS.md
+  - FormalizationPlan.md
+  - Changelog.md
+  - COMMUNICATION_PROTOCOL.md
+  - lakefile.lean
+  - lean-toolchain
+  - lake-manifest.json
+  - scripts/goal
+- current next task for book-faithful workflow:
+  - file: ProofsInTheBook/Chapter04.lean
+  - theorem: chapter04
+  - goal: replace placeholder proof only; keep declaration unchanged.
+  - branch: use previous book-style structure; if no direct theorem exists, return a direct constructive proof term matching the existing statement.

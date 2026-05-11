@@ -329,3 +329,11 @@ Please fill the following placeholders with full Lean proofs:
   - chapter01_euclid: scripts/goal 固定顺序第 1 项，作为 Chapter01 基础无限素数证明，后续 chapter01 收束依赖它
   - chapter01_fermat_coprime: scripts/goal 固定顺序第 2 项，第二个书上方向，独立于 Euclid，且应在 chapter01 前完成
 
+### Webapp request for concrete proofs (next two tasks)
+- task_id: 71545eb9
+- channel: dm-codex
+- file: ProofsInTheBook/Chapter01.lean
+- theorems: chapter01_euclid, chapter01_fermat_coprime
+- constraints: keep declaration unchanged; full proof body only; avoid trivial/placeholder closure
+- status: sent
+

@@ -76,13 +76,14 @@ count_true_stub() {
 
 count_placeholder() {
   local file="$1"
-  local c1 c2 c3 c4 c5
+  local c1 c2 c3 c4 c5 c6
   c1=$(rg -c "Nat\\.Infinite \\{p : ℕ // p.Prime\\}" "$file")
   c2=$(rg -c "Nat\\.Infinite \\{p : Nat // p.Prime\\}" "$file")
   c3=$(rg -c "Set\\.Infinite \\{p : ℕ // p.Prime\\}" "$file")
   c4=$(rg -c "Set\\.Infinite \\{p : Nat // p.Prime\\}" "$file")
   c5=$(rg -c "simpa using Nat\\.infinite_setOf_prime\\.to_subtype" "$file")
-  local cnt=$((c1 + c2 + c3 + c4 + c5))
+  c6=$(rg -c "exact Nat\\.infinite_setOf_prime\\.to_subtype" "$file")
+  local cnt=$((c1 + c2 + c3 + c4 + c5 + c6))
   printf '%s\n' "$cnt"
 }
 
@@ -117,7 +118,8 @@ chapter_task_list() {
        index($0, "Nat.Infinite {p : Nat // p.Prime}") > 0 ||
        index($0, "Set.Infinite {p : ℕ // p.Prime}") > 0 ||
        index($0, "Set.Infinite {p : Nat // p.Prime}") > 0 ||
-       index($0, "simpa using Nat.infinite_setOf_prime.to_subtype") > 0) {
+      index($0, "simpa using Nat.infinite_setOf_prime.to_subtype") > 0 ||
+      index($0, "exact Nat.infinite_setOf_prime.to_subtype") > 0) {
       print cur
       done[cur]=1
     }
@@ -281,6 +283,10 @@ cmd_run() {
     elif rg -q "theorem ${t}[[:space:]]*:\\s*.*Set\\.Infinite \\{p : ℕ // p.Prime\\}" "$file"; then
       echo "- [ ] Replace placeholder for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
     elif rg -q "theorem ${t}[[:space:]]*:\\s*.*Set\\.Infinite \\{p : Nat // p.Prime\\}" "$file"; then
+      echo "- [ ] Replace placeholder for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
+    elif rg -q "theorem ${t}[[:space:]]*:\\s*.*simpa using Nat\\.infinite_setOf_prime\\.to_subtype" "$file"; then
+      echo "- [ ] Replace placeholder for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
+    elif rg -q "theorem ${t}[[:space:]]*:\\s*.*exact Nat\\.infinite_setOf_prime\\.to_subtype" "$file"; then
       echo "- [ ] Replace placeholder for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
     else
       echo "- [ ] Replace \`sorry\` for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"

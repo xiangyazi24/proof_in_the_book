@@ -1,6 +1,10 @@
 # Changelog
 
 ## 2026-05-11
+- 更新 `scripts/goal` 占位检测：把 `exact Nat.infinite_setOf_prime.to_subtype` 也计入 `placeholder`，与 `simpa` 同步。
+- 以避免当前 `chapter04`-`chapter40` 被误判为“已完成”；`goal run` 现在会继续下发书向化任务，支持你用 1-2 项批次交给 webapp 逐章重构。
+
+## 2026-05-11
 - 重写 `GOALS.md` 为“重启版完整长期目标”：明确禁止语义占位替代、分阶段里程碑、40 章书-命题对齐清单、以及每轮 `/goal` 1–2 项执行约束。
 - 明确约束：所有章节必须按书证明路径逐步重写，`scripts/goal check` 的三项指标（`sorry`/`true-stub`/`placeholder`）同时为 0 才允许 `mark`。
 - 新增章节-书名对照表，作为后续 `/goal` 任务验收与人工复核依据。

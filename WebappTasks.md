@@ -343,3 +343,26 @@ Please fill the following placeholders with full Lean proofs:
 - answer: 'leanby  apply Set.infinite_coe_iff.mp  exact Nat.infinite_setOf_prime; intro m n hmn  exact Nat.coprime_fermatNumber_fermatNumber hmn'
 - assessment: not acceptable (placeholder-style / likely invalid Lean body formatting)
 
+### Chapter01 euclid applied from webapp response
+- task_id: c1d9d992
+- result: proof body inserted for `ProofsInTheBook/Chapter01.lean` theorem `chapter01_euclid` (non-placeholder, Euclid-style finite-prime avoidance proof)
+- action: chapter01 marked done after goal check
+
+### Chapter02 planning request sent
+- task_id: 8a82b90c
+- asked for next two tasks: chapter02_bertrand, chapter02_landau_trick
+- status: sent
+
+### Chapter02 response (tasks) from dm-codex
+- task_id: 8a82b90c
+- answer: `chapter02_bertrand`, `chapter02_landau_trick`
+- status: confirmed dependency order
+
+### Chapter02 proof request completed
+- task_id: 3cf9f173
+- result: proof bodies accepted:
+  - `chapter02_bertrand`: `by intro n hn0; exact Nat.exists_prime_lt_and_le_two_mul n hn0`
+  - `chapter02_landau_trick`: `by intro n hn; exact Nat.four_pow_lt_mul_centralBinom n hn`
+
+### Changelog
+- chapter01:  proof replaced via webapp-supplied body and chapter01 milestone moved to done. Webapp requests for chapter02 are next.

@@ -1,4 +1,7 @@
-# Changelog
+## 2026-05-11
+- Chapter01 milestone advanced: applied book-style `chapter01_euclid` proof from webapp task `c1d9d992` and marked chapter01 complete in `.proof_goals_state`.
+- Chapter02 follow-up: requested and accepted chapter02 proof tasks (`chapter02_bertrand`, `chapter02_landau_trick`) from webapp task `3cf9f173`.
+
 
 ## 2026-05-11
 - 修正 `scripts/goal` 的占位统计：

@@ -8,8 +8,22 @@ Chapter 1: Six proofs of the infinity of primes.
 -/
 
 theorem chapter01_euclid : Infinite {p : ℕ // p.Prime} := by
-  apply Set.infinite_coe_iff.mp
-  exact Nat.infinite_setOf_prime
+  classical
+  refine infinite_of_forall_exists_gt ?_
+  intro q
+  let N : ℕ := q.val.factorial + 1
+  have hNne : N ≠ 1 := by
+    dsimp [N]
+    exact Nat.succ_ne_zero q.val.factorial
+  obtain ⟨p, hp, hpdvd⟩ := Nat.exists_prime_and_dvd hNne
+  refine ⟨⟨p, hp⟩, ?_⟩
+  dsimp
+  by_contra hle
+  have hp_le_q : p ≤ q.val := hle
+  have hpdvd_fact : p ∣ q.val.factorial := Nat.dvd_factorial hp.pos hp_le_q
+  have hpdvd_one : p ∣ 1 := by
+    exact (Nat.dvd_add_iff_right hpdvd_fact).2 hpdvd
+  exact hp.not_dvd_one hpdvd_one
 
 /--
 Second proof via Fermat numbers.

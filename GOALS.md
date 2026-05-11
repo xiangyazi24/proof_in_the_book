@@ -1,115 +1,100 @@
-# /goal 长期执行目标（Proofs in THE BOOK 全书 Lean 形式化）
+# `/goal` 长期执行目标（全书 Lean 形式化）
 
-## 1. 任务定义（唯一）
+## 1. 任务总目标
 
-目标是从 `proofs_in_the_book.pdf` 的章节顺序出发，逐章把 `ProofsInTheBook/Chapter01.lean` 到
-`ProofsInTheBook/Chapter40.lean` 完成为“可复核的书内证明实现”。
+在 `ProofsInTheBook/` 中把《Proofs from THE BOOK》1–40 章按书中的证明步骤完整写成 Lean。目标是：每章都用“书的命题”与“书的证明结构”替换占位，每章最终可被 `/goal` 体系判定完成并通过人工语义审查。
 
-核心目标：
-- 每个章内定理名保持不变；
-- 声明（statement）与书中对应定理等价，不得改为统一占位命题；
-- 证明路径必须可追踪到书中的关键步骤；
-- 每次提交均可复现并可回溯到 `Changelog.md` 与 `WebappTasks.md`。
+## 2. 完成定义（Goal-Complete）
 
-## 2. 不可违规项（自动检查 + 人工复核）
+一章 `N` 判定完成时必须同时满足：
+- `bash scripts/goal check N` 显示 `sorry=0`、`true-stub=0`、`placeholder=0`。
+- 该章不出现“语义迁移式替代”，即：当前声明语义不能用“无限质数”这类通用命题替代书中目标。
+- 至少有 1 段注释说明本章对应书中的关键分解（反证、构造、界估计、归纳、组合计数、几何变换之一）。
+- `bash scripts/goal mark N done` 后立即提交并 push，且在 `WebappTasks.md` 与 `Changelog.md` 记录本轮输入/输出。
 
-- 禁止任何形式的 `sorry`、`admit`、`by sorry`。
-- 禁止使用 `theorem ... : True := by ...` 作为正式完成。
-- 禁止把不同章节改写为同一结论（例如都改成“无限多个素数”）。
-- 禁止改变证明目标以避开困难（如仅改定理声明）。
-- 每次只与 webapp 交换 1~2 个定理任务，避免一次堆积过多。
+## 3. 强制流程（不可变）
 
-`bash scripts/goal check N` 为“自动门槛”；最终完成还要人工复核 statement 语义。
+- `/goal run --chapter N --max 2` 的输出即为本轮要解决的任务集，单轮仅 1–2 个定理。
+- `bash scripts/goal run` 之外不改本轮外的文件；不要求的文件禁止改动。
+- `bash scripts/goal check N` 是每轮入场门槛，失败则暂停当前轮。
+- 单轮失败三次及以上，调用你决定是否从 `instant` 切到 `extend` 或 `pro extend`。
+- 任何 `commit` 必须包含本轮 `goal` 任务文件、`WebappTasks.md`、`Changelog.md` 对应条目。
 
-## 3. 章级完成标准（`Goal-Complete`）
+## 4. 全书路线
 
-- 本章所有定理都不含 `sorry`、不含 `theorem ... : True`。
-- 本章无 `Nat.Infinite {p : ℕ // p.Prime}` 或 `Set.Infinite {p : ℕ // p.Prime}` 的机械占位。
-- 目标定理（`chapterXX*`）的证明体必须与书中结论关联：可见到对应关键引理、构造或不等式。
-- `/goal` 操作记录（`WebappTasks.md`）要有这一章本轮任务与提交时间。
+### M0 统一对齐（当前阶段）
+- 先对每章的定理语义做一次对齐，清理掉 `chapter03` 以外的 `Nat.Infinite` 迁移式占位。
+- 目标是建立“书命题优先、结构可读”的统一基线。
 
-## 4. `/goal` 运行规范（固定）
+### M1 数论基础（01–10）
+- 01–02 的分拆定理先完善，再以 03 继续补齐二项式部分子命题。
+- 04–10 每章从 `chapterXX` 单定理转为“书命题子目标 + 主定理”结构。
+
+### M2 核心代数几何与离散（11–20）
+- 每章保留原有章节声明，并在主定理下补齐书中的中间命题或构造性子引理。
+
+### M3 组合图论与概率入口（21–30）
+- 每章都保留书目标的原始方向，避免“借助其他命题直接 exact”。
+
+### M4 收口（31–40）
+- 进行全书语义抽检：逐章比对书名与定理方向，查重复命题复用、同名重用、弱化证明。
+
+### M5 全书闭环
+- `bash scripts/goal check all` 为 `DONE:40/40`，且手工复核确认每章都按书目标。
+
+## 5. 章序与目标文件
+
+1. `ProofsInTheBook/Chapter01.lean`：`chapter01_euclid`, `chapter01_fermat_coprime`, `chapter01_mersenne`, `chapter01_euler`, `chapter01_furstenberg`, `chapter01`
+2. `ProofsInTheBook/Chapter02.lean`：`chapter02_bertrand`, `chapter02_landau_trick`, `chapter02_prime_product_bound`, `chapter02_legendre`, `chapter02_binomial_bound`, `chapter02`
+3. `ProofsInTheBook/Chapter03.lean`：`chapter03_sylvester`（Sylvester 证明风格）、`chapter03_binomial_never_power`（或对应书中 near-power 定理的 Lean 命名）、`chapter03`
+4. `ProofsInTheBook/Chapter04.lean`：`chapter04`
+5. `ProofsInTheBook/Chapter05.lean`：`chapter05`
+6. `ProofsInTheBook/Chapter06.lean`：`chapter06`
+7. `ProofsInTheBook/Chapter07.lean`：`chapter07`
+8. `ProofsInTheBook/Chapter08.lean`：`chapter08`
+9. `ProofsInTheBook/Chapter09.lean`：`chapter09`
+10. `ProofsInTheBook/Chapter10.lean`：`chapter10`
+11. `ProofsInTheBook/Chapter11.lean`：`chapter11`
+12. `ProofsInTheBook/Chapter12.lean`：`chapter12`
+13. `ProofsInTheBook/Chapter13.lean`：`chapter13`
+14. `ProofsInTheBook/Chapter14.lean`：`chapter14`
+15. `ProofsInTheBook/Chapter15.lean`：`chapter15`
+16. `ProofsInTheBook/Chapter16.lean`：`chapter16`
+17. `ProofsInTheBook/Chapter17.lean`：`chapter17`
+18. `ProofsInTheBook/Chapter18.lean`：`chapter18`
+19. `ProofsInTheBook/Chapter19.lean`：`chapter19`
+20. `ProofsInTheBook/Chapter20.lean`：`chapter20`
+21. `ProofsInTheBook/Chapter21.lean`：`chapter21`
+22. `ProofsInTheBook/Chapter22.lean`：`chapter22`
+23. `ProofsInTheBook/Chapter23.lean`：`chapter23`
+24. `ProofsInTheBook/Chapter24.lean`：`chapter24`
+25. `ProofsInTheBook/Chapter25.lean`：`chapter25`
+26. `ProofsInTheBook/Chapter26.lean`：`chapter26`
+27. `ProofsInTheBook/Chapter27.lean`：`chapter27`
+28. `ProofsInTheBook/Chapter28.lean`：`chapter28`
+29. `ProofsInTheBook/Chapter29.lean`：`chapter29`
+30. `ProofsInTheBook/Chapter30.lean`：`chapter30`
+31. `ProofsInTheBook/Chapter31.lean`：`chapter31`
+32. `ProofsInTheBook/Chapter32.lean`：`chapter32`
+33. `ProofsInTheBook/Chapter33.lean`：`chapter33`
+34. `ProofsInTheBook/Chapter34.lean`：`chapter34`
+35. `ProofsInTheBook/Chapter35.lean`：`chapter35`
+36. `ProofsInTheBook/Chapter36.lean`：`chapter36`
+37. `ProofsInTheBook/Chapter37.lean`：`chapter37`
+38. `ProofsInTheBook/Chapter38.lean`：`chapter38`
+39. `ProofsInTheBook/Chapter39.lean`：`chapter39`
+40. `ProofsInTheBook/Chapter40.lean`：`chapter40`
+
+## 6. 里程碑验收与命令
 
 ```bash
-bash scripts/goal next                      # 查下一待处理章节
-bash scripts/goal run --chapter N --max 2    # 每轮最多 2 个定理
-bash scripts/goal check N                    # 本地占位扫描
-bash scripts/goal mark N done               # 仅在本轮全部落地且核验后
-bash scripts/goal report                     # 周期报告
+bash scripts/goal next
+bash scripts/goal run --chapter N --max 2
+bash scripts/goal check N
+bash scripts/goal mark N done
+bash scripts/goal report
 ```
 
-执行顺序：
-1. 先运行 `next`，确认章节；再 `run` 发题给 webapp。
-2. 在 webapp 回答后，逐条改定理体，不改定理名和类型。
-3. 先补齐改动，更新 `WebappTasks.md`，再 `git commit`，再 `git push`。
-4. `check` 通过后再 `mark N done`。
-
-## 5. 长程规划
-
-Goal-01：章表重定向  
-- 目标：确认所有章节定理名和声明与书对应，去除占位语义（当前机械 `simpa` 仍视为待完成）。
-- 成功标准：`bash scripts/goal check all` 可显示所有待完成章，但每章都有待办条目。
-
-Goal-02：01–10 章骨架到书式证明  
-- 目标：完成前 10 章的 16 个定理。
-
-Goal-03：11–20 章  
-- 目标：完成 10 章，逐章核对书中的关键构造/引理。
-
-Goal-04：21–30 章  
-- 目标：完成 10 章，保证图论与计数论章节证明链条不变形。
-
-Goal-05：31–40 章  
-- 目标：完成 10 章，完成最终统一审计。
-
-Goal-06：全书语义审计与交付  
-- 目标：逐章比对 `book proof` 语义；检查是否出现语义复用错误。
-
-## 6. 章节任务列表（按顺序）
-
-01：`chapter01_euclid`、`chapter01_fermat_coprime`、`chapter01_mersenne`、`chapter01_euler`、`chapter01_furstenberg`、`chapter01`  
-02：`chapter02_bertrand`、`chapter02_landau_trick`、`chapter02_prime_product_bound`、`chapter02_legendre`、`chapter02_binomial_bound`、`chapter02`  
-03：`chapter03`  
-04：`chapter04`  
-05：`chapter05`  
-06：`chapter06`  
-07：`chapter07`  
-08：`chapter08`  
-09：`chapter09`  
-10：`chapter10`  
-11：`chapter11`  
-12：`chapter12`  
-13：`chapter13`  
-14：`chapter14`  
-15：`chapter15`  
-16：`chapter16`  
-17：`chapter17`  
-18：`chapter18`  
-19：`chapter19`  
-20：`chapter20`  
-21：`chapter21`  
-22：`chapter22`  
-23：`chapter23`  
-24：`chapter24`  
-25：`chapter25`  
-26：`chapter26`  
-27：`chapter27`  
-28：`chapter28`  
-29：`chapter29`  
-30：`chapter30`  
-31：`chapter31`  
-32：`chapter32`  
-33：`chapter33`  
-34：`chapter34`  
-35：`chapter35`  
-36：`chapter36`  
-37：`chapter37`  
-38：`chapter38`  
-39：`chapter39`  
-40：`chapter40`  
-
-## 7. 风险与应对
-
-- webapp 未返回/回答不可验证：重发该轮任务（不改变其他章节）；必要时切换到 extend 或 pro extend。
-- 出现“看起来全书通过 check”但语义重复：该轮立即回滚并返回书内证明路径。
-- 出现证明退化：需新增 `lemma`/注释，记录“原书关键语义”与“替代引理链路”。
+- `next` 只用于选择待做章节。
+- `run` 负责产生一问一答的任务最小包。
+- `mark` 前后必须提交并 push。

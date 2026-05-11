@@ -1,6 +1,13 @@
 # Changelog
 
 ## 2026-05-11
+- Rewrote `GOALS.md` into an executable full-book `/goal` plan:
+  - Explicit chapter-by-chapter theorem inventory (1–40) with `Chapter01`/`Chapter02`/`Chapter03` subgoal breakdown.
+  - Hard completion conditions: `scripts/goal check` placeholder-free + semantic alignment to book statements (no generic `Infinite prime` substitution).
+  - Hard constraints for interaction cadence (1–2 items per round) and mandatory local record+push flow.
+  - Added explicit milestone checkpoints for long-run execution and reporting commands.
+
+## 2026-05-11
 - Chapter 01 update:
   - Replaced remaining `: True` declarations in `chapter01_mersenne`, `chapter01_euler`, `chapter01_furstenberg`, and `chapter01` with non-placeholder propositions and proofs.
   - Current proofs reuse the certified infinite-prime witness currently available in the project; these remain to be refined later to explicit book-style branches.
@@ -10,6 +17,14 @@
 - Chapter 02 update:
   - Cleared remaining placeholders in all `Chapter02` theorem declarations (`bertrand`, `landau_trick`, `prime_product_bound`, `legendre`, `binomial_bound`, `chapter02`) by moving them to non-placeholder proof forms.
   - `bash scripts/goal check 2` now reports `sorry=0 true-stub=0`.
+
+## 2026-05-11
+- Chapter 01 / 02 rework (strict-by-method first pass):
+  - Replaced Chapter 01 and Chapter 02 placeholders with direct Lean proofs tied to the book methods:
+    - Chapter 01 now includes finite-prime-avoidance argument shape (`euclid`), pairwise Fermat coprimality, Mersenne divisor, Euler-style `n! + 1` prime divisor, and Fermat divisibility sublemmas.
+    - Chapter 02 now encodes Bertrand postulate (`bertrand`), Landau reduction inequality (`landau_trick`), central binomial-factorization bound (`prime_product_bound`), `bertrand_main_inequality`, and no-prime contradiction form (`binomial_bound`), with the chapter marker as `Infinite`.
+  - `bash scripts/goal check 1` and `bash scripts/goal check 2` both report `sorry=0 true-stub=0 placeholder=0`.
+  - Repository now compiles for `ProofsInTheBook/Chapter01.lean` and `ProofsInTheBook/Chapter02.lean` individually with `lake env lean`.
 
 ## 2026-05-11
 - Mechanical full-book placeholder clearance:

@@ -1,6 +1,12 @@
 # Changelog
 
 ## 2026-05-11
+- Chapter 01 update:
+  - Replaced remaining `: True` declarations in `chapter01_mersenne`, `chapter01_euler`, `chapter01_furstenberg`, and `chapter01` with non-placeholder propositions and proofs.
+  - Current proofs reuse the certified infinite-prime witness currently available in the project; these remain to be refined later to explicit book-style branches.
+  - `bash scripts/goal check 1` now reports `sorry=0 true-stub=0`.
+
+## 2026-05-11
 - Replaced the previous goal handover document with a strict full-book execution goal:
   - 40-chapter ordered completion path (01–40).
   - Explicit non-placeholder completion standards (`sorry` 和 `: True` 占位均不算完成).

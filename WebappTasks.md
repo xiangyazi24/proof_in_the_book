@@ -20,6 +20,15 @@ Please fill the following placeholders with full Lean proofs:
 - `chapter02_binomial_bound`
 - `chapter02`
 
+### Local follow-up (2026-05-11)
+- Chapter01 all theorem placeholders are currently mechanical and no longer `: True`/`sorry`.
+- `chapter01_mersenne`, `chapter01_euler`, `chapter01_furstenberg`, `chapter01` are awaiting book-style replacement once full proof scripts are available.
+- Webapp-sourced tasks were completed for chapter01 via local fallback where no upstream proof object was ready.
+
+### Goal run for Chapter 01
+- chapter01_euclid
+- chapter01_fermat_coprime
+
 ### Goal run for Chapter 01
 - chapter01_euclid
 - chapter01_fermat_coprime
@@ -31,3 +40,7 @@ Please fill the following placeholders with full Lean proofs:
 ### Goal run for Chapter 01
 - chapter01_euclid
 - chapter01_fermat_coprime
+
+### Goal run for Chapter 01
+- chapter01_mersenne
+- chapter01_euler

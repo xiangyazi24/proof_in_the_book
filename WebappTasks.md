@@ -251,3 +251,7 @@ Please fill the following placeholders with full Lean proofs:
 ### Goal run for Chapter 02
 - chapter02_bertrand
 - chapter02_landau_trick
+
+### Goal run for Chapter 03
+- chapter03_sylvester
+- chapter03_binomials_coefficients_never_powers

@@ -15,7 +15,7 @@ not among p1,...,pr.
 -/
 
 theorem chapter01_euclid : True := by
-  trivial
+  sorry
 
 /--
 Second proof via Fermat numbers.
@@ -23,7 +23,7 @@ Show that Fermat numbers are pairwise coprime, implying infinitely many primes.
 -/
 
 theorem chapter01_fermat_coprime : True := by
-  trivial
+  sorry
 
 /--
 Third proof via Mersenne numbers.
@@ -31,7 +31,7 @@ If p is the largest prime, any prime divisor q of 2^p - 1 satisfies q > p.
 -/
 
 theorem chapter01_mersenne : True := by
-  trivial
+  sorry
 
 /--
 Fourth proof via integration.
@@ -39,20 +39,20 @@ Use bounds on product decompositions of `binom` to show primes up to x contribut
 -/
 
 theorem chapter01_euler : True := by
-  trivial
+  sorry
 
 /--
 Fifth proof (Furstenberg style) via topology and residue classes.
 -/
 
 theorem chapter01_furstenberg : True := by
-  trivial
+  sorry
 
 /--
 Overall chapter marker.
 -/
 
 theorem chapter01 : True := by
-  aesop
+  sorry
 
 end ProofsInTheBook.Chapter01

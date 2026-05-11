@@ -58,7 +58,7 @@ state_set() {
 count_sorry() {
   local file="$1"
   local cnt
-  cnt=$(rg -n "^[[:space:]]*sorry([[:space:]]+|$)" "$file" || true | wc -l | tr -d ' ')
+  cnt=$(awk '/^[[:space:]]*sorry([[:space:]]|$)/{c++} END {print c+0}' "$file")
   printf '%s\n' "$cnt"
 }
 

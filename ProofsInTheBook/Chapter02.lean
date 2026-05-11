@@ -14,7 +14,7 @@ For every n ≥ 1 there exists a prime p with n < p ≤ 2*n.
 -/
 
 theorem chapter02_bertrand : True := by
-  trivial
+  sorry
 
 /--
 Landau's reduction.
@@ -22,34 +22,34 @@ A finite sequence of explicit checked primes gives Bertrand for small n, then on
 -/
 
 theorem chapter02_landau_trick : True := by
-  trivial
+  sorry
 
 /--
 Inequality (1): product of primes up to x ≤ 4^(x-1) for x ≥ 2.
 -/
 
 theorem chapter02_prime_product_bound : True := by
-  trivial
+  sorry
 
 /--
 Legendre exponent decomposition for n! and binomial valuation bounds used in the proof.
 -/
 
 theorem chapter02_legendre : True := by
-  trivial
+  sorry
 
 /--
 Binomial coefficient estimate and contradiction step giving a prime in (n, 2n].
 -/
 
 theorem chapter02_binomial_bound : True := by
-  trivial
+  sorry
 
 /--
 Overall chapter marker.
 -/
 
 theorem chapter02 : True := by
-  aesop
+  sorry
 
 end ProofsInTheBook.Chapter02

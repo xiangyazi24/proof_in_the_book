@@ -1,11 +1,14 @@
 # Formalization Plan (Proofs from THE BOOK)
 
-This repository now tracks a chapter-by-chapter mechanical skeleton for Lean formalization.
+This repository tracks a full Lean formalization of the 40 chapters of
+*Proofs from THE BOOK* (Fourth Edition), with the long-run target being
+non-trivial, theorem-accurate Lean statements and proofs.
 
 ## Scope
-- 40 chapters of *Proofs from THE BOOK* (Fourth Edition)
-- Mechanical task: module and theorem placeholders are created.
-- Hard proofs are delegated to the webapp.
+
+- 40 chapter modules: `ProofsInTheBook/Chapter01.lean` to `ProofsInTheBook/Chapter40.lean`.
+- Main proof driver: `ProofsInTheBook.lean`.
+- Communication: webapp-assisted proof completion via `dm-codex`, with strict task batching.
 
 ## Chapter index
 
@@ -29,7 +32,7 @@ This repository now tracks a chapter-by-chapter mechanical skeleton for Lean for
 18. In praise of inequalities
 19. The fundamental theorem of algebra
 20. One square and an odd number of triangles
-21. A theorem of Polya on polynomials
+21. A theorem of Pólya on polynomials
 22. On a lemma of Littlewood and Offord
 23. Cotangent and the Herglotz trick
 24. Buffon's needle problem
@@ -50,11 +53,25 @@ This repository now tracks a chapter-by-chapter mechanical skeleton for Lean for
 39. Of friends and politicians
 40. Probability makes counting (sometimes) easy
 
-## Convention for each chapter file
-- Keep theorem name `chapterNN : True` as a temporary mechanical marker.
-- Replace `sorry` with full formalization proof by chapter.
+## Execution policy
 
-## Suggested workflow with webapp
-- Assign one chapter per webapp run.
-- Ask webapp to replace `sorry` in `ProofsInTheBook/ChapterXX.lean` with complete proof objects.
-- Keep this file updated whenever a chapter is completed.
+- Mechanical skeletoning (module layout, theorem declarations, imports) is completed locally.
+- Hard proofs are assigned to webapp in bounded batches.
+- Each webapp round must be explicit: file, theorem name, missing proof goal, and intended proof shape.
+- Returned proof text is pasted directly and checked in the corresponding chapter file.
+
+## Acceptance policy
+
+- A chapter is complete only when:
+  1. `bash scripts/goal check <chapter>` reports 0 remaining `sorry`.
+  2. The chapter theorems are not placeholder-only (`: True`) unless that is the real statement.
+  3. The file is type-correct in local context.
+  4. The completion is recorded in one commit and traced in `WebappTasks.md` + `Changelog.md`.
+
+## Data artifacts
+
+- `FormalizationPlan.md`: high-level human planning record.
+- `GOALS.md`: `/goal` long-run workflow specification.
+- `WebappTasks.md`: per-round webapp request log.
+- `COMMUNICATION_PROTOCOL.md`: bridge channel and API contract.
+- `scripts/goal`: scheduling, task extraction, check and progress state.

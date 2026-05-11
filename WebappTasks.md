@@ -235,3 +235,7 @@ Please fill the following placeholders with full Lean proofs:
   - do not answer with `exact Nat.infinite_setOf_prime`, `simpa using Nat.infinite_setOf_prime`, or any direct single-line witness-reuse pattern.
   - if needed, refactor by introducing local lemmas that are derivable from earlier book lemmas.
   - return only Lean code for `chapter04` body so it can be applied directly.
+
+### Goal run for Chapter 01
+- chapter01_euclid
+- chapter01_fermat_coprime

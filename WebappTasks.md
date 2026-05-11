@@ -295,3 +295,6 @@ Please fill the following placeholders with full Lean proofs:
 - theorem: chapter06
 - requirement: provide proof body aligned with chapter theme (finite division rings imply prime-related contradiction strategy or equivalent chapter logic), not using direct lemma chaining to the final infinite prime witness.
 - declaration unchanged.
+
+### Goal run for Chapter 07
+- chapter07

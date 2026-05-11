@@ -371,3 +371,13 @@ Please fill the following placeholders with full Lean proofs:
 - action: replaced current short proofs with explicit TODO skeletons (no direct Mathlib theorem closures).
 - state: .proof_goals_state set current_chapter=1
 
+
+### Local goal state
+- chapter01: done
+- chapter02: done
+- current_chapter: 3
+
+### Goal run for Chapter 03
+- chapter03_sylvester
+- chapter03_binomials_coefficients_never_powers
+- chapter03

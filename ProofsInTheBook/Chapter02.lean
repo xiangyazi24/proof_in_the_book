@@ -44,7 +44,10 @@ theorem chapter02_binomial_bound :
 -- Overall chapter marker.
 
 theorem chapter02 : Infinite {p : ℕ // p.Prime} := by
-  apply Set.infinite_coe_iff.mp
-  exact Nat.infinite_setOf_prime
+  refine (Set.infinite_coe_iff (s := {p : ℕ | p.Prime})).2 ?_
+  refine Set.infinite_of_forall_exists_gt ?_
+  intro q
+  obtain ⟨p, hp, hgt, hle⟩ := chapter02_bertrand (q + 1) (Nat.succ_ne_zero q)
+  exact ⟨p, hp, lt_trans (Nat.lt_succ_self q) hgt⟩
 
 end ProofsInTheBook.Chapter02

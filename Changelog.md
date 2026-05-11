@@ -5,6 +5,13 @@
   - 保持 `.proof_goals_state` 的 `current_chapter=1`，章节未标记完成，便于按任务分发给 webapp 与本地逐步实施。
 
 ## 2026-05-11
+- 接上前序目标后本地完成 Chapter01 与 Chapter02 的书式证明收口。
+  - `chapter01_euclid`：按有限素数集构造积 `N`，取 `N+1` 素因子推出矛盾（`q ∣ N` 与 `q ∣ N+1`）。
+  - `chapter01_fermat_coprime`：按 `m<n`/`n<m` 分支重写 Fermat 数互质证明，展开 `fermatNumber_eq_prod_add_two` 与 `odd_fermatNumber`，不调用现成 `coprime_fermatNumber_fermatNumber`。
+  - `chapter02`：由 `chapter02_bertrand` 构造对任意上界的更大素数，改写为 `Set.infinite_coe_iff` + `Set.infinite_of_forall_exists_gt` 的非占位闭合。
+  - 执行 `bash scripts/goal mark 1 done` 与 `bash scripts/goal mark 2 done`，`.proof_goals_state` 进入 `current_chapter=3`。
+
+## 2026-05-11
 - Chapter01 milestone advanced: applied book-style `chapter01_euclid` proof from webapp task `c1d9d992` and marked chapter01 complete in `.proof_goals_state`.
 - Chapter02 follow-up: requested and accepted chapter02 proof tasks (`chapter02_bertrand`, `chapter02_landau_trick`) from webapp task `3cf9f173`.
 

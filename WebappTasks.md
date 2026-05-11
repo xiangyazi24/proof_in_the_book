@@ -289,3 +289,9 @@ Please fill the following placeholders with full Lean proofs:
 
 ### Goal run for Chapter 06
 - chapter06
+
+### Detailed chapter06 request for dm-codex
+- file: ProofsInTheBook/Chapter06.lean
+- theorem: chapter06
+- requirement: provide proof body aligned with chapter theme (finite division rings imply prime-related contradiction strategy or equivalent chapter logic), not using direct lemma chaining to the final infinite prime witness.
+- declaration unchanged.

@@ -186,3 +186,14 @@ Please fill the following placeholders with full Lean proofs:
   - theorem: chapter04
   - goal: replace placeholder proof only; keep declaration unchanged.
   - branch: use previous book-style structure; if no direct theorem exists, return a direct constructive proof term matching the existing statement.
+
+### Goal run for Chapter 04
+- chapter04
+
+### Goal run for Chapter 01
+- chapter01_euclid
+- chapter01
+
+### Goal run for Chapter 01
+- chapter01_euclid
+- chapter01

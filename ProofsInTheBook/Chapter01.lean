@@ -8,7 +8,8 @@ Chapter 1: Six proofs of the infinity of primes.
 -/
 
 theorem chapter01_euclid : Infinite {p : ℕ // p.Prime} := by
-  exact Nat.infinite_setOf_prime.to_subtype
+  apply Set.infinite_coe_iff.mp
+  exact Nat.infinite_setOf_prime
 
 /--
 Second proof via Fermat numbers.
@@ -57,6 +58,6 @@ Overall chapter marker.
 -/
 
 theorem chapter01 : Infinite {p : ℕ // p.Prime} := by
-  exact Nat.infinite_setOf_prime.to_subtype
+  exact chapter01_euclid
 
 end ProofsInTheBook.Chapter01

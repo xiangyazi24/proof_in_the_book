@@ -1,6 +1,12 @@
 # Changelog
 
 ## 2026-05-11
+- Re-grounded chapter 03 protocol to book-faithful goals:
+  - GOALS now requires `chapter03` to be decomposed as `chapter03_sylvester` + `chapter03_binomials_coefficients_never_powers` before closing Chapter 03.
+  - Added corresponding `WebappTasks.md` run entry asking for two concrete book-theorem tasks.
+  - This update is planning and task-routing only; the Lean chapter-3 proofs remain unresolved at file level.
+
+## 2026-05-11
 - Rewrote `GOALS.md` into an executable full-book `/goal` plan:
   - Explicit chapter-by-chapter theorem inventory (1–40) with `Chapter01`/`Chapter02`/`Chapter03` subgoal breakdown.
   - Hard completion conditions: `scripts/goal check` placeholder-free + semantic alignment to book statements (no generic `Infinite prime` substitution).

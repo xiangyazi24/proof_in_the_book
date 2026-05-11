@@ -49,6 +49,10 @@ Please fill the following placeholders with full Lean proofs:
 - chapter02_bertrand
 - chapter02_landau_trick
 
+### Goal run for Chapter 03 (book-faithful restart)
+- chapter03_sylvester (Sylvester-type theorem: `∀ n k, n ≥ 2 * k → k > 0 → ∃ p, p > k ∧ p.Prime ∧ p ∣ Nat.choose n k`)
+- chapter03_binomials_coefficients_never_powers (binomial coefficients are (almost) never powers; target statement should match book: `∀ k l m n, 2 ≤ l → 4 ≤ k → k ≤ n - 4 → Nat.choose n k ≠ m ^ l`)
+
 ### Goal run for Chapter 03
 - chapter03
 

@@ -46,7 +46,7 @@
 
 1. `ProofsInTheBook/Chapter01.lean`：`chapter01_euclid`, `chapter01_fermat_coprime`, `chapter01_mersenne`, `chapter01_euler`, `chapter01_furstenberg`, `chapter01`
 2. `ProofsInTheBook/Chapter02.lean`：`chapter02_bertrand`, `chapter02_landau_trick`, `chapter02_prime_product_bound`, `chapter02_legendre`, `chapter02_binomial_bound`, `chapter02`
-3. `ProofsInTheBook/Chapter03.lean`：`chapter03_sylvester`（Sylvester 证明风格）、`chapter03_binomial_never_power`（或对应书中 near-power 定理的 Lean 命名）、`chapter03`
+3. `ProofsInTheBook/Chapter03.lean`：`chapter03_sylvester`（Sylvester 证明风格）、`chapter03_binomials_coefficients_never_powers`（或对应书中 near-power 定理的 Lean 命名）、`chapter03`
 4. `ProofsInTheBook/Chapter04.lean`：`chapter04`
 5. `ProofsInTheBook/Chapter05.lean`：`chapter05`
 6. `ProofsInTheBook/Chapter06.lean`：`chapter06`

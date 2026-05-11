@@ -1,6 +1,13 @@
 # Changelog
 
 ## 2026-05-11
+- 重写 `GOALS.md` 为全书执行版 long-run 目标（按章节清单、阶段、验收门槛、失败策略）：
+  - 目标文件可直接驱动 `/goal` 的 01–40 分阶段执行
+  - 明确每轮 1–2 项、`run/check/mark/report` 的固定顺序
+  - 明确完成条件必须同时满足 `sorry=0`、`true-stub=0`、`placeholder=0`
+  - 明确禁止“直接以无限素数占位”收口书命题
+
+## 2026-05-11
 - 更新 `scripts/goal` 占位检测：把 `exact Nat.infinite_setOf_prime.to_subtype` 也计入 `placeholder`，与 `simpa` 同步。
 - 以避免当前 `chapter04`-`chapter40` 被误判为“已完成”；`goal run` 现在会继续下发书向化任务，支持你用 1-2 项批次交给 webapp 逐章重构。
 

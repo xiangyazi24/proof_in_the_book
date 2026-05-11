@@ -76,10 +76,13 @@ count_true_stub() {
 
 count_placeholder() {
   local file="$1"
-  local c1 c2
-  c1=$(grep -F "Nat.Infinite {p : ℕ // p.Prime}" "$file" | wc -l | tr -d ' ')
-  c2=$(grep -F "Nat.Infinite {p : Nat // p.Prime}" "$file" | wc -l | tr -d ' ')
-  local cnt=$((c1 + c2))
+  local c1 c2 c3 c4 c5
+  c1=$(rg -c "Nat\\.Infinite \\{p : ℕ // p.Prime\\}" "$file")
+  c2=$(rg -c "Nat\\.Infinite \\{p : Nat // p.Prime\\}" "$file")
+  c3=$(rg -c "Set\\.Infinite \\{p : ℕ // p.Prime\\}" "$file")
+  c4=$(rg -c "Set\\.Infinite \\{p : Nat // p.Prime\\}" "$file")
+  c5=$(rg -c "simpa using Nat\\.infinite_setOf_prime\\.to_subtype" "$file")
+  local cnt=$((c1 + c2 + c3 + c4 + c5))
   printf '%s\n' "$cnt"
 }
 
@@ -106,11 +109,18 @@ chapter_task_list() {
       sub(/^[[:space:]]*(theorem|lemma|example)[[:space:]]+/, "", line)
       split(line, a, /[[:space:]]*:/)
       cur=a[1]
+      done[cur]=0
     }
-    cur != "" && ( $0 ~ /(^|[^A-Za-z0-9_])sorry([^A-Za-z0-9_]|$)/ ||
+    cur != "" && done[cur]==0 && (
+      $0 ~ /(^|[^A-Za-z0-9_])sorry([^A-Za-z0-9_]|$)/ ||
       index($0, "Nat.Infinite {p : ℕ // p.Prime}") > 0 ||
-      index($0, "Nat.Infinite {p : Nat // p.Prime}") > 0) {
+      index($0, "Nat.Infinite {p : Nat // p.Prime}") > 0 ||
+      index($0, "Set.Infinite {p : ℕ // p.Prime}") > 0 ||
+      index($0, "Set.Infinite {p : Nat // p.Prime}") > 0 ||
+      index($0, "simpa using Nat.infinite_setOf_prime.to_subtype") > 0
+    ) {
       print cur
+      done[cur]=1
     }
   ' "$file"
 }
@@ -219,9 +229,13 @@ cmd_run() {
   echo "================================================="
   while read -r t; do
     [[ -z "$t" ]] && continue
-    if grep -F "theorem ${t}" "$file" | grep -F "Nat.Infinite {p : ℕ // p.Prime}" >/dev/null; then
+    if rg -q "theorem ${t}[[:space:]]*:\\s*.*Nat\\.Infinite \\{p : ℕ // p.Prime\\}" "$file"; then
       echo "- [ ] Replace placeholder for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
-    elif grep -F "theorem ${t}" "$file" | grep -F "Nat.Infinite {p : Nat // p.Prime}" >/dev/null; then
+    elif rg -q "theorem ${t}[[:space:]]*:\\s*.*Nat\\.Infinite \\{p : Nat // p.Prime\\}" "$file"; then
+      echo "- [ ] Replace placeholder for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
+    elif rg -q "theorem ${t}[[:space:]]*:\\s*.*Set\\.Infinite \\{p : ℕ // p.Prime\\}" "$file"; then
+      echo "- [ ] Replace placeholder for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
+    elif rg -q "theorem ${t}[[:space:]]*:\\s*.*Set\\.Infinite \\{p : Nat // p.Prime\\}" "$file"; then
       echo "- [ ] Replace placeholder for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"
     else
       echo "- [ ] Replace \`sorry\` for \`ProofsInTheBook.Chapter$(printf '%02d' "$chapter").${t}\`"

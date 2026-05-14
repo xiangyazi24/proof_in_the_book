@@ -1,4 +1,11 @@
 ## 2026-05-13
+- Added `FORMALIZATION_AUDIT.md` to separate syntactic placeholder cleanup from
+  real full-book semantic completion.
+- Extended `scripts/goal check all` with a `SEMANTIC_TODO` line so
+  `DONE:40/40` is no longer easy to misread as "the book is fully
+  formalized."
+
+## 2026-05-13
 - Removed the remaining Chapter03 `sorry` placeholders without pretending the
   full Sylvester/general perfect-power theorem is done:
   - Kept `chapter03_sylvester` as the proved central-binomial Sylvester case.

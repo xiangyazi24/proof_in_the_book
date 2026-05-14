@@ -6,6 +6,7 @@ PLAN_FILE="$ROOT/GOALS.md"
 CHAPTER_DIR="$ROOT/ProofsInTheBook"
 STATE_FILE="$ROOT/.proof_goals_state"
 TASK_FILE="$ROOT/WebappTasks.md"
+AUDIT_FILE="$ROOT/FORMALIZATION_AUDIT.md"
 
 usage() {
   cat <<'USAGE'
@@ -120,6 +121,14 @@ count_placeholder() {
       print count + 0
     }
   ' "$file"
+}
+
+count_semantic_todo() {
+  if [[ ! -f "$AUDIT_FILE" ]]; then
+    echo 0
+    return
+  fi
+  awk '/^- \[ \] Chapter[0-9][0-9]:/ {c++} END {print c+0}' "$AUDIT_FILE"
 }
 
 chapter_file() {
@@ -370,6 +379,7 @@ cmd_check() {
       fi
     done
     echo "DONE:$done/"$total " TODO:$todo"
+    echo "SEMANTIC_TODO:$(count_semantic_todo)"
   else
     local n="$scope"
     f=$(chapter_file "$n")

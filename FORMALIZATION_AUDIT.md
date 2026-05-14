@@ -56,8 +56,9 @@ the proof bypasses the book argument.
   coloring.
 - [ ] Chapter35: formalize the five-color induction/Kempe-chain step.  The
   current theorem only proves the average-degree lemma.
-- [ ] Chapter36: connect the three-color guard-count arithmetic to a
-  triangulated polygon/art-gallery theorem.
+- [ ] Chapter36: add the geometric prerequisites for the art-gallery theorem:
+  triangulation existence for simple polygons and Fisk's 3-coloring of the
+  triangulation graph.  The current file now proves the finite guard-selection
+  step once a 3-colored triangulation is supplied.
 - [ ] Chapter39: define Kneser graph coloring and prove Lovasz/Barany lower
   bound components.  The current theorem only counts Kneser vertices.
-

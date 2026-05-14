@@ -1,4 +1,9 @@
 ## 2026-05-13
+- Updated the semantic audit for Chapter36 after adding the guard-selection
+  theorem: the remaining gap is now the geometric triangulation and
+  3-coloring infrastructure, not the finite color-class guard argument.
+
+## 2026-05-13
 - Strengthened Chapter36 from the pure arithmetic color-class bound to Fisk's
   finite guard-selection step:
   - Define the three guard colors and color classes.

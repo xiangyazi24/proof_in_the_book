@@ -1,4 +1,12 @@
 ## 2026-05-13
+- Replaced Chapter24's `True` placeholder with the elementary cotangent
+  symmetries used in Herglotz's trick:
+  - Prove `cot (x + π) = cot x` from sine and cosine identities.
+  - Prove oddness of cotangent.
+  - Derive the `x ↦ x + 1` and `x ↦ 1 - x` functional-equation pieces for
+    `cot(πx)`.
+
+## 2026-05-13
 - Replaced Chapter35's `True` placeholder with the average-degree step from
   the five-color theorem proof:
   - If the total degree is less than `6` times the vertex count, prove some

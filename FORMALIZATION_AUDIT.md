@@ -40,9 +40,10 @@ the proof bypasses the book argument.
   The current theorem is only the linear root calculation.
 - [ ] Chapter20: formalize Monsky's parity/Sperner argument and 2-adic color
   construction.  The current theorem only defines the color model.
-- [ ] Chapter24: extend cotangent symmetries to the Herglotz functional
-  equation / partial-fraction argument.  The current theorem is only a symmetry
-  component.
+- [ ] Chapter24: extend cotangent symmetries to the full Herglotz functional
+  equation / partial-fraction argument.  The current file proves the cotangent
+  symmetries and the corresponding rational identity for the two singular
+  terms.
 - [ ] Chapter25: extend the finite polygonal linearity step to the actual
   Buffon needle probability statement.
 - [ ] Chapter29: connect riffle labels to the Gilbert-Shannon-Reeds shuffle

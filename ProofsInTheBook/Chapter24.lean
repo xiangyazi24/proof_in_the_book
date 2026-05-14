@@ -36,6 +36,15 @@ theorem cot_pi_one_sub (x : ℝ) : Real.cot (Real.pi * (1 - x)) = -Real.cot (Rea
   have harg : Real.pi * (1 - x) = -(Real.pi * x) + Real.pi := by ring
   rw [harg, cot_add_pi, cot_neg]
 
+/--
+The rational-function side of the `x ↦ 1 - x` Herglotz functional equation
+for the two singular terms.
+-/
+theorem reciprocal_add_one_sub (x : ℝ) (hx : x ≠ 0) (hx1 : x ≠ 1) :
+    1 / x + 1 / (1 - x) = 1 / (x * (1 - x)) := by
+  field_simp [hx, sub_ne_zero.mpr hx1]
+  ring_nf
+
 theorem chapter24 (x : ℝ) :
     Real.pi * Real.cot (Real.pi * x) + Real.pi * Real.cot (Real.pi * (1 - x)) = 0 := by
   rw [cot_pi_one_sub]

@@ -1,4 +1,11 @@
 ## 2026-05-14
+- Strengthened Chapter24's Herglotz-function-equation layer:
+  - Added the rational identity
+    `1/x + 1/(1-x) = 1/(x*(1-x))` away from the singularities.
+  - Updated the semantic audit to leave the full partial-fraction argument as
+    the remaining gap.
+
+## 2026-05-14
 - Strengthened Chapter31's Cayley/Prüfer setup:
   - Define labeled trees as simple graphs on `Fin n` satisfying
     `SimpleGraph.IsTree`.

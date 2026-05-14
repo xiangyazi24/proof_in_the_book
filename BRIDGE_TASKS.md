@@ -30,6 +30,16 @@ Bridge channel for the current proof-in-the-book workflow: `ssem`.
   - If full proof is too hard, return the smallest next lemma that should
     compile and materially advances the reduction.
 
+Status:
+- Submitted as `52a512cc` / seq 1.
+- Completed.
+- Useful returned next lemmas:
+  - `not_mem_smoothNumbers_succ_of_large_prime_dvd`
+  - `descFactorial_mem_smooth_of_no_large_prime`
+  - `chapter03_not_smooth_of_hasPrimeFactorAbove`
+- Heavy core remains:
+  - `sylvester_descFactorial_not_smooth_book_core`
+
 ### Task A2: Chapter19 Minimum-Modulus Proof Layer
 
 - File: `ProofsInTheBook/Chapter19.lean`
@@ -46,3 +56,9 @@ Bridge channel for the current proof-in-the-book workflow: `ssem`.
   - Return concrete Lean theorem statements first.
   - Prefer a small lemma that can be inserted into Chapter19 and built before
     attempting the full fundamental theorem of algebra.
+
+Status:
+- Submitted as `700ae88d` / seq 2.
+- Completed, but response was a duplicated Chapter03/Sylvester answer, not a
+  Chapter19 answer.
+- Requeued as `68d377af` / seq 3 with an explicit "Chapter19 only" prompt.

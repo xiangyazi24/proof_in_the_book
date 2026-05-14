@@ -228,6 +228,10 @@ Please fill the following placeholders with full Lean proofs:
     `Nat.smoothNumbers` reductions.
   - A2 (`700ae88d`, seq 2): Chapter19 minimum-modulus proof layer after local polynomial-shift
     lemmas.
+- results:
+  - A1 completed with usable Chapter03 lemma suggestions.
+  - A2 completed with a duplicated Chapter03 answer, so it was requeued as
+    `68d377af` / seq 3 with an explicit Chapter19-only prompt.
 
 ### Goal run for Chapter 04
 - chapter04

@@ -36,6 +36,24 @@ theorem prime_dvd_choose_of_dvd_factorial_not_factorial_sides {n k p : ℕ}
   have hleft : p ∣ n.choose k * k ! := (hp.dvd_mul.mp hdvd).resolve_right hnk
   exact (hp.dvd_mul.mp hleft).resolve_right hk
 
+theorem prime_not_dvd_factorial_of_lt {p k : ℕ} (hp : p.Prime) (hk : k < p) :
+    ¬ p ∣ k ! := by
+  rwa [hp.dvd_factorial, not_le]
+
+/--
+If a prime divisor of `n!` is larger than both factorial factors
+`k!` and `(n-k)!`, then it must appear in the binomial coefficient.
+This is the form used by the central Bertrand-prime argument, and it is
+also the local step needed in the general Sylvester proof.
+-/
+theorem prime_dvd_choose_of_interval_prime {n k p : ℕ} (hkn : k ≤ n)
+    (hp : p.Prime) (hk : k < p) (hnk : n - k < p) (hpn : p ≤ n) :
+    p ∣ n.choose k :=
+  prime_dvd_choose_of_dvd_factorial_not_factorial_sides hkn hp
+    (hp.dvd_factorial.mpr hpn)
+    (prime_not_dvd_factorial_of_lt hp hk)
+    (prime_not_dvd_factorial_of_lt hp hnk)
+
 /-!
 ### Central case of Sylvester's theorem
 
@@ -51,10 +69,8 @@ theorem chapter03_sylvester_central (k : ℕ) (hk : k ≠ 0) :
     ∃ p, k < p ∧ p.Prime ∧ p ∣ (2 * k).choose k := by
   obtain ⟨p, hp, hkp, hp2k⟩ := Nat.exists_prime_lt_and_le_two_mul k hk
   refine ⟨p, hkp, hp, ?_⟩
-  have h_dvd : p ∣ (2 * k) ! := hp.dvd_factorial.mpr (by omega)
-  have h_ndvd : ¬ (p ∣ k !) := by rwa [hp.dvd_factorial, not_le]
-  exact prime_dvd_choose_of_dvd_factorial_not_factorial_sides (by omega : k ≤ 2 * k) hp
-    h_dvd h_ndvd (by rwa [show 2 * k - k = k from by omega])
+  exact prime_dvd_choose_of_interval_prime (by omega : k ≤ 2 * k) hp hkp
+    (by rwa [show 2 * k - k = k from by omega]) hp2k
 
 /-!
 ### General Sylvester's theorem

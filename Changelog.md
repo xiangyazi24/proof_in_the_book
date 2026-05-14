@@ -2,6 +2,8 @@
 - Strengthened Chapter03's Sylvester infrastructure:
   - Added a reusable factorial-divisibility lemma: if a prime divides `n!`
     but not `k!` or `(n-k)!`, then it divides `n.choose k`.
+  - Added the interval-prime specialization: if `p` is prime, `k < p`,
+    `n-k < p`, and `p ≤ n`, then `p ∣ n.choose k`.
   - Refactored the central Sylvester proof through this lemma, making the
     general Sylvester proof path more explicit.
 

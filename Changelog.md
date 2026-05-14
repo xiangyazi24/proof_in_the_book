@@ -1,4 +1,13 @@
 ## 2026-05-13
+- Replaced Chapter16's `True` placeholder with a finite Borsuk-partition
+  certificate:
+  - Define a `d+1`-coloring condition requiring same-color point pairs to
+    have distance below a target bound.
+  - Define finite color classes.
+  - Prove membership in one color class gives the advertised smaller
+    pairwise distance bound.
+
+## 2026-05-13
 - Replaced Chapter25's `True` placeholder with the finite linearity step in
   Buffon's needle proof:
   - Define the expected crossing contribution of one segment.

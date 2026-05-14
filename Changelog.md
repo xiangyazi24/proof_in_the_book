@@ -1,4 +1,11 @@
 ## 2026-05-14
+- Strengthened Chapter03's factor-prime obstruction layer:
+  - Proved that if the descending product is `(k+1)`-smooth, then no factor
+    `n - i` with `i < k` has a prime factor above `k`.
+  - Added the direct prime-divisor bound: every prime divisor of such a factor
+    is at most `k`.
+
+## 2026-05-14
 - Strengthened Chapter03's Sylvester smoothness reduction:
   - Proved each factor `n - i` with `i < k` divides `n.descFactorial k`.
   - Proved smoothness of `n.descFactorial k` passes to each such factor via

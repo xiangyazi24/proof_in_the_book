@@ -267,3 +267,17 @@ Status:
   - `prime_factor_le_of_dvd_sub_of_descFactorial_mem_smooth`.
   - `descFactorial_not_smooth_of_sub_hasPrimeFactorAbove`.
   - `descFactorial_not_smooth_of_large_prime_dvd_sub`.
+
+### Task C3: Chapter03 Statement-Only Next Step
+
+- File: `ProofsInTheBook/Chapter03.lean`
+- Purpose:
+  - Since proof-producing Chapter03 bridge tasks timed out, ask for exactly
+    one next theorem statement only.
+- Desired answer:
+  - Chapter03 only.
+  - One small independently useful theorem statement toward the Sylvester
+    smoothness contradiction.
+
+Status:
+- Submitted as `49c190b1` / seq 8, tagged `CH03_STATEMENT_ONLY_20260514`.

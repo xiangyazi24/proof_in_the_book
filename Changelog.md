@@ -1,4 +1,12 @@
 ## 2026-05-13
+- Replaced Chapter35's `True` placeholder with the average-degree step from
+  the five-color theorem proof:
+  - If the total degree is less than `6` times the vertex count, prove some
+    vertex has degree at most `5`.
+  - This isolates the finite combinatorial consequence of the Euler-formula
+    bound used to start the induction.
+
+## 2026-05-13
 - Replaced Chapter39's `True` placeholder with the finite Kneser-graph
   vertex layer:
   - Define `KG(n,k)` vertices as `k`-subsets of `Fin n`.

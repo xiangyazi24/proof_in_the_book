@@ -284,3 +284,21 @@ Status:
 - Still processing after repeated polls; `/api/active?channel=ssem` shows this
   task occupying the channel. No local artifact applied yet.
 - Completed with `[BRIDGE_ERROR] response timeout`.
+
+## 2026-05-14 Batch D
+
+### Task D1: Chapter04 Zagier Involution Skeleton
+
+- File: `ProofsInTheBook/Chapter04.lean`
+- Current local state:
+  - Necessity modulo four is proved.
+  - Brahmagupta identity is available via `Nat.sq_add_sq_mul`.
+  - Sufficiency currently uses `Nat.Prime.sq_add_sq`; the book-style Zagier
+    finite involution argument remains only in comments.
+- Desired answer:
+  - Chapter04 only.
+  - Return the next smallest finite/involution lemma or data structure toward
+    Zagier's proof; do not attempt the full theorem.
+
+Status:
+- Submitted as `fab126a1` / seq 9, tagged `CH04_ZAGIER_20260514`.

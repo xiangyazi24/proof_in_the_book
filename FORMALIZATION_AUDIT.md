@@ -23,6 +23,12 @@ allowed only when the current chapter has a concrete blocker recorded in this
 file or when a later chapter has a small dependency-free strengthening that is
 explicitly logged in `Changelog.md`.
 
+Current blocker: Chapter03's remaining Sylvester non-smoothness core is not yet
+split into a Lean-feasible proof path.  Three `ssem` bridge attempts on
+2026-05-14 (`9eabd2c5`, `8471a107`, `49c190b1`) timed out, including a
+statement-only prompt.  Until this is decomposed further, later independent
+semantic TODO items may be advanced in logged, build-checked increments.
+
 ## Semantic TODO
 
 - [ ] Chapter03: restore the general Sylvester theorem statement

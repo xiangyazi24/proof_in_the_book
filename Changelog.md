@@ -1,4 +1,13 @@
 ## 2026-05-13
+- Strengthened Chapter36 from the pure arithmetic color-class bound to Fisk's
+  finite guard-selection step:
+  - Define the three guard colors and color classes.
+  - Prove color classes partition the vertex set by cardinality.
+  - Prove that if every triangle in a supplied triangulation has all three
+    colors, then some color class of size at most `vertices.card / 3` hits
+    every triangle.
+
+## 2026-05-13
 - Added `FORMALIZATION_AUDIT.md` to separate syntactic placeholder cleanup from
   real full-book semantic completion.
 - Extended `scripts/goal check all` with a `SEMANTIC_TODO` line so

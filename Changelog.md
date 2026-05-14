@@ -5,6 +5,9 @@
     an additive commutative group.
   - Added the torsion-free specialization using `IsAddTorsionFree` and
     `nsmul_eq_zero_iff`.
+  - Added the abstract good/bad split lemma: once the bad subfamily has a
+    sign-reversing equivalence, the total signed sum equals the good
+    contribution.
 
 ## 2026-05-14
 - Strengthened Chapter29's GSR riffle-label partition layer:

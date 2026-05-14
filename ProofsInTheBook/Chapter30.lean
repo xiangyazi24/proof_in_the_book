@@ -88,6 +88,45 @@ theorem sum_eq_zero_of_sign_reversing_equiv {α R : Type*} [Fintype α]
   · exact hsum
   · norm_num at htwo
 
+/--
+LGV split layer: if the bad finite subfamily cancels by a sign-reversing
+equivalence, then the total signed sum is the contribution from the good
+subfamily.
+-/
+theorem total_sum_eq_good_sum_of_bad_sign_reversing {α R : Type*} [Fintype α]
+    [DecidableEq α] [AddCommGroup R] [IsAddTorsionFree R]
+    (bad : α → Prop) [DecidablePred bad] (τbad : {x : α // bad x} ≃ {x : α // bad x})
+    (w : α → R) (hw : ∀ x : {x : α // bad x}, w (τbad x).1 = -w x.1) :
+    (∑ x : α, w x) = ∑ x ∈ (Finset.univ.filter fun x : α => ¬ bad x), w x := by
+  classical
+  let badSet : Finset α := Finset.univ.filter fun x : α => bad x
+  let goodSet : Finset α := Finset.univ.filter fun x : α => ¬ bad x
+  have hbad_sum : (∑ x ∈ badSet, w x) = 0 := by
+    let wbad : {x : α // bad x} → R := fun x => w x.1
+    have hwbad : ∀ x : {x : α // bad x}, wbad (τbad x) = -wbad x := by
+      intro x
+      exact hw x
+    have h := sum_eq_zero_of_sign_reversing_equiv τbad wbad hwbad
+    have hfilter : (∑ x ∈ badSet, w x) = ∑ x : {x : α // bad x}, wbad x := by
+      rw [← Finset.sum_subtype]
+      simp [badSet]
+    rw [hfilter, h]
+  have huniv : (Finset.univ : Finset α) = badSet ∪ goodSet := by
+    ext x
+    by_cases hx : bad x <;> simp [badSet, goodSet, hx]
+  have hdisj : Disjoint badSet goodSet := by
+    rw [Finset.disjoint_left]
+    intro x hxbad hxgood
+    simp [badSet] at hxbad
+    simp [goodSet, hxbad] at hxgood
+  calc
+    (∑ x : α, w x) = ∑ x ∈ (Finset.univ : Finset α), w x := by simp
+    _ = ∑ x ∈ badSet ∪ goodSet, w x := by rw [huniv]
+    _ = (∑ x ∈ badSet, w x) + ∑ x ∈ goodSet, w x := by
+      rw [Finset.sum_union hdisj]
+    _ = ∑ x ∈ goodSet, w x := by rw [hbad_sum, zero_add]
+    _ = ∑ x ∈ (Finset.univ.filter fun x : α => ¬ bad x), w x := rfl
+
 theorem chapter30 {ι R : Type*}
     [Fintype ι] [DecidableEq ι] [CommRing R] (M : Matrix ι ι R)
     (hzero : ∀ i j, i ≠ j → M i j = 0) :

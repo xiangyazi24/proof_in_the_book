@@ -214,3 +214,8 @@ Status:
 - Follow-up abstract-bad-family split prompt `9102ae04` / seq 2 also completed
   quickly but repeated the same cancellation lemma, so the `ssem` transport is
   healthy while the current ChatGPT conversation context is stale/repetitive.
+- After refreshing the `ssem` tab, nonce task `722201e8` returned the exact
+  requested marker, confirming stale-answer capture was fixed.
+- Fresh split prompt `2e2a18ea` / seq 4 returned a useful good/bad split lemma
+  tagged `FRESH_SPLIT_20260514`; local proof required replacing an invalid
+  `rfl` after `Finset.sum_subtype` with `simp [badSet]`.

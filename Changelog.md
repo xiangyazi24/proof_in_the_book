@@ -1,4 +1,11 @@
 ## 2026-05-13
+- Replaced Chapter25's `True` placeholder with the finite linearity step in
+  Buffon's needle proof:
+  - Define the expected crossing contribution of one segment.
+  - Define the expected crossings of a polygonal curve as a finite sum.
+  - Prove the sum depends only on total length in this finite model.
+
+## 2026-05-13
 - Replaced Chapter34's `True` placeholder with the formal target structure
   for the Dinitz problem:
   - Define cells of an `n × n` array and the row/column conflict relation.

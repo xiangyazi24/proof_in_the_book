@@ -79,6 +79,32 @@ structure ZagierTriple (p : ℕ) where
 
 namespace ZagierTriple
 
+instance instFintype (p : ℕ) : Fintype (ZagierTriple p) := by
+  classical
+  let S : Type := {u : Fin (p + 1) × Fin (p + 1) × Fin (p + 1) //
+    0 < u.1.val ∧ 0 < u.2.1.val ∧ 0 < u.2.2.val ∧
+      u.1.val ^ 2 + 4 * u.2.1.val * u.2.2.val = p}
+  let e : ZagierTriple p ≃ S :=
+    { toFun := fun t => ⟨(t.x, t.y, t.z), by
+        exact ⟨t.x_pos, t.y_pos, t.z_pos, t.equation⟩⟩
+      invFun := fun u =>
+        { x := u.1.1
+          y := u.1.2.1
+          z := u.1.2.2
+          x_pos := u.2.1
+          y_pos := u.2.2.1
+          z_pos := u.2.2.2.1
+          equation := u.2.2.2.2 }
+      left_inv := by
+        intro t
+        cases t
+        rfl
+      right_inv := by
+        intro u
+        rcases u with ⟨⟨x, y, z⟩, hx, hy, hz, heq⟩
+        rfl }
+  exact Fintype.ofEquiv S e.symm
+
 /-- The simple involution `(x,y,z) ↦ (x,z,y)` on Zagier triples. -/
 def swapYZ (p : ℕ) : ZagierTriple p ≃ ZagierTriple p where
   toFun t :=

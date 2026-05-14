@@ -340,4 +340,5 @@ Status:
 
 Status:
 - Submitted as `d97e0b1d` / seq 11, tagged `CH04_FINTYPE_20260514`.
-- Awaiting bridge response.
+- Still processing after local fallback work.
+- Local fallback implemented `ZagierTriple.instFintype`.

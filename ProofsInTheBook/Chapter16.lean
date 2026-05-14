@@ -32,6 +32,32 @@ theorem mem_colorClass_iff {α : Type*} {d : ℕ} [DecidableEq (Fin (d + 1))]
     x ∈ colorClass points color c ↔ x ∈ points ∧ color x = c := by
   simp [colorClass]
 
+theorem colorClass_subset_points {α : Type*} {d : ℕ} [DecidableEq (Fin (d + 1))]
+    (points : Finset α) (color : α → Fin (d + 1)) (c : Fin (d + 1)) :
+    colorClass points color c ⊆ points := by
+  intro x hx
+  exact (mem_colorClass_iff points color c x).mp hx |>.1
+
+theorem mem_colorClass_of_mem {α : Type*} {d : ℕ} [DecidableEq (Fin (d + 1))]
+    {points : Finset α} {color : α → Fin (d + 1)} {x : α}
+    (hx : x ∈ points) : x ∈ colorClass points color (color x) := by
+  rw [mem_colorClass_iff]
+  exact ⟨hx, rfl⟩
+
+theorem exists_colorClass_of_mem {α : Type*} {d : ℕ} [DecidableEq (Fin (d + 1))]
+    {points : Finset α} {color : α → Fin (d + 1)} {x : α}
+    (hx : x ∈ points) : ∃ c : Fin (d + 1), x ∈ colorClass points color c :=
+  ⟨color x, mem_colorClass_of_mem hx⟩
+
+theorem disjoint_colorClass_of_ne {α : Type*} {d : ℕ} [DecidableEq (Fin (d + 1))]
+    {points : Finset α} {color : α → Fin (d + 1)} {c₁ c₂ : Fin (d + 1)}
+    (hne : c₁ ≠ c₂) : Disjoint (colorClass points color c₁) (colorClass points color c₂) := by
+  rw [Finset.disjoint_left]
+  intro x hx₁ hx₂
+  have h₁ := (mem_colorClass_iff points color c₁ x).mp hx₁
+  have h₂ := (mem_colorClass_iff points color c₂ x).mp hx₂
+  exact hne (h₁.2.symm.trans h₂.2)
+
 /--
 The basic verification step for a Borsuk partition: every color class has
 the advertised smaller pairwise diameter bound.

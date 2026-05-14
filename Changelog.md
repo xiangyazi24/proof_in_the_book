@@ -1,4 +1,10 @@
 ## 2026-05-14
+- Strengthened Chapter16's finite Borsuk partition layer:
+  - Proved every color class is a subset of the original point set.
+  - Proved every point belongs to its own color class.
+  - Proved distinct color classes are disjoint.
+
+## 2026-05-14
 - Strengthened Chapter13's Cauchy sign bookkeeping:
   - Added strict nonzero edge signs obtained after discarding unchanged edges.
   - Added the coercion from full edge signs to optional strict signs.

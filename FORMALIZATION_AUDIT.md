@@ -52,7 +52,9 @@ explicitly logged in `Changelog.md`.
   signs and proves the strict triangular sign-change count is even, but it
   still lacks the arm lemma, Euler counting, and convex polyhedron geometry.
 - [ ] Chapter16: formalize a real Borsuk/Kahn-Kalai component.  The current
-  theorem only checks a supplied finite coloring certificate.
+  file now proves basic finite color-class partition facts for a supplied
+  Borsuk-style coloring certificate, but it still lacks the Kahn-Kalai
+  combinatorial construction or any Euclidean counterexample.
 - [ ] Chapter19: restore the fundamental theorem of algebra statement and
   replace the black-box root existence with the minimum-modulus proof path.
   The current theorem is only the linear root calculation.

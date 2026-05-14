@@ -1,4 +1,10 @@
 ## 2026-05-13
+- Replaced Chapter29's `True` placeholder with the riffle-label counting
+  component of the Gilbert-Shannon-Reeds shuffle model:
+  - Define `a`-pile labels for an `n`-card deck.
+  - Prove there are `a^n` such label assignments.
+
+## 2026-05-13
 - Replaced Chapter36's `True` placeholder with the arithmetic counting step
   in Fisk's art-gallery proof:
   - For three color classes, prove the smallest has size at most

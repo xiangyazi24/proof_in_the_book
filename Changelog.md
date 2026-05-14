@@ -1,4 +1,12 @@
 ## 2026-05-13
+- Replaced Chapter11's `True` placeholders with the finite slope-counting
+  interface for Ungar's theorem:
+  - Define planar points and slopes of nonvertical ordered pairs.
+  - Define the finite set of slopes determined by a point configuration.
+  - Prove an injective family of witnessed slopes gives a cardinality lower
+    bound.
+
+## 2026-05-13
 - Replaced Chapter10's `True` placeholders with the ordinary-line target
   structure for Sylvester-Gallai:
   - Define the finite set of configuration points lying on a candidate line.

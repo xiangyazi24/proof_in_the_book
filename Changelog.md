@@ -1,4 +1,10 @@
 ## 2026-05-14
+- Clarified semantic-audit work order:
+  - Default to the earliest remaining chapter in `FORMALIZATION_AUDIT.md`.
+  - Require explicit blocker/logging when skipping ahead.
+  - Current next focus is Chapter03.
+
+## 2026-05-14
 - Strengthened Chapter39's Kneser coloring layer:
   - Prove any coloring of `kneserGraph n k` separates distinct disjoint
     `k`-subsets.

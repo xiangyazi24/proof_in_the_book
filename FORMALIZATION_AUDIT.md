@@ -15,6 +15,14 @@ the proof bypasses the book argument.
 - The repository still contains chapters whose current `chapterNN` theorem is
   only a component of the book proof, not the book theorem.
 
+## Work Order
+
+Proceed in the order below.  The next default focus is the earliest unchecked
+chapter in `Semantic TODO`; currently that is Chapter03.  Skipping ahead is
+allowed only when the current chapter has a concrete blocker recorded in this
+file or when a later chapter has a small dependency-free strengthening that is
+explicitly logged in `Changelog.md`.
+
 ## Semantic TODO
 
 - [ ] Chapter03: restore the general Sylvester theorem statement

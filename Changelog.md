@@ -1,4 +1,13 @@
 ## 2026-05-13
+- Tightened `scripts/goal` placeholder detection to match the full-book
+  formalization policy:
+  - Direct black-box closures such as `Cardinal.cantor`,
+    `Complex.exists_root`, `h𝒜.sperner`, and the basic `Nat.choose`
+    identity theorems are now counted as placeholders for chapter completion.
+  - This makes the progress report more honest: these library facts may be
+    useful side lemmas, but they are not substitutes for the book proofs.
+
+## 2026-05-13
 - Closed Chapter27's remaining `True` marker by making `chapter27` state the
   formal De Bruijn tiling necessity theorem and delegate to
   `chapter27_debruijn`.

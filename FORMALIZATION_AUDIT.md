@@ -81,8 +81,9 @@ explicitly logged in `Changelog.md`.
 - [ ] Chapter30: formalize a real Lindstrom-Gessel-Viennot determinant/path
   statement.  The current file exposes the determinant's signed-permutation
   expansion, the diagonal determinant case, and an abstract finite
-  sign-reversing cancellation layer with a good/bad split, but not yet the
-  path-family involution construction itself.
+  sign-reversing cancellation layer with a good/bad split and packaged
+  cancellation certificate, but not yet the path-family involution
+  construction itself.
 - [ ] Chapter31: construct the actual Prüfer encode/decode bijection.  The
   current file now defines labeled trees as `SimpleGraph.IsTree` objects on
   `Fin n` and proves Cayley's count from a supplied Prüfer equivalence.

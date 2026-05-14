@@ -219,3 +219,6 @@ Status:
 - Fresh split prompt `2e2a18ea` / seq 4 returned a useful good/bad split lemma
   tagged `FRESH_SPLIT_20260514`; local proof required replacing an invalid
   `rfl` after `Finset.sum_subtype` with `simp [badSet]`.
+- Certificate packaging prompt `a5671c20` / seq 5 returned a useful
+  `BadInvolutionCertificate` wrapper tagged `FRESH_CERT_20260514`; it compiled
+  locally without changes.

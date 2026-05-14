@@ -127,6 +127,33 @@ theorem total_sum_eq_good_sum_of_bad_sign_reversing {α R : Type*} [Fintype α]
     _ = ∑ x ∈ goodSet, w x := by rw [hbad_sum, zero_add]
     _ = ∑ x ∈ (Finset.univ.filter fun x : α => ¬ bad x), w x := rfl
 
+/--
+A finite LGV cancellation certificate: `bad` identifies the bad path families,
+`tauBad` pairs bad families, and `sign_reverse` says the signed weight reverses.
+-/
+structure BadInvolutionCertificate (Family R : Type*) [AddCommGroup R] where
+  bad : Family → Prop
+  bad_decidable : DecidablePred bad
+  tauBad : {F : Family // bad F} ≃ {F : Family // bad F}
+  signedWeight : Family → R
+  sign_reverse : ∀ F : {F : Family // bad F}, signedWeight (tauBad F).1 = -signedWeight F.1
+
+attribute [instance] BadInvolutionCertificate.bad_decidable
+
+/--
+Using a bad-involution certificate, the total signed sum over all finite
+families equals the signed sum over the good families.
+-/
+theorem BadInvolutionCertificate.total_sum_eq_good_sum {Family R : Type*} [Fintype Family]
+    [DecidableEq Family] [AddCommGroup R] [IsAddTorsionFree R]
+    (C : BadInvolutionCertificate Family R) :
+    (∑ F : Family, C.signedWeight F) =
+      ∑ F ∈ (Finset.univ.filter fun F : Family => ¬ C.bad F), C.signedWeight F := by
+  classical
+  letI : DecidablePred C.bad := C.bad_decidable
+  exact
+    total_sum_eq_good_sum_of_bad_sign_reversing C.bad C.tauBad C.signedWeight C.sign_reverse
+
 theorem chapter30 {ι R : Type*}
     [Fintype ι] [DecidableEq ι] [CommRing R] (M : Matrix ι ι R)
     (hzero : ∀ i j, i ≠ j → M i j = 0) :

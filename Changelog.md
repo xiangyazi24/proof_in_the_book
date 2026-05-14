@@ -8,6 +8,8 @@
   - Added the abstract good/bad split lemma: once the bad subfamily has a
     sign-reversing equivalence, the total signed sum equals the good
     contribution.
+  - Packaged the bad-family data into `BadInvolutionCertificate` and proved
+    its total-sum-to-good-sum theorem.
 
 ## 2026-05-14
 - Strengthened Chapter29's GSR riffle-label partition layer:

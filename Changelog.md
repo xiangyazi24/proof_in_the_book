@@ -1,4 +1,10 @@
 ## 2026-05-14
+- Strengthened Chapter03's smoothness contradiction interface:
+  - Proved that a large prime factor of any descending factor `n - i` forces
+    `n.descFactorial k` to be outside `(k+1).smoothNumbers`.
+  - Added the direct prime-divisor version for later Sylvester reductions.
+
+## 2026-05-14
 - Strengthened Chapter03's factor-prime obstruction layer:
   - Proved that if the descending product is `(k+1)`-smooth, then no factor
     `n - i` with `i < k` has a prime factor above `k`.

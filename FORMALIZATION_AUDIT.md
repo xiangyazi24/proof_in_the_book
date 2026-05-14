@@ -34,7 +34,9 @@ explicitly logged in `Changelog.md`.
   to proving that `n(n-1)...(n-k+1)` is not `(k+1)`-smooth.  It also now
   proves that each factor `n - i` of the descending product inherits
   `(k+1)`-smoothness from the whole product, and therefore every prime
-  divisor of such a factor is at most `k`.
+  divisor of such a factor is at most `k`; conversely, a large prime factor
+  in any descending factor immediately witnesses non-smoothness of the whole
+  descending product.
 - [ ] Chapter04: replace the remaining comment-level gap for the
   sum-of-two-squares sufficiency/involution argument with an actual Lean proof
   path, or narrow the theorem statements and record the gap explicitly.

@@ -261,7 +261,9 @@ Status:
 
 Status:
 - Submitted as `8471a107` / seq 7, tagged `CH03_FACTOR_20260514`.
-- Still processing after local fallback work.
+- Completed with `[BRIDGE_ERROR] response timeout`.
 - Local fallback implemented:
   - `not_hasPrimeFactorAbove_sub_of_descFactorial_mem_smooth`.
   - `prime_factor_le_of_dvd_sub_of_descFactorial_mem_smooth`.
+  - `descFactorial_not_smooth_of_sub_hasPrimeFactorAbove`.
+  - `descFactorial_not_smooth_of_large_prime_dvd_sub`.

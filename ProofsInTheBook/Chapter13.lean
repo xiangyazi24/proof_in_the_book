@@ -29,6 +29,21 @@ inductive EdgeSign where
 
 open EdgeSign
 
+/-- The nonzero signs left after Cauchy's proof discards unchanged edges. -/
+inductive StrictEdgeSign where
+  | plus | minus
+  deriving DecidableEq, Repr
+
+/-- Forget zero signs and keep only genuine increases/decreases. -/
+def EdgeSign.toStrict : EdgeSign → Option StrictEdgeSign
+  | plus => some StrictEdgeSign.plus
+  | minus => some StrictEdgeSign.minus
+  | zero => none
+
+@[simp]
+theorem edgeSign_toStrict_eq_none_iff (s : EdgeSign) : s.toStrict = none ↔ s = zero := by
+  cases s <;> simp [EdgeSign.toStrict]
+
 /--
 The local sign-change count around a triangular face. Cauchy's proof labels
 edges by whether their dihedral angle increases, decreases, or stays fixed,
@@ -46,6 +61,18 @@ theorem signChangesAroundTriangle_le_three (a b c : EdgeSign) :
 theorem signChangesAroundTriangle_eq_zero_of_constant (s : EdgeSign) :
     SignChangesAroundTriangle s s s = 0 := by
   simp [SignChangesAroundTriangle]
+
+def StrictSignChangesAroundTriangle (a b c : StrictEdgeSign) : ℕ :=
+  (if a ≠ b then 1 else 0) + (if b ≠ c then 1 else 0) + (if c ≠ a then 1 else 0)
+
+theorem strictSignChangesAroundTriangle_eq_zero_or_two (a b c : StrictEdgeSign) :
+    StrictSignChangesAroundTriangle a b c = 0 ∨
+      StrictSignChangesAroundTriangle a b c = 2 := by
+  cases a <;> cases b <;> cases c <;> decide
+
+theorem strictSignChangesAroundTriangle_even (a b c : StrictEdgeSign) :
+    Even (StrictSignChangesAroundTriangle a b c) := by
+  cases a <;> cases b <;> cases c <;> decide
 
 theorem chapter13 (a b c : EdgeSign) : SignChangesAroundTriangle a b c ≤ 3 :=
   signChangesAroundTriangle_le_three a b c

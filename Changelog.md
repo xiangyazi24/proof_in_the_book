@@ -1,4 +1,11 @@
 ## 2026-05-14
+- Strengthened Chapter13's Cauchy sign bookkeeping:
+  - Added strict nonzero edge signs obtained after discarding unchanged edges.
+  - Added the coercion from full edge signs to optional strict signs.
+  - Proved that strict sign changes around a triangle are either `0` or `2`,
+    hence even.
+
+## 2026-05-14
 - Strengthened Chapter11's slope/direction model:
   - Added a `Direction` type with a vertical direction and finite real slopes.
   - Added the full finite direction set determined by distinct point pairs.

@@ -48,7 +48,9 @@ explicitly logged in `Changelog.md`.
   nonvertical slope set embeds into the full direction set, but it still lacks
   Ungar's rotating-calipers construction.
 - [ ] Chapter13: formalize Cauchy's rigidity proof beyond local edge-sign
-  bookkeeping.
+  bookkeeping.  The current file now separates zero edges from strict `+/-`
+  signs and proves the strict triangular sign-change count is even, but it
+  still lacks the arm lemma, Euler counting, and convex polyhedron geometry.
 - [ ] Chapter16: formalize a real Borsuk/Kahn-Kalai component.  The current
   theorem only checks a supplied finite coloring certificate.
 - [ ] Chapter19: restore the fundamental theorem of algebra statement and

@@ -1,4 +1,10 @@
 ## 2026-05-13
+- Replaced Chapter36's `True` placeholder with the arithmetic counting step
+  in Fisk's art-gallery proof:
+  - For three color classes, prove the smallest has size at most
+    `⌊(red + green + blue)/3⌋`.
+
+## 2026-05-13
 - Replaced Chapter38's `True` placeholder with the elementary Hamming-distance
   unique-decoding lemma:
   - Define binary words of length `n`.

@@ -199,3 +199,11 @@ Status:
 - Active delivery expected; no blocking poll.
 - Completed, but response was a duplicated Chapter20/Monsky answer, not
   Chapter30. Requeue separately after Chapter25 returns.
+- Requeued a smaller sign-reversing-cancellation prompt as `da9681b0` / seq 1
+  after the bridge stale-answer fix. It returned the correct Chapter30 content.
+- Local implementation added `sum_eq_neg_self_of_sign_reversing_equiv` and
+  `two_nsmul_sum_eq_zero_of_sign_reversing_equiv`; the final proof needed
+  `nth_rewrite 1 [h]` instead of rewriting both summands.
+- Follow-up no-two-torsion prompt `5de41f03` / seq 2 was picked up by `ssem`
+  but later disappeared from `/api/result`, consistent with a bridge restart
+  or in-memory queue clear.

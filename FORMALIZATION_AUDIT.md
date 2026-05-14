@@ -80,8 +80,9 @@ explicitly logged in `Changelog.md`.
   vector summing to the deck size.
 - [ ] Chapter30: formalize a real Lindstrom-Gessel-Viennot determinant/path
   statement.  The current file exposes the determinant's signed-permutation
-  expansion and the diagonal determinant case, but not yet the path-family
-  involution/cancellation proof.
+  expansion, the diagonal determinant case, and an abstract finite
+  sign-reversing cancellation lemma, but not yet the path-family
+  involution construction itself.
 - [ ] Chapter31: construct the actual Prüfer encode/decode bijection.  The
   current file now defines labeled trees as `SimpleGraph.IsTree` objects on
   `Fin n` and proves Cayley's count from a supplied Prüfer equivalence.

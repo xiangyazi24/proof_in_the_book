@@ -1,4 +1,10 @@
 ## 2026-05-14
+- Strengthened Chapter30's LGV cancellation algebra:
+  - Added an abstract finite sign-reversing reindexing lemma.
+  - Proved the corresponding `2`-torsion cancellation statement for sums in
+    an additive commutative group.
+
+## 2026-05-14
 - Strengthened Chapter29's GSR riffle-label partition layer:
   - Proved membership in each label pile is exactly equality of labels.
   - Extracted the pile cover and pairwise-disjointness facts.

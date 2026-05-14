@@ -1,4 +1,11 @@
 ## 2026-05-13
+- Replaced Chapter34's `True` placeholder with the formal target structure
+  for the Dinitz problem:
+  - Define cells of an `n × n` array and the row/column conflict relation.
+  - Define proper array colorings.
+  - Prove row-wise and column-wise injectivity certifies a proper coloring.
+
+## 2026-05-13
 - Replaced Chapter24's `True` placeholder with the elementary cotangent
   symmetries used in Herglotz's trick:
   - Prove `cot (x + π) = cot x` from sine and cosine identities.

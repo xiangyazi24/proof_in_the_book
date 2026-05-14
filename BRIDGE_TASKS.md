@@ -144,6 +144,10 @@ Status:
 Status:
 - Submitted as `68fb6e62` / seq 4.
 - Active delivery expected; no blocking poll.
+- Completed, but response was a duplicated Chapter20/Monsky answer, not
+  Chapter25.
+- Requeued as `f220a654` / seq 7 with a shorter Chapter25-only prompt and an
+  explicit `WRONG_CHANNEL` guard.
 
 ### Task B2: Chapter29 GSR Riffle Label Distribution Layer
 
@@ -164,6 +168,8 @@ Status:
 Status:
 - Submitted as `799bf07d` / seq 5.
 - Active delivery expected; no blocking poll.
+- Completed, but response was a duplicated Chapter20/Monsky answer, not
+  Chapter29. Requeue separately after Chapter25 returns.
 
 ### Task B3: Chapter30 LGV Cancellation Layer
 
@@ -183,3 +189,5 @@ Status:
 Status:
 - Submitted as `146026e6` / seq 6.
 - Active delivery expected; no blocking poll.
+- Completed, but response was a duplicated Chapter20/Monsky answer, not
+  Chapter30. Requeue separately after Chapter25 returns.

@@ -1,4 +1,10 @@
 ## 2026-05-13
+- Replaced Chapter39's `True` placeholder with the finite Kneser-graph
+  vertex layer:
+  - Define `KG(n,k)` vertices as `k`-subsets of `Fin n`.
+  - Prove their cardinality is `n.choose k`.
+
+## 2026-05-13
 - Replaced Chapter30's `True` placeholder with the diagonal determinant case
   of the Lindström-Gessel-Viennot method:
   - State the off-diagonal-zero condition for a path-counting matrix.

@@ -340,5 +340,5 @@ Status:
 
 Status:
 - Submitted as `d97e0b1d` / seq 11, tagged `CH04_FINTYPE_20260514`.
-- Still processing after local fallback work.
+- Completed with `[BRIDGE_ERROR] response timeout`.
 - Local fallback implemented `ZagierTriple.instFintype`.

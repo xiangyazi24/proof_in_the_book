@@ -50,8 +50,10 @@ semantic TODO items may be advanced in logged, build-checked increments.
   multiplication, Mathlib-backed characterization, a finite `ZagierTriple`
   type, and the simple swap involution with fixed points characterized by
   `y = z`; it also proves that a swap fixed point gives a sum-of-two-squares
-  representation.  The piecewise Zagier involution and parity/fixed-point
-  count remain open.
+  representation.  It now also has the finite odd-cardinality involution
+  lemma and applies it to the swap involution.  The piecewise Zagier
+  involution and the proof that the triple set has odd cardinality remain
+  open.
 - [ ] Chapter09: build the Dehn-invariant geometry layer.  The current file
   now defines the tensor-product target for an abstract angle quotient and the
   finite edge-sum algebra, but it still lacks actual polyhedral geometry,

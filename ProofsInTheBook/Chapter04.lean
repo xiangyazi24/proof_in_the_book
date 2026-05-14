@@ -50,6 +50,19 @@ theorem chapter04_brahmagupta {a b x y u v : ℕ}
     ∃ r s : ℕ, a * b = r ^ 2 + s ^ 2 :=
   Nat.sq_add_sq_mul ha hb
 
+theorem exists_fixed_of_odd_card_involutive {α : Type*} [Fintype α]
+    (e : Equiv.Perm α) (hodd : Odd (Fintype.card α)) (hinv : e ^ 2 = 1) :
+    ∃ x : α, e x = x := by
+  classical
+  by_contra hnone
+  have hsupp : e.support = Finset.univ := by
+    ext x
+    have hx : e x ≠ x := fun hfix => hnone ⟨x, hfix⟩
+    simp [Equiv.Perm.mem_support, hx]
+  have htwo : 2 ∣ Fintype.card α := by
+    simpa [hsupp] using Equiv.Perm.two_dvd_card_support (σ := e) hinv
+  exact hodd.not_two_dvd_nat htwo
+
 /-!
 ### Sufficiency: primes p ≡ 1 (mod 4) are sums of two squares
 
@@ -159,6 +172,14 @@ theorem exists_sq_add_sq_of_y_eq_z {p : ℕ} (t : ZagierTriple p) (hyz : t.y = t
 theorem exists_sq_add_sq_of_swapYZ_fixed {p : ℕ} (t : ZagierTriple p) (hfix : (swapYZ p) t = t) :
     ∃ a b : ℕ, a ^ 2 + b ^ 2 = p :=
   exists_sq_add_sq_of_y_eq_z t ((swapYZ_fixed_iff p t).mp hfix)
+
+theorem exists_swapYZ_fixed_of_odd_card {p : ℕ} (hodd : Odd (Fintype.card (ZagierTriple p))) :
+    ∃ t : ZagierTriple p, (swapYZ p) t = t := by
+  have hinv : (swapYZ p : Equiv.Perm (ZagierTriple p)) ^ 2 = 1 := by
+    ext t
+    cases t
+    rfl
+  exact exists_fixed_of_odd_card_involutive (swapYZ p) hodd hinv
 
 end ZagierTriple
 

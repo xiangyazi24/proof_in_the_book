@@ -1,4 +1,11 @@
 ## 2026-05-14
+- Strengthened Chapter29's GSR riffle-label partition layer:
+  - Proved membership in each label pile is exactly equality of labels.
+  - Extracted the pile cover and pairwise-disjointness facts.
+  - Added the induced pile-size vector and proved its entries sum to the deck
+    size.
+
+## 2026-05-14
 - Strengthened Chapter25's Buffon normalization layer:
   - Proved the single-segment expected crossing expression is nonnegative
     under `0 < d` and `0 ≤ length`.

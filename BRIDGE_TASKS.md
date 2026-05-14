@@ -176,6 +176,8 @@ Status:
 - Active delivery expected; no blocking poll.
 - Completed, but response was a duplicated Chapter20/Monsky answer, not
   Chapter29. Requeue separately after Chapter25 returns.
+- Local fallback implemented the pile partition facts and
+  `pileSizeVector_sum_eq_deck_size`.
 
 ### Task B3: Chapter30 LGV Cancellation Layer
 

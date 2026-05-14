@@ -76,7 +76,8 @@ explicitly logged in `Changelog.md`.
   probability model and symmetry argument.
 - [ ] Chapter29: connect riffle labels to the Gilbert-Shannon-Reeds shuffle
   distribution.  The current file counts label assignments and proves the
-  induced pile sizes sum to the deck size.
+  label piles form a disjoint cover of the deck, with the induced pile-size
+  vector summing to the deck size.
 - [ ] Chapter30: formalize a real Lindstrom-Gessel-Viennot determinant/path
   statement.  The current file exposes the determinant's signed-permutation
   expansion and the diagonal determinant case, but not yet the path-family

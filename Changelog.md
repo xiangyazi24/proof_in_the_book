@@ -1,4 +1,12 @@
 ## 2026-05-13
+- Replaced Chapter20's `True` placeholder with the color model used in
+  Monsky's theorem:
+  - Define the three Monsky colors.
+  - Define trichromatic triangles as pairwise-different color triples.
+  - Prove basic constructors and a non-trichromatic obstruction when two
+    vertex colors coincide.
+
+## 2026-05-13
 - Replaced Chapter16's `True` placeholder with a finite Borsuk-partition
   certificate:
   - Define a `d+1`-coloring condition requiring same-color point pairs to

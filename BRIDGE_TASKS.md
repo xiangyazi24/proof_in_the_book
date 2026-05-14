@@ -305,3 +305,16 @@ Status:
 - Completed with `[BRIDGE_ERROR] response timeout`.
 - Local fallback added `ZagierTriple`, `ZagierTriple.swapYZ`, and
   `ZagierTriple.swapYZ_fixed_iff`.
+
+### Task D2: Chapter04 Fixed Swap Gives Representation
+
+- File: `ProofsInTheBook/Chapter04.lean`
+- Current local state:
+  - `ZagierTriple.swapYZ_fixed_iff` characterizes fixed points by `y = z`.
+- Desired answer:
+  - Chapter04 only.
+  - Prove that a fixed point of `swapYZ` yields a representation of `p` as a
+    sum of two squares, taking `a = x` and `b = 2*y`.
+
+Status:
+- Submitted as `8927827d` / seq 10, tagged `CH04_FIXED_REPR_20260514`.

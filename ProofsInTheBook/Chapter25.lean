@@ -37,6 +37,19 @@ theorem curveExpectedCrossings_eq_total_length {ι : Type*} (segments : Finset �
   simp [curveExpectedCrossings, segmentExpectedCrossings, Finset.sum_mul, Finset.mul_sum,
     div_eq_mul_inv]
 
+theorem segmentExpectedCrossings_nonneg {d length : ℝ} (hd : 0 < d) (hlen : 0 ≤ length) :
+    0 ≤ segmentExpectedCrossings d length := by
+  unfold segmentExpectedCrossings
+  positivity
+
+theorem segmentExpectedCrossings_le_one {d length : ℝ} (hd : 0 < d) (hle : length ≤ d) :
+    segmentExpectedCrossings d length ≤ 1 := by
+  unfold segmentExpectedCrossings
+  have hden : 0 < Real.pi * d := mul_pos Real.pi_pos hd
+  rw [div_le_one hden]
+  have h2pi : (2 : ℝ) ≤ Real.pi := Real.two_le_pi
+  nlinarith
+
 theorem chapter25 {ι : Type*} (segments : Finset ι) (length : ι → ℝ) (d : ℝ) :
     curveExpectedCrossings segments length d =
       segmentExpectedCrossings d (∑ i ∈ segments, length i) :=

@@ -1,4 +1,11 @@
 ## 2026-05-14
+- Strengthened Chapter25's Buffon normalization layer:
+  - Proved the single-segment expected crossing expression is nonnegative
+    under `0 < d` and `0 ≤ length`.
+  - Proved the normalized expression is at most `1` when `0 < d` and
+    `length ≤ d`, using `2 ≤ π`.
+
+## 2026-05-14
 - Strengthened Chapter20's Monsky/Sperner parity layer:
   - Added an orientation-free red-green edge predicate.
   - Proved a local parity atom: a triangle is trichromatic exactly when it has

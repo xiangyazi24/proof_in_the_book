@@ -70,7 +70,10 @@ explicitly logged in `Changelog.md`.
   symmetries, abstracts the period-one-plus-odd cancellation step, and proves
   the corresponding rational identity for the two singular terms.
 - [ ] Chapter25: extend the finite polygonal linearity step to the actual
-  Buffon needle probability statement.
+  Buffon needle probability statement.  The current file now also proves the
+  single-segment expectation is nonnegative and bounded by `1` in the usual
+  `0 < d`, `length ≤ d` needle regime, but it still lacks the measure-theoretic
+  probability model and symmetry argument.
 - [ ] Chapter29: connect riffle labels to the Gilbert-Shannon-Reeds shuffle
   distribution.  The current file counts label assignments and proves the
   induced pile sizes sum to the deck size.

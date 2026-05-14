@@ -148,6 +148,12 @@ Status:
   Chapter25.
 - Requeued as `f220a654` / seq 7 with a shorter Chapter25-only prompt and an
   explicit `WRONG_CHANNEL` guard.
+- `f220a654` also returned the duplicated Chapter20/Monsky answer. Diagnosed
+  stale-answer capture in `chatgpt-bridge` and pushed fix
+  `extension: prevent stale answer capture`; the browser extension must be
+  reloaded before more bridge proof tasks are trustworthy.
+- Local fallback implemented `segmentExpectedCrossings_nonneg` and
+  `segmentExpectedCrossings_le_one`.
 
 ### Task B2: Chapter29 GSR Riffle Label Distribution Layer
 

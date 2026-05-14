@@ -40,8 +40,9 @@ explicitly logged in `Changelog.md`.
   finite edge-sum algebra, but it still lacks actual polyhedral geometry,
   angle quotients by `πℚ`, and dissection invariance.
 - [ ] Chapter10: prove an incidence/geometric Sylvester-Gallai statement from
-  the extremal-distance argument.  The current theorem only certifies a line
-  already known to contain exactly two points.
+  the extremal-distance argument.  The current file now has ordinary-line
+  bookkeeping and the finite off-line pair minimization step, but it still
+  lacks the actual plane geometry and closer-pair contradiction.
 - [ ] Chapter11: prove Ungar's slope lower bound.  The current theorem only
   turns an injected witness family into a slope-counting lower bound.
 - [ ] Chapter13: formalize Cauchy's rigidity proof beyond local edge-sign

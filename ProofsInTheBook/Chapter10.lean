@@ -38,6 +38,54 @@ def pointsOnLine {Point Line : Type*} [DecidableEq Point] (points : Finset Point
   points.filter fun p => onLine p line
 
 /--
+Finite candidate set for Gallai's extremal proof: pairs `(P, l)` where `P`
+is one of the configuration points and does not lie on the candidate line `l`.
+-/
+def offLinePairs {Point Line : Type*} [DecidableEq Point] [DecidableEq Line]
+    (points : Finset Point) (lines : Finset Line)
+    (onLine : Point → Line → Prop) [DecidableRel onLine] : Finset (Point × Line) :=
+  (points.product lines).filter fun pl => ¬ onLine pl.1 pl.2
+
+theorem mem_offLinePairs {Point Line : Type*} [DecidableEq Point] [DecidableEq Line]
+    {points : Finset Point} {lines : Finset Line}
+    {onLine : Point → Line → Prop} [DecidableRel onLine] {p : Point} {line : Line} :
+    (p, line) ∈ offLinePairs points lines onLine ↔
+      p ∈ points ∧ line ∈ lines ∧ ¬ onLine p line := by
+  simp [offLinePairs, and_assoc]
+
+theorem offLinePairs_nonempty_of_exists {Point Line : Type*}
+    [DecidableEq Point] [DecidableEq Line] {points : Finset Point}
+    {lines : Finset Line} {onLine : Point → Line → Prop} [DecidableRel onLine]
+    (h : ∃ p ∈ points, ∃ line ∈ lines, ¬ onLine p line) :
+    (offLinePairs points lines onLine).Nonempty := by
+  rcases h with ⟨p, hp, line, hline, hoff⟩
+  exact ⟨(p, line), mem_offLinePairs.mpr ⟨hp, hline, hoff⟩⟩
+
+/--
+The finite extremal step in Gallai's proof: once the candidate set of
+point-line pairs is nonempty, any ordered distance value has a minimizing
+candidate.
+-/
+theorem exists_minimal_offLinePair {Point Line Dist : Type*}
+    [DecidableEq Point] [DecidableEq Line] [LinearOrder Dist]
+    (points : Finset Point) (lines : Finset Line)
+    (onLine : Point → Line → Prop) [DecidableRel onLine]
+    (dist : Point → Line → Dist)
+    (hne : (offLinePairs points lines onLine).Nonempty) :
+    ∃ p line,
+      p ∈ points ∧ line ∈ lines ∧ ¬ onLine p line ∧
+      ∀ p' line', p' ∈ points → line' ∈ lines → ¬ onLine p' line' →
+        dist p line ≤ dist p' line' := by
+  obtain ⟨pair, hpair, hmin⟩ :=
+    Finset.exists_min_image (offLinePairs points lines onLine)
+      (fun pl : Point × Line => dist pl.1 pl.2) hne
+  rcases pair with ⟨p, line⟩
+  rcases mem_offLinePairs.mp hpair with ⟨hp, hline, hoff⟩
+  refine ⟨p, line, hp, hline, hoff, ?_⟩
+  intro p' line' hp' hline' hoff'
+  exact hmin (p', line') (mem_offLinePairs.mpr ⟨hp', hline', hoff'⟩)
+
+/--
 An ordinary line for a finite point configuration: exactly two configuration
 points lie on the line.
 -/

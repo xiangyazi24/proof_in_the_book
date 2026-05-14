@@ -1,4 +1,11 @@
 ## 2026-05-14
+- Strengthened Chapter10's Sylvester-Gallai finite extremal setup:
+  - Added the finite set of off-line point/line candidate pairs.
+  - Proved membership and nonemptiness lemmas for those candidates.
+  - Proved that any linearly ordered distance value has a minimizing
+    off-line pair on the finite candidate set.
+
+## 2026-05-14
 - Strengthened Chapter09's Dehn-invariant algebra layer:
   - Added the tensor-product target `DehnTarget Angle = ℝ ⊗[ℤ] Angle`.
   - Added single-edge Dehn contributions and finite edge-sum invariants.

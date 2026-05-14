@@ -1,4 +1,11 @@
 ## 2026-05-14
+- Strengthened Chapter19's local expansion layer:
+  - Added a first-nonzero-positive-coefficient lemma for
+    `q - C (q.eval 0)`.
+  - Added the shifted-polynomial specialization needed after translating to a
+    minimum-modulus point.
+
+## 2026-05-14
 - Strengthened Chapter19's minimum-modulus algebra setup:
   - Added `shiftedPolynomial p z₀ = p.comp (X + C z₀)` for local coordinates.
   - Proved evaluation, constant-coefficient, and root-transfer lemmas for

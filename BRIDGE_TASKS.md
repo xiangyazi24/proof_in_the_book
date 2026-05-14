@@ -65,6 +65,10 @@ Status:
 - `68d377af` completed with `[BRIDGE_ERROR] response timeout`; split the task
   into smaller Chapter19-only follow-ups.
 - Requeued first-coefficient extraction subtask as `dac1dd49` / seq 4.
+- Bridge restart erased `dac1dd49` from server memory, but Xiang pasted the
+  delivered response manually.  Implemented the robust lemma
+  `exists_first_nonzero_coeff_of_sub_C_eval_zero_ne_zero` and the shifted
+  specialization in Chapter19.
 
 ### Task A3: Chapter20 Monsky/Sperner Layer
 
@@ -85,6 +89,9 @@ Status:
 Status:
 - Submitted as `8b1aed53` / seq 5.
 - Active delivery expected; no blocking poll.
+- Bridge restart erased this task from server memory before local receipt;
+  requeue required.
+- Requeued after bridge restart as `6adccf76` / seq 1.
 
 ### Task A4: Chapter24 Herglotz Functional Equation Layer
 
@@ -103,3 +110,6 @@ Status:
 Status:
 - Submitted as `bb9ac388` / seq 6.
 - Active delivery expected; no blocking poll.
+- Bridge restart erased this task from server memory before local receipt;
+  requeue required.
+- Requeued after bridge restart as `2c682fe1` / seq 2.

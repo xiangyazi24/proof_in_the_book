@@ -238,6 +238,11 @@ Please fill the following placeholders with full Lean proofs:
   - A4 Chapter24 Herglotz layer submitted as `bb9ac388` / seq 6.
   - New bridge mode: active delivery expected; local side should continue
     organizing tasks instead of blocking on polling.
+  - Bridge restart cleared server-side task memory; `dac1dd49`, `8b1aed53`,
+    and `bb9ac388` now return `not found`.
+  - Xiang manually pasted `dac1dd49`'s answer; local side implemented it in
+    Chapter19.
+  - Requeued A3 as `6adccf76` / seq 1 and A4 as `2c682fe1` / seq 2.
 
 ### Goal run for Chapter 04
 - chapter04

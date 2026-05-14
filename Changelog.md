@@ -1,4 +1,10 @@
 ## 2026-05-13
+- Replaced Chapter22's `True` placeholder with the permanent computation for
+  the van der Waerden equality-case matrix:
+  - Define the flat `n × n` matrix with all entries `1/n`.
+  - Compute its permanent as `n! / n^n` from the permutation-sum definition.
+
+## 2026-05-13
 - Replaced Chapter33's `True` placeholder with the finite Hall-marriage
   engine used in the Latin-square completion proof:
   - State the Hall condition for row availability lists.

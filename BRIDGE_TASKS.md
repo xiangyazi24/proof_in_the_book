@@ -342,3 +342,22 @@ Status:
 - Submitted as `d97e0b1d` / seq 11, tagged `CH04_FINTYPE_20260514`.
 - Completed with `[BRIDGE_ERROR] response timeout`.
 - Local fallback implemented `ZagierTriple.instFintype`.
+
+### Task E2: Chapter04 First Zagier Involution Branch
+
+- File: `ProofsInTheBook/Chapter04.lean`
+- Current local state:
+  - `ZagierTriple p` is finite.
+  - The generic odd-cardinality involution fixed-point lemma is proved and
+    applied to `swapYZ`.
+  - The canonical triple `(1, 1, k)` is constructed for `4k + 1`.
+- Desired answer:
+  - Chapter04 only.
+  - Under `h : t.x.val < t.y.val - t.z.val`, construct the first branch of
+    Zagier's piecewise involution with coordinates `(x + 2z, z, y - x - z)`.
+  - Return Lean code likely to compile for this branch only, including the
+    positivity, Fin bounds, and equation proof.
+
+Status:
+- Submitted as `94f69aae` / seq 12, tagged `CH04_ZAGIER_BRANCH1_20260514`.
+- Awaiting bridge response.

@@ -1,4 +1,10 @@
 ## 2026-05-13
+- Replaced Chapter15's `True` placeholder with the sign-vector pigeonhole
+  bound used in the Danzer-Grünbaum proof:
+  - State the injectivity condition for points mapped to Boolean sign vectors.
+  - Prove the `2^d` bound by comparing the finite set with `Fin d → Bool`.
+
+## 2026-05-13
 - Replaced Chapter14's `True` placeholder with the sign-vector pigeonhole
   bound used in the touching-simplices proof:
   - Formalize an injective assignment into Boolean sign vectors.

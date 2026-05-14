@@ -1,4 +1,10 @@
 ## 2026-05-13
+- Replaced Chapter14's `True` placeholder with the sign-vector pigeonhole
+  bound used in the touching-simplices proof:
+  - Formalize an injective assignment into Boolean sign vectors.
+  - Derive the `2^d` bound from the cardinality of `Fin d → Bool`.
+
+## 2026-05-13
 - Replaced Chapter21's `True` placeholder with the formal finite-difference
   step behind Pólya's theorem:
   - Define the forward difference operator on integer-valued functions.

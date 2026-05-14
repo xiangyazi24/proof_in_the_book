@@ -1,4 +1,11 @@
 ## 2026-05-14
+- Strengthened Chapter39's Kneser coloring layer:
+  - Prove any coloring of `kneserGraph n k` separates distinct disjoint
+    `k`-subsets.
+  - Update the semantic audit to keep the Lovasz/Barany lower-bound argument
+    as the remaining gap.
+
+## 2026-05-14
 - Strengthened Chapter24's Herglotz-function-equation layer:
   - Added the rational identity
     `1/x + 1/(1-x) = 1/(x*(1-x))` away from the singularities.

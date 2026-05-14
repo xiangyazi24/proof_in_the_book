@@ -42,6 +42,16 @@ theorem kneserGraph_adj_iff {n k : ℕ} (a b : KneserVertex n k) :
   Iff.rfl
 
 /--
+Any coloring of a Kneser graph assigns different colors to disjoint
+`k`-subsets.
+-/
+theorem kneser_coloring_separates_disjoint {n k q : ℕ}
+    (C : (kneserGraph n k).Coloring (Fin q)) {a b : KneserVertex n k}
+    (hne : a ≠ b) (hdisj : Disjoint (a : Finset (Fin n)) (b : Finset (Fin n))) :
+    C a ≠ C b := by
+  exact C.valid ⟨hne, hdisj⟩
+
+/--
 The first finite-counting layer in the Kneser graph proof: `KG(n,k)` has
 `n choose k` vertices.
 -/

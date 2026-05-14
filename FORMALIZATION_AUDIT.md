@@ -70,4 +70,5 @@ the proof bypasses the book argument.
   step once a 3-colored triangulation is supplied.
 - [ ] Chapter39: formalize Kneser graph coloring and prove Lovasz/Barany
   lower-bound components.  The current file now defines Kneser vertices,
-  the Kneser graph adjacency relation, and the vertex count.
+  the Kneser graph adjacency relation, the coloring separation property for
+  disjoint subsets, and the vertex count.

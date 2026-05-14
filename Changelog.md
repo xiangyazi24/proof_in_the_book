@@ -1,3 +1,8 @@
+## 2026-05-13
+- Added repository-level onboarding docs:
+  - `README.md` now states the project goal: formalize the full book proof-by-proof, not close chapter statements with Mathlib one-liners.
+  - `UNDERSTANDING.md` records the agent workflow: chapters are independent units; finish/check/record/commit one chapter before moving to the next, and compact or summarize context between chapters.
+
 ## 2026-05-11
 - 方向纠偏：Chapter01 只保留书式证明骨架，不再接收任何“直接收口”短证。
   - `chapter01_euclid` 改回反设有限素数集、构造积 N、取 `N + 1` 素因子 `q`、推出 `q ∣ N` 与 `q ∣ N+1` 进而矛盾的结构，等待逐步补齐细节。

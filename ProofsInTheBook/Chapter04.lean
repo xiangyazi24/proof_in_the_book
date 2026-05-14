@@ -123,13 +123,16 @@ theorem swapYZ_fixed_iff (p : ℕ) (t : ZagierTriple p) : (swapYZ p) t = t ↔ t
     subst hyz
     rfl
 
-theorem exists_sq_add_sq_of_swapYZ_fixed {p : ℕ} (t : ZagierTriple p) (hfix : (swapYZ p) t = t) :
+theorem exists_sq_add_sq_of_y_eq_z {p : ℕ} (t : ZagierTriple p) (hyz : t.y = t.z) :
     ∃ a b : ℕ, a ^ 2 + b ^ 2 = p := by
-  have hyz : t.y = t.z := (swapYZ_fixed_iff p t).mp hfix
   refine ⟨t.x.val, 2 * t.y.val, ?_⟩
   have heq := t.equation
   rw [← hyz] at heq
   nlinarith
+
+theorem exists_sq_add_sq_of_swapYZ_fixed {p : ℕ} (t : ZagierTriple p) (hfix : (swapYZ p) t = t) :
+    ∃ a b : ℕ, a ^ 2 + b ^ 2 = p :=
+  exists_sq_add_sq_of_y_eq_z t ((swapYZ_fixed_iff p t).mp hfix)
 
 end ZagierTriple
 

@@ -416,3 +416,9 @@ Please fill the following placeholders with full Lean proofs:
 - chapter03_sylvester
 - chapter03_binomials_coefficients_never_powers
 - chapter03
+
+### Bridge Batch B submitted (ssem, 2026-05-14)
+- Chapter25 Buffon finite linearity-to-probability layer: `68fb6e62` / seq 4.
+- Chapter29 GSR riffle label distribution layer: `799bf07d` / seq 5.
+- Chapter30 LGV cancellation layer: `146026e6` / seq 6.
+- active delivery expected; local side continues with small compileable layers.

@@ -121,3 +121,65 @@ Status:
 - `2c682fe1` completed with useful Chapter24 lemmas; implemented
   `herglotz_cancel_of_periodic_odd`, `herglotz_add_cancel_of_periodic_odd`,
   and `cot_pi_herglotz_add_cancel`.
+
+## 2026-05-14 Batch B
+
+### Task B1: Chapter25 Buffon Linearity-To-Probability Layer
+
+- File: `ProofsInTheBook/Chapter25.lean`
+- Current local state:
+  - `segmentExpectedCrossings d length = 2 * length / (π * d)`.
+  - `curveExpectedCrossings` sums segment contributions.
+  - `curveExpectedCrossings_eq_total_length` proves finite linearity.
+- Heavy goal:
+  - Propose one small Lean-feasible lemma connecting this finite linearity
+    layer toward Buffon's needle probability, preferably assumptions for
+    `0 < d`, `0 ≤ length`, `length ≤ d`, or a normalized probability value
+    `2 * length / (π * d)`.
+- Desired answer:
+  - Chapter25 only.
+  - Return concrete theorem statements and proof sketches.
+  - Avoid measure theory unless the exact Mathlib APIs are named.
+
+Status:
+- Submitted as `68fb6e62` / seq 4.
+- Active delivery expected; no blocking poll.
+
+### Task B2: Chapter29 GSR Riffle Label Distribution Layer
+
+- File: `ProofsInTheBook/Chapter29.lean`
+- Current local state:
+  - `RiffleLabels a n := Fin n → Fin a`.
+  - `pileOfLabel` and `pile_card_sum_eq_deck_size`.
+  - `riffleLabels_card`.
+- Heavy goal:
+  - Propose one Lean-feasible finite combinatorial lemma connecting label
+    assignments to an induced stable riffle order or pile-size vector.
+- Desired answer:
+  - Chapter29 only.
+  - Return concrete theorem statements and proof sketches.
+  - Keep it finite/combinatorial; avoid probability until the finite map is
+    formalized.
+
+Status:
+- Submitted as `799bf07d` / seq 5.
+- Active delivery expected; no blocking poll.
+
+### Task B3: Chapter30 LGV Cancellation Layer
+
+- File: `ProofsInTheBook/Chapter30.lean`
+- Current local state:
+  - Determinant signed-permutation expansion.
+  - Diagonal/off-diagonal-zero determinant case.
+- Heavy goal:
+  - Propose one small Lean-feasible finite lemma toward the LGV cancellation
+    proof, preferably an abstract sign-reversing involution cancellation lemma
+    for a finite sum over permutations/path families.
+- Desired answer:
+  - Chapter30 only.
+  - Return concrete theorem statements and proof sketches.
+  - Keep it algebraic/finite; do not attempt full lattice-path geometry.
+
+Status:
+- Submitted as `146026e6` / seq 6.
+- Active delivery expected; no blocking poll.

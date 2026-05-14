@@ -1,4 +1,9 @@
 ## 2026-05-13
+- Fixed Chapter27 build failure in the De Bruijn tiling formalization:
+  - Reindexed horizontal and vertical brick sums over `Fin n` instead of `Finset.range n`, so the `Fin` bounds use `k.isLt` rather than an unavailable range-membership proof.
+  - Verified `lake env lean ProofsInTheBook/Chapter27.lean` and full `lake build`.
+
+## 2026-05-13
 - Added repository-level onboarding docs:
   - `README.md` now states the project goal: formalize the full book proof-by-proof, not close chapter statements with Mathlib one-liners.
   - `UNDERSTANDING.md` records the agent workflow: chapters are independent units; finish/check/record/commit one chapter before moving to the next, and compact or summarize context between chapters.

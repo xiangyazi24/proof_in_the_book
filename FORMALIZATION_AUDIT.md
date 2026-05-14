@@ -45,7 +45,12 @@ semantic TODO items may be advanced in logged, build-checked increments.
   descending product.
 - [ ] Chapter04: replace the remaining comment-level gap for the
   sum-of-two-squares sufficiency/involution argument with an actual Lean proof
-  path, or narrow the theorem statements and record the gap explicitly.
+  path, or narrow the theorem statements and record the gap explicitly.  The
+  current file now includes the modulo-four necessity, Brahmagupta
+  multiplication, Mathlib-backed characterization, a finite `ZagierTriple`
+  type, and the simple swap involution with fixed points characterized by
+  `y = z`; the piecewise Zagier involution and parity/fixed-point count remain
+  open.
 - [ ] Chapter09: build the Dehn-invariant geometry layer.  The current file
   now defines the tensor-product target for an abstract angle quotient and the
   finite edge-sum algebra, but it still lacks actual polyhedral geometry,

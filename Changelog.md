@@ -1,4 +1,13 @@
 ## 2026-05-14
+- Strengthened Chapter04's two-squares layer:
+  - Expanded the scaffold into the current two-squares formalization layer,
+    including modulo-four necessity, Brahmagupta multiplication, and the
+    existing Mathlib-backed characterization.
+  - Added a finite `ZagierTriple` type for `x^2 + 4yz = p`.
+  - Added the swap involution `(x,y,z) ↦ (x,z,y)` and characterized its fixed
+    points by `y = z`.
+
+## 2026-05-14
 - Strengthened Chapter03's smoothness contradiction interface:
   - Proved that a large prime factor of any descending factor `n - i` forces
     `n.descFactorial k` to be outside `(k+1).smoothNumbers`.

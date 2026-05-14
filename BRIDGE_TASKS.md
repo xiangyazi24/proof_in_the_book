@@ -302,3 +302,6 @@ Status:
 
 Status:
 - Submitted as `fab126a1` / seq 9, tagged `CH04_ZAGIER_20260514`.
+- Completed with `[BRIDGE_ERROR] response timeout`.
+- Local fallback added `ZagierTriple`, `ZagierTriple.swapYZ`, and
+  `ZagierTriple.swapYZ_fixed_iff`.

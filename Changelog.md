@@ -1,4 +1,12 @@
 ## 2026-05-13
+- Replaced Chapter10's `True` placeholders with the ordinary-line target
+  structure for Sylvester-Gallai:
+  - Define the finite set of configuration points lying on a candidate line.
+  - Define an ordinary line as one containing exactly two configuration points.
+  - Prove a line with filtered point count `2` satisfies the ordinary-line
+    predicate.
+
+## 2026-05-13
 - Replaced Chapter13's `True` placeholders with the edge-sign bookkeeping
   used in Cauchy's rigidity proof:
   - Define the three edge signs `+`, `-`, and `0`.

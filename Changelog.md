@@ -1,4 +1,11 @@
 ## 2026-05-13
+- Replaced Chapter09's `True` placeholders with the abstract Dehn-invariant
+  obstruction:
+  - State finite additivity over dissection pieces.
+  - Prove matching piecewise contributions give equal total invariants.
+  - Prove a zero invariant cannot equal a nonzero invariant.
+
+## 2026-05-13
 - Replaced Chapter20's `True` placeholder with the color model used in
   Monsky's theorem:
   - Define the three Monsky colors.

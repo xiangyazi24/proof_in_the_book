@@ -26,6 +26,16 @@ def LatinConflict {n : ℕ} (a b : Cell n) : Prop :=
 def ProperArrayColoring {n : ℕ} {α : Type*} (color : Cell n → α) : Prop :=
   ∀ a b, LatinConflict a b → color a ≠ color b
 
+/-- A coloring respects the list assignment when every cell receives a color from its list. -/
+def RespectsLists {n : ℕ} {α : Type*} (lists : Cell n → Finset α)
+    (color : Cell n → α) : Prop :=
+  ∀ cell, color cell ∈ lists cell
+
+/-- The target object in Dinitz's problem: list-respecting and Latin-proper. -/
+def DinitzSolution {n : ℕ} {α : Type*} (lists : Cell n → Finset α)
+    (color : Cell n → α) : Prop :=
+  RespectsLists lists color ∧ ProperArrayColoring color
+
 /-- The row-and-column injectivity condition used to certify a Latin coloring. -/
 def RowColumnInjective {n : ℕ} {α : Type*} (color : Cell n → α) : Prop :=
   (∀ r : Fin n, Function.Injective fun c : Fin n => color (r, c)) ∧
@@ -51,8 +61,20 @@ theorem properArrayColoring_of_rowColumnInjective {n : ℕ} {α : Type*}
     have hr : ar = br := h.2 ac hsame
     exact hne (by simp [hr])
 
-theorem chapter34 {n : ℕ} {α : Type*} {color : Cell n → α}
-    (h : RowColumnInjective color) : ProperArrayColoring color :=
-  properArrayColoring_of_rowColumnInjective h
+/--
+A list-respecting row/column-injective array coloring is a Dinitz solution.
+Galvin's theorem supplies such a coloring from list-size hypotheses; this
+lemma records the final verification target.
+-/
+theorem dinitzSolution_of_respectsLists_rowColumnInjective {n : ℕ} {α : Type*}
+    {lists : Cell n → Finset α} {color : Cell n → α}
+    (hlist : RespectsLists lists color) (hinj : RowColumnInjective color) :
+    DinitzSolution lists color :=
+  ⟨hlist, properArrayColoring_of_rowColumnInjective hinj⟩
+
+theorem chapter34 {n : ℕ} {α : Type*} {lists : Cell n → Finset α} {color : Cell n → α}
+    (hlist : RespectsLists lists color) (hinj : RowColumnInjective color) :
+    DinitzSolution lists color :=
+  dinitzSolution_of_respectsLists_rowColumnInjective hlist hinj
 
 end ProofsInTheBook.Chapter34

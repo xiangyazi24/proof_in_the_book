@@ -52,8 +52,9 @@ the proof bypasses the book argument.
 - [ ] Chapter31: connect the Prüfer code space to labeled trees and prove the
   bijective Cayley formula, not only the code-space cardinality.
 - [ ] Chapter34: prove the list-coloring/Galvin step for Dinitz arrays.  The
-  current theorem only checks that row/column injectivity implies a proper
-  coloring.
+  current theorem now defines the list-respecting Dinitz solution target and
+  checks that a supplied row/column-injective list-respecting coloring is a
+  solution.
 - [ ] Chapter35: formalize the five-color induction/Kempe-chain step.  The
   current theorem only proves the average-degree lemma.
 - [ ] Chapter36: add the geometric prerequisites for the art-gallery theorem:

@@ -1,4 +1,11 @@
 ## 2026-05-13
+- Strengthened Chapter34's Dinitz target structure:
+  - Added list assignments and the `RespectsLists` predicate.
+  - Defined `DinitzSolution` as list-respecting plus Latin-proper.
+  - Changed `chapter34` to verify a supplied row/column-injective,
+    list-respecting coloring as a Dinitz solution.
+
+## 2026-05-13
 - Updated the semantic audit for Chapter36 after adding the guard-selection
   theorem: the remaining gap is now the geometric triangulation and
   3-coloring infrastructure, not the finite color-class guard argument.

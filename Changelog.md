@@ -1,4 +1,10 @@
 ## 2026-05-13
+- Replaced Chapter33's `True` placeholder with the finite Hall-marriage
+  engine used in the Latin-square completion proof:
+  - State the Hall condition for row availability lists.
+  - Derive an injective system of distinct representatives.
+
+## 2026-05-13
 - Replaced Chapter31's `True` placeholder with the formal Prüfer-code
   counting side of Cayley's formula:
   - Define words of length `n - 2` over the vertex set `Fin n`.

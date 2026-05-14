@@ -1,4 +1,12 @@
 ## 2026-05-13
+- Replaced Chapter19's `Complex.exists_root` placeholder with an explicit
+  algebraic root calculation for the linear term:
+  - Prove `cX + b` has root `-b/c` when `c ≠ 0`.
+  - Record the monic linear special case `X - C a`.
+  - This removes the full FTA black-box closure and leaves a concrete local
+    cancellation component for the minimum-modulus proof path.
+
+## 2026-05-13
 - Replaced Chapter11's `True` placeholders with the finite slope-counting
   interface for Ungar's theorem:
   - Define planar points and slopes of nonvertical ordered pairs.

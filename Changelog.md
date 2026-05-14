@@ -1,4 +1,11 @@
 ## 2026-05-14
+- Strengthened Chapter03's Sylvester infrastructure:
+  - Added a reusable factorial-divisibility lemma: if a prime divides `n!`
+    but not `k!` or `(n-k)!`, then it divides `n.choose k`.
+  - Refactored the central Sylvester proof through this lemma, making the
+    general Sylvester proof path more explicit.
+
+## 2026-05-14
 - Clarified semantic-audit work order:
   - Default to the earliest remaining chapter in `FORMALIZATION_AUDIT.md`.
   - Require explicit blocker/logging when skipping ahead.

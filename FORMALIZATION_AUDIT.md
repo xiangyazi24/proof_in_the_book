@@ -28,7 +28,8 @@ explicitly logged in `Changelog.md`.
 - [ ] Chapter03: restore the general Sylvester theorem statement
   `∀ n k, 2 * k ≤ n → 0 < k → ∃ p, k < p ∧ p.Prime ∧ p ∣ n.choose k`
   and the almost-never-perfect-powers theorem.  The current file proves the
-  central binomial case and a prime-divisor component only.
+  central binomial case, a reusable factorial-divisibility lemma for binomial
+  coefficients, and a prime-divisor component only.
 - [ ] Chapter04: replace the remaining comment-level gap for the
   sum-of-two-squares sufficiency/involution argument with an actual Lean proof
   path, or narrow the theorem statements and record the gap explicitly.

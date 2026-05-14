@@ -22,6 +22,20 @@ namespace ProofsInTheBook.Chapter03
 
 open Nat
 
+/--
+Factorial form of the standard binomial-divisibility argument: if a prime
+divides `n!` but not the two factorial factors in
+`C(n,k) * k! * (n-k)! = n!`, then it divides `C(n,k)`.
+-/
+theorem prime_dvd_choose_of_dvd_factorial_not_factorial_sides {n k p : ℕ}
+    (hkn : k ≤ n) (hp : p.Prime) (hdvd : p ∣ n !)
+    (hk : ¬ p ∣ k !) (hnk : ¬ p ∣ (n - k) !) : p ∣ n.choose k := by
+  have h_eq : n.choose k * k ! * (n - k) ! = n ! :=
+    choose_mul_factorial_mul_factorial hkn
+  rw [← h_eq] at hdvd
+  have hleft : p ∣ n.choose k * k ! := (hp.dvd_mul.mp hdvd).resolve_right hnk
+  exact (hp.dvd_mul.mp hleft).resolve_right hk
+
 /-!
 ### Central case of Sylvester's theorem
 
@@ -37,13 +51,10 @@ theorem chapter03_sylvester_central (k : ℕ) (hk : k ≠ 0) :
     ∃ p, k < p ∧ p.Prime ∧ p ∣ (2 * k).choose k := by
   obtain ⟨p, hp, hkp, hp2k⟩ := Nat.exists_prime_lt_and_le_two_mul k hk
   refine ⟨p, hkp, hp, ?_⟩
-  have h_eq : (2 * k).choose k * k ! * (2 * k - k) ! = (2 * k) ! :=
-    choose_mul_factorial_mul_factorial (by omega : k ≤ 2 * k)
-  rw [show 2 * k - k = k from by omega] at h_eq
   have h_dvd : p ∣ (2 * k) ! := hp.dvd_factorial.mpr (by omega)
   have h_ndvd : ¬ (p ∣ k !) := by rwa [hp.dvd_factorial, not_le]
-  rw [← h_eq] at h_dvd
-  exact (hp.dvd_mul.mp ((hp.dvd_mul.mp h_dvd).resolve_right h_ndvd)).resolve_right h_ndvd
+  exact prime_dvd_choose_of_dvd_factorial_not_factorial_sides (by omega : k ≤ 2 * k) hp
+    h_dvd h_ndvd (by rwa [show 2 * k - k = k from by omega])
 
 /-!
 ### General Sylvester's theorem

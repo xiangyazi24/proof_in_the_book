@@ -1,4 +1,11 @@
 ## 2026-05-13
+- Replaced Chapter38's `True` placeholder with the elementary Hamming-distance
+  unique-decoding lemma:
+  - Define binary words of length `n`.
+  - Prove balls of radius `t` around codewords are disjoint when minimum
+    distance is greater than `2t`, using the Hamming triangle inequality.
+
+## 2026-05-13
 - Replaced Chapter22's `True` placeholder with the permanent computation for
   the van der Waerden equality-case matrix:
   - Define the flat `n × n` matrix with all entries `1/n`.

@@ -19,9 +19,13 @@ Preferred Channel for this repo
 
 Send/Receive workflow (1-2 questions at a time)
 1. From local: call bridge to submit one compact question.
-2. Wait for task id and monitor `GET /api/result/{id}`.
-3. Apply returned patch or theorem proof updates if valid.
-4. Commit and push immediately after local updates.
+2. Record the task id in `BRIDGE_TASKS.md` or `WebappTasks.md`.
+3. If active delivery is unavailable, poll `GET /api/result/{id}` until
+   `completed`, `failed`, or an explicit timeout is recorded.
+4. If active delivery is available, do not block on polling; continue local
+   organization work and process delivered responses when they arrive.
+5. Apply returned patch or theorem proof updates if valid.
+6. Commit and push immediately after local updates.
 
 Why this was used
 - Keeps one question per round short enough for quick handoff.

@@ -62,3 +62,44 @@ Status:
 - Completed, but response was a duplicated Chapter03/Sylvester answer, not a
   Chapter19 answer.
 - Requeued as `68d377af` / seq 3 with an explicit "Chapter19 only" prompt.
+- `68d377af` completed with `[BRIDGE_ERROR] response timeout`; split the task
+  into smaller Chapter19-only follow-ups.
+- Requeued first-coefficient extraction subtask as `dac1dd49` / seq 4.
+
+### Task A3: Chapter20 Monsky/Sperner Layer
+
+- File: `ProofsInTheBook/Chapter20.lean`
+- Current local state:
+  - `MonskyColor` has three colors.
+  - `TrichromaticTriangle` is pairwise color inequality.
+  - Only basic trichromatic/nontrichromatic lemmas are present.
+- Heavy goal:
+  - Propose one Lean-feasible finite combinatorial layer toward Monsky's
+    theorem, preferably a Sperner-style boundary/counting lemma that does not
+    require formal 2-adics yet.
+- Desired answer:
+  - Return concrete Lean theorem statements.
+  - Keep the target local to finite triangles/coloring; do not attempt full
+    geometric triangulation of the square.
+
+Status:
+- Submitted as `8b1aed53` / seq 5.
+- Active delivery expected; no blocking poll.
+
+### Task A4: Chapter24 Herglotz Functional Equation Layer
+
+- File: `ProofsInTheBook/Chapter24.lean`
+- Current local state:
+  - `cot_add_pi`, `cot_neg`, `cot_pi_add_one`, `cot_pi_one_sub`.
+  - `reciprocal_add_one_sub` for the two singular rational terms.
+- Heavy goal:
+  - Propose the next small Lean lemma for the Herglotz trick, either a finite
+    partial-sum rational functional equation or an abstraction of functions
+    satisfying the required periodic/symmetry equations.
+- Desired answer:
+  - Return concrete theorem statements and Mathlib API hints.
+  - Avoid infinite series unless the required summability API is named exactly.
+
+Status:
+- Submitted as `bb9ac388` / seq 6.
+- Active delivery expected; no blocking poll.

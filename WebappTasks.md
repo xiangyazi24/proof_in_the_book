@@ -232,6 +232,12 @@ Please fill the following placeholders with full Lean proofs:
   - A1 completed with usable Chapter03 lemma suggestions.
   - A2 completed with a duplicated Chapter03 answer, so it was requeued as
     `68d377af` / seq 3 with an explicit Chapter19-only prompt.
+  - `68d377af` completed with `[BRIDGE_ERROR] response timeout`; split and
+    requeued first-coefficient extraction as `dac1dd49` / seq 4.
+  - A3 Chapter20 Monsky/Sperner layer submitted as `8b1aed53` / seq 5.
+  - A4 Chapter24 Herglotz layer submitted as `bb9ac388` / seq 6.
+  - New bridge mode: active delivery expected; local side should continue
+    organizing tasks instead of blocking on polling.
 
 ### Goal run for Chapter 04
 - chapter04

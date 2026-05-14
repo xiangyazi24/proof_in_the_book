@@ -35,8 +35,10 @@ explicitly logged in `Changelog.md`.
 - [ ] Chapter04: replace the remaining comment-level gap for the
   sum-of-two-squares sufficiency/involution argument with an actual Lean proof
   path, or narrow the theorem statements and record the gap explicitly.
-- [ ] Chapter09: build the Dehn-invariant geometry layer; the current theorem
-  is only the abstract invariant obstruction.
+- [ ] Chapter09: build the Dehn-invariant geometry layer.  The current file
+  now defines the tensor-product target for an abstract angle quotient and the
+  finite edge-sum algebra, but it still lacks actual polyhedral geometry,
+  angle quotients by `πℚ`, and dissection invariance.
 - [ ] Chapter10: prove an incidence/geometric Sylvester-Gallai statement from
   the extremal-distance argument.  The current theorem only certifies a line
   already known to contain exactly two points.

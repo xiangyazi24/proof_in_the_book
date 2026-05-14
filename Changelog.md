@@ -1,4 +1,10 @@
 ## 2026-05-14
+- Strengthened Chapter09's Dehn-invariant algebra layer:
+  - Added the tensor-product target `DehnTarget Angle = ℝ ⊗[ℤ] Angle`.
+  - Added single-edge Dehn contributions and finite edge-sum invariants.
+  - Proved empty, insert, and disjoint-union formulas for the finite edge sum.
+
+## 2026-05-14
 - Strengthened Chapter03's Sylvester infrastructure:
   - Added a reusable factorial-divisibility lemma: if a prime divides `n!`
     but not `k!` or `(n-k)!`, then it divides `n.choose k`.

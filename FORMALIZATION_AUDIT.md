@@ -57,7 +57,9 @@ explicitly logged in `Changelog.md`.
   combinatorial construction or any Euclidean counterexample.
 - [ ] Chapter19: restore the fundamental theorem of algebra statement and
   replace the black-box root existence with the minimum-modulus proof path.
-  The current theorem is only the linear root calculation.
+  The current file now has the linear root calculation and the polynomial
+  translation layer `w ↦ p(w+z₀)`, but it still lacks the minimum-modulus
+  existence argument and local norm-decrease step.
 - [ ] Chapter20: formalize Monsky's parity/Sperner argument and 2-adic color
   construction.  The current theorem only defines the color model.
 - [ ] Chapter24: extend cotangent symmetries to the full Herglotz functional

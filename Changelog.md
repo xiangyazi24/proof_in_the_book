@@ -1,4 +1,10 @@
 ## 2026-05-14
+- Strengthened Chapter19's minimum-modulus algebra setup:
+  - Added `shiftedPolynomial p z₀ = p.comp (X + C z₀)` for local coordinates.
+  - Proved evaluation, constant-coefficient, and root-transfer lemmas for
+    translated polynomials.
+
+## 2026-05-14
 - Strengthened Chapter16's finite Borsuk partition layer:
   - Proved every color class is a subset of the original point set.
   - Proved every point belongs to its own color class.

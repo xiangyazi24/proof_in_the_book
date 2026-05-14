@@ -19,6 +19,31 @@ namespace ProofsInTheBook.Chapter19
 
 open Polynomial
 
+/-- Translate a polynomial to local coordinates around `z₀`: `w ↦ p(w + z₀)`. -/
+noncomputable def shiftedPolynomial (p : ℂ[X]) (z₀ : ℂ) : ℂ[X] :=
+  p.comp (Polynomial.X + Polynomial.C z₀)
+
+theorem shiftedPolynomial_eval (p : ℂ[X]) (z₀ w : ℂ) :
+    (shiftedPolynomial p z₀).eval w = p.eval (w + z₀) := by
+  simp [shiftedPolynomial]
+
+theorem shiftedPolynomial_eval_zero (p : ℂ[X]) (z₀ : ℂ) :
+    (shiftedPolynomial p z₀).eval 0 = p.eval z₀ := by
+  simpa using shiftedPolynomial_eval p z₀ 0
+
+theorem shiftedPolynomial_coeff_zero (p : ℂ[X]) (z₀ : ℂ) :
+    (shiftedPolynomial p z₀).coeff 0 = p.eval z₀ := by
+  rw [Polynomial.coeff_zero_eq_eval_zero, shiftedPolynomial_eval_zero]
+
+/--
+Root transfer after translating to local coordinates. This is the algebraic
+step used in the minimum-modulus proof after expanding around the minimizing
+point.
+-/
+theorem isRoot_of_shiftedPolynomial_isRoot {p : ℂ[X]} {z₀ w : ℂ}
+    (h : IsRoot (shiftedPolynomial p z₀) w) : IsRoot p (w + z₀) := by
+  simpa [Polynomial.IsRoot, shiftedPolynomial_eval] using h
+
 /--
 The explicit linear case behind the minimum-modulus proof of the fundamental
 theorem of algebra: a nonzero first-order term can be cancelled by moving in

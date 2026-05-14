@@ -1,4 +1,11 @@
 ## 2026-05-13
+- Replaced Chapter13's `True` placeholders with the edge-sign bookkeeping
+  used in Cauchy's rigidity proof:
+  - Define the three edge signs `+`, `-`, and `0`.
+  - Define the sign-change count around a triangular face.
+  - Prove the local count is at most `3`, and is `0` for constant signs.
+
+## 2026-05-13
 - Replaced Chapter09's `True` placeholders with the abstract Dehn-invariant
   obstruction:
   - State finite additivity over dissection pieces.

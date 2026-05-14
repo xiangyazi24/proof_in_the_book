@@ -62,11 +62,13 @@ explicitly logged in `Changelog.md`.
   positive coefficient after subtracting the constant term.  It still lacks
   the minimum-modulus existence argument and local norm-decrease step.
 - [ ] Chapter20: formalize Monsky's parity/Sperner argument and 2-adic color
-  construction.  The current theorem only defines the color model.
+  construction.  The current file now defines the color model and the local
+  red-green edge parity atom for trichromatic triangles, but it still lacks
+  the global Sperner parity count and 2-adic coloring construction.
 - [ ] Chapter24: extend cotangent symmetries to the full Herglotz functional
   equation / partial-fraction argument.  The current file proves the cotangent
-  symmetries and the corresponding rational identity for the two singular
-  terms.
+  symmetries, abstracts the period-one-plus-odd cancellation step, and proves
+  the corresponding rational identity for the two singular terms.
 - [ ] Chapter25: extend the finite polygonal linearity step to the actual
   Buffon needle probability statement.
 - [ ] Chapter29: connect riffle labels to the Gilbert-Shannon-Reeds shuffle

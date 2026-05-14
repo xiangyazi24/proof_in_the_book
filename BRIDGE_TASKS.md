@@ -92,6 +92,11 @@ Status:
 - Bridge restart erased this task from server memory before local receipt;
   requeue required.
 - Requeued after bridge restart as `6adccf76` / seq 1.
+- `6adccf76` completed but returned a Chapter24/Herglotz answer, not Chapter20.
+- Requeued with a shorter Chapter20-only prompt as `bfd68df6` / seq 3.
+- `bfd68df6` completed with useful Chapter20 lemmas; implemented
+  `RedGreenEdge`, `odd_redGreenEdges_iff_trichromatic`, and
+  `redGreenEdges_zmod_two_eq_trichromatic`.
 
 ### Task A4: Chapter24 Herglotz Functional Equation Layer
 
@@ -113,3 +118,6 @@ Status:
 - Bridge restart erased this task from server memory before local receipt;
   requeue required.
 - Requeued after bridge restart as `2c682fe1` / seq 2.
+- `2c682fe1` completed with useful Chapter24 lemmas; implemented
+  `herglotz_cancel_of_periodic_odd`, `herglotz_add_cancel_of_periodic_odd`,
+  and `cot_pi_herglotz_add_cancel`.

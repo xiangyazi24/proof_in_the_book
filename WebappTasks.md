@@ -243,6 +243,15 @@ Please fill the following placeholders with full Lean proofs:
   - Xiang manually pasted `dac1dd49`'s answer; local side implemented it in
     Chapter19.
   - Requeued A3 as `6adccf76` / seq 1 and A4 as `2c682fe1` / seq 2.
+  - Delivery check: both requeued tasks completed.  `2c682fe1` returned the
+    expected Chapter24 answer and was implemented.  `6adccf76` returned a
+    Chapter24 answer despite a Chapter20 prompt, so A3 was requeued with a
+    shorter Chapter20-only prompt as `bfd68df6` / seq 3.
+  - `bfd68df6` completed with the expected Chapter20 answer and was
+    implemented.
+  - Delivery assessment: active delivery/processing works after restart, but
+    concurrent tasks can still cross-contaminate answers; shorter single-topic
+    prompts reduce the issue.
 
 ### Goal run for Chapter 04
 - chapter04

@@ -1,4 +1,17 @@
 ## 2026-05-14
+- Strengthened Chapter20's Monsky/Sperner parity layer:
+  - Added an orientation-free red-green edge predicate.
+  - Proved a local parity atom: a triangle is trichromatic exactly when it has
+    an odd number of red-green edges.
+  - Added the corresponding `ZMod 2` identity for later finite summation.
+
+## 2026-05-14
+- Strengthened Chapter24's Herglotz functional-equation layer:
+  - Added abstract cancellation from period one plus oddness.
+  - Added the additive cancellation form.
+  - Added the direct cotangent cancellation lemma used by the chapter theorem.
+
+## 2026-05-14
 - Strengthened Chapter19's local expansion layer:
   - Added a first-nonzero-positive-coefficient lemma for
     `q - C (q.eval 0)`.

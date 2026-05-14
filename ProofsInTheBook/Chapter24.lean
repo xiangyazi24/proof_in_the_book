@@ -45,6 +45,30 @@ theorem reciprocal_add_one_sub (x : ℝ) (hx : x ≠ 0) (hx1 : x ≠ 1) :
   field_simp [hx, sub_ne_zero.mpr hx1]
   ring_nf
 
+/--
+Abstract Herglotz cancellation: period one plus oddness forces the
+`x ↦ 1 - x` symmetry.
+-/
+theorem herglotz_cancel_of_periodic_odd (f : ℝ → ℝ)
+    (hper : ∀ x, f (x + 1) = f x) (hodd : ∀ x, f (-x) = -f x) (x : ℝ) :
+    f (1 - x) = -f x := by
+  have harg : 1 - x = -x + 1 := by ring
+  calc
+    f (1 - x) = f (-x + 1) := by rw [harg]
+    _ = f (-x) := hper (-x)
+    _ = -f x := hodd x
+
+theorem herglotz_add_cancel_of_periodic_odd (f : ℝ → ℝ)
+    (hper : ∀ x, f (x + 1) = f x) (hodd : ∀ x, f (-x) = -f x) (x : ℝ) :
+    f x + f (1 - x) = 0 := by
+  rw [herglotz_cancel_of_periodic_odd f hper hodd x]
+  ring
+
+theorem cot_pi_herglotz_add_cancel (x : ℝ) :
+    Real.cot (Real.pi * x) + Real.cot (Real.pi * (1 - x)) = 0 := by
+  rw [cot_pi_one_sub]
+  ring
+
 theorem chapter24 (x : ℝ) :
     Real.pi * Real.cot (Real.pi * x) + Real.pi * Real.cot (Real.pi * (1 - x)) = 0 := by
   rw [cot_pi_one_sub]

@@ -1,4 +1,10 @@
 ## 2026-05-13
+- Replaced Chapter30's `True` placeholder with the diagonal determinant case
+  of the Lindström-Gessel-Viennot method:
+  - State the off-diagonal-zero condition for a path-counting matrix.
+  - Prove the determinant reduces to the product of diagonal path counts.
+
+## 2026-05-13
 - Replaced Chapter29's `True` placeholder with the riffle-label counting
   component of the Gilbert-Shannon-Reeds shuffle model:
   - Define `a`-pile labels for an `n`-card deck.

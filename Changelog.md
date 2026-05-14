@@ -6,6 +6,9 @@
     `n-k < p`, and `p ≤ n`, then `p ∣ n.choose k`.
   - Added `HasPrimeFactorAbove` and the `descFactorial` bridge showing that
     any prime factor above `k` of `n.descFactorial k` divides `n.choose k`.
+  - Connected `HasPrimeFactorAbove` to `Nat.smoothNumbers`, reducing the
+    remaining general Sylvester divisor step to a non-smoothness statement for
+    the descending product.
   - Refactored the central Sylvester proof through this lemma, making the
     general Sylvester proof path more explicit.
 

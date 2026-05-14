@@ -58,6 +58,26 @@ theorem exists_large_prime_dvd_choose_of_descFactorial
   rcases h with ⟨p, hkp, hp, hpdvd⟩
   exact ⟨p, hkp, hp, prime_dvd_choose_of_large_prime_dvd_descFactorial hp hkp hpdvd⟩
 
+theorem not_mem_smoothNumbers_succ_iff_hasPrimeFactorAbove {k m : ℕ} :
+    m ∉ (k + 1).smoothNumbers ↔ HasPrimeFactorAbove k m := by
+  constructor
+  · intro h
+    by_contra hlarge
+    apply h
+    rw [Nat.mem_smoothNumbers']
+    intro p hp hpdvd
+    by_contra hlt
+    exact hlarge ⟨p, by omega, hp, hpdvd⟩
+  · rintro ⟨p, hkp, hp, hpdvd⟩ hs
+    rw [Nat.mem_smoothNumbers'] at hs
+    exact (not_lt.mpr (by omega : k + 1 ≤ p)) (hs p hp hpdvd)
+
+theorem exists_large_prime_dvd_choose_of_descFactorial_not_smooth
+    {n k : ℕ} (h : n.descFactorial k ∉ (k + 1).smoothNumbers) :
+    ∃ p, k < p ∧ p.Prime ∧ p ∣ n.choose k :=
+  exists_large_prime_dvd_choose_of_descFactorial
+    (not_mem_smoothNumbers_succ_iff_hasPrimeFactorAbove.mp h)
+
 /--
 If a prime divisor of `n!` is larger than both factorial factors
 `k!` and `(n-k)!`, then it must appear in the binomial coefficient.

@@ -247,3 +247,17 @@ Status:
 - Local fallback implemented:
   - `sub_dvd_descFactorial_of_lt`.
   - `sub_mem_smoothNumbers_of_descFactorial_mem`.
+
+### Task C2: Chapter03 Smooth Factor Follow-Up
+
+- File: `ProofsInTheBook/Chapter03.lean`
+- Current local state:
+  - Smoothness of `n.descFactorial k` passes to each factor `n - i`, `i < k`.
+- Desired answer:
+  - Chapter03 only.
+  - Return a smaller bound/factorization lemma about `(k+1)`-smooth factors
+    that can compile independently and move toward the Sylvester
+    non-smoothness contradiction.
+
+Status:
+- Submitted as `8471a107` / seq 7, tagged `CH03_FACTOR_20260514`.

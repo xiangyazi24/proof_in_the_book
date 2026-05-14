@@ -1,4 +1,12 @@
 ## 2026-05-13
+- Replaced Chapter17's `Cardinal.cantor` black-box closure with the book's
+  diagonal argument:
+  - `chapter17_cantor` now proves directly that no function `α → Set α` is
+    surjective, using the diagonal set `{x | x ∉ f x}`.
+  - `chapter17` packages this as nonexistence of a surjection onto the power
+    set.
+
+## 2026-05-13
 - Tightened `scripts/goal` placeholder detection to match the full-book
   formalization policy:
   - Direct black-box closures such as `Cardinal.cantor`,

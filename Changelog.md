@@ -1,4 +1,12 @@
 ## 2026-05-13
+- Strengthened Chapter39 from Kneser vertex counting to an actual Kneser graph
+  definition:
+  - Define `kneserGraph n k` on `k`-subsets of `Fin n`.
+  - Prove its adjacency relation is exactly distinct disjoint vertex subsets.
+  - Update the semantic audit to leave the chromatic lower-bound proof as the
+    remaining gap.
+
+## 2026-05-13
 - Strengthened Chapter34's Dinitz target structure:
   - Added list assignments and the `RespectsLists` predicate.
   - Defined `DinitzSolution` as list-respecting plus Latin-proper.

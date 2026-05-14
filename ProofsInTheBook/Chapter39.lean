@@ -26,6 +26,21 @@ instance (n k : ℕ) : DecidableEq (KneserVertex n k) := by
   dsimp [KneserVertex]
   infer_instance
 
+/-- The Kneser graph: vertices are `k`-subsets, adjacent when disjoint. -/
+def kneserGraph (n k : ℕ) : SimpleGraph (KneserVertex n k) where
+  Adj a b := a ≠ b ∧ Disjoint (a : Finset (Fin n)) (b : Finset (Fin n))
+  symm := by
+    intro a b h
+    exact ⟨h.1.symm, h.2.symm⟩
+  loopless := ⟨by
+    intro a h
+    exact h.1 rfl⟩
+
+theorem kneserGraph_adj_iff {n k : ℕ} (a b : KneserVertex n k) :
+    (kneserGraph n k).Adj a b ↔
+      a ≠ b ∧ Disjoint (a : Finset (Fin n)) (b : Finset (Fin n)) :=
+  Iff.rfl
+
 /--
 The first finite-counting layer in the Kneser graph proof: `KG(n,k)` has
 `n choose k` vertices.

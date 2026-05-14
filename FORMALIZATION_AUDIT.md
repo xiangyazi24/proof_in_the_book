@@ -61,5 +61,6 @@ the proof bypasses the book argument.
   triangulation existence for simple polygons and Fisk's 3-coloring of the
   triangulation graph.  The current file now proves the finite guard-selection
   step once a 3-colored triangulation is supplied.
-- [ ] Chapter39: define Kneser graph coloring and prove Lovasz/Barany lower
-  bound components.  The current theorem only counts Kneser vertices.
+- [ ] Chapter39: formalize Kneser graph coloring and prove Lovasz/Barany
+  lower-bound components.  The current file now defines Kneser vertices,
+  the Kneser graph adjacency relation, and the vertex count.

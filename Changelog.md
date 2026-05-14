@@ -3,6 +3,8 @@
   - Added an abstract finite sign-reversing reindexing lemma.
   - Proved the corresponding `2`-torsion cancellation statement for sums in
     an additive commutative group.
+  - Added the torsion-free specialization using `IsAddTorsionFree` and
+    `nsmul_eq_zero_iff`.
 
 ## 2026-05-14
 - Strengthened Chapter29's GSR riffle-label partition layer:

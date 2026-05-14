@@ -207,3 +207,10 @@ Status:
 - Follow-up no-two-torsion prompt `5de41f03` / seq 2 was picked up by `ssem`
   but later disappeared from `/api/result`, consistent with a bridge restart
   or in-memory queue clear.
+- Requeued no-two-torsion prompt as `f469676a` / seq 1. It completed quickly
+  after the restart, but repeated the previous answer. Local API search found
+  the usable specialization: `[IsAddTorsionFree R]` plus
+  `nsmul_eq_zero_iff`.
+- Follow-up abstract-bad-family split prompt `9102ae04` / seq 2 also completed
+  quickly but repeated the same cancellation lemma, so the `ssem` transport is
+  healthy while the current ChatGPT conversation context is stale/repetitive.

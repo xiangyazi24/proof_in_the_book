@@ -77,6 +77,17 @@ theorem two_nsmul_sum_eq_zero_of_sign_reversing_equiv {α R : Type*} [Fintype α
   nth_rewrite 1 [h]
   exact neg_add_cancel S
 
+/-- A sign-reversing involution cancels the sum in an additive torsion-free target. -/
+theorem sum_eq_zero_of_sign_reversing_equiv {α R : Type*} [Fintype α]
+    [AddCommGroup R] [IsAddTorsionFree R] (τ : α ≃ α) (w : α → R)
+    (hw : ∀ x, w (τ x) = -w x) :
+    (∑ x : α, w x) = 0 := by
+  classical
+  have h2 := two_nsmul_sum_eq_zero_of_sign_reversing_equiv τ w hw
+  rcases (nsmul_eq_zero_iff.mp h2) with hsum | htwo
+  · exact hsum
+  · norm_num at htwo
+
 theorem chapter30 {ι R : Type*}
     [Fintype ι] [DecidableEq ι] [CommRing R] (M : Matrix ι ι R)
     (hzero : ∀ i j, i ≠ j → M i j = 0) :

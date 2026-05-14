@@ -1,4 +1,12 @@
 ## 2026-05-13
+- Replaced Chapter32's black-box binomial identity closures with visible
+  algebraic/inductive proofs:
+  - Vandermonde now compares coefficients in `(X + 1)^(m+n)`.
+  - Hockey-stick now uses induction over `Icc` and Pascal's identity.
+  - The binomial row sum now follows from the binomial theorem specialization
+    `(1 + 1)^n`.
+
+## 2026-05-13
 - Replaced Chapter17's `Cardinal.cantor` black-box closure with the book's
   diagonal argument:
   - `chapter17_cantor` now proves directly that no function `α → Set α` is

@@ -1,4 +1,13 @@
 ## 2026-05-13
+- Replaced Chapter23's `True` placeholder with a formal Littlewood-Offord
+  subset-sum core:
+  - Define the family of subsets whose sums lie in a half-open interval
+    `[x, x + 1)`.
+  - Prove this family is an antichain by showing comparable subsets have sums
+    differing by at least `1`.
+  - Derive the middle-binomial bound via an explicit LYM-to-Sperner argument.
+
+## 2026-05-13
 - Replaced Chapter28's final `IsAntichain.sperner` black-box closure with the
   visible LYM-to-Sperner derivation:
   - Use the LYM inequality for the sum of inverse layer sizes.

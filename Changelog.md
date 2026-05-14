@@ -1,4 +1,10 @@
 ## 2026-05-13
+- Replaced Chapter31's `True` placeholder with the formal Prüfer-code
+  counting side of Cayley's formula:
+  - Define words of length `n - 2` over the vertex set `Fin n`.
+  - Prove this code space has cardinality `n^(n-2)`.
+
+## 2026-05-13
 - Replaced Chapter15's `True` placeholder with the sign-vector pigeonhole
   bound used in the Danzer-Grünbaum proof:
   - State the injectivity condition for points mapped to Boolean sign vectors.

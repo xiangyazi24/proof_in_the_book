@@ -22,6 +22,9 @@ namespace ProofsInTheBook.Chapter03
 
 open Nat
 
+def HasPrimeFactorAbove (k m : ℕ) : Prop :=
+  ∃ p, k < p ∧ p.Prime ∧ p ∣ m
+
 /--
 Factorial form of the standard binomial-divisibility argument: if a prime
 divides `n!` but not the two factorial factors in
@@ -39,6 +42,21 @@ theorem prime_dvd_choose_of_dvd_factorial_not_factorial_sides {n k p : ℕ}
 theorem prime_not_dvd_factorial_of_lt {p k : ℕ} (hp : p.Prime) (hk : k < p) :
     ¬ p ∣ k ! := by
   rwa [hp.dvd_factorial, not_le]
+
+theorem prime_dvd_choose_of_dvd_descFactorial {n k p : ℕ} (hp : p.Prime)
+    (hdvd : p ∣ n.descFactorial k) (hk : ¬ p ∣ k !) : p ∣ n.choose k := by
+  rw [Nat.descFactorial_eq_factorial_mul_choose] at hdvd
+  exact (hp.dvd_mul.mp hdvd).resolve_left hk
+
+theorem prime_dvd_choose_of_large_prime_dvd_descFactorial {n k p : ℕ}
+    (hp : p.Prime) (hk : k < p) (hdvd : p ∣ n.descFactorial k) : p ∣ n.choose k :=
+  prime_dvd_choose_of_dvd_descFactorial hp hdvd (prime_not_dvd_factorial_of_lt hp hk)
+
+theorem exists_large_prime_dvd_choose_of_descFactorial
+    {n k : ℕ} (h : HasPrimeFactorAbove k (n.descFactorial k)) :
+    ∃ p, k < p ∧ p.Prime ∧ p ∣ n.choose k := by
+  rcases h with ⟨p, hkp, hp, hpdvd⟩
+  exact ⟨p, hkp, hp, prime_dvd_choose_of_large_prime_dvd_descFactorial hp hkp hpdvd⟩
 
 /--
 If a prime divisor of `n!` is larger than both factorial factors

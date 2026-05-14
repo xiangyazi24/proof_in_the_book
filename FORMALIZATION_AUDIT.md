@@ -30,7 +30,8 @@ explicitly logged in `Changelog.md`.
   and the almost-never-perfect-powers theorem.  The current file proves the
   central binomial case, a reusable factorial-divisibility lemma for binomial
   coefficients, the corresponding interval-prime binomial divisor lemma, and
-  a prime-divisor component only.
+  a `descFactorial` bridge reducing the general binomial divisor conclusion
+  to finding a prime factor above `k` in `n(n-1)...(n-k+1)`.
 - [ ] Chapter04: replace the remaining comment-level gap for the
   sum-of-two-squares sufficiency/involution argument with an actual Lean proof
   path, or narrow the theorem statements and record the gap explicitly.

@@ -4,6 +4,8 @@
     but not `k!` or `(n-k)!`, then it divides `n.choose k`.
   - Added the interval-prime specialization: if `p` is prime, `k < p`,
     `n-k < p`, and `p ≤ n`, then `p ∣ n.choose k`.
+  - Added `HasPrimeFactorAbove` and the `descFactorial` bridge showing that
+    any prime factor above `k` of `n.descFactorial k` divides `n.choose k`.
   - Refactored the central Sylvester proof through this lemma, making the
     general Sylvester proof path more explicit.
 

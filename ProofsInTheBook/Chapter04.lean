@@ -118,6 +118,24 @@ instance instFintype (p : ℕ) : Fintype (ZagierTriple p) := by
         rfl }
   exact Fintype.ofEquiv S e.symm
 
+def canonicalTriple (k : ℕ) (hk : 0 < k) : ZagierTriple (4 * k + 1) where
+  x := ⟨1, by omega⟩
+  y := ⟨1, by omega⟩
+  z := ⟨k, by omega⟩
+  x_pos := Nat.zero_lt_one
+  y_pos := Nat.zero_lt_one
+  z_pos := hk
+  equation := by ring
+
+theorem nonempty_of_four_mul_add_one (k : ℕ) (hk : 0 < k) :
+    Nonempty (ZagierTriple (4 * k + 1)) :=
+  ⟨canonicalTriple k hk⟩
+
+theorem card_pos_of_four_mul_add_one (k : ℕ) (hk : 0 < k) :
+    0 < Fintype.card (ZagierTriple (4 * k + 1)) := by
+  classical
+  exact Fintype.card_pos_iff.mpr ⟨canonicalTriple k hk⟩
+
 /-- The simple involution `(x,y,z) ↦ (x,z,y)` on Zagier triples. -/
 def swapYZ (p : ℕ) : ZagierTriple p ≃ ZagierTriple p where
   toFun t :=

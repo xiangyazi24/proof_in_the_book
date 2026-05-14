@@ -49,7 +49,9 @@ the proof bypasses the book argument.
   distribution.  The current file counts label assignments and proves the
   induced pile sizes sum to the deck size.
 - [ ] Chapter30: formalize a real Lindstrom-Gessel-Viennot determinant/path
-  statement rather than only the diagonal determinant case.
+  statement.  The current file exposes the determinant's signed-permutation
+  expansion and the diagonal determinant case, but not yet the path-family
+  involution/cancellation proof.
 - [ ] Chapter31: connect the Prüfer code space to labeled trees and prove the
   bijective Cayley formula, not only the code-space cardinality.
 - [ ] Chapter34: prove the list-coloring/Galvin step for Dinitz arrays.  The

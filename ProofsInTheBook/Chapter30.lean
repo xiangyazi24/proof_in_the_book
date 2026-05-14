@@ -17,6 +17,15 @@ namespace ProofsInTheBook.Chapter30
 open Matrix BigOperators
 
 /--
+The determinant expansion over signed permutations, the algebraic starting
+point of the Lindström-Gessel-Viennot cancellation argument.
+-/
+theorem det_eq_sum_signed_permutations {ι R : Type*}
+    [Fintype ι] [DecidableEq ι] [CommRing R] (M : Matrix ι ι R) :
+    M.det = ∑ σ : Equiv.Perm ι, Equiv.Perm.sign σ • ∏ i, M (σ i) i := by
+  exact Matrix.det_apply M
+
+/--
 The diagonal case of the Lindström-Gessel-Viennot determinant: when the
 path-counting matrix has no off-diagonal contributions, the determinant
 has only the identity permutation term.

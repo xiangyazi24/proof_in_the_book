@@ -1,4 +1,11 @@
 ## 2026-05-13
+- Strengthened Chapter30's LGV algebra layer:
+  - Added the determinant expansion over signed permutations as an explicit
+    theorem.
+  - Updated the semantic audit to leave the path-family cancellation argument
+    as the remaining gap.
+
+## 2026-05-13
 - Strengthened Chapter29's riffle-shuffle model:
   - Define the pile of cards induced by each label.
   - Prove the induced pile sizes sum to the deck size.

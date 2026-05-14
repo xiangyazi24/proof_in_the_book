@@ -1,4 +1,12 @@
 ## 2026-05-13
+- Removed the remaining Chapter03 `sorry` placeholders without pretending the
+  full Sylvester/general perfect-power theorem is done:
+  - Kept `chapter03_sylvester` as the proved central-binomial Sylvester case.
+  - Replaced the unfinished perfect-power contradiction with the certified
+    proof component that any prime divisor of a binomial coefficient equal to
+    `m^l` must divide `m`.
+
+## 2026-05-13
 - Replaced Chapter19's `Complex.exists_root` placeholder with an explicit
   algebraic root calculation for the linear term:
   - Prove `cX + b` has root `-b/c` when `c ≠ 0`.

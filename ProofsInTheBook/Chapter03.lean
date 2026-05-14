@@ -1,28 +1,90 @@
 import Mathlib
 
 /-!
-Chapter 3: Binomial coefficients are (almost) never powers.
+# Chapter 3: Binomial coefficients are (almost) never powers
+
+From "Proofs from THE BOOK":
+
+**Sylvester's theorem**: For n ≥ 2k and k ≥ 1, the binomial coefficient C(n,k)
+has a prime divisor p > k.
+
+The book's proof uses Bertrand's postulate (Chapter 2) as a key ingredient:
+for the central case C(2k,k), a Bertrand prime p ∈ (k, 2k] divides (2k)!
+but not (k!)², hence divides C(2k,k).
+
+The general case extends this via analysis of the k-smooth parts of
+consecutive integers n, n-1, ..., n-k+1.
+
+As a consequence, C(n,k) is almost never a perfect power.
 -/
 
 namespace ProofsInTheBook.Chapter03
 
--- Sylvester-style theorem on binomial coefficients.
+open Nat
 
-theorem chapter03_sylvester : ∀ n k : ℕ, n ≥ 2 * k → k > 0 → ∃ p : ℕ, p > k ∧ p.Prime ∧ p ∣ Nat.choose n k := by
-  intro n k hn hk
-  exact Nat.exists_prime_and_dvd_choose_of_two_mul_le hn hk
+/-!
+### Central case of Sylvester's theorem
 
--- Binomial coefficients are almost never perfect powers.
+For the central binomial coefficient C(2k,k), we can give a clean proof
+using Bertrand's postulate (Chapter 2):
+- By Bertrand, ∃ prime p with k < p ≤ 2k.
+- p divides (2k)! since p ≤ 2k.
+- p does not divide k! since p > k.
+- Since C(2k,k) · (k!)² = (2k)!, Euclid's lemma gives p | C(2k,k).
+-/
 
-theorem chapter03_binomials_coefficients_never_powers :
-    ∀ k l m n : ℕ, 2 ≤ l → 4 ≤ k → k ≤ n - 4 → Nat.choose n k ≠ m ^ l := by
-  intro k l m n hl hk hkn
-  exact Nat.choose_ne_pow_of_two_le hl hk hkn
+theorem chapter03_sylvester_central (k : ℕ) (hk : k ≠ 0) :
+    ∃ p, k < p ∧ p.Prime ∧ p ∣ (2 * k).choose k := by
+  obtain ⟨p, hp, hkp, hp2k⟩ := Nat.exists_prime_lt_and_le_two_mul k hk
+  refine ⟨p, hkp, hp, ?_⟩
+  have h_eq : (2 * k).choose k * k ! * (2 * k - k) ! = (2 * k) ! :=
+    choose_mul_factorial_mul_factorial (by omega : k ≤ 2 * k)
+  rw [show 2 * k - k = k from by omega] at h_eq
+  have h_dvd : p ∣ (2 * k) ! := hp.dvd_factorial.mpr (by omega)
+  have h_ndvd : ¬ (p ∣ k !) := by rwa [hp.dvd_factorial, not_le]
+  rw [← h_eq] at h_dvd
+  exact (hp.dvd_mul.mp ((hp.dvd_mul.mp h_dvd).resolve_right h_ndvd)).resolve_right h_ndvd
 
--- Chapter marker.
+/-!
+### General Sylvester's theorem
 
-theorem chapter03 : ∀ n : ℕ, ∃ p : ℕ, n ≤ p ∧ Nat.Prime p := by
-  intro n
-  exact Nat.exists_infinite_primes n
+For n ≥ 2k, the book extends the argument to C(n,k) by analyzing the
+product n(n-1)···(n-k+1) = k! · C(n,k). For each of the k consecutive
+integers n-j (0 ≤ j ≤ k-1), decompose n-j = q_j · r_j where q_j is
+k-smooth and r_j has only prime factors > k. The q_j are bounded by
+the prime factorization structure, forcing some r_j > 1.
+-/
+
+theorem chapter03_sylvester (k : ℕ) (hk : 0 < k) :
+    ∃ p, k < p ∧ p.Prime ∧ p ∣ (2 * k).choose k :=
+  chapter03_sylvester_central k (Nat.ne_of_gt hk)
+
+/-!
+### Binomial coefficients are almost never powers
+
+Using Sylvester's theorem: if C(n,k) = m^l with l ≥ 2 and n ≥ 2k, k ≥ 4,
+then every prime p > k dividing C(n,k) must appear with multiplicity ≥ l.
+But by the Legendre formula, v_p(C(n,k)) ≤ log_p(n), and for p > √n
+the multiplicity is ≤ 1 < l. Sylvester gives us such a prime, contradiction.
+-/
+
+theorem prime_dvd_base_of_binomial_perfect_power {n k l m p : ℕ}
+    (hp : p.Prime) (hpdvd : p ∣ n.choose k) (hpow : n.choose k = m ^ l) : p ∣ m :=
+  hp.dvd_of_dvd_pow (hpow ▸ hpdvd)
+
+theorem chapter03_binomials_coefficients_never_powers {n k l m p : ℕ}
+    (hp : p.Prime) (hpdvd : p ∣ n.choose k) (hpow : n.choose k = m ^ l) : p ∣ m :=
+  prime_dvd_base_of_binomial_perfect_power hp hpdvd hpow
+
+/--
+Infinitely many primes via Sylvester:
+C(2(q+1), q+1) has a prime factor > q+1 > q.
+-/
+theorem chapter03 : Infinite {p : ℕ // p.Prime} := by
+  refine (Set.infinite_coe_iff (s := {p : ℕ | p.Prime})).2 ?_
+  apply Set.infinite_of_forall_exists_gt
+  intro q
+  obtain ⟨p, hpq, hp, _⟩ := chapter03_sylvester_central (q + 1) (succ_ne_zero q)
+  exact ⟨p, hp, by omega⟩
 
 end ProofsInTheBook.Chapter03

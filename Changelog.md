@@ -1,4 +1,11 @@
 ## 2026-05-13
+- Strengthened Chapter29's riffle-shuffle model:
+  - Define the pile of cards induced by each label.
+  - Prove the induced pile sizes sum to the deck size.
+  - Update the semantic audit to leave the shuffle distribution analysis as
+    the remaining gap.
+
+## 2026-05-13
 - Strengthened Chapter35 with the easy five-color induction extension:
   - Prove that a proper subset of the five colors has an unused color.
   - Prove a vertex with at most four colored neighbors can be assigned a color

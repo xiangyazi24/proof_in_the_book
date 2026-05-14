@@ -46,7 +46,8 @@ the proof bypasses the book argument.
 - [ ] Chapter25: extend the finite polygonal linearity step to the actual
   Buffon needle probability statement.
 - [ ] Chapter29: connect riffle labels to the Gilbert-Shannon-Reeds shuffle
-  distribution rather than only counting labels.
+  distribution.  The current file counts label assignments and proves the
+  induced pile sizes sum to the deck size.
 - [ ] Chapter30: formalize a real Lindstrom-Gessel-Viennot determinant/path
   statement rather than only the diagonal determinant case.
 - [ ] Chapter31: connect the Prüfer code space to labeled trees and prove the

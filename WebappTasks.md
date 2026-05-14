@@ -218,6 +218,17 @@ Please fill the following placeholders with full Lean proofs:
 ### Goal run for Chapter 05
 - chapter05
 
+### Bridge queue reset for low-token workflow (2026-05-14)
+- channel: `ssem`
+- local role: organize task files, apply returned patches, run local build/check.
+- bridge role: do heavy proof search.
+- queue file: `BRIDGE_TASKS.md`
+- queued tasks:
+  - A1 (`52a512cc`, seq 1): Chapter03 Sylvester smoothness gap after local `descFactorial` and
+    `Nat.smoothNumbers` reductions.
+  - A2 (`700ae88d`, seq 2): Chapter19 minimum-modulus proof layer after local polynomial-shift
+    lemmas.
+
 ### Goal run for Chapter 04
 - chapter04
 

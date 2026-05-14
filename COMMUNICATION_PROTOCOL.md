@@ -14,7 +14,8 @@ Transport
   - `GET /api/channels` : active channel list
 
 Preferred Channel for this repo
-- `dm-codex`
+- Historical channel: `dm-codex`
+- Current active bridge channel for this run: `ssem`
 
 Send/Receive workflow (1-2 questions at a time)
 1. From local: call bridge to submit one compact question.
@@ -27,7 +28,7 @@ Why this was used
 - Avoids stale channel bleed between tabs in latest fix.
 
 Example CLI (if using wrapper)
-- `./ask-chatgpt.sh --channel dm-codex "Your question here"`
+- `CHATGPT_CHANNEL_GUARD=0 ./ask-chatgpt.sh --channel ssem "Your question here"`
 
 Note
 - This repo uses mechanical + formal split:

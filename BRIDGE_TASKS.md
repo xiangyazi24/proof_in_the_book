@@ -281,3 +281,5 @@ Status:
 
 Status:
 - Submitted as `49c190b1` / seq 8, tagged `CH03_STATEMENT_ONLY_20260514`.
+- Still processing after repeated polls; `/api/active?channel=ssem` shows this
+  task occupying the channel. No local artifact applied yet.

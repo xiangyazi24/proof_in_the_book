@@ -31,7 +31,9 @@ explicitly logged in `Changelog.md`.
   central binomial case, a reusable factorial-divisibility lemma for binomial
   coefficients, the corresponding interval-prime binomial divisor lemma, and
   a `descFactorial` bridge reducing the general binomial divisor conclusion
-  to proving that `n(n-1)...(n-k+1)` is not `(k+1)`-smooth.
+  to proving that `n(n-1)...(n-k+1)` is not `(k+1)`-smooth.  It also now
+  proves that each factor `n - i` of the descending product inherits
+  `(k+1)`-smoothness from the whole product.
 - [ ] Chapter04: replace the remaining comment-level gap for the
   sum-of-two-squares sufficiency/involution argument with an actual Lean proof
   path, or narrow the theorem statements and record the gap explicitly.

@@ -1,4 +1,10 @@
 ## 2026-05-14
+- Strengthened Chapter03's Sylvester smoothness reduction:
+  - Proved each factor `n - i` with `i < k` divides `n.descFactorial k`.
+  - Proved smoothness of `n.descFactorial k` passes to each such factor via
+    `Nat.mem_smoothNumbers_of_dvd`.
+
+## 2026-05-14
 - Strengthened Chapter30's LGV cancellation algebra:
   - Added an abstract finite sign-reversing reindexing lemma.
   - Proved the corresponding `2`-torsion cancellation statement for sums in

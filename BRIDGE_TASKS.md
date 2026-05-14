@@ -243,3 +243,7 @@ Status:
 
 Status:
 - Submitted as `9eabd2c5` / seq 6, tagged `CH03_FRESH_20260514`.
+- Completed with `[BRIDGE_ERROR] response timeout`.
+- Local fallback implemented:
+  - `sub_dvd_descFactorial_of_lt`.
+  - `sub_mem_smoothNumbers_of_descFactorial_mem`.

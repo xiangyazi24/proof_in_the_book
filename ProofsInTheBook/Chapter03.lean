@@ -78,6 +78,16 @@ theorem exists_large_prime_dvd_choose_of_descFactorial_not_smooth
   exists_large_prime_dvd_choose_of_descFactorial
     (not_mem_smoothNumbers_succ_iff_hasPrimeFactorAbove.mp h)
 
+theorem sub_dvd_descFactorial_of_lt {n k i : ℕ} (hi : i < k) :
+    n - i ∣ n.descFactorial k := by
+  rw [Nat.descFactorial_eq_prod_range]
+  exact Finset.dvd_prod_of_mem (fun i => n - i) (Finset.mem_range.mpr hi)
+
+theorem sub_mem_smoothNumbers_of_descFactorial_mem {n k i : ℕ} (hi : i < k)
+    (hs : n.descFactorial k ∈ (k + 1).smoothNumbers) :
+    n - i ∈ (k + 1).smoothNumbers :=
+  Nat.mem_smoothNumbers_of_dvd hs (sub_dvd_descFactorial_of_lt hi)
+
 /--
 If a prime divisor of `n!` is larger than both factorial factors
 `k!` and `(n-k)!`, then it must appear in the binomial coefficient.

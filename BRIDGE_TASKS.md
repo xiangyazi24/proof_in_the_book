@@ -222,3 +222,24 @@ Status:
 - Certificate packaging prompt `a5671c20` / seq 5 returned a useful
   `BadInvolutionCertificate` wrapper tagged `FRESH_CERT_20260514`; it compiled
   locally without changes.
+
+## 2026-05-14 Batch C
+
+### Task C1: Chapter03 Sylvester Smoothness Next Lemma
+
+- File: `ProofsInTheBook/Chapter03.lean`
+- Current local state:
+  - `HasPrimeFactorAbove k m`.
+  - `not_mem_smoothNumbers_succ_iff_hasPrimeFactorAbove`.
+  - `exists_large_prime_dvd_choose_of_descFactorial_not_smooth`.
+- Heavy gap:
+  - Prove or reduce `n.descFactorial k ∉ (k + 1).smoothNumbers` under
+    Sylvester-style hypotheses such as `0 < k` and `2 * k ≤ n`.
+- Desired answer:
+  - Chapter03 only.
+  - Return the next smallest Lean-feasible lemma using `Nat.factorization`,
+    `Nat.smoothNumbers`, or `Nat.descFactorial`; do not attempt a large
+    opaque proof.
+
+Status:
+- Submitted as `9eabd2c5` / seq 6, tagged `CH03_FRESH_20260514`.

@@ -320,3 +320,24 @@ Status:
 - Submitted as `8927827d` / seq 10, tagged `CH04_FIXED_REPR_20260514`.
 - Completed with `[BRIDGE_ERROR] response timeout`.
 - Local fallback implemented `ZagierTriple.exists_sq_add_sq_of_swapYZ_fixed`.
+
+## 2026-05-14 Batch E
+
+### Task E1: Chapter04 Fintype Infrastructure for Zagier Triples
+
+- File: `ProofsInTheBook/Chapter04.lean`
+- Current local state:
+  - `ZagierTriple p` is a structure over `Fin (p + 1)` coordinates with
+    positivity/equation proof fields.
+  - The simple swap involution is defined, fixed points are characterized by
+    `y = z`, and fixed points yield sum-of-two-squares representations.
+- Desired answer:
+  - Chapter04 only.
+  - Give Lean code likely to compile for `Fintype (ZagierTriple p)`, preferably
+    by equivalence with a subtype of `(Fin (p + 1) × Fin (p + 1) × Fin (p + 1))`
+    satisfying the positivity/equation constraints.
+  - Mention whether `DecidableEq` derivation is feasible with proof fields.
+
+Status:
+- Submitted as `d97e0b1d` / seq 11, tagged `CH04_FINTYPE_20260514`.
+- Awaiting bridge response.

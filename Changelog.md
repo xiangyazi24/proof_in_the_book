@@ -1,4 +1,11 @@
 ## 2026-05-13
+- Replaced Chapter21's `True` placeholder with the formal finite-difference
+  step behind Pólya's theorem:
+  - Define the forward difference operator on integer-valued functions.
+  - Prove `Δ C(x, k + 1) = C(x, k)` from Pascal's identity.
+  - Record the constant-basis zero-difference case.
+
+## 2026-05-13
 - Replaced Chapter23's `True` placeholder with a formal Littlewood-Offord
   subset-sum core:
   - Define the family of subsets whose sums lie in a half-open interval

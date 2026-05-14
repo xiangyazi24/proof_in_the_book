@@ -20,9 +20,20 @@ namespace ProofsInTheBook.Chapter11
 
 abbrev Point2 := ℝ × ℝ
 
+inductive Direction where
+  | vertical
+  | finite (m : ℝ)
+
+noncomputable instance : DecidableEq Direction :=
+  Classical.decEq Direction
+
 /-- The slope determined by an ordered pair of planar points. -/
 noncomputable def slope (p q : Point2) : ℝ :=
   (q.2 - p.2) / (q.1 - p.1)
+
+/-- The projective direction determined by a pair of points, including vertical lines. -/
+noncomputable def direction (p q : Point2) : Direction :=
+  if p.1 = q.1 then Direction.vertical else Direction.finite (slope p q)
 
 /--
 The finite set of slopes determined by nonvertical ordered pairs of distinct
@@ -31,6 +42,34 @@ points in a configuration.
 noncomputable def slopesDeterminedBy (points : Finset Point2) : Finset ℝ :=
   ((points.product points).filter fun pq => pq.1 ≠ pq.2 ∧ pq.1.1 ≠ pq.2.1).image
     (fun pq => slope pq.1 pq.2)
+
+/-- The finite set of all directions determined by distinct pairs of points. -/
+noncomputable def directionsDeterminedBy (points : Finset Point2) : Finset Direction :=
+  ((points.product points).filter fun pq => pq.1 ≠ pq.2).image
+    (fun pq => direction pq.1 pq.2)
+
+theorem direction_mem_directionsDeterminedBy {points : Finset Point2} {p q : Point2}
+    (hp : p ∈ points) (hq : q ∈ points) (hpq : p ≠ q) :
+    direction p q ∈ directionsDeterminedBy points := by
+  exact Finset.mem_image.mpr ⟨(p, q), by simp [hp, hq, hpq], rfl⟩
+
+theorem finite_slope_mem_directionsDeterminedBy {points : Finset Point2} {m : ℝ}
+    (hm : m ∈ slopesDeterminedBy points) :
+    Direction.finite m ∈ directionsDeterminedBy points := by
+  rcases Finset.mem_image.mp hm with ⟨pq, hpq_mem, hpq_slope⟩
+  rcases pq with ⟨p, q⟩
+  rcases Finset.mem_filter.mp hpq_mem with ⟨hpq_prod, hpq_cond⟩
+  rcases hpq_cond with ⟨hpq_ne, hx_ne⟩
+  refine Finset.mem_image.mpr ⟨(p, q), ?_, ?_⟩
+  · exact Finset.mem_filter.mpr ⟨hpq_prod, hpq_ne⟩
+  · simp [direction, hx_ne, hpq_slope]
+
+theorem slopes_card_le_directions_card (points : Finset Point2) :
+    (slopesDeterminedBy points).card ≤ (directionsDeterminedBy points).card := by
+  classical
+  exact Finset.card_le_card_of_injOn Direction.finite
+    (fun _ hm => finite_slope_mem_directionsDeterminedBy hm)
+    (by intro a _ b _ h; simpa using h)
 
 /--
 Counting interface for Ungar's slope theorem: an injective family of witnessed

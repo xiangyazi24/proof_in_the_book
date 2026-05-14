@@ -43,8 +43,10 @@ explicitly logged in `Changelog.md`.
   the extremal-distance argument.  The current file now has ordinary-line
   bookkeeping and the finite off-line pair minimization step, but it still
   lacks the actual plane geometry and closer-pair contradiction.
-- [ ] Chapter11: prove Ungar's slope lower bound.  The current theorem only
-  turns an injected witness family into a slope-counting lower bound.
+- [ ] Chapter11: prove Ungar's slope lower bound.  The current file now
+  distinguishes finite slopes from the vertical direction and proves the
+  nonvertical slope set embeds into the full direction set, but it still lacks
+  Ungar's rotating-calipers construction.
 - [ ] Chapter13: formalize Cauchy's rigidity proof beyond local edge-sign
   bookkeeping.
 - [ ] Chapter16: formalize a real Borsuk/Kahn-Kalai component.  The current

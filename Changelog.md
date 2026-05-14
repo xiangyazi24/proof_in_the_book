@@ -1,4 +1,11 @@
 ## 2026-05-14
+- Strengthened Chapter11's slope/direction model:
+  - Added a `Direction` type with a vertical direction and finite real slopes.
+  - Added the full finite direction set determined by distinct point pairs.
+  - Proved every nonvertical slope contributes a finite direction, so the
+    slope set cardinality is bounded by the full direction set cardinality.
+
+## 2026-05-14
 - Strengthened Chapter10's Sylvester-Gallai finite extremal setup:
   - Added the finite set of off-line point/line candidate pairs.
   - Proved membership and nonemptiness lemmas for those candidates.

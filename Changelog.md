@@ -1,4 +1,11 @@
 ## 2026-05-13
+- Replaced Chapter28's final `IsAntichain.sperner` black-box closure with the
+  visible LYM-to-Sperner derivation:
+  - Use the LYM inequality for the sum of inverse layer sizes.
+  - Compare every layer size with the middle layer via `choose_le_middle`.
+  - Convert the resulting rational inequality back to the cardinality bound.
+
+## 2026-05-13
 - Replaced Chapter32's black-box binomial identity closures with visible
   algebraic/inductive proofs:
   - Vandermonde now compares coefficients in `(X + 1)^(m+n)`.

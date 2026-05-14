@@ -1,4 +1,9 @@
 ## 2026-05-13
+- Closed Chapter27's remaining `True` marker by making `chapter27` state the
+  formal De Bruijn tiling necessity theorem and delegate to
+  `chapter27_debruijn`.
+
+## 2026-05-13
 - Fixed Chapter27 build failure in the De Bruijn tiling formalization:
   - Reindexed horizontal and vertical brick sums over `Fin n` instead of `Finset.range n`, so the `Fin` bounds use `k.isLt` rather than an unavailable range-membership proof.
   - Verified `lake env lean ProofsInTheBook/Chapter27.lean` and full `lake build`.

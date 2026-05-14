@@ -232,6 +232,8 @@ theorem chapter27_debruijn (n a b : ℕ) (hn : 2 ≤ n) (htile : IsTiledByNxOne 
   · left;  exact (geom_sum_zero_iff_dvd n hn a).mp ha
   · right; exact (geom_sum_zero_iff_dvd n hn b).mp hb
 
-theorem chapter27 : True := trivial
+theorem chapter27 (n a b : ℕ) (hn : 2 ≤ n) (htile : IsTiledByNxOne n a b) :
+    n ∣ a ∨ n ∣ b :=
+  chapter27_debruijn n a b hn htile
 
 end ProofsInTheBook.Chapter27

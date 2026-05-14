@@ -56,7 +56,9 @@ the proof bypasses the book argument.
   checks that a supplied row/column-injective list-respecting coloring is a
   solution.
 - [ ] Chapter35: formalize the five-color induction/Kempe-chain step.  The
-  current theorem only proves the average-degree lemma.
+  current file proves the average-degree lemma and the easy low-degree
+  extension for vertices with at most four neighbor colors; the degree-five
+  Kempe-chain case remains open.
 - [ ] Chapter36: add the geometric prerequisites for the art-gallery theorem:
   triangulation existence for simple polygons and Fisk's 3-coloring of the
   triangulation graph.  The current file now proves the finite guard-selection

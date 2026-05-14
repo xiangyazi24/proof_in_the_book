@@ -1,4 +1,12 @@
 ## 2026-05-13
+- Strengthened Chapter35 with the easy five-color induction extension:
+  - Prove that a proper subset of the five colors has an unused color.
+  - Prove a vertex with at most four colored neighbors can be assigned a color
+    unused by those neighbors.
+  - Update the audit to identify the degree-five Kempe-chain case as the
+    remaining proof gap.
+
+## 2026-05-13
 - Strengthened Chapter39 from Kneser vertex counting to an actual Kneser graph
   definition:
   - Define `kneserGraph n k` on `k`-subsets of `Fin n`.

@@ -44,4 +44,33 @@ theorem chapter35 {α : Type*} (vertices : Finset α) (degree : α → ℕ)
     ∃ v ∈ vertices, degree v ≤ 5 :=
   exists_degree_le_five_of_average_lt_six vertices degree hsum
 
+/-- If fewer than five colors are used, one of the five colors is still free. -/
+theorem exists_unused_five_color (used : Finset (Fin 5)) (hused : used.card < 5) :
+    ∃ c : Fin 5, c ∉ used := by
+  by_contra hnone
+  push Not at hnone
+  have huniv : used = Finset.univ := by
+    ext c
+    exact ⟨fun _ => Finset.mem_univ c, fun _ => hnone c⟩
+  have : used.card = 5 := by simp [huniv]
+  omega
+
+/--
+The easy induction-extension step in the five-color proof: a vertex with at
+most four neighbors can receive a color unused by its neighbors.
+-/
+theorem exists_unused_color_of_neighbor_bound {V : Type*} [DecidableEq V]
+    (neighbors : Finset V) (color : V → Fin 5) (hdeg : neighbors.card ≤ 4) :
+    ∃ c : Fin 5, ∀ v ∈ neighbors, color v ≠ c := by
+  classical
+  let used := neighbors.image color
+  have hused : used.card < 5 := by
+    have hle : used.card ≤ neighbors.card := Finset.card_image_le
+    omega
+  rcases exists_unused_five_color used hused with ⟨c, hc⟩
+  refine ⟨c, ?_⟩
+  intro v hv hvc
+  apply hc
+  exact Finset.mem_image.mpr ⟨v, hv, hvc⟩
+
 end ProofsInTheBook.Chapter35

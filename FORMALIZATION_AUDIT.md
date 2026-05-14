@@ -49,8 +49,9 @@ semantic TODO items may be advanced in logged, build-checked increments.
   current file now includes the modulo-four necessity, Brahmagupta
   multiplication, Mathlib-backed characterization, a finite `ZagierTriple`
   type, and the simple swap involution with fixed points characterized by
-  `y = z`; the piecewise Zagier involution and parity/fixed-point count remain
-  open.
+  `y = z`; it also proves that a swap fixed point gives a sum-of-two-squares
+  representation.  The piecewise Zagier involution and parity/fixed-point
+  count remain open.
 - [ ] Chapter09: build the Dehn-invariant geometry layer.  The current file
   now defines the tensor-product target for an abstract angle quotient and the
   finite edge-sum algebra, but it still lacks actual polyhedral geometry,

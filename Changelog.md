@@ -6,6 +6,8 @@
   - Added a finite `ZagierTriple` type for `x^2 + 4yz = p`.
   - Added the swap involution `(x,y,z) ↦ (x,z,y)` and characterized its fixed
     points by `y = z`.
+  - Proved that a fixed point of the swap involution yields a representation
+    of `p` as a sum of two squares.
 
 ## 2026-05-14
 - Strengthened Chapter03's smoothness contradiction interface:

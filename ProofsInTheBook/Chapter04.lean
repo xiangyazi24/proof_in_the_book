@@ -123,6 +123,14 @@ theorem swapYZ_fixed_iff (p : ℕ) (t : ZagierTriple p) : (swapYZ p) t = t ↔ t
     subst hyz
     rfl
 
+theorem exists_sq_add_sq_of_swapYZ_fixed {p : ℕ} (t : ZagierTriple p) (hfix : (swapYZ p) t = t) :
+    ∃ a b : ℕ, a ^ 2 + b ^ 2 = p := by
+  have hyz : t.y = t.z := (swapYZ_fixed_iff p t).mp hfix
+  refine ⟨t.x.val, 2 * t.y.val, ?_⟩
+  have heq := t.equation
+  rw [← hyz] at heq
+  nlinarith
+
 end ZagierTriple
 
 theorem chapter04_sufficiency (p : ℕ) [hp : Fact p.Prime] (hmod : p % 4 ≠ 3) :

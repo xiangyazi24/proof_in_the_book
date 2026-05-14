@@ -318,3 +318,5 @@ Status:
 
 Status:
 - Submitted as `8927827d` / seq 10, tagged `CH04_FIXED_REPR_20260514`.
+- Still processing after local fallback work.
+- Local fallback implemented `ZagierTriple.exists_sq_add_sq_of_swapYZ_fixed`.

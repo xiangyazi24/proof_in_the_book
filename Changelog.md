@@ -1,3 +1,11 @@
+## 2026-05-14
+- Strengthened Chapter31's Cayley/Prüfer setup:
+  - Define labeled trees as simple graphs on `Fin n` satisfying
+    `SimpleGraph.IsTree`.
+  - Prove Cayley's count from a supplied equivalence with Prüfer code space.
+  - Update the semantic audit so the remaining gap is the actual Prüfer
+    encode/decode bijection.
+
 ## 2026-05-13
 - Strengthened Chapter30's LGV algebra layer:
   - Added the determinant expansion over signed permutations as an explicit

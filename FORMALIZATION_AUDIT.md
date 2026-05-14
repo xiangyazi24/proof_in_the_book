@@ -52,8 +52,9 @@ the proof bypasses the book argument.
   statement.  The current file exposes the determinant's signed-permutation
   expansion and the diagonal determinant case, but not yet the path-family
   involution/cancellation proof.
-- [ ] Chapter31: connect the Prüfer code space to labeled trees and prove the
-  bijective Cayley formula, not only the code-space cardinality.
+- [ ] Chapter31: construct the actual Prüfer encode/decode bijection.  The
+  current file now defines labeled trees as `SimpleGraph.IsTree` objects on
+  `Fin n` and proves Cayley's count from a supplied Prüfer equivalence.
 - [ ] Chapter34: prove the list-coloring/Galvin step for Dinitz arrays.  The
   current theorem now defines the list-respecting Dinitz solution target and
   checks that a supplied row/column-injective list-respecting coloring is a

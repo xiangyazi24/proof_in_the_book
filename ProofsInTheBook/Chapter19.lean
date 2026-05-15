@@ -165,7 +165,18 @@ theorem fta_minimum_modulus_contradiction
     (hp0 : p.eval z₀ ≠ 0)
     (hmin : ∀ z : ℂ, ‖p.eval z₀‖ ≤ ‖p.eval z‖) : False := by
   have hshift_ne : shiftedPolynomial p z₀ - C (p.eval z₀) ≠ 0 := by
-    sorry
+    intro heq
+    have hsub : shiftedPolynomial p z₀ = C (p.eval z₀) :=
+      Polynomial.sub_eq_zero.mp heq
+    have hdeg_shift : (shiftedPolynomial p z₀).natDegree = p.natDegree := by
+      simp only [shiftedPolynomial]
+      rw [Polynomial.natDegree_comp]
+      have : (Polynomial.X + Polynomial.C z₀ : ℂ[X]).natDegree = 1 :=
+        Polynomial.natDegree_X_add_C z₀
+      omega
+    have hdeg_c : (C (p.eval z₀) : ℂ[X]).natDegree = 0 := Polynomial.natDegree_C _
+    rw [hsub, hdeg_c] at hdeg_shift
+    omega
   obtain ⟨m, hm0, hm_ne, hm_below⟩ :=
     exists_first_nonzero_coeff_of_sub_C_eval_zero_ne_zero hshift_ne
   obtain ⟨w, hw⟩ :=

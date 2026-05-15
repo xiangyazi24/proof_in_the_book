@@ -431,6 +431,25 @@ theorem zagierMap_fixed_unique {p : ℕ} (hp : p.Prime) (hp2 : p ≠ 2)
     rw [hbxy.1, hbxy.2] at hbeq
     omega
 
+theorem zagierMap_canonicalTriple_fixed (k : ℕ) (hk : 0 < k)
+    (hp : (4 * k + 1).Prime) :
+    zagierMapOfPrimeNeTwo hp (by omega : 4 * k + 1 ≠ 2) (canonicalTriple k hk) =
+      canonicalTriple k hk := by
+  have h1 : ¬ (1 : ℕ) < 1 - k := by omega
+  have h2 : (1 : ℕ) < 2 * 1 := by omega
+  ext
+  all_goals simp [zagierMapOfPrimeNeTwo, canonicalTriple, branchTwo, h1, h2]
+
+theorem existsUnique_zagierMap_fixed_of_four_mul_add_one (k : ℕ) (hk : 0 < k)
+    (hp : (4 * k + 1).Prime) :
+    ∃! t : ZagierTriple (4 * k + 1),
+      zagierMapOfPrimeNeTwo hp (by omega : 4 * k + 1 ≠ 2) t = t := by
+  let hp2 : 4 * k + 1 ≠ 2 := by omega
+  refine ⟨canonicalTriple k hk, ?_, ?_⟩
+  · exact zagierMap_canonicalTriple_fixed k hk hp
+  · intro t ht
+    exact zagierMap_fixed_unique hp hp2 ht (zagierMap_canonicalTriple_fixed k hk hp)
+
 /-- The simple involution `(x,y,z) ↦ (x,z,y)` on Zagier triples. -/
 def swapYZ (p : ℕ) : ZagierTriple p ≃ ZagierTriple p where
   toFun t :=

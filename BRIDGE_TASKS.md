@@ -413,4 +413,5 @@ Status:
 
 Status:
 - Submitted as `2280c259` / seq 15, tagged `CH04_MAP_BRANCH2_INV_20260514`.
-- Awaiting bridge response.
+- Still processing after local fallback work.
+- Local fallback implemented `ZagierTriple.zagierMap_branchTwo`.

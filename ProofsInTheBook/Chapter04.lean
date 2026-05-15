@@ -309,6 +309,19 @@ theorem zagierMap_branchOne {p : ℕ} (hp : p.Prime) (hp2 : p ≠ 2)
   all_goals simp [zagierMapOfPrimeNeTwo, branchOne, branchThree, h1raw, h2raw]
   all_goals try omega
 
+theorem zagierMap_branchTwo {p : ℕ} (hp : p.Prime) (hp2 : p ≠ 2)
+    (t : ZagierTriple p) (hleft : t.y.val - t.z.val < t.x.val)
+    (hright : t.x.val < 2 * t.y.val) :
+    zagierMapOfPrimeNeTwo hp hp2 (branchTwo t hleft hright) = t := by
+  have h1raw : ¬ 2 * t.y.val - t.x.val < t.y.val - (t.x.val + t.z.val - t.y.val) := by
+    omega
+  have h2raw : 2 * t.y.val - t.x.val < 2 * t.y.val := by
+    have hx := t.x_pos
+    omega
+  ext
+  all_goals simp [zagierMapOfPrimeNeTwo, branchTwo, h1raw, h2raw]
+  all_goals try omega
+
 /-- The simple involution `(x,y,z) ↦ (x,z,y)` on Zagier triples. -/
 def swapYZ (p : ℕ) : ZagierTriple p ≃ ZagierTriple p where
   toFun t :=

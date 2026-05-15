@@ -174,7 +174,7 @@ counts.
 -/
 theorem lgv_identity_case {n R : Type*} [Fintype n] [DecidableEq n]
     [CommRing R] [IsAddTorsionFree R]
-    (pathCount : n → n → R)
+    (_pathCount : n → n → R)
     (cert : BadInvolutionCertificate (Equiv.Perm n) R) :
     (∑ σ : Equiv.Perm n, cert.signedWeight σ) =
       ∑ σ ∈ (Finset.univ.filter fun σ : Equiv.Perm n => ¬ cert.bad σ),

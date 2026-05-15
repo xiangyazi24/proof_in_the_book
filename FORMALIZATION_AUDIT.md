@@ -57,10 +57,12 @@ semantic TODO items may be advanced in logged, build-checked increments.
   along with a total map for primes `p ≠ 2` after ruling out the two boundary
   equalities.  The three inverse cases and the full involution theorem for
   this map are proved.  A fixed point of the Zagier map is now shown to have
-  `x = 1` and `y = 1`, fixed points are unique, and the canonical triple is
+  `x = 1` and `y = 1`, fixed points are unique, the canonical triple is
   proved to be the unique fixed point for primes of the form `4k + 1` with
-  `0 < k`.  Translating this unique fixed point into the odd-cardinality
-  conclusion remains open.
+  `0 < k`, the triple set is proved odd, and the `swapYZ` fixed-point
+  argument now yields a sum-of-two-squares representation for such primes.
+  A wrapper connecting an arbitrary prime congruent to `1 mod 4` to the
+  `4k + 1` statement remains open.
 - [ ] Chapter09: build the Dehn-invariant geometry layer.  The current file
   now defines the tensor-product target for an abstract angle quotient and the
   finite edge-sum algebra, but it still lacks actual polyhedral geometry,

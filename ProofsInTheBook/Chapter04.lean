@@ -63,6 +63,25 @@ theorem exists_fixed_of_odd_card_involutive {α : Type*} [Fintype α]
     simpa [hsupp] using Equiv.Perm.two_dvd_card_support (σ := e) hinv
   exact hodd.not_two_dvd_nat htwo
 
+theorem odd_card_of_involutive_unique_fixed {α : Type*} [Fintype α] [DecidableEq α]
+    (f : Function.End α) (hinv : Function.Involutive f)
+    (huniq : ∃! x : α, f x = x) : Odd (Fintype.card α) := by
+  have hf2 : f ^ 2 = 1 := by
+    apply funext
+    intro x
+    exact hinv x
+  have hf : f ^ 2 ^ 1 = 1 := by
+    simpa using hf2
+  have hmod : Fintype.card α ≡ Fintype.card (Function.fixedPoints f) [MOD 2] := by
+    simpa using Equiv.Perm.card_fixedPoints_modEq (f := f) (p := 2) (n := 1) hf
+  have hfixed : Fintype.card (Function.fixedPoints f) = 1 := by
+    rw [Fintype.card_eq_one_iff]
+    rcases huniq with ⟨x, hx, hunique⟩
+    exact ⟨⟨x, hx⟩, fun y => Subtype.ext (hunique y y.property)⟩
+  rw [hfixed] at hmod
+  rw [Nat.odd_iff]
+  exact hmod
+
 /-!
 ### Sufficiency: primes p ≡ 1 (mod 4) are sums of two squares
 
@@ -450,6 +469,15 @@ theorem existsUnique_zagierMap_fixed_of_four_mul_add_one (k : ℕ) (hk : 0 < k)
   · intro t ht
     exact zagierMap_fixed_unique hp hp2 ht (zagierMap_canonicalTriple_fixed k hk hp)
 
+theorem card_odd_of_four_mul_add_one (k : ℕ) (hk : 0 < k)
+    (hp : (4 * k + 1).Prime) : Odd (Fintype.card (ZagierTriple (4 * k + 1))) := by
+  classical
+  let hp2 : 4 * k + 1 ≠ 2 := by omega
+  exact odd_card_of_involutive_unique_fixed
+    (zagierMapOfPrimeNeTwo hp hp2)
+    (zagierMap_involutive hp hp2)
+    (existsUnique_zagierMap_fixed_of_four_mul_add_one k hk hp)
+
 /-- The simple involution `(x,y,z) ↦ (x,z,y)` on Zagier triples. -/
 def swapYZ (p : ℕ) : ZagierTriple p ≃ ZagierTriple p where
   toFun t :=
@@ -513,6 +541,12 @@ theorem exists_swapYZ_fixed_of_odd_card {p : ℕ} (hodd : Odd (Fintype.card (Zag
     cases t
     rfl
   exact exists_fixed_of_odd_card_involutive (swapYZ p) hodd hinv
+
+theorem exists_sq_add_sq_of_four_mul_add_one_prime (k : ℕ) (hk : 0 < k)
+    (hp : (4 * k + 1).Prime) : ∃ a b : ℕ, a ^ 2 + b ^ 2 = 4 * k + 1 := by
+  have hodd := card_odd_of_four_mul_add_one k hk hp
+  rcases exists_swapYZ_fixed_of_odd_card hodd with ⟨t, hfix⟩
+  exact exists_sq_add_sq_of_swapYZ_fixed t hfix
 
 end ZagierTriple
 

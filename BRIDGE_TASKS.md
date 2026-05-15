@@ -454,5 +454,5 @@ Status:
 
 Status:
 - Submitted as `a38fc99d` / seq 19, tagged `CH09_DEHN_PARTITION_20260515`.
-- Still processing after local fallback work.
+- Completed with `[BRIDGE_ERROR] response timeout`.
 - Local fallback implemented `dehnInvariant_biUnion_of_pairwiseDisjoint`.

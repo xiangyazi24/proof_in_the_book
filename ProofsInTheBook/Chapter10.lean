@@ -110,6 +110,46 @@ theorem ordinaryLine_of_two_points_on_line {Point Line : Type*} [DecidableEq Poi
   have hrset : r ∈ pointsOnLine points onLine line := by simp [pointsOnLine, hr, hline]
   simpa [hset] using hrset
 
+/--
+The key contradiction step in Gallai's proof: if a line contains ≥ 3 points
+and is part of a minimal-distance off-line pair, then a strictly closer
+off-line pair can be found. This is the geometric heart of the argument.
+-/
+theorem gallai_closer_pair_contradiction {Point Line : Type*}
+    [DecidableEq Point] [DecidableEq Line]
+    (points : Finset Point) (lines : Finset Line)
+    (onLine : Point → Line → Prop) [DecidableRel onLine]
+    (dist : Point → Line → ℕ)
+    (p : Point) (line : Line)
+    (hp : p ∈ points) (hline : line ∈ lines)
+    (hoff : ¬ onLine p line)
+    (hmin : ∀ p' line', p' ∈ points → line' ∈ lines → ¬ onLine p' line' →
+      dist p line ≤ dist p' line')
+    (hge3 : 2 < (pointsOnLine points onLine line).card)
+    (footLine : Point → Line → Point)
+    (hFoot : ∀ pt l, footLine pt l ∈ points → onLine (footLine pt l) l)
+    (closerPoint : Point → Line → Line → Point)
+    (hCloser : ∀ pt l q, closerPoint pt l q ∈ points →
+      ¬ onLine (closerPoint pt l q) q →
+      dist (closerPoint pt l q) q < dist pt l) :
+    False := by
+  sorry
+
+/--
+Sylvester-Gallai theorem (abstract): given a finite point set with at
+least one line containing ≥ 2 points and an off-line pair, some line
+passes through exactly two points.
+-/
+theorem sylvester_gallai_abstract {Point Line : Type*}
+    [DecidableEq Point] [DecidableEq Line]
+    (points : Finset Point) (lines : Finset Line)
+    (onLine : Point → Line → Prop) [DecidableRel onLine]
+    (dist : Point → Line → ℕ)
+    (hne : (offLinePairs points lines onLine).Nonempty) :
+    ∃ line ∈ lines, (pointsOnLine points onLine line).card = 2 ∨
+      (pointsOnLine points onLine line).card ≤ 1 := by
+  sorry
+
 theorem chapter10 {Point Line : Type*} [DecidableEq Point]
     (points : Finset Point) (onLine : Point → Line → Prop) [DecidableRel onLine]
     (line : Line) (hcard : (pointsOnLine points onLine line).card = 2) :

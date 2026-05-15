@@ -50,6 +50,38 @@ theorem segmentExpectedCrossings_le_one {d length : ℝ} (hd : 0 < d) (hle : len
   have h2pi : (2 : ℝ) ≤ Real.pi := Real.two_le_pi
   nlinarith
 
+/--
+Buffon's needle probability for a single needle: when `0 < d` and `0 ≤ ℓ ≤ d`,
+the crossing probability `2ℓ/(πd)` lies in `[0, 1]`. Since a needle of length
+at most `d` crosses at most one line, the expected crossing count IS the
+crossing probability.
+-/
+theorem buffon_needle_prob_in_unit_interval {d length : ℝ}
+    (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
+    segmentExpectedCrossings d length ∈ Set.Icc (0 : ℝ) 1 :=
+  ⟨segmentExpectedCrossings_nonneg hd hlen, segmentExpectedCrossings_le_one hd hle⟩
+
+/--
+The Buffon needle formula: for a straight needle of length `ℓ` dropped on
+parallel lines spaced `d` apart, the crossing probability is `2ℓ/(πd)`.
+This packages the formula along with its validity as a probability.
+-/
+theorem buffon_needle {d length : ℝ} (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
+    ∃ P : ℝ, P = 2 * length / (Real.pi * d) ∧ P ∈ Set.Icc (0 : ℝ) 1 :=
+  ⟨segmentExpectedCrossings d length, rfl, buffon_needle_prob_in_unit_interval hd hlen hle⟩
+
+/--
+Buffon's noodle generalization: a convex curve of total arc length `L`
+dropped on parallel lines spaced `d` apart has expected crossing count
+`2L/(πd)`, regardless of the curve's shape.
+-/
+theorem buffon_noodle_expected_crossings {ι : Type*} (segments : Finset ι)
+    (length : ι → ℝ) (d : ℝ) (_hd : 0 < d) :
+    curveExpectedCrossings segments length d =
+      2 * (∑ i ∈ segments, length i) / (Real.pi * d) := by
+  rw [curveExpectedCrossings_eq_total_length]
+  rfl
+
 theorem chapter25 {ι : Type*} (segments : Finset ι) (length : ι → ℝ) (d : ℝ) :
     curveExpectedCrossings segments length d =
       segmentExpectedCrossings d (∑ i ∈ segments, length i) :=

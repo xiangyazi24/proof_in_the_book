@@ -72,65 +72,90 @@ semantic TODO items may be advanced in logged, build-checked increments.
   geometry, the full `πℚ` quotient, and geometric dissection invariance.
 - [ ] Chapter10: prove an incidence/geometric Sylvester-Gallai statement from
   the extremal-distance argument.  The current file now has ordinary-line
-  bookkeeping and the finite off-line pair minimization step, but it still
-  lacks the actual plane geometry and closer-pair contradiction.
+  bookkeeping, the finite off-line pair minimization step, the closer-pair
+  contradiction structure (Gallai's argument that ≥3 points on a line yields
+  a nearer off-line pair), and an abstract Sylvester-Gallai theorem statement.
+  It still lacks the actual Euclidean geometry linking the abstract and
+  concrete arguments.
 - [ ] Chapter11: prove Ungar's slope lower bound.  The current file now
-  distinguishes finite slopes from the vertical direction and proves the
-  nonvertical slope set embeds into the full direction set, but it still lacks
-  Ungar's rotating-calipers construction.
+  distinguishes finite slopes from the vertical direction, proves the
+  nonvertical slope set embeds into the full direction set, and states the
+  target `n - 1 ≤ |directions|` lower bound.  It still lacks Ungar's
+  rotating-calipers construction.
 - [ ] Chapter13: formalize Cauchy's rigidity proof beyond local edge-sign
   bookkeeping.  The current file now separates zero edges from strict `+/-`
-  signs and proves the strict triangular sign-change count is even, but it
-  still lacks the arm lemma, Euler counting, and convex polyhedron geometry.
+  signs, proves the strict triangular sign-change count is even, and states
+  the abstract arm lemma and Euler sign-change parity interfaces.  It still
+  lacks the concrete arm-lemma proof and convex polyhedron geometry.
 - [ ] Chapter16: formalize a real Borsuk/Kahn-Kalai component.  The current
   file now proves basic finite color-class partition facts for a supplied
   Borsuk-style coloring certificate, but it still lacks the Kahn-Kalai
   combinatorial construction or any Euclidean counterexample.
 - [ ] Chapter19: restore the fundamental theorem of algebra statement and
   replace the black-box root existence with the minimum-modulus proof path.
-  The current file now has the linear root calculation and the polynomial
-  translation layer `w ↦ p(w+z₀)`, plus extraction of the first nonzero
-  positive coefficient after subtracting the constant term.  It still lacks
-  the minimum-modulus existence argument and local norm-decrease step.
+  The current file now has the polynomial translation layer, first-nonzero
+  coefficient extraction, the local norm-decrease lemma statement
+  (`complex_poly_local_norm_decrease`), the shifted-polynomial specialization
+  (`shiftedPolynomial_local_norm_decrease`), and the minimum-modulus
+  contradiction theorem (`fta_minimum_modulus_contradiction`).  The core
+  analytic norm-decrease proof and the nonconstancy-implies-nonzero-shift
+  remain as sorry.
 - [ ] Chapter20: formalize Monsky's parity/Sperner argument and 2-adic color
-  construction.  The current file now defines the color model and the local
-  red-green edge parity atom for trichromatic triangles, but it still lacks
-  the global Sperner parity count and 2-adic coloring construction.
+  construction.  The current file now defines the color model, the local
+  red-green edge parity atom, an abstract Sperner parity lemma connecting
+  trichromatic triangle count parity to boundary red-green edge parity, and
+  a corollary that odd boundary parity forces existence of a trichromatic
+  triangle.  It still lacks the 2-adic coloring construction and the
+  double-counting link between interior and boundary red-green edges.
 - [ ] Chapter24: extend cotangent symmetries to the full Herglotz functional
-  equation / partial-fraction argument.  The current file proves the cotangent
-  symmetries, abstracts the period-one-plus-odd cancellation step, and proves
-  the corresponding rational identity for the two singular terms.
+  equation / partial-fraction argument.  The current file now proves the
+  cotangent symmetries, abstracts the `HerglotzClass` structure with
+  `eval_half` and `cancel` lemmas, proves the duplication formula for
+  periodic functions, and defines the finite rational partial-sum function.
+  It still lacks the limit argument connecting the partial sums to
+  `π·cot(πx)`.
 - [ ] Chapter25: extend the finite polygonal linearity step to the actual
-  Buffon needle probability statement.  The current file now also proves the
-  single-segment expectation is nonnegative and bounded by `1` in the usual
-  `0 < d`, `length ≤ d` needle regime, but it still lacks the measure-theoretic
-  probability model and symmetry argument.
+  Buffon needle probability statement.  The current file now proves the
+  single-segment crossing value is in `[0, 1]`, states Buffon's needle
+  formula `P = 2ℓ/(πd)`, and proves the noodle generalization for curves.
+  It still lacks the measure-theoretic probability foundation.
 - [ ] Chapter29: connect riffle labels to the Gilbert-Shannon-Reeds shuffle
-  distribution.  The current file counts label assignments and proves the
-  label piles form a disjoint cover of the deck, with the induced pile-size
-  vector summing to the deck size.
+  distribution.  The current file counts label assignments, proves the
+  label piles form a disjoint cover of the deck, defines the stable riffle
+  order with irreflexivity, transitivity, and trichotomy, and states the
+  pile-size counting interface.
 - [ ] Chapter30: formalize a real Lindstrom-Gessel-Viennot determinant/path
   statement.  The current file exposes the determinant's signed-permutation
-  expansion, the diagonal determinant case, and an abstract finite
-  sign-reversing cancellation layer with a good/bad split and packaged
-  cancellation certificate, but not yet the path-family involution
-  construction itself.
+  expansion, the diagonal determinant case, abstract sign-reversing
+  cancellation with good/bad split, a `BadInvolutionCertificate` package,
+  the path-swap sign-change lemma (`path_swap_changes_sign`), and the
+  LGV identity-case framework.  It still lacks the concrete path-family
+  intersection involution construction.
 - [ ] Chapter31: construct the actual Prüfer encode/decode bijection.  The
-  current file now defines labeled trees as `SimpleGraph.IsTree` objects on
-  `Fin n` and proves Cayley's count from a supplied Prüfer equivalence.
+  current file defines labeled trees, proves Cayley's count from a supplied
+  equivalence, defines Prüfer leaves (vertices not in the code), and proves
+  the leaf set is nonempty for `n ≥ 2` by a counting argument.  It still
+  lacks the actual encode/decode algorithms.
 - [ ] Chapter34: prove the list-coloring/Galvin step for Dinitz arrays.  The
-  current theorem now defines the list-respecting Dinitz solution target and
-  checks that a supplied row/column-injective list-respecting coloring is a
-  solution.
+  current file defines Dinitz solutions, row/column injectivity, a
+  kernel-perfect orientation structure, and Galvin's greedy extension step
+  (unused colors exist when the list is larger than the neighbor set).  It
+  still lacks the actual kernel-perfect orientation construction for
+  bipartite graphs.
 - [ ] Chapter35: formalize the five-color induction/Kempe-chain step.  The
-  current file proves the average-degree lemma and the easy low-degree
-  extension for vertices with at most four neighbor colors; the degree-five
-  Kempe-chain case remains open.
+  current file proves the average-degree lemma, the easy low-degree
+  extension, and now also defines `kempeGraph` (the two-color induced
+  subgraph), `KempeChain` via `SimpleGraph.Reachable`, `swapColor` with
+  injectivity, `kempeSwap` on a chain, and proves the boundary contradiction
+  lemma.  The full `kempeSwap_proper` properness proof and planarity
+  argument remain as sorry.
 - [ ] Chapter36: add the geometric prerequisites for the art-gallery theorem:
   triangulation existence for simple polygons and Fisk's 3-coloring of the
   triangulation graph.  The current file now proves the finite guard-selection
   step once a 3-colored triangulation is supplied.
-- [ ] Chapter39: formalize Kneser graph coloring and prove Lovasz/Barany
+- [ ] Chapter39: formalize Kneser graph coloring and prove Lovász/Bárány
   lower-bound components.  The current file now defines Kneser vertices,
-  the Kneser graph adjacency relation, the coloring separation property for
-  disjoint subsets, and the vertex count.
+  the Kneser graph adjacency relation, the coloring separation property,
+  the vertex count, and states both the chromatic upper bound
+  (`n - 2k + 2`-colorability) and the lower bound (not `(n - 2k + 1)`-colorable).
+  Both bounds remain as sorry; the lower bound requires Borsuk-Ulam.

@@ -84,6 +84,19 @@ theorem card_le_slopes_of_injective_witness {ι : Type*} [Fintype ι]
   exact Finset.card_le_card_of_injOn witness (by intro i _hi; exact hwitness i)
     (by intro a _ha b _hb h; exact hinj h)
 
+/--
+Ungar's rotating-calipers argument (abstract counting step): given `n` points
+not all collinear, the number of distinct directions is at least `n - 1`.
+The proof constructs `n - 1` distinct slopes by rotating a supporting line
+around the convex hull.
+-/
+theorem ungar_directions_lower_bound (points : Finset Point2)
+    (hn : 2 ≤ points.card)
+    (hncoll : ∃ p ∈ points, ∃ q ∈ points, ∃ r ∈ points,
+      ¬ (q.2 - p.2) * (r.1 - p.1) = (r.2 - p.2) * (q.1 - p.1)) :
+    points.card - 1 ≤ (directionsDeterminedBy points).card := by
+  sorry
+
 theorem chapter11 {ι : Type*} [Fintype ι] (points : Finset Point2) (witness : ι → ℝ)
     (hwitness : ∀ i, witness i ∈ slopesDeterminedBy points)
     (hinj : Function.Injective witness) :

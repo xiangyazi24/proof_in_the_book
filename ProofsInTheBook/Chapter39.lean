@@ -65,6 +65,27 @@ theorem kneserVertex_card (n k : ℕ) :
     simp [Finset.mem_powersetCard]
   rw [hset, Finset.card_powersetCard, Finset.card_univ, Fintype.card_fin]
 
+/--
+The easy upper bound: `KG(n,k)` is `(n - 2k + 2)`-colorable. Color each
+`k`-subset `S` by `min(S)` when `min(S) ≤ n - 2k + 1`, and color `n - 2k + 2`
+otherwise. Disjoint sets cannot share a minimum in `{1, ..., n-2k+1}`, and
+at most one can have minimum > `n - 2k + 1`.
+-/
+theorem kneser_chromatic_upper_bound (n k : ℕ) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
+    ∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
+      ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b := by
+  sorry
+
+/--
+Kneser graph chromatic number lower bound: `KG(n,k)` is NOT
+`(n - 2k + 1)`-colorable. This is the hard direction, proved by Lovász
+using the Borsuk-Ulam theorem (or by Bárány's simplicial argument).
+-/
+theorem kneser_chromatic_lower_bound (n k : ℕ) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
+    ¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
+      ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b := by
+  sorry
+
 theorem chapter39 (n k : ℕ) :
     Fintype.card (KneserVertex n k) = n.choose k :=
   kneserVertex_card n k

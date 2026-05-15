@@ -70,6 +70,62 @@ theorem redGreenEdges_zmod_two_eq_trichromatic (a b c : MonskyColor) :
     (if TrichromaticTriangle a b c then 1 else 0 : ZMod 2) := by
   cases a <;> cases b <;> cases c <;> decide
 
+/--
+Abstract Sperner parity lemma: in a finite triangulation where each edge
+belongs to at most two triangles, the number of trichromatic triangles has
+the same parity as the number of red-green boundary edges.
+
+`triangles` is the finite set of triangles, each given by three color assignments.
+`boundaryRG` counts red-green edges on the boundary (shared by exactly one triangle).
+-/
+theorem sperner_parity_abstract
+    (n : ℕ) (triangleColors : Fin n → MonskyColor × MonskyColor × MonskyColor)
+    (boundaryRGCount : ℕ)
+    (totalRG : ℕ)
+    (htotal : totalRG = ∑ i : Fin n,
+      ((if RedGreenEdge (triangleColors i).1 (triangleColors i).2.1 then 1 else 0) +
+       (if RedGreenEdge (triangleColors i).2.1 (triangleColors i).2.2 then 1 else 0) +
+       (if RedGreenEdge (triangleColors i).2.2 (triangleColors i).1 then 1 else 0)))
+    (hparity : totalRG % 2 = boundaryRGCount % 2) :
+    (Finset.univ.filter fun i : Fin n =>
+      TrichromaticTriangle (triangleColors i).1 (triangleColors i).2.1
+        (triangleColors i).2.2).card % 2 = boundaryRGCount % 2 := by
+  sorry
+
+/--
+Corollary: if the boundary red-green edge count is odd, at least one triangle
+is trichromatic.
+-/
+theorem exists_trichromatic_of_odd_boundary
+    (n : ℕ) (triangleColors : Fin n → MonskyColor × MonskyColor × MonskyColor)
+    (boundaryRGCount : ℕ)
+    (totalRG : ℕ)
+    (htotal : totalRG = ∑ i : Fin n,
+      ((if RedGreenEdge (triangleColors i).1 (triangleColors i).2.1 then 1 else 0) +
+       (if RedGreenEdge (triangleColors i).2.1 (triangleColors i).2.2 then 1 else 0) +
+       (if RedGreenEdge (triangleColors i).2.2 (triangleColors i).1 then 1 else 0)))
+    (hparity : totalRG % 2 = boundaryRGCount % 2)
+    (hodd : Odd boundaryRGCount) :
+    ∃ i : Fin n,
+      TrichromaticTriangle (triangleColors i).1 (triangleColors i).2.1
+        (triangleColors i).2.2 := by
+  by_contra hall
+  push Not at hall
+  have hempty : (Finset.univ.filter fun i : Fin n =>
+      TrichromaticTriangle (triangleColors i).1 (triangleColors i).2.1
+        (triangleColors i).2.2) = ∅ := by
+    rw [Finset.filter_eq_empty_iff]
+    intro i _
+    exact hall i
+  have hcard0 : (Finset.univ.filter fun i : Fin n =>
+      TrichromaticTriangle (triangleColors i).1 (triangleColors i).2.1
+        (triangleColors i).2.2).card = 0 := by
+    simp [hempty]
+  have := sperner_parity_abstract n triangleColors boundaryRGCount totalRG htotal hparity
+  rw [hcard0] at this
+  rcases hodd with ⟨k, hk⟩
+  omega
+
 theorem chapter20 : TrichromaticTriangle red green blue :=
   trichromatic_of_eq_red_green_blue rfl rfl rfl
 

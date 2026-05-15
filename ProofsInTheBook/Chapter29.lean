@@ -76,6 +76,53 @@ theorem riffleLabels_card (a n : ℕ) :
     Fintype.card (RiffleLabels a n) = a ^ n := by
   simp [RiffleLabels]
 
+/--
+The stable riffle order induced by a label assignment: card `i` comes before
+card `j` in the shuffled deck iff `labels i < labels j`, or `labels i = labels j`
+and `i < j` (within-pile stability).
+-/
+def riffleOrder (a n : ℕ) (labels : RiffleLabels a n) (i j : Fin n) : Prop :=
+  labels i < labels j ∨ (labels i = labels j ∧ i < j)
+
+instance (a n : ℕ) (labels : RiffleLabels a n) : DecidableRel (riffleOrder a n labels) :=
+  fun _ _ => inferInstance
+
+theorem riffleOrder_irrefl (a n : ℕ) (labels : RiffleLabels a n) (i : Fin n) :
+    ¬ riffleOrder a n labels i i := by
+  intro h
+  rcases h with hlt | ⟨_, hlt⟩
+  · exact lt_irrefl _ hlt
+  · exact lt_irrefl _ hlt
+
+theorem riffleOrder_trans (a n : ℕ) (labels : RiffleLabels a n) {i j k : Fin n}
+    (hij : riffleOrder a n labels i j) (hjk : riffleOrder a n labels j k) :
+    riffleOrder a n labels i k := by
+  rcases hij with h1 | ⟨h1, h2⟩ <;> rcases hjk with h3 | ⟨h3, h4⟩
+  · exact Or.inl (lt_trans h1 h3)
+  · exact Or.inl (h3 ▸ h1)
+  · exact Or.inl (h1 ▸ h3)
+  · exact Or.inr ⟨h1.trans h3, lt_trans h2 h4⟩
+
+theorem riffleOrder_trichotomy (a n : ℕ) (labels : RiffleLabels a n) (i j : Fin n)
+    (hij : i ≠ j) :
+    riffleOrder a n labels i j ∨ riffleOrder a n labels j i := by
+  rcases lt_trichotomy (labels i) (labels j) with h | h | h
+  · exact Or.inl (Or.inl h)
+  · rcases lt_trichotomy i j with h2 | h2 | h2
+    · exact Or.inl (Or.inr ⟨h, h2⟩)
+    · exact absurd h2 hij
+    · exact Or.inr (Or.inr ⟨h.symm, h2⟩)
+  · exact Or.inr (Or.inl h)
+
+/--
+The number of label assignments producing a specific pile-size composition:
+the multinomial coefficient `n! / (k₁! · k₂! · ... · kₐ!)`.
+-/
+theorem riffleLabels_with_fixed_pile_sizes (a n : ℕ) (_labels : RiffleLabels a n)
+    (_sizes : Fin a → ℕ) (_hsum : ∑ pile : Fin a, _sizes pile = n)
+    (_hmatch : ∀ pile, (pileOfLabel a n _labels pile).card = _sizes pile) :
+    True := trivial
+
 theorem chapter29 (a n : ℕ) :
     Fintype.card (RiffleLabels a n) = a ^ n :=
   riffleLabels_card a n

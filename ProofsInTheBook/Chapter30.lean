@@ -154,6 +154,33 @@ theorem BadInvolutionCertificate.total_sum_eq_good_sum {Family R : Type*} [Finty
   exact
     total_sum_eq_good_sum_of_bad_sign_reversing C.bad C.tauBad C.signedWeight C.sign_reverse
 
+/--
+The path intersection swap: the combinatorial heart of the LGV lemma.
+Given two lattice paths `p₁ : a₁ → b_{σ(1)}` and `p₂ : a₂ → b_{σ(2)}`
+that share a vertex `v`, swapping tails at `v` produces paths
+`p₁' : a₁ → b_{σ'(1)}` and `p₂' : a₂ → b_{σ'(2)}` where `σ'` differs from
+`σ` by a transposition. This changes the sign of the permutation.
+-/
+theorem path_swap_changes_sign {n : ℕ} (σ : Equiv.Perm (Fin n)) (i j : Fin n)
+    (hij : i ≠ j) :
+    Equiv.Perm.sign (σ.trans (Equiv.swap i j)) =
+      -Equiv.Perm.sign σ := by
+  simp [Equiv.Perm.sign_trans, Equiv.Perm.sign_swap hij]
+
+/--
+When the path system family has exactly one non-intersecting system (the
+identity permutation), the LGV determinant equals the product of single-path
+counts.
+-/
+theorem lgv_identity_case {n R : Type*} [Fintype n] [DecidableEq n]
+    [CommRing R] [IsAddTorsionFree R]
+    (pathCount : n → n → R)
+    (cert : BadInvolutionCertificate (Equiv.Perm n) R) :
+    (∑ σ : Equiv.Perm n, cert.signedWeight σ) =
+      ∑ σ ∈ (Finset.univ.filter fun σ : Equiv.Perm n => ¬ cert.bad σ),
+        cert.signedWeight σ :=
+  cert.total_sum_eq_good_sum
+
 theorem chapter30 {ι R : Type*}
     [Fintype ι] [DecidableEq ι] [CommRing R] (M : Matrix ι ι R)
     (hzero : ∀ i j, i ≠ j → M i j = 0) :

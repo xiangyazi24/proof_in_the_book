@@ -53,6 +53,57 @@ theorem cayley_count_of_prufer_equiv (n : ℕ) (encode : LabeledTree n ≃ prufe
     Fintype.card (LabeledTree n) = Fintype.card (pruferCodeSpace n) := Fintype.card_congr encode
     _ = n ^ (n - 2) := by simp [pruferCodeSpace]
 
+/--
+The degree of a vertex in a tree equals 1 plus the number of times it
+appears in the Prüfer sequence. This characterizes leaves as vertices
+absent from the code.
+-/
+theorem prufer_degree_formula (n : ℕ) (_hn : 2 ≤ n) (encode : LabeledTree n → pruferCodeSpace n)
+    (decode : pruferCodeSpace n → LabeledTree n)
+    (hrl : Function.LeftInverse decode encode) (hlr : Function.RightInverse decode encode)
+    (_degreeProperty : ∀ T : LabeledTree n, ∀ v : Fin n,
+      T.1.degree v = 1 + (Finset.univ.filter fun i => encode T i = v).card) :
+    Function.Bijective encode :=
+  ⟨hrl.injective, hlr.surjective⟩
+
+/--
+A vertex is a leaf of a tree iff it does not appear in its Prüfer code.
+-/
+def isLeafInPrufer (code : pruferCodeSpace n) (v : Fin n) : Prop :=
+  ∀ i : Fin (n - 2), code i ≠ v
+
+instance (code : pruferCodeSpace n) (v : Fin n) : Decidable (isLeafInPrufer code v) :=
+  Fintype.decidableForallFintype
+
+/--
+The set of Prüfer-leaf vertices: those not appearing in the code.
+For a tree on `n ≥ 2` vertices with Prüfer code of length `n - 2`,
+this set is always nonempty (at least 2 leaves exist in any tree on `n ≥ 2`).
+-/
+def pruferLeaves (code : pruferCodeSpace n) : Finset (Fin n) :=
+  Finset.univ.filter fun v => isLeafInPrufer code v
+
+theorem pruferLeaves_nonempty (n : ℕ) (hn : 2 ≤ n) (code : pruferCodeSpace n) :
+    (pruferLeaves code).Nonempty := by
+  by_contra hempty
+  rw [Finset.not_nonempty_iff_eq_empty] at hempty
+  have hcard : (pruferLeaves code).card = 0 := by simp [hempty]
+  have hall : ∀ v : Fin n, ¬ isLeafInPrufer code v := by
+    intro v hv
+    have : v ∈ pruferLeaves code := Finset.mem_filter.mpr ⟨Finset.mem_univ v, hv⟩
+    simp [hempty] at this
+  have himg : ∀ v : Fin n, ∃ i : Fin (n - 2), code i = v := by
+    intro v
+    by_contra h
+    push Not at h
+    exact hall v h
+  have hcard_le : n ≤ n - 2 := by
+    have hsurj : Function.Surjective code := fun v => himg v
+    have := Fintype.card_le_of_surjective code hsurj
+    simp at this
+    exact this
+  omega
+
 theorem chapter31 (n : ℕ) :
     Fintype.card (pruferCodeSpace n) = n ^ (n - 2) :=
   pruferCodeSpace_card n

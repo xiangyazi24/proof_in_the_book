@@ -416,6 +416,21 @@ theorem zagierMap_fixed_xy_one {p : ℕ} (hp : p.Prime) (hp2 : p ≠ 2)
   · exact hx1
   · omega
 
+theorem zagierMap_fixed_unique {p : ℕ} (hp : p.Prime) (hp2 : p ≠ 2)
+    {a b : ZagierTriple p}
+    (ha : zagierMapOfPrimeNeTwo hp hp2 a = a)
+    (hb : zagierMapOfPrimeNeTwo hp hp2 b = b) : a = b := by
+  have haxy := zagierMap_fixed_xy_one hp hp2 a ha
+  have hbxy := zagierMap_fixed_xy_one hp hp2 b hb
+  ext
+  · exact haxy.1.trans hbxy.1.symm
+  · exact haxy.2.trans hbxy.2.symm
+  · have haeq := a.equation
+    have hbeq := b.equation
+    rw [haxy.1, haxy.2] at haeq
+    rw [hbxy.1, hbxy.2] at hbeq
+    omega
+
 /-- The simple involution `(x,y,z) ↦ (x,z,y)` on Zagier triples. -/
 def swapYZ (p : ℕ) : ZagierTriple p ≃ ZagierTriple p where
   toFun t :=

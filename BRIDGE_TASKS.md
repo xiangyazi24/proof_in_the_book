@@ -413,5 +413,7 @@ Status:
 
 Status:
 - Submitted as `2280c259` / seq 15, tagged `CH04_MAP_BRANCH2_INV_20260514`.
-- Still processing after local fallback work.
+- Completed with `[BRIDGE_ERROR] response timeout`.
 - Local fallback implemented `ZagierTriple.zagierMap_branchTwo`.
+  The same local pass also implemented `ZagierTriple.zagierMap_branchThree`
+  and `ZagierTriple.zagierMap_involutive`.

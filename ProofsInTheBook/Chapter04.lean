@@ -322,6 +322,31 @@ theorem zagierMap_branchTwo {p : ℕ} (hp : p.Prime) (hp2 : p ≠ 2)
   all_goals simp [zagierMapOfPrimeNeTwo, branchTwo, h1raw, h2raw]
   all_goals try omega
 
+theorem zagierMap_branchThree {p : ℕ} (hp : p.Prime) (hp2 : p ≠ 2)
+    (t : ZagierTriple p) (h : 2 * t.y.val < t.x.val) :
+    zagierMapOfPrimeNeTwo hp hp2 (branchThree t h) = t := by
+  have h1raw : t.x.val - 2 * t.y.val < (t.x.val - t.y.val + t.z.val) - t.y.val := by
+    have hz := t.z_pos
+    omega
+  ext
+  all_goals simp [zagierMapOfPrimeNeTwo, branchThree, branchOne, h1raw]
+  all_goals try omega
+
+theorem zagierMap_involutive {p : ℕ} (hp : p.Prime) (hp2 : p ≠ 2) :
+    Function.Involutive (zagierMapOfPrimeNeTwo hp hp2) := by
+  intro t
+  by_cases h1 : t.x.val < t.y.val - t.z.val
+  · simpa [zagierMapOfPrimeNeTwo, h1] using zagierMap_branchOne hp hp2 t h1
+  · by_cases h2 : t.x.val < 2 * t.y.val
+    · have hleft : t.y.val - t.z.val < t.x.val := by
+        have hne := ne_y_sub_z_of_prime hp t
+        omega
+      simpa [zagierMapOfPrimeNeTwo, h1, h2] using zagierMap_branchTwo hp hp2 t hleft h2
+    · have h3 : 2 * t.y.val < t.x.val := by
+        have hne := ne_two_mul_y_of_prime_ne_two hp hp2 t
+        omega
+      simpa [zagierMapOfPrimeNeTwo, h1, h2] using zagierMap_branchThree hp hp2 t h3
+
 /-- The simple involution `(x,y,z) ↦ (x,z,y)` on Zagier triples. -/
 def swapYZ (p : ℕ) : ZagierTriple p ≃ ZagierTriple p where
   toFun t :=

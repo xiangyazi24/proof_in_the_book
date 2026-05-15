@@ -248,6 +248,46 @@ def branchThree {p : ℕ} (t : ZagierTriple p) (h : 2 * t.y.val < t.x.val) :
           = t.x.val ^ 2 + 4 * t.y.val * t.z.val := branch_three_equation _ _ _ h2y
       _ = p := t.equation
 
+theorem ne_y_sub_z_of_prime {p : ℕ} (hp : p.Prime) (t : ZagierTriple p) :
+    t.x.val ≠ t.y.val - t.z.val := by
+  intro h
+  have hx := t.x_pos
+  have hsum : t.y.val = t.x.val + t.z.val := by omega
+  have heq : (t.x.val + 2 * t.z.val) ^ 2 = p := by
+    calc
+      (t.x.val + 2 * t.z.val) ^ 2 = t.x.val ^ 2 + 4 * t.y.val * t.z.val := by
+        rw [hsum]
+        ring
+      _ = p := t.equation
+  have hprimepow : ((t.x.val + 2 * t.z.val) ^ 2).Prime := by
+    simpa [heq] using hp
+  exact Nat.Prime.not_prime_pow (x := t.x.val + 2 * t.z.val) (n := 2) (by norm_num) hprimepow
+
+theorem ne_two_mul_y_of_prime_ne_two {p : ℕ} (hp : p.Prime) (hp2 : p ≠ 2)
+    (t : ZagierTriple p) :
+    t.x.val ≠ 2 * t.y.val := by
+  intro h
+  have hpeven : Even p := by
+    refine even_iff_two_dvd.mpr ?_
+    rw [← t.equation]
+    rw [h]
+    ring_nf
+    omega
+  have hpodd : Odd p := hp.odd_of_ne_two hp2
+  exact hpodd.not_two_dvd_nat (even_iff_two_dvd.mp hpeven)
+
+def zagierMapOfPrimeNeTwo {p : ℕ} (hp : p.Prime) (hp2 : p ≠ 2) :
+    ZagierTriple p → ZagierTriple p := fun t => by
+  by_cases h1 : t.x.val < t.y.val - t.z.val
+  · exact branchOne t h1
+  · by_cases h2 : t.x.val < 2 * t.y.val
+    · exact branchTwo t (by
+        have hne := ne_y_sub_z_of_prime hp t
+        omega) h2
+    · exact branchThree t (by
+        have hne := ne_two_mul_y_of_prime_ne_two hp hp2 t
+        omega)
+
 /-- The simple involution `(x,y,z) ↦ (x,z,y)` on Zagier triples. -/
 def swapYZ (p : ℕ) : ZagierTriple p ≃ ZagierTriple p where
   toFun t :=

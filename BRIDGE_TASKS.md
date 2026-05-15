@@ -379,4 +379,7 @@ Status:
 
 Status:
 - Submitted as `c761d828` / seq 13, tagged `CH04_ZAGIER_TOTAL_MAP_20260514`.
-- Awaiting bridge response.
+- Still processing after local fallback work.
+- Local fallback implemented `ZagierTriple.zagierMapOfPrimeNeTwo`, with
+  boundary exclusions `ne_y_sub_z_of_prime` and
+  `ne_two_mul_y_of_prime_ne_two`.

@@ -53,9 +53,10 @@ semantic TODO items may be advanced in logged, build-checked increments.
   representation.  It now also has the finite odd-cardinality involution
   lemma, applies it to the swap involution, and constructs the canonical
   triple `(1, 1, k)` for numbers of the form `4k + 1` with `0 < k`.  The
-  three local branches of Zagier's piecewise involution are now constructed.
-  Assembly into a full involution and the proof that the triple set has odd
-  cardinality remain open.
+  three local branches of Zagier's piecewise involution are now constructed,
+  along with a total map for primes `p ≠ 2` after ruling out the two boundary
+  equalities.  Proving that this map is an involution and has exactly one
+  fixed point, and deriving odd cardinality of the triple set, remain open.
 - [ ] Chapter09: build the Dehn-invariant geometry layer.  The current file
   now defines the tensor-product target for an abstract angle quotient and the
   finite edge-sum algebra, but it still lacks actual polyhedral geometry,

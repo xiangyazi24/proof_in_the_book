@@ -434,3 +434,24 @@ Status:
 - Completed with `[BRIDGE_ERROR] response timeout`.
 - Local fallback implemented `ZagierTriple.zagierMap_fixed_xy_one` and
   `ZagierTriple.zagierMap_fixed_unique`.
+
+## 2026-05-15 Batch F
+
+### Task F1: Chapter09 Dehn Partition Additivity
+
+- File: `ProofsInTheBook/Chapter09.lean`
+- Current local state:
+  - `dehnEdge` and `dehnInvariant` are finite `Finset` sums into
+    `TensorProduct ℤ ℝ Angle`.
+  - Basic empty/insert/union additivity lemmas are proved.
+- Desired answer:
+  - Chapter09 only.
+  - Add one Lean-feasible algebraic lemma toward dissection invariance:
+    a finite edge partition/refinement statement, such as a `Finset.biUnion`
+    or sigma-type sum over piece-indexed edge sets equaling the sum of piece
+    Dehn sums under disjointness.
+  - Keep it finite/combinatorial; no real geometry.
+
+Status:
+- Submitted as `a38fc99d` / seq 19, tagged `CH09_DEHN_PARTITION_20260515`.
+- Awaiting bridge response.

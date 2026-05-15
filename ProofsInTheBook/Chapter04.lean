@@ -92,6 +92,16 @@ structure ZagierTriple (p : ℕ) where
 
 namespace ZagierTriple
 
+@[ext] theorem ext {p : ℕ} {a b : ZagierTriple p}
+    (hx : a.x = b.x) (hy : a.y = b.y) (hz : a.z = b.z) : a = b := by
+  cases a
+  cases b
+  simp at hx hy hz
+  subst hx
+  subst hy
+  subst hz
+  rfl
+
 instance instFintype (p : ℕ) : Fintype (ZagierTriple p) := by
   classical
   let S : Type := {u : Fin (p + 1) × Fin (p + 1) × Fin (p + 1) //
@@ -288,6 +298,17 @@ def zagierMapOfPrimeNeTwo {p : ℕ} (hp : p.Prime) (hp2 : p ≠ 2) :
         have hne := ne_two_mul_y_of_prime_ne_two hp hp2 t
         omega)
 
+theorem zagierMap_branchOne {p : ℕ} (hp : p.Prime) (hp2 : p ≠ 2)
+    (t : ZagierTriple p) (h : t.x.val < t.y.val - t.z.val) :
+    zagierMapOfPrimeNeTwo hp hp2 (branchOne t h) = t := by
+  have h1raw : ¬ t.x.val + 2 * t.z.val < t.z.val - (t.y.val - t.x.val - t.z.val) := by
+    omega
+  have h2raw : ¬ t.x.val + 2 * t.z.val < 2 * t.z.val := by
+    omega
+  ext
+  all_goals simp [zagierMapOfPrimeNeTwo, branchOne, branchThree, h1raw, h2raw]
+  all_goals try omega
+
 /-- The simple involution `(x,y,z) ↦ (x,z,y)` on Zagier triples. -/
 def swapYZ (p : ℕ) : ZagierTriple p ≃ ZagierTriple p where
   toFun t :=
@@ -346,7 +367,8 @@ theorem exists_sq_add_sq_of_swapYZ_fixed {p : ℕ} (t : ZagierTriple p) (hfix : 
 theorem exists_swapYZ_fixed_of_odd_card {p : ℕ} (hodd : Odd (Fintype.card (ZagierTriple p))) :
     ∃ t : ZagierTriple p, (swapYZ p) t = t := by
   have hinv : (swapYZ p : Equiv.Perm (ZagierTriple p)) ^ 2 = 1 := by
-    ext t
+    apply Equiv.ext
+    intro t
     cases t
     rfl
   exact exists_fixed_of_odd_card_involutive (swapYZ p) hodd hinv

@@ -397,4 +397,5 @@ Status:
 
 Status:
 - Submitted as `d89ecc9f` / seq 14, tagged `CH04_MAP_BRANCH1_INV_20260514`.
-- Awaiting bridge response.
+- Completed with `[BRIDGE_ERROR] response timeout`.
+- Local fallback implemented `ZagierTriple.zagierMap_branchOne`.

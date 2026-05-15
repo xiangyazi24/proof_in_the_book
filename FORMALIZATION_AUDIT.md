@@ -55,8 +55,9 @@ semantic TODO items may be advanced in logged, build-checked increments.
   triple `(1, 1, k)` for numbers of the form `4k + 1` with `0 < k`.  The
   three local branches of Zagier's piecewise involution are now constructed,
   along with a total map for primes `p ≠ 2` after ruling out the two boundary
-  equalities.  Proving that this map is an involution and has exactly one
-  fixed point, and deriving odd cardinality of the triple set, remain open.
+  equalities.  The branch-one inverse case of this map is proved.  The other
+  inverse cases, the full involution theorem, the unique fixed-point theorem,
+  and the odd-cardinality conclusion remain open.
 - [ ] Chapter09: build the Dehn-invariant geometry layer.  The current file
   now defines the tensor-product target for an abstract angle quotient and the
   finite edge-sum algebra, but it still lacks actual polyhedral geometry,

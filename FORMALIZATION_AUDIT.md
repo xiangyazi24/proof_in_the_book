@@ -60,9 +60,8 @@ semantic TODO items may be advanced in logged, build-checked increments.
   `x = 1` and `y = 1`, fixed points are unique, the canonical triple is
   proved to be the unique fixed point for primes of the form `4k + 1` with
   `0 < k`, the triple set is proved odd, and the `swapYZ` fixed-point
-  argument now yields a sum-of-two-squares representation for such primes.
-  A wrapper connecting an arbitrary prime congruent to `1 mod 4` to the
-  `4k + 1` statement remains open.
+  argument now yields a sum-of-two-squares representation for primes
+  congruent to `1 mod 4`.
 - [ ] Chapter09: build the Dehn-invariant geometry layer.  The current file
   now defines the tensor-product target for an abstract angle quotient and the
   finite edge-sum algebra, but it still lacks actual polyhedral geometry,

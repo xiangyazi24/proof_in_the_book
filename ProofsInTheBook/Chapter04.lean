@@ -548,6 +548,20 @@ theorem exists_sq_add_sq_of_four_mul_add_one_prime (k : ℕ) (hk : 0 < k)
   rcases exists_swapYZ_fixed_of_odd_card hodd with ⟨t, hfix⟩
   exact exists_sq_add_sq_of_swapYZ_fixed t hfix
 
+theorem exists_sq_add_sq_of_prime_mod_four_eq_one (p : ℕ) (hp : p.Prime)
+    (hmod : p % 4 = 1) : ∃ a b : ℕ, a ^ 2 + b ^ 2 = p := by
+  let k := p / 4
+  have hp_eq : p = 4 * k + 1 := by
+    omega
+  have hk : 0 < k := by
+    have hpgt : 1 < p := hp.one_lt
+    omega
+  have hkprime : (4 * k + 1).Prime := by
+    rwa [← hp_eq]
+  rcases exists_sq_add_sq_of_four_mul_add_one_prime k hk hkprime with ⟨a, b, h⟩
+  refine ⟨a, b, ?_⟩
+  rwa [hp_eq]
+
 end ZagierTriple
 
 theorem chapter04_sufficiency (p : ℕ) [hp : Fact p.Prime] (hmod : p % 4 ≠ 3) :

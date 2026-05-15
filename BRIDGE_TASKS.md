@@ -383,3 +383,18 @@ Status:
 - Local fallback implemented `ZagierTriple.zagierMapOfPrimeNeTwo`, with
   boundary exclusions `ne_y_sub_z_of_prime` and
   `ne_two_mul_y_of_prime_ne_two`.
+
+### Task E4: Chapter04 Zagier Map Branch-One Inverse Case
+
+- File: `ProofsInTheBook/Chapter04.lean`
+- Current local state:
+  - `zagierMapOfPrimeNeTwo` is assembled for prime `p ≠ 2`.
+- Desired answer:
+  - Chapter04 only.
+  - Prove the single involution case
+    `zagierMapOfPrimeNeTwo hp hp2 (branchOne t h) = t`.
+  - Do not prove the other two cases yet.
+
+Status:
+- Submitted as `d89ecc9f` / seq 14, tagged `CH04_MAP_BRANCH1_INV_20260514`.
+- Awaiting bridge response.

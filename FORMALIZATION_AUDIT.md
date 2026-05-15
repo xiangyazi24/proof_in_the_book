@@ -66,8 +66,10 @@ semantic TODO items may be advanced in logged, build-checked increments.
 - [ ] Chapter09: build the Dehn-invariant geometry layer.  The current file
   now defines the tensor-product target for an abstract angle quotient, the
   finite edge-sum algebra, and finite pairwise-disjoint edge partition
-  additivity.  It still lacks actual polyhedral geometry, angle quotients by
-  `πℚ`, and geometric dissection invariance.
+  additivity.  It also packages an abstract scissors certificate whose
+  matching piecewise Dehn contributions force equality of total invariants.
+  It still lacks actual polyhedral geometry, angle quotients by `πℚ`, and
+  geometric dissection invariance.
 - [ ] Chapter10: prove an incidence/geometric Sylvester-Gallai statement from
   the extremal-distance argument.  The current file now has ordinary-line
   bookkeeping and the finite off-line pair minimization step, but it still

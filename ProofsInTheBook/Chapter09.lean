@@ -90,6 +90,28 @@ theorem dehnInvariant_eq_of_same_piece_multiset {Piece A : Type*} [AddCommMonoid
     (∑ p ∈ pieces, dehn₁ p) = ∑ p ∈ pieces, dehn₂ p := by
   exact Finset.sum_congr rfl h
 
+structure DehnScissorsCertificate (Piece A : Type*) [AddCommMonoid A] (left right : A) where
+  pieces : Finset Piece
+  leftDehn : Piece → A
+  rightDehn : Piece → A
+  left_eq : left = ∑ p ∈ pieces, leftDehn p
+  right_eq : right = ∑ p ∈ pieces, rightDehn p
+  piece_eq : ∀ p ∈ pieces, leftDehn p = rightDehn p
+
+theorem dehn_eq_of_scissors_certificate {Piece A : Type*} [AddCommMonoid A]
+    {left right : A} (cert : DehnScissorsCertificate Piece A left right) : left = right := by
+  calc
+    left = ∑ p ∈ cert.pieces, cert.leftDehn p := cert.left_eq
+    _ = ∑ p ∈ cert.pieces, cert.rightDehn p :=
+      dehnInvariant_eq_of_same_piece_multiset cert.pieces cert.leftDehn cert.rightDehn cert.piece_eq
+    _ = right := cert.right_eq.symm
+
+theorem no_scissors_certificate_of_dehn_ne {Piece A : Type*} [AddCommMonoid A]
+    {left right : A} (hleft : left = 0) (hright : right ≠ 0) :
+    ¬ Nonempty (DehnScissorsCertificate Piece A left right) := by
+  rintro ⟨cert⟩
+  exact hright ((dehn_eq_of_scissors_certificate cert).symm.trans hleft)
+
 /--
 The final invariant obstruction in Hilbert's third problem: an object with
 zero Dehn invariant cannot be scissors-congruent to one with nonzero Dehn

@@ -347,6 +347,75 @@ theorem zagierMap_involutive {p : ℕ} (hp : p.Prime) (hp2 : p ≠ 2) :
         omega
       simpa [zagierMapOfPrimeNeTwo, h1, h2] using zagierMap_branchThree hp hp2 t h3
 
+theorem branchOne_ne_self {p : ℕ} (t : ZagierTriple p)
+    (h : t.x.val < t.y.val - t.z.val) :
+    branchOne t h ≠ t := by
+  intro hf
+  have hy := congrArg (fun s : ZagierTriple p => s.y.val) hf
+  have hz := congrArg (fun s : ZagierTriple p => s.z.val) hf
+  simp [branchOne] at hy hz
+  omega
+
+theorem branchThree_ne_self {p : ℕ} (t : ZagierTriple p) (h : 2 * t.y.val < t.x.val) :
+    branchThree t h ≠ t := by
+  intro hf
+  have hx := congrArg (fun s : ZagierTriple p => s.x.val) hf
+  have hy := t.y_pos
+  simp [branchThree] at hx
+  omega
+
+theorem branchTwo_fixed_x_eq_y {p : ℕ} (t : ZagierTriple p)
+    (hleft : t.y.val - t.z.val < t.x.val) (hright : t.x.val < 2 * t.y.val)
+    (hf : branchTwo t hleft hright = t) : t.x.val = t.y.val := by
+  have hx := congrArg (fun s : ZagierTriple p => s.x.val) hf
+  simp [branchTwo] at hx
+  omega
+
+theorem zagierMap_fixed_x_eq_y {p : ℕ} (hp : p.Prime) (hp2 : p ≠ 2)
+    (t : ZagierTriple p) (hfix : zagierMapOfPrimeNeTwo hp hp2 t = t) :
+    t.x.val = t.y.val := by
+  by_cases h1 : t.x.val < t.y.val - t.z.val
+  · have hf : branchOne t h1 = t := by
+      simpa [zagierMapOfPrimeNeTwo, h1] using hfix
+    exact False.elim (branchOne_ne_self t h1 hf)
+  · by_cases h2 : t.x.val < 2 * t.y.val
+    · have hleft : t.y.val - t.z.val < t.x.val := by
+        have hne := ne_y_sub_z_of_prime hp t
+        omega
+      have hf : branchTwo t hleft h2 = t := by
+        simpa [zagierMapOfPrimeNeTwo, h1, h2] using hfix
+      exact branchTwo_fixed_x_eq_y t hleft h2 hf
+    · have h3 : 2 * t.y.val < t.x.val := by
+        have hne := ne_two_mul_y_of_prime_ne_two hp hp2 t
+        omega
+      have hf : branchThree t h3 = t := by
+        simpa [zagierMapOfPrimeNeTwo, h1, h2] using hfix
+      exact False.elim (branchThree_ne_self t h3 hf)
+
+theorem x_eq_one_of_prime_and_x_eq_y {p : ℕ} (hp : p.Prime) (t : ZagierTriple p)
+    (hxy : t.x.val = t.y.val) : t.x.val = 1 := by
+  by_contra hne
+  have hp_eq : p = t.x.val * (t.x.val + 4 * t.z.val) := by
+    calc
+      p = t.x.val ^ 2 + 4 * t.y.val * t.z.val := t.equation.symm
+      _ = t.x.val * (t.x.val + 4 * t.z.val) := by
+        rw [← hxy]
+        ring
+  have hdiv : t.x.val ∣ p := ⟨t.x.val + 4 * t.z.val, hp_eq⟩
+  have hpx : p = t.x.val := (hp.dvd_iff_eq hne).mp hdiv
+  have hx := t.x_pos
+  have hz := t.z_pos
+  nlinarith
+
+theorem zagierMap_fixed_xy_one {p : ℕ} (hp : p.Prime) (hp2 : p ≠ 2)
+    (t : ZagierTriple p) (hfix : zagierMapOfPrimeNeTwo hp hp2 t = t) :
+    t.x.val = 1 ∧ t.y.val = 1 := by
+  have hxy := zagierMap_fixed_x_eq_y hp hp2 t hfix
+  have hx1 := x_eq_one_of_prime_and_x_eq_y hp t hxy
+  constructor
+  · exact hx1
+  · omega
+
 /-- The simple involution `(x,y,z) ↦ (x,z,y)` on Zagier triples. -/
 def swapYZ (p : ℕ) : ZagierTriple p ≃ ZagierTriple p where
   toFun t :=

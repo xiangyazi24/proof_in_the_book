@@ -431,4 +431,5 @@ Status:
 
 Status:
 - Submitted as `e7ea983b` / seq 16, tagged `CH04_ZAGIER_FIXED_XY_20260514`.
-- Awaiting bridge response.
+- Still processing after local fallback work.
+- Local fallback implemented `ZagierTriple.zagierMap_fixed_xy_one`.

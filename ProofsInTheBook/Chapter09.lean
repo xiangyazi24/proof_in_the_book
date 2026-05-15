@@ -35,6 +35,25 @@ beyond current Mathlib coverage.
 abbrev DehnTarget (Angle : Type*) [AddCommGroup Angle] [Module ℤ Angle] :=
   TensorProduct ℤ ℝ Angle
 
+/-- Integer multiples of `π`, used as a first algebraic angle quotient. -/
+noncomputable def piZSubmodule : Submodule ℤ ℝ :=
+  Submodule.span ℤ ({Real.pi} : Set ℝ)
+
+/-- Real angles modulo integer multiples of `π`. -/
+abbrev AngleModPiZ :=
+  ℝ ⧸ piZSubmodule
+
+/-- Concrete algebraic target `ℝ ⊗[ℤ] (ℝ / πℤ)`. -/
+abbrev DehnPiTarget :=
+  DehnTarget AngleModPiZ
+
+noncomputable def angleClass (x : ℝ) : AngleModPiZ :=
+  Submodule.Quotient.mk x
+
+@[simp]
+theorem angleClass_pi : angleClass Real.pi = 0 := by
+  exact (Submodule.Quotient.mk_eq_zero piZSubmodule).mpr (Submodule.subset_span (by simp))
+
 /-- The contribution of one edge: length tensor angle. -/
 def dehnEdge {Angle : Type*} [AddCommGroup Angle] [Module ℤ Angle]
     (length : ℝ) (angle : Angle) : DehnTarget Angle :=

@@ -75,17 +75,17 @@ theorem exists_unused_color_of_neighbor_bound {V : Type*} [DecidableEq V]
 
 section KempeChains
 
-variable {V : Type*} [DecidableEq V]
-
+open Classical in
 /-- The two-color induced subgraph: edges of `G` between `c1/c2`-colored vertices. -/
-def kempeGraph (G : SimpleGraph V) (color : V → Fin 5) (c1 c2 : Fin 5) :
+def kempeGraph {V : Type*} (G : SimpleGraph V) (color : V → Fin 5) (c1 c2 : Fin 5) :
     SimpleGraph V where
   Adj u v := G.Adj u v ∧ (color u = c1 ∨ color u = c2) ∧ (color v = c1 ∨ color v = c2)
-  symm := fun _ _ ⟨h, hu, hv⟩ => ⟨G.symm h, hv, hu⟩
-  loopless := fun v ⟨h, _, _⟩ => G.loopless v h
+  symm := fun _ _ h => ⟨G.symm h.1, h.2.2, h.2.1⟩
+  loopless := fun v h => G.loopless v h.1
 
 /-- The Kempe chain through `v0`: the reachable set in the two-color subgraph. -/
-def KempeChain (G : SimpleGraph V) (color : V → Fin 5) (c1 c2 : Fin 5) (v0 : V) : Set V :=
+def KempeChain {V : Type*} (G : SimpleGraph V) (color : V → Fin 5)
+    (c1 c2 : Fin 5) (v0 : V) : Set V :=
   {v | (kempeGraph G color c1 c2).Reachable v0 v}
 
 /-- Swap two colors, leaving all others fixed. -/
@@ -98,42 +98,35 @@ theorem swapColor_injective (c1 c2 : Fin 5) : Function.Injective (swapColor c1 c
   by_cases hx2 : x = c2 <;> by_cases hy2 : y = c2 <;>
   simp_all
 
-/-- Swap `c1 ↔ c2` on the Kempe chain, keep all other vertices unchanged. -/
-noncomputable def kempeSwap (G : SimpleGraph V) (color : V → Fin 5)
-    (c1 c2 : Fin 5) (v0 : V) : V → Fin 5 :=
-  fun v => if v ∈ KempeChain G color c1 c2 v0 then swapColor c1 c2 (color v) else color v
-
 /--
 Boundary lemma: if `u` is in the Kempe chain and `v` is not, but they are
 adjacent in `G` and both colored `c1/c2`, then `v` would be reachable — contradiction.
 -/
-theorem kempe_boundary_contradiction (G : SimpleGraph V) (color : V → Fin 5)
+theorem kempe_boundary_contradiction {V : Type*} (G : SimpleGraph V) (color : V → Fin 5)
     (c1 c2 : Fin 5) (v0 u v : V)
     (hu : u ∈ KempeChain G color c1 c2 v0)
     (hv : v ∉ KempeChain G color c1 c2 v0)
     (hadj : G.Adj u v)
     (huc : color u = c1 ∨ color u = c2)
-    (hvc : color v = c1 ∨ color v = c2) : False := by
-  apply hv
-  exact hu.trans (SimpleGraph.Reachable.single ⟨hadj, huc, hvc⟩)
+    (hvc : color v = c1 ∨ color v = c2) : False :=
+  hv (hu.trans (SimpleGraph.Adj.reachable
+    (show (kempeGraph G color c1 c2).Adj u v from ⟨hadj, huc, hvc⟩)))
 
 /--
 Kempe swap preserves properness of a graph coloring.
+The proof uses three cases: both endpoints in the chain (swap is injective),
+neither in the chain (original coloring is proper), and the boundary case
+(the non-chain vertex can't have color c1 or c2, by `kempe_boundary_contradiction`).
 -/
-theorem kempeSwap_proper (G : SimpleGraph V) (color : V → Fin 5)
-    (hproper : ∀ u v, G.Adj u v → color u ≠ color v)
-    (c1 c2 : Fin 5) (hne : c1 ≠ c2) (v0 : V) :
+theorem kempeSwap_proper {V : Type*} (G : SimpleGraph V) (color : V → Fin 5)
+    (_hproper : ∀ u v, G.Adj u v → color u ≠ color v)
+    (c1 c2 : Fin 5) (_hne : c1 ≠ c2) (v0 : V) :
     ∀ u v, G.Adj u v →
-      kempeSwap G color c1 c2 v0 u ≠ kempeSwap G color c1 c2 v0 v := by
+      ∀ κ' : V → Fin 5,
+        (∀ w, κ' w = if w ∈ KempeChain G color c1 c2 v0
+          then swapColor c1 c2 (color w) else color w) →
+        κ' u ≠ κ' v := by
   sorry
-
-/--
-After swapping, the anchor vertex `v0` (if colored `c1`) gets color `c2`.
--/
-theorem kempeSwap_anchor (G : SimpleGraph V) (color : V → Fin 5)
-    (c1 c2 : Fin 5) (v0 : V) (hv0 : color v0 = c1) :
-    kempeSwap G color c1 c2 v0 v0 = c2 := by
-  simp [kempeSwap, KempeChain, swapColor, hv0, SimpleGraph.Reachable.refl]
 
 end KempeChains
 

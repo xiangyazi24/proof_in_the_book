@@ -136,6 +136,39 @@ theorem card_pos_of_four_mul_add_one (k : ℕ) (hk : 0 < k) :
   classical
   exact Fintype.card_pos_iff.mpr ⟨canonicalTriple k hk⟩
 
+private theorem branch_one_equation (x y z : ℕ) (h : x + z ≤ y) :
+    (x + 2 * z) ^ 2 + 4 * z * (y - x - z) = x ^ 2 + 4 * y * z := by
+  have hcast : ((y - x - z : ℕ) : ℤ) = (y : ℤ) - x - z := by omega
+  norm_num [pow_two]
+  nlinarith
+
+def branchOne {p : ℕ} (t : ZagierTriple p) (h : t.x.val < t.y.val - t.z.val) :
+    ZagierTriple p where
+  x := ⟨t.x.val + 2 * t.z.val, by
+    have heq := t.equation
+    have hx := t.x_pos
+    have hy := t.y_pos
+    have hz := t.z_pos
+    have hzle : 2 * t.z.val ≤ 4 * t.y.val * t.z.val := by nlinarith
+    have hxle : t.x.val ≤ t.x.val ^ 2 := by nlinarith
+    omega⟩
+  y := t.z
+  z := ⟨t.y.val - t.x.val - t.z.val, by
+    exact lt_of_le_of_lt (le_trans (Nat.sub_le _ _) (Nat.sub_le _ _)) t.y.2⟩
+  x_pos := Nat.add_pos_left t.x_pos _
+  y_pos := t.z_pos
+  z_pos := by
+    change 0 < t.y.val - t.x.val - t.z.val
+    have hcomm : t.y.val - t.x.val - t.z.val = t.y.val - t.z.val - t.x.val := by omega
+    rw [hcomm]
+    exact Nat.sub_pos_of_lt h
+  equation := by
+    have hsum : t.x.val + t.z.val ≤ t.y.val := by omega
+    calc
+      (t.x.val + 2 * t.z.val) ^ 2 + 4 * t.z.val * (t.y.val - t.x.val - t.z.val)
+          = t.x.val ^ 2 + 4 * t.y.val * t.z.val := branch_one_equation _ _ _ hsum
+      _ = p := t.equation
+
 /-- The simple involution `(x,y,z) ↦ (x,z,y)` on Zagier triples. -/
 def swapYZ (p : ℕ) : ZagierTriple p ≃ ZagierTriple p where
   toFun t :=

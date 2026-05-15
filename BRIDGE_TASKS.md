@@ -360,4 +360,5 @@ Status:
 
 Status:
 - Submitted as `94f69aae` / seq 12, tagged `CH04_ZAGIER_BRANCH1_20260514`.
-- Awaiting bridge response.
+- Completed with `[BRIDGE_ERROR] response timeout`.
+- Local fallback implemented `ZagierTriple.branchOne`.

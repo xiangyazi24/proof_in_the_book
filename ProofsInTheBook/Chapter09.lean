@@ -66,6 +66,15 @@ theorem dehnInvariant_union_of_disjoint {Edge Angle : Type*} [DecidableEq Edge]
       dehnInvariant left length angle + dehnInvariant right length angle := by
   simp [dehnInvariant, Finset.sum_union hdisj]
 
+theorem dehnInvariant_biUnion_of_pairwiseDisjoint {Piece Edge Angle : Type*}
+    [DecidableEq Edge] [AddCommGroup Angle] [Module ℤ Angle]
+    {pieces : Finset Piece} {edges : Piece → Finset Edge}
+    (hdisj : Set.PairwiseDisjoint (↑pieces) edges)
+    (length : Edge → ℝ) (angle : Edge → Angle) :
+    dehnInvariant (pieces.biUnion edges) length angle =
+      ∑ p ∈ pieces, dehnInvariant (edges p) length angle := by
+  simp [dehnInvariant, Finset.sum_biUnion hdisj]
+
 /-- Additivity of an abstract Dehn invariant over finitely many pieces. -/
 theorem dehnInvariant_additive_over_dissection {Piece A : Type*} [AddCommMonoid A]
     (pieces : Finset Piece) (dehn : Piece → A) :

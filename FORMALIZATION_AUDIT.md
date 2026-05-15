@@ -64,9 +64,10 @@ semantic TODO items may be advanced in logged, build-checked increments.
   congruent to `1 mod 4`.  The public `chapter04_sufficiency` theorem now
   calls this Zagier proof path, with the prime `2` handled separately.
 - [ ] Chapter09: build the Dehn-invariant geometry layer.  The current file
-  now defines the tensor-product target for an abstract angle quotient and the
-  finite edge-sum algebra, but it still lacks actual polyhedral geometry,
-  angle quotients by `πℚ`, and dissection invariance.
+  now defines the tensor-product target for an abstract angle quotient, the
+  finite edge-sum algebra, and finite pairwise-disjoint edge partition
+  additivity.  It still lacks actual polyhedral geometry, angle quotients by
+  `πℚ`, and geometric dissection invariance.
 - [ ] Chapter10: prove an incidence/geometric Sylvester-Gallai statement from
   the extremal-distance argument.  The current file now has ordinary-line
   bookkeeping and the finite off-line pair minimization step, but it still

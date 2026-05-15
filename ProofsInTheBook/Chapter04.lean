@@ -210,6 +210,44 @@ def branchTwo {p : ℕ} (t : ZagierTriple p)
           = t.x.val ^ 2 + 4 * t.y.val * t.z.val := branch_two_equation _ _ _ hxy hyxz
       _ = p := t.equation
 
+private theorem branch_three_equation (x y z : ℕ) (h2y : 2 * y ≤ x) :
+    (x - 2 * y) ^ 2 + 4 * (x - y + z) * y = x ^ 2 + 4 * y * z := by
+  apply Int.ofNat.inj
+  norm_num [pow_two]
+  have hyx : y ≤ x := by omega
+  have hcast1 : ((x - 2 * y : ℕ) : ℤ) = (x : ℤ) - 2 * y := by omega
+  have hcast2 : ((x - y : ℕ) : ℤ) = (x : ℤ) - y := by omega
+  rw [hcast1, hcast2]
+  ring
+
+def branchThree {p : ℕ} (t : ZagierTriple p) (h : 2 * t.y.val < t.x.val) :
+    ZagierTriple p where
+  x := ⟨t.x.val - 2 * t.y.val, by
+    exact lt_of_le_of_lt (Nat.sub_le _ _) t.x.2⟩
+  y := ⟨t.x.val - t.y.val + t.z.val, by
+    have heq := t.equation
+    have hx := t.x_pos
+    have hy := t.y_pos
+    have hz := t.z_pos
+    have hzle : t.z.val ≤ 4 * t.y.val * t.z.val := by nlinarith
+    have hxle : t.x.val ≤ t.x.val ^ 2 := by nlinarith
+    omega⟩
+  z := t.y
+  x_pos := by
+    change 0 < t.x.val - 2 * t.y.val
+    exact Nat.sub_pos_of_lt h
+  y_pos := by
+    change 0 < t.x.val - t.y.val + t.z.val
+    have hyx : t.y.val < t.x.val := by omega
+    exact Nat.add_pos_left (Nat.sub_pos_of_lt hyx) _
+  z_pos := t.y_pos
+  equation := by
+    have h2y : 2 * t.y.val ≤ t.x.val := by omega
+    calc
+      (t.x.val - 2 * t.y.val) ^ 2 + 4 * (t.x.val - t.y.val + t.z.val) * t.y.val
+          = t.x.val ^ 2 + 4 * t.y.val * t.z.val := branch_three_equation _ _ _ h2y
+      _ = p := t.equation
+
 /-- The simple involution `(x,y,z) ↦ (x,z,y)` on Zagier triples. -/
 def swapYZ (p : ℕ) : ZagierTriple p ≃ ZagierTriple p where
   toFun t :=

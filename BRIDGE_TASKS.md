@@ -417,3 +417,18 @@ Status:
 - Local fallback implemented `ZagierTriple.zagierMap_branchTwo`.
   The same local pass also implemented `ZagierTriple.zagierMap_branchThree`
   and `ZagierTriple.zagierMap_involutive`.
+
+### Task E6: Chapter04 Zagier Map Fixed-Point Coordinates
+
+- File: `ProofsInTheBook/Chapter04.lean`
+- Current local state:
+  - `ZagierTriple.zagierMap_involutive` is proved for prime `p ≠ 2`.
+- Desired answer:
+  - Chapter04 only.
+  - If `hfix : zagierMapOfPrimeNeTwo hp hp2 t = t`, prove
+    `t.x.val = 1` and `t.y.val = 1`, or return the smallest compiling lemma
+    toward that fixed-point characterization.
+
+Status:
+- Submitted as `e7ea983b` / seq 16, tagged `CH04_ZAGIER_FIXED_XY_20260514`.
+- Awaiting bridge response.

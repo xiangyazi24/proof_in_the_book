@@ -456,3 +456,20 @@ Status:
 - Submitted as `a38fc99d` / seq 19, tagged `CH09_DEHN_PARTITION_20260515`.
 - Completed with `[BRIDGE_ERROR] response timeout`.
 - Local fallback implemented `dehnInvariant_biUnion_of_pairwiseDisjoint`.
+
+### Task F2: Chapter09 Angle Quotient Layer
+
+- File: `ProofsInTheBook/Chapter09.lean`
+- Current local state:
+  - The Dehn target is still parameterized by an abstract `Angle`.
+- Desired answer:
+  - Chapter09 only.
+  - Define an additive quotient type for real angles modulo integer multiples
+    of `Real.pi`, for example `ℝ ⧸ Submodule.span ℤ {Real.pi}`.
+  - Prove the class of `Real.pi` is zero and define the concrete Dehn target
+    using this quotient.
+  - Keep it algebraic; no real geometry.
+
+Status:
+- Submitted as `7acdd18b` / seq 20, tagged `CH09_ANGLE_QUOTIENT_20260515`.
+- Awaiting bridge response.

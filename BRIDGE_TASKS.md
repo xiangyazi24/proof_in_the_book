@@ -362,3 +362,21 @@ Status:
 - Submitted as `94f69aae` / seq 12, tagged `CH04_ZAGIER_BRANCH1_20260514`.
 - Completed with `[BRIDGE_ERROR] response timeout`.
 - Local fallback implemented `ZagierTriple.branchOne`.
+
+### Task E3: Chapter04 Total Zagier Map Assembly
+
+- File: `ProofsInTheBook/Chapter04.lean`
+- Current local state:
+  - `ZagierTriple.branchOne`, `branchTwo`, and `branchThree` construct the
+    three local branches of Zagier's piecewise map.
+- Desired answer:
+  - Chapter04 only.
+  - Define a total `zagierMap : ZagierTriple p → ZagierTriple p` by decidable
+    case split using the three local branch constructors.
+  - Do not prove involutivity yet.
+  - If the exact split needs equality-boundary handling, identify the minimal
+    extra branch or lemma required.
+
+Status:
+- Submitted as `c761d828` / seq 13, tagged `CH04_ZAGIER_TOTAL_MAP_20260514`.
+- Awaiting bridge response.

@@ -169,6 +169,47 @@ def branchOne {p : ℕ} (t : ZagierTriple p) (h : t.x.val < t.y.val - t.z.val) :
           = t.x.val ^ 2 + 4 * t.y.val * t.z.val := branch_one_equation _ _ _ hsum
       _ = p := t.equation
 
+private theorem branch_two_equation (x y z : ℕ) (hxy : x ≤ 2 * y) (hyxz : y ≤ x + z) :
+    (2 * y - x) ^ 2 + 4 * y * (x + z - y) = x ^ 2 + 4 * y * z := by
+  have hcast1 : ((2 * y - x : ℕ) : ℤ) = 2 * (y : ℤ) - x := by omega
+  have hcast2 : ((x + z - y : ℕ) : ℤ) = (x : ℤ) + z - y := by omega
+  norm_num [pow_two]
+  nlinarith
+
+def branchTwo {p : ℕ} (t : ZagierTriple p)
+    (hleft : t.y.val - t.z.val < t.x.val) (hright : t.x.val < 2 * t.y.val) :
+    ZagierTriple p where
+  x := ⟨2 * t.y.val - t.x.val, by
+    have heq := t.equation
+    have hy := t.y_pos
+    have hz := t.z_pos
+    have hyle : 2 * t.y.val ≤ 4 * t.y.val * t.z.val := by nlinarith
+    omega⟩
+  y := t.y
+  z := ⟨t.x.val + t.z.val - t.y.val, by
+    have heq := t.equation
+    have hx := t.x_pos
+    have hy := t.y_pos
+    have hz := t.z_pos
+    have hzle : t.z.val ≤ 4 * t.y.val * t.z.val := by nlinarith
+    have hxle : t.x.val ≤ t.x.val ^ 2 := by nlinarith
+    omega⟩
+  x_pos := by
+    change 0 < 2 * t.y.val - t.x.val
+    exact Nat.sub_pos_of_lt hright
+  y_pos := t.y_pos
+  z_pos := by
+    change 0 < t.x.val + t.z.val - t.y.val
+    have hyxz : t.y.val < t.x.val + t.z.val := by omega
+    exact Nat.sub_pos_of_lt hyxz
+  equation := by
+    have hxy : t.x.val ≤ 2 * t.y.val := by omega
+    have hyxz : t.y.val ≤ t.x.val + t.z.val := by omega
+    calc
+      (2 * t.y.val - t.x.val) ^ 2 + 4 * t.y.val * (t.x.val + t.z.val - t.y.val)
+          = t.x.val ^ 2 + 4 * t.y.val * t.z.val := branch_two_equation _ _ _ hxy hyxz
+      _ = p := t.equation
+
 /-- The simple involution `(x,y,z) ↦ (x,z,y)` on Zagier triples. -/
 def swapYZ (p : ℕ) : ZagierTriple p ≃ ZagierTriple p where
   toFun t :=

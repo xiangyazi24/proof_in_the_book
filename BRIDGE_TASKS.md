@@ -399,3 +399,18 @@ Status:
 - Submitted as `d89ecc9f` / seq 14, tagged `CH04_MAP_BRANCH1_INV_20260514`.
 - Completed with `[BRIDGE_ERROR] response timeout`.
 - Local fallback implemented `ZagierTriple.zagierMap_branchOne`.
+
+### Task E5: Chapter04 Zagier Map Branch-Two Inverse Case
+
+- File: `ProofsInTheBook/Chapter04.lean`
+- Current local state:
+  - `zagierMap_branchOne` is proved.
+- Desired answer:
+  - Chapter04 only.
+  - Prove the single involution case
+    `zagierMapOfPrimeNeTwo hp hp2 (branchTwo t hleft hright) = t`.
+  - Do not prove the other cases yet.
+
+Status:
+- Submitted as `2280c259` / seq 15, tagged `CH04_MAP_BRANCH2_INV_20260514`.
+- Awaiting bridge response.

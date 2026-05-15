@@ -95,8 +95,9 @@ This involution has exactly one fixed point (1, 1, (p-1)/4), so |S| is odd.
 The involution g(x,y,z) = (x,z,y) also acts on S. Since |S| is odd,
 g must have a fixed point (x,y,y), giving x² + 4y² = p.
 
-The full formalization of this involution argument is left as sorry;
-it requires careful case analysis on a finite set with a parity argument.
+The formalization below follows this path: it builds the finite triple type,
+the three branches of Zagier's involution, the unique fixed point, the parity
+step, and then the swap fixed-point argument.
 -/
 
 /-- Finite ambient version of Zagier's triples `x^2 + 4yz = p`. -/
@@ -565,8 +566,15 @@ theorem exists_sq_add_sq_of_prime_mod_four_eq_one (p : ℕ) (hp : p.Prime)
 end ZagierTriple
 
 theorem chapter04_sufficiency (p : ℕ) [hp : Fact p.Prime] (hmod : p % 4 ≠ 3) :
-    ∃ a b : ℕ, a ^ 2 + b ^ 2 = p :=
-  Nat.Prime.sq_add_sq hmod
+    ∃ a b : ℕ, a ^ 2 + b ^ 2 = p := by
+  have hp' : p.Prime := hp.out
+  by_cases hp2 : p = 2
+  · refine ⟨1, 1, ?_⟩
+    omega
+  · have hodd : Odd p := hp'.odd_of_ne_two hp2
+    have hmod2 : p % 2 = 1 := Nat.odd_iff.mp hodd
+    have hmod4 : p % 4 = 1 := by omega
+    exact ZagierTriple.exists_sq_add_sq_of_prime_mod_four_eq_one p hp' hmod4
 
 /-!
 ### Full characterization

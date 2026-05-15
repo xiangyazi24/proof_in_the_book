@@ -43,7 +43,7 @@ semantic TODO items may be advanced in logged, build-checked increments.
   divisor of such a factor is at most `k`; conversely, a large prime factor
   in any descending factor immediately witnesses non-smoothness of the whole
   descending product.
-- [ ] Chapter04: replace the remaining comment-level gap for the
+- [x] Chapter04: replace the remaining comment-level gap for the
   sum-of-two-squares sufficiency/involution argument with an actual Lean proof
   path, or narrow the theorem statements and record the gap explicitly.  The
   current file now includes the modulo-four necessity, Brahmagupta
@@ -61,7 +61,8 @@ semantic TODO items may be advanced in logged, build-checked increments.
   proved to be the unique fixed point for primes of the form `4k + 1` with
   `0 < k`, the triple set is proved odd, and the `swapYZ` fixed-point
   argument now yields a sum-of-two-squares representation for primes
-  congruent to `1 mod 4`.
+  congruent to `1 mod 4`.  The public `chapter04_sufficiency` theorem now
+  calls this Zagier proof path, with the prime `2` handled separately.
 - [ ] Chapter09: build the Dehn-invariant geometry layer.  The current file
   now defines the tensor-product target for an abstract angle quotient and the
   finite edge-sum algebra, but it still lacks actual polyhedral geometry,

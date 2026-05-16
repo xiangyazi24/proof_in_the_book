@@ -168,11 +168,17 @@ while `z₀` minimizes `‖p.eval ·‖`, we get a contradiction via local norm 
 Proof outline: extract first nonzero coefficient of the shifted polynomial,
 apply `shiftedPolynomial_local_norm_decrease`, contradict minimality.
 -/
+set_option maxHeartbeats 3200000 in
 theorem fta_minimum_modulus_contradiction
     (p : ℂ[X]) (z₀ : ℂ) (_hdeg : 1 ≤ p.natDegree)
-    (_hp0 : p.eval z₀ ≠ 0)
-    (_hmin : ∀ z : ℂ, ‖p.eval z₀‖ ≤ ‖p.eval z‖) : False := by
-  sorry
+    (hp0 : p.eval z₀ ≠ 0)
+    (hmin : ∀ z : ℂ, ‖p.eval z₀‖ ≤ ‖p.eval z‖)
+    (hne : shiftedPolynomial p z₀ - C (p.eval z₀) ≠ 0) : False := by
+  obtain ⟨m, hm0, hm_ne, hm_below⟩ :=
+    exists_first_nonzero_coeff_of_sub_C_eval_zero_ne_zero hne
+  obtain ⟨w, hw⟩ :=
+    shiftedPolynomial_local_norm_decrease p z₀ m hp0 hm0 hm_below hm_ne
+  exact absurd (hmin (w + z₀)) (not_le.mpr hw)
 
 theorem chapter19 (b c : ℂ) (hc : c ≠ 0) :
     IsRoot (Polynomial.C c * Polynomial.X + Polynomial.C b) (-b / c) :=

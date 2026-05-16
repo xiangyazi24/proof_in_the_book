@@ -147,7 +147,11 @@ theorem herglotz_dyadic_average (f : ℝ → ℝ)
     (n : ℕ) (x : ℝ) :
     f x = (1 / (2 ^ n : ℝ)) *
       ∑ k ∈ Finset.range (2 ^ n), f ((x + k) / (2 ^ n : ℝ)) := by
-  sorry
+  induction n with
+  | zero => simp
+  | succ n ih =>
+    rw [ih]
+    sorry
 
 theorem chapter24 (x : ℝ) :
     Real.pi * Real.cot (Real.pi * x) + Real.pi * Real.cot (Real.pi * (1 - x)) = 0 := by

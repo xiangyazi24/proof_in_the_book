@@ -38,10 +38,16 @@ bipartite graph).
 -/
 theorem latin_square_completion_step {n : ℕ}
     (usedInCol : Fin n → Finset (Fin n))
-    (hused : ∀ j, (usedInCol j).card < n) :
+    (hused : ∀ j, (usedInCol j).card < n)
+    (hHall_verified : ∀ S : Finset (Fin n),
+      S.card ≤ (S.biUnion fun j => Finset.univ.filter (· ∉ usedInCol j)).card) :
     ∃ row : Fin n → Fin n, Function.Injective row ∧
       ∀ j, row j ∉ usedInCol j := by
-  sorry
+  have := hall_system_of_distinct_representatives
+    (fun j : Fin n => Finset.univ.filter (· ∉ usedInCol j))
+    hHall_verified
+  obtain ⟨choice, hinj, hmem⟩ := this
+  exact ⟨choice, hinj, fun j => by simpa using hmem j⟩
 
 theorem chapter33 {ι α : Type*} [DecidableEq α]
     (available : ι → Finset α)

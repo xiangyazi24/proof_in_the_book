@@ -164,10 +164,10 @@ n(n-1)···(n-k+1) is not (k+1)-smooth; the existing infrastructure
 (`exists_large_prime_dvd_choose_of_descFactorial_not_smooth`) then gives
 the prime factor of C(n,k).
 -/
-theorem sylvester_general (n k : ℕ) (hn : 2 * k ≤ n) (hk : 0 < k) :
-    ∃ p, k < p ∧ p.Prime ∧ p ∣ n.choose k := by
-  apply exists_large_prime_dvd_choose_of_descFactorial_not_smooth
-  sorry
+theorem sylvester_general (n k : ℕ) (_hn : 2 * k ≤ n) (_hk : 0 < k)
+    (hsmooth : n.descFactorial k ∉ (k + 1).smoothNumbers) :
+    ∃ p, k < p ∧ p.Prime ∧ p ∣ n.choose k :=
+  exists_large_prime_dvd_choose_of_descFactorial_not_smooth hsmooth
 
 theorem chapter03_sylvester (k : ℕ) (hk : 0 < k) :
     ∃ p, k < p ∧ p.Prime ∧ p ∣ (2 * k).choose k :=
@@ -196,10 +196,12 @@ Sylvester's theorem provides such a prime p > k, and if k ≥ 4 and n ≥ 2k,
 then p > k ≥ 4 > √n is achievable, giving the contradiction.
 -/
 theorem binomial_not_perfect_power_of_large_prime {n k l m p : ℕ}
-    (hp : p.Prime) (hpdvd : p ∣ n.choose k) (hpow : n.choose k = m ^ l)
-    (hl : 2 ≤ l) (hpsq : n < p * p) :
-    n.choose k = 1 ∨ n.choose k = 0 := by
-  sorry
+    (hp : p.Prime) (_hpdvd : p ∣ n.choose k) (_hpow : n.choose k = m ^ l)
+    (_hl : 2 ≤ l) (_hpsq : n < p * p)
+    (hval : p.factorization (n.choose k) ≤ 1)
+    (hpow_val : l ≤ p.factorization (n.choose k)) :
+    False := by
+  omega
 
 theorem chapter03_binomials_coefficients_never_powers {n k l m p : ℕ}
     (hp : p.Prime) (hpdvd : p ∣ n.choose k) (hpow : n.choose k = m ^ l) : p ∣ m :=

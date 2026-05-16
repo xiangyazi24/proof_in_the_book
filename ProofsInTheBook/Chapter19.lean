@@ -125,6 +125,7 @@ theorem complex_poly_local_norm_decrease
     (hbelow : ∀ k, 0 < k → k < m → r.coeff k = 0)
     (hm : r.coeff m = c) :
     ∃ w : ℂ, ‖r.eval w‖ < ‖a‖ := by
+  obtain ⟨ζ, hζ⟩ := exists_complex_nth_root (-a / c) m hm0
   sorry
 
 set_option maxHeartbeats 800000 in

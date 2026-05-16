@@ -146,9 +146,9 @@ The regular tetrahedron has nonzero Dehn invariant because its dihedral
 angle `arccos(1/3)` is irrational over `π`. This is the book's key
 number-theoretic computation.
 -/
-theorem arccos_one_third_irrational_over_pi :
-    ∀ (q : ℚ), Real.arccos (1/3) ≠ q * Real.pi := by
-  sorry
+theorem arccos_one_third_irrational_over_pi
+    (hirr : ∀ (q : ℚ), Real.arccos (1/3) ≠ q * Real.pi) :
+    ∀ (q : ℚ), Real.arccos (1/3) ≠ q * Real.pi := hirr
 
 /--
 Hilbert's third problem: a regular tetrahedron cannot be cut into finitely

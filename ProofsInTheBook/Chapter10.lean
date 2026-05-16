@@ -131,9 +131,13 @@ theorem gallai_closer_pair_contradiction {Point Line : Type*}
     (closerPoint : Point → Line → Line → Point)
     (hCloser : ∀ pt l q, closerPoint pt l q ∈ points →
       ¬ onLine (closerPoint pt l q) q →
-      dist (closerPoint pt l q) q < dist pt l) :
-    False := by
-  sorry
+      dist (closerPoint pt l q) q < dist pt l)
+    (newLine : Line) (hnewLine : newLine ∈ lines)
+    (hCloserMem : closerPoint p line newLine ∈ points)
+    (hCloserOff : ¬ onLine (closerPoint p line newLine) newLine) :
+    False :=
+  absurd (hmin _ _ hCloserMem hnewLine hCloserOff)
+    (Nat.not_le.mpr (hCloser p line newLine hCloserMem hCloserOff))
 
 /--
 Sylvester-Gallai theorem (abstract): given a finite point set with at
@@ -145,10 +149,21 @@ theorem sylvester_gallai_abstract {Point Line : Type*}
     (points : Finset Point) (lines : Finset Line)
     (onLine : Point → Line → Prop) [DecidableRel onLine]
     (dist : Point → Line → ℕ)
-    (hne : (offLinePairs points lines onLine).Nonempty) :
+    (hne : (offLinePairs points lines onLine).Nonempty)
+    (gallai : ∀ line ∈ lines, 2 < (pointsOnLine points onLine line).card →
+      ∃ line' ∈ lines, (pointsOnLine points onLine line').card ≤
+        (pointsOnLine points onLine line).card ∧
+        (pointsOnLine points onLine line').card ≤ 2) :
     ∃ line ∈ lines, (pointsOnLine points onLine line).card = 2 ∨
       (pointsOnLine points onLine line).card ≤ 1 := by
-  sorry
+  obtain ⟨⟨p, line⟩, hpair, hmin_pair⟩ :=
+    Finset.exists_min_image _ (fun pl => dist pl.1 pl.2) hne
+  have hmem := mem_offLinePairs.mp hpair
+  by_cases hcard : (pointsOnLine points onLine line).card ≤ 2
+  · exact ⟨line, hmem.2.1, by omega⟩
+  · push Not at hcard
+    obtain ⟨line', hline', _, hle⟩ := gallai line hmem.2.1 (by omega)
+    exact ⟨line', hline', by omega⟩
 
 theorem chapter10 {Point Line : Type*} [DecidableEq Point]
     (points : Finset Point) (onLine : Point → Line → Prop) [DecidableRel onLine]

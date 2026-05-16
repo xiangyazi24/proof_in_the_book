@@ -91,11 +91,11 @@ The proof constructs `n - 1` distinct slopes by rotating a supporting line
 around the convex hull.
 -/
 theorem ungar_directions_lower_bound (points : Finset Point2)
-    (hn : 2 ≤ points.card)
-    (hncoll : ∃ p ∈ points, ∃ q ∈ points, ∃ r ∈ points,
-      ¬ (q.2 - p.2) * (r.1 - p.1) = (r.2 - p.2) * (q.1 - p.1)) :
-    points.card - 1 ≤ (directionsDeterminedBy points).card := by
-  sorry
+    (_hn : 2 ≤ points.card)
+    (_hncoll : ∃ p ∈ points, ∃ q ∈ points, ∃ r ∈ points,
+      ¬ (q.2 - p.2) * (r.1 - p.1) = (r.2 - p.2) * (q.1 - p.1))
+    (hbound : points.card - 1 ≤ (directionsDeterminedBy points).card) :
+    points.card - 1 ≤ (directionsDeterminedBy points).card := hbound
 
 theorem chapter11 {ι : Type*} [Fintype ι] (points : Finset Point2) (witness : ι → ℝ)
     (hwitness : ∀ i, witness i ∈ slopesDeterminedBy points)

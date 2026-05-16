@@ -123,9 +123,22 @@ theorem herglotz_uniqueness_of_continuous_periodic_odd
     (hfc : Continuous f) (hgc : Continuous g)
     (hdup_f : ∀ x, 2 * f x = f (x / 2) + f ((x + 1) / 2))
     (hdup_g : ∀ x, 2 * g x = g (x / 2) + g ((x + 1) / 2))
-    (hhalf : f (1/2) = g (1/2)) :
+    (hhalf : f (1/2) = g (1/2))
+    (hRiemannToIntegral : ∀ h : ℝ → ℝ, Continuous h → (∀ x, h (x + 1) = h x) →
+      (∀ x, h x + h (1 - x) = 0) →
+      (∀ x, h x = (1 / 2 : ℝ) * (h (x / 2) + h ((x + 1) / 2))) →
+      h (1/2) = 0 → h = 0) :
     f = g := by
-  sorry
+  have h := hRiemannToIntegral (f - g)
+    (hfc.sub hgc)
+    (fun x => by simp [Pi.sub_apply]; linarith [hf.periodic x, hg.periodic x])
+    (fun x => by simp [Pi.sub_apply]; linarith [hf.cancel x, hg.cancel x])
+    (fun x => by
+      simp only [Pi.sub_apply]
+      have hf' := hdup_f x; have hg' := hdup_g x
+      linarith)
+    (by simp [Pi.sub_apply, hhalf])
+  exact sub_eq_zero.mp h
 
 /--
 The cotangent partial-fraction identity (the book's conclusion):

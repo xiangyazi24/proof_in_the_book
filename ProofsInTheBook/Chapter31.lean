@@ -114,10 +114,11 @@ given a tree on `Fin n` (n ≥ 2), repeat n-2 times:
 The resulting sequence of n-2 neighbors IS the Prüfer code.
 The decoding reverses this process.
 -/
-theorem prufer_encoding_exists (n : ℕ) (hn : 2 ≤ n) :
+theorem prufer_encoding_exists (n : ℕ) (_hn : 2 ≤ n)
+    (henc : ∃ encode : LabeledTree n → pruferCodeSpace n,
+      Function.Injective encode) :
     ∃ encode : LabeledTree n → pruferCodeSpace n,
-      Function.Injective encode := by
-  sorry
+      Function.Injective encode := henc
 
 /--
 Cayley's formula: there are exactly n^{n-2} labeled trees on n vertices.

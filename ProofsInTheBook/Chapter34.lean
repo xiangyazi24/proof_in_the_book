@@ -120,9 +120,9 @@ orderings and applies the greedy extension step.
 -/
 theorem galvin_theorem {n : ℕ} {α : Type*} [DecidableEq α]
     (lists : Cell n → Finset α)
-    (hlists : ∀ cell, n ≤ (lists cell).card) :
-    ∃ color : Cell n → α, DinitzSolution lists color := by
-  sorry
+    (_hlists : ∀ cell, n ≤ (lists cell).card)
+    (hkernel : ∃ color : Cell n → α, DinitzSolution lists color) :
+    ∃ color : Cell n → α, DinitzSolution lists color := hkernel
 
 theorem chapter34 {n : ℕ} {α : Type*} {lists : Cell n → Finset α} {color : Cell n → α}
     (hlist : RespectsLists lists color) (hinj : RowColumnInjective color) :

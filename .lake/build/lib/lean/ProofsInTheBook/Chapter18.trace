@@ -1,0 +1,40 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["9cab55d0bf760aca.olean"],
+  "m": false,
+  "i": "b52a7af059645684.ilean",
+  "c": "f637eeb11c166bcf.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/huangx/repos/proof_in_the_book/.lake/packages/Cli/.lake/build/lib/lean:/Users/huangx/repos/proof_in_the_book/.lake/packages/batteries/.lake/build/lib/lean:/Users/huangx/repos/proof_in_the_book/.lake/packages/Qq/.lake/build/lib/lean:/Users/huangx/repos/proof_in_the_book/.lake/packages/aesop/.lake/build/lib/lean:/Users/huangx/repos/proof_in_the_book/.lake/packages/proofwidgets/.lake/build/lib/lean:/Users/huangx/repos/proof_in_the_book/.lake/packages/importGraph/.lake/build/lib/lean:/Users/huangx/repos/proof_in_the_book/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/Users/huangx/repos/proof_in_the_book/.lake/packages/plausible/.lake/build/lib/lean:/Users/huangx/repos/proof_in_the_book/.lake/packages/Mathlib/.lake/build/lib/lean:/Users/huangx/repos/proof_in_the_book/.lake/build/lib/lean /Users/huangx/.elan/toolchains/leanprover--lean4---v4.30.0-rc2/bin/lean /Users/huangx/repos/proof_in_the_book/ProofsInTheBook/Chapter18.lean -o /Users/huangx/repos/proof_in_the_book/.lake/build/lib/lean/ProofsInTheBook/Chapter18.olean -i /Users/huangx/repos/proof_in_the_book/.lake/build/lib/lean/ProofsInTheBook/Chapter18.ilean -c /Users/huangx/repos/proof_in_the_book/.lake/build/ir/ProofsInTheBook/Chapter18.c --setup /Users/huangx/repos/proof_in_the_book/.lake/build/ir/ProofsInTheBook/Chapter18.setup.json --json",
+   "level": "trace"},
+  {"message":
+   "ProofsInTheBook/Chapter18.lean:30:38: unused variable `ha`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "ProofsInTheBook/Chapter18.lean:30:51: unused variable `hb`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"}],
+ "inputs":
+ [["ProofsInTheBook.Chapter18:deps",
+   [["deps",
+     [["proof_in_the_book/ProofsInTheBook:extraDep",
+       [["@proof_in_the_book:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["Mathlib transitive imports (legacy)", "242a6c6914a84a54"],
+        ["Mathlib:importAllArts", "185ad99313a7ed1e"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.30.0, commit 3dc1a088b6d2d8eafe25a7cd7ec7b58d731bd7cc",
+   "2c8d2623007dfc36"],
+  ["/Users/huangx/repos/proof_in_the_book/ProofsInTheBook/Chapter18.lean",
+   "15e386880bfedac1"],
+  ["options", "00000000000006bb"],
+  ["isModule: false", "feefd2a0d3a1847e"],
+  ["Module.name: ProofsInTheBook.Chapter18", "1945f51d174df4d2"],
+  ["Package.id?: (some proof_in_the_book)", "b367cb2fc38b6724"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "a30f33d0e65dd374"}

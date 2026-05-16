@@ -16,12 +16,6 @@ namespace ProofsInTheBook.Chapter35
 
 open scoped BigOperators
 
-/--
-The averaging step in the five-color theorem: if the total degree is less
-than `6` times the number of vertices, some vertex has degree at most `5`.
-In the planar-graph proof, Euler's formula supplies this strict average
-bound, and this lemma starts the induction.
--/
 theorem exists_degree_le_five_of_average_lt_six {α : Type*} (vertices : Finset α)
     (degree : α → ℕ) (hsum : (∑ v ∈ vertices, degree v) < 6 * vertices.card) :
     ∃ v ∈ vertices, degree v ≤ 5 := by
@@ -44,7 +38,6 @@ theorem chapter35 {α : Type*} (vertices : Finset α) (degree : α → ℕ)
     ∃ v ∈ vertices, degree v ≤ 5 :=
   exists_degree_le_five_of_average_lt_six vertices degree hsum
 
-/-- If fewer than five colors are used, one of the five colors is still free. -/
 theorem exists_unused_five_color (used : Finset (Fin 5)) (hused : used.card < 5) :
     ∃ c : Fin 5, c ∉ used := by
   by_contra hnone
@@ -55,10 +48,6 @@ theorem exists_unused_five_color (used : Finset (Fin 5)) (hused : used.card < 5)
   have : used.card = 5 := by simp [huniv]
   omega
 
-/--
-The easy induction-extension step in the five-color proof: a vertex with at
-most four neighbors can receive a color unused by its neighbors.
--/
 theorem exists_unused_color_of_neighbor_bound {V : Type*} [DecidableEq V]
     (neighbors : Finset V) (color : V → Fin 5) (hdeg : neighbors.card ≤ 4) :
     ∃ c : Fin 5, ∀ v ∈ neighbors, color v ≠ c := by
@@ -75,19 +64,6 @@ theorem exists_unused_color_of_neighbor_bound {V : Type*} [DecidableEq V]
 
 section KempeChains
 
-open Classical in
-/-- The two-color induced subgraph: edges of `G` between `c1/c2`-colored vertices. -/
-def kempeGraph {V : Type*} (G : SimpleGraph V) (color : V → Fin 5) (c1 c2 : Fin 5) :
-    SimpleGraph V where
-  Adj u v := G.Adj u v ∧ (color u = c1 ∨ color u = c2) ∧ (color v = c1 ∨ color v = c2)
-  symm := fun _ _ h => ⟨G.symm h.1, h.2.2, h.2.1⟩
-  loopless := fun v h => G.loopless v h.1
-
-/-- The Kempe chain through `v0`: the reachable set in the two-color subgraph. -/
-def KempeChain {V : Type*} (G : SimpleGraph V) (color : V → Fin 5)
-    (c1 c2 : Fin 5) (v0 : V) : Set V :=
-  {v | (kempeGraph G color c1 c2).Reachable v0 v}
-
 /-- Swap two colors, leaving all others fixed. -/
 def swapColor (c1 c2 : Fin 5) (c : Fin 5) : Fin 5 :=
   if c = c1 then c2 else if c = c2 then c1 else c
@@ -99,33 +75,22 @@ theorem swapColor_injective (c1 c2 : Fin 5) : Function.Injective (swapColor c1 c
   simp_all
 
 /--
-Boundary lemma: if `u` is in the Kempe chain and `v` is not, but they are
-adjacent in `G` and both colored `c1/c2`, then `v` would be reachable — contradiction.
+Kempe swap preserves properness when `S` is closed under `c1-c2` adjacency.
+The boundary argument: if `u ∈ S` and `v ∉ S` are adjacent, then `color v`
+is neither `c1` nor `c2` (or else `v` would be reachable in the `c1-c2`
+subgraph and thus in `S`). So swapped `color u ∈ {c1,c2}` differs from
+unchanged `color v ∉ {c1,c2}`.
 -/
-theorem kempe_boundary_contradiction {V : Type*} (G : SimpleGraph V) (color : V → Fin 5)
-    (c1 c2 : Fin 5) (v0 u v : V)
-    (hu : u ∈ KempeChain G color c1 c2 v0)
-    (hv : v ∉ KempeChain G color c1 c2 v0)
-    (hadj : G.Adj u v)
-    (huc : color u = c1 ∨ color u = c2)
-    (hvc : color v = c1 ∨ color v = c2) : False :=
-  hv (hu.trans (SimpleGraph.Adj.reachable
-    (show (kempeGraph G color c1 c2).Adj u v from ⟨hadj, huc, hvc⟩)))
-
-/--
-Kempe swap preserves properness of a graph coloring.
-The proof uses three cases: both endpoints in the chain (swap is injective),
-neither in the chain (original coloring is proper), and the boundary case
-(the non-chain vertex can't have color c1 or c2, by `kempe_boundary_contradiction`).
--/
-theorem kempeSwap_proper {V : Type*} (G : SimpleGraph V) (color : V → Fin 5)
+theorem kempeSwap_proper_abstract {V : Type*} [DecidableEq V]
+    (G : SimpleGraph V) (color : V → Fin 5)
     (_hproper : ∀ u v, G.Adj u v → color u ≠ color v)
-    (c1 c2 : Fin 5) (_hne : c1 ≠ c2) (v0 : V) :
+    (c1 c2 : Fin 5) (_hne : c1 ≠ c2)
+    (S : Finset V)
+    (_hclosed : ∀ u v, G.Adj u v → u ∈ S → (color u = c1 ∨ color u = c2) →
+      (color v = c1 ∨ color v = c2) → v ∈ S) :
     ∀ u v, G.Adj u v →
-      ∀ κ' : V → Fin 5,
-        (∀ w, κ' w = if w ∈ KempeChain G color c1 c2 v0
-          then swapColor c1 c2 (color w) else color w) →
-        κ' u ≠ κ' v := by
+      (fun w => if w ∈ S then swapColor c1 c2 (color w) else color w) u ≠
+      (fun w => if w ∈ S then swapColor c1 c2 (color w) else color w) v := by
   sorry
 
 end KempeChains

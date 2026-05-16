@@ -1,53 +1,171 @@
 import Mathlib
 
--- Chapter 2: Bertrand's postulate.
+/-!
+# Chapter 2: Bertrand's Postulate
+
+Following Erdős's proof from "Proofs from THE BOOK."
+
+**Theorem.** For every n ≥ 1, there is a prime p with n < p ≤ 2n.
+
+The proof has four main ingredients:
+1. **Chebyshev's bound**: ∏(p ≤ n) p ≤ 4^n, proved by strong induction.
+2. **Lower bound on C(2n,n)**: 4^n < n · C(2n,n) for n ≥ 4.
+3. **Factorization analysis**: each prime power in C(2n,n) is ≤ 2n, and
+   primes p with 2n/3 < p ≤ n don't divide C(2n,n) at all.
+4. **Contradiction**: combining the bounds shows Bertrand must hold for
+   large n; small cases are checked directly.
+-/
 
 namespace ProofsInTheBook.Chapter02
 
--- Bertrand's postulate statement.
--- For every n ≥ 1 there exists a prime p with n < p ≤ 2*n.
+open Nat Finset
 
-theorem chapter02_bertrand : ∀ n : ℕ, n ≠ 0 → ∃ p : ℕ, Nat.Prime p ∧ n < p ∧ p ≤ 2 * n := by
-  intro n hn0
-  exact Nat.exists_prime_lt_and_le_two_mul n hn0
+/-!
+### Part 1: Chebyshev's bound on the primorial
 
--- Landau's reduction.
--- A finite sequence of explicit checked primes gives Bertrand for small n, then only large n remain.
+*Book proof.* By strong induction on n.
+- If n is even and > 2: n is composite, so ∏(p ≤ n) = ∏(p ≤ n-1) ≤ 4^{n-1} ≤ 4^n.
+- If n = 2m+1 is odd: every prime p with m+1 < p ≤ 2m+1 divides C(2m+1, m),
+  because p appears in (2m+1)! but not in m!(m+1)!. Their product divides
+  C(2m+1, m) ≤ 4^m. By induction, ∏(p ≤ m+1) ≤ 4^{m+1}.
+  Total: ≤ 4^{m+1} · 4^m = 4^{2m+1}.
+-/
 
-theorem chapter02_landau_trick : ∀ n : ℕ, 4 ≤ n → 4 ^ n < n * n.centralBinom := by
-  intro n hn
-  exact Nat.four_pow_lt_mul_centralBinom n hn
+theorem chapter02_chebyshev (n : ℕ) : primorial n ≤ 4 ^ n := by
+  induction n using Nat.strong_induction_on with | h n ihn =>
+  rcases n with _ | n
+  · simp
+  rcases n.even_or_odd with ⟨m, rfl⟩ | ho
+  · -- n+1 = 2m+1 is odd: split primes at m+1
+    rcases m.eq_zero_or_pos with rfl | hm
+    · decide
+    calc primorial (m + m + 1)
+        = primorial (m + 1 + m) := by rw [add_right_comm]
+      _ ≤ primorial (m + 1) * (m + 1 + m).choose (m + 1) := primorial_add_le m.le_succ
+      _ = primorial (m + 1) * (2 * m + 1).choose m := by
+            rw [choose_symm_add, two_mul, add_right_comm]
+      _ ≤ 4 ^ (m + 1) * 4 ^ m := by
+            apply Nat.mul_le_mul
+            · exact ihn _ (by omega)
+            · exact choose_middle_le_pow m
+      _ ≤ 4 ^ (m + m + 1) := by rw [← pow_add, add_right_comm]
+  · -- n+1 is even: not prime for n ≥ 2, so primorial unchanged
+    rcases Decidable.eq_or_ne n 1 with rfl | hn'
+    · decide
+    calc primorial (n + 1)
+        = primorial n := primorial_succ hn' ho
+      _ ≤ 4 ^ n := ihn n (by omega)
+      _ ≤ 4 ^ (n + 1) := Nat.pow_le_pow_right (by norm_num) n.le_succ
 
--- Inequality (1): product of primes up to x ≤ 4^(x-1) for x ≥ 2.
+/-!
+### Part 2: Lower bound on the central binomial coefficient
 
-theorem chapter02_prime_product_bound :
-    ∀ n : ℕ, 2 < n → (∀ p : ℕ, Nat.Prime p → n < p → 2 * n < p) →
-      n.centralBinom ≤ (2 * n) ^ (2 * n).sqrt * 4 ^ (2 * n / 3) := by
-  intro n hn hnp
-  exact centralBinom_le_of_no_bertrand_prime n hn hnp
+From (1+1)^{2n} = ∑ C(2n,k) and C(2n,n) being the largest among 2n+1 terms,
+the book gets C(2n,n) ≥ 4^n/(2n+1). The tighter bound 4^n < n·C(2n,n) for n ≥ 4
+follows from the recurrence (n+1)·C(2(n+1),n+1) = 2(2n+1)·C(2n,n).
+-/
 
--- Legendre exponent decomposition for n! and binomial valuation bounds used in the proof.
+theorem chapter02_central_binom_lower (n : ℕ) (hn : 4 ≤ n) :
+    4 ^ n < n * n.centralBinom :=
+  four_pow_lt_mul_centralBinom n hn
 
-theorem chapter02_legendre : ∀ n : ℕ, 512 ≤ n →
-    n * (2 * n) ^ (2 * n).sqrt * 4 ^ (2 * n / 3) ≤ 4 ^ n := by
-  intro n hn
-  exact bertrand_main_inequality hn
+/-!
+### Part 3: Prime factorization analysis of C(2n,n)
 
--- Binomial coefficient estimate and contradiction step giving a prime in (n, 2n].
+Two key observations from the book:
 
-theorem chapter02_binomial_bound :
-    ∀ n : ℕ, 2 < n → (∀ p : ℕ, Nat.Prime p → n < p → 2 * n < p) →
-      n.centralBinom ≤ (2 * n) ^ (2 * n).sqrt * 4 ^ (2 * n / 3) := by
-  intro n hn hnp
-  exact centralBinom_le_of_no_bertrand_prime n hn hnp
+1. **Prime power bound**: by Legendre's formula,
+   v_p(C(2n,n)) = ∑_i (⌊2n/p^i⌋ - 2⌊n/p^i⌋), each term 0 or 1,
+   so p^{v_p} ≤ p^{log_p(2n)} ≤ 2n.
 
--- Overall chapter marker.
+2. **Medium primes vanish**: if 2n/3 < p ≤ n, then p² > 2n
+   so v_p ≤ 1, and the single term is ⌊2n/p⌋ - 2⌊n/p⌋ = 2 - 2 = 0.
+-/
 
+theorem chapter02_prime_power_le (n : ℕ) (hn : 0 < n) (p : ℕ) :
+    p ^ (n.centralBinom).factorization p ≤ 2 * n :=
+  pow_factorization_choose_le (by omega)
+
+theorem chapter02_medium_primes (n : ℕ) (hn : 2 < n) (p : ℕ)
+    (hp_le : p ≤ n) (hp_large : 2 * n < 3 * p) :
+    (n.centralBinom).factorization p = 0 :=
+  factorization_centralBinom_of_two_mul_self_lt_three_mul hn hp_le hp_large
+
+/-!
+### Part 4: Upper bound on C(2n,n) when Bertrand fails
+
+If no prime exists in (n, 2n], split the prime factorization of C(2n,n) into:
+1. **p ≤ √(2n)**: each p^{v_p} ≤ 2n, at most √(2n) primes → (2n)^{√(2n)}.
+2. **√(2n) < p ≤ 2n/3**: p² > 2n so v_p ≤ 1, product ≤ primorial(2n/3) ≤ 4^{2n/3}.
+3. **2n/3 < p ≤ n**: v_p = 0, nothing.
+4. **n < p ≤ 2n**: assumed nonexistent.
+
+Conclusion: C(2n,n) ≤ (2n)^{√(2n)} · 4^{2n/3}.
+-/
+
+theorem chapter02_upper_bound (n : ℕ) (hn : 2 < n)
+    (no_prime : ∀ p : ℕ, p.Prime → n < p → 2 * n < p) :
+    n.centralBinom ≤ (2 * n) ^ (2 * n).sqrt * 4 ^ (2 * n / 3) :=
+  centralBinom_le_of_no_bertrand_prime n hn no_prime
+
+/-!
+### Part 5: Main inequality and Bertrand's Postulate
+
+For n ≥ 512, the inequality n · (2n)^{√(2n)} · 4^{2n/3} ≤ 4^n
+is verified by a concavity argument (real analysis at x = 512).
+-/
+
+theorem chapter02_main_ineq (n : ℕ) (hn : 512 ≤ n) :
+    n * (2 * n) ^ (2 * n).sqrt * 4 ^ (2 * n / 3) ≤ 4 ^ n :=
+  bertrand_main_inequality hn
+
+/-!
+### Main theorem
+
+*Book proof.* Suppose no prime exists in (n, 2n] for some n ≥ 512.
+By the lower bound, 4^n < n · C(2n,n).
+By the upper bound, C(2n,n) ≤ (2n)^{√(2n)} · 4^{2n/3}.
+So 4^n < n · (2n)^{√(2n)} · 4^{2n/3}, contradicting the main inequality.
+For n < 512, check directly with the explicit prime chain
+2, 3, 5, 7, 13, 23, 43, 83, 163, 317 (each ≤ twice the next).
+-/
+
+theorem chapter02_bertrand (n : ℕ) (hn : n ≠ 0) :
+    ∃ p, Prime p ∧ n < p ∧ p ≤ 2 * n := by
+  rcases lt_or_ge 511 n with h_large | h_small
+  · -- Large n (≥ 512): contradiction from combining upper and lower bounds
+    by_contra h_no
+    push Not at h_no
+    have h_lower := chapter02_central_binom_lower n (by omega)
+    have h_upper := chapter02_upper_bound n (by omega) h_no
+    exact absurd (calc
+      4 ^ n < n * n.centralBinom := h_lower
+      _ ≤ n * ((2 * n) ^ (2 * n).sqrt * 4 ^ (2 * n / 3)) :=
+          Nat.mul_le_mul_left n h_upper
+      _ = n * (2 * n) ^ (2 * n).sqrt * 4 ^ (2 * n / 3) := by ring
+      _ ≤ 4 ^ n := chapter02_main_ineq n (by omega)) (lt_irrefl _)
+  · -- Small n (< 512): explicit prime chain covering all cases
+    have h_bound : n < 521 := by omega
+    revert h_bound
+    open Lean Elab Tactic in
+    run_tac do
+      for i in [317, 163, 83, 43, 23, 13, 7, 5, 3, 2] do
+        let i : Term := quote i
+        evalTactic <| ←
+          `(tactic| refine exists_prime_lt_and_le_two_mul_succ $i
+              (by norm_num1) (by norm_num1) ?_)
+    exact fun h2 => ⟨2, prime_two, h2,
+      Nat.mul_le_mul_left 2 (Nat.pos_of_ne_zero hn)⟩
+
+/--
+Infinitely many primes via Bertrand's postulate:
+given any q, there is a prime p > q in (q, 2(q+1)].
+-/
 theorem chapter02 : Infinite {p : ℕ // p.Prime} := by
   refine (Set.infinite_coe_iff (s := {p : ℕ | p.Prime})).2 ?_
-  refine Set.infinite_of_forall_exists_gt ?_
+  apply Set.infinite_of_forall_exists_gt
   intro q
-  obtain ⟨p, hp, hgt, hle⟩ := chapter02_bertrand (q + 1) (Nat.succ_ne_zero q)
-  exact ⟨p, hp, lt_trans (Nat.lt_succ_self q) hgt⟩
+  obtain ⟨p, hp, hgt, _⟩ := chapter02_bertrand (q + 1) (succ_ne_zero q)
+  exact ⟨p, hp, by omega⟩
 
 end ProofsInTheBook.Chapter02

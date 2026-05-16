@@ -39,4 +39,3 @@ import ProofsInTheBook.Chapter38
 import ProofsInTheBook.Chapter39
 import ProofsInTheBook.Chapter40
 
-/-- Root module re-exporting all chapter namespaces. -/

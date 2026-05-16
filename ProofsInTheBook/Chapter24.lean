@@ -109,7 +109,7 @@ The rational partial-fraction function: `1/x + Σ_{n=1}^{N} (1/(x+n) + 1/(x-n))`
 This is the finite truncation of the series that equals `π·cot(πx)`.
 -/
 noncomputable def rationalPartialSum (N : ℕ) (x : ℝ) : ℝ :=
-  1 / x + ∑ n in Finset.range N, (1 / (x + (n + 1 : ℕ)) + 1 / (x - (n + 1 : ℕ)))
+  1 / x + ∑ n ∈ Finset.range N, (1 / (x + (n + 1 : ℕ)) + 1 / (x - (n + 1 : ℕ)))
 
 theorem chapter24 (x : ℝ) :
     Real.pi * Real.cot (Real.pi * x) + Real.pi * Real.cot (Real.pi * (1 - x)) = 0 := by

@@ -85,7 +85,7 @@ def riffleOrder (a n : ℕ) (labels : RiffleLabels a n) (i j : Fin n) : Prop :=
   labels i < labels j ∨ (labels i = labels j ∧ i < j)
 
 instance (a n : ℕ) (labels : RiffleLabels a n) : DecidableRel (riffleOrder a n labels) :=
-  fun _ _ => inferInstance
+  fun i j => by unfold riffleOrder; exact inferInstance
 
 theorem riffleOrder_irrefl (a n : ℕ) (labels : RiffleLabels a n) (i : Fin n) :
     ¬ riffleOrder a n labels i i := by

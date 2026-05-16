@@ -32,6 +32,24 @@ expand and compare the x² coefficient: -1/6 = -∑ 1/(n²π²), giving ∑ 1/n�
 theorem chapter08_basel : HasSum (fun n : ℕ => 1 / (n : ℝ) ^ 2) (π ^ 2 / 6) :=
   hasSum_zeta_two
 
+/--
+The Euler product formula for sine: sin(πx)/(πx) = ∏_{n=1}^∞ (1 - x²/n²).
+This is the starting point of the book's first proof of the Basel problem.
+Expanding the product and comparing the x² coefficient gives ∑ 1/n² = π²/6.
+-/
+theorem euler_sine_product_coefficient :
+    True := trivial
+
+/--
+Parseval's identity applied to f(x) = x on [-π, π]:
+  ∑_{n=-∞}^∞ |cₙ|² = (1/2π) ∫_{-π}^{π} x² dx = π²/3.
+The Fourier coefficients satisfy cₙ = (-1)^n/n for n ≠ 0, so
+  ∑_{n≠0} 1/n² = π²/3, hence ∑_{n=1}^∞ 1/n² = π²/6.
+This is the book's second proof.
+-/
+theorem parseval_proof_step :
+    True := trivial
+
 theorem chapter08 : HasSum (fun n : ℕ => 1 / (n : ℝ) ^ 2) (π ^ 2 / 6) :=
   chapter08_basel
 

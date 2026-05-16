@@ -29,6 +29,20 @@ theorem hall_system_of_distinct_representatives {ι α : Type*} [DecidableEq α]
     ∃ choice : ι → α, Function.Injective choice ∧ ∀ row, choice row ∈ available row :=
   (Finset.all_card_le_biUnion_card_iff_exists_injective available).mp hHall
 
+/--
+Latin square completion via Hall's theorem: a partial Latin square of order n
+can be extended one row at a time. At each step, for each symbol not yet used
+in a column, Hall's condition holds because the number of available symbols
+in any set of k columns is at least k (the unused symbols form a regular
+bipartite graph).
+-/
+theorem latin_square_completion_step {n : ℕ}
+    (usedInCol : Fin n → Finset (Fin n))
+    (hused : ∀ j, (usedInCol j).card < n) :
+    ∃ row : Fin n → Fin n, Function.Injective row ∧
+      ∀ j, row j ∉ usedInCol j := by
+  sorry
+
 theorem chapter33 {ι α : Type*} [DecidableEq α]
     (available : ι → Finset α)
     (hHall : ∀ rows : Finset ι, rows.card ≤ (rows.biUnion available).card) :

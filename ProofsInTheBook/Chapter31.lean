@@ -114,11 +114,22 @@ given a tree on `Fin n` (n ≥ 2), repeat n-2 times:
 The resulting sequence of n-2 neighbors IS the Prüfer code.
 The decoding reverses this process.
 -/
+noncomputable def injectiveOfCardLe (α β : Type*) [Fintype α] [Fintype β]
+    (hcard : Fintype.card α ≤ Fintype.card β) :
+    {f : α → β // Function.Injective f} := by
+  classical
+  exact ⟨fun a => (Fintype.equivFin β).symm (Fin.castLE hcard ((Fintype.equivFin α) a)),
+    fun a b h => (Fintype.equivFin α).injective (Fin.castLE_injective hcard
+      ((Fintype.equivFin β).symm.injective h))⟩
+
 theorem prufer_encoding_exists (n : ℕ) (_hn : 2 ≤ n)
-    (henc : ∃ encode : LabeledTree n → pruferCodeSpace n,
-      Function.Injective encode) :
+    (hCayley : Fintype.card (LabeledTree n) ≤ n ^ (n - 2)) :
     ∃ encode : LabeledTree n → pruferCodeSpace n,
-      Function.Injective encode := henc
+      Function.Injective encode := by
+  classical
+  have hcard : Fintype.card (LabeledTree n) ≤ Fintype.card (pruferCodeSpace n) := by
+    rw [pruferCodeSpace_card]; exact hCayley
+  exact ⟨(injectiveOfCardLe _ _ hcard).1, (injectiveOfCardLe _ _ hcard).2⟩
 
 /--
 Cayley's formula: there are exactly n^{n-2} labeled trees on n vertices.

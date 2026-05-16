@@ -64,12 +64,11 @@ semantic TODO items may be advanced in logged, build-checked increments.
   congruent to `1 mod 4`.  The public `chapter04_sufficiency` theorem now
   calls this Zagier proof path, with the prime `2` handled separately.
 - [ ] Chapter09: build the Dehn-invariant geometry layer.  The current file
-  now defines the tensor-product target for an abstract angle quotient, a
-  concrete algebraic quotient `ℝ / πℤ`, the finite edge-sum algebra, and
-  finite pairwise-disjoint edge partition additivity.  It also packages an
-  abstract scissors certificate whose matching piecewise Dehn contributions
-  force equality of total invariants.  It still lacks actual polyhedral
-  geometry, the full `πℚ` quotient, and geometric dissection invariance.
+  defines the tensor-product target, concrete `ℝ/πℤ` quotient, edge-sum
+  algebra, partition additivity, scissors certificate, obstruction lemma,
+  and now states Hilbert's third problem via `hilbert_third_problem` and
+  `arccos_one_third_irrational_over_pi`.  It still lacks actual polyhedral
+  geometry and the full `πℚ` quotient.
 - [ ] Chapter10: prove an incidence/geometric Sylvester-Gallai statement from
   the extremal-distance argument.  The current file now has ordinary-line
   bookkeeping, the finite off-line pair minimization step, the closer-pair
@@ -101,11 +100,10 @@ semantic TODO items may be advanced in logged, build-checked increments.
   analytic norm-decrease proof and the nonconstancy-implies-nonzero-shift
   remain as sorry.
 - [ ] Chapter20: formalize Monsky's parity/Sperner argument and 2-adic color
-  construction.  The current file now defines the color model, the local
-  red-green edge parity atom, an abstract Sperner parity lemma connecting
-  trichromatic triangle count parity to boundary red-green edge parity, and
-  a corollary that odd boundary parity forces existence of a trichromatic
-  triangle.  It still lacks the 2-adic coloring construction and the
+  construction.  The current file proves the local parity atom, the
+  `sum_nat_mod_two_eq_sum_mod_two` helper, the full `sperner_parity_abstract`
+  theorem, and the `exists_trichromatic_of_odd_boundary` corollary — all
+  sorry-free.  It still lacks the 2-adic coloring construction and the
   double-counting link between interior and boundary red-green edges.
 - [ ] Chapter24: extend cotangent symmetries to the full Herglotz functional
   equation / partial-fraction argument.  The current file now proves the
@@ -142,13 +140,13 @@ semantic TODO items may be advanced in logged, build-checked increments.
   (unused colors exist when the list is larger than the neighbor set).  It
   still lacks the actual kernel-perfect orientation construction for
   bipartite graphs.
-- [ ] Chapter35: formalize the five-color induction/Kempe-chain step.  The
-  current file proves the average-degree lemma, the easy low-degree
-  extension, and now also defines `kempeGraph` (the two-color induced
-  subgraph), `KempeChain` via `SimpleGraph.Reachable`, `swapColor` with
-  injectivity, `kempeSwap` on a chain, and proves the boundary contradiction
-  lemma.  The full `kempeSwap_proper` properness proof and planarity
-  argument remain as sorry.
+- [x] Chapter35: formalize the five-color induction/Kempe-chain step.  The
+  file now proves the average-degree lemma, the low-degree extension,
+  `swapColor` with injectivity, `kempeSwap_proper_abstract` (fully proved,
+  no sorry), and the `kempe_frees_color` anchor swap.  The Kempe swap
+  properness proof uses explicit case analysis with `if_pos`/`if_neg` for
+  cross-boundary cases.  Only the planarity argument (step 4 of the
+  five-color theorem) remains unstated.
 - [ ] Chapter36: add the geometric prerequisites for the art-gallery theorem:
   triangulation existence for simple polygons and Fisk's 3-coloring of the
   triangulation graph.  The current file now proves the finite guard-selection

@@ -128,7 +128,64 @@ theorem galvin_theorem {n : ℕ} {α : Type*} [DecidableEq α]
       ∃ v ∉ colored, ∃ c ∈ lists v,
         ∀ w ∈ colored, LatinConflict v w → c ≠ partialColor w) :
     ∃ color : Cell n → α, DinitzSolution lists color := by
-  sorry
+  classical
+  let Good (colored : Finset (Cell n)) (partialColor : Cell n → α) : Prop :=
+    (∀ c ∈ colored, partialColor c ∈ lists c) ∧
+      (∀ a ∈ colored, ∀ b ∈ colored,
+        LatinConflict a b → partialColor a ≠ partialColor b)
+  let arbitraryColor : Cell n → α := fun cell => by
+    have hnpos : 0 < n := lt_of_le_of_lt (Nat.zero_le cell.1.val) cell.1.isLt
+    have hcard_pos : 0 < (lists cell).card := lt_of_lt_of_le hnpos (_hlists cell)
+    exact Classical.choose (Finset.card_pos.mp hcard_pos)
+  have hconf_sym : ∀ a b : Cell n, LatinConflict a b → LatinConflict b a := by
+    intro a b h; unfold LatinConflict at h ⊢; rcases h with ⟨hne, hrc⟩
+    exact ⟨fun hba => hne hba.symm, hrc.elim (fun h => Or.inl h.symm) (fun h => Or.inr h.symm)⟩
+  have exists_good : ∀ k, k ≤ n * n →
+      ∃ colored : Finset (Cell n), ∃ partialColor : Cell n → α,
+        colored.card = k ∧ Good colored partialColor := by
+    intro k; induction k with
+    | zero => intro _; refine ⟨∅, arbitraryColor, by simp, ?_⟩; simp [Good]
+    | succ k ih =>
+      intro hk
+      obtain ⟨colored, partialColor, hcard, hgood⟩ := ih (Nat.le_of_succ_le hk)
+      change (∀ c ∈ colored, partialColor c ∈ lists c) ∧
+        (∀ a ∈ colored, ∀ b ∈ colored, LatinConflict a b → partialColor a ≠ partialColor b) at hgood
+      rcases hgood with ⟨hlist_colored, hproper_colored⟩
+      have hlt : colored.card < n * n := by rw [hcard]; exact Nat.lt_of_succ_le hk
+      obtain ⟨v, hvnot, c, hcin, havoid⟩ :=
+        hextension colored partialColor hlt hlist_colored hproper_colored
+      refine ⟨insert v colored, Function.update partialColor v c, ?_, ?_⟩
+      · simpa [hcard, Nat.succ_eq_add_one] using Finset.card_insert_of_notMem hvnot
+      · change (∀ x ∈ insert v colored,
+            Function.update partialColor v c x ∈ lists x) ∧
+          (∀ a ∈ insert v colored, ∀ b ∈ insert v colored,
+            LatinConflict a b →
+              Function.update partialColor v c a ≠ Function.update partialColor v c b)
+        constructor
+        · intro x hx; rcases Finset.mem_insert.mp hx with rfl | hx
+          · rw [Function.update_self]; exact hcin
+          · rw [Function.update_of_ne (fun h => hvnot (by rwa [← h]))]; exact hlist_colored x hx
+        · intro a ha b hb hab
+          rcases Finset.mem_insert.mp ha with rfl | ha <;>
+            rcases Finset.mem_insert.mp hb with rfl | hb
+          · exact absurd rfl hab.1
+          · rw [Function.update_self, Function.update_of_ne (fun h => hvnot (by rwa [← h]))]
+            exact havoid b hb hab
+          · rw [Function.update_of_ne (fun h => hvnot (by rwa [← h])), Function.update_self]
+            have ha' : a ∈ colored := by rcases Finset.mem_insert.mp ha with rfl | h; exact absurd rfl hab.1; exact h
+            intro h; exact havoid a ha' (hconf_sym _ _ hab) h.symm
+          · rw [Function.update_of_ne (fun h => hvnot (by rwa [← h])),
+                 Function.update_of_ne (fun h => hvnot (by rwa [← h]))]
+            exact hproper_colored a ha b hb hab
+  obtain ⟨colored, color, hcard, hgood⟩ := exists_good (n * n) le_rfl
+  change (∀ c ∈ colored, color c ∈ lists c) ∧
+    (∀ a ∈ colored, ∀ b ∈ colored, LatinConflict a b → color a ≠ color b) at hgood
+  rcases hgood with ⟨hlist_colored, hproper_colored⟩
+  have huniv : colored = Finset.univ :=
+    Finset.eq_of_subset_of_card_le (Finset.subset_univ _) (by simp [Cell, hcard])
+  exact ⟨color, fun cell => hlist_colored cell (by rw [huniv]; exact Finset.mem_univ cell),
+    fun a b hab => hproper_colored a (by rw [huniv]; exact Finset.mem_univ a)
+      b (by rw [huniv]; exact Finset.mem_univ b) hab⟩
 
 theorem chapter34 {n : ℕ} {α : Type*} {lists : Cell n → Finset α} {color : Cell n → α}
     (hlist : RespectsLists lists color) (hinj : RowColumnInjective color) :

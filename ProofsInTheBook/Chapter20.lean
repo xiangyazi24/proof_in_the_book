@@ -78,6 +78,11 @@ the same parity as the number of red-green boundary edges.
 `triangles` is the finite set of triangles, each given by three color assignments.
 `boundaryRG` counts red-green edges on the boundary (shared by exactly one triangle).
 -/
+private theorem sum_nat_mod_two_eq_sum_mod_two
+    {α : Type*} (s : Finset α) (f : α → ℕ) :
+    (∑ x ∈ s, f x) % 2 = (∑ x ∈ s, f x % 2) % 2 := by
+  sorry
+
 theorem sperner_parity_abstract
     (n : ℕ) (triangleColors : Fin n → MonskyColor × MonskyColor × MonskyColor)
     (boundaryRGCount : ℕ)
@@ -90,7 +95,36 @@ theorem sperner_parity_abstract
     (Finset.univ.filter fun i : Fin n =>
       TrichromaticTriangle (triangleColors i).1 (triangleColors i).2.1
         (triangleColors i).2.2).card % 2 = boundaryRGCount % 2 := by
-  sorry
+  classical
+  let f : Fin n → ℕ := fun i =>
+    (if RedGreenEdge (triangleColors i).1 (triangleColors i).2.1 then 1 else 0) +
+    (if RedGreenEdge (triangleColors i).2.1 (triangleColors i).2.2 then 1 else 0) +
+    (if RedGreenEdge (triangleColors i).2.2 (triangleColors i).1 then 1 else 0)
+  let T : Fin n → Prop := fun i =>
+    TrichromaticTriangle (triangleColors i).1 (triangleColors i).2.1
+      (triangleColors i).2.2
+  have hlocal : ∀ i : Fin n, f i % 2 = if T i then 1 else 0 := by
+    intro i
+    have hodd := odd_redGreenEdges_iff_trichromatic (triangleColors i).1
+      (triangleColors i).2.1 (triangleColors i).2.2
+    by_cases ht : T i
+    · rw [if_pos ht]
+      exact Nat.odd_iff.mp (hodd.mpr ht)
+    · rw [if_neg ht]
+      by_contra h
+      have : f i % 2 = 1 := by omega
+      exact ht (hodd.mp (Nat.odd_iff.mpr this))
+  have hreplace : (∑ i : Fin n, f i % 2) = ∑ i : Fin n, if T i then 1 else 0 :=
+    Finset.sum_congr rfl fun i _ => hlocal i
+  have hcard : (∑ i : Fin n, if T i then (1 : ℕ) else 0) =
+      (Finset.univ.filter T).card := by
+    rw [← Finset.sum_filter]; simp
+  calc (Finset.univ.filter T).card % 2
+      = (∑ i : Fin n, if T i then (1 : ℕ) else 0) % 2 := by rw [hcard]
+    _ = (∑ i : Fin n, f i % 2) % 2 := by rw [hreplace]
+    _ = (∑ i : Fin n, f i) % 2 := (sum_nat_mod_two_eq_sum_mod_two _ _).symm
+    _ = totalRG % 2 := by rw [htotal]
+    _ = boundaryRGCount % 2 := hparity
 
 /--
 Corollary: if the boundary red-green edge count is odd, at least one triangle

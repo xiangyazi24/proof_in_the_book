@@ -177,6 +177,16 @@ theorem herglotz_uniqueness_of_continuous_periodic_odd
     simp only [d]; linarith [hf.periodic x, hg.periodic x]
   have dcancel : ∀ x, d x + d (1 - x) = 0 := fun x => by
     simp only [d]; linarith [hf.cancel x, hg.cancel x]
+  have dperiodic : Function.Periodic d 1 := fun x => dper x
+  have dper_int : ∀ (y : ℝ), d (y - ↑⌊y⌋ * 1) = d y := by
+    intro y; exact dperiodic.sub_int_mul_eq ⌊y⌋
+  have dred : ∀ y, ∃ z ∈ Set.Icc (0:ℝ) 1, d y = d z := by
+    intro y
+    refine ⟨Int.fract y, ⟨Int.fract_nonneg y, le_of_lt (Int.fract_lt_one y)⟩, ?_⟩
+    have : d (Int.fract y) = d y := by
+      simp only [Int.fract]
+      convert dperiodic.sub_int_mul_eq ⌊y⌋ using 2; ring
+    exact this.symm
   have ddup : ∀ x, d x = (1/2 : ℝ) * (d (x/2) + d ((x+1)/2)) := fun x => by
     simp only [d]; have := hdup_f x; have := hdup_g x; linarith
   have dzero : d 0 = 0 := by
@@ -186,17 +196,23 @@ theorem herglotz_uniqueness_of_continuous_periodic_odd
   intro x
   have hle : d x ≤ 0 := by
     by_contra hgt; push_neg at hgt
-    have hmax_exists : ∃ x₀, ∀ y, d y ≤ d x₀ := by sorry
+    have hmax_exists : ∃ x₀, ∀ y, d y ≤ d x₀ := by
+      obtain ⟨x₀, _, hx₀⟩ := IsCompact.exists_isMaxOn isCompact_Icc
+        (Set.nonempty_Icc.mpr (by norm_num : (0:ℝ) ≤ 1)) dcont.continuousOn
+      exact ⟨x₀, fun y => by obtain ⟨z, hz, heq⟩ := dred y; rw [heq]; exact hx₀ hz⟩
     obtain ⟨x₀, hx₀⟩ := hmax_exists
     exact absurd (max_le_zero_of_dup_zero d dcont dper ddup dzero x₀ hx₀) (by linarith [hx₀ x])
   have hge : 0 ≤ d x := by
     by_contra hlt; push_neg at hlt
-    have hmax_neg : ∃ x₀, ∀ y, -d y ≤ -d x₀ := by sorry
+    have hmax_neg : ∃ x₀, ∀ y, -d y ≤ -d x₀ := by
+      obtain ⟨x₀, _, hx₀⟩ := IsCompact.exists_isMinOn isCompact_Icc
+        (Set.nonempty_Icc.mpr (by norm_num : (0:ℝ) ≤ 1)) dcont.continuousOn
+      exact ⟨x₀, fun y => by obtain ⟨z, hz, heq⟩ := dred y; simp; rw [heq]; exact hx₀ hz⟩
     obtain ⟨x₀, hx₀⟩ := hmax_neg
     have := max_le_zero_of_dup_zero (fun y => -d y) dcont.neg
-      (fun y => by simp only [d] at *; linarith [dper y])
-      (fun y => by simp only [d] at *; linarith [ddup y])
-      (by simp only [d] at *; linarith) x₀ hx₀
+      (fun y => by show -d (y + 1) = -d y; linarith [dper y])
+      (fun y => by show -d y = (1/2) * (-d (y/2) + -d ((y+1)/2)); linarith [ddup y])
+      (by show -d 0 = 0; linarith [dzero]) x₀ hx₀
     linarith [hx₀ x]
   linarith
 

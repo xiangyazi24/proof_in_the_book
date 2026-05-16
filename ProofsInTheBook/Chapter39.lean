@@ -159,7 +159,28 @@ theorem kneser_chromatic_lower_bound (n k : ℕ) (hk : 1 ≤ k) (hn : 2 * k ≤ 
     intro ⟨C, hC⟩
     have hfin1 : ∀ (a b : Fin (2 * k - 2 * k + 1)), a = b := by intro a b; ext; omega
     have ⟨a, b, hadj⟩ : ∃ a b : KneserVertex (2 * k) k, (kneserGraph (2 * k) k).Adj a b := by
-      sorry
+      classical
+      let A : Finset (Fin (2 * k)) := (Finset.univ.filter fun i => i.val < k)
+      let B : Finset (Fin (2 * k)) := (Finset.univ.filter fun i => k ≤ i.val)
+      have hAcard : A.card = k := by
+        have : A = (Finset.univ : Finset (Fin (2 * k))).filter (fun i => i.val < k) := rfl
+        rw [this]
+        convert_to (Finset.Iio (⟨k, by omega⟩ : Fin (2*k))).card = k
+        · congr 1; ext i; simp [Finset.mem_Iio, Fin.lt_iff_val_lt_val]
+        · simp [Fin.card_Iio]
+      have hBcard : B.card = k := by
+        have hAB : A.card + B.card = 2 * k := by
+          have := @Finset.filter_card_add_filter_neg_card_eq_card _ Finset.univ
+            (fun i : Fin (2*k) => i.val < k) (fun _ => inferInstance)
+          simp at this; omega
+        omega
+      have hdisj : Disjoint A B := by
+        rw [Finset.disjoint_filter]; intro i _ h1 h2; omega
+      have hne : (⟨A, hAcard⟩ : KneserVertex (2*k) k) ≠ ⟨B, hBcard⟩ := by
+        intro h; simp at h
+        have : (⟨0, by omega⟩ : Fin (2*k)) ∈ A := by simp [A]; omega
+        rw [h] at this; simp [B] at this; omega
+      exact ⟨⟨A, hAcard⟩, ⟨B, hBcard⟩, hne, hdisj⟩
     exact absurd (hfin1 (C a) (C b)) (hC a b hadj)
   · exact hhard heq
 

@@ -83,15 +83,43 @@ unchanged `color v ∉ {c1,c2}`.
 -/
 theorem kempeSwap_proper_abstract {V : Type*} [DecidableEq V]
     (G : SimpleGraph V) (color : V → Fin 5)
-    (_hproper : ∀ u v, G.Adj u v → color u ≠ color v)
-    (c1 c2 : Fin 5) (_hne : c1 ≠ c2)
+    (hproper : ∀ u v, G.Adj u v → color u ≠ color v)
+    (c1 c2 : Fin 5) (hne : c1 ≠ c2)
     (S : Finset V)
-    (_hclosed : ∀ u v, G.Adj u v → u ∈ S → (color u = c1 ∨ color u = c2) →
+    (hclosed : ∀ u v, G.Adj u v → u ∈ S → (color u = c1 ∨ color u = c2) →
       (color v = c1 ∨ color v = c2) → v ∈ S) :
     ∀ u v, G.Adj u v →
       (fun w => if w ∈ S then swapColor c1 c2 (color w) else color w) u ≠
       (fun w => if w ∈ S then swapColor c1 c2 (color w) else color w) v := by
-  sorry
+  intro u v hadj heq
+  simp only at heq
+  by_cases hu : u ∈ S <;> by_cases hv : v ∈ S <;> simp only [hu, hv, ite_true, ite_false] at heq
+  · exact hproper u v hadj (swapColor_injective c1 c2 heq)
+  · by_cases huc1 : color u = c1
+    · by_cases hvc : color v = c1 ∨ color v = c2
+      · exact hv (hclosed u v hadj hu (Or.inl huc1) hvc)
+      · push Not at hvc
+        simp only [swapColor, if_pos huc1] at heq; exact hvc.2 heq.symm
+    · by_cases huc2 : color u = c2
+      · by_cases hvc : color v = c1 ∨ color v = c2
+        · exact hv (hclosed u v hadj hu (Or.inr huc2) hvc)
+        · push Not at hvc
+          simp only [swapColor, if_neg huc1, if_pos huc2] at heq; exact hvc.1 heq.symm
+      · simp only [swapColor, if_neg huc1, if_neg huc2] at heq
+        exact hproper u v hadj heq
+  · by_cases hvc1 : color v = c1
+    · by_cases huc : color u = c1 ∨ color u = c2
+      · exact hu (hclosed v u (G.symm hadj) hv (Or.inl hvc1) huc)
+      · push Not at huc
+        simp only [swapColor, if_pos hvc1] at heq; exact huc.2 heq
+    · by_cases hvc2 : color v = c2
+      · by_cases huc : color u = c1 ∨ color u = c2
+        · exact hu (hclosed v u (G.symm hadj) hv (Or.inr hvc2) huc)
+        · push Not at huc
+          simp only [swapColor, if_neg hvc1, if_pos hvc2] at heq; exact huc.1 heq
+      · simp only [swapColor, if_neg hvc1, if_neg hvc2] at heq
+        exact hproper u v hadj heq
+  · exact hproper u v hadj heq
 
 end KempeChains
 

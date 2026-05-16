@@ -112,6 +112,51 @@ noncomputable def rationalPartialSum (N : ℕ) (x : ℝ) : ℝ :=
   1 / x + ∑ n ∈ Finset.range N, (1 / (x + (n + 1 : ℕ)) + 1 / (x - (n + 1 : ℕ)))
 
 /--
+Helper: if h achieves max M at x₀ and h(x₀) = (1/2)(h(x₀/2) + h((x₀+1)/2)) with
+both ≤ M, then h(x₀/2) = M.
+-/
+private theorem avg_eq_max_implies_both_eq (a b M : ℝ) (ha : a ≤ M) (hb : b ≤ M)
+    (havg : M = (1/2 : ℝ) * (a + b)) : a = M ∧ b = M := by
+  constructor <;> nlinarith
+
+/--
+Key lemma: a continuous periodic function satisfying duplication with h(0) = 0
+that achieves its max must have max ≤ 0.
+-/
+private theorem max_le_zero_of_dup_zero
+    (h : ℝ → ℝ) (hcont : Continuous h) (hper : ∀ x, h (x + 1) = h x)
+    (hdup : ∀ x, h x = (1/2 : ℝ) * (h (x/2) + h ((x+1)/2)))
+    (hzero : h 0 = 0)
+    (x₀ : ℝ) (hmax : ∀ y, h y ≤ h x₀) : h x₀ ≤ 0 := by
+  by_contra hpos; push_neg at hpos
+  have hiter : ∀ n : ℕ, h (x₀ / 2 ^ n) = h x₀ := by
+    intro n; induction n with
+    | zero => simp
+    | succ n ih =>
+      have hd := hdup (x₀ / 2 ^ n)
+      rw [ih] at hd
+      have := avg_eq_max_implies_both_eq
+        (h (x₀ / 2 ^ n / 2)) (h ((x₀ / 2 ^ n + 1) / 2)) (h x₀)
+        (hmax _) (hmax _) hd
+      rw [show x₀ / (2 : ℝ) ^ n / 2 = x₀ / (2 : ℝ) ^ (n + 1) from by ring] at this
+      exact this.1
+  have hlim : Filter.Tendsto (fun n : ℕ => x₀ / (2 : ℝ) ^ n) Filter.atTop (nhds 0) := by
+    have h12 : Filter.Tendsto (fun n : ℕ => (1 / (2 : ℝ)) ^ n) Filter.atTop (nhds 0) :=
+      tendsto_pow_atTop_nhds_zero_of_lt_one (by positivity) (by norm_num)
+    have := h12.const_mul x₀
+    simp only [mul_zero] at this
+    refine this.congr (fun n => ?_)
+    rw [one_div, inv_pow]; ring
+  have hconv := (hcont.tendsto 0).comp hlim
+  simp only [Function.comp] at hconv
+  have : Filter.Tendsto (fun n => h (x₀ / 2 ^ n)) Filter.atTop (nhds (h 0)) := hconv
+  have hconst : Filter.Tendsto (fun n => h (x₀ / 2 ^ n)) Filter.atTop (nhds (h x₀)) := by
+    rw [show (fun n => h (x₀ / 2 ^ n)) = fun _ => h x₀ from funext hiter]
+    exact tendsto_const_nhds
+  have := tendsto_nhds_unique hconst this
+  linarith
+
+/--
 The Herglotz uniqueness theorem (the book's key argument): if two functions
 in the Herglotz class (periodic-one, odd) are both continuous and satisfy the
 same duplication formula, then they agree everywhere. The proof uses the
@@ -123,19 +168,37 @@ theorem herglotz_uniqueness_of_continuous_periodic_odd
     (hfc : Continuous f) (hgc : Continuous g)
     (hdup_f : ∀ x, 2 * f x = f (x / 2) + f ((x + 1) / 2))
     (hdup_g : ∀ x, 2 * g x = g (x / 2) + g ((x + 1) / 2))
-    (hhalf : f (1/2) = g (1/2))
-    (hRiemannToIntegral : ∀ h : ℝ → ℝ, Continuous h → (∀ x, h (x + 1) = h x) →
-      (∀ x, h x + h (1 - x) = 0) →
-      (∀ x, h x = (1 / 2 : ℝ) * (h (x / 2) + h ((x + 1) / 2))) →
-      h (1/2) = 0 → h = 0) :
+    (hhalf : f (1/2) = g (1/2)) :
     f = g := by
-  have h := hRiemannToIntegral (fun x => f x - g x)
-    (hfc.sub hgc)
-    (fun x => by simp only [Function.comp]; linarith [hf.periodic x, hg.periodic x])
-    (fun x => by linarith [hf.cancel x, hg.cancel x])
-    (fun x => by have := hdup_f x; have := hdup_g x; linarith)
-    (by linarith [hhalf])
-  ext x; have := congr_fun h x; simp at this; linarith
+  suffices ∀ x, f x - g x = 0 by ext x; linarith [this x]
+  let d := fun x => f x - g x
+  have dcont : Continuous d := hfc.sub hgc
+  have dper : ∀ x, d (x + 1) = d x := fun x => by
+    simp only [d]; linarith [hf.periodic x, hg.periodic x]
+  have dcancel : ∀ x, d x + d (1 - x) = 0 := fun x => by
+    simp only [d]; linarith [hf.cancel x, hg.cancel x]
+  have ddup : ∀ x, d x = (1/2 : ℝ) * (d (x/2) + d ((x+1)/2)) := fun x => by
+    simp only [d]; have := hdup_f x; have := hdup_g x; linarith
+  have dzero : d 0 = 0 := by
+    have h1 : d 0 + d 1 = 0 := by convert dcancel 0 using 2; ring
+    have h2 : d 1 = d 0 := by convert dper 0 using 2; ring
+    linarith
+  intro x
+  have hle : d x ≤ 0 := by
+    by_contra hgt; push_neg at hgt
+    have hmax_exists : ∃ x₀, ∀ y, d y ≤ d x₀ := by sorry
+    obtain ⟨x₀, hx₀⟩ := hmax_exists
+    exact absurd (max_le_zero_of_dup_zero d dcont dper ddup dzero x₀ hx₀) (by linarith [hx₀ x])
+  have hge : 0 ≤ d x := by
+    by_contra hlt; push_neg at hlt
+    have hmax_neg : ∃ x₀, ∀ y, -d y ≤ -d x₀ := by sorry
+    obtain ⟨x₀, hx₀⟩ := hmax_neg
+    have := max_le_zero_of_dup_zero (fun y => -d y) dcont.neg
+      (fun y => by simp only [d] at *; linarith [dper y])
+      (fun y => by simp only [d] at *; linarith [ddup y])
+      (by simp only [d] at *; linarith) x₀ hx₀
+    linarith [hx₀ x]
+  linarith
 
 /--
 The cotangent partial-fraction identity (the book's conclusion):

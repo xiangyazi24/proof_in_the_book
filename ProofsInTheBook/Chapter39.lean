@@ -89,10 +89,54 @@ noncomputable def kneserColor {n k : ℕ} (hk : 1 ≤ k) (h2k : 2 * k ≤ n) :
     KneserVertex n k → Fin (n - 2 * k + 2) :=
   fun S => ⟨kneserColorNat hk S, kneserColorNat_lt hk h2k S⟩
 
+private theorem kneserColor_proper {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (a b : KneserVertex n k) (hadj : (kneserGraph n k).Adj a b) :
+    kneserColor hk hn a ≠ kneserColor hk hn b := by
+  simp only [kneserColor, Fin.mk.injEq, kneserColorNat]
+  set ma := (KneserVertex.min' hk a).val
+  set mb := (KneserVertex.min' hk b).val
+  have hdisj := hadj.2
+  have hma_mem : KneserVertex.min' hk a ∈ a.1 := Finset.min'_mem _ _
+  have hmb_mem : KneserVertex.min' hk b ∈ b.1 := Finset.min'_mem _ _
+  have hne_min : ma ≠ mb := by
+    intro heq
+    have : KneserVertex.min' hk a ∈ a.1 ⊓ b.1 := by
+      simp [Finset.mem_inf, hma_mem]
+      have : KneserVertex.min' hk a = KneserVertex.min' hk b := Fin.ext heq
+      rw [this]; exact hmb_mem
+    exact Finset.disjoint_left.mp hdisj hma_mem (by
+      have : KneserVertex.min' hk a = KneserVertex.min' hk b := Fin.ext heq
+      rw [this]; exact hmb_mem)
+  by_cases ha : ma ≤ n - 2 * k <;> by_cases hb : mb ≤ n - 2 * k <;> simp [ha, hb]
+  · exact hne_min
+  · omega
+  · omega
+  · exfalso
+    have ha_sub : ∀ x ∈ a.1, n - 2 * k < x.val := by
+      intro x hx
+      by_contra hle; push Not at hle
+      exact ha (Nat.le_trans (Finset.min'_le _ _ hx) hle)
+    have hb_sub : ∀ x ∈ b.1, n - 2 * k < x.val := by
+      intro x hx
+      by_contra hle; push Not at hle
+      exact hb (Nat.le_trans (Finset.min'_le _ _ hx) hle)
+    have hunion_sub : ∀ x ∈ a.1 ∪ b.1, n - 2 * k < x.val := by
+      intro x hx; rcases Finset.mem_union.mp hx with h | h
+      · exact ha_sub x h
+      · exact hb_sub x h
+    have hcard_union : (a.1 ∪ b.1).card = 2 * k := by
+      rw [Finset.card_union_of_disjoint hdisj, a.2, b.2]
+    have hcard_range : (Finset.univ.filter fun i : Fin n => n - 2 * k < i.val).card = 2 * k - 1 := by
+      simp [Finset.card_filter]; omega
+    have hsub : a.1 ∪ b.1 ⊆ Finset.univ.filter fun i : Fin n => n - 2 * k < i.val :=
+      fun x hx => Finset.mem_filter.mpr ⟨Finset.mem_univ _, hunion_sub x hx⟩
+    have := Finset.card_le_card hsub
+    omega
+
 theorem kneser_chromatic_upper_bound (n k : ℕ) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
     ∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
       ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b :=
-  ⟨kneserColor hk hn, by sorry⟩
+  ⟨kneserColor hk hn, kneserColor_proper hk hn⟩
 
 /--
 Kneser graph chromatic number lower bound: `KG(n,k)` is NOT

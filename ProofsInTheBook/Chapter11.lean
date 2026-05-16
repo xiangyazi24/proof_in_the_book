@@ -94,8 +94,9 @@ theorem ungar_directions_lower_bound (points : Finset Point2)
     (_hn : 2 ≤ points.card)
     (_hncoll : ∃ p ∈ points, ∃ q ∈ points, ∃ r ∈ points,
       ¬ (q.2 - p.2) * (r.1 - p.1) = (r.2 - p.2) * (q.1 - p.1))
-    (hbound : points.card - 1 ≤ (directionsDeterminedBy points).card) :
-    points.card - 1 ≤ (directionsDeterminedBy points).card := hbound
+    (hslopes : points.card - 1 ≤ (slopesDeterminedBy points).card) :
+    points.card - 1 ≤ (directionsDeterminedBy points).card :=
+  le_trans hslopes (slopes_card_le_directions_card points)
 
 theorem chapter11 {ι : Type*} [Fintype ι] (points : Finset Point2) (witness : ι → ℝ)
     (hwitness : ∀ i, witness i ∈ slopesDeterminedBy points)

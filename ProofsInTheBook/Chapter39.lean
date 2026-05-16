@@ -157,9 +157,10 @@ theorem kneser_chromatic_lower_bound (n k : ℕ) (hk : 1 ≤ k) (hn : 2 * k ≤ 
   by_cases heq : n = 2 * k
   · subst heq
     intro ⟨C, hC⟩
-    have hfin1 : ∀ (a b : Fin (2 * k - 2 * k + 1)), a = b := by
-      intro a b; ext; omega
-    sorry
+    have hfin1 : ∀ (a b : Fin (2 * k - 2 * k + 1)), a = b := by intro a b; ext; omega
+    have ⟨a, b, hadj⟩ : ∃ a b : KneserVertex (2 * k) k, (kneserGraph (2 * k) k).Adj a b := by
+      sorry
+    exact absurd (hfin1 (C a) (C b)) (hC a b hadj)
   · exact hhard heq
 
 theorem chapter39 (n k : ℕ) :

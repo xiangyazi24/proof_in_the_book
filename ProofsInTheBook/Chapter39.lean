@@ -149,11 +149,18 @@ Kneser graph chromatic number lower bound: `KG(n,k)` is NOT
 `(n - 2k + 1)`-colorable. This is the hard direction, proved by Lovász
 using the Borsuk-Ulam theorem (or by Bárány's simplicial argument).
 -/
-theorem kneser_chromatic_lower_bound (n k : ℕ) (_hk : 1 ≤ k) (_hn : 2 * k ≤ n)
-    (hLovasz : ¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
+theorem kneser_chromatic_lower_bound (n k : ℕ) (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (hhard : n ≠ 2 * k → ¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
       ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :
     ¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
-      ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b := hLovasz
+      ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b := by
+  by_cases heq : n = 2 * k
+  · subst heq
+    intro ⟨C, hC⟩
+    have hfin1 : ∀ (a b : Fin (2 * k - 2 * k + 1)), a = b := by
+      intro a b; ext; omega
+    sorry
+  · exact hhard heq
 
 theorem chapter39 (n k : ℕ) :
     Fintype.card (KneserVertex n k) = n.choose k :=

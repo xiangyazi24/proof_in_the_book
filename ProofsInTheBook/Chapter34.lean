@@ -121,8 +121,14 @@ orderings and applies the greedy extension step.
 theorem galvin_theorem {n : ℕ} {α : Type*} [DecidableEq α]
     (lists : Cell n → Finset α)
     (_hlists : ∀ cell, n ≤ (lists cell).card)
-    (hkernel : ∃ color : Cell n → α, DinitzSolution lists color) :
-    ∃ color : Cell n → α, DinitzSolution lists color := hkernel
+    (hextension : ∀ (colored : Finset (Cell n)) (partialColor : Cell n → α),
+      colored.card < n * n →
+      (∀ c ∈ colored, partialColor c ∈ lists c) →
+      (∀ a ∈ colored, ∀ b ∈ colored, LatinConflict a b → partialColor a ≠ partialColor b) →
+      ∃ v ∉ colored, ∃ c ∈ lists v,
+        ∀ w ∈ colored, LatinConflict v w → c ≠ partialColor w) :
+    ∃ color : Cell n → α, DinitzSolution lists color := by
+  sorry
 
 theorem chapter34 {n : ℕ} {α : Type*} {lists : Cell n → Finset α} {color : Cell n → α}
     (hlist : RespectsLists lists color) (hinj : RowColumnInjective color) :

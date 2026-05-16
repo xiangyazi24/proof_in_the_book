@@ -81,7 +81,14 @@ the same parity as the number of red-green boundary edges.
 private theorem sum_nat_mod_two_eq_sum_mod_two
     {α : Type*} (s : Finset α) (f : α → ℕ) :
     (∑ x ∈ s, f x) % 2 = (∑ x ∈ s, f x % 2) % 2 := by
-  sorry
+  classical
+  induction s using Finset.cons_induction_on with
+  | empty => simp
+  | cons a s ha ih =>
+    rw [Finset.sum_cons, Finset.sum_cons]
+    conv_lhs => rw [Nat.add_mod (f a) _ 2, ih]
+    conv_rhs => rw [Nat.add_mod (f a % 2) _ 2]
+    simp [Nat.mod_mod]
 
 theorem sperner_parity_abstract
     (n : ℕ) (triangleColors : Fin n → MonskyColor × MonskyColor × MonskyColor)

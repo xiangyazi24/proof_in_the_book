@@ -129,16 +129,13 @@ theorem herglotz_uniqueness_of_continuous_periodic_odd
       (∀ x, h x = (1 / 2 : ℝ) * (h (x / 2) + h ((x + 1) / 2))) →
       h (1/2) = 0 → h = 0) :
     f = g := by
-  have h := hRiemannToIntegral (f - g)
+  have h := hRiemannToIntegral (fun x => f x - g x)
     (hfc.sub hgc)
-    (fun x => by simp [Pi.sub_apply]; linarith [hf.periodic x, hg.periodic x])
-    (fun x => by simp [Pi.sub_apply]; linarith [hf.cancel x, hg.cancel x])
-    (fun x => by
-      simp only [Pi.sub_apply]
-      have hf' := hdup_f x; have hg' := hdup_g x
-      linarith)
-    (by simp [Pi.sub_apply, hhalf])
-  exact sub_eq_zero.mp h
+    (fun x => by simp only [Function.comp]; linarith [hf.periodic x, hg.periodic x])
+    (fun x => by linarith [hf.cancel x, hg.cancel x])
+    (fun x => by have := hdup_f x; have := hdup_g x; linarith)
+    (by linarith [hhalf])
+  ext x; have := congr_fun h x; simp at this; linarith
 
 /--
 The cotangent partial-fraction identity (the book's conclusion):
@@ -171,19 +168,22 @@ theorem herglotz_dyadic_average (f : ℝ → ℝ)
         (x + (↑k + 2 ^ n)) / (2 ^ (n + 1) : ℝ) := by
       intro k; field_simp; ring
     simp_rw [halg, halg2]
-    rw [show (1 : ℝ) / 2 ^ n * ∑ k ∈ Finset.range (2 ^ n),
-        1 / 2 * (f ((x + ↑k) / 2 ^ (n + 1)) + f ((x + (↑k + 2 ^ n)) / 2 ^ (n + 1))) =
-        1 / 2 ^ (n + 1) * (∑ k ∈ Finset.range (2 ^ n), f ((x + ↑k) / 2 ^ (n + 1)) +
-          ∑ k ∈ Finset.range (2 ^ n), f ((x + (↑k + 2 ^ n)) / 2 ^ (n + 1))) from by
-      rw [Finset.mul_sum]; simp_rw [Finset.sum_add_distrib]; ring]
+    conv_lhs =>
+      rw [Finset.mul_sum]
+      arg 2; ext k
+      rw [show (1 : ℝ) / 2 ^ n * (1 / 2 * (f ((x + ↑k) / 2 ^ (n + 1)) +
+          f ((x + (↑k + 2 ^ n)) / 2 ^ (n + 1)))) =
+        1 / 2 ^ (n + 1) * f ((x + ↑k) / 2 ^ (n + 1)) +
+        1 / 2 ^ (n + 1) * f ((x + (↑k + 2 ^ n)) / 2 ^ (n + 1)) from by ring]
+    rw [Finset.sum_add_distrib, ← Finset.mul_sum, ← Finset.mul_sum, ← mul_add]
     congr 1
-    rw [show 2 ^ (n + 1) = 2 ^ n + 2 ^ n from by ring]
+    congr 1
+    rw [show (2 : ℕ) ^ (n + 1) = 2 ^ n + 2 ^ n from by ring]
     rw [Finset.sum_range_add]
     congr 1
     apply Finset.sum_congr rfl
     intro k _
-    congr 1
-    push_cast; ring
+    congr 1; push_cast; ring
 
 theorem chapter24 (x : ℝ) :
     Real.pi * Real.cot (Real.pi * x) + Real.pi * Real.cot (Real.pi * (1 - x)) = 0 := by

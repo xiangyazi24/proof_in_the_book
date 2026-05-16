@@ -170,22 +170,22 @@ theorem shiftedPolynomial_local_norm_decrease
   rw [← shiftedPolynomial_eval]
   exact hw
 
-/--
-The minimum-modulus proof of FTA: if `p` is nonconstant and `p.eval z₀ ≠ 0`
-while `z₀` minimizes `‖p.eval ·‖`, we get a contradiction via local norm decrease.
-Proof outline: extract first nonzero coefficient of the shifted polynomial,
-apply `shiftedPolynomial_local_norm_decrease`, contradict minimality.
--/
 set_option maxHeartbeats 3200000 in
+/--
+The minimum-modulus proof of FTA.
+-/
 theorem fta_minimum_modulus_contradiction
     (p : ℂ[X]) (z₀ : ℂ) (_hdeg : 1 ≤ p.natDegree)
     (hp0 : p.eval z₀ ≠ 0)
     (hmin : ∀ z : ℂ, ‖p.eval z₀‖ ≤ ‖p.eval z‖)
     (hne : shiftedPolynomial p z₀ - C (p.eval z₀) ≠ 0) : False := by
+  have hne' : shiftedPolynomial p z₀ - C ((shiftedPolynomial p z₀).eval 0) ≠ 0 := by
+    rwa [shiftedPolynomial_eval_zero]
   obtain ⟨m, hm0, hm_ne, hm_below⟩ :=
-    exists_first_nonzero_coeff_of_sub_C_eval_zero_ne_zero hne
+    exists_first_nonzero_coeff_of_sub_C_eval_zero_ne_zero hne'
+  rw [shiftedPolynomial_eval_zero] at hm_ne hm_below
   obtain ⟨w, hw⟩ :=
-    shiftedPolynomial_local_norm_decrease p z₀ m hp0 hm0 hm_below hm_ne
+    shiftedPolynomial_local_norm_decrease p z₀ m hp0 hm0 (fun k hk0 hkm => hm_below k hkm) hm_ne
   exact absurd (hmin (w + z₀)) (not_le.mpr hw)
 
 theorem chapter19 (b c : ℂ) (hc : c ≠ 0) :

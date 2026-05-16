@@ -96,7 +96,9 @@ requires the integral `∫₀^π sin(θ) dθ = 2`.
 -/
 theorem buffon_rotational_symmetry_integral :
     ∫ θ in (0 : ℝ)..Real.pi, Real.sin θ = 2 := by
-  sorry
+  rw [integral_sin]
+  simp [Real.cos_pi, Real.cos_zero]
+  norm_num
 
 theorem chapter25 {ι : Type*} (segments : Finset ι) (length : ι → ℝ) (d : ℝ) :
     curveExpectedCrossings segments length d =

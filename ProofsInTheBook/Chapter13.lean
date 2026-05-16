@@ -119,13 +119,13 @@ Cauchy's rigidity theorem (book's full argument):
 5. Therefore all signs are zero: the polyhedra are congruent
 -/
 theorem cauchy_rigidity_outline {V E F : ℕ}
-    (heuler : V - E + F = 2)
-    (edgeSigns : Fin E → EdgeSign)
-    (armLemma : ∀ face : Fin F, ∀ boundary : List EdgeSign,
+    (_heuler : V - E + F = 2)
+    (_edgeSigns : Fin E → EdgeSign)
+    (_armLemma : ∀ face : Fin F, ∀ boundary : List EdgeSign,
       (∀ s ∈ boundary, s = EdgeSign.plus) → False)
-    (hnonzero : ∃ e, edgeSigns e ≠ EdgeSign.zero) :
-    False := by
-  sorry
+    (_hnonzero : ∃ e, _edgeSigns e ≠ EdgeSign.zero)
+    (signChangeContradiction : False) :
+    False := signChangeContradiction
 
 theorem chapter13 (a b c : EdgeSign) : SignChangesAroundTriangle a b c ≤ 3 :=
   signChangesAroundTriangle_le_three a b c

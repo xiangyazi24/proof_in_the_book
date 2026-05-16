@@ -95,7 +95,7 @@ Step 1 (the rotational symmetry argument) is the geometric core and
 requires the integral `∫₀^π sin(θ) dθ = 2`.
 -/
 theorem buffon_rotational_symmetry_integral :
-    ∫ θ in Set.Icc 0 Real.pi, Real.sin θ = 2 := by
+    ∫ θ in (0 : ℝ)..Real.pi, Real.sin θ = 2 := by
   sorry
 
 theorem chapter25 {ι : Type*} (segments : Finset ι) (length : ι → ℝ) (d : ℝ) :

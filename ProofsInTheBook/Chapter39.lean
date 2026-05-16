@@ -66,15 +66,33 @@ theorem kneserVertex_card (n k : ℕ) :
   rw [hset, Finset.card_powersetCard, Finset.card_univ, Fintype.card_fin]
 
 /--
-The easy upper bound: `KG(n,k)` is `(n - 2k + 2)`-colorable. Color each
-`k`-subset `S` by `min(S)` when `min(S) ≤ n - 2k + 1`, and color `n - 2k + 2`
-otherwise. Disjoint sets cannot share a minimum in `{1, ..., n-2k+1}`, and
-at most one can have minimum > `n - 2k + 1`.
+The minimum element of a k-subset (well-defined since k ≥ 1).
 -/
+noncomputable def KneserVertex.min' {n k : ℕ} (hk : 1 ≤ k) (S : KneserVertex n k) : Fin n :=
+  S.1.min' (by rw [Finset.nonempty_iff_ne_empty]; intro h; have := S.2; simp [h] at this; omega)
+
+/--
+The Kneser coloring by minimum element: color each k-subset by its minimum
+when that minimum is ≤ n-2k, otherwise assign the default color n-2k+1.
+-/
+noncomputable def kneserColorNat {n k : ℕ} (hk : 1 ≤ k) (S : KneserVertex n k) : ℕ :=
+  let m := (KneserVertex.min' hk S).val
+  if m ≤ n - 2 * k then m else n - 2 * k + 1
+
+theorem kneserColorNat_lt {n k : ℕ} (_hk : 1 ≤ k) (h2k : 2 * k ≤ n)
+    (S : KneserVertex n k) : kneserColorNat _hk S < n - 2 * k + 2 := by
+  unfold kneserColorNat
+  simp only
+  by_cases h : (KneserVertex.min' _hk S).val ≤ n - 2 * k <;> simp [h] <;> omega
+
+noncomputable def kneserColor {n k : ℕ} (hk : 1 ≤ k) (h2k : 2 * k ≤ n) :
+    KneserVertex n k → Fin (n - 2 * k + 2) :=
+  fun S => ⟨kneserColorNat hk S, kneserColorNat_lt hk h2k S⟩
+
 theorem kneser_chromatic_upper_bound (n k : ℕ) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
     ∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
-      ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b := by
-  sorry
+      ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b :=
+  ⟨kneserColor hk hn, by sorry⟩
 
 /--
 Kneser graph chromatic number lower bound: `KG(n,k)` is NOT

@@ -186,6 +186,21 @@ theorem prime_dvd_base_of_binomial_perfect_power {n k l m p : ℕ}
     (hp : p.Prime) (hpdvd : p ∣ n.choose k) (hpow : n.choose k = m ^ l) : p ∣ m :=
   hp.dvd_of_dvd_pow (hpow ▸ hpdvd)
 
+/--
+The book's "almost never powers" argument: if C(n,k) = m^l with l ≥ 2,
+then every prime p dividing C(n,k) satisfies p^l | C(n,k), so
+v_p(C(n,k)) ≥ l. By the Legendre formula, v_p(C(n,k)) = v_p(n!) - v_p(k!) - v_p((n-k)!),
+which is at most ⌊log_p(n)⌋ (Kummer's theorem: the number of carries when
+adding k and n-k in base p). For p > √n, v_p(C(n,k)) ≤ 1 < l.
+Sylvester's theorem provides such a prime p > k, and if k ≥ 4 and n ≥ 2k,
+then p > k ≥ 4 > √n is achievable, giving the contradiction.
+-/
+theorem binomial_not_perfect_power_of_large_prime {n k l m p : ℕ}
+    (hp : p.Prime) (hpdvd : p ∣ n.choose k) (hpow : n.choose k = m ^ l)
+    (hl : 2 ≤ l) (hpsq : n < p * p) :
+    n.choose k = 1 ∨ n.choose k = 0 := by
+  sorry
+
 theorem chapter03_binomials_coefficients_never_powers {n k l m p : ℕ}
     (hp : p.Prime) (hpdvd : p ∣ n.choose k) (hpow : n.choose k = m ^ l) : p ∣ m :=
   prime_dvd_base_of_binomial_perfect_power hp hpdvd hpow

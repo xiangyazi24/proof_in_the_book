@@ -136,6 +136,19 @@ satisfy the duplication formula, and agree at `x = 1/2`.
 theorem cot_pi_partial_fraction_identity :
     True := trivial
 
+/--
+The dyadic averaging identity: if `f` satisfies the duplication formula
+`f(x) = (1/2)(f(x/2) + f((x+1)/2))`, then iterating n times gives
+`f(x) = 2^{-n} · ∑_{k=0}^{2^n-1} f((x+k)/2^n)`.
+This is the algebraic engine of the Herglotz uniqueness argument.
+-/
+theorem herglotz_dyadic_average (f : ℝ → ℝ)
+    (hdup : ∀ x, f x = (1 / 2 : ℝ) * (f (x / 2) + f ((x + 1) / 2)))
+    (n : ℕ) (x : ℝ) :
+    f x = (1 / (2 ^ n : ℝ)) *
+      ∑ k ∈ Finset.range (2 ^ n), f ((x + k) / (2 ^ n : ℝ)) := by
+  sorry
+
 theorem chapter24 (x : ℝ) :
     Real.pi * Real.cot (Real.pi * x) + Real.pi * Real.cot (Real.pi * (1 - x)) = 0 := by
   rw [cot_pi_one_sub]

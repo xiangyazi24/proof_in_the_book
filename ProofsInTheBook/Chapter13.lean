@@ -109,6 +109,24 @@ theorem cauchy_rigidity_of_all_zero {n : ℕ}
     (hall : ∀ i, signs i = zero) :
     ∀ i, signs i = zero := hall
 
+/--
+Cauchy's rigidity theorem (book's full argument):
+1. Label each edge +/−/0 by whether dihedral angle increases/decreases/stays
+2. Around each triangulated face, sign changes are even (strict sign lemma)
+3. Sum over faces: total sign changes ≤ 2E (each edge contributes ≤ 2)
+4. By Euler V - E + F = 2, if any sign is nonzero, the arm lemma gives
+   a contradiction (the polygon must both open and close)
+5. Therefore all signs are zero: the polyhedra are congruent
+-/
+theorem cauchy_rigidity_outline {V E F : ℕ}
+    (heuler : V - E + F = 2)
+    (edgeSigns : Fin E → EdgeSign)
+    (armLemma : ∀ face : Fin F, ∀ boundary : List EdgeSign,
+      (∀ s ∈ boundary, s = EdgeSign.plus) → False)
+    (hnonzero : ∃ e, edgeSigns e ≠ EdgeSign.zero) :
+    False := by
+  sorry
+
 theorem chapter13 (a b c : EdgeSign) : SignChangesAroundTriangle a b c ≤ 3 :=
   signChangesAroundTriangle_le_three a b c
 

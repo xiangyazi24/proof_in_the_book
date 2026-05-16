@@ -102,14 +102,19 @@ theorem linear_polynomial_has_root (b c : ℂ) (hc : c ≠ 0) :
 theorem monic_linear_has_root (a : ℂ) : IsRoot (Polynomial.X - Polynomial.C a) a := by
   simp [Polynomial.IsRoot]
 
+/-- Complex m-th root extraction: for any `z : ℂ` and `m > 0`, ∃ ζ with ζ^m = z. -/
+theorem exists_complex_nth_root (z : ℂ) (m : ℕ) (hm : 0 < m) :
+    ∃ ζ : ℂ, ζ ^ m = z :=
+  ⟨z ^ ((m : ℂ)⁻¹), by simpa using Complex.cpow_nat_inv_pow z hm.ne'⟩
+
 /--
 Analytic local norm-decrease lemma: given a polynomial `r` with constant term
 `a ≠ 0`, first nonzero higher coefficient `c` at degree `m > 0`, there exists
 `w` with `‖r.eval w‖ < ‖a‖`.
 
-The classic argument: choose `ζ` with `ζ^m = -a/c` (algebraic closedness),
-set `w = t·ζ` for small `t > 0`, so `a + c·w^m = a·(1 - t^m)`, and the
-higher-order tail is `O(t^{m+1})`.
+Uses `exists_complex_nth_root` to find `ζ` with `ζ^m = -a/c`, then
+sets `w = t·ζ` for small `t > 0` so `a + c·w^m = a·(1 - t^m)` dominates
+the higher-order tail.
 -/
 theorem complex_poly_local_norm_decrease
     (r : ℂ[X]) (a c : ℂ) (m : ℕ)

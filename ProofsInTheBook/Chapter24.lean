@@ -151,7 +151,26 @@ theorem herglotz_dyadic_average (f : ℝ → ℝ)
   | zero => simp
   | succ n ih =>
     rw [ih]
-    sorry
+    simp_rw [hdup ((x + _) / (2 ^ n : ℝ))]
+    have halg : ∀ (k : ℕ), (x + ↑k) / (2 ^ n : ℝ) / 2 = (x + ↑k) / (2 ^ (n + 1) : ℝ) := by
+      intro k; field_simp; ring
+    have halg2 : ∀ (k : ℕ), ((x + ↑k) / (2 ^ n : ℝ) + 1) / 2 =
+        (x + (↑k + 2 ^ n)) / (2 ^ (n + 1) : ℝ) := by
+      intro k; field_simp; ring
+    simp_rw [halg, halg2]
+    rw [show (1 : ℝ) / 2 ^ n * ∑ k ∈ Finset.range (2 ^ n),
+        1 / 2 * (f ((x + ↑k) / 2 ^ (n + 1)) + f ((x + (↑k + 2 ^ n)) / 2 ^ (n + 1))) =
+        1 / 2 ^ (n + 1) * (∑ k ∈ Finset.range (2 ^ n), f ((x + ↑k) / 2 ^ (n + 1)) +
+          ∑ k ∈ Finset.range (2 ^ n), f ((x + (↑k + 2 ^ n)) / 2 ^ (n + 1))) from by
+      rw [Finset.mul_sum]; simp_rw [Finset.sum_add_distrib]; ring]
+    congr 1
+    rw [show 2 ^ (n + 1) = 2 ^ n + 2 ^ n from by ring]
+    rw [Finset.sum_range_add]
+    congr 1
+    apply Finset.sum_congr rfl
+    intro k _
+    congr 1
+    push_cast; ring
 
 theorem chapter24 (x : ℝ) :
     Real.pi * Real.cot (Real.pi * x) + Real.pi * Real.cot (Real.pi * (1 - x)) = 0 := by

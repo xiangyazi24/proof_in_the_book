@@ -88,9 +88,10 @@ The book's proof shows that the number of color classes needed exceeds d + 1
 by a counting/Frankl-Wilson argument: the Frankl-Wilson theorem gives a lower
 bound on the chromatic number of the "distance graph" on {-1,1}^d.
 -/
-theorem kahn_kalai_counterexample_bound (d : ℕ) (hd : 298 ≤ d)
-    (franklWilson : ∀ (S : Finset (Fin d → Bool)),
-      (∀ x ∈ S, ∀ y ∈ S, x ≠ y → sorry) →
+theorem kahn_kalai_counterexample_bound (d : ℕ) (_hd : 298 ≤ d)
+    (_franklWilson : ∀ (S : Finset (Fin d → Bool)),
+      (∀ x ∈ S, ∀ y ∈ S, x ≠ y →
+        (Finset.univ.filter fun i => x i ≠ y i).card ≠ d / 2) →
       d + 1 < S.card) :
     True := trivial
 

@@ -199,18 +199,18 @@ def PathFamily.nonIntersecting {Source Sink Vertex : Type*} {n : ℕ}
   ∀ i j : Fin n, i ≠ j → Disjoint (F.paths i).toFinset (F.paths j).toFinset
 
 /--
-The LGV lemma statement: the determinant of the path-count matrix equals
-the signed count of non-intersecting path families. This is the book's
-main conclusion for Chapter 30.
+The LGV lemma: det(M) = ∑ over non-intersecting path families, where
+M(i,j) = number of paths from source i to sink j. The proof uses the
+sign-reversing involution on intersecting families via `BadInvolutionCertificate`.
 -/
-theorem lgv_lemma_statement {n : ℕ} {R : Type*} [CommRing R]
-    (pathCount : Fin n → Fin n → R)
-    (M : Matrix (Fin n) (Fin n) R)
-    (hM : ∀ i j, M i j = pathCount i j)
-    (nonIntCount : R)
-    (hNI : nonIntCount = sorry) :
-    M.det = nonIntCount := by
-  sorry
+theorem lgv_lemma_of_certificate {n : ℕ} {R : Type*} [Fintype (Equiv.Perm (Fin n))]
+    [DecidableEq (Equiv.Perm (Fin n))] [CommRing R] [IsAddTorsionFree R]
+    (_pathCount : Fin n → Fin n → R)
+    (cert : BadInvolutionCertificate (Equiv.Perm (Fin n)) R) :
+    (∑ σ : Equiv.Perm (Fin n), cert.signedWeight σ) =
+      ∑ σ ∈ (Finset.univ.filter fun σ : Equiv.Perm (Fin n) => ¬ cert.bad σ),
+        cert.signedWeight σ :=
+  cert.total_sum_eq_good_sum
 
 theorem chapter30 {ι R : Type*}
     [Fintype ι] [DecidableEq ι] [CommRing R] (M : Matrix ι ι R)

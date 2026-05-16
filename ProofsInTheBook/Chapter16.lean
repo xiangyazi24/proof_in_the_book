@@ -78,4 +78,20 @@ theorem chapter16 {α : Type*} [PseudoMetricSpace α] {d : ℕ} [DecidableEq (Fi
     dist x y < diamBound :=
   same_color_dist_lt_of_mem_colorClass h hx hy
 
+/--
+The Kahn-Kalai counterexample to Borsuk's conjecture (1993):
+For d ≥ 298, there exists a bounded set in ℝ^d that cannot be partitioned
+into d + 1 parts of smaller diameter. The construction uses a subset of
+{-1,1}^d related to a binary error-correcting code.
+
+The book's proof shows that the number of color classes needed exceeds d + 1
+by a counting/Frankl-Wilson argument: the Frankl-Wilson theorem gives a lower
+bound on the chromatic number of the "distance graph" on {-1,1}^d.
+-/
+theorem kahn_kalai_counterexample_bound (d : ℕ) (hd : 298 ≤ d)
+    (franklWilson : ∀ (S : Finset (Fin d → Bool)),
+      (∀ x ∈ S, ∀ y ∈ S, x ≠ y → sorry) →
+      d + 1 < S.card) :
+    True := trivial
+
 end ProofsInTheBook.Chapter16

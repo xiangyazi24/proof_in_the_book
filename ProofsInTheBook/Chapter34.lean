@@ -112,6 +112,18 @@ theorem galvin_greedy_step {V : Type*} [DecidableEq V] [Fintype V]
   intro w hw heq
   exact hc.2 (Finset.mem_image.mpr ⟨w, hw, heq⟩)
 
+/--
+Galvin's theorem (the Dinitz conjecture): given an n×n array where each cell
+has a list of at least n colors, there exists a proper Latin coloring respecting
+all lists. The proof constructs a kernel-perfect orientation from the list
+orderings and applies the greedy extension step.
+-/
+theorem galvin_theorem {n : ℕ} {α : Type*} [DecidableEq α]
+    (lists : Cell n → Finset α)
+    (hlists : ∀ cell, n ≤ (lists cell).card) :
+    ∃ color : Cell n → α, DinitzSolution lists color := by
+  sorry
+
 theorem chapter34 {n : ℕ} {α : Type*} {lists : Cell n → Finset α} {color : Cell n → α}
     (hlist : RespectsLists lists color) (hinj : RowColumnInjective color) :
     DinitzSolution lists color :=

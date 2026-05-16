@@ -104,6 +104,30 @@ theorem pruferLeaves_nonempty (n : ℕ) (hn : 2 ≤ n) (code : pruferCodeSpace n
     exact this
   omega
 
+/--
+The Prüfer encoding algorithm (the book's bijection proof of Cayley's formula):
+given a tree on `Fin n` (n ≥ 2), repeat n-2 times:
+  - Find the leaf with smallest label
+  - Record its unique neighbor in the code
+  - Remove the leaf
+
+The resulting sequence of n-2 neighbors IS the Prüfer code.
+The decoding reverses this process.
+-/
+theorem prufer_encoding_exists (n : ℕ) (hn : 2 ≤ n) :
+    ∃ encode : LabeledTree n → pruferCodeSpace n,
+      Function.Injective encode := by
+  sorry
+
+/--
+Cayley's formula: there are exactly n^{n-2} labeled trees on n vertices.
+This follows immediately from the Prüfer bijection.
+-/
+theorem cayley_formula (n : ℕ) (hn : 2 ≤ n)
+    (prufer_equiv : LabeledTree n ≃ pruferCodeSpace n) :
+    Fintype.card (LabeledTree n) = n ^ (n - 2) :=
+  cayley_count_of_prufer_equiv n prufer_equiv
+
 theorem chapter31 (n : ℕ) :
     Fintype.card (pruferCodeSpace n) = n ^ (n - 2) :=
   pruferCodeSpace_card n

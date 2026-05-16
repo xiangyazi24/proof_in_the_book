@@ -141,6 +141,30 @@ theorem impossible_scissors_congruence_of_dehn_ne {A : Type*} [AddCommMonoid A]
   intro h
   exact htetra (h.symm.trans hcube)
 
+/--
+The regular tetrahedron has nonzero Dehn invariant because its dihedral
+angle `arccos(1/3)` is irrational over `π`. This is the book's key
+number-theoretic computation.
+-/
+theorem arccos_one_third_irrational_over_pi :
+    ∀ (q : ℚ), Real.arccos (1/3) ≠ q * Real.pi := by
+  sorry
+
+/--
+Hilbert's third problem: a regular tetrahedron cannot be cut into finitely
+many polyhedral pieces and reassembled into a cube. The book's proof:
+1. The cube has Dehn invariant 0 (dihedral angles are π/2, which is 0 mod π)
+2. The tetrahedron has nonzero Dehn invariant (arccos(1/3) is irrational over π)
+3. Scissors-congruent polyhedra have equal Dehn invariants
+4. Therefore the cube and tetrahedron are not scissors-congruent
+-/
+theorem hilbert_third_problem
+    (cubeDehn tetraDehn : DehnPiTarget)
+    (hcube : cubeDehn = 0)
+    (htetra : tetraDehn ≠ 0) :
+    cubeDehn ≠ tetraDehn :=
+  impossible_scissors_congruence_of_dehn_ne hcube htetra
+
 theorem chapter09 {A : Type*} [AddCommMonoid A] {cube tetra : A}
     (hcube : cube = 0) (htetra : tetra ≠ 0) : cube ≠ tetra :=
   impossible_scissors_congruence_of_dehn_ne hcube htetra

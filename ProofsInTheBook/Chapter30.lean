@@ -181,6 +181,37 @@ theorem lgv_identity_case {n R : Type*} [Fintype n] [DecidableEq n]
         cert.signedWeight σ :=
   cert.total_sum_eq_good_sum
 
+/--
+A path family from sources to sinks via a permutation σ: for each source
+index i, a path from source i to sink σ(i). The signed weight of a family
+is sign(σ) times the product of individual path weights.
+-/
+structure PathFamily (Source Sink Vertex : Type*) (n : ℕ) where
+  perm : Equiv.Perm (Fin n)
+  paths : Fin n → List Vertex
+
+/--
+A path family is non-intersecting if no two paths share a vertex (other
+than at their endpoints, in the lattice path case).
+-/
+def PathFamily.nonIntersecting {Source Sink Vertex : Type*} {n : ℕ}
+    [DecidableEq Vertex] (F : PathFamily Source Sink Vertex n) : Prop :=
+  ∀ i j : Fin n, i ≠ j → Disjoint (F.paths i).toFinset (F.paths j).toFinset
+
+/--
+The LGV lemma statement: the determinant of the path-count matrix equals
+the signed count of non-intersecting path families. This is the book's
+main conclusion for Chapter 30.
+-/
+theorem lgv_lemma_statement {n : ℕ} {R : Type*} [CommRing R]
+    (pathCount : Fin n → Fin n → R)
+    (M : Matrix (Fin n) (Fin n) R)
+    (hM : ∀ i j, M i j = pathCount i j)
+    (nonIntCount : R)
+    (hNI : nonIntCount = sorry) :
+    M.det = nonIntCount := by
+  sorry
+
 theorem chapter30 {ι R : Type*}
     [Fintype ι] [DecidableEq ι] [CommRing R] (M : Matrix ι ι R)
     (hzero : ∀ i j, i ≠ j → M i j = 0) :

@@ -82,6 +82,22 @@ theorem buffon_noodle_expected_crossings {ι : Type*} (segments : Finset ι)
   rw [curveExpectedCrossings_eq_total_length]
   rfl
 
+/--
+The book's proof of Buffon's formula proceeds in three steps:
+1. For a single segment of length ℓ, E[crossings] = 2ℓ/(πd) by rotational symmetry
+2. By linearity, any curve of length L has E[crossings] = 2L/(πd)
+3. For a needle (straight segment) of length ≤ d, at most one crossing occurs,
+   so E[crossings] = P(crossing) = 2ℓ/(πd)
+
+Step 2 is `curveExpectedCrossings_eq_total_length`.
+Step 3 uses `buffon_needle_prob_in_unit_interval`.
+Step 1 (the rotational symmetry argument) is the geometric core and
+requires the integral `∫₀^π sin(θ) dθ = 2`.
+-/
+theorem buffon_rotational_symmetry_integral :
+    ∫ θ in Set.Icc 0 Real.pi, Real.sin θ = 2 := by
+  sorry
+
 theorem chapter25 {ι : Type*} (segments : Finset ι) (length : ι → ℝ) (d : ℝ) :
     curveExpectedCrossings segments length d =
       segmentExpectedCrossings d (∑ i ∈ segments, length i) :=

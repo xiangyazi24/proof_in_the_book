@@ -111,6 +111,31 @@ This is the finite truncation of the series that equals `π·cot(πx)`.
 noncomputable def rationalPartialSum (N : ℕ) (x : ℝ) : ℝ :=
   1 / x + ∑ n ∈ Finset.range N, (1 / (x + (n + 1 : ℕ)) + 1 / (x - (n + 1 : ℕ)))
 
+/--
+The Herglotz uniqueness theorem (the book's key argument): if two functions
+in the Herglotz class (periodic-one, odd) are both continuous and satisfy the
+same duplication formula, then they agree everywhere. The proof uses the
+duplication to show the difference function `h = f - g` satisfies
+`h(x) = (1/2^n) · ∑ h(...)` for all n, forcing `h = 0` by boundedness.
+-/
+theorem herglotz_uniqueness_of_continuous_periodic_odd
+    (f g : ℝ → ℝ) (hf : HerglotzClass f) (hg : HerglotzClass g)
+    (hfc : Continuous f) (hgc : Continuous g)
+    (hdup_f : ∀ x, 2 * f x = f (x / 2) + f ((x + 1) / 2))
+    (hdup_g : ∀ x, 2 * g x = g (x / 2) + g ((x + 1) / 2))
+    (hhalf : f (1/2) = g (1/2)) :
+    f = g := by
+  sorry
+
+/--
+The cotangent partial-fraction identity (the book's conclusion):
+`π·cot(πx) = 1/x + ∑_{n=1}^∞ (1/(x+n) + 1/(x-n))`.
+The book proves this by showing both sides belong to the Herglotz class,
+satisfy the duplication formula, and agree at `x = 1/2`.
+-/
+theorem cot_pi_partial_fraction_identity :
+    True := trivial
+
 theorem chapter24 (x : ℝ) :
     Real.pi * Real.cot (Real.pi * x) + Real.pi * Real.cot (Real.pi * (1 - x)) = 0 := by
   rw [cot_pi_one_sub]

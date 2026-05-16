@@ -157,6 +157,18 @@ k-smooth and r_j has only prime factors > k. The q_j are bounded by
 the prime factorization structure, forcing some r_j > 1.
 -/
 
+/--
+The general Sylvester theorem: for n ≥ 2k and k ≥ 1, C(n,k) has a prime
+divisor exceeding k. The proof reduces to showing the descending factorial
+n(n-1)···(n-k+1) is not (k+1)-smooth; the existing infrastructure
+(`exists_large_prime_dvd_choose_of_descFactorial_not_smooth`) then gives
+the prime factor of C(n,k).
+-/
+theorem sylvester_general (n k : ℕ) (hn : 2 * k ≤ n) (hk : 0 < k) :
+    ∃ p, k < p ∧ p.Prime ∧ p ∣ n.choose k := by
+  apply exists_large_prime_dvd_choose_of_descFactorial_not_smooth
+  sorry
+
 theorem chapter03_sylvester (k : ℕ) (hk : 0 < k) :
     ∃ p, k < p ∧ p.Prime ∧ p ∣ (2 * k).choose k :=
   chapter03_sylvester_central k (Nat.ne_of_gt hk)

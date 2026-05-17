@@ -7,12 +7,10 @@ core of its chapter's book proof. This file tracks them for future work.
 
 ## Priority 1: Provable with current Mathlib
 
-### Ch33: Hall's condition for Latin square complement
-- **File:** `Chapter33.lean` line 42
-- **Premise:** `hHall_verified : ∀ S, S.card ≤ (S.biUnion available).card`
-- **What it says:** The complement bipartite graph (columns → unused symbols) satisfies Hall's marriage condition.
-- **How to prove:** Double counting. Each column has `n - r` available symbols (where `r` rows are filled). The bipartite graph between k columns and their available symbols has at least k distinct symbols, because each symbol appears in exactly `n - r` columns (by Latin square regularity). This is a `≥ k` bound from regularity of the bipartite graph.
-- **Estimated effort:** ~40 lines. Need to formalize the regularity argument.
+### ~~Ch33: Hall's condition for Latin square complement~~ ✅
+- **Status:** Proved using double counting. The `hHall_verified` premise eliminated.
+  Key lemma: `hall_from_partial_square` — if used symbols have witness cells and
+  filled cells ≤ n-1, then Hall's condition holds. Injection via `Finset.card_le_card_of_injOn`.
 
 ### Ch03: Sylvester smoothness core
 - **File:** `Chapter03.lean` line 168
@@ -70,16 +68,16 @@ core of its chapter's book proof. This file tracks them for future work.
 
 ## Summary
 
-| Chapter | Premise | Difficulty | Blocker |
-|---------|---------|------------|---------|
-| Ch33 | Hall's condition | Easy | None |
-| Ch03 | Sylvester smoothness | Medium | None |
-| Ch11 | Rotating calipers | Medium | Convex hull |
-| Ch31 | Prüfer encoding | Medium | Algorithm formalization |
-| Ch34 | Kernel-perfect orientation | Medium-Hard | None |
-| Ch09 | arccos(1/3) irrationality | Hard | Niven's theorem |
-| Ch10 | Gallai geometry | Hard | Plane geometry |
-| Ch39 | Kneser lower bound | Very Hard | Borsuk-Ulam |
+| Chapter | Premise | Difficulty | Blocker | Status |
+|---------|---------|------------|---------|--------|
+| Ch33 | Hall's condition | Easy | None | ✅ **Done** |
+| Ch03 | Sylvester smoothness | Medium | None | ⬜ |
+| Ch31 | Prüfer encoding | Medium | Algorithm formalization | ⬜ |
+| Ch34 | Kernel-perfect orientation | Medium-Hard | None | ⬜ |
+| Ch11 | Rotating calipers | Medium | Convex hull | ⬜ |
+| Ch09 | arccos(1/3) irrationality | Hard | Niven's theorem | ⬜ |
+| Ch10 | Gallai geometry | Hard | Plane geometry | ⬜ |
+| Ch39 | Kneser lower bound | Very Hard | Borsuk-Ulam | ⬜ |
 
-Total estimated effort: ~1200 lines across 8 chapters.
-Recommended attack order: Ch33 → Ch03 → Ch31 → Ch34 → Ch11 → Ch09 → Ch10 → Ch39.
+Total estimated effort: ~1200 lines across 7 remaining chapters.
+Recommended attack order: Ch03 → Ch31 → Ch34 → Ch11 → Ch09 → Ch10 → Ch39.

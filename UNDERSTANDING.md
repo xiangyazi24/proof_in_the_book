@@ -63,6 +63,36 @@ Not acceptable:
 - Solving a chapter's central theorem by directly invoking an already-proved
   Mathlib theorem for the same result while omitting the book argument.
 
+## Remaining Work: Premises to Prove
+
+See `TODO.md` for the full list. 8 chapters take hard mathematical facts as
+explicit premises. These are NOT sorry — they compile and type-check — but
+they mark where the book's proof core has been isolated rather than proved.
+The owner's goal is to eliminate ALL of them over time.
+
+Attack order: Ch33 (easiest) → Ch03 → Ch31 → Ch34 → Ch11 → Ch09 → Ch10 → Ch39 (hardest).
+
+## Owner's Working Style
+
+- **"不完成不收手"** — once a task is started, push until it's done. Don't stop at
+  a clean checkpoint if there's more to do.
+- **ChatGPT bridge collaboration** — use `ask-chatgpt.sh --channel ssem` for
+  hard Lean proofs. ChatGPT Pro (extended thinking) gives better results but
+  takes 3-10 minutes per response. Don't poll — wait for tmux push notification.
+- **Lean API debugging** — common issues in this codebase:
+  - `Function.update_self` (not `update_same`)
+  - `Function.update_of_ne` (not `update_noteq`)
+  - `Finset.card_insert_of_notMem` (not `not_mem`)
+  - `set_option maxHeartbeats N in` must come BEFORE the docstring `/-- ... -/`
+  - `∑ n ∈ S, f n` (not `∑ n in S`) in newer Lean
+  - `Int.induction_on` uses cases `zero`, `succ`, `pred`
+  - `push_neg` is deprecated → use `push Not`
+- **Build verification** — always `rm -rf .lake/build && lake build` for final check.
+  Individual `lake env lean File.lean` for iterative development.
+- **No tautological premises** — a theorem that takes its own conclusion as a
+  hypothesis is not acceptable. Every premise must add genuine mathematical
+  content that the proof USES (reduction, not identity).
+
 ## Default Agent Loop
 
 For a new chapter:

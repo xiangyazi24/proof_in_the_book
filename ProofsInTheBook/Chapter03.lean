@@ -3,19 +3,46 @@ import Mathlib
 /-!
 # Chapter 3: Binomial coefficients are (almost) never powers
 
-From "Proofs from THE BOOK":
+From "Proofs from THE BOOK" (Aigner & Ziegler).
 
-**Sylvester's theorem**: For n ≥ 2k and k ≥ 1, the binomial coefficient C(n,k)
-has a prime divisor p > k.
+## Book content summary
 
-The book's proof uses Bertrand's postulate (Chapter 2) as a key ingredient:
-for the central case C(2k,k), a Bertrand prime p ∈ (k, 2k] divides (2k)!
-but not (k!)², hence divides C(2k,k).
+The book states Sylvester's theorem (1892):
 
-The general case extends this via analysis of the k-smooth parts of
-consecutive integers n, n-1, ..., n-k+1.
+> If n ≥ 2k, then at least one of the numbers n, n - 1, ..., n - k + 1
+> has a prime divisor p greater than k.
 
-As a consequence, C(n,k) is almost never a perfect power.
+Equivalently, the binomial coefficient C(n,k) = n(n-1)...(n-k+1)/k!
+always has a prime factor p > k when n ≥ 2k.
+
+The central case n = 2k is precisely Bertrand's postulate (Chapter 2).
+
+For the general case, the book notes (p. 13):
+
+> In 1934, Erdős gave a short and elementary Book Proof of Sylvester's
+> result, running along the lines of his proof of Bertrand's postulate.
+
+The book does **not** reproduce this proof in full. It references:
+
+> P. Erdős: A theorem of Sylvester and Schur,
+> J. London Math. Soc. 9 (1934), 282-288.
+
+The rest of Chapter 3 uses Sylvester's theorem as a lemma to prove the
+"binomial coefficients are almost never powers" result.
+
+## Formalization status
+
+The central case (C(2k,k)) is fully proved below using Bertrand's postulate.
+
+The general case (`sylvester_general`) currently takes `hsmooth` (that
+n.descFactorial k is not (k+1)-smooth) as a premise. Eliminating this
+premise requires a full formalization of Erdős's 1934 Sylvester-Schur
+proof, which uses a refined analysis of how prime powers are distributed
+among the k consecutive integers — more delicate than the Bertrand
+chapter's global inequality bounding.
+
+This is tracked in TODO.md as "Ch03: Sylvester smoothness core" —
+difficulty: Medium-Hard, blocker: needs Erdős 1934 proof formalized.
 -/
 
 namespace ProofsInTheBook.Chapter03

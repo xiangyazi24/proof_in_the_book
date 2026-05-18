@@ -85,6 +85,17 @@ theorem exists_large_prime_dvd_choose_of_descFactorial
   rcases h with ⟨p, hkp, hp, hpdvd⟩
   exact ⟨p, hkp, hp, prime_dvd_choose_of_large_prime_dvd_descFactorial hp hkp hpdvd⟩
 
+theorem prime_dvd_descFactorial_of_dvd_choose {n k p : ℕ}
+    (hdvd : p ∣ n.choose k) : p ∣ n.descFactorial k := by
+  rw [Nat.descFactorial_eq_factorial_mul_choose]
+  exact dvd_mul_of_dvd_right hdvd (k !)
+
+theorem exists_large_prime_dvd_descFactorial_of_choose
+    {n k : ℕ} (h : ∃ p, k < p ∧ p.Prime ∧ p ∣ n.choose k) :
+    HasPrimeFactorAbove k (n.descFactorial k) := by
+  rcases h with ⟨p, hkp, hp, hpdvd⟩
+  exact ⟨p, hkp, hp, prime_dvd_descFactorial_of_dvd_choose hpdvd⟩
+
 theorem not_mem_smoothNumbers_succ_iff_hasPrimeFactorAbove {k m : ℕ} :
     m ∉ (k + 1).smoothNumbers ↔ HasPrimeFactorAbove k m := by
   constructor
@@ -199,6 +210,10 @@ theorem sylvester_general (n k : ℕ) (_hn : 2 * k ≤ n) (_hk : 0 < k)
 theorem chapter03_sylvester (k : ℕ) (hk : 0 < k) :
     ∃ p, k < p ∧ p.Prime ∧ p ∣ (2 * k).choose k :=
   chapter03_sylvester_central k (Nat.ne_of_gt hk)
+
+theorem chapter03_sylvester_descFactorial (k : ℕ) (hk : 0 < k) :
+    HasPrimeFactorAbove k ((2 * k).descFactorial k) :=
+  exists_large_prime_dvd_descFactorial_of_choose (chapter03_sylvester k hk)
 
 /-!
 ### Binomial coefficients are almost never powers

@@ -615,6 +615,17 @@ def adjacentInList (l : List (Fin n)) (u v : Fin n) : Prop :=
   ∃ i : ℕ, ∃ hi : i < l.length, ∃ hi' : i + 1 < l.length,
     (l[i]'hi = u ∧ l[i + 1]'hi' = v) ∨ (l[i]'hi = v ∧ l[i + 1]'hi' = u)
 
+theorem adjacentInList_of_pair_infix {l : List (Fin n)} {u v : Fin n}
+    (h : [u, v] <:+: l) : adjacentInList l u v := by
+  rcases List.infix_iff_getElem?.mp h with ⟨i, hi, hget⟩
+  refine ⟨i, ?_, ?_, Or.inl ⟨?_, ?_⟩⟩
+  · grind
+  · grind
+  · have h0 := hget 0 (by simp : 0 < [u, v].length)
+    grind
+  · have h1 := hget 1 (by simp : 1 < [u, v].length)
+    grind
+
 def joyalRecoveredAdj (X : DoublyRootedLabeledTree n) (u v : Fin n) : Prop :=
   adjacentInList (joyalPathRangeOrder X) u v ∨
     (u ∉ joyalPathVertices X ∧ joyalTreeToFunction X u = v) ∨

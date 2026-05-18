@@ -925,6 +925,142 @@ theorem close_branch_upper_simple_aux {a k M : ℕ} {N L : ℝ}
     exact div_le_div_of_nonneg_right (by exact_mod_cast ha) (by norm_num)
   exact add_le_add_left (mul_le_mul_of_nonneg_right ha_real hN) ((k : ℝ) * L)
 
+theorem log2_lt_7_10 : Real.log 2 < (7 : ℝ) / 10 := by
+  nlinarith [Real.log_two_lt_d9]
+
+theorem log4_lt_7_5 : Real.log 4 < (7 : ℝ) / 5 := by
+  rw [show (4 : ℝ) = 2 ^ 2 by norm_num, Real.log_pow]
+  nlinarith [log2_lt_7_10]
+
+theorem log64_lt_21_5 : Real.log 64 < (21 : ℝ) / 5 := by
+  rw [show (64 : ℝ) = 2 ^ 6 by norm_num, Real.log_pow]
+  nlinarith [log2_lt_7_10]
+
+theorem log_le_div64_add_16_5_of_120_le {k : ℕ} (hk120 : 120 ≤ k) :
+    Real.log k ≤ (k : ℝ) / 64 + (16 : ℝ) / 5 := by
+  have hkpos : 0 < k := by omega
+  have hdivpos : 0 < (k : ℝ) / 64 := by positivity
+  have hlogdiv := Real.log_le_sub_one_of_pos (x := (k : ℝ) / 64) hdivpos
+  rw [Real.log_div (by exact_mod_cast hkpos.ne' : (k : ℝ) ≠ 0)
+    (by norm_num : (64 : ℝ) ≠ 0)] at hlogdiv
+  nlinarith [log64_lt_21_5]
+
+theorem large_k_stirling_tail_lt_div32 {k : ℕ} (hk120 : 120 ≤ k) :
+    Real.log k / 2 + (6 : ℝ) / 5 < (k : ℝ) / 32 := by
+  have hlog := log_le_div64_add_16_5_of_120_le hk120
+  have hkreal : (120 : ℝ) ≤ k := by exact_mod_cast hk120
+  nlinarith
+
+theorem log6_gt_8_5 : (8 : ℝ) / 5 < Real.log 6 := by
+  have hlog2 : (69 : ℝ) / 100 < Real.log 2 := by
+    nlinarith [Real.log_two_gt_d9]
+  have hlog3 : (1 : ℝ) < Real.log 3 := by
+    exact (Real.lt_log_iff_exp_lt (by norm_num : (0 : ℝ) < 3)).mpr Real.exp_one_lt_three
+  have hlog6 : Real.log 6 = Real.log 2 + Real.log 3 := by
+    rw [show (6 : ℝ) = 2 * 3 by norm_num, Real.log_mul]
+    all_goals norm_num
+  nlinarith
+
+theorem stirling_correction_ge_neg_log_k_sub_six_fifths
+    {n k : ℕ} (hkpos : 0 < k) (hklt : k < n) :
+    - Real.log k / 2 - (6 : ℝ) / 5 ≤
+      Real.log n / 2 - Real.log k / 2 - Real.log (n - k) / 2
+        + Real.log (2 * Real.pi) / 2 - 2 := by
+  have hnkpos : 0 < n - k := Nat.sub_pos_of_lt hklt
+  have hcast_sub : ((n - k : ℕ) : ℝ) = (n : ℝ) - (k : ℝ) :=
+    Nat.cast_sub (le_of_lt hklt)
+  have hnkpos_real : (0 : ℝ) < (n : ℝ) - (k : ℝ) := by
+    rw [← hcast_sub]
+    exact_mod_cast hnkpos
+  have hnk_le_n_real : (n : ℝ) - (k : ℝ) ≤ (n : ℝ) := by
+    have hk_nonneg : (0 : ℝ) ≤ k := by positivity
+    linarith
+  have hlognk_le_logn : Real.log (n - k) ≤ Real.log n :=
+    Real.log_le_log hnkpos_real hnk_le_n_real
+  have htwopi : (6 : ℝ) < 2 * Real.pi := by
+    nlinarith [Real.pi_gt_three]
+  have hlog6_le : Real.log 6 ≤ Real.log (2 * Real.pi) :=
+    Real.log_le_log (by norm_num) htwopi.le
+  nlinarith [log6_gt_8_5, hlog6_le]
+
+theorem two_mul_sub_one_div_add_one_le_log {x : ℝ} (hx1 : 1 ≤ x) :
+    2 * (x - 1) / (x + 1) ≤ Real.log x := by
+  by_cases hx : x = 1
+  · subst x
+    norm_num
+  have hxgt : 1 < x := lt_of_le_of_ne hx1 (Ne.symm hx)
+  let u : ℝ := (x - 1) / (x + 1)
+  have hdenpos : 0 < x + 1 := by linarith
+  have hu0 : 0 ≤ u := by
+    exact div_nonneg (by linarith) hdenpos.le
+  have hu1 : u < 1 := by
+    rw [show u = (x - 1) / (x + 1) by rfl]
+    rw [div_lt_one hdenpos]
+    linarith
+  have hsum := Real.sum_range_le_log_div hu0 hu1 1
+  norm_num at hsum
+  have hratio : (1 + u) / (1 - u) = x := by
+    rw [show u = (x - 1) / (x + 1) by rfl]
+    field_simp [hdenpos.ne']
+    ring
+  rw [hratio] at hsum
+  have hleft : 2 * (x - 1) / (x + 1) = 2 * u := by
+    rw [show u = (x - 1) / (x + 1) by rfl]
+    ring
+  rw [hleft]
+  nlinarith
+
+theorem two_div_two_mul_sub_one_le_log_div_sub_one {x : ℝ} (hx : 1 < x) :
+    2 / (2 * x - 1) ≤ Real.log (x / (x - 1)) := by
+  have hy1 : 1 ≤ x / (x - 1) := by
+    have hden : 0 < x - 1 := by linarith
+    rw [one_le_div hden]
+    linarith
+  have h := two_mul_sub_one_div_add_one_le_log hy1
+  have hden : 0 < x - 1 := by linarith
+  have hden2 : 0 < 2 * x - 1 := by linarith
+  convert h using 1
+  field_simp [hden.ne', hden2.ne']
+  ring
+
+theorem sqrt_div_mul_log_mul_le_of_120_le
+    {K x : ℝ} (hK : 120 ≤ K) (hx : 2 ≤ x) :
+    Real.sqrt (x / K) * Real.log (K * x) ≤
+      Real.sqrt (x / 120) * Real.log (120 * x) := by
+  have hxpos : 0 < x := by linarith
+  have hKpos : 0 < K := by linarith
+  have h120pos : (0 : ℝ) < 120 := by norm_num
+  have hz0 : Real.exp 2 ≤ 120 * x := by
+    have hexp1 : Real.exp 1 < 3 := Real.exp_one_lt_three
+    have hexp1pos : 0 < Real.exp 1 := Real.exp_pos 1
+    have hexp2 : Real.exp 2 < 9 := by
+      rw [show (2 : ℝ) = 1 + 1 by norm_num, Real.exp_add]
+      nlinarith
+    nlinarith
+  have hzK : Real.exp 2 ≤ K * x := by
+    have hle : 120 * x ≤ K * x := mul_le_mul_of_nonneg_right hK hxpos.le
+    exact hz0.trans hle
+  have hKx : 120 * x ≤ K * x := mul_le_mul_of_nonneg_right hK hxpos.le
+  have hanti := Real.log_div_sqrt_antitoneOn hz0 hzK hKx
+  have hscale :
+      x * (Real.log (K * x) / Real.sqrt (K * x)) ≤
+        x * (Real.log (120 * x) / Real.sqrt (120 * x)) :=
+    mul_le_mul_of_nonneg_left hanti hxpos.le
+  have hleft :
+      Real.sqrt (x / K) * Real.log (K * x) =
+        x * (Real.log (K * x) / Real.sqrt (K * x)) := by
+    rw [Real.sqrt_div hxpos.le, Real.sqrt_mul hKpos.le]
+    field_simp [ne_of_gt (Real.sqrt_pos_of_pos hxpos), ne_of_gt (Real.sqrt_pos_of_pos hKpos)]
+    rw [Real.sq_sqrt hxpos.le]
+  have hright :
+      Real.sqrt (x / 120) * Real.log (120 * x) =
+        x * (Real.log (120 * x) / Real.sqrt (120 * x)) := by
+    rw [Real.sqrt_div hxpos.le, Real.sqrt_mul h120pos.le]
+    field_simp [ne_of_gt (Real.sqrt_pos_of_pos hxpos), ne_of_gt (Real.sqrt_pos_of_pos h120pos)]
+    rw [Real.sq_sqrt hxpos.le]
+  rw [hleft, hright]
+  exact hscale
+
 set_option maxHeartbeats 800000 in
 theorem exists_large_prime_factor_choose_below_sq_close_of_sqrt33
     {n k : ℕ} (hk9 : 9 ≤ k) (hn2k : 2 * k ≤ n)

@@ -1094,6 +1094,31 @@ theorem rightMirrorCrossingPositions_card_eq_crossOrder_of_crossing {k : ℕ}
     rw [hmin]
     simp
 
+/-- Positions in `I` whose interval mirror crosses the middle barrier. -/
+noncomputable def mirrorCrossingPositions (k : ℕ) (I : PositionInterval (2 * k)) :
+    Finset (Fin (2 * k)) :=
+  leftMirrorCrossingPositions k I ∪ rightMirrorCrossingPositions k I
+
+theorem left_right_mirrorCrossingPositions_disjoint {k : ℕ}
+    (I : PositionInterval (2 * k)) :
+    Disjoint (leftMirrorCrossingPositions k I) (rightMirrorCrossingPositions k I) := by
+  classical
+  rw [Finset.disjoint_left]
+  intro p hp_left hp_right
+  rw [leftMirrorCrossingPositions, Finset.mem_filter] at hp_left
+  rw [rightMirrorCrossingPositions, Finset.mem_filter] at hp_right
+  exact not_lt_of_ge hp_right.2.1 hp_left.2.1
+
+theorem mirrorCrossingPositions_card_eq_two_mul_crossOrder_of_crossing {k : ℕ}
+    (I : PositionInterval (2 * k)) (hcross : I.lo < k ∧ k ≤ I.hi) :
+    (mirrorCrossingPositions k I).card = 2 * I.crossOrder k := by
+  classical
+  rw [mirrorCrossingPositions, Finset.card_union_of_disjoint
+    (left_right_mirrorCrossingPositions_disjoint I)]
+  rw [leftMirrorCrossingPositions_card_eq_crossOrder_of_crossing I hcross,
+    rightMirrorCrossingPositions_card_eq_crossOrder_of_crossing I hcross]
+  omega
+
 theorem crossOrder_eq_min_side_cards_of_crossing {k : ℕ} (I : PositionInterval (2 * k))
     (hcross : I.lo < k ∧ k ≤ I.hi) :
     I.crossOrder k =

@@ -1,6 +1,6 @@
 # TODO: Remaining Premises to Prove
 
-All 40 chapters compile with 0 `sorry` and 0 `axiom`. Ch03, Ch31, and Ch33
+All 40 chapters compile with 0 `sorry` and 0 `axiom`. Ch03, Ch31, Ch33, and Ch34
 have had their original explicit premises eliminated.
 
 ## Priority 1: Provable with current Mathlib
@@ -32,7 +32,7 @@ have had their original explicit premises eliminated.
   The key theorem is `joyal_tree_adj_iff_recovered`, which reconstructs all tree
   edges from the endofunction.
 
-### Ch34: Kernel-perfect extension step
+### ~~Ch34: Kernel-perfect extension step~~ ✅
 - **File:** `Chapter34.lean` line 124
 - **Premise:** `hextension : ∀ colored partialColor, ... → ∃ v c, ...`
 - **What it says:** Given a partial proper list-coloring, one more cell can always be colored.
@@ -41,8 +41,10 @@ have had their original explicit premises eliminated.
   replace this false greedy-extension interface with the actual Galvin proof:
   list coloring from a kernel-perfect orientation, then the Dinitz orientation
   and stable-matching kernel argument.
-- **Estimated effort:** Medium-hard. The proof must formalize the correct
-  kernel-perfect induction, not a one-cell greedy extension.
+- **Status:** Proved. The false `hextension` premise was removed from `galvin_theorem`.
+  The replacement formalizes the kernel-perfect list-coloring induction, the
+  Dinitz cyclic orientation, the outdegree bound, and the row-max/column-max
+  stable-matching kernel proof for every induced subgraph.
 
 ## Priority 2: Needs infrastructure not yet in Mathlib
 
@@ -77,11 +79,11 @@ have had their original explicit premises eliminated.
 | Ch33 | Hall's condition | Easy | None | ✅ **Done** |
 | Ch03 | Sylvester smoothness | Medium | None | ✅ **Done** |
 | Ch31 | Joyal/Cayley upper bound | Medium | None | ✅ **Done** |
-| Ch34 | Kernel-perfect orientation | Medium-Hard | None | ⬜ |
+| Ch34 | Kernel-perfect orientation | Medium-Hard | None | ✅ **Done** |
 | Ch11 | Rotating calipers | Medium | Convex hull | ⬜ |
 | Ch09 | arccos(1/3) irrationality | Hard | Niven's theorem | ⬜ |
 | Ch10 | Gallai geometry | Hard | Plane geometry | ⬜ |
 | Ch39 | Kneser lower bound | Very Hard | Borsuk-Ulam | ⬜ |
 
-Total estimated effort: ~1200 lines across 7 remaining chapters.
-Recommended attack order: Ch34 → Ch11 → Ch09 → Ch10 → Ch39.
+Total estimated effort: ~900 lines across 4 remaining chapters.
+Recommended attack order: Ch11 → Ch09 → Ch10 → Ch39.

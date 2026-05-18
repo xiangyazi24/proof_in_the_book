@@ -399,6 +399,248 @@ theorem dinitzSolution_of_kernel_perfect_orientation {n : ℕ} {α : Type*}
   · intro a b hab
     exact hproper a (Finset.mem_univ a) b (Finset.mem_univ b) hab hab.1
 
+/-! ### Stable matchings give Galvin kernels for the Dinitz orientation -/
+
+/-- A matching in an induced Dinitz conflict graph. -/
+def MatchingCells {n : ℕ} (A M : Finset (Cell n)) : Prop :=
+  M ⊆ A ∧
+    ∀ u ∈ M, ∀ v ∈ M, LatinConflict u v → u = v
+
+/-- A cell is dominated by a matching if it has an outgoing arc to a matched cell. -/
+def DominatedByMatching {n : ℕ} (M : Finset (Cell n)) (cell : Cell n) : Prop :=
+  ∃ matched ∈ M, dinitzOrient cell matched
+
+/--
+A stable matching for the Dinitz orientation: unmatched cells in `A` point to
+some matched cell. This is the exact kernel condition supplied by Galvin's
+stable-matching argument.
+-/
+def StableMatching {n : ℕ} (A M : Finset (Cell n)) : Prop :=
+  MatchingCells A M ∧
+    ∀ cell ∈ A, cell ∉ M → DominatedByMatching M cell
+
+theorem isKernelIn_of_stableMatching {n : ℕ} {A M : Finset (Cell n)}
+    (hstable : StableMatching A M) :
+    IsKernelIn A M LatinConflict dinitzOrient := by
+  rcases hstable with ⟨hmatching, hdom⟩
+  rcases hmatching with ⟨hsub, hind⟩
+  exact ⟨hsub, hind, hdom⟩
+
+private lemma exists_row_cyclic_max {n : ℕ} {A : Finset (Cell n)} {x : Cell n}
+    (hx : x ∈ A) :
+    ∃ y ∈ A, y.1 = x.1 ∧ cyclicLatinValue x ≤ cyclicLatinValue y ∧
+      ∀ z ∈ A, z.1 = x.1 → cyclicLatinValue z ≤ cyclicLatinValue y := by
+  classical
+  let R : Finset (Cell n) := A.filter fun z => z.1 = x.1
+  have hxR : x ∈ R := by
+    simp [R, hx]
+  obtain ⟨y, hymax⟩ := R.exists_maximalFor cyclicLatinValue ⟨x, hxR⟩
+  have hyR : y ∈ R := hymax.1
+  have hyA : y ∈ A := (Finset.mem_filter.mp hyR).1
+  have hyrow : y.1 = x.1 := (Finset.mem_filter.mp hyR).2
+  refine ⟨y, hyA, hyrow, ?_, ?_⟩
+  · have hx_le_or : cyclicLatinValue x ≤ cyclicLatinValue y ∨
+        cyclicLatinValue y ≤ cyclicLatinValue x := le_total _ _
+    rcases hx_le_or with hxy | hyx
+    · exact hxy
+    · exact hymax.2 hxR hyx
+  · intro z hzA hzrow
+    have hzR : z ∈ R := by
+      simp [R, hzA, hzrow]
+    have hz_le_or : cyclicLatinValue z ≤ cyclicLatinValue y ∨
+        cyclicLatinValue y ≤ cyclicLatinValue z := le_total _ _
+    rcases hz_le_or with hzy | hyz
+    · exact hzy
+    · exact hymax.2 hzR hyz
+
+private lemma exists_col_cyclic_max {n : ℕ} {A : Finset (Cell n)} {x : Cell n}
+    (hx : x ∈ A) :
+    ∃ y ∈ A, y.2 = x.2 ∧ cyclicLatinValue x ≤ cyclicLatinValue y ∧
+      ∀ z ∈ A, z.2 = x.2 → cyclicLatinValue z ≤ cyclicLatinValue y := by
+  classical
+  let C : Finset (Cell n) := A.filter fun z => z.2 = x.2
+  have hxC : x ∈ C := by
+    simp [C, hx]
+  obtain ⟨y, hymax⟩ := C.exists_maximalFor cyclicLatinValue ⟨x, hxC⟩
+  have hyC : y ∈ C := hymax.1
+  have hyA : y ∈ A := (Finset.mem_filter.mp hyC).1
+  have hycol : y.2 = x.2 := (Finset.mem_filter.mp hyC).2
+  refine ⟨y, hyA, hycol, ?_, ?_⟩
+  · have hx_le_or : cyclicLatinValue x ≤ cyclicLatinValue y ∨
+        cyclicLatinValue y ≤ cyclicLatinValue x := le_total _ _
+    rcases hx_le_or with hxy | hyx
+    · exact hxy
+    · exact hymax.2 hxC hyx
+  · intro z hzA hzcol
+    have hzC : z ∈ C := by
+      simp [C, hzA, hzcol]
+    have hz_le_or : cyclicLatinValue z ≤ cyclicLatinValue y ∨
+        cyclicLatinValue y ≤ cyclicLatinValue z := le_total _ _
+    rcases hz_le_or with hzy | hyz
+    · exact hzy
+    · exact hymax.2 hzC hyz
+
+/--
+The remaining hard Galvin lemma: every finite induced subgraph of the Dinitz
+orientation has a stable matching. This is the stable-marriage part of the
+book proof.
+-/
+theorem stableMatching_exists {n : ℕ} (A : Finset (Cell n)) :
+    ∃ M : Finset (Cell n), StableMatching A M := by
+  classical
+  let P : ℕ → Prop := fun m => ∀ A : Finset (Cell n), A.card = m →
+    ∃ M : Finset (Cell n), StableMatching A M
+  have hP : ∀ m, P m := by
+    intro m
+    induction m using Nat.strong_induction_on with
+    | h m ih =>
+      intro A hcard
+      by_cases hA : A.Nonempty
+      · let T : Finset (Cell n) :=
+          A.filter fun x =>
+            ∀ y ∈ A, y.1 = x.1 → cyclicLatinValue y ≤ cyclicLatinValue x
+        by_cases hTind : ∀ u ∈ T, ∀ v ∈ T, LatinConflict u v → u = v
+        · refine ⟨T, ?_⟩
+          constructor
+          · constructor
+            · exact Finset.filter_subset _ _
+            · exact hTind
+          · intro cell hcellA hcellT
+            obtain ⟨y, hyA, hyrow, _, hymax⟩ := exists_row_cyclic_max (A := A) hcellA
+            have hyT : y ∈ T := by
+              apply Finset.mem_filter.mpr
+              constructor
+              · exact hyA
+              intro z hzA hzrow
+              exact hymax z hzA (hzrow.trans hyrow)
+            have hlt : cyclicLatinValue cell < cyclicLatinValue y := by
+              by_contra hnot
+              have hyle : cyclicLatinValue y ≤ cyclicLatinValue cell := le_of_not_gt hnot
+              have hcellTin : cell ∈ T := by
+                apply Finset.mem_filter.mpr
+                constructor
+                · exact hcellA
+                intro z hzA hzrow
+                exact (hymax z hzA hzrow).trans hyle
+              exact hcellT hcellTin
+            refine ⟨y, hyT, ?_⟩
+            have hne : cell ≠ y := by
+              intro hcy
+              subst cell
+              exact (lt_irrefl (cyclicLatinValue y)) hlt
+            exact ⟨⟨hne, Or.inl hyrow.symm⟩, Or.inl ⟨hyrow.symm, hlt⟩⟩
+        · push Not at hTind
+          obtain ⟨u, huT, v, hvT, huvconf, huvne⟩ := hTind
+          have huA : u ∈ A := (Finset.mem_filter.mp huT).1
+          have hvA : v ∈ A := (Finset.mem_filter.mp hvT).1
+          have huMax : ∀ y ∈ A, y.1 = u.1 → cyclicLatinValue y ≤ cyclicLatinValue u :=
+            (Finset.mem_filter.mp huT).2
+          have hvMax : ∀ y ∈ A, y.1 = v.1 → cyclicLatinValue y ≤ cyclicLatinValue v :=
+            (Finset.mem_filter.mp hvT).2
+          obtain ⟨hune, hrowcol⟩ := huvconf
+          have hcoluv : u.2 = v.2 := by
+            rcases hrowcol with hrow | hcol
+            · have huvle : cyclicLatinValue u ≤ cyclicLatinValue v := hvMax u huA hrow
+              have hvule : cyclicLatinValue v ≤ cyclicLatinValue u := huMax v hvA hrow.symm
+              have hval : cyclicLatinValue u = cyclicLatinValue v := le_antisymm huvle hvule
+              have hcol' : u.2 = v.2 := cyclicLatinValue_eq_of_same_row hrow hval
+              exact hcol'
+            · exact hcol
+          have hvalne : cyclicLatinValue u ≠ cyclicLatinValue v := by
+            intro hval
+            have hrow' : u.1 = v.1 := cyclicLatinValue_eq_of_same_col hcoluv hval
+            exact hune (Prod.ext hrow' hcoluv)
+          have hpair :
+              ∃ low high : Cell n,
+                low ∈ T ∧ high ∈ T ∧ low.2 = high.2 ∧
+                  cyclicLatinValue low < cyclicLatinValue high := by
+            rcases lt_or_gt_of_ne hvalne with huvlt | hvult
+            · exact ⟨u, v, huT, hvT, hcoluv, huvlt⟩
+            · exact ⟨v, u, hvT, huT, hcoluv.symm, hvult⟩
+          obtain ⟨low, high, hlowT, hhighT, hlowhighcol, hlowhighlt⟩ := hpair
+          have hlowA : low ∈ A := (Finset.mem_filter.mp hlowT).1
+          have hhighA : high ∈ A := (Finset.mem_filter.mp hhighT).1
+          have hlowMax : ∀ y ∈ A, y.1 = low.1 → cyclicLatinValue y ≤ cyclicLatinValue low :=
+            (Finset.mem_filter.mp hlowT).2
+          obtain ⟨v₀, hv₀A, hv₀col, _, hv₀max⟩ := exists_col_cyclic_max (A := A) hlowA
+          have hhighle : cyclicLatinValue high ≤ cyclicLatinValue v₀ :=
+            hv₀max high hhighA hlowhighcol.symm
+          have hlowltv₀ : cyclicLatinValue low < cyclicLatinValue v₀ :=
+            hlowhighlt.trans_le hhighle
+          have hlow_ne_v₀ : low ≠ v₀ := by
+            intro h
+            subst low
+            exact (lt_irrefl (cyclicLatinValue v₀)) hlowltv₀
+          have hcardlt : (A.erase v₀).card < m := by
+            rw [← hcard]
+            exact Finset.card_erase_lt_of_mem hv₀A
+          obtain ⟨K, hKstable⟩ := ih (A.erase v₀).card hcardlt (A.erase v₀) rfl
+          rcases hKstable with ⟨hKmatch, hKdom⟩
+          rcases hKmatch with ⟨hKsubErase, hKind⟩
+          refine ⟨K, ?_⟩
+          constructor
+          · constructor
+            · intro x hxK
+              exact Finset.mem_of_mem_erase (hKsubErase hxK)
+            · exact hKind
+          · intro cell hcellA hcellK
+            by_cases hcellv₀ : cell = v₀
+            · subst cell
+              have hv₀K : v₀ ∉ K := by
+                intro hv₀K
+                exact (Finset.mem_erase.mp (hKsubErase hv₀K)).1 rfl
+              by_cases hlowK : low ∈ K
+              · refine ⟨low, hlowK, ?_⟩
+                have hne : v₀ ≠ low := by
+                  intro h
+                  subst v₀
+                  exact (lt_irrefl (cyclicLatinValue low)) hlowltv₀
+                exact ⟨⟨hne, Or.inr hv₀col⟩, Or.inr ⟨hv₀col, hlowltv₀⟩⟩
+              · have hlowErase : low ∈ A.erase v₀ := by
+                  simp [hlowA, hlow_ne_v₀]
+                obtain ⟨k, hkK, hlowk⟩ := hKdom low hlowErase hlowK
+                have hkA : k ∈ A := Finset.mem_of_mem_erase (hKsubErase hkK)
+                rcases hlowk with ⟨_, hdir⟩
+                rcases hdir with ⟨hkrow, hlowltk⟩ | ⟨hkcol, hkltlow⟩
+                · exfalso
+                  exact not_lt_of_ge (hlowMax k hkA hkrow.symm) hlowltk
+                · refine ⟨k, hkK, ?_⟩
+                  have hv₀kcol : v₀.2 = k.2 := hv₀col.trans hkcol
+                  have hkltv₀ : cyclicLatinValue k < cyclicLatinValue v₀ :=
+                    hkltlow.trans hlowltv₀
+                  have hne : v₀ ≠ k := by
+                    intro h
+                    subst v₀
+                    exact (lt_irrefl (cyclicLatinValue k)) hkltv₀
+                  exact ⟨⟨hne, Or.inr hv₀kcol⟩, Or.inr ⟨hv₀kcol, hkltv₀⟩⟩
+            · have hcellErase : cell ∈ A.erase v₀ := by
+                simp [hcellA, hcellv₀]
+              exact hKdom cell hcellErase hcellK
+      · refine ⟨∅, ?_⟩
+        constructor
+        · constructor
+          · intro x hx
+            simp at hx
+          · intro u hu
+            simp at hu
+        · intro cell hcellA _
+          exact False.elim (hA ⟨cell, hcellA⟩)
+  exact hP A.card A rfl
+
+theorem dinitzOrient_kernelPerfectOn {n : ℕ} :
+    KernelPerfectOn (Finset.univ : Finset (Cell n)) LatinConflict dinitzOrient := by
+  intro A hA hAne
+  obtain ⟨M, hM⟩ := stableMatching_exists A
+  exact ⟨M, isKernelIn_of_stableMatching hM⟩
+
+theorem dinitzSolution_of_dinitzOrient {n : ℕ} {α : Type*}
+    [DecidableEq α] [Inhabited α]
+    (lists : Cell n → Finset α) (hlists : ∀ cell, n ≤ (lists cell).card) :
+    ∃ color : Cell n → α, DinitzSolution lists color :=
+  dinitzSolution_of_kernel_perfect_orientation lists dinitzOrient
+    dinitzOrient_orientedEdge dinitzOrient_kernelPerfectOn
+    (dinitzOrient_outNeighbors_lt_list_card lists hlists)
+
 /--
 Galvin's theorem (the Dinitz conjecture): given an n×n array where each cell
 has a list of at least n colors, there exists a proper Latin coloring respecting
@@ -407,72 +649,23 @@ orderings and applies the greedy extension step.
 -/
 theorem galvin_theorem {n : ℕ} {α : Type*} [DecidableEq α]
     (lists : Cell n → Finset α)
-    (_hlists : ∀ cell, n ≤ (lists cell).card)
-    (hextension : ∀ (colored : Finset (Cell n)) (partialColor : Cell n → α),
-      colored.card < n * n →
-      (∀ c ∈ colored, partialColor c ∈ lists c) →
-      (∀ a ∈ colored, ∀ b ∈ colored, LatinConflict a b → partialColor a ≠ partialColor b) →
-      ∃ v ∉ colored, ∃ c ∈ lists v,
-        ∀ w ∈ colored, LatinConflict v w → c ≠ partialColor w) :
+    (hlists : ∀ cell, n ≤ (lists cell).card) :
     ∃ color : Cell n → α, DinitzSolution lists color := by
   classical
-  let Good (colored : Finset (Cell n)) (partialColor : Cell n → α) : Prop :=
-    (∀ c ∈ colored, partialColor c ∈ lists c) ∧
-      (∀ a ∈ colored, ∀ b ∈ colored,
-        LatinConflict a b → partialColor a ≠ partialColor b)
-  let arbitraryColor : Cell n → α := fun cell => by
-    have hnpos : 0 < n := lt_of_le_of_lt (Nat.zero_le cell.1.val) cell.1.isLt
-    have hcard_pos : 0 < (lists cell).card := lt_of_lt_of_le hnpos (_hlists cell)
-    exact Classical.choose (Finset.card_pos.mp hcard_pos)
-  have hconf_sym : ∀ a b : Cell n, LatinConflict a b → LatinConflict b a := by
-    intro a b h; unfold LatinConflict at h ⊢; rcases h with ⟨hne, hrc⟩
-    exact ⟨fun hba => hne hba.symm, hrc.elim (fun h => Or.inl h.symm) (fun h => Or.inr h.symm)⟩
-  have exists_good : ∀ k, k ≤ n * n →
-      ∃ colored : Finset (Cell n), ∃ partialColor : Cell n → α,
-        colored.card = k ∧ Good colored partialColor := by
-    intro k; induction k with
-    | zero => intro _; refine ⟨∅, arbitraryColor, by simp, ?_⟩; simp [Good]
-    | succ k ih =>
-      intro hk
-      obtain ⟨colored, partialColor, hcard, hgood⟩ := ih (Nat.le_of_succ_le hk)
-      change (∀ c ∈ colored, partialColor c ∈ lists c) ∧
-        (∀ a ∈ colored, ∀ b ∈ colored, LatinConflict a b → partialColor a ≠ partialColor b) at hgood
-      rcases hgood with ⟨hlist_colored, hproper_colored⟩
-      have hlt : colored.card < n * n := by rw [hcard]; exact Nat.lt_of_succ_le hk
-      obtain ⟨v, hvnot, c, hcin, havoid⟩ :=
-        hextension colored partialColor hlt hlist_colored hproper_colored
-      refine ⟨insert v colored, Function.update partialColor v c, ?_, ?_⟩
-      · simpa [hcard, Nat.succ_eq_add_one] using Finset.card_insert_of_notMem hvnot
-      · change (∀ x ∈ insert v colored,
-            Function.update partialColor v c x ∈ lists x) ∧
-          (∀ a ∈ insert v colored, ∀ b ∈ insert v colored,
-            LatinConflict a b →
-              Function.update partialColor v c a ≠ Function.update partialColor v c b)
-        constructor
-        · intro x hx; rcases Finset.mem_insert.mp hx with rfl | hx
-          · rw [Function.update_self]; exact hcin
-          · rw [Function.update_of_ne (fun h => hvnot (by rwa [← h]))]; exact hlist_colored x hx
-        · intro a ha b hb hab
-          rcases Finset.mem_insert.mp ha with rfl | ha <;>
-            rcases Finset.mem_insert.mp hb with rfl | hb
-          · exact absurd rfl hab.1
-          · rw [Function.update_self, Function.update_of_ne (fun h => hvnot (by rwa [← h]))]
-            exact havoid b hb hab
-          · rw [Function.update_of_ne (fun h => hvnot (by rwa [← h])), Function.update_self]
-            have ha' : a ∈ colored := by rcases Finset.mem_insert.mp ha with rfl | h; exact absurd rfl hab.1; exact h
-            intro h; exact havoid a ha' (hconf_sym _ _ hab) h.symm
-          · rw [Function.update_of_ne (fun h => hvnot (by rwa [← h])),
-                 Function.update_of_ne (fun h => hvnot (by rwa [← h]))]
-            exact hproper_colored a ha b hb hab
-  obtain ⟨colored, color, hcard, hgood⟩ := exists_good (n * n) le_rfl
-  change (∀ c ∈ colored, color c ∈ lists c) ∧
-    (∀ a ∈ colored, ∀ b ∈ colored, LatinConflict a b → color a ≠ color b) at hgood
-  rcases hgood with ⟨hlist_colored, hproper_colored⟩
-  have huniv : colored = Finset.univ :=
-    Finset.eq_of_subset_of_card_le (Finset.subset_univ _) (by simp [Cell, hcard])
-  exact ⟨color, fun cell => hlist_colored cell (by rw [huniv]; exact Finset.mem_univ cell),
-    fun a b hab => hproper_colored a (by rw [huniv]; exact Finset.mem_univ a)
-      b (by rw [huniv]; exact Finset.mem_univ b) hab⟩
+  by_cases hn : n = 0
+  · subst n
+    let color : Cell 0 → α := fun cell => Fin.elim0 cell.1
+    refine ⟨color, ?_⟩
+    constructor
+    · intro cell
+      exact Fin.elim0 cell.1
+    · intro a _ _
+      exact Fin.elim0 a.1
+  · have hnpos : 0 < n := Nat.pos_of_ne_zero hn
+    let z : Fin n := ⟨0, hnpos⟩
+    have hcard_pos : 0 < (lists (z, z)).card := lt_of_lt_of_le hnpos (hlists (z, z))
+    haveI : Inhabited α := ⟨Classical.choose (Finset.card_pos.mp hcard_pos)⟩
+    exact dinitzSolution_of_dinitzOrient lists hlists
 
 theorem chapter34 {n : ℕ} {α : Type*} {lists : Cell n → Finset α} {color : Cell n → α}
     (hlist : RespectsLists lists color) (hinj : RowColumnInjective color) :

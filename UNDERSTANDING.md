@@ -9,12 +9,11 @@ Full-book formalization of *Proofs from THE BOOK* (Aigner & Ziegler) in Lean 4.
 
 - 40 chapters compile with 0 `sorry` and 0 `axiom`.
 - Ch31 Cayley upper bound has been eliminated via Joyal's endofunction injection.
+- Ch34 Dinitz/Galvin premise has been eliminated via kernel-perfect orientation
+  and stable-matching kernels.
 - Ch33 Hall's condition premise eliminated.
 - Ch03 Sylvester-Schur premise eliminated; `sylvester_general` now proves the binomial coefficient form directly from `2 * k ≤ n` and `0 < k`.
-- Next target: Ch34 Dinitz/Galvin. The current `hextension` interface is too
-  strong: arbitrary partial proper list-colorings are not always one-cell
-  extendable. The correct route is the book's kernel-perfect orientation plus
-  stable-matching kernel argument.
+- Next target: Ch11 rotating calipers / slopes count.
 
 ## Premises to eliminate (from TODO.md)
 
@@ -23,7 +22,7 @@ Full-book formalization of *Proofs from THE BOOK* (Aigner & Ziegler) in Lean 4.
 | Ch33 | Hall's condition | Easy | ✅ DONE |
 | Ch03 | Sylvester smoothness | Medium-Hard | ✅ DONE |
 | Ch31 | Joyal/Cayley upper bound | Medium | ✅ DONE |
-| Ch34 | Kernel-perfect extension | Medium-Hard | ⬜ |
+| Ch34 | Kernel-perfect extension | Medium-Hard | ✅ DONE |
 | Ch11 | Rotating calipers | Medium | ⬜ |
 | Ch09 | arccos(1/3) irrationality | Hard | ⬜ |
 | Ch10 | Gallai geometry | Hard | ⬜ |
@@ -140,19 +139,25 @@ theorem joyal_tree_adj_iff_recovered (X : DoublyRootedLabeledTree n) (u v : Fin 
 This reconstructs all original tree edges from the Joyal endofunction data.
 The final proof is remote-build checked and has no `sorry`.
 
-## Ch34 — Kernel-perfect orientation
+## Ch34 — Kernel-perfect orientation (DONE)
 
 Premise: `hextension : ∀ colored partialColor, ... → ∃ v c, ...`
 
 The current premise is mathematically too strong: a partial proper coloring of
 an `n × n` Dinitz array with lists of size `n` need not be extendable by coloring
 one additional arbitrary-uncolored cell. The correct proof is not greedy over
-arbitrary partial colorings. It must be replaced by Galvin's proof:
+arbitrary partial colorings. It has been replaced by Galvin's proof:
 
 1. Prove list-colorability from a kernel-perfect orientation with
    `|C(v)| > outdegree(v)` for every vertex.
 2. Construct the Dinitz orientation from a Latin square order.
 3. Prove every induced subgraph has a kernel via the stable-matching lemma.
+
+The committed proof uses the cyclic Latin value orientation. Kernel existence
+is proved directly on finite induced cell sets by the row-max/column-max
+stable-matching argument: if row-maximal cells are independent, they form a
+kernel; otherwise a same-column conflicting pair lets one delete a column-maximum
+cell and lift the inductive kernel back.
 
 ## Ch11 — Rotating calipers (slopes count)
 

@@ -1148,6 +1148,36 @@ theorem sqrt_div_mul_log_mul_le_of_120_le
   rw [hleft, hright]
   exact hscale
 
+theorem sqrt_div_mul_log_mul_le_of_base_le
+    {K0 K x : ℝ} (hK0pos : 0 < K0) (hK0K : K0 ≤ K) (hxpos : 0 < x)
+    (hexp : Real.exp 2 ≤ K0 * x) :
+    Real.sqrt (x / K) * Real.log (K * x) ≤
+      Real.sqrt (x / K0) * Real.log (K0 * x) := by
+  have hKpos : 0 < K := hK0pos.trans_le hK0K
+  have hzK : Real.exp 2 ≤ K * x := by
+    have hle : K0 * x ≤ K * x := mul_le_mul_of_nonneg_right hK0K hxpos.le
+    exact hexp.trans hle
+  have hKx : K0 * x ≤ K * x := mul_le_mul_of_nonneg_right hK0K hxpos.le
+  have hanti := Real.log_div_sqrt_antitoneOn hexp hzK hKx
+  have hscale :
+      x * (Real.log (K * x) / Real.sqrt (K * x)) ≤
+        x * (Real.log (K0 * x) / Real.sqrt (K0 * x)) :=
+    mul_le_mul_of_nonneg_left hanti hxpos.le
+  have hleft :
+      Real.sqrt (x / K) * Real.log (K * x) =
+        x * (Real.log (K * x) / Real.sqrt (K * x)) := by
+    rw [Real.sqrt_div hxpos.le, Real.sqrt_mul hKpos.le]
+    field_simp [ne_of_gt (Real.sqrt_pos_of_pos hxpos), ne_of_gt (Real.sqrt_pos_of_pos hKpos)]
+    rw [Real.sq_sqrt hxpos.le]
+  have hright :
+      Real.sqrt (x / K0) * Real.log (K0 * x) =
+        x * (Real.log (K0 * x) / Real.sqrt (K0 * x)) := by
+    rw [Real.sqrt_div hxpos.le, Real.sqrt_mul hK0pos.le]
+    field_simp [ne_of_gt (Real.sqrt_pos_of_pos hxpos), ne_of_gt (Real.sqrt_pos_of_pos hK0pos)]
+    rw [Real.sq_sqrt hxpos.le]
+  rw [hleft, hright]
+  exact hscale
+
 theorem nat_sqrt_div_le_sqrt_ratio {n k : ℕ} (hkpos : 0 < k) :
     ((sqrt n : ℕ) : ℝ) / (k : ℝ) ≤
       Real.sqrt (((n : ℝ) / (k : ℝ)) / (k : ℝ)) := by

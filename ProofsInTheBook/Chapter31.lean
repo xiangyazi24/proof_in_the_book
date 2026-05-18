@@ -183,6 +183,24 @@ theorem joyalPathRangeOrder_nodup (X : DoublyRootedLabeledTree n) :
     (SimpleGraph.Walk.isPath_def (treePath X.1 X.2.1 X.2.2)).mp
       (treePath_isPath X.1 X.2.1 X.2.2)
 
+theorem joyalPathDomainOrder_toFinset (X : DoublyRootedLabeledTree n) :
+    (joyalPathDomainOrder X).toFinset = joyalPathVertices X := by
+  simp [joyalPathDomainOrder]
+
+theorem joyalPathRangeOrder_toFinset (X : DoublyRootedLabeledTree n) :
+    (joyalPathRangeOrder X).toFinset = joyalPathVertices X := by
+  rfl
+
+theorem joyalPathOrders_length_eq (X : DoublyRootedLabeledTree n) :
+    (joyalPathDomainOrder X).length = (joyalPathRangeOrder X).length := by
+  calc
+    (joyalPathDomainOrder X).length = (joyalPathVertices X).card := by
+      simp [joyalPathDomainOrder]
+    _ = (joyalPathRangeOrder X).toFinset.card := by
+      rw [joyalPathRangeOrder_toFinset]
+    _ = (joyalPathRangeOrder X).length := by
+      rw [List.toFinset_card_of_nodup (joyalPathRangeOrder_nodup X)]
+
 theorem doublyRootedLabeledTree_card (n : ℕ) :
     Fintype.card (DoublyRootedLabeledTree n) = Fintype.card (LabeledTree n) * n * n := by
   simp [DoublyRootedLabeledTree, Nat.mul_assoc]

@@ -921,6 +921,19 @@ def order {k : ℕ} {π ρ : State (2 * k)} (M : ReversalStep k π ρ) : ℕ :=
 def IsCrossing {k : ℕ} {π ρ : State (2 * k)} (M : ReversalStep k π ρ) : Prop :=
   0 < M.order
 
+/-- The labels crossing in one reversal step fit inside the full position set. -/
+theorem two_mul_order_le_positions {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) :
+    2 * M.order ≤ 2 * k := by
+  calc
+    2 * M.order =
+        ∑ i : Fin M.move.blockCount, 2 * (M.move.block i).crossOrder k := by
+          simp [order, Finset.mul_sum]
+    _ ≤ ∑ i : Fin M.move.blockCount, (M.move.block i).length := by
+          exact Finset.sum_le_sum
+            (by intro i _hi; exact PositionInterval.two_mul_crossOrder_le_length (M.move.block i))
+    _ ≤ 2 * k := M.move.sum_block_lengths_le
+
 end ReversalStep
 
 /-- The number of labels crossing the middle barrier in one concrete step. -/

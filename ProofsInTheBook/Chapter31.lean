@@ -87,6 +87,19 @@ theorem smallestTreeLeaf_le_of_unique_adj (n : ℕ) (hn : 2 ≤ n) (T : LabeledT
     smallestTreeLeaf n hn T ≤ v := by
   exact Finset.min'_le _ _ (by simp [treeLeaves, hv])
 
+noncomputable def smallestTreeLeafNeighbor (n : ℕ) (hn : 2 ≤ n) (T : LabeledTree n) : Fin n :=
+  (ExistsUnique.exists (unique_adj_smallestTreeLeaf n hn T)).choose
+
+theorem smallestTreeLeaf_adj_neighbor (n : ℕ) (hn : 2 ≤ n) (T : LabeledTree n) :
+    T.1.Adj (smallestTreeLeaf n hn T) (smallestTreeLeafNeighbor n hn T) :=
+  (ExistsUnique.exists (unique_adj_smallestTreeLeaf n hn T)).choose_spec
+
+theorem smallestTreeLeaf_neighbor_unique (n : ℕ) (hn : 2 ≤ n) (T : LabeledTree n)
+    {w : Fin n} (hw : T.1.Adj (smallestTreeLeaf n hn T) w) :
+    w = smallestTreeLeafNeighbor n hn T := by
+  exact (unique_adj_smallestTreeLeaf n hn T).unique hw
+    (smallestTreeLeaf_adj_neighbor n hn T)
+
 /-!
 ### Current target: eliminate the Cayley upper-bound premise
 

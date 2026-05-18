@@ -73,6 +73,53 @@ theorem factorization_choose_eq_zero_of_noLargePrimeFactor
     exact (not_lt_of_ge (hno p hp hpdvd)) hkp
   · exact Nat.factorization_eq_zero_of_not_prime (n.choose k) hp
 
+theorem Finset.prod_le_pow_card_of_le {α : Type*} (s : Finset α) (f : α → ℕ) (N : ℕ)
+    (h : ∀ a ∈ s, f a ≤ N) : (∏ a ∈ s, f a) ≤ N ^ s.card := by
+  classical
+  calc
+    (∏ a ∈ s, f a) ≤ ∏ _a ∈ s, N := Finset.prod_le_prod' h
+    _ = N ^ s.card := by rw [Finset.prod_const]
+
+theorem choose_le_pow_primeCounting_of_noLargePrimeFactor
+    {n k : ℕ} (hnpos : 0 < n) (hkn : k ≤ n)
+    (hno : NoLargePrimeFactor k (n.choose k)) :
+    n.choose k ≤ n ^ Nat.primeCounting k := by
+  classical
+  let s := (Finset.range (n + 1)).filter (fun p => p ∈ Nat.primesLE k)
+  have hprod_filter :
+      (∏ p ∈ Finset.range (n + 1), p ^ (n.choose k).factorization p)
+        = ∏ p ∈ s, p ^ (n.choose k).factorization p := by
+    symm
+    refine Finset.prod_subset (Finset.filter_subset _ _) ?_
+    intro p hp_range hp_not_s
+    have hp_not_primes : p ∉ Nat.primesLE k := by
+      intro hp_primes
+      exact hp_not_s (Finset.mem_filter.mpr ⟨hp_range, hp_primes⟩)
+    have hfac : (n.choose k).factorization p = 0 := by
+      by_cases hpprime : p.Prime
+      · have hkp : k < p := by
+          by_contra hnot
+          exact hp_not_primes (Nat.mem_primesLE.mpr ⟨le_of_not_gt hnot, hpprime⟩)
+        exact factorization_choose_eq_zero_of_noLargePrimeFactor hno hkp
+      · exact Nat.factorization_eq_zero_of_not_prime (n.choose k) hpprime
+    simp [hfac]
+  have hprod_le : (∏ p ∈ s, p ^ (n.choose k).factorization p) ≤ n ^ s.card :=
+    Finset.prod_le_pow_card_of_le s (fun p => p ^ (n.choose k).factorization p) n
+      (fun p _ => Nat.pow_factorization_choose_le hnpos)
+  have hcard : s.card ≤ (Nat.primesLE k).card := by
+    refine Finset.card_le_card ?_
+    intro p hp
+    exact (Finset.mem_filter.mp hp).2
+  have hpow_card : n ^ s.card ≤ n ^ Nat.primeCounting k := by
+    rw [← Nat.primesLE_card_eq_primeCounting]
+    exact Nat.pow_le_pow_right hnpos hcard
+  calc
+    n.choose k = ∏ p ∈ Finset.range (n + 1), p ^ (n.choose k).factorization p := by
+      exact (Nat.prod_pow_factorization_choose n k hkn).symm
+    _ = ∏ p ∈ s, p ^ (n.choose k).factorization p := hprod_filter
+    _ ≤ n ^ s.card := hprod_le
+    _ ≤ n ^ Nat.primeCounting k := hpow_card
+
 /--
 Factorial form of the standard binomial-divisibility argument: if a prime
 divides `n!` but not the two factorial factors in

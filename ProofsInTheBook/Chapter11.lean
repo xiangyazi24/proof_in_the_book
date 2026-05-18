@@ -1342,6 +1342,27 @@ theorem position_crosses_mem_crossingBlockIndex {k : ℕ} {π ρ : State (2 * k)
     M.crossingBlockIndex_unique hM hcross
   rwa [hi] at hpi
 
+theorem positionCrossingCard_le_crossingBlock_length {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (hM : M.IsCrossing) :
+    positionCrossingCard k M.move.map ≤
+      (M.move.block (M.crossingBlockIndex hM)).length := by
+  classical
+  unfold positionCrossingCard
+  let B := M.move.block (M.crossingBlockIndex hM)
+  let f :
+      {p : Fin (2 * k) // middleLeft k p ↔ ¬ middleLeft k (M.move.map p)} →
+        {p : Fin (2 * k) // p ∈ B.toFinset} :=
+    fun p => ⟨p.1, PositionInterval.mem_toFinset.mpr
+      (M.position_crosses_mem_crossingBlockIndex hrev hM p.2)⟩
+  have hinj : Function.Injective f := by
+    intro a b h
+    apply Subtype.ext
+    exact congrArg (fun x : {p : Fin (2 * k) // p ∈ B.toFinset} => (x : Fin (2 * k))) h
+  have hcard := Fintype.card_le_of_injective f hinj
+  have hBcard : Fintype.card {p : Fin (2 * k) // p ∈ B.toFinset} = B.length := by
+    simpa using B.toFinset_card
+  rwa [hBcard] at hcard
+
 /-- The labels crossing in one reversal step fit inside the full position set. -/
 theorem two_mul_order_le_positions {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) :

@@ -63,6 +63,17 @@ noncomputable def entropyTerm (n k : ℕ) : ℝ :=
 def primeIntervalProduct (a b : ℕ) : ℕ :=
   ∏ p ∈ Finset.Ioc a b with p.Prime, p
 
+theorem primeIntervalProduct_dvd_choose {a M : ℕ} (haM : a ≤ M) (hd : M - a ≤ a) :
+    primeIntervalProduct a M ∣ M.choose a := by
+  rw [primeIntervalProduct, ← Nat.add_sub_of_le haM]
+  exact Finset.prod_primes_dvd _ (fun _ hp => (Finset.mem_filter.1 hp).2.prime) fun p hp => by
+    rw [Finset.mem_filter, Finset.mem_Ioc] at hp
+    exact hp.2.dvd_choose_add hp.1.1 (hd.trans_lt hp.1.1) hp.1.2
+
+theorem primeIntervalProduct_le_choose {a M : ℕ} (haM : a ≤ M) (hd : M - a ≤ a) :
+    primeIntervalProduct a M ≤ M.choose a := by
+  exact le_of_dvd (Nat.choose_pos haM) (primeIntervalProduct_dvd_choose haM hd)
+
 theorem not_hasPrimeFactorAbove_iff_noLargePrimeFactor {k m : ℕ} :
     ¬ HasPrimeFactorAbove k m ↔ NoLargePrimeFactor k m := by
   constructor

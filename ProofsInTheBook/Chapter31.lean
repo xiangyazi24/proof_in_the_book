@@ -584,6 +584,25 @@ theorem joyalPathRangeOrder_last (X : DoublyRootedLabeledTree n)
   simpa [joyalPathRangeOrder, SimpleGraph.Walk.length_support] using
     SimpleGraph.Walk.support_getElem_length (treePath X.1 X.2.1 X.2.2)
 
+theorem mem_joyalPathVertices_of_mem_treePath_to_left (X : DoublyRootedLabeledTree n)
+    {z y : Fin n} (hz : z ∈ joyalPathVertices X)
+    (hy : y ∈ (treePath X.1 z X.2.1).support) :
+    y ∈ joyalPathVertices X := by
+  classical
+  let p := treePath X.1 X.2.1 X.2.2
+  have hzsup : z ∈ p.support := by
+    simpa [joyalPathVertices, p] using hz
+  let q : X.1.1.Walk z X.2.1 := (p.takeUntil z hzsup).reverse
+  have hqPath : q.IsPath := by
+    exact ((treePath_isPath X.1 X.2.1 X.2.2).takeUntil hzsup).reverse
+  have hqEq : q = treePath X.1 z X.2.1 := treePath_unique X.1 z X.2.1 hqPath
+  have hyq : y ∈ q.support := by
+    rwa [hqEq]
+  have hytake : y ∈ (p.takeUntil z hzsup).support := by
+    simpa [q, SimpleGraph.Walk.support_reverse] using hyq
+  have hyp : y ∈ p.support := SimpleGraph.Walk.support_takeUntil_subset p hzsup hytake
+  simpa [joyalPathVertices, p] using hyp
+
 theorem joyal_left_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
     (hXY : joyalTreeToFunction X = joyalTreeToFunction Y) :
     X.2.1 = Y.2.1 := by

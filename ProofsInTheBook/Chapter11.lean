@@ -862,6 +862,42 @@ namespace BlockMove
 def SameBlock {N : ℕ} (M : BlockMove N) (p q : Fin N) : Prop :=
   ∃ b : Fin M.blockCount, (M.block b).Mem p ∧ (M.block b).Mem q
 
+theorem pairwise_disjoint_toFinset {N : ℕ} (M : BlockMove N) :
+    ((Finset.univ : Finset (Fin M.blockCount)) : Set (Fin M.blockCount)).PairwiseDisjoint
+      (fun i => (M.block i).toFinset) := by
+  classical
+  intro i _hi j _hj hij
+  change Disjoint (M.block i).toFinset (M.block j).toFinset
+  rw [Finset.disjoint_left]
+  intro p hpi hpj
+  have hset_dis : Disjoint ((M.block i).toSet) ((M.block j).toSet) :=
+    M.pairwise_disjoint (by simp) (by simp) hij
+  have hpi_set : p ∈ (M.block i).toSet := by
+    simpa [PositionInterval.toSet, PositionInterval.mem_toFinset] using hpi
+  have hpj_set : p ∈ (M.block j).toSet := by
+    simpa [PositionInterval.toSet, PositionInterval.mem_toFinset] using hpj
+  exact hset_dis.le_bot ⟨hpi_set, hpj_set⟩
+
+/-- Pairwise-disjoint blocks in `Fin N` have total length at most `N`. -/
+theorem sum_block_lengths_le {N : ℕ} (M : BlockMove N) :
+    (∑ i : Fin M.blockCount, (M.block i).length) ≤ N := by
+  classical
+  have hcard :
+      ((Finset.univ : Finset (Fin M.blockCount)).biUnion
+        (fun i => (M.block i).toFinset)).card =
+        ∑ i : Fin M.blockCount, ((M.block i).toFinset).card := by
+    simpa using
+      (Finset.card_biUnion (s := (Finset.univ : Finset (Fin M.blockCount)))
+        (t := fun i => (M.block i).toFinset) M.pairwise_disjoint_toFinset)
+  have hle :
+      ((Finset.univ : Finset (Fin M.blockCount)).biUnion
+        (fun i => (M.block i).toFinset)).card ≤ N := by
+    simpa [Fintype.card_fin] using
+      (((Finset.univ : Finset (Fin M.blockCount)).biUnion
+        (fun i => (M.block i).toFinset)).card_le_univ)
+  rw [hcard] at hle
+  simpa [PositionInterval.toFinset_card] using hle
+
 end BlockMove
 
 /--

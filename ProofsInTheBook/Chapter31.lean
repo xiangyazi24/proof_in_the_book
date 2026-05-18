@@ -626,6 +626,12 @@ theorem adjacentInList_of_pair_infix {l : List (Fin n)} {u v : Fin n}
   · have h1 := hget 1 (by simp : 1 < [u, v].length)
     grind
 
+theorem adjacentInList_comm {l : List (Fin n)} {u v : Fin n}
+    (h : adjacentInList l u v) : adjacentInList l v u := by
+  rcases h with ⟨i, hi, hi', huv | hvu⟩
+  · exact ⟨i, hi, hi', Or.inr huv⟩
+  · exact ⟨i, hi, hi', Or.inl hvu⟩
+
 def joyalRecoveredAdj (X : DoublyRootedLabeledTree n) (u v : Fin n) : Prop :=
   adjacentInList (joyalPathRangeOrder X) u v ∨
     (u ∉ joyalPathVertices X ∧ joyalTreeToFunction X u = v) ∨
@@ -650,6 +656,25 @@ theorem joyalRecoveredAdj_of_offpath_dist_left_add_one_right (X : DoublyRootedLa
   refine ⟨hw, ?_⟩
   rw [joyalTreeToFunction_apply_of_not_mem X hw]
   exact joyalOffPathValue_eq_of_adj_dist_left_add_one X hw hadj.symm hdist
+
+theorem joyalRecoveredAdj_of_mem_path_darts (X : DoublyRootedLabeledTree n)
+    {u v : Fin n} (hadj : X.1.1.Adj u v)
+    (hd : ⟨⟨u, v⟩, hadj⟩ ∈ (treePath X.1 X.2.1 X.2.2).darts) :
+    joyalRecoveredAdj X u v := by
+  left
+  exact adjacentInList_of_pair_infix (l := joyalPathRangeOrder X) <| by
+    simpa [joyalPathRangeOrder] using
+      (SimpleGraph.Walk.mem_darts_iff_infix_support hadj).mp hd
+
+theorem joyalRecoveredAdj_of_mem_path_darts_symm (X : DoublyRootedLabeledTree n)
+    {u v : Fin n} (hadj : X.1.1.Adj u v)
+    (hd : ⟨⟨v, u⟩, hadj.symm⟩ ∈ (treePath X.1 X.2.1 X.2.2).darts) :
+    joyalRecoveredAdj X u v := by
+  left
+  apply adjacentInList_comm
+  exact adjacentInList_of_pair_infix (l := joyalPathRangeOrder X) <| by
+    have hinfix := (SimpleGraph.Walk.mem_darts_iff_infix_support hadj.symm).mp hd
+    simpa [joyalPathRangeOrder] using hinfix
 
 theorem adjacentInList_joyalPathRangeOrder_adj (X : DoublyRootedLabeledTree n)
     {u v : Fin n} (h : adjacentInList (joyalPathRangeOrder X) u v) :

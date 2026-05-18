@@ -1140,6 +1140,22 @@ theorem sqrt_div_mul_log_mul_le_of_120_le
   rw [hleft, hright]
   exact hscale
 
+theorem nat_sqrt_div_le_sqrt_ratio {n k : ℕ} (hkpos : 0 < k) :
+    ((sqrt n : ℕ) : ℝ) / (k : ℝ) ≤
+      Real.sqrt (((n : ℝ) / (k : ℝ)) / (k : ℝ)) := by
+  have hkpos_real : (0 : ℝ) < k := by exact_mod_cast hkpos
+  have hnonneg : 0 ≤ ((sqrt n : ℕ) : ℝ) / (k : ℝ) := by positivity
+  have harg_nonneg : 0 ≤ ((n : ℝ) / (k : ℝ)) / (k : ℝ) := by positivity
+  have hsqrt_sq_nat : sqrt n * sqrt n ≤ n := Nat.sqrt_le n
+  have hsqrt_sq_real : (((sqrt n : ℕ) : ℝ) / (k : ℝ)) ^ 2 ≤
+      ((n : ℝ) / (k : ℝ)) / (k : ℝ) := by
+    have hcast : (((sqrt n : ℕ) : ℝ) ^ 2) ≤ (n : ℝ) := by
+      norm_num [pow_two]
+      exact_mod_cast hsqrt_sq_nat
+    field_simp [ne_of_gt hkpos_real]
+    nlinarith
+  exact (Real.le_sqrt hnonneg harg_nonneg).mpr hsqrt_sq_real
+
 set_option maxHeartbeats 800000 in
 theorem exists_large_prime_factor_choose_below_sq_close_of_sqrt33
     {n k : ℕ} (hk9 : 9 ≤ k) (hn2k : 2 * k ≤ n)

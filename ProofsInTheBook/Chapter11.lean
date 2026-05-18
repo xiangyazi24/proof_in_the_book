@@ -484,11 +484,6 @@ structure UngarMoveSchedule (k r : ℕ) extends UngarCountingCertificate (2 * k)
       (idx ⟨0, by omega⟩).val +
         (r - 1 - (idx ⟨crossingCount - 1, by omega⟩).val)
 
-theorem UngarMoveSchedule.sum_orders_le_moves {k r : ℕ}
-    (C : UngarMoveSchedule k r) :
-    (∑ i : Fin C.crossingCount, 2 * C.order i) ≤ r :=
-  C.blocks_fit
-
 theorem UngarMoveSchedule.crossingCount_le_moves {k r : ℕ}
     (C : UngarMoveSchedule k r) :
     C.crossingCount ≤ r := by
@@ -525,6 +520,102 @@ theorem UngarMoveSchedule.first_idx_lt_last_idx {k r : ℕ}
     have hc2 : 2 ≤ C.crossingCount := C.two_le_crossingCount
     omega
   exact C.idx_strict hfin
+
+theorem UngarMoveSchedule.sum_orders_le_moves_from_gaps_int {k r : ℕ}
+    (C : UngarMoveSchedule k r) :
+    (2 * (∑ i : Fin C.crossingCount, (C.order i : ℤ)) : ℤ) ≤ r := by
+  classical
+  let c := C.crossingCount
+  let d : ℕ → ℤ := fun i =>
+    if h : i < c then (C.order ⟨i, h⟩ : ℤ) else 0
+  let a : ℕ → ℤ := fun i =>
+    if h : i < c then ((C.idx ⟨i, h⟩).val : ℤ) else 0
+  have horder_sum :
+      (∑ i ∈ Finset.range c, d i) =
+        ∑ i : Fin c, (C.order i : ℤ) := by
+    rw [← Fin.sum_univ_eq_sum_range]
+    apply Finset.sum_congr rfl
+    intro i _hi
+    simp [d]
+  have hbetween :
+      (∑ i ∈ Finset.range (c - 1), (d i + d (i + 1) - 1)) ≤
+        ∑ i ∈ Finset.range (c - 1), (a (i + 1) - a i - 1) := by
+    apply Finset.sum_le_sum
+    intro i hi
+    rw [Finset.mem_range] at hi
+    have hi0 : i < c := by omega
+    have hi1 : i + 1 < c := by omega
+    have hg := C.gap_between i (by omega)
+    have hpos0 : 0 < C.order ⟨i, hi0⟩ := C.order_pos ⟨i, hi0⟩
+    have hpos1 : 0 < C.order ⟨i + 1, hi1⟩ := C.order_pos ⟨i + 1, hi1⟩
+    simp [d, a, hi0, hi1]
+    omega
+  have hgap_sum :
+      (∑ i ∈ Finset.range (c - 1), (a (i + 1) - a i - 1)) =
+        a (c - 1) - a 0 - (c - 1 : ℤ) := by
+    have hc1 : 1 ≤ c := le_trans (by norm_num : 1 ≤ 2) C.two_le_crossingCount
+    exact ungar_adjacent_gap_sum_identity_int c hc1 a
+  have hbetween' :
+      (∑ i ∈ Finset.range (c - 1), (d i + d (i + 1) - 1)) ≤
+        a (c - 1) - a 0 - (c - 1 : ℤ) := by
+    exact le_trans hbetween (le_of_eq hgap_sum)
+  have hends :
+      d 0 + d (c - 1) - 1 ≤ a 0 + ((r : ℤ) - 1 - a (c - 1)) := by
+    have h0 : 0 < c := lt_of_lt_of_le (by norm_num : 0 < 2) C.two_le_crossingCount
+    have hlast : c - 1 < c := Nat.sub_lt h0 (by norm_num)
+    have hg := C.gap_ends
+    have hpos0 : 0 < C.order ⟨0, h0⟩ := C.order_pos ⟨0, h0⟩
+    have hpos_last : 0 < C.order ⟨c - 1, hlast⟩ := C.order_pos ⟨c - 1, hlast⟩
+    have hlast_eq :
+        (⟨c - 1, hlast⟩ : Fin C.crossingCount) =
+          ⟨C.crossingCount - 1, by
+            have hcpos : 0 < C.crossingCount :=
+              lt_of_lt_of_le (by norm_num : 0 < 2) C.two_le_crossingCount
+            exact Nat.sub_lt hcpos (by norm_num)⟩ := by
+      apply Fin.ext
+      simp [c]
+    rw [← hlast_eq] at hg
+    simp [d, a, h0, hlast]
+    omega
+  have hleft_le :
+      (d 0 + d (c - 1) - 1) +
+          ∑ i ∈ Finset.range (c - 1), (d i + d (i + 1) - 1)
+        ≤
+      (a 0 + ((r : ℤ) - 1 - a (c - 1))) +
+          (a (c - 1) - a 0 - (c - 1 : ℤ)) := by
+    exact add_le_add hends hbetween'
+  have hidentity :=
+    ungar_adjacent_order_sum_identity_int c C.two_le_crossingCount d
+  rw [hidentity] at hleft_le
+  rw [horder_sum] at hleft_le
+  have hright_eq :
+      (a 0 + ((r : ℤ) - 1 - a (c - 1))) +
+          (a (c - 1) - a 0 - (c - 1 : ℤ)) =
+        (r : ℤ) - c := by
+    have hc_cast : ((c - 1 : ℕ) : ℤ) = (c : ℤ) - 1 := by
+      have hc1 : 1 ≤ c := le_trans (by norm_num : 1 ≤ 2) C.two_le_crossingCount
+      omega
+    ring
+  rw [hright_eq] at hleft_le
+  linarith
+
+theorem UngarMoveSchedule.sum_orders_le_moves_from_gaps {k r : ℕ}
+    (C : UngarMoveSchedule k r) :
+    (∑ i : Fin C.crossingCount, 2 * C.order i) ≤ r := by
+  have hint := C.sum_orders_le_moves_from_gaps_int
+  have hsum :
+      ((∑ i : Fin C.crossingCount, 2 * C.order i : ℕ) : ℤ) =
+        2 * (∑ i : Fin C.crossingCount, (C.order i : ℤ)) := by
+    simp [Finset.mul_sum]
+  have hcast : ((∑ i : Fin C.crossingCount, 2 * C.order i : ℕ) : ℤ) ≤ (r : ℤ) := by
+    rw [hsum]
+    exact hint
+  exact_mod_cast hcast
+
+theorem UngarMoveSchedule.sum_orders_le_moves {k r : ℕ}
+    (C : UngarMoveSchedule k r) :
+    (∑ i : Fin C.crossingCount, 2 * C.order i) ≤ r :=
+  C.sum_orders_le_moves_from_gaps
 
 def UngarMoveSchedule.toCountingCertificate {k r : ℕ}
     (C : UngarMoveSchedule k r) : UngarCountingCertificate (2 * k) r where

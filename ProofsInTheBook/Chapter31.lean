@@ -596,6 +596,70 @@ def joyalRecoveredAdj (X : DoublyRootedLabeledTree n) (u v : Fin n) : Prop :=
     (u ∉ joyalPathVertices X ∧ joyalTreeToFunction X u = v) ∨
     (v ∉ joyalPathVertices X ∧ joyalTreeToFunction X v = u)
 
+theorem adjacentInList_joyalPathRangeOrder_adj (X : DoublyRootedLabeledTree n)
+    {u v : Fin n} (h : adjacentInList (joyalPathRangeOrder X) u v) :
+    X.1.1.Adj u v := by
+  classical
+  let p := treePath X.1 X.2.1 X.2.2
+  rcases h with ⟨i, hi, hi', huv | hvu⟩
+  · have hilen : i < p.length := by
+      have hi'p : i + 1 < p.support.length := by
+        simpa [joyalPathRangeOrder, p] using hi'
+      rw [SimpleGraph.Walk.length_support] at hi'p
+      omega
+    have hip : i < p.support.length := by
+      simpa [joyalPathRangeOrder, p] using hi
+    have hi'p : i + 1 < p.support.length := by
+      simpa [joyalPathRangeOrder, p] using hi'
+    have h0 : p.getVert i = u := by
+      have hs := SimpleGraph.Walk.support_getElem_eq_getVert p hip
+      have hsu : p.support[i]'hip = u := by
+        simpa [joyalPathRangeOrder, p] using huv.1
+      exact hs.symm.trans hsu
+    have h1 : p.getVert (i + 1) = v := by
+      have hs := SimpleGraph.Walk.support_getElem_eq_getVert p hi'p
+      have hsv : p.support[i + 1]'hi'p = v := by
+        simpa [joyalPathRangeOrder, p] using huv.2
+      exact hs.symm.trans hsv
+    simpa [h0, h1] using p.adj_getVert_succ (i := i) hilen
+  · have hilen : i < p.length := by
+      have hi'p : i + 1 < p.support.length := by
+        simpa [joyalPathRangeOrder, p] using hi'
+      rw [SimpleGraph.Walk.length_support] at hi'p
+      omega
+    have hip : i < p.support.length := by
+      simpa [joyalPathRangeOrder, p] using hi
+    have hi'p : i + 1 < p.support.length := by
+      simpa [joyalPathRangeOrder, p] using hi'
+    have h0 : p.getVert i = v := by
+      have hs := SimpleGraph.Walk.support_getElem_eq_getVert p hip
+      have hsv : p.support[i]'hip = v := by
+        simpa [joyalPathRangeOrder, p] using hvu.1
+      exact hs.symm.trans hsv
+    have h1 : p.getVert (i + 1) = u := by
+      have hs := SimpleGraph.Walk.support_getElem_eq_getVert p hi'p
+      have hsu : p.support[i + 1]'hi'p = u := by
+        simpa [joyalPathRangeOrder, p] using hvu.2
+      exact hs.symm.trans hsu
+    have hadj : X.1.1.Adj v u := by
+      simpa [h0, h1] using p.adj_getVert_succ (i := i) hilen
+    exact hadj.symm
+
+theorem joyalRecoveredAdj_adj (X : DoublyRootedLabeledTree n)
+    {u v : Fin n} (h : joyalRecoveredAdj X u v) :
+    X.1.1.Adj u v := by
+  classical
+  rcases h with hpath | hoff | hoff
+  · exact adjacentInList_joyalPathRangeOrder_adj X hpath
+  · rcases hoff with ⟨hu, hfu⟩
+    have hadj := joyalOffPathValue_adj X u hu
+    rwa [← joyalTreeToFunction_apply_of_not_mem X hu, hfu] at hadj
+  · rcases hoff with ⟨hv, hfv⟩
+    have hadj := joyalOffPathValue_adj X v hv
+    have hadj' : X.1.1.Adj v u := by
+      rwa [← joyalTreeToFunction_apply_of_not_mem X hv, hfv] at hadj
+    exact hadj'.symm
+
 theorem joyalRecoveredAdj_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
     (hXY : joyalTreeToFunction X = joyalTreeToFunction Y) (u v : Fin n) :
     joyalRecoveredAdj X u v ↔ joyalRecoveredAdj Y u v := by
@@ -611,7 +675,10 @@ is connected to its image.
 theorem joyal_tree_adj_iff_recovered (X : DoublyRootedLabeledTree n) (u v : Fin n) :
     X.1.1.Adj u v ↔ joyalRecoveredAdj X u v := by
   classical
-  sorry
+  constructor
+  · intro h
+    sorry
+  · exact joyalRecoveredAdj_adj X
 
 theorem joyal_tree_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
     (hXY : joyalTreeToFunction X = joyalTreeToFunction Y) :

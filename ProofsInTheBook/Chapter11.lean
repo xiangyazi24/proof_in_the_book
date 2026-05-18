@@ -2027,6 +2027,54 @@ theorem crossingIdx_strict {k r : ℕ}
   change A.crossingIdx i < A.crossingIdx j
   exact (A.crossingMoves.orderEmbOfFin rfl).strictMono hij
 
+theorem not_isCrossing_between_crossingIdx_succ {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r)
+    (i : ℕ) (hi : i + 1 < A.crossingMoves.card) {j : Fin r}
+    (hlo : (A.crossingIdx ⟨i, by omega⟩).val < j.val)
+    (hhi : j.val < (A.crossingIdx ⟨i + 1, by omega⟩).val) :
+    ¬ A.IsCrossing j := by
+  classical
+  intro hjCross
+  have hjmem : j ∈ A.crossingMoves := A.mem_crossingMoves.mpr hjCross
+  have hmap :
+      Finset.map (A.crossingMoves.orderEmbOfFin rfl).toEmbedding Finset.univ =
+        A.crossingMoves :=
+    Finset.map_orderEmbOfFin_univ A.crossingMoves rfl
+  have hjmap : j ∈ Finset.map (A.crossingMoves.orderEmbOfFin rfl).toEmbedding Finset.univ := by
+    rwa [hmap]
+  rcases Finset.mem_map.mp hjmap with ⟨l, _hlmem, hlj⟩
+  have hlj' : A.crossingIdx l = j := by
+    simpa [crossingIdx] using hlj
+  have hcases : l.val ≤ i ∨ i + 1 ≤ l.val := by omega
+  rcases hcases with hle | hle
+  · have hfinle : l ≤ (⟨i, by omega⟩ : Fin A.crossingMoves.card) := by
+      change l.val ≤ i
+      exact hle
+    have hidxle : A.crossingIdx l ≤ A.crossingIdx ⟨i, by omega⟩ := by
+      change (A.crossingMoves.orderEmbOfFin rfl l) ≤
+        A.crossingMoves.orderEmbOfFin rfl ⟨i, by omega⟩
+      exact (A.crossingMoves.orderEmbOfFin rfl).monotone hfinle
+    have hvalle : j.val ≤ (A.crossingIdx ⟨i, by omega⟩).val := by
+      have hvaleq : (A.crossingIdx l).val = j.val := congrArg Fin.val hlj'
+      have hidxle_val : (A.crossingIdx l).val ≤ (A.crossingIdx ⟨i, by omega⟩).val :=
+        hidxle
+      omega
+    omega
+  · have hfinle : (⟨i + 1, by omega⟩ : Fin A.crossingMoves.card) ≤ l := by
+      change i + 1 ≤ l.val
+      exact hle
+    have hidxle : A.crossingIdx ⟨i + 1, by omega⟩ ≤ A.crossingIdx l := by
+      change (A.crossingMoves.orderEmbOfFin rfl ⟨i + 1, by omega⟩) ≤
+        A.crossingMoves.orderEmbOfFin rfl l
+      exact (A.crossingMoves.orderEmbOfFin rfl).monotone hfinle
+    have hvalle : (A.crossingIdx ⟨i + 1, by omega⟩).val ≤ j.val := by
+      have hvaleq : (A.crossingIdx l).val = j.val := congrArg Fin.val hlj'
+      have hidxle_val : (A.crossingIdx ⟨i + 1, by omega⟩).val ≤
+          (A.crossingIdx l).val :=
+        hidxle
+      omega
+    omega
+
 theorem sum_crossingIdx_eq_sum_crossingMoves {k r : ℕ}
     (A : CountedGeneralizedAllowableSequence k r) :
     (∑ i : Fin A.crossingMoves.card, 2 * A.moveOrder (A.crossingIdx i)) =

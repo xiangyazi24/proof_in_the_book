@@ -1261,6 +1261,12 @@ theorem stepCrossingLabelsCard_eq_labelCrossingCard
   classical
   simp [stepCrossingLabelsCard, ReversalStep.labelCrossingCard]
 
+theorem stepCrossingLabelsCard_eq_positionCrossingCard_of_reversesBlocks {k : ℕ}
+    {π ρ : State (2 * k)} (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) :
+    stepCrossingLabelsCard k π ρ = ReversalStep.positionCrossingCard k M.move.map := by
+  rw [stepCrossingLabelsCard_eq_labelCrossingCard]
+  exact M.crossingLabelsCard_eq_positionCrossingCard_of_reversesBlocks hrev
+
 /--
 A reversal step together with the key finite counting theorem for that step.
 The block-reversal geometry should eventually prove this field.

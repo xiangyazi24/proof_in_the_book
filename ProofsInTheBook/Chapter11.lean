@@ -972,6 +972,13 @@ noncomputable def toCountingCertificate {k r : ℕ}
     UngarCountingCertificate (2 * k) r :=
   A.toStepCounting.toCountingCertificate packing
 
+/-- The finite Ungar conclusion extracted from a counted sequence and packing. -/
+theorem length_lower_bound {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r)
+    (packing : UngarBlockPacking r r A.toStepCounting.order) :
+    2 * k ≤ r :=
+  (A.toCountingCertificate packing).length_lower_bound
+
 end CountedGeneralizedAllowableSequence
 
 /--

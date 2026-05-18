@@ -1255,6 +1255,12 @@ noncomputable def stepCrossingLabelsCard (k : ℕ) (π ρ : State (2 * k)) : ℕ
   classical
   exact Fintype.card {a : Fin (2 * k) // crossesMiddle k π ρ a}
 
+theorem stepCrossingLabelsCard_eq_labelCrossingCard
+    (k : ℕ) (π ρ : State (2 * k)) :
+    stepCrossingLabelsCard k π ρ = ReversalStep.labelCrossingCard k π ρ := by
+  classical
+  simp [stepCrossingLabelsCard, ReversalStep.labelCrossingCard]
+
 /--
 A reversal step together with the key finite counting theorem for that step.
 The block-reversal geometry should eventually prove this field.

@@ -3450,6 +3450,30 @@ theorem exists_large_prime_factor_choose_below_sq_of_sqrt_lt_33
     subst k
     exact exists_large_prime_factor_choose_126_13
 
+def nextPrimeWithin : ℕ → ℕ → ℕ
+  | 0, m => m
+  | fuel + 1, m => if Nat.Prime (m + 1) then m + 1 else nextPrimeWithin fuel (m + 1)
+
+theorem interval_prime_below_sq_k_lt_120_sqrt33_cert :
+    ∀ k : Fin 120, ∀ n : Fin 14400,
+      9 ≤ k.val → 33 ≤ sqrt n.val → 2 * k.val ≤ n.val → n.val < k.val * k.val →
+        let p := nextPrimeWithin 120 (n.val - k.val)
+        k.val < p ∧ n.val - k.val < p ∧ p ≤ n.val ∧ Nat.Prime p := by
+  native_decide
+
+theorem exists_large_prime_factor_choose_below_sq_of_k_lt_120
+    {n k : ℕ} (hk9 : 9 ≤ k) (hk120 : k < 120) (hn2k : 2 * k ≤ n)
+    (hnsq : n < k * k) (hsqrt33 : 33 ≤ sqrt n) :
+    HasPrimeFactorAbove k (n.choose k) := by
+  have hn14400 : n < 120 * 120 := by nlinarith
+  let p := nextPrimeWithin 120 (n - k)
+  have hcert :=
+    interval_prime_below_sq_k_lt_120_sqrt33_cert
+      ⟨k, hk120⟩ ⟨n, by simpa using hn14400⟩ hk9 hsqrt33 hn2k hnsq
+  dsimp only at hcert
+  rcases hcert with ⟨hkp, hnkp, hpn, hp⟩
+  exact hasPrimeFactorAbove_choose_of_interval_prime (by omega : k ≤ n) hp hkp hnkp hpn
+
 /-!
 ### Central case of Sylvester's theorem
 

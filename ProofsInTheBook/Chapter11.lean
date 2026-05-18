@@ -378,6 +378,38 @@ theorem directions_lower_bound_three (points : Finset Point2)
   norm_num at htwo ⊢
   exact htwo
 
+theorem one_lt_directions_card_of_noncollinear (points : Finset Point2)
+    (hncoll : NoncollinearSet points) :
+    1 < (directionsDeterminedBy points).card := by
+  classical
+  rcases hncoll with ⟨p, hp, q, hq, r, hr, hnon⟩
+  let witness : Bool → Direction := fun b => cond b (direction p r) (direction p q)
+  have hwitness : ∀ b, witness b ∈ directionsDeterminedBy points := by
+    intro b
+    cases b
+    · exact direction_mem_directionsDeterminedBy hp hq
+        (left_ne_right_of_noncollinear hnon)
+    · exact direction_mem_directionsDeterminedBy hp hr
+        (left_ne_third_of_noncollinear hnon)
+  have hinj : Function.Injective witness := by
+    intro a b hab
+    cases a <;> cases b
+    · rfl
+    · exfalso
+      have hdir : direction p q = direction p r := by
+        simpa [witness] using hab
+      exact hnon (determinant_eq_zero_of_same_direction_from_left hdir)
+    · exfalso
+      have hdir : direction p q = direction p r := by
+        simpa [witness] using hab.symm
+      exact hnon (determinant_eq_zero_of_same_direction_from_left hdir)
+    · rfl
+  have htwo : Fintype.card Bool ≤ (directionsDeterminedBy points).card := by
+    exact Finset.card_le_card_of_injOn witness (by intro b _hb; exact hwitness b)
+      (by intro a _ha b _hb h; exact hinj h)
+  norm_num at htwo
+  omega
+
 theorem directions_lower_bound_of_even_direction_bound_all (points : Finset Point2)
     (hcard : 3 ≤ points.card) (hncoll : NoncollinearSet points)
     (heven_bound : ∀ S : Finset Point2, Even S.card → NoncollinearSet S →

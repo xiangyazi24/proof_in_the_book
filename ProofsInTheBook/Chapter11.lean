@@ -1190,6 +1190,22 @@ theorem order_eq_crossingBlockIndex_crossOrder {k : ℕ} {π ρ : State (2 * k)}
     M.order = (M.move.block (M.crossingBlockIndex hM)).crossOrder k :=
   M.order_eq_crossOrder_of_crossing_block (M.crossingBlockIndex_spec hM)
 
+theorem new_position_eq_map_old_position_of_reversesBlocks {k : ℕ}
+    {π ρ : State (2 * k)} (M : ReversalStep k π ρ)
+    (hrev : M.move.ReversesBlocks) (a : Fin (2 * k)) :
+    ρ.symm a = M.move.map (π.symm a) := by
+  apply ρ.injective
+  rw [Equiv.apply_symm_apply]
+  rw [M.step_apply]
+  rw [M.move.map_map_eq_of_reversesBlocks hrev]
+  exact (Equiv.apply_symm_apply π a).symm
+
+theorem crossesMiddle_iff_map_old_position {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (a : Fin (2 * k)) :
+    crossesMiddle k π ρ a ↔
+      (middleLeft k (π.symm a) ↔ ¬ middleLeft k (M.move.map (π.symm a))) := by
+  rw [crossesMiddle, M.new_position_eq_map_old_position_of_reversesBlocks hrev a]
+
 /-- The labels crossing in one reversal step fit inside the full position set. -/
 theorem two_mul_order_le_positions {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) :

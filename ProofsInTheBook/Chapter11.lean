@@ -907,6 +907,16 @@ theorem crossOrder_eq_min_of_crossing {k : ℕ} {I : PositionInterval (2 * k)}
     I.crossOrder k = Nat.min (k - I.lo) (I.hi + 1 - k) := by
   simp [crossOrder, h]
 
+theorem crossOrder_eq_min_side_cards_of_crossing {k : ℕ} (I : PositionInterval (2 * k))
+    (hcross : I.lo < k ∧ k ≤ I.hi) :
+    I.crossOrder k =
+      Nat.min
+        (I.toFinset.filter fun p => p.val < k).card
+        (I.toFinset.filter fun p => k ≤ p.val).card := by
+  rw [crossOrder_eq_min_of_crossing hcross,
+    left_of_middle_card_of_crossing I hcross,
+    right_of_middle_card_of_crossing I hcross]
+
 theorem crossOrder_le_left {k : ℕ} (I : PositionInterval (2 * k)) :
     I.crossOrder k ≤ k - I.lo := by
   by_cases h : I.lo < k ∧ k ≤ I.hi

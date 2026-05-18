@@ -161,9 +161,24 @@ cell and lift the inductive kernel back.
 
 ## Ch11 — Rotating calipers (slopes count)
 
-Premise: `hslopes : points.card - 1 ≤ slopesDeterminedBy points`.card
+Premise: Ungar's direction lower bound for non-collinear finite point sets.
 
-Ungar's rotating-calipers argument. Needs convex hull infrastructure.
+Important correction: the fixed-coordinate statement
+`points.card - 1 ≤ (slopesDeterminedBy points).card` is false because
+`slopesDeterminedBy` intentionally excludes vertical directions. The book's
+"slope" count includes the vertical parallel class. The correct target in Lean
+is therefore phrased using `directionsDeterminedBy`.
+
+Current progress:
+
+- Proved finite slopes embed into directions.
+- Proved directions have at most one more element than finite slopes.
+- Proved subset monotonicity for slopes/directions and non-collinearity.
+- Proved the book's reduction from all sets to the even-cardinality direction
+  theorem, including the `n = 3` base case.
+
+Remaining core: formalize Ungar's even-cardinality permutation/T-O-C counting
+argument (or an equivalent rotating-calipers construction).
 
 ## Working style notes
 

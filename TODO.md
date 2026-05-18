@@ -19,9 +19,14 @@ have had their original explicit premises eliminated.
 
 ### Ch11: Slopes count from rotating calipers
 - **File:** `Chapter11.lean` line 97
-- **Premise:** `hslopes : points.card - 1 ≤ (slopesDeterminedBy points).card`
-- **What it says:** n non-collinear points determine at least n-1 distinct slopes.
+- **Premise:** rotating-calipers / Ungar direction lower bound.
+- **What it says:** n non-collinear points determine at least n-1 distinct
+  projective directions, with vertical counted as one direction.
 - **How to prove:** Ungar's rotating-calipers argument: rotate a directed line through all angles. At each of n-1 "events" (line passes through a new pair), a new slope appears. Needs convex hull infrastructure.
+- **Correction:** The fixed-coordinate finite real-slope statement excluding
+  vertical directions is false. The book counts vertical as a slope/direction.
+  `Chapter11.lean` now uses `directionsDeterminedBy` for the coordinate-correct
+  target and keeps `slopesDeterminedBy` only for nonvertical bookkeeping.
 - **Estimated effort:** ~120 lines. Convex hull + angular sweep formalization.
 
 ### ~~Ch31: Cayley's upper bound (Prüfer/Joyal encoding)~~ ✅

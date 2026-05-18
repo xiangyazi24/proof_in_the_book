@@ -1273,6 +1273,30 @@ theorem positionCrossingCard_eq_zero_of_no_crossing_block {k : ℕ}
     · exact (hp.mp hp_left) hp_left
     · exact hp_left (hp.mpr hp_left)
 
+theorem exists_crossing_block_of_position_crosses {k : ℕ}
+    {M : BlockMove (2 * k)} (hrev : M.ReversesBlocks) {p : Fin (2 * k)}
+    (hp : middleLeft k p ↔ ¬ middleLeft k (M.map p)) :
+    ∃ i : Fin M.blockCount, (M.block i).lo < k ∧ k ≤ (M.block i).hi := by
+  classical
+  by_contra hnone
+  have hnone' :
+      ∀ i : Fin M.blockCount, ¬ ((M.block i).lo < k ∧ k ≤ (M.block i).hi) := by
+    intro i hi
+    exact hnone ⟨i, hi⟩
+  have hz := positionCrossingCard_eq_zero_of_no_crossing_block
+    (k := k) (M := M) hrev hnone'
+  unfold positionCrossingCard at hz
+  have hmem : (⟨p, hp⟩ :
+      {p : Fin (2 * k) // middleLeft k p ↔ ¬ middleLeft k (M.map p)}) ∈
+        (Finset.univ :
+          Finset {p : Fin (2 * k) // middleLeft k p ↔ ¬ middleLeft k (M.map p)}) := by
+    simp
+  have hcard_pos :
+      0 < Fintype.card
+        {p : Fin (2 * k) // middleLeft k p ↔ ¬ middleLeft k (M.map p)} := by
+    exact Fintype.card_pos_iff.mpr ⟨⟨p, hp⟩⟩
+  omega
+
 /-- The labels crossing in one reversal step fit inside the full position set. -/
 theorem two_mul_order_le_positions {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) :

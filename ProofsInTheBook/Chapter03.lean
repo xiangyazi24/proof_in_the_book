@@ -939,6 +939,14 @@ theorem log4_lt_1733_1250 : Real.log 4 < (1733 : ℝ) / 1250 := by
   rw [show (4 : ℝ) = 2 ^ 2 by norm_num, Real.log_pow]
   nlinarith [log2_lt_1733_2500]
 
+theorem log4_gt_69_50 : (69 : ℝ) / 50 < Real.log 4 := by
+  rw [show (4 : ℝ) = 2 ^ 2 by norm_num, Real.log_pow]
+  nlinarith [Real.log_two_gt_d9]
+
+theorem log16_gt_69_25 : (69 : ℝ) / 25 < Real.log 16 := by
+  rw [show (16 : ℝ) = 2 ^ 4 by norm_num, Real.log_pow]
+  nlinarith [Real.log_two_gt_d9]
+
 theorem log64_lt_21_5 : Real.log 64 < (21 : ℝ) / 5 := by
   rw [show (64 : ℝ) = 2 ^ 6 by norm_num, Real.log_pow]
   nlinarith [log2_lt_7_10]
@@ -1497,6 +1505,126 @@ theorem below_square_B_core_7_2_4 {x : ℝ} (hx7 : (7 : ℝ) / 2 ≤ x) (hx4 : x
       2 * (x - 1) / (x + 1) + (x - 1) * (2 / (2 * x - 1)) ≤
         x * Real.log x - (x - 1) * Real.log (x - 1) := by
     linarith
+  linarith
+
+theorem below_square_B_core_4_6 {x : ℝ} (hx4 : 4 ≤ x) (hx6 : x ≤ 6) :
+    Real.sqrt (x / 120) / 3 * Real.log (120 * x)
+        + min 1 (x / 3) * Real.log 4 + (1 : ℝ) / 32
+      ≤ x * Real.log x - (x - 1) * Real.log (x - 1) := by
+  have hx1 : 1 < x := by linarith
+  have hterm := sqrt_log120_mul_le_1_2_of_4_le_of_le_6 hx4 hx6
+  have hlog4_nonneg : 0 ≤ Real.log 4 := Real.log_nonneg (by norm_num)
+  have hminlog : min 1 (x / 3) * Real.log 4 ≤ ((1733 : ℝ) / 1250) := by
+    calc
+      min 1 (x / 3) * Real.log 4 ≤ 1 * Real.log 4 := by
+        exact mul_le_mul_of_nonneg_right (min_le_left 1 (x / 3)) hlog4_nonneg
+      _ ≤ ((1733 : ℝ) / 1250) := by nlinarith [log4_lt_1733_1250]
+  have hlogx : (69 : ℝ) / 50 ≤ Real.log x := by
+    have hlelog := Real.log_le_log (by norm_num : (0 : ℝ) < 4) hx4
+    nlinarith [hlelog, log4_gt_69_50]
+  have haux : (1 : ℝ) / 32 + ((1733 : ℝ) / 1250) + (1 : ℝ) / 2
+      ≤ (69 : ℝ) / 50 + 1 - 1 / x := by
+    have hxpos : 0 < x := by linarith
+    have hinv : 1 / x ≤ (1 : ℝ) / 4 := by
+      exact one_div_le_one_div_of_le (by norm_num) hx4
+    nlinarith
+  have hlower := entropyRatio_lower_log_add hx1
+  linarith
+
+theorem below_square_B_core_6_10 {x : ℝ} (hx6 : 6 ≤ x) (hx10 : x ≤ 10) :
+    Real.sqrt (x / 120) / 3 * Real.log (120 * x)
+        + min 1 (x / 3) * Real.log 4 + (1 : ℝ) / 32
+      ≤ x * Real.log x - (x - 1) * Real.log (x - 1) := by
+  have hx1 : 1 < x := by linarith
+  have hterm := sqrt_log120_mul_le_3_4_of_6_le_of_le_10 hx6 hx10
+  have hlog4_nonneg : 0 ≤ Real.log 4 := Real.log_nonneg (by norm_num)
+  have hminlog : min 1 (x / 3) * Real.log 4 ≤ ((1733 : ℝ) / 1250) := by
+    calc
+      min 1 (x / 3) * Real.log 4 ≤ 1 * Real.log 4 := by
+        exact mul_le_mul_of_nonneg_right (min_le_left 1 (x / 3)) hlog4_nonneg
+      _ ≤ ((1733 : ℝ) / 1250) := by nlinarith [log4_lt_1733_1250]
+  have hlogx : (8 : ℝ) / 5 ≤ Real.log x := by
+    have hlelog := Real.log_le_log (by norm_num : (0 : ℝ) < 6) hx6
+    nlinarith [hlelog, log6_gt_8_5]
+  have haux : (1 : ℝ) / 32 + ((1733 : ℝ) / 1250) + (3 : ℝ) / 4
+      ≤ (8 : ℝ) / 5 + 1 - 1 / x := by
+    have hxpos : 0 < x := by linarith
+    have hinv : 1 / x ≤ (1 : ℝ) / 6 := by
+      exact one_div_le_one_div_of_le (by norm_num) hx6
+    nlinarith
+  have hlower := entropyRatio_lower_log_add hx1
+  linarith
+
+theorem below_square_B_core_10_16 {x : ℝ} (hx10 : 10 ≤ x) (hx16 : x ≤ 16) :
+    Real.sqrt (x / 120) / 3 * Real.log (120 * x)
+        + min 1 (x / 3) * Real.log 4 + (1 : ℝ) / 32
+      ≤ x * Real.log x - (x - 1) * Real.log (x - 1) := by
+  have hx1 : 1 < x := by linarith
+  have hterm := sqrt_log120_mul_le_1_of_10_le_of_le_16 hx10 hx16
+  have hlog4_nonneg : 0 ≤ Real.log 4 := Real.log_nonneg (by norm_num)
+  have hminlog : min 1 (x / 3) * Real.log 4 ≤ ((1733 : ℝ) / 1250) := by
+    calc
+      min 1 (x / 3) * Real.log 4 ≤ 1 * Real.log 4 := by
+        exact mul_le_mul_of_nonneg_right (min_le_left 1 (x / 3)) hlog4_nonneg
+      _ ≤ ((1733 : ℝ) / 1250) := by nlinarith [log4_lt_1733_1250]
+  have hlogx : (8 : ℝ) / 5 ≤ Real.log x := by
+    have hlelog := Real.log_le_log (by norm_num : (0 : ℝ) < 6) (by linarith : (6 : ℝ) ≤ x)
+    nlinarith [hlelog, log6_gt_8_5]
+  have haux : (1 : ℝ) / 32 + ((1733 : ℝ) / 1250) + (1 : ℝ)
+      ≤ (8 : ℝ) / 5 + 1 - 1 / x := by
+    have hxpos : 0 < x := by linarith
+    have hinv : 1 / x ≤ (1 : ℝ) / 10 := by
+      exact one_div_le_one_div_of_le (by norm_num) hx10
+    nlinarith
+  have hlower := entropyRatio_lower_log_add hx1
+  linarith
+
+theorem below_square_B_core_16_24 {x : ℝ} (hx16 : 16 ≤ x) (hx24 : x ≤ 24) :
+    Real.sqrt (x / 120) / 3 * Real.log (120 * x)
+        + min 1 (x / 3) * Real.log 4 + (1 : ℝ) / 32
+      ≤ x * Real.log x - (x - 1) * Real.log (x - 1) := by
+  have hx1 : 1 < x := by linarith
+  have hterm := sqrt_log120_mul_le_5_4_of_16_le_of_le_24 hx16 hx24
+  have hlog4_nonneg : 0 ≤ Real.log 4 := Real.log_nonneg (by norm_num)
+  have hminlog : min 1 (x / 3) * Real.log 4 ≤ ((1733 : ℝ) / 1250) := by
+    calc
+      min 1 (x / 3) * Real.log 4 ≤ 1 * Real.log 4 := by
+        exact mul_le_mul_of_nonneg_right (min_le_left 1 (x / 3)) hlog4_nonneg
+      _ ≤ ((1733 : ℝ) / 1250) := by nlinarith [log4_lt_1733_1250]
+  have hlogx : (69 : ℝ) / 25 ≤ Real.log x := by
+    have hlelog := Real.log_le_log (by norm_num : (0 : ℝ) < 16) hx16
+    nlinarith [hlelog, log16_gt_69_25]
+  have haux : (1 : ℝ) / 32 + ((1733 : ℝ) / 1250) + (5 : ℝ) / 4
+      ≤ (69 : ℝ) / 25 + 1 - 1 / x := by
+    have hxpos : 0 < x := by linarith
+    have hinv : 1 / x ≤ (1 : ℝ) / 16 := by
+      exact one_div_le_one_div_of_le (by norm_num) hx16
+    nlinarith
+  have hlower := entropyRatio_lower_log_add hx1
+  linarith
+
+theorem below_square_B_core_24_31 {x : ℝ} (hx24 : 24 ≤ x) (hx31 : x ≤ 31) :
+    Real.sqrt (x / 120) / 3 * Real.log (120 * x)
+        + min 1 (x / 3) * Real.log 4 + (1 : ℝ) / 32
+      ≤ x * Real.log x - (x - 1) * Real.log (x - 1) := by
+  have hx1 : 1 < x := by linarith
+  have hterm := sqrt_log120_mul_le_3_2_of_24_le_of_le_31 hx24 hx31
+  have hlog4_nonneg : 0 ≤ Real.log 4 := Real.log_nonneg (by norm_num)
+  have hminlog : min 1 (x / 3) * Real.log 4 ≤ ((1733 : ℝ) / 1250) := by
+    calc
+      min 1 (x / 3) * Real.log 4 ≤ 1 * Real.log 4 := by
+        exact mul_le_mul_of_nonneg_right (min_le_left 1 (x / 3)) hlog4_nonneg
+      _ ≤ ((1733 : ℝ) / 1250) := by nlinarith [log4_lt_1733_1250]
+  have hlogx : (69 : ℝ) / 25 ≤ Real.log x := by
+    have hlelog := Real.log_le_log (by norm_num : (0 : ℝ) < 16) (by linarith : (16 : ℝ) ≤ x)
+    nlinarith [hlelog, log16_gt_69_25]
+  have haux : (1 : ℝ) / 32 + ((1733 : ℝ) / 1250) + (3 : ℝ) / 2
+      ≤ (69 : ℝ) / 25 + 1 - 1 / x := by
+    have hxpos : 0 < x := by linarith
+    have hinv : 1 / x ≤ (1 : ℝ) / 24 := by
+      exact one_div_le_one_div_of_le (by norm_num) hx24
+    nlinarith
+  have hlower := entropyRatio_lower_log_add hx1
   linarith
 
 set_option maxHeartbeats 800000 in

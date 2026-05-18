@@ -620,6 +620,26 @@ def joyalRecoveredAdj (X : DoublyRootedLabeledTree n) (u v : Fin n) : Prop :=
     (u ∉ joyalPathVertices X ∧ joyalTreeToFunction X u = v) ∨
     (v ∉ joyalPathVertices X ∧ joyalTreeToFunction X v = u)
 
+theorem joyalRecoveredAdj_of_offpath_dist_left_add_one (X : DoublyRootedLabeledTree n)
+    {w z : Fin n} (hw : w ∉ joyalPathVertices X) (hadj : X.1.1.Adj w z)
+    (hdist : X.1.1.dist X.2.1 z + 1 = X.1.1.dist X.2.1 w) :
+    joyalRecoveredAdj X w z := by
+  right
+  left
+  refine ⟨hw, ?_⟩
+  rw [joyalTreeToFunction_apply_of_not_mem X hw]
+  exact joyalOffPathValue_eq_of_adj_dist_left_add_one X hw hadj hdist
+
+theorem joyalRecoveredAdj_of_offpath_dist_left_add_one_right (X : DoublyRootedLabeledTree n)
+    {w z : Fin n} (hw : w ∉ joyalPathVertices X) (hadj : X.1.1.Adj z w)
+    (hdist : X.1.1.dist X.2.1 z + 1 = X.1.1.dist X.2.1 w) :
+    joyalRecoveredAdj X z w := by
+  right
+  right
+  refine ⟨hw, ?_⟩
+  rw [joyalTreeToFunction_apply_of_not_mem X hw]
+  exact joyalOffPathValue_eq_of_adj_dist_left_add_one X hw hadj.symm hdist
+
 theorem adjacentInList_joyalPathRangeOrder_adj (X : DoublyRootedLabeledTree n)
     {u v : Fin n} (h : adjacentInList (joyalPathRangeOrder X) u v) :
     X.1.1.Adj u v := by

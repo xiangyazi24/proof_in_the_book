@@ -280,6 +280,33 @@ theorem galvin_list_coloring_from_kernel_perfect_target
   exact hP S.card S lists rfl _hkernel _hsize
 
 /--
+Correct Galvin interface specialized to the Dinitz conflict graph: once an
+orientation is known to be kernel-perfect and to have outdegree below each
+list size, a Dinitz list coloring follows.
+-/
+theorem dinitzSolution_of_kernel_perfect_orientation {n : ℕ} {α : Type*}
+    [DecidableEq α] [Inhabited α]
+    (lists : Cell n → Finset α)
+    (orient : Cell n → Cell n → Prop) [DecidableRel orient]
+    (horient : OrientedEdge LatinConflict orient)
+    (hkernel : KernelPerfectOn (Finset.univ : Finset (Cell n)) LatinConflict orient)
+    (hsize : ∀ cell : Cell n,
+      (outNeighborsIn (Finset.univ : Finset (Cell n)) orient cell).card < (lists cell).card) :
+    ∃ color : Cell n → α, DinitzSolution lists color := by
+  classical
+  obtain ⟨color, hcolor⟩ :=
+    galvin_list_coloring_from_kernel_perfect_target
+      (S := (Finset.univ : Finset (Cell n))) (adj := LatinConflict) (orient := orient)
+      (lists := lists) horient hkernel (by intro v _; exact hsize v)
+  rcases hcolor with ⟨hlist, hproper⟩
+  refine ⟨color, ?_⟩
+  constructor
+  · intro cell
+    exact hlist cell (Finset.mem_univ cell)
+  · intro a b hab
+    exact hproper a (Finset.mem_univ a) b (Finset.mem_univ b) hab hab.1
+
+/--
 Galvin's theorem (the Dinitz conjecture): given an n×n array where each cell
 has a list of at least n colors, there exists a proper Latin coloring respecting
 all lists. The proof constructs a kernel-perfect orientation from the list

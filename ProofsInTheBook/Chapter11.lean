@@ -730,6 +730,86 @@ def StepCounting.toCountingCertificate {k r : ℕ} {A : GeneralizedAllowableSequ
 
 end GeneralizedAllowableSequence
 
+/-! ### Consecutive block moves -/
+
+/-- A consecutive interval of positions in `Fin N`. -/
+structure PositionInterval (N : ℕ) where
+  lo : ℕ
+  hi : ℕ
+  lo_le_hi : lo ≤ hi
+  hi_lt : hi < N
+
+namespace PositionInterval
+
+/-- Membership of a position in a consecutive interval. -/
+def Mem {N : ℕ} (I : PositionInterval N) (p : Fin N) : Prop :=
+  I.lo ≤ p.val ∧ p.val ≤ I.hi
+
+/-- The set of positions in a consecutive interval. -/
+def toSet {N : ℕ} (I : PositionInterval N) : Set (Fin N) :=
+  {p | I.Mem p}
+
+/-- The number of positions in a consecutive interval. -/
+def length {N : ℕ} (I : PositionInterval N) : ℕ :=
+  I.hi + 1 - I.lo
+
+/--
+For `2 * k` positions, the order of an interval crossing the middle barrier.
+The barrier is between positions `k - 1` and `k`.
+-/
+def crossOrder (k : ℕ) (I : PositionInterval (2 * k)) : ℕ :=
+  if I.lo < k ∧ k ≤ I.hi then
+    Nat.min (k - I.lo) (I.hi + 1 - k)
+  else
+    0
+
+end PositionInterval
+
+/--
+A simultaneous move reverses several pairwise-disjoint consecutive blocks.
+The actual permutation is kept as data; later lemmas prove its middle-barrier
+crossing count from the block fields.
+-/
+structure BlockMove (N : ℕ) where
+  blockCount : ℕ
+  block : Fin blockCount → PositionInterval N
+  pairwise_disjoint :
+    ((Finset.univ : Finset (Fin blockCount)) : Set (Fin blockCount)).PairwiseDisjoint
+      (fun i => (block i).toSet)
+  nontrivial : ∀ i : Fin blockCount, 2 ≤ (block i).length
+  map : State N
+
+namespace BlockMove
+
+/-- Two positions lie in the same reversed block of a block move. -/
+def SameBlock {N : ℕ} (M : BlockMove N) (p q : Fin N) : Prop :=
+  ∃ b : Fin M.blockCount, (M.block b).Mem p ∧ (M.block b).Mem q
+
+end BlockMove
+
+/--
+One legal step of a generalized allowable sequence.  The increasing-block
+condition is the finite Goodman--Pollack/Ungar rule before reversal.
+-/
+structure ReversalStep (k : ℕ) (π ρ : State (2 * k)) where
+  move : BlockMove (2 * k)
+  step_apply : ∀ p : Fin (2 * k), ρ p = π (move.map p)
+  increasing_before :
+    ∀ i : Fin move.blockCount,
+      StrictMonoOn (fun p : Fin (2 * k) => (π p).val) ((move.block i).toSet)
+
+namespace ReversalStep
+
+/-- The total middle-barrier order of a reversal step. -/
+def order {k : ℕ} {π ρ : State (2 * k)} (M : ReversalStep k π ρ) : ℕ :=
+  ∑ i : Fin M.move.blockCount, (M.move.block i).crossOrder k
+
+/-- A reversal step is crossing exactly when its total order is positive. -/
+def IsCrossing {k : ℕ} {π ρ : State (2 * k)} (M : ReversalStep k π ρ) : Prop :=
+  0 < M.order
+
+end ReversalStep
+
 /--
 The universally valid fixed-axis finite-slope consequence of a projective
 direction bound: losing the vertical direction costs at most one slope.

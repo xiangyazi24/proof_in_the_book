@@ -1455,7 +1455,7 @@ theorem map_map_eq_of_reversesBlocks {N : ℕ} {M : BlockMove N}
 
 theorem map_middleLeft_iff_of_reversesBlocks_no_crossing {k : ℕ}
     {M : BlockMove (2 * k)} (hM : M.ReversesBlocks)
-    (hnone : ∀ i : Fin M.blockCount, ¬ (M.block i).lo < k ∧ k ≤ (M.block i).hi)
+    (hnone : ∀ i : Fin M.blockCount, ¬ ((M.block i).lo < k ∧ k ≤ (M.block i).hi))
     (p : Fin (2 * k)) :
     middleLeft k (M.map p) ↔ middleLeft k p := by
   classical
@@ -1611,6 +1611,14 @@ theorem order_eq_crossingBlockIndex_crossOrder {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) (hM : M.IsCrossing) :
     M.order = (M.move.block (M.crossingBlockIndex hM)).crossOrder k :=
   M.order_eq_crossOrder_of_crossing_block (M.crossingBlockIndex_spec hM)
+
+theorem move_middleLeft_iff_of_not_isCrossing {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)
+    (hM : ¬ M.IsCrossing) (p : Fin (2 * k)) :
+    middleLeft k (M.move.map p) ↔ middleLeft k p := by
+  exact M.move.map_middleLeft_iff_of_reversesBlocks_no_crossing hrev (by
+    intro i hi
+    exact hM ((M.isCrossing_iff_exists_crossing_block).mpr ⟨i, hi⟩)) p
 
 theorem new_position_eq_map_old_position_of_reversesBlocks {k : ℕ}
     {π ρ : State (2 * k)} (M : ReversalStep k π ρ)

@@ -112,6 +112,60 @@ theorem galvin_greedy_step {V : Type*} [DecidableEq V] [Fintype V]
   intro w hw heq
   exact hc.2 (Finset.mem_image.mpr ⟨w, hw, heq⟩)
 
+/-! ### Galvin's actual kernel-perfect list-coloring interface -/
+
+/-- A directed orientation relation used for Galvin's list-coloring lemma. -/
+def OrientedEdge {V : Type*} (adj : V → V → Prop) (orient : V → V → Prop) : Prop :=
+  ∀ ⦃u v⦄, orient u v → adj u v
+
+/-- Out-neighbors of `v` inside a finite vertex set `S`. -/
+def outNeighborsIn {V : Type*} [DecidableEq V] (S : Finset V)
+    (orient : V → V → Prop) [DecidableRel orient] (v : V) : Finset V :=
+  S.filter fun w => orient v w
+
+/-- A kernel in an induced directed graph on `S`. -/
+def IsKernelIn {V : Type*} [DecidableEq V] (S K : Finset V)
+    (adj orient : V → V → Prop) : Prop :=
+  K ⊆ S ∧
+    (∀ u ∈ K, ∀ v ∈ K, adj u v → u = v) ∧
+    ∀ u ∈ S, u ∉ K → ∃ v ∈ K, orient u v
+
+/--
+The kernel-perfect premise actually used by Galvin: every nonempty induced
+subgraph has a kernel.
+-/
+def KernelPerfectOn {V : Type*} [DecidableEq V] (S : Finset V)
+    (adj orient : V → V → Prop) : Prop :=
+  ∀ T : Finset V, T ⊆ S → T.Nonempty → ∃ K : Finset V, IsKernelIn T K adj orient
+
+/-- A list coloring of a finite induced graph. -/
+def ListColoringOn {V α : Type*} [DecidableEq V] [DecidableEq α]
+    (S : Finset V) (adj : V → V → Prop) (lists : V → Finset α)
+    (color : V → α) : Prop :=
+  (∀ v ∈ S, color v ∈ lists v) ∧
+    ∀ u ∈ S, ∀ v ∈ S, adj u v → u ≠ v → color u ≠ color v
+
+/--
+This is the correct replacement target for the false one-cell extension
+premise: Galvin's induction colors a kernel all at once, then removes that
+kernel and one color.
+-/
+theorem galvin_list_coloring_from_kernel_perfect_target
+    {V α : Type*} [DecidableEq V] [DecidableEq α] [Inhabited α]
+    (S : Finset V) (adj orient : V → V → Prop)
+    [DecidableRel adj] [DecidableRel orient]
+    (lists : V → Finset α)
+    (_horient : OrientedEdge adj orient)
+    (_hkernel : KernelPerfectOn S adj orient)
+    (_hsize : ∀ v ∈ S, (outNeighborsIn S orient v).card < (lists v).card) :
+    ∃ color : V → α, ListColoringOn S adj lists color := by
+  classical
+  -- This is the next hard Ch34 target. The proof follows the book's Lemma 1:
+  -- choose a color `c`, take a kernel in the subgraph induced by vertices whose
+  -- lists contain `c`, color the kernel with `c`, delete the kernel and `c`,
+  -- and recurse on the remaining vertex set.
+  sorry
+
 /--
 Galvin's theorem (the Dinitz conjecture): given an n×n array where each cell
 has a list of at least n colors, there exists a proper Latin coloring respecting

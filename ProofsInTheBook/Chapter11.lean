@@ -1052,6 +1052,19 @@ theorem map_map_eq_of_reversesBlocks_mem {N : ℕ} {M : BlockMove N}
   rcases hp with ⟨hlo, hhi⟩
   omega
 
+theorem map_map_eq_of_reversesBlocks {N : ℕ} {M : BlockMove N}
+    (hM : M.ReversesBlocks) (p : Fin N) :
+    M.map (M.map p) = p := by
+  classical
+  by_cases hp : ∃ i : Fin M.blockCount, (M.block i).Mem p
+  · rcases hp with ⟨i, hi⟩
+    exact map_map_eq_of_reversesBlocks_mem hM hi
+  · have hfix : M.map p = p := hM.2 p (by
+      intro i
+      exact fun hi => hp ⟨i, hi⟩)
+    rw [hfix]
+    exact hfix
+
 theorem pairwise_disjoint_toFinset {N : ℕ} (M : BlockMove N) :
     ((Finset.univ : Finset (Fin M.blockCount)) : Set (Fin M.blockCount)).PairwiseDisjoint
       (fun i => (M.block i).toFinset) := by

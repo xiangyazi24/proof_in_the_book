@@ -713,6 +713,21 @@ theorem StepCounting.letters_cross {k r : ℕ} {A : GeneralizedAllowableSequence
     exact C.crossed_labels_card j
   rwa [hsum] at hcard'
 
+/-- A step-counting proof plus a packing proof gives the sweep certificate. -/
+def StepCounting.toSweepCertificate {k r : ℕ} {A : GeneralizedAllowableSequence k r}
+    (C : StepCounting A) (packing : UngarBlockPacking r r C.order) :
+    UngarSweepCertificate (2 * k) r where
+  crossingCount := r
+  order := C.order
+  letters_cross := C.letters_cross
+  packing := packing
+
+/-- A step-counting proof plus a packing proof gives the counting certificate. -/
+def StepCounting.toCountingCertificate {k r : ℕ} {A : GeneralizedAllowableSequence k r}
+    (C : StepCounting A) (packing : UngarBlockPacking r r C.order) :
+    UngarCountingCertificate (2 * k) r :=
+  (C.toSweepCertificate packing).toCountingCertificate
+
 end GeneralizedAllowableSequence
 
 /--

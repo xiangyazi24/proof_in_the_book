@@ -515,3 +515,18 @@ Update for Task G1 physical `ssem`:
   prime-power multiples in the descending block, so it is not a shortcut around
   §§2-4. Useful pieces: product comparison `k! < n.descFactorial k` and a
   possible factorization-counting alternative to the choose-estimate route.
+
+Update for Task G1 duplicate `ssem2` response:
+- Task `0dc2cefd` completed with a more detailed estimate architecture.
+- Suggested hard-range route:
+  1. Prove `choose_upper_noLarge_nat` by splitting binomial factorization into
+     small primes `p <= sqrt n` and large allowed primes; use
+     `pow_factorization_choose_le`, `factorization_choose_le_one`,
+     `factorization_choose_of_lt_three_mul`, and `primorial_le_four_pow`.
+  2. Convert to logs via Chebyshev/primorial theta bounds.
+  3. Prove entropy lower bound for `log (n.choose k)`.
+  4. Prove a standalone real gap lemma above a large cutoff `K0`, and close the
+     remaining finite region by executable certificate/native decision.
+- This is compatible with the local work already pushed:
+  `NoLargePrimeFactor`, valuation vanishing, no-large choose upper bound over
+  `primeCounting k`, and `k! < n.descFactorial k`.

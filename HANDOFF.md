@@ -89,3 +89,50 @@ Local `lake env lean File.lean` for single-file checks (do NOT run `lake build` 
 ```bash
 ~/repos/chatgpt-bridge/ask-chatgpt.sh --pipe --channel ssem2 --no-channel-guard --stdin
 ```
+
+## Build SOP update — 2026-05-17
+
+Full local `lake build` is forbidden on the Mac mini: it can exhaust memory and hang.
+
+Use local single-file checks only:
+
+```bash
+lake env lean ProofsInTheBook/Chapter03.lean
+```
+
+Use the workspace-level remote build script for full builds:
+
+```bash
+/Users/huangx/.openclaw/workspace/scripts/remote-build.sh $(basename $PWD)
+```
+
+For this repository, from inside `~/repos/proof_in_the_book`, this expands to:
+
+```bash
+/Users/huangx/.openclaw/workspace/scripts/remote-build.sh proof_in_the_book
+```
+
+The script rsyncs the local repo to `uisai1`, checks/installs the Lean toolchain as needed, runs
+`lake build` remotely with 32-core parallelism, and returns output. `uisai1` cannot directly reach
+GitHub; the script handles this through the Mac mini relay.
+
+## Current Ch03 direction — 2026-05-17
+
+Xiang clarified that Ch03 must prove the full Sylvester-Schur theorem, including Erdős §§2-4;
+§§2-4 must not be left as `sorry` or postponed.
+
+Current investigation:
+
+- Mathlib does not appear to contain a ready-made Sylvester-Schur theorem.
+- `mo271/FormalBook` also leaves Sylvester's theorem as `sorry`/TODO in Chapter 3.
+- A simple lcm-based proof works only under the stronger hypothesis `start >= lcm(1..k)`, so it
+  does not replace Sylvester-Schur under the desired `n >= 2*k` hypothesis.
+- Useful Mathlib building blocks found so far:
+  - `Nat.pow_factorization_choose_le`
+  - `Nat.prod_pow_factorization_choose`
+  - `Nat.factorization_choose_of_lt_three_mul`
+  - Bertrand upper-bound pattern in `Mathlib/NumberTheory/Bertrand.lean`
+  - Chebyshev `theta`, `psi`, and `lcmUpto` infrastructure in `Mathlib/NumberTheory/Chebyshev.lean`
+
+ChatGPT bridge queries have been submitted on channels `ssem2` and `ssem` for proof-strategy help,
+but the work should proceed independently rather than waiting on them.

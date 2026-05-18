@@ -911,6 +911,23 @@ theorem sum_block_lengths_le {N : ℕ} (M : BlockMove N) :
   rw [hcard] at hle
   simpa [PositionInterval.toFinset_card] using hle
 
+/-- In a disjoint block move, at most one block can cross the middle barrier. -/
+theorem crossing_blocks_eq {k : ℕ} (M : BlockMove (2 * k))
+    {i j : Fin M.blockCount}
+    (hi : (M.block i).lo < k ∧ k ≤ (M.block i).hi)
+    (hj : (M.block j).lo < k ∧ k ≤ (M.block j).hi) :
+    i = j := by
+  by_contra hij
+  have hklt : k < 2 * k := lt_of_le_of_lt hi.2 (M.block i).hi_lt
+  let p : Fin (2 * k) := ⟨k, hklt⟩
+  have hpi : p ∈ (M.block i).toSet := by
+    exact ⟨hi.1.le, hi.2⟩
+  have hpj : p ∈ (M.block j).toSet := by
+    exact ⟨hj.1.le, hj.2⟩
+  have hdis : Disjoint ((M.block i).toSet) ((M.block j).toSet) :=
+    M.pairwise_disjoint (by simp) (by simp) hij
+  exact hdis.le_bot ⟨hpi, hpj⟩
+
 end BlockMove
 
 /--

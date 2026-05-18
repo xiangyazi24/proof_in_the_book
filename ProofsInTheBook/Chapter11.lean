@@ -440,6 +440,30 @@ theorem ungar_adjacent_order_sum_identity_int (c : ℕ) (hc : 2 ≤ c) (d : ℕ 
         simp [Finset.sum_range_succ]
         ring
 
+/-- Telescoping identity for adjacent index gaps. -/
+theorem ungar_adjacent_gap_sum_identity_int (c : ℕ) (hc : 1 ≤ c) (a : ℕ → ℤ) :
+    (∑ i ∈ Finset.range (c - 1), (a (i + 1) - a i - 1))
+      = a (c - 1) - a 0 - (c - 1 : ℤ) := by
+  induction c with
+  | zero => omega
+  | succ c ih =>
+      by_cases hc1 : 1 ≤ c
+      · have ihc := ih hc1
+        rw [show c + 1 - 1 = c by omega]
+        have hsum :
+            (∑ i ∈ Finset.range c, (a (i + 1) - a i - 1)) =
+              (∑ i ∈ Finset.range (c - 1), (a (i + 1) - a i - 1)) +
+                (a c - a (c - 1) - 1) := by
+          rw [← show c - 1 + 1 = c by omega]
+          rw [Finset.sum_range_succ]
+          simp [Nat.sub_add_cancel hc1]
+        rw [hsum, ihc]
+        rw [show ((c + 1 : ℕ) : ℤ) = (c : ℤ) + 1 by norm_num]
+        ring
+      · have hc_eq : c = 0 := by omega
+        subst c
+        simp
+
 /--
 Finite schedule of crossing moves in Ungar's middle-barrier proof.  The
 additional `idx` and gap fields are the data coming from the T/O/C pattern;

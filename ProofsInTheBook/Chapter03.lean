@@ -3474,6 +3474,35 @@ theorem exists_large_prime_factor_choose_below_sq_of_k_lt_120
   rcases hcert with ⟨hkp, hnkp, hpn, hp⟩
   exact hasPrimeFactorAbove_choose_of_interval_prime (by omega : k ≤ n) hp hkp hnkp hpn
 
+theorem exists_large_prime_factor_choose_below_sq_of_9_le
+    {n k : ℕ} (hk9 : 9 ≤ k) (hn2k : 2 * k ≤ n) (hnsq : n < k * k) :
+    HasPrimeFactorAbove k (n.choose k) := by
+  by_cases hsqrt33_lt : sqrt n < 33
+  · exact exists_large_prime_factor_choose_below_sq_of_sqrt_lt_33
+      hk9 hn2k hnsq hsqrt33_lt
+  · have hsqrt33 : 33 ≤ sqrt n := by omega
+    by_cases hk120_lt : k < 120
+    · exact exists_large_prime_factor_choose_below_sq_of_k_lt_120
+        hk9 hk120_lt hn2k hnsq hsqrt33
+    · have hk120 : 120 ≤ k := by omega
+      by_cases hclose : min k (n / 3) - sqrt n ≤ sqrt n
+      · exact exists_large_prime_factor_choose_below_sq_close_of_sqrt33
+          hk9 hn2k hnsq hsqrt33 hclose
+      · have hfar : 2 * sqrt n < min k (n / 3) := by omega
+        exact exists_large_prime_factor_choose_below_sq_far_of_120_le
+          hk120 hn2k hnsq hsqrt33 hfar
+
+theorem exists_large_prime_factor_choose_of_two_mul_le
+    {n k : ℕ} (hkpos : 0 < k) (hn2k : 2 * k ≤ n) :
+    HasPrimeFactorAbove k (n.choose k) := by
+  by_cases hk9_lt : k < 9
+  · exact exists_large_prime_factor_choose_of_lt_9 hkpos hk9_lt hn2k
+  · have hk9 : 9 ≤ k := by omega
+    by_cases hsq : k * k ≤ n
+    · exact exists_large_prime_factor_choose_sq_le_of_9_le hk9 (by omega) hsq
+    · have hbelow : n < k * k := by omega
+      exact exists_large_prime_factor_choose_below_sq_of_9_le hk9 hn2k hbelow
+
 /-!
 ### Central case of Sylvester's theorem
 
@@ -3509,10 +3538,9 @@ n(n-1)···(n-k+1) is not (k+1)-smooth; the existing infrastructure
 (`exists_large_prime_dvd_choose_of_descFactorial_not_smooth`) then gives
 the prime factor of C(n,k).
 -/
-theorem sylvester_general (n k : ℕ) (_hn : 2 * k ≤ n) (_hk : 0 < k)
-    (hsmooth : n.descFactorial k ∉ (k + 1).smoothNumbers) :
+theorem sylvester_general (n k : ℕ) (hn : 2 * k ≤ n) (hk : 0 < k) :
     ∃ p, k < p ∧ p.Prime ∧ p ∣ n.choose k :=
-  exists_large_prime_dvd_choose_of_descFactorial_not_smooth hsmooth
+  exists_large_prime_factor_choose_of_two_mul_le hk hn
 
 theorem chapter03_sylvester (k : ℕ) (hk : 0 < k) :
     ∃ p, k < p ∧ p.Prime ∧ p ∣ (2 * k).choose k :=

@@ -354,6 +354,26 @@ theorem exists_large_prime_factor_choose_sq_le_of_120_le
   exists_large_prime_factor_choose_of_sq_le_and_primeCounting_gap
     (by omega) hkn hsq (primeCounting_gap_of_120_le hk120)
 
+theorem primeCounting_gap_9_120_cert :
+    ∀ k : Fin 120, 9 ≤ k.val → 2 * Nat.primeCounting k.val < k.val := by
+  native_decide
+
+theorem primeCounting_gap_of_9_le_lt_120 {k : ℕ} (hk9 : 9 ≤ k) (hk120 : k < 120) :
+    2 * Nat.primeCounting k < k :=
+  primeCounting_gap_9_120_cert ⟨k, hk120⟩ hk9
+
+theorem primeCounting_gap_of_9_le {k : ℕ} (hk9 : 9 ≤ k) :
+    2 * Nat.primeCounting k < k := by
+  by_cases hk120 : k < 120
+  · exact primeCounting_gap_of_9_le_lt_120 hk9 hk120
+  · exact primeCounting_gap_of_120_le (by omega)
+
+theorem exists_large_prime_factor_choose_sq_le_of_9_le
+    {n k : ℕ} (hk9 : 9 ≤ k) (hkn : k ≤ n) (hsq : k * k ≤ n) :
+    HasPrimeFactorAbove k (n.choose k) :=
+  exists_large_prime_factor_choose_of_sq_le_and_primeCounting_gap
+    (by omega) hkn hsq (primeCounting_gap_of_9_le hk9)
+
 /--
 Factorial form of the standard binomial-divisibility argument: if a prime
 divides `n!` but not the two factorial factors in

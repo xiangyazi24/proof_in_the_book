@@ -1331,6 +1331,17 @@ theorem exists_mem_crossing_block_of_position_crosses {k : ℕ}
     · exact False.elim ((hp.mp hleft) hleft)
     · exact False.elim (hleft (hp.mpr hleft))
 
+theorem position_crosses_mem_crossingBlockIndex {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (hM : M.IsCrossing)
+    {p : Fin (2 * k)}
+    (hp : middleLeft k p ↔ ¬ middleLeft k (M.move.map p)) :
+    (M.move.block (M.crossingBlockIndex hM)).Mem p := by
+  rcases exists_mem_crossing_block_of_position_crosses (M := M.move) hrev hp with
+    ⟨i, hpi, hcross⟩
+  have hi : i = M.crossingBlockIndex hM :=
+    M.crossingBlockIndex_unique hM hcross
+  rwa [hi] at hpi
+
 /-- The labels crossing in one reversal step fit inside the full position set. -/
 theorem two_mul_order_le_positions {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) :

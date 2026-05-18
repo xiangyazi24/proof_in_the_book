@@ -530,3 +530,10 @@ Update for Task G1 duplicate `ssem2` response:
 - This is compatible with the local work already pushed:
   `NoLargePrimeFactor`, valuation vanishing, no-large choose upper bound over
   `primeCounting k`, and `k! < n.descFactorial k`.
+
+Update for duplicate bridge completions:
+- `10e3ddde` completed with the same detailed estimate architecture as
+  `0dc2cefd`; no new actionable lemmas beyond the already recorded
+  `choose_upper_noLarge_nat` / entropy / real-gap plan.
+- `c777c9af` returned a stale/garbage capture (prompt echo plus `Extended`),
+  so it is ignored.

@@ -70,7 +70,7 @@ private lemma one_le_ldsAt {m : ℕ} (a : Fin m → ℝ) (i : Fin m) : 1 ≤ lds
 /-! ### Key injectivity: the (lisAt, ldsAt) label distinguishes positions -/
 
 /-- If i < j and a(i) < a(j), then the LIS ending at j is strictly longer. -/
-private lemma lisAt_lt_of_lt {m : ℕ} {a : Fin m → ℝ} (ha : Injective a)
+private lemma lisAt_lt_of_lt {m : ℕ} {a : Fin m → ℝ} (_ha : Injective a)
     {i j : Fin m} (hij : i < j) (haij : a i < a j) :
     lisAt a i < lisAt a j := by
   -- Extract the optimal IS S of length lisAt a i ending at i
@@ -116,7 +116,7 @@ private lemma lisAt_lt_of_lt {m : ℕ} {a : Fin m → ℝ} (ha : Injective a)
   omega
 
 /-- If i < j and a(i) > a(j), then the LDS ending at j is strictly longer. -/
-private lemma ldsAt_lt_of_gt {m : ℕ} {a : Fin m → ℝ} (ha : Injective a)
+private lemma ldsAt_lt_of_gt {m : ℕ} {a : Fin m → ℝ} (_ha : Injective a)
     {i j : Fin m} (hij : i < j) (haij : a j < a i) :
     ldsAt a i < ldsAt a j := by
   -- Extract the optimal DS S of length ldsAt a i ending at i

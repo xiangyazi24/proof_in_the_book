@@ -79,11 +79,14 @@ noncomputable def kneserColorNat {n k : ℕ} (hk : 1 ≤ k) (S : KneserVertex n 
   let m := (KneserVertex.min' hk S).val
   if m ≤ n - 2 * k then m else n - 2 * k + 1
 
-theorem kneserColorNat_lt {n k : ℕ} (_hk : 1 ≤ k) (h2k : 2 * k ≤ n)
+theorem kneserColorNat_lt {n k : ℕ} (_hk : 1 ≤ k) (_h2k : 2 * k ≤ n)
     (S : KneserVertex n k) : kneserColorNat _hk S < n - 2 * k + 2 := by
   unfold kneserColorNat
   simp only
-  by_cases h : (KneserVertex.min' _hk S).val ≤ n - 2 * k <;> simp [h] <;> omega
+  by_cases h : (KneserVertex.min' _hk S).val ≤ n - 2 * k
+  · simp [h]
+    omega
+  · simp [h]
 
 noncomputable def kneserColor {n k : ℕ} (hk : 1 ≤ k) (h2k : 2 * k ≤ n) :
     KneserVertex n k → Fin (n - 2 * k + 2) :=
@@ -126,8 +129,8 @@ private theorem kneserColor_proper {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
     have hle := Finset.card_le_card hsub
     have hfilt_le : (Finset.univ.filter fun i : Fin n => n - 2 * k < i.val).card +
         (Finset.univ.filter fun i : Fin n => i.val ≤ n - 2 * k).card = n := by
-      have := @Finset.filter_card_add_filter_neg_card_eq_card (Fin n) Finset.univ
-        (fun i => n - 2 * k < i.val) (fun _ => by infer_instance)
+      have := Finset.card_filter_add_card_filter_not
+        (s := (Finset.univ : Finset (Fin n))) (p := fun i => n - 2 * k < i.val)
       simp at this; omega
     have hlow : (Finset.univ.filter fun i : Fin n => i.val ≤ n - 2 * k).card ≥ n - 2 * k + 1 := by
       have : ∀ j : Fin (n - 2 * k + 1), (⟨j.val, by omega⟩ : Fin n) ∈
@@ -166,12 +169,12 @@ theorem kneser_chromatic_lower_bound (n k : ℕ) (hk : 1 ≤ k) (hn : 2 * k ≤ 
         have : A = (Finset.univ : Finset (Fin (2 * k))).filter (fun i => i.val < k) := rfl
         rw [this]
         convert_to (Finset.Iio (⟨k, by omega⟩ : Fin (2*k))).card = k
-        · congr 1; ext i; simp [Finset.mem_Iio, Fin.lt_iff_val_lt_val]
+        · congr 1; ext i; simp [Finset.mem_Iio, Fin.lt_def]
         · simp [Fin.card_Iio]
       have hBcard : B.card = k := by
         have hAB : A.card + B.card = 2 * k := by
-          have := @Finset.filter_card_add_filter_neg_card_eq_card _ Finset.univ
-            (fun i : Fin (2*k) => i.val < k) (fun _ => inferInstance)
+          have := Finset.card_filter_add_card_filter_not
+            (s := (Finset.univ : Finset (Fin (2*k)))) (p := fun i : Fin (2*k) => i.val < k)
           simp at this; omega
         omega
       have hdisj : Disjoint A B := by

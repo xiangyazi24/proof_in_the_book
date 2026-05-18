@@ -121,8 +121,8 @@ theorem complex_poly_local_norm_decrease
     (hm0 : 0 < m)
     (ha : a ≠ 0)
     (hc : c ≠ 0)
-    (hconst : r.coeff 0 = a)
-    (hbelow : ∀ k, 0 < k → k < m → r.coeff k = 0)
+    (_hconst : r.coeff 0 = a)
+    (_hbelow : ∀ k, 0 < k → k < m → r.coeff k = 0)
     (hm : r.coeff m = c) :
     ∃ w : ℂ, ‖r.eval w‖ < ‖a‖ := by
   have hdeg : 0 < r.natDegree := by

@@ -81,10 +81,10 @@ This is the geometric engine of Cauchy's rigidity proof.
 -/
 theorem arm_lemma_abstract {n : ℕ} (angles newAngles : Fin n → ℝ)
     (chord newChord : ℝ)
-    (hopen : ∀ i, angles i ≤ newAngles i)
-    (hstrict : ∃ i, angles i < newAngles i)
-    (hconvex : ∀ i, newAngles i < Real.pi)
-    (harm : chord < newChord ∨ (∀ i, angles i = newAngles i)) :
+    (_hopen : ∀ i, angles i ≤ newAngles i)
+    (_hstrict : ∃ i, angles i < newAngles i)
+    (_hconvex : ∀ i, newAngles i < Real.pi)
+    (_harm : chord < newChord ∨ (∀ i, angles i = newAngles i)) :
     True := trivial
 
 /--
@@ -121,7 +121,7 @@ Cauchy's rigidity theorem (book's full argument):
 theorem cauchy_rigidity_outline {V E F : ℕ}
     (_heuler : V - E + F = 2)
     (_edgeSigns : Fin E → EdgeSign)
-    (_armLemma : ∀ face : Fin F, ∀ boundary : List EdgeSign,
+    (_armLemma : ∀ _face : Fin F, ∀ boundary : List EdgeSign,
       (∀ s ∈ boundary, s = EdgeSign.plus) → False)
     (_hnonzero : ∃ e, _edgeSigns e ≠ EdgeSign.zero)
     (signChangeContradiction : False) :

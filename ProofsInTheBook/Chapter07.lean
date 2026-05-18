@@ -82,7 +82,7 @@ private lemma scaled_exp_partial_sum_is_int (n : ℕ) :
     _ = ((n.factorial / k.factorial : ℕ) : ℝ) := by
       rw [div_eq_iff hkfac_ne]; exact_mod_cast hnat.symm
 
-private lemma factorial_tail_le_geom (n j : ℕ) (hn : 0 < n) :
+private lemma factorial_tail_le_geom (n j : ℕ) (_hn : 0 < n) :
     (n.factorial : ℝ) / ((n + 1 + j).factorial : ℝ) ≤
       (1 / ((n + 1 : ℕ) : ℝ)) ^ (j + 1) := by
   have hfac_ne : ((n.factorial : ℕ) : ℝ) ≠ 0 := by

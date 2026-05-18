@@ -27,7 +27,7 @@ follows from (a-b)² ≥ 0. This is the heart of AM-GM.
 theorem chapter18_sq_abs_le (a b : ℝ) : 2 * a * b ≤ a ^ 2 + b ^ 2 := by
   nlinarith [sq_nonneg (a - b)]
 
-theorem chapter18_am_gm_sq (a b : ℝ) (ha : 0 ≤ a) (hb : 0 ≤ b) :
+theorem chapter18_am_gm_sq (a b : ℝ) (_ha : 0 ≤ a) (_hb : 0 ≤ b) :
     a * b ≤ ((a + b) / 2) ^ 2 := by
   nlinarith [sq_nonneg (a - b)]
 

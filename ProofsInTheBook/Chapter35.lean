@@ -84,7 +84,7 @@ unchanged `color v ∉ {c1,c2}`.
 theorem kempeSwap_proper_abstract {V : Type*} [DecidableEq V]
     (G : SimpleGraph V) (color : V → Fin 5)
     (hproper : ∀ u v, G.Adj u v → color u ≠ color v)
-    (c1 c2 : Fin 5) (hne : c1 ≠ c2)
+    (c1 c2 : Fin 5) (_hne : c1 ≠ c2)
     (S : Finset V)
     (hclosed : ∀ u v, G.Adj u v → u ∈ S → (color u = c1 ∨ color u = c2) →
       (color v = c1 ∨ color v = c2) → v ∈ S) :

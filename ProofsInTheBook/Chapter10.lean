@@ -121,13 +121,13 @@ theorem gallai_closer_pair_contradiction {Point Line : Type*}
     (onLine : Point → Line → Prop) [DecidableRel onLine]
     (dist : Point → Line → ℕ)
     (p : Point) (line : Line)
-    (hp : p ∈ points) (hline : line ∈ lines)
-    (hoff : ¬ onLine p line)
+    (_hp : p ∈ points) (_hline : line ∈ lines)
+    (_hoff : ¬ onLine p line)
     (hmin : ∀ p' line', p' ∈ points → line' ∈ lines → ¬ onLine p' line' →
       dist p line ≤ dist p' line')
-    (hge3 : 2 < (pointsOnLine points onLine line).card)
+    (_hge3 : 2 < (pointsOnLine points onLine line).card)
     (footLine : Point → Line → Point)
-    (hFoot : ∀ pt l, footLine pt l ∈ points → onLine (footLine pt l) l)
+    (_hFoot : ∀ pt l, footLine pt l ∈ points → onLine (footLine pt l) l)
     (closerPoint : Point → Line → Line → Point)
     (hCloser : ∀ pt l q, closerPoint pt l q ∈ points →
       ¬ onLine (closerPoint pt l q) q →

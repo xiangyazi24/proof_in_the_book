@@ -155,7 +155,7 @@ any simple polygon with n vertices. Fisk's proof:
 Steps 1 and 3 are geometric; step 4 is `exists_small_guard_color_class` above.
 -/
 theorem art_gallery_theorem (n : ℕ)
-    (triangulation_exists : ∀ (V : Type*) [DecidableEq V] [Fintype V],
+    (_triangulation_exists : ∀ (V : Type*) [DecidableEq V] [Fintype V],
       ∀ (vertices : Finset V), vertices.card = n →
       ∃ (triangles : Finset (Finset V)) (color : V → GuardColor),
         (∀ tri ∈ triangles, tri ⊆ vertices) ∧

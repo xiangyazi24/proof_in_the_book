@@ -124,11 +124,11 @@ Key lemma: a continuous periodic function satisfying duplication with h(0) = 0
 that achieves its max must have max ≤ 0.
 -/
 private theorem max_le_zero_of_dup_zero
-    (h : ℝ → ℝ) (hcont : Continuous h) (hper : ∀ x, h (x + 1) = h x)
+    (h : ℝ → ℝ) (hcont : Continuous h) (_hper : ∀ x, h (x + 1) = h x)
     (hdup : ∀ x, h x = (1/2 : ℝ) * (h (x/2) + h ((x+1)/2)))
     (hzero : h 0 = 0)
     (x₀ : ℝ) (hmax : ∀ y, h y ≤ h x₀) : h x₀ ≤ 0 := by
-  by_contra hpos; push_neg at hpos
+  by_contra hpos; push Not at hpos
   have hiter : ∀ n : ℕ, h (x₀ / 2 ^ n) = h x₀ := by
     intro n; induction n with
     | zero => simp
@@ -148,7 +148,6 @@ private theorem max_le_zero_of_dup_zero
     refine this.congr (fun n => ?_)
     rw [one_div, inv_pow]; ring
   have hconv := (hcont.tendsto 0).comp hlim
-  simp only [Function.comp] at hconv
   have : Filter.Tendsto (fun n => h (x₀ / 2 ^ n)) Filter.atTop (nhds (h 0)) := hconv
   have hconst : Filter.Tendsto (fun n => h (x₀ / 2 ^ n)) Filter.atTop (nhds (h x₀)) := by
     rw [show (fun n => h (x₀ / 2 ^ n)) = fun _ => h x₀ from funext hiter]
@@ -168,7 +167,7 @@ theorem herglotz_uniqueness_of_continuous_periodic_odd
     (hfc : Continuous f) (hgc : Continuous g)
     (hdup_f : ∀ x, 2 * f x = f (x / 2) + f ((x + 1) / 2))
     (hdup_g : ∀ x, 2 * g x = g (x / 2) + g ((x + 1) / 2))
-    (hhalf : f (1/2) = g (1/2)) :
+    (_hhalf : f (1/2) = g (1/2)) :
     f = g := by
   suffices ∀ x, f x - g x = 0 by ext x; linarith [this x]
   let d := fun x => f x - g x
@@ -190,12 +189,12 @@ theorem herglotz_uniqueness_of_continuous_periodic_odd
   have ddup : ∀ x, d x = (1/2 : ℝ) * (d (x/2) + d ((x+1)/2)) := fun x => by
     simp only [d]; have := hdup_f x; have := hdup_g x; linarith
   have dzero : d 0 = 0 := by
-    have h1 : d 0 + d 1 = 0 := by convert dcancel 0 using 2; ring
+    have h1 : d 0 + d 1 = 0 := by convert dcancel 0 using 2; ring_nf
     have h2 : d 1 = d 0 := by convert dper 0 using 2; ring
     linarith
   intro x
   have hle : d x ≤ 0 := by
-    by_contra hgt; push_neg at hgt
+    by_contra hgt; push Not at hgt
     have hmax_exists : ∃ x₀, ∀ y, d y ≤ d x₀ := by
       obtain ⟨x₀, _, hx₀⟩ := IsCompact.exists_isMaxOn isCompact_Icc
         (Set.nonempty_Icc.mpr (by norm_num : (0:ℝ) ≤ 1)) dcont.continuousOn
@@ -203,7 +202,7 @@ theorem herglotz_uniqueness_of_continuous_periodic_odd
     obtain ⟨x₀, hx₀⟩ := hmax_exists
     exact absurd (max_le_zero_of_dup_zero d dcont dper ddup dzero x₀ hx₀) (by linarith [hx₀ x])
   have hge : 0 ≤ d x := by
-    by_contra hlt; push_neg at hlt
+    by_contra hlt; push Not at hlt
     have hmax_neg : ∃ x₀, ∀ y, -d y ≤ -d x₀ := by
       obtain ⟨x₀, _, hx₀⟩ := IsCompact.exists_isMinOn isCompact_Icc
         (Set.nonempty_Icc.mpr (by norm_num : (0:ℝ) ≤ 1)) dcont.continuousOn
@@ -255,7 +254,6 @@ theorem herglotz_dyadic_average (f : ℝ → ℝ)
         1 / 2 ^ (n + 1) * f ((x + ↑k) / 2 ^ (n + 1)) +
         1 / 2 ^ (n + 1) * f ((x + (↑k + 2 ^ n)) / 2 ^ (n + 1)) from by ring]
     rw [Finset.sum_add_distrib, ← Finset.mul_sum, ← Finset.mul_sum, ← mul_add]
-    congr 1
     congr 1
     rw [show (2 : ℕ) ^ (n + 1) = 2 ^ n + 2 ^ n from by ring]
     rw [Finset.sum_range_add]

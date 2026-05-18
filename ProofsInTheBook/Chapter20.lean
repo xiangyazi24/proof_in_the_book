@@ -88,7 +88,7 @@ private theorem sum_nat_mod_two_eq_sum_mod_two
     rw [Finset.sum_cons, Finset.sum_cons]
     conv_lhs => rw [Nat.add_mod (f a) _ 2, ih]
     conv_rhs => rw [Nat.add_mod (f a % 2) _ 2]
-    simp [Nat.mod_mod]
+    simp
 
 theorem sperner_parity_abstract
     (n : ℕ) (triangleColors : Fin n → MonskyColor × MonskyColor × MonskyColor)

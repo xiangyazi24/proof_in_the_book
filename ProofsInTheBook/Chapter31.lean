@@ -489,6 +489,16 @@ theorem periodicCore_joyalTreeToFunction (X : DoublyRootedLabeledTree n) :
     (periodicCore_subset_joyalPathVertices X)
     (joyalPathVertices_subset_periodicCore X)
 
+theorem joyalPathVertices_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
+    (hXY : joyalTreeToFunction X = joyalTreeToFunction Y) :
+    joyalPathVertices X = joyalPathVertices Y := by
+  rw [← periodicCore_joyalTreeToFunction X, ← periodicCore_joyalTreeToFunction Y, hXY]
+
+theorem joyalPathDomainOrder_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
+    (hXY : joyalTreeToFunction X = joyalTreeToFunction Y) :
+    joyalPathDomainOrder X = joyalPathDomainOrder Y := by
+  simp [joyalPathDomainOrder, joyalPathVertices_eq_of_function_eq hXY]
+
 theorem joyalPathRangeOrder_zero (X : DoublyRootedLabeledTree n)
     (h : 0 < (joyalPathRangeOrder X).length) :
     (joyalPathRangeOrder X)[0]'h = X.2.1 := by

@@ -120,6 +120,67 @@ theorem choose_le_pow_primeCounting_of_noLargePrimeFactor
     _ ≤ n ^ s.card := hprod_le
     _ ≤ n ^ Nat.primeCounting k := hpow_card
 
+theorem choose_factorization_le_min_third_of_noLargePrimeFactor
+    {n k : ℕ} (hkn : k ≤ n) (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)
+    (hno : NoLargePrimeFactor k (n.choose k)) :
+    n.choose k =
+      ∏ p ∈ Finset.range (min k (n / 3) + 1),
+        p ^ (n.choose k).factorization p := by
+  refine (Eq.trans ?_ (Nat.prod_pow_factorization_choose n k hkn)).symm
+  refine Finset.prod_subset ?hsub ?hzero
+  · intro p hp
+    rw [Finset.mem_range] at hp ⊢
+    omega
+  · intro p hp_range hp_not_small
+    rw [Finset.mem_range] at hp_range hp_not_small
+    have hMp : min k (n / 3) < p := by omega
+    by_cases hpprime : p.Prime
+    · by_cases hkp : k < p
+      · rw [factorization_choose_eq_zero_of_noLargePrimeFactor hno hkp, pow_zero]
+      · have hpk : p ≤ k := le_of_not_gt hkp
+        have hpnk : p ≤ n - k := by omega
+        have hp2 : p ≠ 2 := by
+          intro hp_eq
+          have hnthird : 2 ≤ n / 3 := by omega
+          omega
+        have hdiv : n / 3 < p := by omega
+        have hnlt : n < 3 * p := by
+          have := (Nat.div_lt_iff_lt_mul three_pos).mp hdiv
+          simpa [mul_comm] using this
+        rw [Nat.factorization_choose_of_lt_three_mul hp2 hpk hpnk hnlt, pow_zero]
+    · rw [Nat.factorization_eq_zero_of_not_prime (n.choose k) hpprime, pow_zero]
+
+theorem choose_le_sqrt_mul_four_pow_min_third_of_noLargePrimeFactor
+    {n k : ℕ} (hnpos : 0 < n) (hkn : k ≤ n) (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)
+    (hno : NoLargePrimeFactor k (n.choose k)) :
+    n.choose k ≤ n ^ sqrt n * 4 ^ min k (n / 3) := by
+  let M := min k (n / 3)
+  let S := {p ∈ Finset.range (M + 1) | Nat.Prime p}
+  let f := fun p => p ^ (n.choose k).factorization p
+  have hprime_filter : ∏ p ∈ S, f p = ∏ p ∈ Finset.range (M + 1), f p := by
+    refine Finset.prod_filter_of_ne fun p _ hpprime => ?_
+    contrapose hpprime
+    dsimp only [f]
+    rw [Nat.factorization_eq_zero_of_not_prime (n.choose k) hpprime, pow_zero]
+  rw [choose_factorization_le_min_third_of_noLargePrimeFactor hkn hn2k hn6 hno, ← hprime_filter,
+    ← Finset.prod_filter_mul_prod_filter_not S (· ≤ sqrt n)]
+  apply mul_le_mul'
+  · refine (Finset.prod_le_prod' fun p _ => (?_ : f p ≤ n)).trans ?_
+    · exact Nat.pow_factorization_choose_le hnpos
+    have hcard : (Finset.Icc 1 (sqrt n)).card = sqrt n := by
+      rw [Nat.card_Icc, Nat.add_sub_cancel]
+    rw [Finset.prod_const]
+    refine pow_right_mono₀ (Nat.succ_le_iff.mpr hnpos) ((Finset.card_le_card fun p hp => ?_).trans hcard.le)
+    obtain ⟨hpS, hpsqrt⟩ := Finset.mem_filter.1 hp
+    exact Finset.mem_Icc.mpr ⟨(Finset.mem_filter.1 hpS).2.one_lt.le, hpsqrt⟩
+  · refine le_trans ?_ (primorial_le_four_pow M)
+    refine (Finset.prod_le_prod' fun p hp => (?_ : f p ≤ p)).trans ?_
+    · obtain ⟨hpS, hpsqrt⟩ := Finset.mem_filter.1 hp
+      refine (pow_right_mono₀ (Finset.mem_filter.1 hpS).2.one_lt.le ?_).trans (pow_one p).le
+      exact Nat.factorization_choose_le_one (sqrt_lt'.mp <| not_le.1 hpsqrt)
+    refine Finset.prod_le_prod_of_subset_of_one_le' (Finset.filter_subset _ _) ?_
+    exact fun p hp _ => (Finset.mem_filter.1 hp).2.one_lt.le
+
 /--
 Factorial form of the standard binomial-divisibility argument: if a prime
 divides `n!` but not the two factorial factors in

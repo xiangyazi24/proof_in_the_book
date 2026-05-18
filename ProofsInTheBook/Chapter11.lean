@@ -1938,6 +1938,17 @@ def moveOrder {k r : ℕ} (A : CountedGeneralizedAllowableSequence k r) (j : Fin
 def IsCrossing {k r : ℕ} (A : CountedGeneralizedAllowableSequence k r) (j : Fin r) : Prop :=
   0 < A.moveOrder j
 
+noncomputable def crossingMoves {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) : Finset (Fin r) := by
+  classical
+  exact Finset.univ.filter A.IsCrossing
+
+theorem mem_crossingMoves {k r : ℕ} {A : CountedGeneralizedAllowableSequence k r}
+    {j : Fin r} :
+    j ∈ A.crossingMoves ↔ A.IsCrossing j := by
+  classical
+  simp [crossingMoves]
+
 theorem crossingLabelsCard_eq_two_mul_moveOrder {k r : ℕ}
     (A : CountedGeneralizedAllowableSequence k r) (j : Fin r) :
     GeneralizedAllowableSequence.crossingLabelsCard A.seq j = 2 * A.moveOrder j := by
@@ -1961,6 +1972,17 @@ theorem exists_crossing_move {k r : ℕ} (A : CountedGeneralizedAllowableSequenc
   have hcount := A.crossingLabelsCard_eq_two_mul_moveOrder j
   unfold IsCrossing
   omega
+
+theorem crossingMoves_nonempty {k r : ℕ} (A : CountedGeneralizedAllowableSequence k r)
+    (hk : 0 < k) :
+    A.crossingMoves.Nonempty := by
+  rcases A.exists_crossing_move hk with ⟨j, hj⟩
+  exact ⟨j, A.mem_crossingMoves.mpr hj⟩
+
+theorem crossingMoves_card_pos {k r : ℕ} (A : CountedGeneralizedAllowableSequence k r)
+    (hk : 0 < k) :
+    0 < A.crossingMoves.card := by
+  exact Finset.card_pos.mpr (A.crossingMoves_nonempty hk)
 
 /-- Counted reversal steps plus a packing proof give a counting certificate. -/
 noncomputable def toCountingCertificate {k r : ℕ}

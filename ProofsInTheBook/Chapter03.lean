@@ -932,6 +932,13 @@ theorem log4_lt_7_5 : Real.log 4 < (7 : ℝ) / 5 := by
   rw [show (4 : ℝ) = 2 ^ 2 by norm_num, Real.log_pow]
   nlinarith [log2_lt_7_10]
 
+theorem log2_lt_1733_2500 : Real.log 2 < (1733 : ℝ) / 2500 := by
+  nlinarith [Real.log_two_lt_d9]
+
+theorem log4_lt_1733_1250 : Real.log 4 < (1733 : ℝ) / 1250 := by
+  rw [show (4 : ℝ) = 2 ^ 2 by norm_num, Real.log_pow]
+  nlinarith [log2_lt_1733_2500]
+
 theorem log64_lt_21_5 : Real.log 64 < (21 : ℝ) / 5 := by
   rw [show (64 : ℝ) = 2 ^ 6 by norm_num, Real.log_pow]
   nlinarith [log2_lt_7_10]
@@ -983,6 +990,60 @@ theorem stirling_correction_ge_neg_log_k_sub_six_fifths
     Real.log_le_log (by norm_num) htwopi.le
   nlinarith [log6_gt_8_5, hlog6_le]
 
+theorem entropyTerm_eq_mul_entropyRatio
+    {n k : ℕ} (hkpos : 0 < k) (hklt : k < n) :
+    entropyTerm n k =
+      (k : ℝ) * (((n : ℝ) / (k : ℝ)) * Real.log ((n : ℝ) / (k : ℝ))
+        - ((n : ℝ) / (k : ℝ) - 1) * Real.log ((n : ℝ) / (k : ℝ) - 1)) := by
+  have hkn : k ≤ n := le_of_lt hklt
+  have hnpos : 0 < n := hkpos.trans hklt
+  have hnkpos : 0 < n - k := Nat.sub_pos_of_lt hklt
+  have hkpos_real : (0 : ℝ) < k := by exact_mod_cast hkpos
+  have hnpos_real : (0 : ℝ) < n := by exact_mod_cast hnpos
+  have hnkpos_real_nat : (0 : ℝ) < ((n - k : ℕ) : ℝ) := by exact_mod_cast hnkpos
+  have hk_ne : (k : ℝ) ≠ 0 := ne_of_gt hkpos_real
+  have hn_ne : (n : ℝ) ≠ 0 := ne_of_gt hnpos_real
+  have hnk_ne : ((n - k : ℕ) : ℝ) ≠ 0 := ne_of_gt hnkpos_real_nat
+  have hcast_sub : ((n - k : ℕ) : ℝ) = (n : ℝ) - (k : ℝ) := Nat.cast_sub hkn
+  have hratio_sub :
+      (n : ℝ) / (k : ℝ) - 1 = ((n - k : ℕ) : ℝ) / (k : ℝ) := by
+    rw [hcast_sub]
+    field_simp [hk_ne]
+  unfold entropyTerm
+  rw [Real.log_div hn_ne hk_ne, hratio_sub, Real.log_div hnk_ne hk_ne]
+  rw [hcast_sub]
+  field_simp [hk_ne]
+  ring
+
+theorem entropyRatio_lower_log_add
+    {x : ℝ} (hx : 1 < x) :
+    Real.log x + 1 - 1 / x ≤
+      x * Real.log x - (x - 1) * Real.log (x - 1) := by
+  have hxpos : 0 < x := by linarith
+  have hxsubpos : 0 < x - 1 := by linarith
+  have hypos : 0 < x / (x - 1) := div_pos hxpos hxsubpos
+  have hlog := Real.one_sub_inv_le_log_of_pos hypos
+  have hrewrite :
+      Real.log x + (x - 1) * Real.log (x / (x - 1)) =
+        x * Real.log x - (x - 1) * Real.log (x - 1) := by
+    rw [Real.log_div (ne_of_gt hxpos) (ne_of_gt hxsubpos)]
+    ring
+  have hinv_eq : (x / (x - 1))⁻¹ = (x - 1) / x := by
+    field_simp [ne_of_gt hxpos, ne_of_gt hxsubpos]
+  rw [hinv_eq] at hlog
+  have hlog' : 1 / x ≤ Real.log (x / (x - 1)) := by
+    field_simp [ne_of_gt hxpos] at hlog ⊢
+    linarith
+  have hmul :
+      (x - 1) * (1 / x) ≤ (x - 1) * Real.log (x / (x - 1)) :=
+    mul_le_mul_of_nonneg_left hlog' (by linarith)
+  have hbasic :
+      Real.log x + 1 - 1 / x ≤
+        Real.log x + (x - 1) * Real.log (x / (x - 1)) := by
+    field_simp [ne_of_gt hxpos, ne_of_gt hxsubpos] at hmul ⊢
+    nlinarith
+  rwa [hrewrite] at hbasic
+
 theorem two_mul_sub_one_div_add_one_le_log {x : ℝ} (hx1 : 1 ≤ x) :
     2 * (x - 1) / (x + 1) ≤ Real.log x := by
   by_cases hx : x = 1
@@ -1022,6 +1083,24 @@ theorem two_div_two_mul_sub_one_le_log_div_sub_one {x : ℝ} (hx : 1 < x) :
   convert h using 1
   field_simp [hden.ne', hden2.ne']
   ring
+
+theorem entropyRatio_lower_log_add_two_div
+    {x : ℝ} (hx : 1 < x) :
+    Real.log x + (x - 1) * (2 / (2 * x - 1)) ≤
+      x * Real.log x - (x - 1) * Real.log (x - 1) := by
+  have hxpos : 0 < x := by linarith
+  have hxsubpos : 0 < x - 1 := by linarith
+  have hratio := two_div_two_mul_sub_one_le_log_div_sub_one hx
+  have hmul :
+      (x - 1) * (2 / (2 * x - 1)) ≤
+        (x - 1) * Real.log (x / (x - 1)) :=
+    mul_le_mul_of_nonneg_left hratio (by linarith)
+  have hrewrite :
+      Real.log x + (x - 1) * Real.log (x / (x - 1)) =
+        x * Real.log x - (x - 1) * Real.log (x - 1) := by
+    rw [Real.log_div (ne_of_gt hxpos) (ne_of_gt hxsubpos)]
+    ring
+  linarith
 
 theorem sqrt_div_mul_log_mul_le_of_120_le
     {K x : ℝ} (hK : 120 ≤ K) (hx : 2 ≤ x) :

@@ -825,6 +825,68 @@ theorem toFinset_card {N : ℕ} (I : PositionInterval N) :
   rw [← hcard_map]
   simp [length]
 
+theorem left_of_middle_card_of_crossing {k : ℕ} (I : PositionInterval (2 * k))
+    (hcross : I.lo < k ∧ k ≤ I.hi) :
+    (I.toFinset.filter fun p => p.val < k).card = k - I.lo := by
+  classical
+  let e : Fin (2 * k) ↪ ℕ := ⟨Fin.val, by intro a b h; exact Fin.ext h⟩
+  have hmap :
+      (I.toFinset.filter fun p => p.val < k).map e = Finset.Icc I.lo (k - 1) := by
+    ext n
+    constructor
+    · intro hn
+      rcases Finset.mem_map.mp hn with ⟨p, hp, hpval⟩
+      rw [Finset.mem_filter, mem_toFinset] at hp
+      simp [e] at hpval
+      subst n
+      exact Finset.mem_Icc.mpr ⟨hp.1.1, Nat.le_sub_one_of_lt hp.2⟩
+    · intro hn
+      rcases Finset.mem_Icc.mp hn with ⟨hlo, hle⟩
+      have hnlt_k : n < k := by omega
+      have hnlt : n < 2 * k := lt_trans hnlt_k (by omega : k < 2 * k)
+      refine Finset.mem_map.mpr ⟨⟨n, hnlt⟩, ?_, ?_⟩
+      · rw [Finset.mem_filter, mem_toFinset]
+        exact ⟨⟨hlo, le_trans hnlt_k.le hcross.2⟩, hnlt_k⟩
+      · simp [e]
+  have hcard_map :
+      ((I.toFinset.filter fun p => p.val < k).map e).card =
+        (I.toFinset.filter fun p => p.val < k).card :=
+    Finset.card_map e
+  rw [hmap] at hcard_map
+  rw [← hcard_map]
+  simp
+  omega
+
+theorem right_of_middle_card_of_crossing {k : ℕ} (I : PositionInterval (2 * k))
+    (hcross : I.lo < k ∧ k ≤ I.hi) :
+    (I.toFinset.filter fun p => k ≤ p.val).card = I.hi + 1 - k := by
+  classical
+  let e : Fin (2 * k) ↪ ℕ := ⟨Fin.val, by intro a b h; exact Fin.ext h⟩
+  have hmap :
+      (I.toFinset.filter fun p => k ≤ p.val).map e = Finset.Icc k I.hi := by
+    ext n
+    constructor
+    · intro hn
+      rcases Finset.mem_map.mp hn with ⟨p, hp, hpval⟩
+      rw [Finset.mem_filter, mem_toFinset] at hp
+      simp [e] at hpval
+      subst n
+      exact Finset.mem_Icc.mpr ⟨hp.2, hp.1.2⟩
+    · intro hn
+      rcases Finset.mem_Icc.mp hn with ⟨hk, hhi⟩
+      have hnlt : n < 2 * k := lt_of_le_of_lt hhi I.hi_lt
+      refine Finset.mem_map.mpr ⟨⟨n, hnlt⟩, ?_, ?_⟩
+      · rw [Finset.mem_filter, mem_toFinset]
+        exact ⟨⟨le_trans hcross.1.le hk, hhi⟩, hk⟩
+      · simp [e]
+  have hcard_map :
+      ((I.toFinset.filter fun p => k ≤ p.val).map e).card =
+        (I.toFinset.filter fun p => k ≤ p.val).card :=
+    Finset.card_map e
+  rw [hmap] at hcard_map
+  rw [← hcard_map]
+  simp
+
 /--
 For `2 * k` positions, the order of an interval crossing the middle barrier.
 The barrier is between positions `k - 1` and `k`.

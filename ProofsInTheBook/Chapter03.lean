@@ -254,6 +254,18 @@ theorem mul_log_sub_mul_log_le_log_choose {n k : ℕ}
         (by exact_mod_cast hchoose_pos.ne')]
       ring
 
+theorem erdos_log_sandwich_of_noLargePrimeFactor
+    {n k : ℕ} (hkpos : 0 < k) (hnpos : 0 < n) (hkn : k ≤ n)
+    (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)
+    (hno : NoLargePrimeFactor k (n.choose k)) :
+    (k : ℝ) * Real.log n - (k : ℝ) * Real.log k ≤
+      (sqrt n : ℝ) * Real.log n + ((min k (n / 3) : ℕ) : ℝ) * Real.log 4 := by
+  have hlower := mul_log_sub_mul_log_le_log_choose (n := n) (k := k) hkpos hkn
+  have hupper :=
+    log_choose_le_sqrt_log_add_min_third_log_four_of_noLargePrimeFactor
+      (n := n) (k := k) hnpos hkn hn2k hn6 hno
+  linarith
+
 /--
 Factorial form of the standard binomial-divisibility argument: if a prime
 divides `n!` but not the two factorial factors in

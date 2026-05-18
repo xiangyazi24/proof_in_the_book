@@ -1453,6 +1453,25 @@ theorem map_map_eq_of_reversesBlocks {N : ℕ} {M : BlockMove N}
     rw [hfix]
     exact hfix
 
+theorem map_middleLeft_iff_of_reversesBlocks_no_crossing {k : ℕ}
+    {M : BlockMove (2 * k)} (hM : M.ReversesBlocks)
+    (hnone : ∀ i : Fin M.blockCount, ¬ (M.block i).lo < k ∧ k ≤ (M.block i).hi)
+    (p : Fin (2 * k)) :
+    middleLeft k (M.map p) ↔ middleLeft k p := by
+  classical
+  by_cases hp : ∃ i : Fin M.blockCount, (M.block i).Mem p
+  · rcases hp with ⟨i, hpi⟩
+    have hmap : M.map p = (M.block i).mirror p hpi := hM.1 i p hpi
+    rw [hmap]
+    rcases hpi with ⟨hlo, hhi⟩
+    have hnot := hnone i
+    simp [middleLeft, PositionInterval.mirror]
+    omega
+  · have hfix : M.map p = p := hM.2 p (by
+      intro i
+      exact fun hpi => hp ⟨i, hpi⟩)
+    rw [hfix]
+
 theorem pairwise_disjoint_toFinset {N : ℕ} (M : BlockMove N) :
     ((Finset.univ : Finset (Fin M.blockCount)) : Set (Fin M.blockCount)).PairwiseDisjoint
       (fun i => (M.block i).toFinset) := by

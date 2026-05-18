@@ -154,6 +154,18 @@ theorem treePath_unique (T : LabeledTree n) (u v : Fin n) {p : T.1.Walk u v}
     p = treePath T u v := by
   exact (T.2.existsUnique_path u v).unique hp (treePath_isPath T u v)
 
+theorem isTree_path_length_eq_dist (T : LabeledTree n) {u v : Fin n}
+    {p : T.1.Walk u v} (hp : p.IsPath) :
+    p.length = T.1.dist u v := by
+  obtain ⟨q, hqPath, hqLen⟩ := T.2.connected.exists_path_of_dist u v
+  have hpq : p = q := (T.2.existsUnique_path u v).unique hp hqPath
+  rw [hpq]
+  exact hqLen
+
+theorem treePath_length_eq_dist (T : LabeledTree n) (u v : Fin n) :
+    (treePath T u v).length = T.1.dist u v :=
+  isTree_path_length_eq_dist T (treePath_isPath T u v)
+
 noncomputable def joyalPathVertices (X : DoublyRootedLabeledTree n) : Finset (Fin n) :=
   (treePath X.1 X.2.1 X.2.2).support.toFinset
 
@@ -253,6 +265,32 @@ theorem joyalOffPathValue_ne (X : DoublyRootedLabeledTree n)
     (v : Fin n) (hv : v ∉ joyalPathVertices X) :
     joyalOffPathValue X v hv ≠ v := by
   exact (joyalOffPathValue_adj X v hv).ne'
+
+theorem joyalOffPathValue_dist_left_add_one (X : DoublyRootedLabeledTree n)
+    (v : Fin n) (hv : v ∉ joyalPathVertices X) :
+    X.1.1.dist X.2.1 (joyalOffPathValue X v hv) + 1 = X.1.1.dist X.2.1 v := by
+  let p := treePath X.1 v X.2.1
+  have hne : v ≠ X.2.1 := by
+    intro h
+    exact hv (by simpa [h] using joyal_left_mem_pathVertices X)
+  have hpNotNil : ¬ p.Nil := SimpleGraph.Walk.not_nil_of_ne hne
+  have hpPath : p.IsPath := treePath_isPath X.1 v X.2.1
+  have htailPath : p.tail.IsPath := by
+    rw [SimpleGraph.Walk.isPath_def]
+    have hpNodup : p.support.Nodup := (SimpleGraph.Walk.isPath_def p).mp hpPath
+    simpa [p.support_tail_of_not_nil hpNotNil] using hpNodup.tail
+  have htailLen : p.tail.length = X.1.1.dist (joyalOffPathValue X v hv) X.2.1 := by
+    change p.tail.length = X.1.1.dist p.snd X.2.1
+    exact isTree_path_length_eq_dist X.1 htailPath
+  have hpLen : p.length = X.1.1.dist v X.2.1 := treePath_length_eq_dist X.1 v X.2.1
+  calc
+    X.1.1.dist X.2.1 (joyalOffPathValue X v hv) + 1
+        = X.1.1.dist (joyalOffPathValue X v hv) X.2.1 + 1 := by
+          rw [SimpleGraph.dist_comm]
+    _ = p.tail.length + 1 := by rw [htailLen]
+    _ = p.length := p.length_tail_add_one hpNotNil
+    _ = X.1.1.dist v X.2.1 := hpLen
+    _ = X.1.1.dist X.2.1 v := SimpleGraph.dist_comm
 
 /-- Joyal's map from a doubly-rooted tree to an endofunction on its label set. -/
 noncomputable def joyalTreeToFunction (X : DoublyRootedLabeledTree n) : Fin n → Fin n :=

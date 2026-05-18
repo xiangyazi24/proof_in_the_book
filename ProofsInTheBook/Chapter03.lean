@@ -759,6 +759,29 @@ theorem three_mul_primeCounting_le_of_33_le {k : ℕ} (hk33 : 33 ≤ k) :
     have hmul : 30 * (m / 30) ≤ m := Nat.mul_div_le m 30
     omega
 
+theorem log_choose_le_sqrt_third_log_add_min_third_log_two_of_noLargePrimeFactor
+    {n k : ℕ} (hnpos : 0 < n) (hkn : k ≤ n) (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)
+    (hno : NoLargePrimeFactor k (n.choose k))
+    (hsqrt33 : 33 ≤ sqrt n)
+    (hsqrtM : sqrt n ≤ min k (n / 3)) (hMsub : min k (n / 3) - sqrt n ≤ sqrt n) :
+    Real.log (n.choose k) ≤
+      ((sqrt n : ℕ) : ℝ) / 3 * Real.log n
+        + ((min k (n / 3) : ℕ) : ℝ) * Real.log 2 := by
+  have hupper :=
+    log_choose_le_primeCounting_sqrt_log_add_min_third_log_two_of_noLargePrimeFactor
+      (n := n) (k := k) hnpos hkn hn2k hn6 hno hsqrtM hMsub
+  have hlogn_pos : 0 < Real.log n := by
+    have hn_gt_one : 1 < n := lt_of_lt_of_le (by omega : 1 < sqrt n) (Nat.sqrt_le_self n)
+    exact Real.log_pos (by exact_mod_cast hn_gt_one)
+  have hpi : 3 * Nat.primeCounting (sqrt n) ≤ sqrt n :=
+    three_mul_primeCounting_le_of_33_le hsqrt33
+  have hpi_real : (Nat.primeCounting (sqrt n) : ℝ) ≤ ((sqrt n : ℕ) : ℝ) / 3 := by
+    nlinarith [show (3 * Nat.primeCounting (sqrt n) : ℝ) ≤ ((sqrt n : ℕ) : ℝ) by
+      exact_mod_cast hpi]
+  exact hupper.trans <|
+    add_le_add_left (mul_le_mul_of_nonneg_right hpi_real hlogn_pos.le)
+      (((min k (n / 3) : ℕ) : ℝ) * Real.log 2)
+
 theorem exists_large_prime_factor_choose_sq_le_of_9_le
     {n k : ℕ} (hk9 : 9 ≤ k) (hkn : k ≤ n) (hsq : k * k ≤ n) :
     HasPrimeFactorAbove k (n.choose k) :=

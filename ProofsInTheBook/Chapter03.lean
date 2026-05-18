@@ -735,6 +735,30 @@ theorem primeCounting_gap_of_9_le {k : ℕ} (hk9 : 9 ≤ k) :
   · exact primeCounting_gap_of_9_le_lt_120 hk9 hk120
   · exact primeCounting_gap_of_120_le (by omega)
 
+theorem three_mul_primeCounting_le_30_150_cert :
+    ∀ k : Fin 150, 33 ≤ k.val → 3 * Nat.primeCounting k.val ≤ k.val := by
+  native_decide
+
+theorem three_mul_primeCounting_le_of_33_le {k : ℕ} (hk33 : 33 ≤ k) :
+    3 * Nat.primeCounting k ≤ k := by
+  by_cases hk150 : k < 150
+  · exact three_mul_primeCounting_le_30_150_cert ⟨k, hk150⟩ hk33
+  · let m := k - 30
+    have hk_eq : k = 30 + m := by omega
+    have hbound0 := Nat.primeCounting_add_le
+      (a := 30) (k := 30) (n := m) (by norm_num) (by norm_num : 30 ≤ 30)
+    have hbound : Nat.primeCounting k ≤ Nat.primeCounting 30 + Nat.totient 30 * (m / 30 + 1) := by
+      simpa [hk_eq] using hbound0
+    have hcalc : Nat.primeCounting 30 = 10 := by native_decide
+    have htot : Nat.totient 30 = 8 := by native_decide
+    have hbound2 : Nat.primeCounting k ≤ 10 + 8 * (m / 30 + 1) := by
+      simpa [hcalc, htot] using hbound
+    have hm120 : 120 ≤ m := by omega
+    have hq4 : 4 ≤ m / 30 := by
+      exact (Nat.le_div_iff_mul_le (by norm_num : 0 < 30)).mpr hm120
+    have hmul : 30 * (m / 30) ≤ m := Nat.mul_div_le m 30
+    omega
+
 theorem exists_large_prime_factor_choose_sq_le_of_9_le
     {n k : ℕ} (hk9 : 9 ≤ k) (hkn : k ≤ n) (hsq : k * k ≤ n) :
     HasPrimeFactorAbove k (n.choose k) :=

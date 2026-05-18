@@ -100,6 +100,17 @@ theorem smallestTreeLeaf_neighbor_unique (n : ℕ) (hn : 2 ≤ n) (T : LabeledTr
   exact (unique_adj_smallestTreeLeaf n hn T).unique hw
     (smallestTreeLeaf_adj_neighbor n hn T)
 
+theorem isTree_delete_smallestTreeLeaf (n : ℕ) (hn : 2 ≤ n) (T : LabeledTree n) :
+    (T.1.induce ({smallestTreeLeaf n hn T}ᶜ : Set (Fin n))).IsTree := by
+  classical
+  let leaf := smallestTreeLeaf n hn T
+  change (T.1.induce ({leaf}ᶜ : Set (Fin n))).IsTree
+  letI : Fintype (T.1.neighborSet leaf) :=
+    Subtype.fintype fun w => w ∈ T.1.neighborSet leaf
+  have hdeg : T.1.degree leaf = 1 :=
+    SimpleGraph.degree_eq_one_iff_existsUnique_adj.mpr (unique_adj_smallestTreeLeaf n hn T)
+  exact isTree_induce_compl_singleton_of_degree_eq_one T.2 hdeg
+
 /-!
 ### Current target: eliminate the Cayley upper-bound premise
 

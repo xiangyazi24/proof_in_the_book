@@ -63,6 +63,53 @@ noncomputable def entropyTerm (n k : ℕ) : ℝ :=
 def primeIntervalProduct (a b : ℕ) : ℕ :=
   ∏ p ∈ Finset.Ioc a b with p.Prime, p
 
+theorem primorial_eq_mul_primeIntervalProduct {a M : ℕ} (haM : a ≤ M) :
+    primorial M = primorial a * primeIntervalProduct a M := by
+  rw [primorial, primeIntervalProduct]
+  rw [show (Finset.range (M + 1)).filter Nat.Prime =
+      (Finset.range (a + 1)).filter Nat.Prime ∪ (Finset.Ioc a M).filter Nat.Prime by
+    ext p
+    simp only [Finset.mem_filter, Finset.mem_range, Finset.mem_union, Finset.mem_Ioc]
+    constructor
+    · rintro ⟨hpM, hpprime⟩
+      by_cases hpa : p ≤ a
+      · exact Or.inl ⟨by omega, hpprime⟩
+      · exact Or.inr ⟨⟨by omega, by omega⟩, hpprime⟩
+    · rintro (⟨hpa, hpprime⟩ | ⟨⟨hpa, hpM⟩, hpprime⟩) <;> exact ⟨by omega, hpprime⟩]
+  rw [Finset.prod_union]
+  · rfl
+  · rw [Finset.disjoint_left]
+    intro p hp1 hp2
+    simp only [Finset.mem_filter, Finset.mem_range, Finset.mem_Ioc] at hp1 hp2
+    omega
+
+theorem log_primeIntervalProduct_eq_theta_sub {a M : ℕ} (haM : a ≤ M) :
+    Real.log (primeIntervalProduct a M) =
+      Chebyshev.theta (M : ℝ) - Chebyshev.theta (a : ℝ) := by
+  have hprod := primorial_eq_mul_primeIntervalProduct (a := a) (M := M) haM
+  have hposA : 0 < (primorial a : ℕ) := primorial_pos a
+  have hposP : 0 < primeIntervalProduct a M := by
+    dsimp [primeIntervalProduct]
+    exact Finset.prod_pos fun p hp => (Finset.mem_filter.1 hp).2.pos
+  have hlogprod :
+      Real.log (primorial M) =
+        Real.log (primorial a) + Real.log (primeIntervalProduct a M) := by
+    rw [hprod, Nat.cast_mul]
+    exact Real.log_mul
+      (by exact_mod_cast hposA.ne' : ((primorial a : ℕ) : ℝ) ≠ 0)
+      (by exact_mod_cast hposP.ne' : ((primeIntervalProduct a M : ℕ) : ℝ) ≠ 0)
+  rw [Chebyshev.theta_eq_log_primorial, Chebyshev.theta_eq_log_primorial]
+  norm_num at hlogprod ⊢
+  linarith
+
+theorem log_primeIntervalProduct_le_min_third_log4_sub_theta
+    {a M : ℕ} (haM : a ≤ M) :
+    Real.log (primeIntervalProduct a M) ≤
+      (M : ℝ) * Real.log 4 - Chebyshev.theta (a : ℝ) := by
+  rw [log_primeIntervalProduct_eq_theta_sub haM]
+  have hthetaM := Chebyshev.theta_le_log4_mul_x (x := (M : ℝ)) (by positivity)
+  linarith
+
 theorem primeIntervalProduct_dvd_choose {a M : ℕ} (haM : a ≤ M) (hd : M - a ≤ a) :
     primeIntervalProduct a M ∣ M.choose a := by
   rw [primeIntervalProduct, ← Nat.add_sub_of_le haM]
@@ -782,6 +829,269 @@ theorem log_choose_le_sqrt_third_log_add_min_third_log_two_of_noLargePrimeFactor
     add_le_add_left (mul_le_mul_of_nonneg_right hpi_real hlogn_pos.le)
       (((min k (n / 3) : ℕ) : ℝ) * Real.log 2)
 
+theorem log_choose_le_sqrt_third_log_add_min_log4_sub_theta_of_noLargePrimeFactor
+    {n k : ℕ} (hnpos : 0 < n) (hkn : k ≤ n) (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)
+    (hno : NoLargePrimeFactor k (n.choose k))
+    (hsqrt33 : 33 ≤ sqrt n)
+    (hsqrtM : sqrt n ≤ min k (n / 3)) :
+    Real.log (n.choose k) ≤
+      ((sqrt n : ℕ) : ℝ) / 3 * Real.log n
+        + ((min k (n / 3) : ℕ) : ℝ) * Real.log 4
+        - Chebyshev.theta ((sqrt n : ℕ) : ℝ) := by
+  have hupper :=
+    log_choose_le_primeCounting_sqrt_log_add_log_primeIntervalProduct_of_noLargePrimeFactor
+      (n := n) (k := k) hnpos hkn hn2k hn6 hno
+  have hlogP :=
+    log_primeIntervalProduct_le_min_third_log4_sub_theta
+      (a := sqrt n) (M := min k (n / 3)) hsqrtM
+  have hlogn_pos : 0 < Real.log n := by
+    have hn_gt_one : 1 < n := lt_of_lt_of_le (by omega : 1 < sqrt n) (Nat.sqrt_le_self n)
+    exact Real.log_pos (by exact_mod_cast hn_gt_one)
+  have hpi : 3 * Nat.primeCounting (sqrt n) ≤ sqrt n :=
+    three_mul_primeCounting_le_of_33_le hsqrt33
+  have hpi_real : (Nat.primeCounting (sqrt n) : ℝ) ≤ ((sqrt n : ℕ) : ℝ) / 3 := by
+    nlinarith [show (3 * Nat.primeCounting (sqrt n) : ℝ) ≤ ((sqrt n : ℕ) : ℝ) by
+      exact_mod_cast hpi]
+  have hpc :
+      (Nat.primeCounting (sqrt n) : ℝ) * Real.log n ≤
+        ((sqrt n : ℕ) : ℝ) / 3 * Real.log n :=
+    mul_le_mul_of_nonneg_right hpi_real hlogn_pos.le
+  linarith
+
+theorem exists_large_prime_factor_choose_of_theta_interval_entropy_gap
+    {n k : ℕ} (hkpos : 0 < k) (hklt : k < n)
+    (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)
+    (hsqrt33 : 33 ≤ sqrt n) (hsqrtM : sqrt n ≤ min k (n / 3))
+    (hgap :
+      ((sqrt n : ℕ) : ℝ) / 3 * Real.log n
+          + ((min k (n / 3) : ℕ) : ℝ) * Real.log 4
+          - Chebyshev.theta ((sqrt n : ℕ) : ℝ) <
+        entropyTerm n k
+          + Real.log n / 2 - Real.log k / 2 - Real.log (n - k) / 2
+          + Real.log (2 * Real.pi) / 2 - 2) :
+    HasPrimeFactorAbove k (n.choose k) := by
+  have hkn : k ≤ n := le_of_lt hklt
+  have hnpos : 0 < n := hkpos.trans hklt
+  by_contra hlarge
+  have hno : NoLargePrimeFactor k (n.choose k) :=
+    not_hasPrimeFactorAbove_iff_noLargePrimeFactor.mp hlarge
+  have hupper :=
+    log_choose_le_sqrt_third_log_add_min_log4_sub_theta_of_noLargePrimeFactor
+      (n := n) (k := k) hnpos hkn hn2k hn6 hno hsqrt33 hsqrtM
+  have hlower := entropy_lower_le_log_choose (n := n) (k := k) hkpos hklt
+  exact not_lt_of_ge (hlower.trans hupper) hgap
+
+theorem min_eq_left_of_sqrt33_close
+    {n k : ℕ} (hsqrt33 : 33 ≤ sqrt n)
+    (hMsub : min k (n / 3) - sqrt n ≤ sqrt n) :
+    min k (n / 3) = k := by
+  by_cases hk : k ≤ n / 3
+  · exact Nat.min_eq_left hk
+  · have hM : min k (n / 3) = n / 3 := Nat.min_eq_right (le_of_not_ge hk)
+    have hclose : n / 3 ≤ 2 * sqrt n := by
+      omega
+    have hnle : n ≤ 3 * (n / 3) + 2 := by omega
+    have hsq : sqrt n * sqrt n ≤ n := Nat.sqrt_le n
+    nlinarith
+
+theorem close_branch_coef_gap_aux {L N : ℝ} (h10 : 10 * L < N) (hL : L < 1) :
+    (2 : ℝ) / 3 < N / 6 - 2 * L + 1 := by
+  linarith
+
+theorem close_branch_main_gap_aux {k N L : ℝ} (hk : 34 ≤ k) (hN : N / 2 ≤ k / 6)
+    (hc : (2 : ℝ) / 3 < N / 6 - 2 * L + 1) :
+    0 < k * (N / 6 - 2 * L + 1) - N / 2 - 6 := by
+  have hkpos : 0 < k := by linarith
+  have hprod :
+      k * ((2 : ℝ) / 3) < k * (N / 6 - 2 * L + 1) :=
+    mul_lt_mul_of_pos_left hc hkpos
+  nlinarith
+
+theorem close_branch_simple_gap_aux {k N L : ℝ}
+    (h : 0 < k * (N / 6 - 2 * L + 1) - N / 2 - 6) :
+    k / 3 * N + k * L <
+      (k / 2 * N - k * L + k - 4) - N / 2 - 2 := by
+  nlinarith
+
+theorem close_branch_shift_aux {A B N : ℝ} (h : A ≤ B) :
+    A - N / 2 - 2 ≤ B - N / 2 - 2 := by
+  linarith
+
+theorem close_branch_upper_simple_aux {a k M : ℕ} {N L : ℝ}
+    (hM : M = k) (ha : a ≤ k) (hN : 0 ≤ N) :
+    (a : ℝ) / 3 * N + (M : ℝ) * L ≤ (k : ℝ) / 3 * N + (k : ℝ) * L := by
+  subst M
+  have ha_real : (a : ℝ) / 3 ≤ (k : ℝ) / 3 := by
+    exact div_le_div_of_nonneg_right (by exact_mod_cast ha) (by norm_num)
+  exact add_le_add_left (mul_le_mul_of_nonneg_right ha_real hN) ((k : ℝ) * L)
+
+set_option maxHeartbeats 800000 in
+theorem exists_large_prime_factor_choose_below_sq_close_of_sqrt33
+    {n k : ℕ} (hk9 : 9 ≤ k) (hn2k : 2 * k ≤ n)
+    (hnsq : n < k * k) (hsqrt33 : 33 ≤ sqrt n)
+    (hMsub : min k (n / 3) - sqrt n ≤ sqrt n) :
+    HasPrimeFactorAbove k (n.choose k) := by
+  have hkpos : 0 < k := by omega
+  have hkn : k ≤ n := by omega
+  have hklt : k < n := by omega
+  have hnpos : 0 < n := hkpos.trans_le hkn
+  have hn6 : 6 ≤ n := by
+    have hsqrt_le_self : sqrt n ≤ n := Nat.sqrt_le_self n
+    omega
+  have hn9 : 9 ≤ n := by omega
+  have hsqrtM : sqrt n ≤ min k (n / 3) :=
+    sqrt_le_min_of_nine_le_and_lt_sq hn9 hnsq
+  have hM_eq : min k (n / 3) = k :=
+    min_eq_left_of_sqrt33_close hsqrt33 hMsub
+  have hsqrt_lt_k : sqrt n < k := Nat.sqrt_lt.mpr hnsq
+  have hk34 : 34 ≤ k := by omega
+  have hk_le_2sqrt : k ≤ 2 * sqrt n := by
+    rw [hM_eq] at hMsub
+    omega
+  have hksq4 : k * k ≤ 4 * n := by
+    have hsq : sqrt n * sqrt n ≤ n := Nat.sqrt_le n
+    nlinarith
+  have hlog2_pos : 0 < Real.log 2 := Real.log_pos (by norm_num)
+  have hlog2_lt_one : Real.log 2 < 1 := by
+    have h := Real.log_lt_sub_one_of_pos (x := (2 : ℝ)) (by norm_num) (by norm_num)
+    norm_num at h
+    exact h
+  have hlogn_pos : 0 < Real.log n := by
+    exact Real.log_pos (by exact_mod_cast (by omega : 1 < n))
+  have hlogk_le_logn : Real.log k ≤ Real.log n :=
+    Real.log_le_log (by exact_mod_cast hkpos) (by exact_mod_cast hkn)
+  have hnkpos : 0 < n - k := Nat.sub_pos_of_lt hklt
+  have hlognk_le_logn : Real.log (n - k) ≤ Real.log n :=
+    Real.log_le_log (by exact_mod_cast hnkpos) (by exact_mod_cast (by omega : n - k ≤ n))
+  have hlogtwopi_nonneg : 0 ≤ Real.log (2 * Real.pi) := by
+    exact Real.log_nonneg (by nlinarith [Real.one_le_pi_div_two])
+  have hcorr_ge :
+      - Real.log n / 2 - 2 ≤
+        Real.log n / 2 - Real.log k / 2 - Real.log (n - k) / 2
+          + Real.log (2 * Real.pi) / 2 - 2 := by
+    nlinarith
+  have hlog4_eq : Real.log (4 : ℝ) = 2 * Real.log 2 := by
+    rw [show (4 : ℝ) = 2 ^ 2 by norm_num, Real.log_pow]
+    norm_num
+  have htwologk_le : 2 * Real.log k ≤ Real.log n + 2 * Real.log 2 := by
+    have hlog_sq_le : Real.log ((k : ℝ) ^ 2) ≤ Real.log ((4 : ℝ) * (n : ℝ)) := by
+      have hcast : (k : ℝ) ^ 2 ≤ (4 : ℝ) * (n : ℝ) := by
+        norm_num [pow_two]
+        exact_mod_cast hksq4
+      exact Real.log_le_log (sq_pos_of_pos (by exact_mod_cast hkpos)) hcast
+    rw [Real.log_pow] at hlog_sq_le
+    rw [Real.log_mul (by norm_num : (4 : ℝ) ≠ 0)
+      (by exact_mod_cast hnpos.ne' : (n : ℝ) ≠ 0), hlog4_eq] at hlog_sq_le
+    norm_num at hlog_sq_le
+    nlinarith
+  have hlogk_le_half : Real.log k ≤ Real.log n / 2 + Real.log 2 := by
+    linarith
+  have hk_sq_div_le_four : (k : ℝ) ^ 2 / (n : ℝ) ≤ 4 := by
+    have hcast : (k : ℝ) ^ 2 ≤ 4 * (n : ℝ) := by
+      norm_num [pow_two]
+      exact_mod_cast hksq4
+    exact (div_le_iff₀ (by exact_mod_cast hnpos : (0 : ℝ) < n)).mpr (by linarith)
+  have hbasic_ge :
+      (k : ℝ) / 2 * Real.log n - (k : ℝ) * Real.log 2 + (k : ℝ) - 4 ≤
+        (k : ℝ) * Real.log n - (k : ℝ) * Real.log k
+          + (k : ℝ) - (k : ℝ) ^ 2 / (n : ℝ) := by
+    have hmul : (k : ℝ) * Real.log k ≤ (k : ℝ) * (Real.log n / 2 + Real.log 2) :=
+      mul_le_mul_of_nonneg_left hlogk_le_half (by positivity)
+    nlinarith
+  have hbasic_ge_shift :
+      ((k : ℝ) / 2 * Real.log n - (k : ℝ) * Real.log 2 + (k : ℝ) - 4)
+          - Real.log n / 2 - (2 : ℝ) ≤
+        ((k : ℝ) * Real.log n - (k : ℝ) * Real.log k
+          + (k : ℝ) - (k : ℝ) ^ 2 / (n : ℝ)) - Real.log n / 2 - (2 : ℝ) := by
+    exact close_branch_shift_aux hbasic_ge
+  have hlog16_lt_four : Real.log (16 : ℝ) < 4 := by
+    rw [show (16 : ℝ) = 2 ^ 4 by norm_num, Real.log_pow]
+    norm_num
+    nlinarith
+  have hlogk_le_six : Real.log k ≤ (k : ℝ) / 6 := by
+    have hdivpos : 0 < (k : ℝ) / 16 := by positivity
+    have hdiv :=
+      Real.log_le_sub_one_of_pos (x := (k : ℝ) / 16) hdivpos
+    rw [Real.log_div (by exact_mod_cast hkpos.ne' : (k : ℝ) ≠ 0)
+      (by norm_num : (16 : ℝ) ≠ 0)] at hdiv
+    have haux : Real.log k ≤ (k : ℝ) / 16 + 3 := by
+      nlinarith
+    have hk34r : (34 : ℝ) ≤ k := by exact_mod_cast hk34
+    nlinarith
+  have hlogn_lt_twologk : Real.log n < 2 * Real.log k := by
+    have hlog_lt : Real.log (n : ℝ) < Real.log ((k * k : ℕ) : ℝ) :=
+      Real.log_lt_log (by exact_mod_cast hnpos) (by exact_mod_cast hnsq)
+    rw [show ((k * k : ℕ) : ℝ) = (k : ℝ) ^ 2 by norm_num [pow_two],
+      Real.log_pow] at hlog_lt
+    exact hlog_lt
+  have hlogn_le_kthird : Real.log n ≤ (k : ℝ) / 3 := by
+    linarith only [hlogn_lt_twologk, hlogk_le_six]
+  have hlogn_half_le_ksix : Real.log n / 2 ≤ (k : ℝ) / 6 := by
+    linarith only [hlogn_le_kthird]
+  have hn1024 : 1024 < n := by
+    have hsq : sqrt n * sqrt n ≤ n := Nat.sqrt_le n
+    have h1024 : 1024 < sqrt n * sqrt n := by
+      nlinarith only [hsqrt33]
+    exact h1024.trans_le hsq
+  have hten_log2_lt_logn : 10 * Real.log 2 < Real.log n := by
+    have hlog_lt : Real.log (1024 : ℝ) < Real.log (n : ℝ) :=
+      Real.log_lt_log (by norm_num) (by exact_mod_cast hn1024)
+    rwa [show (1024 : ℝ) = 2 ^ 10 by norm_num, Real.log_pow] at hlog_lt
+  have hcoef : (2 : ℝ) / 3 < Real.log n / 6 - 2 * Real.log 2 + 1 := by
+    exact close_branch_coef_gap_aux hten_log2_lt_logn hlog2_lt_one
+  have hmain :
+      0 < (k : ℝ) * (Real.log n / 6 - 2 * Real.log 2 + 1)
+          - Real.log n / 2 - 6 := by
+    have hk34r : (34 : ℝ) ≤ k := by exact_mod_cast hk34
+    exact close_branch_main_gap_aux hk34r hlogn_half_le_ksix hcoef
+  have hsimple_gap :
+      (k : ℝ) / 3 * Real.log n + (k : ℝ) * Real.log 2 <
+        ((k : ℝ) / 2 * Real.log n - (k : ℝ) * Real.log 2 + (k : ℝ) - 4)
+          - Real.log n / 2 - 2 := by
+    exact close_branch_simple_gap_aux hmain
+  have hupper_simple :
+      ((sqrt n : ℕ) : ℝ) / 3 * Real.log n
+          + ((min k (n / 3) : ℕ) : ℝ) * Real.log 2 ≤
+        (k : ℝ) / 3 * Real.log n + (k : ℝ) * Real.log 2 := by
+    exact close_branch_upper_simple_aux
+      (a := sqrt n) (k := k) (M := min k (n / 3))
+      (N := Real.log n) (L := Real.log 2) hM_eq hsqrt_lt_k.le hlogn_pos.le
+  have hbasic := entropyTerm_lower_basic (n := n) (k := k) hkpos hklt
+  have hlower_entropy := entropy_lower_le_log_choose (n := n) (k := k) hkpos hklt
+  have hlower :
+      ((k : ℝ) * Real.log n - (k : ℝ) * Real.log k
+          + (k : ℝ) - (k : ℝ) ^ 2 / (n : ℝ)) - Real.log n / 2 - 2
+        ≤ Real.log (n.choose k) := by
+    calc
+      ((k : ℝ) * Real.log n - (k : ℝ) * Real.log k
+          + (k : ℝ) - (k : ℝ) ^ 2 / (n : ℝ)) - Real.log n / 2 - 2
+          ≤ entropyTerm n k
+            + Real.log n / 2 - Real.log k / 2 - Real.log (n - k) / 2
+            + Real.log (2 * Real.pi) / 2 - 2 := by
+              linarith only [hbasic, hcorr_ge]
+      _ ≤ Real.log (n.choose k) := hlower_entropy
+  have hupper_lt_lower :
+      ((sqrt n : ℕ) : ℝ) / 3 * Real.log n
+          + ((min k (n / 3) : ℕ) : ℝ) * Real.log 2 <
+        ((k : ℝ) * Real.log n - (k : ℝ) * Real.log k
+          + (k : ℝ) - (k : ℝ) ^ 2 / (n : ℝ)) - Real.log n / 2 - 2 := by
+    calc
+      ((sqrt n : ℕ) : ℝ) / 3 * Real.log n
+          + ((min k (n / 3) : ℕ) : ℝ) * Real.log 2
+          ≤ (k : ℝ) / 3 * Real.log n + (k : ℝ) * Real.log 2 := hupper_simple
+      _ < (k : ℝ) / 2 * Real.log n - (k : ℝ) * Real.log 2 + (k : ℝ) - 4
+            - Real.log n / 2 - 2 := hsimple_gap
+      _ ≤ ((k : ℝ) * Real.log n - (k : ℝ) * Real.log k
+          + (k : ℝ) - (k : ℝ) ^ 2 / (n : ℝ)) - Real.log n / 2 - 2 := by
+            exact hbasic_ge_shift
+  by_contra hlarge
+  have hno : NoLargePrimeFactor k (n.choose k) :=
+    not_hasPrimeFactorAbove_iff_noLargePrimeFactor.mp hlarge
+  have hupper :=
+    log_choose_le_sqrt_third_log_add_min_third_log_two_of_noLargePrimeFactor
+      (n := n) (k := k) hnpos hkn hn2k hn6 hno hsqrt33 hsqrtM hMsub
+  exact not_lt_of_ge (hlower.trans hupper) hupper_lt_lower
+
 theorem exists_large_prime_factor_choose_sq_le_of_9_le
     {n k : ℕ} (hk9 : 9 ≤ k) (hkn : k ≤ n) (hsq : k * k ≤ n) :
     HasPrimeFactorAbove k (n.choose k) :=
@@ -992,6 +1302,26 @@ theorem prime_dvd_choose_of_interval_prime {n k p : ℕ} (hkn : k ≤ n)
     (hp.dvd_factorial.mpr hpn)
     (prime_not_dvd_factorial_of_lt hp hk)
     (prime_not_dvd_factorial_of_lt hp hnk)
+
+theorem hasPrimeFactorAbove_choose_of_interval_prime {n k p : ℕ} (hkn : k ≤ n)
+    (hp : p.Prime) (hk : k < p) (hnk : n - k < p) (hpn : p ≤ n) :
+    HasPrimeFactorAbove k (n.choose k) :=
+  ⟨p, hk, hp, prime_dvd_choose_of_interval_prime hkn hp hk hnk hpn⟩
+
+theorem exists_large_prime_factor_choose_125_12 :
+    HasPrimeFactorAbove 12 ((125).choose 12) := by
+  refine ⟨13, by norm_num, by norm_num, ?_⟩
+  native_decide
+
+theorem exists_large_prime_factor_choose_126_12 :
+    HasPrimeFactorAbove 12 ((126).choose 12) := by
+  refine ⟨13, by norm_num, by norm_num, ?_⟩
+  native_decide
+
+theorem exists_large_prime_factor_choose_126_13 :
+    HasPrimeFactorAbove 13 ((126).choose 13) := by
+  refine ⟨17, by norm_num, by norm_num, ?_⟩
+  native_decide
 
 /-!
 ### Central case of Sylvester's theorem

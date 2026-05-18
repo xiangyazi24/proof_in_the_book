@@ -788,6 +788,13 @@ theorem joyalRecoveredAdj_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
   have hrange := joyalPathRangeOrder_eq_of_function_eq hXY
   simp [joyalRecoveredAdj, hpath, hrange, hXY]
 
+theorem joyalRecoveredAdj_of_path_edge (X : DoublyRootedLabeledTree n)
+    {u v : Fin n} (hu : u ∈ joyalPathVertices X) (hv : v ∈ joyalPathVertices X)
+    (hadj : X.1.1.Adj u v) :
+    joyalRecoveredAdj X u v := by
+  classical
+  sorry
+
 /--
 The Joyal endofunction data reconstructs the original tree edges: consecutive
 vertices on the left-right path give the path edges, and every off-path vertex
@@ -798,7 +805,20 @@ theorem joyal_tree_adj_iff_recovered (X : DoublyRootedLabeledTree n) (u v : Fin 
   classical
   constructor
   · intro h
-    sorry
+    have hdist := X.1.2.dist_eq_dist_add_one_of_adj X.2.1 h
+    rcases hdist with hdu | hdv
+    · by_cases hu : u ∈ joyalPathVertices X
+      · by_cases hv : v ∈ joyalPathVertices X
+        · exact joyalRecoveredAdj_of_path_edge X hu hv h
+        · exact False.elim <|
+            not_offpath_adj_path_farther_from_left X hv hu h.symm hdu.symm
+      · exact joyalRecoveredAdj_of_offpath_dist_left_add_one X hu h hdu.symm
+    · by_cases hv : v ∈ joyalPathVertices X
+      · by_cases hu : u ∈ joyalPathVertices X
+        · exact joyalRecoveredAdj_of_path_edge X hu hv h
+        · exact False.elim <|
+            not_offpath_adj_path_farther_from_left X hu hv h hdv.symm
+      · exact joyalRecoveredAdj_of_offpath_dist_left_add_one_right X hv h hdv.symm
   · exact joyalRecoveredAdj_adj X
 
 theorem joyal_tree_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}

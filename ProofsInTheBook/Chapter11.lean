@@ -763,6 +763,13 @@ theorem even_direction_bound_of_ungar_finset_sweep_certificate (points : Finset 
     points.card ≤ (directionsDeterminedBy points).card :=
   cert.length_lower_bound
 
+theorem even_direction_bound_of_ungar_move_schedule (points : Finset Point2) {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (cert : UngarMoveSchedule k (directionsDeterminedBy points).card) :
+    points.card ≤ (directionsDeterminedBy points).card := by
+  rw [hcard]
+  exact cert.toCountingCertificate.length_lower_bound
+
 theorem directions_lower_bound_of_even_ungar_certificates (points : Finset Point2)
     (hcard : 3 ≤ points.card) (hncoll : NoncollinearSet points)
     (hcert : ∀ S : Finset Point2, Even S.card → NoncollinearSet S →
@@ -780,6 +787,17 @@ theorem directions_lower_bound_of_even_ungar_sweep_certificates (points : Finset
   directions_lower_bound_of_even_direction_bound_all points hcard hncoll
     (fun S hEven hS =>
       even_direction_bound_of_ungar_sweep_certificate S (hcert S hEven hS))
+
+theorem directions_lower_bound_of_even_ungar_move_schedules (points : Finset Point2)
+    (hcard : 3 ≤ points.card) (hncoll : NoncollinearSet points)
+    (hcert : ∀ S : Finset Point2, ∀ k : ℕ, S.card = 2 * k → NoncollinearSet S →
+      UngarMoveSchedule k (directionsDeterminedBy S).card) :
+    points.card - 1 ≤ (directionsDeterminedBy points).card :=
+  directions_lower_bound_of_even_direction_bound_all points hcard hncoll
+    (fun S hEven hS => by
+      rcases hEven with ⟨k, hk⟩
+      have hcardS : S.card = 2 * k := by omega
+      exact even_direction_bound_of_ungar_move_schedule S hcardS (hcert S k hcardS hS))
 
 /-! ### Finite allowable-sequence vocabulary -/
 

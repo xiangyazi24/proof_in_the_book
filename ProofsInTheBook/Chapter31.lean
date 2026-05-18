@@ -142,6 +142,47 @@ noncomputable def deleteSmallestLeafTreeSucc (m : ℕ) (hm : 1 ≤ m)
 abbrev DoublyRootedLabeledTree (n : ℕ) : Type :=
   LabeledTree n × Fin n × Fin n
 
+noncomputable def treePath (T : LabeledTree n) (u v : Fin n) : T.1.Walk u v :=
+  (ExistsUnique.exists (T.2.existsUnique_path u v)).choose
+
+theorem treePath_isPath (T : LabeledTree n) (u v : Fin n) :
+    (treePath T u v).IsPath :=
+  (ExistsUnique.exists (T.2.existsUnique_path u v)).choose_spec
+
+theorem treePath_unique (T : LabeledTree n) (u v : Fin n) {p : T.1.Walk u v}
+    (hp : p.IsPath) :
+    p = treePath T u v := by
+  exact (T.2.existsUnique_path u v).unique hp (treePath_isPath T u v)
+
+noncomputable def joyalPathVertices (X : DoublyRootedLabeledTree n) : Finset (Fin n) :=
+  (treePath X.1 X.2.1 X.2.2).support.toFinset
+
+theorem joyal_left_mem_pathVertices (X : DoublyRootedLabeledTree n) :
+    X.2.1 ∈ joyalPathVertices X := by
+  exact List.mem_toFinset.mpr (SimpleGraph.Walk.start_mem_support _)
+
+theorem joyal_right_mem_pathVertices (X : DoublyRootedLabeledTree n) :
+    X.2.2 ∈ joyalPathVertices X := by
+  exact List.mem_toFinset.mpr (SimpleGraph.Walk.end_mem_support _)
+
+/-- First row in Joyal's table: path vertices sorted by their labels. -/
+noncomputable def joyalPathDomainOrder (X : DoublyRootedLabeledTree n) : List (Fin n) :=
+  (joyalPathVertices X).sort (· ≤ ·)
+
+/-- Second row in Joyal's table: the same path vertices in left-to-right path order. -/
+noncomputable def joyalPathRangeOrder (X : DoublyRootedLabeledTree n) : List (Fin n) :=
+  (treePath X.1 X.2.1 X.2.2).support
+
+theorem joyalPathDomainOrder_nodup (X : DoublyRootedLabeledTree n) :
+    (joyalPathDomainOrder X).Nodup := by
+  exact (joyalPathVertices X).sort_nodup (· ≤ ·)
+
+theorem joyalPathRangeOrder_nodup (X : DoublyRootedLabeledTree n) :
+    (joyalPathRangeOrder X).Nodup := by
+  simpa [joyalPathRangeOrder] using
+    (SimpleGraph.Walk.isPath_def (treePath X.1 X.2.1 X.2.2)).mp
+      (treePath_isPath X.1 X.2.1 X.2.2)
+
 theorem doublyRootedLabeledTree_card (n : ℕ) :
     Fintype.card (DoublyRootedLabeledTree n) = Fintype.card (LabeledTree n) * n * n := by
   simp [DoublyRootedLabeledTree, Nat.mul_assoc]

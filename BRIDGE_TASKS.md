@@ -496,3 +496,13 @@ Status:
 Status:
 - Submitted on channel `ssem` as `0dc2cefd` / seq 11.
 - Parallel long-form `ssem2` task currently active as `8ee23bc0` / seq 10.
+
+Update for Task G1:
+- `ssem2` returned task `743a8d52` with a decomposition, but it did not close
+  Erdős §§2-4. It confirmed the structural split: prove `choose` first, use
+  `NoLargePrimeFactor`, close `k^2 <= n` separately, and isolate the hard
+  `k^2 > n` large-allowed-prime product bound.
+- Physical `ssem` routing issue diagnosed: bridge group `ssem` had only
+  `ssem2`, so tasks sent to `ssem` were resolved to `ssem2`. Registered group
+  `ssem = [ssem, ssem2]` and submitted `e1853e3c`, confirmed resolved to
+  physical channel `ssem`.

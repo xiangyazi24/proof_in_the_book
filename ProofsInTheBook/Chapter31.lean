@@ -111,6 +111,33 @@ theorem isTree_delete_smallestTreeLeaf (n : ℕ) (hn : 2 ≤ n) (T : LabeledTree
     SimpleGraph.degree_eq_one_iff_existsUnique_adj.mpr (unique_adj_smallestTreeLeaf n hn T)
   exact isTree_induce_compl_singleton_of_degree_eq_one T.2 hdeg
 
+noncomputable def finSuccAboveEquivCompl {m : ℕ} (leaf : Fin (m + 1)) :
+    Fin m ≃ {v : Fin (m + 1) // v ∈ ({leaf}ᶜ : Set (Fin (m + 1)))} := by
+  classical
+  refine Equiv.ofBijective (fun i => ⟨leaf.succAbove i, by simp⟩) ?_
+  constructor
+  · intro i j hij
+    exact leaf.succAbove_right_injective (congrArg Subtype.val hij)
+  · intro v
+    have hvNotMem : v.1 ∉ ({leaf} : Set (Fin (m + 1))) := v.2
+    have hv : v.1 ≠ leaf := by
+      intro h
+      exact hvNotMem (by simp [h])
+    obtain ⟨i, hi⟩ := Fin.exists_succAbove_eq hv
+    exact ⟨i, Subtype.ext hi⟩
+
+noncomputable def deleteSmallestLeafTreeSucc (m : ℕ) (hm : 1 ≤ m)
+    (T : LabeledTree (m + 1)) : LabeledTree m := by
+  classical
+  have hn : 2 ≤ m + 1 := by omega
+  let leaf := smallestTreeLeaf (m + 1) hn T
+  let e := finSuccAboveEquivCompl leaf
+  refine ⟨(T.1.induce ({leaf}ᶜ : Set (Fin (m + 1)))).comap e.toEmbedding, ?_⟩
+  have hdel : (T.1.induce ({leaf}ᶜ : Set (Fin (m + 1)))).IsTree := by
+    simpa [leaf] using isTree_delete_smallestTreeLeaf (m + 1) hn T
+  exact (SimpleGraph.Iso.isTree_iff
+    (SimpleGraph.Iso.comap e (T.1.induce ({leaf}ᶜ : Set (Fin (m + 1)))))).mpr hdel
+
 /-!
 ### Current target: eliminate the Cayley upper-bound premise
 

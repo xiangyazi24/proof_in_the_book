@@ -2027,6 +2027,55 @@ theorem crossingIdx_strict {k r : ℕ}
   change A.crossingIdx i < A.crossingIdx j
   exact (A.crossingMoves.orderEmbOfFin rfl).strictMono hij
 
+theorem sum_crossingIdx_eq_sum_crossingMoves {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) :
+    (∑ i : Fin A.crossingMoves.card, 2 * A.moveOrder (A.crossingIdx i)) =
+      ∑ j ∈ A.crossingMoves, 2 * A.moveOrder j := by
+  classical
+  calc
+    (∑ i : Fin A.crossingMoves.card, 2 * A.moveOrder (A.crossingIdx i)) =
+        ∑ j ∈ Finset.map (A.crossingMoves.orderEmbOfFin rfl).toEmbedding Finset.univ,
+          2 * A.moveOrder j := by
+          exact (Finset.univ.sum_map (A.crossingMoves.orderEmbOfFin rfl).toEmbedding
+            (fun j => 2 * A.moveOrder j)).symm
+    _ = ∑ j ∈ A.crossingMoves, 2 * A.moveOrder j := by
+          rw [Finset.map_orderEmbOfFin_univ]
+
+theorem letters_cross_crossingIdx {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) :
+    2 * k ≤ ∑ i : Fin A.crossingMoves.card, 2 * A.moveOrder (A.crossingIdx i) := by
+  rw [A.sum_crossingIdx_eq_sum_crossingMoves]
+  exact A.letters_cross_crossingMoves
+
+noncomputable def toMoveSchedule {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r)
+    (htwo : 2 ≤ A.crossingMoves.card)
+    (hgap_between :
+      ∀ (i : ℕ) (hi : i + 1 < A.crossingMoves.card),
+        A.moveOrder (A.crossingIdx ⟨i, by omega⟩) +
+            A.moveOrder (A.crossingIdx ⟨i + 1, by omega⟩) - 1 ≤
+          (A.crossingIdx ⟨i + 1, by omega⟩).val -
+            (A.crossingIdx ⟨i, by omega⟩).val - 1)
+    (hgap_ends :
+      A.moveOrder (A.crossingIdx ⟨0, by omega⟩) +
+          A.moveOrder (A.crossingIdx ⟨A.crossingMoves.card - 1, by omega⟩) - 1 ≤
+        (A.crossingIdx ⟨0, by omega⟩).val +
+          (r - 1 - (A.crossingIdx ⟨A.crossingMoves.card - 1, by omega⟩).val)) :
+    UngarMoveSchedule k r where
+  crossingCount := A.crossingMoves.card
+  order := fun i => A.moveOrder (A.crossingIdx i)
+  letters_cross := A.letters_cross_crossingIdx
+  two_le_crossingCount := htwo
+  idx := A.crossingIdx
+  idx_strict := by
+    intro i j hij
+    exact A.crossingIdx_strict hij
+  order_pos := by
+    intro i
+    exact A.crossingIdx_isCrossing i
+  gap_between := hgap_between
+  gap_ends := hgap_ends
+
 /-- Counted reversal steps plus a packing proof give a counting certificate. -/
 noncomputable def toCountingCertificate {k r : ℕ}
     (A : CountedGeneralizedAllowableSequence k r)

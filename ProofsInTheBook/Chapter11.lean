@@ -443,6 +443,28 @@ theorem UngarMoveSchedule.crossingCount_le_moves {k r : ℕ}
       omega
   simpa [Fintype.card_fin] using Fintype.card_le_of_injective C.idx hinj
 
+theorem UngarMoveSchedule.two_le_moves {k r : ℕ}
+    (C : UngarMoveSchedule k r) :
+    2 ≤ r := by
+  exact le_trans C.two_le_crossingCount C.crossingCount_le_moves
+
+theorem UngarMoveSchedule.first_idx_lt_last_idx {k r : ℕ}
+    (C : UngarMoveSchedule k r) :
+    (C.idx ⟨0, lt_of_lt_of_le (by norm_num : 0 < 2) C.two_le_crossingCount⟩).val <
+      (C.idx ⟨C.crossingCount - 1,
+        Nat.sub_lt (lt_of_lt_of_le (by norm_num : 0 < 2) C.two_le_crossingCount)
+          (by norm_num : 0 < 1)⟩).val := by
+  have hfin :
+      (⟨0, lt_of_lt_of_le (by norm_num : 0 < 2) C.two_le_crossingCount⟩ :
+        Fin C.crossingCount) <
+        (⟨C.crossingCount - 1,
+          Nat.sub_lt (lt_of_lt_of_le (by norm_num : 0 < 2) C.two_le_crossingCount)
+            (by norm_num : 0 < 1)⟩ : Fin C.crossingCount) := by
+    change 0 < C.crossingCount - 1
+    have hc2 : 2 ≤ C.crossingCount := C.two_le_crossingCount
+    omega
+  exact C.idx_strict hfin
+
 def UngarMoveSchedule.toCountingCertificate {k r : ℕ}
     (C : UngarMoveSchedule k r) : UngarCountingCertificate (2 * k) r where
   crossingCount := C.crossingCount

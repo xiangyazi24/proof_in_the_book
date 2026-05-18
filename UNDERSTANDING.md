@@ -176,9 +176,12 @@ Current progress:
 - Proved subset monotonicity for slopes/directions and non-collinearity.
 - Proved the book's reduction from all sets to the even-cardinality direction
   theorem, including the `n = 3` base case.
+- Formalized Ungar's final numerical counting endpoint as
+  `UngarCountingCertificate.length_lower_bound`.
 
 Remaining core: formalize Ungar's even-cardinality permutation/T-O-C counting
-argument (or an equivalent rotating-calipers construction).
+argument enough to produce an `UngarCountingCertificate` from the rotating
+projection sweep.
 
 ## Working style notes
 

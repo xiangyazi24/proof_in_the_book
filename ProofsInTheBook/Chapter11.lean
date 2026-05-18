@@ -312,6 +312,27 @@ theorem directions_lower_bound_of_even_direction_bound_all (points : Finset Poin
   · exact directions_lower_bound_of_even_direction_bound points (by omega) hncoll heven_bound
 
 /--
+The numerical core of Ungar's even-cardinality proof.  The crossing moves have
+orders `d_i`; every letter crosses the central barrier at least once, giving
+`n ≤ Σ 2 d_i`, while the T/O/C block argument fits disjoint blocks of total
+length `Σ 2 d_i` inside one period of length `t`.
+-/
+structure UngarCountingCertificate (n t : ℕ) where
+  crossingCount : ℕ
+  order : Fin crossingCount → ℕ
+  letters_cross : n ≤ ∑ i : Fin crossingCount, 2 * order i
+  blocks_fit : (∑ i : Fin crossingCount, 2 * order i) ≤ t
+
+theorem UngarCountingCertificate.length_lower_bound {n t : ℕ}
+    (cert : UngarCountingCertificate n t) : n ≤ t :=
+  le_trans cert.letters_cross cert.blocks_fit
+
+theorem even_direction_bound_of_ungar_counting_certificate (points : Finset Point2)
+    (cert : UngarCountingCertificate points.card (directionsDeterminedBy points).card) :
+    points.card ≤ (directionsDeterminedBy points).card :=
+  cert.length_lower_bound
+
+/--
 Counting interface for Ungar's slope theorem: an injective family of witnessed
 slopes gives the corresponding lower bound on the number of slopes.
 -/

@@ -327,8 +327,51 @@ theorem UngarCountingCertificate.length_lower_bound {n t : ℕ}
     (cert : UngarCountingCertificate n t) : n ≤ t :=
   le_trans cert.letters_cross cert.blocks_fit
 
+/--
+A finite packing certificate for the T/O/C block argument: the `i`th crossing
+move of order `dᵢ` owns a block of `2dᵢ` slots, and all these slots inject
+into one period of length `t`.
+-/
+structure UngarBlockPacking (t crossingCount : ℕ) (order : Fin crossingCount → ℕ) where
+  slot : (Σ i : Fin crossingCount, Fin (2 * order i)) → Fin t
+  injective_slot : Function.Injective slot
+
+theorem UngarBlockPacking.blocks_fit {t crossingCount : ℕ}
+    {order : Fin crossingCount → ℕ}
+    (packing : UngarBlockPacking t crossingCount order) :
+    (∑ i : Fin crossingCount, 2 * order i) ≤ t := by
+  have hcard := Fintype.card_le_of_injective packing.slot packing.injective_slot
+  simpa [Fintype.card_sigma, Fintype.card_fin] using hcard
+
+/--
+The finite sweep certificate that remains to be extracted from the rotating
+projection sequence: crossing orders, enough letter crossings, and a block
+packing inside one period.
+-/
+structure UngarSweepCertificate (n t : ℕ) where
+  crossingCount : ℕ
+  order : Fin crossingCount → ℕ
+  letters_cross : n ≤ ∑ i : Fin crossingCount, 2 * order i
+  packing : UngarBlockPacking t crossingCount order
+
+def UngarSweepCertificate.toCountingCertificate {n t : ℕ}
+    (cert : UngarSweepCertificate n t) : UngarCountingCertificate n t where
+  crossingCount := cert.crossingCount
+  order := cert.order
+  letters_cross := cert.letters_cross
+  blocks_fit := cert.packing.blocks_fit
+
+theorem UngarSweepCertificate.length_lower_bound {n t : ℕ}
+    (cert : UngarSweepCertificate n t) : n ≤ t :=
+  cert.toCountingCertificate.length_lower_bound
+
 theorem even_direction_bound_of_ungar_counting_certificate (points : Finset Point2)
     (cert : UngarCountingCertificate points.card (directionsDeterminedBy points).card) :
+    points.card ≤ (directionsDeterminedBy points).card :=
+  cert.length_lower_bound
+
+theorem even_direction_bound_of_ungar_sweep_certificate (points : Finset Point2)
+    (cert : UngarSweepCertificate points.card (directionsDeterminedBy points).card) :
     points.card ≤ (directionsDeterminedBy points).card :=
   cert.length_lower_bound
 
@@ -340,6 +383,15 @@ theorem directions_lower_bound_of_even_ungar_certificates (points : Finset Point
   directions_lower_bound_of_even_direction_bound_all points hcard hncoll
     (fun S hEven hS =>
       even_direction_bound_of_ungar_counting_certificate S (hcert S hEven hS))
+
+theorem directions_lower_bound_of_even_ungar_sweep_certificates (points : Finset Point2)
+    (hcard : 3 ≤ points.card) (hncoll : NoncollinearSet points)
+    (hcert : ∀ S : Finset Point2, Even S.card → NoncollinearSet S →
+      UngarSweepCertificate S.card (directionsDeterminedBy S).card) :
+    points.card - 1 ≤ (directionsDeterminedBy points).card :=
+  directions_lower_bound_of_even_direction_bound_all points hcard hncoll
+    (fun S hEven hS =>
+      even_direction_bound_of_ungar_sweep_certificate S (hcert S hEven hS))
 
 /--
 Counting interface for Ungar's slope theorem: an injective family of witnessed

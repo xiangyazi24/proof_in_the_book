@@ -1627,6 +1627,33 @@ theorem below_square_B_core_24_31 {x : ℝ} (hx24 : 24 ≤ x) (hx31 : x ≤ 31) 
   have hlower := entropyRatio_lower_log_add hx1
   linarith
 
+theorem below_square_B_core_compact {x : ℝ} (hx2 : 2 ≤ x) (hx31 : x ≤ 31) :
+    Real.sqrt (x / 120) / 3 * Real.log (120 * x)
+        + min 1 (x / 3) * Real.log 4 + (1 : ℝ) / 32
+      ≤ x * Real.log x - (x - 1) * Real.log (x - 1) := by
+  by_cases hx3 : x ≤ 3
+  · exact below_square_B_core_2_3 hx2 hx3
+  · have hx3' : 3 ≤ x := by linarith
+    by_cases hx7 : x ≤ (7 : ℝ) / 2
+    · exact below_square_B_core_3_7_2 hx3' hx7
+    · have hx7' : (7 : ℝ) / 2 ≤ x := by linarith
+      by_cases hx4 : x ≤ 4
+      · exact below_square_B_core_7_2_4 hx7' hx4
+      · have hx4' : 4 ≤ x := by linarith
+        by_cases hx6 : x ≤ 6
+        · exact below_square_B_core_4_6 hx4' hx6
+        · have hx6' : 6 ≤ x := by linarith
+          by_cases hx10 : x ≤ 10
+          · exact below_square_B_core_6_10 hx6' hx10
+          · have hx10' : 10 ≤ x := by linarith
+            by_cases hx16 : x ≤ 16
+            · exact below_square_B_core_10_16 hx10' hx16
+            · have hx16' : 16 ≤ x := by linarith
+              by_cases hx24 : x ≤ 24
+              · exact below_square_B_core_16_24 hx16' hx24
+              · have hx24' : 24 ≤ x := by linarith
+                exact below_square_B_core_24_31 hx24' hx31
+
 set_option maxHeartbeats 800000 in
 theorem exists_large_prime_factor_choose_below_sq_close_of_sqrt33
     {n k : ℕ} (hk9 : 9 ≤ k) (hn2k : 2 * k ≤ n)

@@ -22,14 +22,18 @@ abbrev Cell (n : ℕ) : Type := Fin n × Fin n
 def OrientedEdge {V : Type*} (adj : V → V → Prop) (orient : V → V → Prop) : Prop :=
   ∀ ⦃u v⦄, orient u v → adj u v
 
+/-- Out-neighbors of `v` inside a finite vertex set `S`. -/
+def outNeighborsIn {V : Type*} [DecidableEq V] (S : Finset V)
+    (orient : V → V → Prop) [DecidableRel orient] (v : V) : Finset V :=
+  S.filter fun w => orient v w
+
 /-- Two cells conflict when they are distinct and lie in a common row or column. -/
 def LatinConflict {n : ℕ} (a b : Cell n) : Prop :=
   a ≠ b ∧ (a.1 = b.1 ∨ a.2 = b.2)
 
 /-- The cyclic Latin square value used in Galvin's orientation. -/
 noncomputable def cyclicLatinValue {n : ℕ} (cell : Cell n) : Fin n :=
-  ⟨(cell.1.val + cell.2.val) % n,
-    Nat.mod_lt _ (lt_of_le_of_lt (Nat.zero_le cell.1.val) cell.1.isLt)⟩
+  cell.1 + cell.2
 
 /--
 Galvin's orientation of the Dinitz conflict graph from the cyclic Latin square:
@@ -41,10 +45,84 @@ noncomputable def dinitzOrient {n : ℕ} (a b : Cell n) : Prop :=
     ((a.1 = b.1 ∧ cyclicLatinValue a < cyclicLatinValue b) ∨
       (a.2 = b.2 ∧ cyclicLatinValue b < cyclicLatinValue a))
 
+noncomputable instance dinitzOrient_decidableRel {n : ℕ} : DecidableRel (@dinitzOrient n) :=
+  Classical.decRel _
+
 theorem dinitzOrient_orientedEdge {n : ℕ} :
     OrientedEdge (LatinConflict : Cell n → Cell n → Prop) dinitzOrient := by
   intro u v h
   exact h.1
+
+theorem cyclicLatinValue_eq_of_same_row {n : ℕ} {a b : Cell n}
+    (hrow : a.1 = b.1) (hval : cyclicLatinValue a = cyclicLatinValue b) :
+    a.2 = b.2 := by
+  have h : a.1 + a.2 = a.1 + b.2 := by
+    simpa [cyclicLatinValue, hrow] using hval
+  exact add_left_cancel h
+
+theorem cyclicLatinValue_eq_of_same_col {n : ℕ} {a b : Cell n}
+    (hcol : a.2 = b.2) (hval : cyclicLatinValue a = cyclicLatinValue b) :
+    a.1 = b.1 := by
+  have h : a.1 + a.2 = b.1 + a.2 := by
+    simpa [cyclicLatinValue, hcol] using hval
+  exact add_right_cancel h
+
+theorem dinitzOrient_outNeighbors_card_lt {n : ℕ} (cell : Cell n) :
+    (outNeighborsIn (Finset.univ : Finset (Cell n)) dinitzOrient cell).card < n := by
+  classical
+  let out := outNeighborsIn (Finset.univ : Finset (Cell n)) dinitzOrient cell
+  let target := (Finset.univ : Finset (Fin n)).erase (cyclicLatinValue cell)
+  have hmaps : Set.MapsTo cyclicLatinValue (out : Set (Cell n)) (target : Set (Fin n)) := by
+    intro b hb
+    have hb' : dinitzOrient cell b := by
+      simpa [out, outNeighborsIn] using hb
+    rcases hb' with ⟨_, hdir⟩
+    apply Finset.mem_erase.mpr
+    constructor
+    · rcases hdir with ⟨_, hlt⟩ | ⟨_, hlt⟩
+      · exact ne_of_gt hlt
+      · exact ne_of_lt hlt
+    · exact Finset.mem_univ _
+  have hinj : Set.InjOn cyclicLatinValue (out : Set (Cell n)) := by
+    intro b hb d hd hval
+    have hb' : dinitzOrient cell b := by
+      simpa [out, outNeighborsIn] using hb
+    have hd' : dinitzOrient cell d := by
+      simpa [out, outNeighborsIn] using hd
+    rcases hb' with ⟨_, hbdir⟩
+    rcases hd' with ⟨_, hddir⟩
+    rcases hbdir with ⟨hbrow, hblt⟩ | ⟨hbcol, hblt⟩
+    · rcases hddir with ⟨hdrow, hdlt⟩ | ⟨hdcol, hdlt⟩
+      · have hrow : b.1 = d.1 := by exact hbrow.symm.trans hdrow
+        have hcol : b.2 = d.2 := cyclicLatinValue_eq_of_same_row hrow hval
+        exact Prod.ext hrow hcol
+      · exfalso
+        have : cyclicLatinValue d < cyclicLatinValue cell := hdlt
+        rw [← hval] at this
+        exact not_lt_of_ge hblt.le this
+    · rcases hddir with ⟨hdrow, hdlt⟩ | ⟨hdcol, hdlt⟩
+      · exfalso
+        have : cyclicLatinValue cell < cyclicLatinValue d := hdlt
+        rw [← hval] at this
+        exact not_lt_of_ge hblt.le this
+      · have hcol : b.2 = d.2 := by exact hbcol.symm.trans hdcol
+        have hrow : b.1 = d.1 := cyclicLatinValue_eq_of_same_col hcol hval
+        exact Prod.ext hrow hcol
+  have hle : out.card ≤ target.card :=
+    Finset.card_le_card_of_injOn cyclicLatinValue hmaps hinj
+  have htarget : target.card = n - 1 := by
+    simp [target]
+  have hnpos : 0 < n := lt_of_le_of_lt (Nat.zero_le cell.1.val) cell.1.isLt
+  have houtcard : out.card =
+      (outNeighborsIn (Finset.univ : Finset (Cell n)) dinitzOrient cell).card := rfl
+  omega
+
+theorem dinitzOrient_outNeighbors_lt_list_card {n : ℕ} {α : Type*}
+    (lists : Cell n → Finset α) (hlists : ∀ cell, n ≤ (lists cell).card)
+    (cell : Cell n) :
+    (outNeighborsIn (Finset.univ : Finset (Cell n)) dinitzOrient cell).card <
+      (lists cell).card :=
+  lt_of_lt_of_le (dinitzOrient_outNeighbors_card_lt cell) (hlists cell)
 
 /-- A proper Dinitz/Latin coloring: conflicting cells receive different colors. -/
 def ProperArrayColoring {n : ℕ} {α : Type*} (color : Cell n → α) : Prop :=
@@ -137,11 +215,6 @@ theorem galvin_greedy_step {V : Type*} [DecidableEq V] [Fintype V]
   exact hc.2 (Finset.mem_image.mpr ⟨w, hw, heq⟩)
 
 /-! ### Galvin's actual kernel-perfect list-coloring interface -/
-
-/-- Out-neighbors of `v` inside a finite vertex set `S`. -/
-def outNeighborsIn {V : Type*} [DecidableEq V] (S : Finset V)
-    (orient : V → V → Prop) [DecidableRel orient] (v : V) : Finset V :=
-  S.filter fun w => orient v w
 
 /-- A kernel in an induced directed graph on `S`. -/
 def IsKernelIn {V : Type*} [DecidableEq V] (S K : Finset V)

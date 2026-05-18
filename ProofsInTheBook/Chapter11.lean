@@ -557,6 +557,131 @@ theorem directions_lower_bound_of_even_ungar_sweep_certificates (points : Finset
     (fun S hEven hS =>
       even_direction_bound_of_ungar_sweep_certificate S (hcert S hEven hS))
 
+/-! ### Finite allowable-sequence vocabulary -/
+
+/-- A permutation state maps position to label. -/
+abbrev State (N : ℕ) := Equiv.Perm (Fin N)
+
+/-- The left side of the middle barrier in `2 * k` positions. -/
+def middleLeft (k : ℕ) (p : Fin (2 * k)) : Prop :=
+  p.val < k
+
+/-- A label crosses the middle barrier between two permutation states. -/
+def crossesMiddle (k : ℕ) (π ρ : State (2 * k)) (a : Fin (2 * k)) : Prop :=
+  middleLeft k (π.symm a) ↔ ¬ middleLeft k (ρ.symm a)
+
+/-- The source index of step `j` in a sequence of `r + 1` states. -/
+def stepFrom {r : ℕ} (j : Fin r) : Fin (r + 1) :=
+  ⟨j.val, lt_trans j.isLt (Nat.lt_succ_self r)⟩
+
+/-- The target index of step `j` in a sequence of `r + 1` states. -/
+def stepTo {r : ℕ} (j : Fin r) : Fin (r + 1) :=
+  ⟨j.val + 1, Nat.succ_lt_succ j.isLt⟩
+
+/-- The reverse permutation on `Fin N`. -/
+def reverseFin (N : ℕ) : State N :=
+  Fin.revPerm
+
+theorem middleLeft_reverseFin_symm_iff_not {k : ℕ} (a : Fin (2 * k)) :
+    middleLeft k ((reverseFin (2 * k)).symm a) ↔ ¬ middleLeft k a := by
+  simp [reverseFin, middleLeft, Fin.revPerm_symm]
+  omega
+
+/--
+A finite generalized allowable sequence, reduced to the data needed for the
+middle-barrier counting layer: a list of permutation states beginning at the
+identity and ending at the reverse permutation.
+-/
+structure GeneralizedAllowableSequence (k r : ℕ) where
+  π : Fin (r + 1) → State (2 * k)
+  start : π ⟨0, Nat.succ_pos r⟩ = Equiv.refl (Fin (2 * k))
+  finish : π ⟨r, Nat.lt_succ_self r⟩ = reverseFin (2 * k)
+
+namespace GeneralizedAllowableSequence
+
+/-- If a Boolean value changes between the endpoints of a finite sequence,
+then it changes across some adjacent step. -/
+theorem every_label_crosses {k r : ℕ} (A : GeneralizedAllowableSequence k r)
+    (a : Fin (2 * k)) :
+    ∃ j : Fin r,
+      crossesMiddle k (A.π (stepFrom j)) (A.π (stepTo j)) a := by
+  classical
+  by_contra hnone
+  push Not at hnone
+  have hsame_step :
+      ∀ j : Fin r,
+        middleLeft k ((A.π (stepFrom j)).symm a) ↔
+          middleLeft k ((A.π (stepTo j)).symm a) := by
+    intro j
+    have hnot := hnone j
+    unfold crossesMiddle at hnot
+    by_cases hfrom : middleLeft k ((A.π (stepFrom j)).symm a) <;>
+      by_cases hto : middleLeft k ((A.π (stepTo j)).symm a) <;>
+      simp [hfrom, hto] at hnot ⊢
+  let b (i : ℕ) (hi : i ≤ r) : Prop :=
+    middleLeft k ((A.π ⟨i, Nat.lt_succ_of_le hi⟩).symm a)
+  have hsame_to_start :
+      ∀ i : ℕ, ∀ hi : i ≤ r, b i hi ↔ b 0 (Nat.zero_le r) := by
+    intro i
+    induction i with
+    | zero =>
+        intro hi
+        rfl
+    | succ i ih =>
+        intro hi
+        have hi_prev : i ≤ r := Nat.le_of_succ_le hi
+        have hi_lt : i < r := Nat.lt_of_succ_le hi
+        have hstep := hsame_step ⟨i, hi_lt⟩
+        have hprev := ih hi_prev
+        change b i hi_prev ↔ b (i + 1) hi at hstep
+        exact hstep.symm.trans hprev
+  have hend_same :
+      middleLeft k ((A.π ⟨r, Nat.lt_succ_self r⟩).symm a) ↔
+        middleLeft k ((A.π ⟨0, Nat.succ_pos r⟩).symm a) := by
+    simpa [b] using hsame_to_start r (le_rfl : r ≤ r)
+  have hstart :
+      middleLeft k ((A.π ⟨0, Nat.succ_pos r⟩).symm a) ↔ middleLeft k a := by
+    rw [A.start]
+    simp
+  have hend :
+      middleLeft k ((A.π ⟨r, Nat.lt_succ_self r⟩).symm a) ↔
+        ¬ middleLeft k a := by
+    rw [A.finish]
+    exact middleLeft_reverseFin_symm_iff_not a
+  have hbad :
+      middleLeft k ((A.π ⟨0, Nat.succ_pos r⟩).symm a) ↔
+        ¬ middleLeft k ((A.π ⟨0, Nat.succ_pos r⟩).symm a) := by
+    exact hend_same.symm.trans (hend.trans (not_congr hstart.symm))
+  by_cases h0 : middleLeft k ((A.π ⟨0, Nat.succ_pos r⟩).symm a)
+  · exact (hbad.mp h0) h0
+  · exact h0 (hbad.mpr h0)
+
+end GeneralizedAllowableSequence
+
+/--
+The universally valid fixed-axis finite-slope consequence of a projective
+direction bound: losing the vertical direction costs at most one slope.
+-/
+theorem finite_slopes_bound_of_direction_bound (points : Finset Point2)
+    (hdir : 2 * (points.card / 2) ≤ (directionsDeterminedBy points).card) :
+    2 * (points.card / 2) - 1 ≤ (slopesDeterminedBy points).card := by
+  have hle := directions_card_le_slopes_card_succ points
+  omega
+
+/-- If the projective direction count reaches `n`, finite slopes reach `n - 1`. -/
+theorem slopes_card_sub_one_of_card_le_directions (points : Finset Point2)
+    (hdir : points.card ≤ (directionsDeterminedBy points).card) :
+    points.card - 1 ≤ (slopesDeterminedBy points).card := by
+  have hle := directions_card_le_slopes_card_succ points
+  omega
+
+/-- If no vertical pair is present, direction and finite-slope counts agree. -/
+theorem slopes_lower_bound_of_directions_lower_bound_noVerticalPairs
+    {points : Finset Point2} (hnv : NoVerticalPairs points)
+    (hdir : points.card - 1 ≤ (directionsDeterminedBy points).card) :
+    points.card - 1 ≤ (slopesDeterminedBy points).card := by
+  rwa [directions_card_eq_slopes_card_of_noVerticalPairs hnv] at hdir
+
 /--
 The remaining geometric/combinatorial core of Ungar's proof: for every even
 non-collinear point set, the rotating projection sequence supplies the finite

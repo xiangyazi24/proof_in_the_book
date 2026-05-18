@@ -415,6 +415,32 @@ theorem joyalPathVertices_subset_periodicCore (X : DoublyRootedLabeledTree n) :
   have hval := congrArg Subtype.val hm
   simpa [g, joyalPathSelfMap_iterate_val] using hval
 
+theorem exists_iterate_mem_joyalPathVertices (X : DoublyRootedLabeledTree n) (v : Fin n) :
+    ∃ m : ℕ, (joyalTreeToFunction X)^[m] v ∈ joyalPathVertices X := by
+  classical
+  let f := joyalTreeToFunction X
+  let D := fun v : Fin n => X.1.1.dist X.2.1 v
+  have main : ∀ d : ℕ, (∀ e < d, ∀ v : Fin n, D v = e → ∃ m : ℕ, f^[m] v ∈ joyalPathVertices X) →
+      ∀ v : Fin n, D v = d → ∃ m : ℕ, f^[m] v ∈ joyalPathVertices X := by
+    intro d ih v hvd
+    by_cases hv : v ∈ joyalPathVertices X
+    · exact ⟨0, by simpa [f] using hv⟩
+    · let w := f v
+      have hw_eq : w = joyalOffPathValue X v hv := by
+        simp [w, f, joyalTreeToFunction_apply_of_not_mem X hv]
+      have hdist : D w + 1 = D v := by
+        simpa [D, w, hw_eq] using joyalOffPathValue_dist_left_add_one X v hv
+      have hwd_lt : D w < d := by omega
+      obtain ⟨m, hm⟩ := ih (D w) hwd_lt w rfl
+      refine ⟨m + 1, ?_⟩
+      simpa [f, Function.iterate_succ, Function.comp_def, w] using hm
+  have main' : ∀ d : ℕ, ∀ v : Fin n, D v = d → ∃ m : ℕ, f^[m] v ∈ joyalPathVertices X := by
+    intro d
+    induction d using Nat.strong_induction_on with
+    | h d ih =>
+        exact main d (by intro e he; exact ih e he)
+  exact main' (D v) v rfl
+
 /--
 No vertex off the left-right path is periodic under Joyal's endofunction.
 The intended proof uses `joyalOffPathValue_mem_tail_path_to_left`: while outside

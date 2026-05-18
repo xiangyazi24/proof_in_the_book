@@ -795,6 +795,25 @@ theorem mem_toFinset {N : ℕ} {I : PositionInterval N} {p : Fin N} :
     p ∈ I.toFinset ↔ I.Mem p := by
   simp [toFinset]
 
+/-- Mirror a position across the midpoint of a consecutive interval. -/
+def mirror {N : ℕ} (I : PositionInterval N) (p : Fin N) (hp : I.Mem p) : Fin N :=
+  ⟨I.lo + I.hi - p.val, by
+    rcases hp with ⟨hlo, hhi⟩
+    have hle_hi : I.lo + I.hi - p.val ≤ I.hi := by omega
+    exact lt_of_le_of_lt hle_hi I.hi_lt⟩
+
+theorem mirror_mem {N : ℕ} (I : PositionInterval N) (p : Fin N) (hp : I.Mem p) :
+    I.Mem (I.mirror p hp) := by
+  rcases hp with ⟨hlo, hhi⟩
+  constructor
+  · dsimp [mirror]
+    omega
+  · dsimp [mirror]
+    omega
+
+theorem mirror_val {N : ℕ} (I : PositionInterval N) (p : Fin N) (hp : I.Mem p) :
+    (I.mirror p hp).val = I.lo + I.hi - p.val := rfl
+
 /-- The number of positions in a consecutive interval. -/
 def length {N : ℕ} (I : PositionInterval N) : ℕ :=
   I.hi + 1 - I.lo

@@ -237,6 +237,23 @@ theorem joyalOffPathValue_adj (X : DoublyRootedLabeledTree n)
   change X.1.1.Adj v p.snd
   exact SimpleGraph.Walk.adj_snd hp
 
+/-- The off-path value is the next vertex on the unique path toward the left endpoint. -/
+theorem joyalOffPathValue_mem_tail_path_to_left (X : DoublyRootedLabeledTree n)
+    (v : Fin n) (hv : v ∉ joyalPathVertices X) :
+    joyalOffPathValue X v hv ∈ (treePath X.1 v X.2.1).support.tail := by
+  let p := treePath X.1 v X.2.1
+  have hne : v ≠ X.2.1 := by
+    intro h
+    exact hv (by simpa [h] using joyal_left_mem_pathVertices X)
+  have hp : ¬ p.Nil := SimpleGraph.Walk.not_nil_of_ne hne
+  change p.snd ∈ p.support.tail
+  exact SimpleGraph.Walk.snd_mem_tail_support hp
+
+theorem joyalOffPathValue_ne (X : DoublyRootedLabeledTree n)
+    (v : Fin n) (hv : v ∉ joyalPathVertices X) :
+    joyalOffPathValue X v hv ≠ v := by
+  exact (joyalOffPathValue_adj X v hv).ne'
+
 /-- Joyal's map from a doubly-rooted tree to an endofunction on its label set. -/
 noncomputable def joyalTreeToFunction (X : DoublyRootedLabeledTree n) : Fin n → Fin n :=
   fun v =>

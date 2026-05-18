@@ -286,6 +286,46 @@ theorem joyalTreeToFunction_maps_pathVertices (X : DoublyRootedLabeledTree n)
   rw [joyalTreeToFunction_apply_of_mem X hv]
   exact joyalPathTableValue_mem_pathVertices X hv
 
+theorem joyalPathTableValue_injective (X : DoublyRootedLabeledTree n)
+    {v w : Fin n} (hv : v ∈ joyalPathVertices X) (hw : w ∈ joyalPathVertices X)
+    (h : joyalPathTableValue X v hv = joyalPathTableValue X w hw) :
+    v = w := by
+  classical
+  have hvd : v ∈ joyalPathDomainOrder X := by
+    simpa [joyalPathDomainOrder] using hv
+  have hwd : w ∈ joyalPathDomainOrder X := by
+    simpa [joyalPathDomainOrder] using hw
+  have hvidx : List.idxOf v (joyalPathDomainOrder X) < (joyalPathRangeOrder X).length := by
+    have hdom : List.idxOf v (joyalPathDomainOrder X) < (joyalPathDomainOrder X).length :=
+      List.idxOf_lt_length_iff.mpr hvd
+    rwa [← joyalPathOrders_length_eq X]
+  have hwidx : List.idxOf w (joyalPathDomainOrder X) < (joyalPathRangeOrder X).length := by
+    have hdom : List.idxOf w (joyalPathDomainOrder X) < (joyalPathDomainOrder X).length :=
+      List.idxOf_lt_length_iff.mpr hwd
+    rwa [← joyalPathOrders_length_eq X]
+  have hget :
+      (joyalPathRangeOrder X)[List.idxOf v (joyalPathDomainOrder X)]'hvidx =
+        (joyalPathRangeOrder X)[List.idxOf w (joyalPathDomainOrder X)]'hwidx := by
+    simpa [joyalPathTableValue] using h
+  have hidx :
+      List.idxOf v (joyalPathDomainOrder X) =
+        List.idxOf w (joyalPathDomainOrder X) := by
+    exact congrArg Fin.val ((joyalPathRangeOrder_nodup X).get_inj_iff.mp hget)
+  have hvget :
+      (joyalPathDomainOrder X)[List.idxOf v (joyalPathDomainOrder X)]'
+        (List.idxOf_lt_length_iff.mpr hvd) = v :=
+    List.idxOf_get (List.idxOf_lt_length_iff.mpr hvd)
+  have hwget :
+      (joyalPathDomainOrder X)[List.idxOf w (joyalPathDomainOrder X)]'
+        (List.idxOf_lt_length_iff.mpr hwd) = w :=
+    List.idxOf_get (List.idxOf_lt_length_iff.mpr hwd)
+  calc
+    v = (joyalPathDomainOrder X)[List.idxOf v (joyalPathDomainOrder X)]'
+        (List.idxOf_lt_length_iff.mpr hvd) := hvget.symm
+    _ = (joyalPathDomainOrder X)[List.idxOf w (joyalPathDomainOrder X)]'
+        (List.idxOf_lt_length_iff.mpr hwd) := by simp [hidx]
+    _ = w := hwget
+
 /--
 Joyal's path vertices are exactly the periodic core of the associated endofunction.
 This is the formal version of the book's subset `M`.

@@ -231,6 +231,29 @@ theorem log_choose_le_sqrt_log_add_min_third_log_four_of_noLargePrimeFactor
     _ = (sqrt n : ℝ) * Real.log n + ((min k (n / 3) : ℕ) : ℝ) * Real.log 4 := by
       simp [M]
 
+theorem mul_log_sub_mul_log_le_log_choose {n k : ℕ}
+    (hkpos : 0 < k) (hkn : k ≤ n) :
+    (k : ℝ) * Real.log n - (k : ℝ) * Real.log k ≤ Real.log (n.choose k) := by
+  have hnpos : 0 < n := hkpos.trans_le hkn
+  have hchoose_pos : 0 < n.choose k := Nat.choose_pos hkn
+  have hnat : n ^ k ≤ k ^ k * n.choose k := pow_le_pow_mul_choose hkn
+  have hlog :
+      Real.log ((n : ℝ) ^ k) ≤ Real.log ((k : ℝ) ^ k * (n.choose k : ℝ)) := by
+    exact Real.log_le_log
+      (pow_pos (by exact_mod_cast hnpos) k)
+      (by exact_mod_cast hnat)
+  calc
+    (k : ℝ) * Real.log n - (k : ℝ) * Real.log k
+        = Real.log ((n : ℝ) ^ k) - Real.log ((k : ℝ) ^ k) := by
+          rw [Real.log_pow, Real.log_pow]
+    _ ≤ Real.log ((k : ℝ) ^ k * (n.choose k : ℝ)) - Real.log ((k : ℝ) ^ k) := by
+      exact sub_le_sub_right hlog _
+    _ = Real.log (n.choose k) := by
+      rw [Real.log_mul
+        (pow_ne_zero _ (by exact_mod_cast hkpos.ne' : (k : ℝ) ≠ 0))
+        (by exact_mod_cast hchoose_pos.ne')]
+      ring
+
 /--
 Factorial form of the standard binomial-divisibility argument: if a prime
 divides `n!` but not the two factorial factors in

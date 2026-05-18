@@ -516,6 +516,34 @@ theorem joyalPathRangeOrder_get_eq_function_domain_get (X : DoublyRootedLabeledT
     simpa [v] using (joyalPathDomainOrder_nodup X).idxOf_getElem i hid
   simpa [hidx]
 
+theorem joyalPathRangeOrder_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
+    (hXY : joyalTreeToFunction X = joyalTreeToFunction Y) :
+    joyalPathRangeOrder X = joyalPathRangeOrder Y := by
+  classical
+  have hdom := joyalPathDomainOrder_eq_of_function_eq hXY
+  apply List.ext_getElem
+  · calc
+      (joyalPathRangeOrder X).length = (joyalPathDomainOrder X).length :=
+        (joyalPathOrders_length_eq X).symm
+      _ = (joyalPathDomainOrder Y).length := by rw [hdom]
+      _ = (joyalPathRangeOrder Y).length := joyalPathOrders_length_eq Y
+  · intro i hx hy
+    have hdx : i < (joyalPathDomainOrder X).length := by
+      simpa [joyalPathOrders_length_eq X] using hx
+    have hdy : i < (joyalPathDomainOrder Y).length := by
+      simpa [joyalPathOrders_length_eq Y] using hy
+    calc
+      (joyalPathRangeOrder X)[i]'hx
+          = joyalTreeToFunction X ((joyalPathDomainOrder X)[i]'hdx) :=
+            joyalPathRangeOrder_get_eq_function_domain_get X i hx hdx
+      _ = joyalTreeToFunction Y ((joyalPathDomainOrder Y)[i]'hdy) := by
+            have harg : (joyalPathDomainOrder X)[i]'hdx =
+                (joyalPathDomainOrder Y)[i]'hdy := by
+              simpa [hdom]
+            rw [hXY, harg]
+      _ = (joyalPathRangeOrder Y)[i]'hy :=
+            (joyalPathRangeOrder_get_eq_function_domain_get Y i hy hdy).symm
+
 theorem joyalPathRangeOrder_zero (X : DoublyRootedLabeledTree n)
     (h : 0 < (joyalPathRangeOrder X).length) :
     (joyalPathRangeOrder X)[0]'h = X.2.1 := by

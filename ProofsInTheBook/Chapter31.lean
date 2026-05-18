@@ -245,6 +245,22 @@ noncomputable def joyalTreeToFunction (X : DoublyRootedLabeledTree n) : Fin n �
     else
       joyalOffPathValue X v hv
 
+theorem joyalTreeToFunction_apply_of_mem (X : DoublyRootedLabeledTree n)
+    {v : Fin n} (hv : v ∈ joyalPathVertices X) :
+    joyalTreeToFunction X v = joyalPathTableValue X v hv := by
+  simp [joyalTreeToFunction, hv]
+
+theorem joyalTreeToFunction_apply_of_not_mem (X : DoublyRootedLabeledTree n)
+    {v : Fin n} (hv : v ∉ joyalPathVertices X) :
+    joyalTreeToFunction X v = joyalOffPathValue X v hv := by
+  simp [joyalTreeToFunction, hv]
+
+theorem joyalPathRangeOrder_zero (X : DoublyRootedLabeledTree n)
+    (h : 0 < (joyalPathRangeOrder X).length) :
+    (joyalPathRangeOrder X)[0]'h = X.2.1 := by
+  simpa [joyalPathRangeOrder] using
+    SimpleGraph.Walk.support_getElem_zero (treePath X.1 X.2.1 X.2.2)
+
 theorem joyalTreeToFunction_injective (n : ℕ) :
     Function.Injective (joyalTreeToFunction : DoublyRootedLabeledTree n → Fin n → Fin n) := by
   intro X Y hXY

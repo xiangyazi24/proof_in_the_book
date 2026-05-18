@@ -52,6 +52,14 @@ open Nat
 def HasPrimeFactorAbove (k m : ℕ) : Prop :=
   ∃ p, k < p ∧ p.Prime ∧ p ∣ m
 
+def HasPrimeFactorAboveBelow (B k m : ℕ) : Prop :=
+  ∃ p : Fin B, k < p.val ∧ p.val.Prime ∧ p.val ∣ m
+
+theorem hasPrimeFactorAbove_of_hasPrimeFactorAboveBelow {B k m : ℕ}
+    (h : HasPrimeFactorAboveBelow B k m) : HasPrimeFactorAbove k m := by
+  rcases h with ⟨p, hkp, hp, hpdvd⟩
+  exact ⟨p.val, hkp, hp, hpdvd⟩
+
 def NoLargePrimeFactor (k m : ℕ) : Prop :=
   ∀ p, p.Prime → p ∣ m → p ≤ k
 
@@ -449,6 +457,26 @@ theorem sylvester_schur_descFactorial_one {n : ℕ} (hn : 2 * 1 ≤ n) :
   have hn_ne_one : n ≠ 1 := by omega
   rcases Nat.ne_one_iff_exists_prime_dvd.mp hn_ne_one with ⟨p, hp, hpdvd⟩
   exact ⟨p, hp.one_lt, hp, by simpa [Nat.descFactorial_one] using hpdvd⟩
+
+theorem sylvester_schur_descFactorial_small_lt_sq_cert :
+    ∀ n : Fin 64, ∀ k : Fin 9,
+      2 * k.val ≤ n.val →
+      0 < k.val →
+      n.val < k.val * k.val →
+      ∃ p : Fin 64, k.val < p.val ∧ p.val.Prime ∧ p.val ∣ n.val.descFactorial k.val := by
+  native_decide
+
+theorem sylvester_schur_descFactorial_small_lt_sq {n k : ℕ}
+    (hn2k : 2 * k ≤ n) (hkpos : 0 < k) (hk8 : k ≤ 8) (hnlt : n < k * k) :
+    HasPrimeFactorAbove k (n.descFactorial k) := by
+  have hn64 : n < 64 := by
+    have hkk : k * k ≤ 8 * 8 := Nat.mul_le_mul hk8 hk8
+    omega
+  have hk9 : k < 9 := by omega
+  exact hasPrimeFactorAbove_of_hasPrimeFactorAboveBelow
+    (show HasPrimeFactorAboveBelow 64 k (n.descFactorial k) from
+      sylvester_schur_descFactorial_small_lt_sq_cert
+        ⟨n, hn64⟩ ⟨k, hk9⟩ hn2k hkpos hnlt)
 
 theorem factorial_lt_descFactorial_of_two_mul_le {n k : ℕ}
     (hk : 0 < k) (hn : 2 * k ≤ n) : k ! < n.descFactorial k := by

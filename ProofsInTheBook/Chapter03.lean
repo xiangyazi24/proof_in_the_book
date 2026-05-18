@@ -800,6 +800,24 @@ theorem exists_large_prime_factor_choose_of_lt_9
       hkpos (by omega) (by interval_cases k <;> native_decide)
       (pow_gap_small_k_tail hkpos hk9 (by omega))
 
+theorem exists_large_prime_factor_choose_sqrt_lt_9_cert :
+    ∀ k : Fin 41, ∀ n : Fin 81,
+      9 ≤ k.val → 2 * k.val ≤ n.val → n.val < k.val * k.val →
+        ∃ p : Fin 81, k.val < p.val ∧ p.val.Prime ∧ p.val ∣ n.val.choose k.val := by
+  native_decide
+
+theorem exists_large_prime_factor_choose_below_sq_of_sqrt_lt_9
+    {n k : ℕ} (hk9 : 9 ≤ k) (hn2k : 2 * k ≤ n)
+    (hnsq : n < k * k) (hsqrt9 : sqrt n < 9) :
+    HasPrimeFactorAbove k (n.choose k) := by
+  have hn81 : n < 81 := by
+    rw [Nat.sqrt_lt] at hsqrt9
+    simpa using hsqrt9
+  have hk41 : k < 41 := by nlinarith
+  rcases exists_large_prime_factor_choose_sqrt_lt_9_cert ⟨k, hk41⟩ ⟨n, hn81⟩
+    hk9 hn2k hnsq with ⟨p, hkp, hp, hpdvd⟩
+  exact ⟨p.val, hkp, hp, hpdvd⟩
+
 theorem exists_large_prime_dvd_choose_sq_le_of_9_le
     {n k : ℕ} (hk9 : 9 ≤ k) (hkn : k ≤ n) (hsq : k * k ≤ n) :
     ∃ p, k < p ∧ p.Prime ∧ p ∣ n.choose k := by

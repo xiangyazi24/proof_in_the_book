@@ -824,6 +824,19 @@ theorem crossOrder_le_right {k : ℕ} (I : PositionInterval (2 * k)) :
   · rw [crossOrder_eq_zero_of_not_crossing h]
     omega
 
+theorem crossOrder_pos_iff {k : ℕ} (I : PositionInterval (2 * k)) :
+    0 < I.crossOrder k ↔ I.lo < k ∧ k ≤ I.hi := by
+  constructor
+  · intro hpos
+    by_contra hcross
+    have hzero := crossOrder_eq_zero_of_not_crossing (I := I) hcross
+    omega
+  · intro hcross
+    rw [crossOrder_eq_min_of_crossing hcross]
+    have hleft : 0 < k - I.lo := by omega
+    have hright : 0 < I.hi + 1 - k := by omega
+    exact Nat.lt_min.mpr ⟨hleft, hright⟩
+
 theorem two_mul_crossOrder_le_length {k : ℕ} (I : PositionInterval (2 * k)) :
     2 * I.crossOrder k ≤ I.length := by
   by_cases h : I.lo < k ∧ k ≤ I.hi
@@ -920,6 +933,19 @@ def order {k : ℕ} {π ρ : State (2 * k)} (M : ReversalStep k π ρ) : ℕ :=
 /-- A reversal step is crossing exactly when its total order is positive. -/
 def IsCrossing {k : ℕ} {π ρ : State (2 * k)} (M : ReversalStep k π ρ) : Prop :=
   0 < M.order
+
+theorem isCrossing_iff_exists_crossing_block {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) :
+    M.IsCrossing ↔
+      ∃ i : Fin M.move.blockCount, (M.move.block i).lo < k ∧ k ≤ (M.move.block i).hi := by
+  classical
+  unfold IsCrossing order
+  rw [Finset.sum_pos_iff]
+  constructor
+  · rintro ⟨i, _hi, hpos⟩
+    exact ⟨i, (M.move.block i).crossOrder_pos_iff.mp hpos⟩
+  · rintro ⟨i, hcross⟩
+    exact ⟨i, by simp, (M.move.block i).crossOrder_pos_iff.mpr hcross⟩
 
 /-- The labels crossing in one reversal step fit inside the full position set. -/
 theorem two_mul_order_le_positions {k : ℕ} {π ρ : State (2 * k)}

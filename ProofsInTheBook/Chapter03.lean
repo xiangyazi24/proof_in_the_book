@@ -1156,6 +1156,349 @@ theorem nat_sqrt_div_le_sqrt_ratio {n k : ℕ} (hkpos : 0 < k) :
     nlinarith
   exact (Real.le_sqrt hnonneg harg_nonneg).mpr hsqrt_sq_real
 
+theorem log360_lt_6 : Real.log 360 < (6 : ℝ) := by
+  have hfracpos : (0 : ℝ) < 360 / 256 := by norm_num
+  have hfrac := Real.log_le_sub_one_of_pos (x := (360 : ℝ) / 256) hfracpos
+  rw [Real.log_div (by norm_num : (360 : ℝ) ≠ 0) (by norm_num : (256 : ℝ) ≠ 0)] at hfrac
+  have h256 : Real.log 256 = 8 * Real.log 2 := by
+    rw [show (256 : ℝ) = 2 ^ 8 by norm_num, Real.log_pow]
+    norm_num
+  rw [h256] at hfrac
+  nlinarith [log2_lt_1733_2500]
+
+theorem log420_lt_31_5 : Real.log 420 < (31 : ℝ) / 5 := by
+  have hfracpos : (0 : ℝ) < 420 / 256 := by norm_num
+  have hfrac := Real.log_le_sub_one_of_pos (x := (420 : ℝ) / 256) hfracpos
+  rw [Real.log_div (by norm_num : (420 : ℝ) ≠ 0) (by norm_num : (256 : ℝ) ≠ 0)] at hfrac
+  have h256 : Real.log 256 = 8 * Real.log 2 := by
+    rw [show (256 : ℝ) = 2 ^ 8 by norm_num, Real.log_pow]
+    norm_num
+  rw [h256] at hfrac
+  nlinarith [log2_lt_1733_2500]
+
+theorem log480_lt_13_2 : Real.log 480 < (13 : ℝ) / 2 := by
+  have hfracpos : (0 : ℝ) < 480 / 256 := by norm_num
+  have hfrac := Real.log_le_sub_one_of_pos (x := (480 : ℝ) / 256) hfracpos
+  rw [Real.log_div (by norm_num : (480 : ℝ) ≠ 0) (by norm_num : (256 : ℝ) ≠ 0)] at hfrac
+  have h256 : Real.log 256 = 8 * Real.log 2 := by
+    rw [show (256 : ℝ) = 2 ^ 8 by norm_num, Real.log_pow]
+    norm_num
+  rw [h256] at hfrac
+  nlinarith [log2_lt_1733_2500]
+
+theorem log720_lt_20_3 : Real.log 720 < (20 : ℝ) / 3 := by
+  have hfracpos : (0 : ℝ) < 720 / 512 := by norm_num
+  have hfrac := Real.log_le_sub_one_of_pos (x := (720 : ℝ) / 512) hfracpos
+  rw [Real.log_div (by norm_num : (720 : ℝ) ≠ 0) (by norm_num : (512 : ℝ) ≠ 0)] at hfrac
+  have h512 : Real.log 512 = 9 * Real.log 2 := by
+    rw [show (512 : ℝ) = 2 ^ 9 by norm_num, Real.log_pow]
+    norm_num
+  rw [h512] at hfrac
+  nlinarith [log2_lt_1733_2500]
+
+theorem log1200_lt_15_2 : Real.log 1200 < (15 : ℝ) / 2 := by
+  have hfracpos : (0 : ℝ) < 1200 / 1024 := by norm_num
+  have hfrac := Real.log_le_sub_one_of_pos (x := (1200 : ℝ) / 1024) hfracpos
+  rw [Real.log_div (by norm_num : (1200 : ℝ) ≠ 0) (by norm_num : (1024 : ℝ) ≠ 0)] at hfrac
+  have h1024 : Real.log 1024 = 10 * Real.log 2 := by
+    rw [show (1024 : ℝ) = 2 ^ 10 by norm_num, Real.log_pow]
+    norm_num
+  rw [h1024] at hfrac
+  nlinarith [log2_lt_1733_2500]
+
+theorem log1920_lt_8 : Real.log 1920 < (8 : ℝ) := by
+  have hfracpos : (0 : ℝ) < 1920 / 1024 := by norm_num
+  have hfrac := Real.log_le_sub_one_of_pos (x := (1920 : ℝ) / 1024) hfracpos
+  rw [Real.log_div (by norm_num : (1920 : ℝ) ≠ 0) (by norm_num : (1024 : ℝ) ≠ 0)] at hfrac
+  have h1024 : Real.log 1024 = 10 * Real.log 2 := by
+    rw [show (1024 : ℝ) = 2 ^ 10 by norm_num, Real.log_pow]
+    norm_num
+  rw [h1024] at hfrac
+  nlinarith [log2_lt_1733_2500]
+
+theorem log2880_lt_41_5 : Real.log 2880 < (41 : ℝ) / 5 := by
+  have hfracpos : (0 : ℝ) < 2880 / 2048 := by norm_num
+  have hfrac := Real.log_le_sub_one_of_pos (x := (2880 : ℝ) / 2048) hfracpos
+  rw [Real.log_div (by norm_num : (2880 : ℝ) ≠ 0) (by norm_num : (2048 : ℝ) ≠ 0)] at hfrac
+  have h2048 : Real.log 2048 = 11 * Real.log 2 := by
+    rw [show (2048 : ℝ) = 2 ^ 11 by norm_num, Real.log_pow]
+    norm_num
+  rw [h2048] at hfrac
+  nlinarith [log2_lt_1733_2500]
+
+theorem log3720_lt_43_5 : Real.log 3720 < (43 : ℝ) / 5 := by
+  have hfracpos : (0 : ℝ) < 3720 / 2048 := by norm_num
+  have hfrac := Real.log_le_sub_one_of_pos (x := (3720 : ℝ) / 2048) hfracpos
+  rw [Real.log_div (by norm_num : (3720 : ℝ) ≠ 0) (by norm_num : (2048 : ℝ) ≠ 0)] at hfrac
+  have h2048 : Real.log 2048 = 11 * Real.log 2 := by
+    rw [show (2048 : ℝ) = 2 ^ 11 by norm_num, Real.log_pow]
+    norm_num
+  rw [h2048] at hfrac
+  nlinarith [log2_lt_1733_2500]
+
+theorem sqrt_log120_mul_le_1_3_of_2_le_of_le_3 {x : ℝ} (hx2 : 2 ≤ x) (hx3 : x ≤ 3) :
+    Real.sqrt (x / 120) / 3 * Real.log (120 * x) ≤ (1 : ℝ) / 3 := by
+  have hxpos : 0 < x := by linarith
+  have hsqrt : Real.sqrt (x / 120) ≤ (1 : ℝ) / 6 := by
+    rw [Real.sqrt_le_left (by norm_num : (0 : ℝ) ≤ 1 / 6)]
+    nlinarith
+  have hlog : Real.log (120 * x) ≤ (6 : ℝ) := by
+    have hle : 120 * x ≤ (360 : ℝ) := by nlinarith
+    exact (Real.log_le_log (by nlinarith : (0 : ℝ) < 120 * x) hle).trans log360_lt_6.le
+  have hlog_nonneg : 0 ≤ Real.log (120 * x) := Real.log_nonneg (by nlinarith : (1 : ℝ) ≤ 120 * x)
+  have hmul := mul_le_mul hsqrt hlog hlog_nonneg (by norm_num)
+  nlinarith
+
+theorem sqrt_log120_mul_le_3_8_of_3_le_of_le_7_2 {x : ℝ}
+    (hx3 : 3 ≤ x) (hx7 : x ≤ (7 : ℝ) / 2) :
+    Real.sqrt (x / 120) / 3 * Real.log (120 * x) ≤ (3 : ℝ) / 8 := by
+  have hxpos : 0 < x := by linarith
+  have hsqrt : Real.sqrt (x / 120) ≤ (7 : ℝ) / 40 := by
+    rw [Real.sqrt_le_left (by norm_num : (0 : ℝ) ≤ 7 / 40)]
+    nlinarith
+  have hlog : Real.log (120 * x) ≤ (31 : ℝ) / 5 := by
+    have hle : 120 * x ≤ (420 : ℝ) := by nlinarith
+    exact (Real.log_le_log (by nlinarith : (0 : ℝ) < 120 * x) hle).trans log420_lt_31_5.le
+  have hlog_nonneg : 0 ≤ Real.log (120 * x) := Real.log_nonneg (by nlinarith : (1 : ℝ) ≤ 120 * x)
+  have hmul := mul_le_mul hsqrt hlog hlog_nonneg (by norm_num)
+  nlinarith
+
+theorem sqrt_log120_mul_le_2_5_of_7_2_le_of_le_4 {x : ℝ}
+    (hx7 : (7 : ℝ) / 2 ≤ x) (hx4 : x ≤ 4) :
+    Real.sqrt (x / 120) / 3 * Real.log (120 * x) ≤ (2 : ℝ) / 5 := by
+  have hxpos : 0 < x := by linarith
+  have hsqrt : Real.sqrt (x / 120) ≤ (11 : ℝ) / 60 := by
+    rw [Real.sqrt_le_left (by norm_num : (0 : ℝ) ≤ (11 : ℝ) / 60)]
+    nlinarith
+  have hlog : Real.log (120 * x) ≤ (13 : ℝ) / 2 := by
+    have hle : 120 * x ≤ (480 : ℝ) := by nlinarith
+    exact (Real.log_le_log (by nlinarith : (0 : ℝ) < 120 * x) hle).trans log480_lt_13_2.le
+  have hlog_nonneg : 0 ≤ Real.log (120 * x) := Real.log_nonneg (by nlinarith : (1 : ℝ) ≤ 120 * x)
+  have hmul := mul_le_mul hsqrt hlog hlog_nonneg (by norm_num)
+  nlinarith
+
+theorem sqrt_log120_mul_le_1_2_of_4_le_of_le_6 {x : ℝ} (hx4 : 4 ≤ x) (hx6 : x ≤ 6) :
+    Real.sqrt (x / 120) / 3 * Real.log (120 * x) ≤ (1 : ℝ) / 2 := by
+  have hxpos : 0 < x := by linarith
+  have hsqrt : Real.sqrt (x / 120) ≤ (9 : ℝ) / 40 := by
+    rw [Real.sqrt_le_left (by norm_num : (0 : ℝ) ≤ (9 : ℝ) / 40)]
+    nlinarith
+  have hlog : Real.log (120 * x) ≤ (20 : ℝ) / 3 := by
+    have hle : 120 * x ≤ (720 : ℝ) := by nlinarith
+    exact (Real.log_le_log (by nlinarith : (0 : ℝ) < 120 * x) hle).trans log720_lt_20_3.le
+  have hlog_nonneg : 0 ≤ Real.log (120 * x) := Real.log_nonneg (by nlinarith : (1 : ℝ) ≤ 120 * x)
+  have hmul := mul_le_mul hsqrt hlog hlog_nonneg (by norm_num)
+  nlinarith
+
+theorem sqrt_log120_mul_le_3_4_of_6_le_of_le_10 {x : ℝ} (hx6 : 6 ≤ x) (hx10 : x ≤ 10) :
+    Real.sqrt (x / 120) / 3 * Real.log (120 * x) ≤ (3 : ℝ) / 4 := by
+  have hxpos : 0 < x := by linarith
+  have hsqrt : Real.sqrt (x / 120) ≤ (3 : ℝ) / 10 := by
+    rw [Real.sqrt_le_left (by norm_num : (0 : ℝ) ≤ (3 : ℝ) / 10)]
+    nlinarith
+  have hlog : Real.log (120 * x) ≤ (15 : ℝ) / 2 := by
+    have hle : 120 * x ≤ (1200 : ℝ) := by nlinarith
+    exact (Real.log_le_log (by nlinarith : (0 : ℝ) < 120 * x) hle).trans log1200_lt_15_2.le
+  have hlog_nonneg : 0 ≤ Real.log (120 * x) := Real.log_nonneg (by nlinarith : (1 : ℝ) ≤ 120 * x)
+  have hmul := mul_le_mul hsqrt hlog hlog_nonneg (by norm_num)
+  nlinarith
+
+theorem sqrt_log120_mul_le_1_of_10_le_of_le_16 {x : ℝ} (hx10 : 10 ≤ x) (hx16 : x ≤ 16) :
+    Real.sqrt (x / 120) / 3 * Real.log (120 * x) ≤ (1 : ℝ) := by
+  have hxpos : 0 < x := by linarith
+  have hsqrt : Real.sqrt (x / 120) ≤ (3 : ℝ) / 8 := by
+    rw [Real.sqrt_le_left (by norm_num : (0 : ℝ) ≤ (3 : ℝ) / 8)]
+    nlinarith
+  have hlog : Real.log (120 * x) ≤ (8 : ℝ) := by
+    have hle : 120 * x ≤ (1920 : ℝ) := by nlinarith
+    exact (Real.log_le_log (by nlinarith : (0 : ℝ) < 120 * x) hle).trans log1920_lt_8.le
+  have hlog_nonneg : 0 ≤ Real.log (120 * x) := Real.log_nonneg (by nlinarith : (1 : ℝ) ≤ 120 * x)
+  have hmul := mul_le_mul hsqrt hlog hlog_nonneg (by norm_num)
+  nlinarith
+
+theorem sqrt_log120_mul_le_5_4_of_16_le_of_le_24 {x : ℝ} (hx16 : 16 ≤ x) (hx24 : x ≤ 24) :
+    Real.sqrt (x / 120) / 3 * Real.log (120 * x) ≤ (5 : ℝ) / 4 := by
+  have hxpos : 0 < x := by linarith
+  have hsqrt : Real.sqrt (x / 120) ≤ (9 : ℝ) / 20 := by
+    rw [Real.sqrt_le_left (by norm_num : (0 : ℝ) ≤ (9 : ℝ) / 20)]
+    nlinarith
+  have hlog : Real.log (120 * x) ≤ (41 : ℝ) / 5 := by
+    have hle : 120 * x ≤ (2880 : ℝ) := by nlinarith
+    exact (Real.log_le_log (by nlinarith : (0 : ℝ) < 120 * x) hle).trans log2880_lt_41_5.le
+  have hlog_nonneg : 0 ≤ Real.log (120 * x) := Real.log_nonneg (by nlinarith : (1 : ℝ) ≤ 120 * x)
+  have hmul := mul_le_mul hsqrt hlog hlog_nonneg (by norm_num)
+  nlinarith
+
+theorem sqrt_log120_mul_le_3_2_of_24_le_of_le_31 {x : ℝ} (hx24 : 24 ≤ x) (hx31 : x ≤ 31) :
+    Real.sqrt (x / 120) / 3 * Real.log (120 * x) ≤ (3 : ℝ) / 2 := by
+  have hxpos : 0 < x := by linarith
+  have hsqrt : Real.sqrt (x / 120) ≤ (13 : ℝ) / 25 := by
+    rw [Real.sqrt_le_left (by norm_num : (0 : ℝ) ≤ (13 : ℝ) / 25)]
+    nlinarith
+  have hlog : Real.log (120 * x) ≤ (43 : ℝ) / 5 := by
+    have hle : 120 * x ≤ (3720 : ℝ) := by nlinarith
+    exact (Real.log_le_log (by nlinarith : (0 : ℝ) < 120 * x) hle).trans log3720_lt_43_5.le
+  have hlog_nonneg : 0 ≤ Real.log (120 * x) := Real.log_nonneg (by nlinarith : (1 : ℝ) ≤ 120 * x)
+  have hmul := mul_le_mul hsqrt hlog hlog_nonneg (by norm_num)
+  nlinarith
+
+theorem far_core_aux_2_3 {x : ℝ} (hx2 : 2 ≤ x) (hx3 : x ≤ 3) :
+    (1 : ℝ) / 32 + x / 3 * ((1733 : ℝ) / 1250) + (1 : ℝ) / 3 ≤
+      2 * (x - 1) / (x + 1) + (x - 1) * (2 / (2 * x - 1)) := by
+  have hden1 : 0 < x + 1 := by linarith
+  have hden2 : 0 < 2 * x - 1 := by linarith
+  have ht0 : 0 ≤ x - 2 := by linarith
+  have ht1 : 0 ≤ 3 - x := by linarith
+  have hp :
+      0 ≤ -55456 * x ^ 3 + 288522 * x ^ 2 - 354147 * x + (21875 : ℝ) := by
+    have h0 : 0 ≤ (24021 : ℝ) * (3 - x) ^ 3 := by positivity
+    have h1 : 0 ≤ (3 : ℝ) * 68844 * (x - 2) * (3 - x) ^ 2 := by positivity
+    have h2 : 0 ≤ (3 : ℝ) * 98929 * (x - 2) ^ 2 * (3 - x) := by positivity
+    have h3 : 0 ≤ (58820 : ℝ) * (x - 2) ^ 3 := by positivity
+    have hid :
+        -55456 * x ^ 3 + 288522 * x ^ 2 - 354147 * x + (21875 : ℝ) =
+          24021 * (3 - x) ^ 3 + 3 * 68844 * (x - 2) * (3 - x) ^ 2
+            + 3 * 98929 * (x - 2) ^ 2 * (3 - x) + 58820 * (x - 2) ^ 3 := by
+      ring
+    rw [hid]
+    positivity
+  have hdenpos : 0 < (60000 : ℝ) * (x + 1) * (2 * x - 1) := by positivity
+  have hfrac :
+      0 ≤ (-55456 * x ^ 3 + 288522 * x ^ 2 - 354147 * x + (21875 : ℝ)) /
+        ((60000 : ℝ) * (x + 1) * (2 * x - 1)) :=
+    div_nonneg hp hdenpos.le
+  have hdiff :
+      2 * (x - 1) / (x + 1) + (x - 1) * (2 / (2 * x - 1))
+        - ((1 : ℝ) / 32 + x / 3 * ((1733 : ℝ) / 1250) + (1 : ℝ) / 3)
+      =
+      (-55456 * x ^ 3 + 288522 * x ^ 2 - 354147 * x + (21875 : ℝ)) /
+        ((60000 : ℝ) * (x + 1) * (2 * x - 1)) := by
+    field_simp [hden1.ne', hden2.ne']
+    ring
+  linarith
+
+theorem far_core_aux_3_7_2 {x : ℝ} (hx3 : 3 ≤ x) (_hx7 : x ≤ (7 : ℝ) / 2) :
+    (1 : ℝ) / 32 + ((1733 : ℝ) / 1250) + (3 : ℝ) / 8 ≤
+      2 * (x - 1) / (x + 1) + (x - 1) * (2 / (2 * x - 1)) := by
+  have hden1 : 0 < x + 1 := by linarith
+  have hden2 : 0 < 2 * x - 1 := by linarith
+  have ht : 0 ≤ x - 3 := by linarith
+  have hp : 0 ≤ (16098 : ℝ) * x ^ 2 - 51951 * x + 11951 := by
+    have hid : (16098 : ℝ) * x ^ 2 - 51951 * x + 11951 =
+        16098 * (x - 3) ^ 2 + 44637 * (x - 3) + 980 := by ring
+    rw [hid]
+    positivity
+  have hdenpos : 0 < (20000 : ℝ) * (x + 1) * (2 * x - 1) := by positivity
+  have hfrac :
+      0 ≤ (3 * ((16098 : ℝ) * x ^ 2 - 51951 * x + 11951)) /
+        ((20000 : ℝ) * (x + 1) * (2 * x - 1)) :=
+    div_nonneg (by positivity) hdenpos.le
+  have hdiff :
+      2 * (x - 1) / (x + 1) + (x - 1) * (2 / (2 * x - 1))
+        - ((1 : ℝ) / 32 + ((1733 : ℝ) / 1250) + (3 : ℝ) / 8)
+      =
+      (3 * ((16098 : ℝ) * x ^ 2 - 51951 * x + 11951)) /
+        ((20000 : ℝ) * (x + 1) * (2 * x - 1)) := by
+    field_simp [hden1.ne', hden2.ne']
+    ring
+  linarith
+
+theorem far_core_aux_7_2_4 {x : ℝ} (hx7 : (7 : ℝ) / 2 ≤ x) (_hx4 : x ≤ 4) :
+    (1 : ℝ) / 32 + ((1733 : ℝ) / 1250) + (2 : ℝ) / 5 ≤
+      2 * (x - 1) / (x + 1) + (x - 1) * (2 / (2 * x - 1)) := by
+  have hden1 : 0 < x + 1 := by linarith
+  have hden2 : 0 < 2 * x - 1 := by linarith
+  have ht : 0 ≤ x - (7 : ℝ) / 2 := by linarith
+  have hp : 0 ≤ (47294 : ℝ) * x ^ 2 - 156353 * x + 36353 := by
+    have hid : (47294 : ℝ) * x ^ 2 - 156353 * x + 36353 =
+        47294 * (x - (7 : ℝ) / 2) ^ 2 + 174705 * (x - (7 : ℝ) / 2) + 68469 := by
+      ring
+    rw [hid]
+    positivity
+  have hdenpos : 0 < (20000 : ℝ) * (x + 1) * (2 * x - 1) := by positivity
+  have hfrac :
+      0 ≤ ((47294 : ℝ) * x ^ 2 - 156353 * x + 36353) /
+        ((20000 : ℝ) * (x + 1) * (2 * x - 1)) :=
+    div_nonneg hp hdenpos.le
+  have hdiff :
+      2 * (x - 1) / (x + 1) + (x - 1) * (2 / (2 * x - 1))
+        - ((1 : ℝ) / 32 + ((1733 : ℝ) / 1250) + (2 : ℝ) / 5)
+      =
+      ((47294 : ℝ) * x ^ 2 - 156353 * x + 36353) /
+        ((20000 : ℝ) * (x + 1) * (2 * x - 1)) := by
+    field_simp [hden1.ne', hden2.ne']
+    ring
+  linarith
+
+theorem below_square_B_core_2_3 {x : ℝ} (hx2 : 2 ≤ x) (hx3 : x ≤ 3) :
+    Real.sqrt (x / 120) / 3 * Real.log (120 * x)
+        + min 1 (x / 3) * Real.log 4 + (1 : ℝ) / 32
+      ≤ x * Real.log x - (x - 1) * Real.log (x - 1) := by
+  have hx1 : 1 < x := by linarith
+  have hterm := sqrt_log120_mul_le_1_3_of_2_le_of_le_3 hx2 hx3
+  have hlog4_nonneg : 0 ≤ Real.log 4 := Real.log_nonneg (by norm_num)
+  have hminlog :
+      min 1 (x / 3) * Real.log 4 ≤ x / 3 * ((1733 : ℝ) / 1250) := by
+    calc
+      min 1 (x / 3) * Real.log 4 ≤ (x / 3) * Real.log 4 := by
+        exact mul_le_mul_of_nonneg_right (min_le_right 1 (x / 3)) hlog4_nonneg
+      _ ≤ (x / 3) * ((1733 : ℝ) / 1250) := by
+        exact mul_le_mul_of_nonneg_left log4_lt_1733_1250.le (by nlinarith)
+  have haux := far_core_aux_2_3 hx2 hx3
+  have hlogx := two_mul_sub_one_div_add_one_le_log (by linarith : (1 : ℝ) ≤ x)
+  have hlower := entropyRatio_lower_log_add_two_div hx1
+  have hrat_lower :
+      2 * (x - 1) / (x + 1) + (x - 1) * (2 / (2 * x - 1)) ≤
+        x * Real.log x - (x - 1) * Real.log (x - 1) := by
+    linarith
+  linarith
+
+theorem below_square_B_core_3_7_2 {x : ℝ} (hx3 : 3 ≤ x) (hx7 : x ≤ (7 : ℝ) / 2) :
+    Real.sqrt (x / 120) / 3 * Real.log (120 * x)
+        + min 1 (x / 3) * Real.log 4 + (1 : ℝ) / 32
+      ≤ x * Real.log x - (x - 1) * Real.log (x - 1) := by
+  have hx1 : 1 < x := by linarith
+  have hterm := sqrt_log120_mul_le_3_8_of_3_le_of_le_7_2 hx3 hx7
+  have hlog4_nonneg : 0 ≤ Real.log 4 := Real.log_nonneg (by norm_num)
+  have hminlog :
+      min 1 (x / 3) * Real.log 4 ≤ ((1733 : ℝ) / 1250) := by
+    calc
+      min 1 (x / 3) * Real.log 4 ≤ 1 * Real.log 4 := by
+        exact mul_le_mul_of_nonneg_right (min_le_left 1 (x / 3)) hlog4_nonneg
+      _ ≤ ((1733 : ℝ) / 1250) := by
+        nlinarith [log4_lt_1733_1250]
+  have haux := far_core_aux_3_7_2 hx3 hx7
+  have hlogx := two_mul_sub_one_div_add_one_le_log (by linarith : (1 : ℝ) ≤ x)
+  have hlower := entropyRatio_lower_log_add_two_div hx1
+  have hrat_lower :
+      2 * (x - 1) / (x + 1) + (x - 1) * (2 / (2 * x - 1)) ≤
+        x * Real.log x - (x - 1) * Real.log (x - 1) := by
+    linarith
+  linarith
+
+theorem below_square_B_core_7_2_4 {x : ℝ} (hx7 : (7 : ℝ) / 2 ≤ x) (hx4 : x ≤ 4) :
+    Real.sqrt (x / 120) / 3 * Real.log (120 * x)
+        + min 1 (x / 3) * Real.log 4 + (1 : ℝ) / 32
+      ≤ x * Real.log x - (x - 1) * Real.log (x - 1) := by
+  have hx1 : 1 < x := by linarith
+  have hterm := sqrt_log120_mul_le_2_5_of_7_2_le_of_le_4 hx7 hx4
+  have hlog4_nonneg : 0 ≤ Real.log 4 := Real.log_nonneg (by norm_num)
+  have hminlog :
+      min 1 (x / 3) * Real.log 4 ≤ ((1733 : ℝ) / 1250) := by
+    calc
+      min 1 (x / 3) * Real.log 4 ≤ 1 * Real.log 4 := by
+        exact mul_le_mul_of_nonneg_right (min_le_left 1 (x / 3)) hlog4_nonneg
+      _ ≤ ((1733 : ℝ) / 1250) := by
+        nlinarith [log4_lt_1733_1250]
+  have haux := far_core_aux_7_2_4 hx7 hx4
+  have hlogx := two_mul_sub_one_div_add_one_le_log (by linarith : (1 : ℝ) ≤ x)
+  have hlower := entropyRatio_lower_log_add_two_div hx1
+  have hrat_lower :
+      2 * (x - 1) / (x + 1) + (x - 1) * (2 / (2 * x - 1)) ≤
+        x * Real.log x - (x - 1) * Real.log (x - 1) := by
+    linarith
+  linarith
+
 set_option maxHeartbeats 800000 in
 theorem exists_large_prime_factor_choose_below_sq_close_of_sqrt33
     {n k : ℕ} (hk9 : 9 ≤ k) (hn2k : 2 * k ≤ n)

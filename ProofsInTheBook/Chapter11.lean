@@ -810,6 +810,44 @@ def IsCrossing {k : ℕ} {π ρ : State (2 * k)} (M : ReversalStep k π ρ) : Pr
 
 end ReversalStep
 
+/-- The number of labels crossing the middle barrier in one concrete step. -/
+noncomputable def stepCrossingLabelsCard (k : ℕ) (π ρ : State (2 * k)) : ℕ := by
+  classical
+  exact Fintype.card {a : Fin (2 * k) // crossesMiddle k π ρ a}
+
+/--
+A reversal step together with the key finite counting theorem for that step.
+The block-reversal geometry should eventually prove this field.
+-/
+structure CountedReversalStep (k : ℕ) (π ρ : State (2 * k)) extends
+    ReversalStep k π ρ where
+  crossed_labels_card : stepCrossingLabelsCard k π ρ = 2 * toReversalStep.order
+
+/-- A generalized allowable sequence with counted reversal data on every step. -/
+structure CountedGeneralizedAllowableSequence (k r : ℕ) where
+  seq : GeneralizedAllowableSequence k r
+  step : ∀ j : Fin r, CountedReversalStep k (seq.π (stepFrom j)) (seq.π (stepTo j))
+
+namespace CountedGeneralizedAllowableSequence
+
+/-- Counted reversal steps produce the `StepCounting` data used above. -/
+noncomputable def toStepCounting {k r : ℕ} (A : CountedGeneralizedAllowableSequence k r) :
+    GeneralizedAllowableSequence.StepCounting A.seq where
+  order := fun j => (A.step j).toReversalStep.order
+  crossed_labels_card := by
+    intro j
+    simpa [GeneralizedAllowableSequence.crossingLabelsCard, stepCrossingLabelsCard]
+      using (A.step j).crossed_labels_card
+
+/-- Counted reversal steps plus a packing proof give a counting certificate. -/
+noncomputable def toCountingCertificate {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r)
+    (packing : UngarBlockPacking r r A.toStepCounting.order) :
+    UngarCountingCertificate (2 * k) r :=
+  A.toStepCounting.toCountingCertificate packing
+
+end CountedGeneralizedAllowableSequence
+
 /--
 The universally valid fixed-axis finite-slope consequence of a projective
 direction bound: losing the vertical direction costs at most one slope.

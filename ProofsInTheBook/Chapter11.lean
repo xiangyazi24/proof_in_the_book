@@ -1671,6 +1671,25 @@ theorem stepCrossingLabelsCard_eq_positionCrossingCard_of_reversesBlocks {k : �
   rw [stepCrossingLabelsCard_eq_labelCrossingCard]
   exact M.crossingLabelsCard_eq_positionCrossingCard_of_reversesBlocks hrev
 
+theorem crossed_labels_card_of_reversesBlocks {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) :
+    stepCrossingLabelsCard k π ρ = 2 * M.order := by
+  by_cases hM : M.IsCrossing
+  · rw [stepCrossingLabelsCard_eq_positionCrossingCard_of_reversesBlocks M hrev]
+    exact M.positionCrossingCard_eq_two_mul_order_of_reversesBlocks hrev hM
+  · have horder : M.order = 0 := by
+      unfold ReversalStep.IsCrossing at hM
+      omega
+    have hnone :
+        ∀ i : Fin M.move.blockCount,
+          ¬ ((M.move.block i).lo < k ∧ k ≤ (M.move.block i).hi) := by
+      intro i hi
+      exact hM ((M.isCrossing_iff_exists_crossing_block).mpr ⟨i, hi⟩)
+    have hzero := ReversalStep.positionCrossingCard_eq_zero_of_no_crossing_block
+      (k := k) (M := M.move) hrev hnone
+    rw [stepCrossingLabelsCard_eq_positionCrossingCard_of_reversesBlocks M hrev,
+      hzero, horder]
+
 /--
 A reversal step together with the key finite counting theorem for that step.
 The block-reversal geometry should eventually prove this field.

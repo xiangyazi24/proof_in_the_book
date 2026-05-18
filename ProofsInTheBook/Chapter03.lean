@@ -502,6 +502,27 @@ theorem exists_large_prime_factor_choose_of_entropy_gap
   have hlower := entropy_lower_le_log_choose (n := n) (k := k) hkpos hklt
   exact not_lt_of_ge (hlower.trans hupper) hgap
 
+theorem exists_large_prime_factor_choose_of_interval_entropy_gap
+    {n k : ℕ} (hkpos : 0 < k) (hklt : k < n)
+    (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)
+    (hgap :
+      (Nat.primeCounting (sqrt n) : ℝ) * Real.log n
+          + Real.log (primeIntervalProduct (sqrt n) (min k (n / 3))) <
+        entropyTerm n k
+          + Real.log n / 2 - Real.log k / 2 - Real.log (n - k) / 2
+          + Real.log (2 * Real.pi) / 2 - 2) :
+    HasPrimeFactorAbove k (n.choose k) := by
+  have hkn : k ≤ n := le_of_lt hklt
+  have hnpos : 0 < n := hkpos.trans hklt
+  by_contra hlarge
+  have hno : NoLargePrimeFactor k (n.choose k) :=
+    not_hasPrimeFactorAbove_iff_noLargePrimeFactor.mp hlarge
+  have hupper :=
+    log_choose_le_primeCounting_sqrt_log_add_log_primeIntervalProduct_of_noLargePrimeFactor
+      (n := n) (k := k) hnpos hkn hn2k hn6 hno
+  have hlower := entropy_lower_le_log_choose (n := n) (k := k) hkpos hklt
+  exact not_lt_of_ge (hlower.trans hupper) hgap
+
 theorem exists_large_prime_factor_choose_of_sq_le_and_primeCounting_gap
     {n k : ℕ} (hk1 : 1 < k) (hkn : k ≤ n) (hsq : k * k ≤ n)
     (hpi : 2 * Nat.primeCounting k < k) :

@@ -274,6 +274,21 @@ theorem erdos_log_sandwich_of_noLargePrimeFactor
       (n := n) (k := k) hnpos hkn hn2k hn6 hno
   linarith
 
+theorem log_choose_le_primeCounting_log_of_noLargePrimeFactor
+    {n k : ℕ} (hnpos : 0 < n) (hkn : k ≤ n)
+    (hno : NoLargePrimeFactor k (n.choose k)) :
+    Real.log (n.choose k) ≤ (Nat.primeCounting k : ℝ) * Real.log n := by
+  have hnat : n.choose k ≤ n ^ Nat.primeCounting k :=
+    choose_le_pow_primeCounting_of_noLargePrimeFactor hnpos hkn hno
+  have hchoose_pos : 0 < n.choose k := Nat.choose_pos hkn
+  calc
+    Real.log (n.choose k) ≤ Real.log (n ^ Nat.primeCounting k) := by
+      exact Real.log_le_log (by exact_mod_cast hchoose_pos) (by exact_mod_cast hnat)
+    _ = (Nat.primeCounting k : ℝ) * Real.log n := by
+      rw [show Real.log (n ^ Nat.primeCounting k) =
+        Real.log ((n : ℝ) ^ Nat.primeCounting k) by norm_num [Nat.cast_pow],
+        Real.log_pow]
+
 theorem exists_large_prime_factor_choose_of_erdos_log_gap
     {n k : ℕ} (hkpos : 0 < k) (hnpos : 0 < n) (hkn : k ≤ n)
     (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)
@@ -288,6 +303,37 @@ theorem exists_large_prime_factor_choose_of_erdos_log_gap
     erdos_log_sandwich_of_noLargePrimeFactor
       (n := n) (k := k) hkpos hnpos hkn hn2k hn6 hno
   exact not_lt_of_ge hsandwich hgap
+
+theorem exists_large_prime_factor_choose_of_sq_le_and_primeCounting_gap
+    {n k : ℕ} (hk1 : 1 < k) (hkn : k ≤ n) (hsq : k * k ≤ n)
+    (hpi : 2 * Nat.primeCounting k < k) :
+    HasPrimeFactorAbove k (n.choose k) := by
+  have hkpos : 0 < k := hk1.trans' zero_lt_one
+  have hnpos : 0 < n := hkpos.trans_le hkn
+  have hlogn_pos : 0 < Real.log n := Real.log_pos (by exact_mod_cast hk1.trans_le hkn)
+  have hlog_sq_le : Real.log ((k : ℝ) ^ 2) ≤ Real.log (n : ℝ) := by
+    have hsq_pow : k ^ 2 ≤ n := by simpa [sq] using hsq
+    exact Real.log_le_log (sq_pos_of_pos (by exact_mod_cast hkpos))
+      (by exact_mod_cast hsq_pow)
+  have htwologk_le : 2 * Real.log k ≤ Real.log n := by
+    simpa [Real.log_pow] using hlog_sq_le
+  have hhalf_le :
+      ((k : ℝ) / 2) * Real.log n ≤ (k : ℝ) * Real.log n - (k : ℝ) * Real.log k := by
+    nlinarith
+  have hpi_lt_half : (Nat.primeCounting k : ℝ) < (k : ℝ) / 2 := by
+    nlinarith [show (2 * Nat.primeCounting k : ℝ) < (k : ℝ) by exact_mod_cast hpi]
+  have hpi_log_lt :
+      (Nat.primeCounting k : ℝ) * Real.log n <
+        (k : ℝ) * Real.log n - (k : ℝ) * Real.log k := by
+    exact (mul_lt_mul_of_pos_right hpi_lt_half hlogn_pos).trans_le hhalf_le
+  by_contra hlarge
+  have hno : NoLargePrimeFactor k (n.choose k) :=
+    not_hasPrimeFactorAbove_iff_noLargePrimeFactor.mp hlarge
+  have hupper :=
+    log_choose_le_primeCounting_log_of_noLargePrimeFactor
+      (n := n) (k := k) hnpos hkn hno
+  have hlower := mul_log_sub_mul_log_le_log_choose (n := n) (k := k) hkpos hkn
+  exact not_lt_of_ge (hlower.trans hupper) hpi_log_lt
 
 /--
 Factorial form of the standard binomial-divisibility argument: if a prime

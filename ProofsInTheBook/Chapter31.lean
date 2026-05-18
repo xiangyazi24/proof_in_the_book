@@ -237,6 +237,19 @@ theorem joyalOffPathValue_adj (X : DoublyRootedLabeledTree n)
   change X.1.1.Adj v p.snd
   exact SimpleGraph.Walk.adj_snd hp
 
+/-- Joyal's map from a doubly-rooted tree to an endofunction on its label set. -/
+noncomputable def joyalTreeToFunction (X : DoublyRootedLabeledTree n) : Fin n → Fin n :=
+  fun v =>
+    if hv : v ∈ joyalPathVertices X then
+      joyalPathTableValue X v hv
+    else
+      joyalOffPathValue X v hv
+
+theorem joyalTreeToFunction_injective (n : ℕ) :
+    Function.Injective (joyalTreeToFunction : DoublyRootedLabeledTree n → Fin n → Fin n) := by
+  intro X Y hXY
+  sorry
+
 theorem doublyRootedLabeledTree_card (n : ℕ) :
     Fintype.card (DoublyRootedLabeledTree n) = Fintype.card (LabeledTree n) * n * n := by
   simp [DoublyRootedLabeledTree, Nat.mul_assoc]
@@ -272,7 +285,7 @@ this cardinal inequality is the remaining formal content of that bijection.
 theorem joyal_doubly_rooted_card_bound (n : ℕ) :
     Fintype.card (DoublyRootedLabeledTree n) ≤ Fintype.card (Fin n → Fin n) := by
   classical
-  sorry
+  exact Fintype.card_le_of_injective joyalTreeToFunction (joyalTreeToFunction_injective n)
 
 /-!
 ### Current target: eliminate the Cayley upper-bound premise

@@ -509,6 +509,51 @@ theorem log_choose_le_primeCounting_log_of_noLargePrimeFactor
         Real.log ((n : ℝ) ^ Nat.primeCounting k) by norm_num [Nat.cast_pow],
         Real.log_pow]
 
+theorem exists_large_prime_factor_choose_of_primeCounting_log_gap
+    {n k : ℕ} (hkpos : 0 < k) (hnpos : 0 < n) (hkn : k ≤ n)
+    (hgap :
+      (Nat.primeCounting k : ℝ) * Real.log n <
+        (k : ℝ) * Real.log n - (k : ℝ) * Real.log k) :
+    HasPrimeFactorAbove k (n.choose k) := by
+  by_contra hlarge
+  have hno : NoLargePrimeFactor k (n.choose k) :=
+    not_hasPrimeFactorAbove_iff_noLargePrimeFactor.mp hlarge
+  have hlower := mul_log_sub_mul_log_le_log_choose (n := n) (k := k) hkpos hkn
+  have hupper :=
+    log_choose_le_primeCounting_log_of_noLargePrimeFactor
+      (n := n) (k := k) hnpos hkn hno
+  exact not_lt_of_ge (hlower.trans hupper) hgap
+
+theorem exists_large_prime_factor_choose_of_pow_gap
+    {n k : ℕ} (hkpos : 0 < k) (hkn : k ≤ n)
+    (hpi : Nat.primeCounting k ≤ k)
+    (hpow : k ^ k < n ^ (k - Nat.primeCounting k)) :
+    HasPrimeFactorAbove k (n.choose k) := by
+  have hnpos : 0 < n := hkpos.trans_le hkn
+  refine exists_large_prime_factor_choose_of_primeCounting_log_gap
+    (n := n) (k := k) hkpos hnpos hkn ?_
+  have hkpow_pos : 0 < (k : ℝ) ^ k := pow_pos (by exact_mod_cast hkpos) k
+  have hlogpow :
+      (k : ℝ) * Real.log k <
+        (k - Nat.primeCounting k : ℕ) * Real.log n := by
+    have hlog : Real.log ((k : ℝ) ^ k) <
+        Real.log ((n : ℝ) ^ (k - Nat.primeCounting k)) := by
+      exact Real.log_lt_log hkpow_pos (by exact_mod_cast hpow)
+    simpa [Real.log_pow] using hlog
+  have hk_split :
+      (k : ℝ) = (Nat.primeCounting k : ℝ) + (k - Nat.primeCounting k : ℕ) := by
+    exact_mod_cast (Nat.add_sub_of_le hpi).symm
+  calc
+    (Nat.primeCounting k : ℝ) * Real.log n
+        < (Nat.primeCounting k : ℝ) * Real.log n
+            + (k - Nat.primeCounting k : ℕ) * Real.log n - (k : ℝ) * Real.log k := by
+          linarith
+    _ = ((Nat.primeCounting k : ℝ) + (k - Nat.primeCounting k : ℕ)) * Real.log n
+            - (k : ℝ) * Real.log k := by
+          ring
+    _ = (k : ℝ) * Real.log n - (k : ℝ) * Real.log k := by
+          rw [← hk_split]
+
 theorem exists_large_prime_factor_choose_of_erdos_log_gap
     {n k : ℕ} (hkpos : 0 < k) (hnpos : 0 < n) (hkn : k ≤ n)
     (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)
@@ -656,6 +701,51 @@ theorem exists_large_prime_factor_choose_below_sq_of_lt_9
   rcases exists_large_prime_factor_choose_below_sq_small_cert ⟨k, hk9⟩ ⟨n, hn81⟩
     hkpos hn2k hnsq with ⟨p, hkp, hp, hpdvd⟩
   exact ⟨p.val, hkp, hp, hpdvd⟩
+
+theorem exists_large_prime_factor_choose_small_cert :
+    ∀ k : Fin 9, ∀ n : Fin 94,
+      0 < k.val → 2 * k.val ≤ n.val →
+        ∃ p : Fin 94, k.val < p.val ∧ p.val.Prime ∧ p.val ∣ n.val.choose k.val := by
+  native_decide
+
+theorem pow_gap_small_k_tail {n k : ℕ} (hkpos : 0 < k) (hk9 : k < 9) (hn94 : 94 ≤ n) :
+    k ^ k < n ^ (k - Nat.primeCounting k) := by
+  interval_cases k
+  · exact lt_of_lt_of_le
+      (by native_decide : 1 ^ 1 < 94 ^ (1 - Nat.primeCounting 1))
+      (Nat.pow_le_pow_left hn94 (1 - Nat.primeCounting 1))
+  · exact lt_of_lt_of_le
+      (by native_decide : 2 ^ 2 < 94 ^ (2 - Nat.primeCounting 2))
+      (Nat.pow_le_pow_left hn94 (2 - Nat.primeCounting 2))
+  · exact lt_of_lt_of_le
+      (by native_decide : 3 ^ 3 < 94 ^ (3 - Nat.primeCounting 3))
+      (Nat.pow_le_pow_left hn94 (3 - Nat.primeCounting 3))
+  · exact lt_of_lt_of_le
+      (by native_decide : 4 ^ 4 < 94 ^ (4 - Nat.primeCounting 4))
+      (Nat.pow_le_pow_left hn94 (4 - Nat.primeCounting 4))
+  · exact lt_of_lt_of_le
+      (by native_decide : 5 ^ 5 < 94 ^ (5 - Nat.primeCounting 5))
+      (Nat.pow_le_pow_left hn94 (5 - Nat.primeCounting 5))
+  · exact lt_of_lt_of_le
+      (by native_decide : 6 ^ 6 < 94 ^ (6 - Nat.primeCounting 6))
+      (Nat.pow_le_pow_left hn94 (6 - Nat.primeCounting 6))
+  · exact lt_of_lt_of_le
+      (by native_decide : 7 ^ 7 < 94 ^ (7 - Nat.primeCounting 7))
+      (Nat.pow_le_pow_left hn94 (7 - Nat.primeCounting 7))
+  · exact lt_of_lt_of_le
+      (by native_decide : 8 ^ 8 < 94 ^ (8 - Nat.primeCounting 8))
+      (Nat.pow_le_pow_left hn94 (8 - Nat.primeCounting 8))
+
+theorem exists_large_prime_factor_choose_of_lt_9
+    {n k : ℕ} (hkpos : 0 < k) (hk9 : k < 9) (hn2k : 2 * k ≤ n) :
+    HasPrimeFactorAbove k (n.choose k) := by
+  by_cases hn94 : n < 94
+  · rcases exists_large_prime_factor_choose_small_cert ⟨k, hk9⟩ ⟨n, hn94⟩
+      hkpos hn2k with ⟨p, hkp, hp, hpdvd⟩
+    exact ⟨p.val, hkp, hp, hpdvd⟩
+  · exact exists_large_prime_factor_choose_of_pow_gap (n := n) (k := k)
+      hkpos (by omega) (by interval_cases k <;> native_decide)
+      (pow_gap_small_k_tail hkpos hk9 (by omega))
 
 theorem exists_large_prime_dvd_choose_sq_le_of_9_le
     {n k : ℕ} (hk9 : 9 ≤ k) (hkn : k ≤ n) (hsq : k * k ≤ n) :

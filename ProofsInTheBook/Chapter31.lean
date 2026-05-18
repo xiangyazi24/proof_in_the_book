@@ -793,7 +793,62 @@ theorem joyalRecoveredAdj_of_path_edge (X : DoublyRootedLabeledTree n)
     (hadj : X.1.1.Adj u v) :
     joyalRecoveredAdj X u v := by
   classical
-  sorry
+  left
+  let p := treePath X.1 X.2.1 X.2.2
+  have huSup : u ∈ p.support := by
+    simpa [joyalPathVertices, p] using hu
+  have hvSup : v ∈ p.support := by
+    simpa [joyalPathVertices, p] using hv
+  let lu := (p.takeUntil u huSup).length
+  let lv := (p.takeUntil v hvSup).length
+  have hdistu : X.1.1.dist X.2.1 u = lu := by
+    have hpath : (p.takeUntil u huSup).IsPath :=
+      (treePath_isPath X.1 X.2.1 X.2.2).takeUntil huSup
+    exact (isTree_path_length_eq_dist X.1 hpath).symm
+  have hdistv : X.1.1.dist X.2.1 v = lv := by
+    have hpath : (p.takeUntil v hvSup).IsPath :=
+      (treePath_isPath X.1 X.2.1 X.2.2).takeUntil hvSup
+    exact (isTree_path_length_eq_dist X.1 hpath).symm
+  have hduv := X.1.2.dist_eq_dist_add_one_of_adj X.2.1 hadj
+  rcases hduv with hdu | hdv
+  · have hlu : lv + 1 = lu := by omega
+    have hlvle : lv ≤ p.length := by
+      simpa [lv] using p.length_takeUntil_le hvSup
+    have hlule : lu ≤ p.length := by
+      simpa [lu] using p.length_takeUntil_le huSup
+    have hi : lv < p.support.length := by
+      rw [SimpleGraph.Walk.length_support]
+      omega
+    have hi' : lv + 1 < p.support.length := by
+      rw [SimpleGraph.Walk.length_support]
+      omega
+    have hvget : p.getVert lv = v := by
+      simpa [lv] using SimpleGraph.Walk.getVert_length_takeUntil (p := p) hvSup
+    have huget : p.getVert (lv + 1) = u := by
+      rw [hlu]
+      simpa [lu] using SimpleGraph.Walk.getVert_length_takeUntil (p := p) huSup
+    refine ⟨lv, hi, hi', Or.inr ⟨?_, ?_⟩⟩
+    · exact (SimpleGraph.Walk.support_getElem_eq_getVert p hi).trans hvget
+    · exact (SimpleGraph.Walk.support_getElem_eq_getVert p hi').trans huget
+  · have hlv : lu + 1 = lv := by omega
+    have hlule : lu ≤ p.length := by
+      simpa [lu] using p.length_takeUntil_le huSup
+    have hlvle : lv ≤ p.length := by
+      simpa [lv] using p.length_takeUntil_le hvSup
+    have hi : lu < p.support.length := by
+      rw [SimpleGraph.Walk.length_support]
+      omega
+    have hi' : lu + 1 < p.support.length := by
+      rw [SimpleGraph.Walk.length_support]
+      omega
+    have huget : p.getVert lu = u := by
+      simpa [lu] using SimpleGraph.Walk.getVert_length_takeUntil (p := p) huSup
+    have hvget : p.getVert (lu + 1) = v := by
+      rw [hlv]
+      simpa [lv] using SimpleGraph.Walk.getVert_length_takeUntil (p := p) hvSup
+    refine ⟨lu, hi, hi', Or.inl ⟨?_, ?_⟩⟩
+    · exact (SimpleGraph.Walk.support_getElem_eq_getVert p hi).trans huget
+    · exact (SimpleGraph.Walk.support_getElem_eq_getVert p hi').trans hvget
 
 /--
 The Joyal endofunction data reconstructs the original tree edges: consecutive

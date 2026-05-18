@@ -327,6 +327,33 @@ theorem exists_large_prime_factor_choose_of_sq_le_and_primeCounting_gap
   have hlower := mul_log_sub_mul_log_le_log_choose (n := n) (k := k) hkpos hkn
   exact not_lt_of_ge (hlower.trans hupper) hpi_log_lt
 
+theorem primeCounting_gap_of_120_le {k : ℕ} (hk : 120 ≤ k) :
+    2 * Nat.primeCounting k < k := by
+  let n := k - 30
+  have hk_eq : k = 30 + n := by omega
+  have hbound0 := Nat.primeCounting_add_le
+    (a := 30) (k := 30) (n := n) (by norm_num) (by norm_num : 30 ≤ 30)
+  have hbound : Nat.primeCounting k ≤ Nat.primeCounting 30 + Nat.totient 30 * (n / 30 + 1) := by
+    simpa [hk_eq] using hbound0
+  have hcalc : Nat.primeCounting 30 = 10 := by native_decide
+  have htot : Nat.totient 30 = 8 := by native_decide
+  have hnle : n / 30 ≤ n / 4 :=
+    Nat.div_le_div_left (by norm_num : 4 ≤ 30) (by norm_num : 0 < 4)
+  have hbound2 : Nat.primeCounting k ≤ 10 + 8 * (n / 30 + 1) := by
+    simpa [hcalc, htot] using hbound
+  have hbound3 : Nat.primeCounting k ≤ 10 + 8 * (n / 4 + 1) := by
+    nlinarith
+  have h4 : 4 * (n / 4) ≤ n := Nat.mul_div_le n 4
+  have hdiv : 8 * (n / 4) ≤ 2 * n := by
+    nlinarith
+  omega
+
+theorem exists_large_prime_factor_choose_sq_le_of_120_le
+    {n k : ℕ} (hk120 : 120 ≤ k) (hkn : k ≤ n) (hsq : k * k ≤ n) :
+    HasPrimeFactorAbove k (n.choose k) :=
+  exists_large_prime_factor_choose_of_sq_le_and_primeCounting_gap
+    (by omega) hkn hsq (primeCounting_gap_of_120_le hk120)
+
 /--
 Factorial form of the standard binomial-divisibility argument: if a prime
 divides `n!` but not the two factorial factors in

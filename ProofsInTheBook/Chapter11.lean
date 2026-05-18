@@ -2075,6 +2075,67 @@ theorem not_isCrossing_between_crossingIdx_succ {k r : ℕ}
       omega
     omega
 
+theorem not_isCrossing_before_first_crossingIdx {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r)
+    (hpos : 0 < A.crossingMoves.card) {j : Fin r}
+    (hbefore : j.val < (A.crossingIdx ⟨0, hpos⟩).val) :
+    ¬ A.IsCrossing j := by
+  classical
+  intro hjCross
+  have hjmem : j ∈ A.crossingMoves := A.mem_crossingMoves.mpr hjCross
+  have hmap :
+      Finset.map (A.crossingMoves.orderEmbOfFin rfl).toEmbedding Finset.univ =
+        A.crossingMoves :=
+    Finset.map_orderEmbOfFin_univ A.crossingMoves rfl
+  have hjmap : j ∈ Finset.map (A.crossingMoves.orderEmbOfFin rfl).toEmbedding Finset.univ := by
+    rwa [hmap]
+  rcases Finset.mem_map.mp hjmap with ⟨l, _hlmem, hlj⟩
+  have hlj' : A.crossingIdx l = j := by
+    simpa [crossingIdx] using hlj
+  have hfinle : (⟨0, hpos⟩ : Fin A.crossingMoves.card) ≤ l := by
+    change 0 ≤ l.val
+    omega
+  have hidxle : A.crossingIdx ⟨0, hpos⟩ ≤ A.crossingIdx l := by
+    change (A.crossingMoves.orderEmbOfFin rfl ⟨0, hpos⟩) ≤
+      A.crossingMoves.orderEmbOfFin rfl l
+    exact (A.crossingMoves.orderEmbOfFin rfl).monotone hfinle
+  have hvaleq : (A.crossingIdx l).val = j.val := congrArg Fin.val hlj'
+  have hidxle_val : (A.crossingIdx ⟨0, hpos⟩).val ≤ (A.crossingIdx l).val :=
+    hidxle
+  omega
+
+theorem not_isCrossing_after_last_crossingIdx {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r)
+    (hpos : 0 < A.crossingMoves.card) {j : Fin r}
+    (hafter : (A.crossingIdx ⟨A.crossingMoves.card - 1, by omega⟩).val < j.val) :
+    ¬ A.IsCrossing j := by
+  classical
+  intro hjCross
+  have hjmem : j ∈ A.crossingMoves := A.mem_crossingMoves.mpr hjCross
+  have hmap :
+      Finset.map (A.crossingMoves.orderEmbOfFin rfl).toEmbedding Finset.univ =
+        A.crossingMoves :=
+    Finset.map_orderEmbOfFin_univ A.crossingMoves rfl
+  have hjmap : j ∈ Finset.map (A.crossingMoves.orderEmbOfFin rfl).toEmbedding Finset.univ := by
+    rwa [hmap]
+  rcases Finset.mem_map.mp hjmap with ⟨l, _hlmem, hlj⟩
+  have hlj' : A.crossingIdx l = j := by
+    simpa [crossingIdx] using hlj
+  have hfinle : l ≤ (⟨A.crossingMoves.card - 1, by omega⟩ :
+      Fin A.crossingMoves.card) := by
+    change l.val ≤ A.crossingMoves.card - 1
+    omega
+  have hidxle : A.crossingIdx l ≤
+      A.crossingIdx ⟨A.crossingMoves.card - 1, by omega⟩ := by
+    change (A.crossingMoves.orderEmbOfFin rfl l) ≤
+      A.crossingMoves.orderEmbOfFin rfl ⟨A.crossingMoves.card - 1, by omega⟩
+    exact (A.crossingMoves.orderEmbOfFin rfl).monotone hfinle
+  have hvaleq : (A.crossingIdx l).val = j.val := congrArg Fin.val hlj'
+  have hidxle_val : (A.crossingIdx l).val ≤
+      (A.crossingIdx ⟨A.crossingMoves.card - 1, by omega⟩).val :=
+    hidxle
+  omega
+
 theorem sum_crossingIdx_eq_sum_crossingMoves {k r : ℕ}
     (A : CountedGeneralizedAllowableSequence k r) :
     (∑ i : Fin A.crossingMoves.card, 2 * A.moveOrder (A.crossingIdx i)) =

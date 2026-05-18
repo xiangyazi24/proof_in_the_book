@@ -814,6 +814,13 @@ theorem mirror_mem {N : ℕ} (I : PositionInterval N) (p : Fin N) (hp : I.Mem p)
 theorem mirror_val {N : ℕ} (I : PositionInterval N) (p : Fin N) (hp : I.Mem p) :
     (I.mirror p hp).val = I.lo + I.hi - p.val := rfl
 
+theorem mirror_mirror {N : ℕ} (I : PositionInterval N) (p : Fin N) (hp : I.Mem p) :
+    I.mirror (I.mirror p hp) (I.mirror_mem p hp) = p := by
+  apply Fin.ext
+  rcases hp with ⟨hlo, hhi⟩
+  dsimp [mirror]
+  omega
+
 /-- The number of positions in a consecutive interval. -/
 def length {N : ℕ} (I : PositionInterval N) : ℕ :=
   I.hi + 1 - I.lo

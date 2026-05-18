@@ -1711,6 +1711,13 @@ structure CountedGeneralizedAllowableSequence (k r : ℕ) where
 
 namespace CountedGeneralizedAllowableSequence
 
+noncomputable def ofReversesBlocks {k r : ℕ} (A : GeneralizedAllowableSequence k r)
+    (step : ∀ j : Fin r, ReversalStep k (A.π (stepFrom j)) (A.π (stepTo j)))
+    (hrev : ∀ j : Fin r, (step j).move.ReversesBlocks) :
+    CountedGeneralizedAllowableSequence k r where
+  seq := A
+  step := fun j => CountedReversalStep.ofReversesBlocks (step j) (hrev j)
+
 /-- Counted reversal steps produce the `StepCounting` data used above. -/
 noncomputable def toStepCounting {k r : ℕ} (A : CountedGeneralizedAllowableSequence k r) :
     GeneralizedAllowableSequence.StepCounting A.seq where

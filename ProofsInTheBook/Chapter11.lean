@@ -403,6 +403,43 @@ theorem UngarCountingCertificate.length_lower_bound {n t : ℕ}
     (cert : UngarCountingCertificate n t) : n ≤ t :=
   le_trans cert.letters_cross cert.blocks_fit
 
+/-- Integer telescoping identity for Ungar's adjacent crossing-order sums. -/
+theorem ungar_adjacent_order_sum_identity_int (c : ℕ) (hc : 2 ≤ c) (d : ℕ → ℤ) :
+    (d 0 + d (c - 1) - 1)
+        + ∑ i ∈ Finset.range (c - 1), (d i + d (i + 1) - 1)
+      =
+    2 * (∑ i ∈ Finset.range c, d i) - c := by
+  induction c with
+  | zero => omega
+  | succ c ih =>
+      by_cases hc2 : 2 ≤ c
+      · have ihc := ih hc2
+        rw [Finset.sum_range_succ]
+        rw [show c + 1 - 1 = c by omega]
+        have hsum_adj :
+            (∑ i ∈ Finset.range c, (d i + d (i + 1) - 1)) =
+              (∑ i ∈ Finset.range (c - 1), (d i + d (i + 1) - 1)) +
+                (d (c - 1) + d c - 1) := by
+          rw [← show c - 1 + 1 = c by omega]
+          rw [Finset.sum_range_succ]
+          simp [Nat.sub_add_cancel (by omega : 1 ≤ c)]
+        rw [hsum_adj]
+        have hrewrite :
+            (d 0 + d c - 1) +
+                ((∑ i ∈ Finset.range (c - 1), (d i + d (i + 1) - 1)) +
+                  (d (c - 1) + d c - 1))
+              =
+            ((d 0 + d (c - 1) - 1) +
+                ∑ i ∈ Finset.range (c - 1), (d i + d (i + 1) - 1))
+              + 2 * d c - 1 := by ring
+        rw [hrewrite, ihc]
+        rw [show ((c + 1 : ℕ) : ℤ) = (c : ℤ) + 1 by norm_num]
+        ring_nf
+      · have hc_eq : c = 1 := by omega
+        subst c
+        simp [Finset.sum_range_succ]
+        ring
+
 /--
 Finite schedule of crossing moves in Ungar's middle-barrier proof.  The
 additional `idx` and gap fields are the data coming from the T/O/C pattern;

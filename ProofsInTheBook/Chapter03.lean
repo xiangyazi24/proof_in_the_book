@@ -478,6 +478,12 @@ theorem sylvester_schur_descFactorial_small_lt_sq {n k : ℕ}
       sylvester_schur_descFactorial_small_lt_sq_cert
         ⟨n, hn64⟩ ⟨k, hk9⟩ hn2k hkpos hnlt)
 
+theorem sylvester_schur_choose_small_lt_sq {n k : ℕ}
+    (hn2k : 2 * k ≤ n) (hkpos : 0 < k) (hk8 : k ≤ 8) (hnlt : n < k * k) :
+    ∃ p, k < p ∧ p.Prime ∧ p ∣ n.choose k :=
+  exists_large_prime_dvd_choose_of_descFactorial
+    (sylvester_schur_descFactorial_small_lt_sq hn2k hkpos hk8 hnlt)
+
 theorem factorial_lt_descFactorial_of_two_mul_le {n k : ℕ}
     (hk : 0 < k) (hn : 2 * k ≤ n) : k ! < n.descFactorial k := by
   rw [Nat.factorial_eq_prod_range_add_one, Nat.descFactorial_eq_prod_range]

@@ -332,6 +332,15 @@ theorem even_direction_bound_of_ungar_counting_certificate (points : Finset Poin
     points.card ≤ (directionsDeterminedBy points).card :=
   cert.length_lower_bound
 
+theorem directions_lower_bound_of_even_ungar_certificates (points : Finset Point2)
+    (hcard : 3 ≤ points.card) (hncoll : NoncollinearSet points)
+    (hcert : ∀ S : Finset Point2, Even S.card → NoncollinearSet S →
+      UngarCountingCertificate S.card (directionsDeterminedBy S).card) :
+    points.card - 1 ≤ (directionsDeterminedBy points).card :=
+  directions_lower_bound_of_even_direction_bound_all points hcard hncoll
+    (fun S hEven hS =>
+      even_direction_bound_of_ungar_counting_certificate S (hcert S hEven hS))
+
 /--
 Counting interface for Ungar's slope theorem: an injective family of witnessed
 slopes gives the corresponding lower bound on the number of slopes.

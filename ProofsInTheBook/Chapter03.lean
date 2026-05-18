@@ -186,6 +186,37 @@ theorem choose_le_sqrt_mul_four_pow_min_third_of_noLargePrimeFactor
     refine Finset.prod_le_prod_of_subset_of_one_le' (Finset.filter_subset _ _) ?_
     exact fun p hp _ => (Finset.mem_filter.1 hp).2.one_lt.le
 
+theorem choose_le_primeCounting_sqrt_mul_four_pow_min_third_of_noLargePrimeFactor
+    {n k : ℕ} (hnpos : 0 < n) (hkn : k ≤ n) (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)
+    (hno : NoLargePrimeFactor k (n.choose k)) :
+    n.choose k ≤ n ^ Nat.primeCounting (sqrt n) * 4 ^ min k (n / 3) := by
+  let M := min k (n / 3)
+  let S := {p ∈ Finset.range (M + 1) | Nat.Prime p}
+  let f := fun p => p ^ (n.choose k).factorization p
+  have hprime_filter : ∏ p ∈ S, f p = ∏ p ∈ Finset.range (M + 1), f p := by
+    refine Finset.prod_filter_of_ne fun p _ hpprime => ?_
+    contrapose hpprime
+    dsimp only [f]
+    rw [Nat.factorization_eq_zero_of_not_prime (n.choose k) hpprime, pow_zero]
+  rw [choose_factorization_le_min_third_of_noLargePrimeFactor hkn hn2k hn6 hno, ← hprime_filter,
+    ← Finset.prod_filter_mul_prod_filter_not S (· ≤ sqrt n)]
+  apply mul_le_mul'
+  · refine (Finset.prod_le_prod' fun p _ => (?_ : f p ≤ n)).trans ?_
+    · exact Nat.pow_factorization_choose_le hnpos
+    rw [Finset.prod_const]
+    refine pow_right_mono₀ (Nat.succ_le_iff.mpr hnpos) ?_
+    rw [← Nat.primesLE_card_eq_primeCounting]
+    exact Finset.card_le_card fun p hp => by
+      obtain ⟨hpS, hpsqrt⟩ := Finset.mem_filter.1 hp
+      exact Nat.mem_primesLE.mpr ⟨hpsqrt, (Finset.mem_filter.1 hpS).2⟩
+  · refine le_trans ?_ (primorial_le_four_pow M)
+    refine (Finset.prod_le_prod' fun p hp => (?_ : f p ≤ p)).trans ?_
+    · obtain ⟨hpS, hpsqrt⟩ := Finset.mem_filter.1 hp
+      refine (pow_right_mono₀ (Finset.mem_filter.1 hpS).2.one_lt.le ?_).trans (pow_one p).le
+      exact Nat.factorization_choose_le_one (sqrt_lt'.mp <| not_le.1 hpsqrt)
+    refine Finset.prod_le_prod_of_subset_of_one_le' (Finset.filter_subset _ _) ?_
+    exact fun p hp _ => (Finset.mem_filter.1 hp).2.one_lt.le
+
 theorem pow_mul_self_descFactorial_le_pow_mul_descFactorial {n k : ℕ} (hkn : k ≤ n) :
     n ^ k * k.descFactorial k ≤ k ^ k * n.descFactorial k := by
   have hnprod : n ^ k = ∏ _i ∈ Finset.range k, n := by
@@ -234,6 +265,34 @@ theorem log_choose_le_sqrt_log_add_min_third_log_four_of_noLargePrimeFactor
         (pow_ne_zero _ (by norm_num : (4 : ℝ) ≠ 0)),
         Real.log_pow, Real.log_pow]
     _ = (sqrt n : ℝ) * Real.log n + ((min k (n / 3) : ℕ) : ℝ) * Real.log 4 := by
+      simp [M]
+
+theorem log_choose_le_primeCounting_sqrt_log_add_min_third_log_four_of_noLargePrimeFactor
+    {n k : ℕ} (hnpos : 0 < n) (hkn : k ≤ n) (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)
+    (hno : NoLargePrimeFactor k (n.choose k)) :
+    Real.log (n.choose k) ≤
+      (Nat.primeCounting (sqrt n) : ℝ) * Real.log n
+        + ((min k (n / 3) : ℕ) : ℝ) * Real.log 4 := by
+  let M := min k (n / 3)
+  have hnat :
+      n.choose k ≤ n ^ Nat.primeCounting (sqrt n) * 4 ^ M :=
+    choose_le_primeCounting_sqrt_mul_four_pow_min_third_of_noLargePrimeFactor
+      hnpos hkn hn2k hn6 hno
+  have hpos_choose_nat : 0 < n.choose k := Nat.choose_pos hkn
+  have hlogle :
+      Real.log (n.choose k) ≤ Real.log (n ^ Nat.primeCounting (sqrt n) * 4 ^ M) := by
+    exact Real.log_le_log (by exact_mod_cast hpos_choose_nat) (by exact_mod_cast hnat)
+  calc
+    Real.log (n.choose k) ≤ Real.log (n ^ Nat.primeCounting (sqrt n) * 4 ^ M) := hlogle
+    _ = Real.log ((n : ℝ) ^ Nat.primeCounting (sqrt n) * (4 : ℝ) ^ M) := by
+      norm_num [Nat.cast_pow]
+    _ = (Nat.primeCounting (sqrt n) : ℝ) * Real.log n + (M : ℝ) * Real.log 4 := by
+      rw [Real.log_mul
+        (pow_ne_zero _ (by exact_mod_cast hnpos.ne' : (n : ℝ) ≠ 0))
+        (pow_ne_zero _ (by norm_num : (4 : ℝ) ≠ 0)),
+        Real.log_pow, Real.log_pow]
+    _ = (Nat.primeCounting (sqrt n) : ℝ) * Real.log n
+        + ((min k (n / 3) : ℕ) : ℝ) * Real.log 4 := by
       simp [M]
 
 theorem mul_log_sub_mul_log_le_log_choose {n k : ℕ}
@@ -447,6 +506,13 @@ theorem exists_large_prime_factor_choose_sq_le_of_9_le
   exists_large_prime_factor_choose_of_sq_le_and_primeCounting_gap
     (by omega) hkn hsq (primeCounting_gap_of_9_le hk9)
 
+theorem exists_large_prime_dvd_choose_sq_le_of_9_le
+    {n k : ℕ} (hk9 : 9 ≤ k) (hkn : k ≤ n) (hsq : k * k ≤ n) :
+    ∃ p, k < p ∧ p.Prime ∧ p ∣ n.choose k := by
+  rcases exists_large_prime_factor_choose_sq_le_of_9_le
+      (n := n) (k := k) hk9 hkn hsq with ⟨p, hkp, hp, hpdvd⟩
+  exact ⟨p, hkp, hp, hpdvd⟩
+
 /--
 Factorial form of the standard binomial-divisibility argument: if a prime
 divides `n!` but not the two factorial factors in
@@ -490,6 +556,12 @@ theorem exists_large_prime_dvd_descFactorial_of_choose
     HasPrimeFactorAbove k (n.descFactorial k) := by
   rcases h with ⟨p, hkp, hp, hpdvd⟩
   exact ⟨p, hkp, hp, prime_dvd_descFactorial_of_dvd_choose hpdvd⟩
+
+theorem exists_large_prime_factor_descFactorial_sq_le_of_9_le
+    {n k : ℕ} (hk9 : 9 ≤ k) (hkn : k ≤ n) (hsq : k * k ≤ n) :
+    HasPrimeFactorAbove k (n.descFactorial k) :=
+  exists_large_prime_dvd_descFactorial_of_choose
+    (exists_large_prime_dvd_choose_sq_le_of_9_le (n := n) (k := k) hk9 hkn hsq)
 
 theorem not_mem_smoothNumbers_succ_iff_hasPrimeFactorAbove {k m : ℕ} :
     m ∉ (k + 1).smoothNumbers ↔ HasPrimeFactorAbove k m := by

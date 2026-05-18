@@ -289,6 +289,19 @@ theorem sylvester_schur_descFactorial_one {n : ℕ} (hn : 2 * 1 ≤ n) :
   rcases Nat.ne_one_iff_exists_prime_dvd.mp hn_ne_one with ⟨p, hp, hpdvd⟩
   exact ⟨p, hp.one_lt, hp, by simpa [Nat.descFactorial_one] using hpdvd⟩
 
+theorem factorial_lt_descFactorial_of_two_mul_le {n k : ℕ}
+    (hk : 0 < k) (hn : 2 * k ≤ n) : k ! < n.descFactorial k := by
+  rw [Nat.factorial_eq_prod_range_add_one, Nat.descFactorial_eq_prod_range]
+  refine Finset.prod_lt_prod_of_nonempty
+    (s := Finset.range k) (f := fun i => i + 1) (g := fun i => n - i) ?hf ?hlt ?hne
+  · intro i _hi
+    exact Nat.succ_pos i
+  · intro i hi
+    rw [Finset.mem_range] at hi
+    change i + 1 < n - i
+    omega
+  · exact Finset.nonempty_range_iff.mpr hk.ne'
+
 /-!
 ### Binomial coefficients are almost never powers
 

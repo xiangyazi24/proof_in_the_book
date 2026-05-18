@@ -172,3 +172,18 @@ Current missing mathematical core:
 The bridge responses (`0dc2cefd`, `10e3ddde`) recommend the same route:
 upper-bound factorization + entropy lower bound + standalone real gap + finite certificate.
 No bridge response supplied a complete proof of the hard real/finite parts.
+
+Additional Chapter03 progress:
+
+- Added finite certificate over `Fin 64 × Fin 9` for the small region
+  `0 < k`, `k <= 8`, `2*k <= n`, `n < k*k`:
+  `sylvester_schur_descFactorial_small_lt_sq_cert`.
+- Derived usable small-region theorems:
+  `sylvester_schur_descFactorial_small_lt_sq` and
+  `sylvester_schur_choose_small_lt_sq`.
+
+This clears the bounded small-`k` / below-square region. Remaining unclosed regions:
+
+- The below-square large-`k` region needs the real/entropy gap or a larger finite certificate.
+- The above-square region still needs either a prime-counting estimate (`2*pi(k)<k`) plus the
+  existing lower/upper bounds, or an alternate real-gap argument.

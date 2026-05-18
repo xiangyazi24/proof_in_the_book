@@ -1537,6 +1537,108 @@ theorem positionCrossingCard_le_crossingBlock_length {k : ℕ} {π ρ : State (2
     simpa using B.toFinset_card
   rwa [hBcard] at hcard
 
+theorem positionCrossingCard_eq_two_mul_order_of_reversesBlocks {k : ℕ}
+    {π ρ : State (2 * k)} (M : ReversalStep k π ρ)
+    (hrev : M.move.ReversesBlocks) (hM : M.IsCrossing) :
+    positionCrossingCard k M.move.map = 2 * M.order := by
+  classical
+  let B := M.move.block (M.crossingBlockIndex hM)
+  have hBcross : B.lo < k ∧ k ≤ B.hi :=
+    M.crossingBlockIndex_spec hM
+  have hcard :
+      positionCrossingCard k M.move.map =
+        (B.mirrorCrossingPositions k).card := by
+    have hcardSubtype :
+        Fintype.card
+          {p : Fin (2 * k) // middleLeft k p ↔ ¬ middleLeft k (M.move.map p)} =
+          Fintype.card {p : Fin (2 * k) // p ∈ B.mirrorCrossingPositions k} := by
+      refine Fintype.card_congr ?_
+      refine
+      { toFun := ?_
+        invFun := ?_
+        left_inv := ?_
+        right_inv := ?_ }
+      · intro p
+        refine ⟨p.1, ?_⟩
+        have hpB : B.Mem p.1 :=
+        M.position_crosses_mem_crossingBlockIndex hrev hM p.2
+        by_cases hleft : middleLeft k p.1
+        · have hmap_not_left : ¬ middleLeft k (M.move.map p.1) := p.2.mp hleft
+          have hmap_eq : M.move.map p.1 = B.mirror p.1 hpB :=
+            hrev.1 (M.crossingBlockIndex hM) p.1 hpB
+          have hmirror_right : k ≤ (B.mirror p.1 hpB).val := by
+            rw [← hmap_eq]
+            exact not_lt.mp hmap_not_left
+          have hle_sub : p.1.val ≤ B.lo + B.hi - k :=
+            (B.le_mirror_iff_le_sub p.1 hpB hBcross.2).mp hmirror_right
+          rw [PositionInterval.mirrorCrossingPositions, Finset.mem_union,
+            PositionInterval.leftMirrorCrossingPositions,
+            PositionInterval.rightMirrorCrossingPositions, Finset.mem_filter,
+            Finset.mem_filter, PositionInterval.mem_toFinset]
+          exact Or.inl ⟨hpB, hleft, hle_sub⟩
+        · have hp_right : k ≤ p.1.val := not_lt.mp hleft
+          have hmap_left : middleLeft k (M.move.map p.1) := by
+            by_contra hmap_not_left
+            exact hleft (p.2.mpr hmap_not_left)
+          have hmap_eq : M.move.map p.1 = B.mirror p.1 hpB :=
+            hrev.1 (M.crossingBlockIndex hM) p.1 hpB
+          have hmirror_left : (B.mirror p.1 hpB).val < k := by
+            rw [← hmap_eq]
+            exact hmap_left
+          have hthreshold : B.lo + B.hi + 1 - k ≤ p.1.val := by
+            rw [B.mirror_lt_iff_sub_lt p.1 hpB] at hmirror_left
+            rcases hpB with ⟨hlo, hhi⟩
+            omega
+          rw [PositionInterval.mirrorCrossingPositions, Finset.mem_union,
+            PositionInterval.leftMirrorCrossingPositions,
+            PositionInterval.rightMirrorCrossingPositions, Finset.mem_filter,
+            Finset.mem_filter, PositionInterval.mem_toFinset]
+          exact Or.inr ⟨hpB, hp_right, hthreshold⟩
+      · intro p
+        refine ⟨p.1, ?_⟩
+        have hp_mem : p.1 ∈ B.mirrorCrossingPositions k := p.2
+        simp [PositionInterval.mirrorCrossingPositions,
+          PositionInterval.leftMirrorCrossingPositions,
+          PositionInterval.rightMirrorCrossingPositions,
+          PositionInterval.mem_toFinset] at hp_mem
+        rcases hp_mem with hp_left | hp_right
+        · rcases hp_left with ⟨hpB, hp_left, hle_sub⟩
+          have hmap_eq : M.move.map p.1 = B.mirror p.1 hpB :=
+            hrev.1 (M.crossingBlockIndex hM) p.1 hpB
+          have hmirror_right : k ≤ (B.mirror p.1 hpB).val :=
+            (B.le_mirror_iff_le_sub p.1 hpB hBcross.2).mpr hle_sub
+          have hmap_not_left : ¬ middleLeft k (M.move.map p.1) := by
+            rw [hmap_eq]
+            exact not_lt.mpr hmirror_right
+          exact iff_of_true hp_left hmap_not_left
+        · rcases hp_right with ⟨hpB, hp_right, hthreshold⟩
+          have hmap_eq : M.move.map p.1 = B.mirror p.1 hpB :=
+            hrev.1 (M.crossingBlockIndex hM) p.1 hpB
+          have hmirror_left : (B.mirror p.1 hpB).val < k := by
+            rw [B.mirror_lt_iff_sub_lt p.1 hpB]
+            rcases hpB with ⟨hlo, hhi⟩
+            omega
+          have hp_not_left : ¬ middleLeft k p.1 := not_lt.mpr hp_right
+          have hmap_left : middleLeft k (M.move.map p.1) := by
+            rw [hmap_eq]
+            exact hmirror_left
+          exact iff_of_false hp_not_left (not_not.mpr hmap_left)
+      · intro p
+        apply Subtype.ext
+        rfl
+      · intro p
+        apply Subtype.ext
+        rfl
+    have hfinset :
+        Fintype.card {p : Fin (2 * k) // p ∈ B.mirrorCrossingPositions k} =
+          (B.mirrorCrossingPositions k).card := by
+      simp
+    exact (by
+      simpa [positionCrossingCard] using hcardSubtype.trans hfinset)
+  rw [hcard]
+  rw [B.mirrorCrossingPositions_card_eq_two_mul_crossOrder_of_crossing hBcross]
+  rw [M.order_eq_crossingBlockIndex_crossOrder hM]
+
 /-- The labels crossing in one reversal step fit inside the full position set. -/
 theorem two_mul_order_le_positions {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) :

@@ -763,6 +763,48 @@ def crossOrder (k : ℕ) (I : PositionInterval (2 * k)) : ℕ :=
   else
     0
 
+theorem crossOrder_eq_zero_of_not_crossing {k : ℕ} {I : PositionInterval (2 * k)}
+    (h : ¬ (I.lo < k ∧ k ≤ I.hi)) :
+    I.crossOrder k = 0 := by
+  simp [crossOrder, h]
+
+theorem crossOrder_eq_min_of_crossing {k : ℕ} {I : PositionInterval (2 * k)}
+    (h : I.lo < k ∧ k ≤ I.hi) :
+    I.crossOrder k = Nat.min (k - I.lo) (I.hi + 1 - k) := by
+  simp [crossOrder, h]
+
+theorem crossOrder_le_left {k : ℕ} (I : PositionInterval (2 * k)) :
+    I.crossOrder k ≤ k - I.lo := by
+  by_cases h : I.lo < k ∧ k ≤ I.hi
+  · rw [crossOrder_eq_min_of_crossing h]
+    exact Nat.min_le_left _ _
+  · rw [crossOrder_eq_zero_of_not_crossing h]
+    omega
+
+theorem crossOrder_le_right {k : ℕ} (I : PositionInterval (2 * k)) :
+    I.crossOrder k ≤ I.hi + 1 - k := by
+  by_cases h : I.lo < k ∧ k ≤ I.hi
+  · rw [crossOrder_eq_min_of_crossing h]
+    exact Nat.min_le_right _ _
+  · rw [crossOrder_eq_zero_of_not_crossing h]
+    omega
+
+theorem two_mul_crossOrder_le_length {k : ℕ} (I : PositionInterval (2 * k)) :
+    2 * I.crossOrder k ≤ I.length := by
+  by_cases h : I.lo < k ∧ k ≤ I.hi
+  · rw [crossOrder_eq_min_of_crossing h]
+    have hleft : Nat.min (k - I.lo) (I.hi + 1 - k) ≤ k - I.lo :=
+      Nat.min_le_left _ _
+    have hright : Nat.min (k - I.lo) (I.hi + 1 - k) ≤ I.hi + 1 - k :=
+      Nat.min_le_right _ _
+    have hlen : I.length = (k - I.lo) + (I.hi + 1 - k) := by
+      dsimp [length]
+      omega
+    rw [hlen]
+    omega
+  · rw [crossOrder_eq_zero_of_not_crossing h]
+    omega
+
 end PositionInterval
 
 /--

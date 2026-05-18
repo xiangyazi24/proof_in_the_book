@@ -506,6 +506,35 @@ theorem entropy_lower_le_log_choose {n k : ℕ} (hkpos : 0 < k) (hklt : k < n) :
   rw [hcast_sub] at hR ⊢
   nlinarith
 
+theorem entropyTerm_lower_basic {n k : ℕ} (hkpos : 0 < k) (hklt : k < n) :
+    (k : ℝ) * Real.log n - (k : ℝ) * Real.log k
+      + (k : ℝ) - (k : ℝ) ^ 2 / (n : ℝ) ≤ entropyTerm n k := by
+  have hkn : k ≤ n := le_of_lt hklt
+  have hnpos : 0 < (n : ℝ) := by exact_mod_cast (hkpos.trans hklt)
+  have hrpos_nat : 0 < n - k := Nat.sub_pos_of_lt hklt
+  have hrpos : 0 < ((n - k : ℕ) : ℝ) := by exact_mod_cast hrpos_nat
+  have hcast_sub : ((n - k : ℕ) : ℝ) = (n : ℝ) - (k : ℝ) := by
+    exact Nat.cast_sub hkn
+  have hlog_ratio :=
+    Real.log_le_sub_one_of_pos
+      (x := ((n - k : ℕ) : ℝ) / (n : ℝ)) (div_pos hrpos hnpos)
+  have hdiff :
+      (k : ℝ) / (n : ℝ) ≤ Real.log n - Real.log (n - k) := by
+    rw [Real.log_div (ne_of_gt hrpos) (ne_of_gt hnpos)] at hlog_ratio
+    rw [hcast_sub] at hlog_ratio
+    have hnne : (n : ℝ) ≠ 0 := ne_of_gt hnpos
+    field_simp [hnne] at hlog_ratio ⊢
+    nlinarith
+  have hmul :
+      ((n - k : ℕ) : ℝ) * ((k : ℝ) / (n : ℝ)) ≤
+        ((n - k : ℕ) : ℝ) * (Real.log n - Real.log (n - k)) :=
+    mul_le_mul_of_nonneg_left hdiff hrpos.le
+  unfold entropyTerm
+  have hnne : (n : ℝ) ≠ 0 := ne_of_gt hnpos
+  rw [hcast_sub] at hmul ⊢
+  field_simp [hnne] at hmul ⊢
+  nlinarith
+
 theorem erdos_log_sandwich_of_noLargePrimeFactor
     {n k : ℕ} (hkpos : 0 < k) (hnpos : 0 < n) (hkn : k ≤ n)
     (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)

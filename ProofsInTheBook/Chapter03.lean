@@ -266,6 +266,21 @@ theorem erdos_log_sandwich_of_noLargePrimeFactor
       (n := n) (k := k) hnpos hkn hn2k hn6 hno
   linarith
 
+theorem exists_large_prime_factor_choose_of_erdos_log_gap
+    {n k : ℕ} (hkpos : 0 < k) (hnpos : 0 < n) (hkn : k ≤ n)
+    (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)
+    (hgap :
+      (sqrt n : ℝ) * Real.log n + ((min k (n / 3) : ℕ) : ℝ) * Real.log 4 <
+        (k : ℝ) * Real.log n - (k : ℝ) * Real.log k) :
+    HasPrimeFactorAbove k (n.choose k) := by
+  by_contra hlarge
+  have hno : NoLargePrimeFactor k (n.choose k) :=
+    not_hasPrimeFactorAbove_iff_noLargePrimeFactor.mp hlarge
+  have hsandwich :=
+    erdos_log_sandwich_of_noLargePrimeFactor
+      (n := n) (k := k) hkpos hnpos hkn hn2k hn6 hno
+  exact not_lt_of_ge hsandwich hgap
+
 /--
 Factorial form of the standard binomial-divisibility argument: if a prime
 divides `n!` but not the two factorial factors in

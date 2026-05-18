@@ -441,6 +441,15 @@ theorem exists_iterate_mem_joyalPathVertices (X : DoublyRootedLabeledTree n) (v 
         exact main d (by intro e he; exact ih e he)
   exact main' (D v) v rfl
 
+theorem iterate_joyal_mem_pathVertices_of_mem (X : DoublyRootedLabeledTree n)
+    {v : Fin n} (hv : v ∈ joyalPathVertices X) (m : ℕ) :
+    (joyalTreeToFunction X)^[m] v ∈ joyalPathVertices X := by
+  induction m generalizing v with
+  | zero => simpa using hv
+  | succ m ih =>
+      rw [Function.iterate_succ_apply']
+      exact joyalTreeToFunction_maps_pathVertices X (ih hv)
+
 /--
 No vertex off the left-right path is periodic under Joyal's endofunction.
 The intended proof uses `joyalOffPathValue_mem_tail_path_to_left`: while outside
@@ -449,7 +458,25 @@ the path, iterating strictly shortens the unique path to the left endpoint.
 theorem periodicCore_subset_joyalPathVertices (X : DoublyRootedLabeledTree n) :
     periodicCore (joyalTreeToFunction X) ⊆ joyalPathVertices X := by
   classical
-  sorry
+  intro v hv
+  rw [mem_periodicCore_iff] at hv
+  rcases hv with ⟨p, hpPos, hp⟩
+  obtain ⟨r, hr⟩ := exists_iterate_mem_joyalPathVertices X v
+  let N := (r + 1) * p
+  have hrle : r ≤ N := by
+    have : r + 1 ≤ N := by
+      simpa [N] using Nat.le_mul_of_pos_right (r + 1) hpPos
+    omega
+  have hNpath : (joyalTreeToFunction X)^[N] v ∈ joyalPathVertices X := by
+    have htail := iterate_joyal_mem_pathVertices_of_mem X hr (N - r)
+    have hsum : (N - r) + r = N := Nat.sub_add_cancel hrle
+    rw [← Function.iterate_add_apply (joyalTreeToFunction X) (N - r) r v] at htail
+    simpa [hsum] using htail
+  have hperN : (joyalTreeToFunction X)^[N] v = v := by
+    have hper : Function.IsPeriodicPt (joyalTreeToFunction X) p v := hp
+    have hmul := hper.const_mul (r + 1)
+    simpa [Function.IsPeriodicPt, N, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using hmul
+  simpa [hperN] using hNpath
 
 /--
 Joyal's path vertices are exactly the periodic core of the associated endofunction.

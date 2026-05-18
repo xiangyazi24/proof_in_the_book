@@ -56,6 +56,14 @@ def NoncollinearTriple (p q r : Point2) : Prop :=
 def NoncollinearSet (points : Finset Point2) : Prop :=
   ∃ p ∈ points, ∃ q ∈ points, ∃ r ∈ points, NoncollinearTriple p q r
 
+/-- The configuration determines the vertical direction. -/
+def HasVerticalPair (points : Finset Point2) : Prop :=
+  ∃ p ∈ points, ∃ q ∈ points, p ≠ q ∧ p.1 = q.1
+
+/-- No two distinct points in the configuration have the same x-coordinate. -/
+def NoVerticalPairs (points : Finset Point2) : Prop :=
+  ∀ ⦃p q⦄, p ∈ points → q ∈ points → p ≠ q → p.1 ≠ q.1
+
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by
   intro hpq
@@ -189,12 +197,28 @@ theorem finite_slope_mem_of_finite_direction {points : Finset Point2} {m : ℝ}
     · exact Finset.mem_filter.mpr ⟨hpq_prod, hpq_ne, hx⟩
     · simpa [direction, hx] using hpq_dir
 
-/--
-The full projective direction set contains exactly the finite slopes, with
-possibly one additional vertical direction.
--/
-theorem directions_card_le_slopes_card_succ (points : Finset Point2) :
-    (directionsDeterminedBy points).card ≤ (slopesDeterminedBy points).card + 1 := by
+theorem vertical_mem_directionsDeterminedBy_iff {points : Finset Point2} :
+    Direction.vertical ∈ directionsDeterminedBy points ↔ HasVerticalPair points := by
+  classical
+  constructor
+  · intro hv
+    rcases Finset.mem_image.mp hv with ⟨pq, hpq_mem, hpq_dir⟩
+    rcases pq with ⟨p, q⟩
+    rcases Finset.mem_filter.mp hpq_mem with ⟨hpq_prod, hpq_ne⟩
+    rcases Finset.mem_product.mp hpq_prod with ⟨hp, hq⟩
+    by_cases hx : p.1 = q.1
+    · exact ⟨p, hp, q, hq, hpq_ne, hx⟩
+    · simp [direction, hx] at hpq_dir
+  · rintro ⟨p, hp, q, hq, hpq_ne, hx⟩
+    refine Finset.mem_image.mpr ⟨(p, q), ?_, ?_⟩
+    · exact Finset.mem_filter.mpr
+        ⟨Finset.mem_product.mpr ⟨hp, hq⟩, hpq_ne⟩
+    · simp [direction, hx]
+
+/-- Removing the vertical direction leaves exactly the finite slopes. -/
+theorem directions_erase_vertical_card_eq_slopes_card (points : Finset Point2) :
+    ((directionsDeterminedBy points).erase Direction.vertical).card =
+      (slopesDeterminedBy points).card := by
   classical
   let finiteDirs := (directionsDeterminedBy points).erase Direction.vertical
   have hfinite_le : finiteDirs.card ≤ (slopesDeterminedBy points).card := by
@@ -218,16 +242,68 @@ theorem directions_card_le_slopes_card_succ (points : Finset Point2) :
           | finite mb =>
               simp at hab
               simp [hab]
-  by_cases hv : Direction.vertical ∈ directionsDeterminedBy points
-  · have hcard :
-        finiteDirs.card + 1 = (directionsDeterminedBy points).card := by
-      dsimp [finiteDirs]
-      exact Finset.card_erase_add_one hv
+  have hslopes_le : (slopesDeterminedBy points).card ≤ finiteDirs.card := by
+    refine Finset.card_le_card_of_injOn Direction.finite ?_ ?_
+    · intro m hm
+      apply Finset.mem_erase.mpr
+      constructor
+      · simp
+      · exact finite_slope_mem_directionsDeterminedBy hm
+    · intro a _ b _ h
+      simpa using h
+  have hfinite_card : finiteDirs.card = (slopesDeterminedBy points).card :=
+    le_antisymm hfinite_le hslopes_le
+  exact hfinite_card
+
+theorem directions_card_eq_slopes_card_add_one_of_hasVerticalPair {points : Finset Point2}
+    (hvert : HasVerticalPair points) :
+    (directionsDeterminedBy points).card = (slopesDeterminedBy points).card + 1 := by
+  classical
+  have hv : Direction.vertical ∈ directionsDeterminedBy points :=
+    vertical_mem_directionsDeterminedBy_iff.mpr hvert
+  have hcard :
+      ((directionsDeterminedBy points).erase Direction.vertical).card + 1 =
+        (directionsDeterminedBy points).card :=
+    Finset.card_erase_add_one hv
+  rw [directions_erase_vertical_card_eq_slopes_card] at hcard
+  exact hcard.symm
+
+theorem directions_card_eq_slopes_card_of_not_hasVerticalPair {points : Finset Point2}
+    (hvert : ¬ HasVerticalPair points) :
+    (directionsDeterminedBy points).card = (slopesDeterminedBy points).card := by
+  classical
+  have hv : Direction.vertical ∉ directionsDeterminedBy points := by
+    intro hv
+    exact hvert (vertical_mem_directionsDeterminedBy_iff.mp hv)
+  have hcard :
+      ((directionsDeterminedBy points).erase Direction.vertical).card =
+        (directionsDeterminedBy points).card := by
+    rw [Finset.erase_eq_of_notMem hv]
+  rw [directions_erase_vertical_card_eq_slopes_card] at hcard
+  exact hcard.symm
+
+/--
+The full projective direction set contains exactly the finite slopes, with
+possibly one additional vertical direction.
+-/
+theorem directions_card_le_slopes_card_succ (points : Finset Point2) :
+    (directionsDeterminedBy points).card ≤ (slopesDeterminedBy points).card + 1 := by
+  classical
+  by_cases hvert : HasVerticalPair points
+  · rw [directions_card_eq_slopes_card_add_one_of_hasVerticalPair hvert]
+  · rw [directions_card_eq_slopes_card_of_not_hasVerticalPair hvert]
     omega
-  · have hcard : finiteDirs.card = (directionsDeterminedBy points).card := by
-      dsimp [finiteDirs]
-      rw [Finset.erase_eq_of_notMem hv]
-    omega
+
+theorem not_hasVerticalPair_of_noVerticalPairs {points : Finset Point2}
+    (hnv : NoVerticalPairs points) : ¬ HasVerticalPair points := by
+  rintro ⟨p, hp, q, hq, hpq, hx⟩
+  exact hnv hp hq hpq hx
+
+theorem directions_card_eq_slopes_card_of_noVerticalPairs {points : Finset Point2}
+    (hnv : NoVerticalPairs points) :
+    (directionsDeterminedBy points).card = (slopesDeterminedBy points).card := by
+  exact directions_card_eq_slopes_card_of_not_hasVerticalPair
+    (not_hasVerticalPair_of_noVerticalPairs hnv)
 
 /--
 Ungar's direction-counting form implies the finite-slope form because at most

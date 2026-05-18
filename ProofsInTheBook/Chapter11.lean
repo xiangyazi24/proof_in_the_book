@@ -2018,6 +2018,19 @@ theorem crossingLabelsCard_eq_two_mul_moveOrder {k r : ℕ}
     GeneralizedAllowableSequence.crossingLabelsCard A.seq j = 2 * A.moveOrder j := by
   exact A.toStepCounting.crossed_labels_card j
 
+theorem not_isCrossing_iff_moveOrder_eq_zero {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) (j : Fin r) :
+    ¬ A.IsCrossing j ↔ A.moveOrder j = 0 := by
+  unfold IsCrossing
+  omega
+
+theorem crossingLabelsCard_eq_zero_of_not_isCrossing {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) {j : Fin r}
+    (hj : ¬ A.IsCrossing j) :
+    GeneralizedAllowableSequence.crossingLabelsCard A.seq j = 0 := by
+  rw [A.crossingLabelsCard_eq_two_mul_moveOrder j]
+  rw [(A.not_isCrossing_iff_moveOrder_eq_zero j).mp hj]
+
 theorem letters_cross {k r : ℕ} (A : CountedGeneralizedAllowableSequence k r) :
     2 * k ≤ ∑ j : Fin r, 2 * A.moveOrder j := by
   exact A.toStepCounting.letters_cross

@@ -1958,6 +1958,26 @@ theorem letters_cross {k r : ℕ} (A : CountedGeneralizedAllowableSequence k r) 
     2 * k ≤ ∑ j : Fin r, 2 * A.moveOrder j := by
   exact A.toStepCounting.letters_cross
 
+theorem sum_moveOrder_eq_sum_crossingMoves {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) :
+    (∑ j : Fin r, 2 * A.moveOrder j) =
+      ∑ j ∈ A.crossingMoves, 2 * A.moveOrder j := by
+  classical
+  exact (Finset.sum_subset (Finset.subset_univ A.crossingMoves) (by
+    intro j _hj hnot
+    have hnotCross : ¬ A.IsCrossing j := by
+      intro hjCross
+      exact hnot (A.mem_crossingMoves.mpr hjCross)
+    unfold IsCrossing at hnotCross
+    have hzero : A.moveOrder j = 0 := by omega
+    simp [hzero])).symm
+
+theorem letters_cross_crossingMoves {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) :
+    2 * k ≤ ∑ j ∈ A.crossingMoves, 2 * A.moveOrder j := by
+  rw [← A.sum_moveOrder_eq_sum_crossingMoves]
+  exact A.letters_cross
+
 theorem exists_crossing_move {k r : ℕ} (A : CountedGeneralizedAllowableSequence k r)
     (hk : 0 < k) :
     ∃ j : Fin r, A.IsCrossing j := by

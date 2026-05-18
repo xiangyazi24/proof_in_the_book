@@ -1,9 +1,9 @@
 # TODO: Remaining Premises to Prove
 
-All 40 chapters compile with 0 `sorry` and 0 `axiom`. However, 8 chapters
-take hard mathematical facts as explicit premises (function parameters)
-rather than proving them internally. Each premise marks the mathematical
-core of its chapter's book proof. This file tracks them for future work.
+All 40 chapters compiled with 0 `sorry` and 0 `axiom` before the active Ch31
+work began. During the Ch31 work-in-progress, the Cayley upper bound is
+localized as one explicit `sorry` target. The project goal remains to return
+to 0 `sorry` and 0 `axiom` after each premise is fully eliminated.
 
 ## Priority 1: Provable with current Mathlib
 
@@ -12,12 +12,12 @@ core of its chapter's book proof. This file tracks them for future work.
   Key lemma: `hall_from_partial_square` — if used symbols have witness cells and
   filled cells ≤ n-1, then Hall's condition holds. Injection via `Finset.card_le_card_of_injOn`.
 
-### Ch03: Sylvester smoothness core
+### ~~Ch03: Sylvester smoothness core~~ ✅
 - **File:** `Chapter03.lean` line 168
 - **Premise:** `hsmooth : n.descFactorial k ∉ (k+1).smoothNumbers`
 - **What it says:** Among k consecutive integers n, n-1, ..., n-k+1, at least one has a prime factor > k.
 - **How to prove:** The book uses Legendre's formula to bound p-adic valuations. For each prime p ≤ k, its total contribution to the product is bounded. The total smooth part cannot account for the full product. Key Mathlib tools: `Nat.factorization`, `Nat.descFactorial_eq_prod_range`.
-- **Estimated effort:** ~80 lines. The prime factorization bookkeeping is the main work.
+- **Status:** Proved via Erdős's Sylvester-Schur argument, with analytic large-range estimates and finite certificates for the small/below-square residues. `sylvester_general` no longer has the `hsmooth` premise.
 
 ### Ch11: Slopes count from rotating calipers
 - **File:** `Chapter11.lean` line 97
@@ -71,7 +71,7 @@ core of its chapter's book proof. This file tracks them for future work.
 | Chapter | Premise | Difficulty | Blocker | Status |
 |---------|---------|------------|---------|--------|
 | Ch33 | Hall's condition | Easy | None | ✅ **Done** |
-| Ch03 | Sylvester smoothness | Medium | None | ⬜ |
+| Ch03 | Sylvester smoothness | Medium | None | ✅ **Done** |
 | Ch31 | Prüfer encoding | Medium | Algorithm formalization | ⬜ |
 | Ch34 | Kernel-perfect orientation | Medium-Hard | None | ⬜ |
 | Ch11 | Rotating calipers | Medium | Convex hull | ⬜ |
@@ -80,4 +80,4 @@ core of its chapter's book proof. This file tracks them for future work.
 | Ch39 | Kneser lower bound | Very Hard | Borsuk-Ulam | ⬜ |
 
 Total estimated effort: ~1200 lines across 7 remaining chapters.
-Recommended attack order: Ch03 → Ch31 → Ch34 → Ch11 → Ch09 → Ch10 → Ch39.
+Recommended attack order: Ch31 → Ch34 → Ch11 → Ch09 → Ch10 → Ch39.

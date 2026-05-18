@@ -43,6 +43,33 @@ theorem pruferCodeSpace_card (n : ℕ) :
     Fintype.card (pruferCodeSpace n) = n ^ (n - 2) := by
   simp [pruferCodeSpace]
 
+/-!
+### Current target: eliminate the Cayley upper-bound premise
+
+The book chapter (Chapter 30 in `proofs_in_the_book.pdf`, Chapter31 in this
+repository) mentions Prüfer's code, then develops several alternate proofs:
+Joyal's function-to-doubly-rooted-tree bijection, Kirchhoff's matrix-tree
+proof, Riordan-Rényi recursion, and Pitman's double-counting proof for rooted
+forests.
+
+For this Lean file the immediate target is the upper bound needed to construct
+an injection into Prüfer code space:
+
+`Fintype.card (LabeledTree n) ≤ n ^ (n - 2)`.
+
+This is isolated here as the single remaining mathematical target for the
+chapter. The likely formalization route is still under evaluation:
+
+* Prüfer encoding uses Mathlib's `SimpleGraph.IsTree.exists_vert_degree_one_of_nontrivial`
+  and leaf deletion lemmas.
+* The book's Joyal/Pitman proofs may avoid recursive graph deletion but require
+  formalizing functional digraph cycles or rooted forests.
+-/
+theorem cayley_upper_bound (n : ℕ) (_hn : 2 ≤ n) :
+    Fintype.card (LabeledTree n) ≤ n ^ (n - 2) := by
+  classical
+  sorry
+
 /--
 The counting conclusion of Prüfer's proof once the actual Prüfer bijection is
 constructed.
@@ -122,13 +149,12 @@ noncomputable def injectiveOfCardLe (α β : Type*) [Fintype α] [Fintype β]
     fun a b h => (Fintype.equivFin α).injective (Fin.castLE_injective hcard
       ((Fintype.equivFin β).symm.injective h))⟩
 
-theorem prufer_encoding_exists (n : ℕ) (_hn : 2 ≤ n)
-    (hCayley : Fintype.card (LabeledTree n) ≤ n ^ (n - 2)) :
+theorem prufer_encoding_exists (n : ℕ) (hn : 2 ≤ n) :
     ∃ encode : LabeledTree n → pruferCodeSpace n,
       Function.Injective encode := by
   classical
   have hcard : Fintype.card (LabeledTree n) ≤ Fintype.card (pruferCodeSpace n) := by
-    rw [pruferCodeSpace_card]; exact hCayley
+    rw [pruferCodeSpace_card]; exact cayley_upper_bound n hn
   exact ⟨(injectiveOfCardLe _ _ hcard).1, (injectiveOfCardLe _ _ hcard).2⟩
 
 /--

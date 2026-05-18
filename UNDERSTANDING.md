@@ -5,19 +5,20 @@
 Full-book formalization of *Proofs from THE BOOK* (Aigner & Ziegler) in Lean 4.
 40 chapters, each formalizing one "book proof."
 
-**Current status after Ch33 fix (2026-05-17, DeepSeek v4 Pro session):**
+**Current status after Ch03 completion (2026-05-18):**
 
-- 40 chapters compile with 0 `sorry` and 0 `axiom`
-- 7 chapters have explicit premises (function parameters) marking difficult math
-- 1 premise eliminated (Ch33 Hall's condition)
-- Ch03 partial work done (Erdős 1934 paper located and analyzed, §1 proof scaffold built)
+- 40 chapters compiled with 0 `sorry` and 0 `axiom` before the active Ch31 scaffold.
+- Ch31 now has one localized `sorry` target, `cayley_upper_bound`, while the old external `hCayley` parameter is being eliminated.
+- Ch33 Hall's condition premise eliminated.
+- Ch03 Sylvester-Schur premise eliminated; `sylvester_general` now proves the binomial coefficient form directly from `2 * k ≤ n` and `0 < k`.
+- Next target: Ch31 Cayley upper bound / labeled tree enumeration.
 
 ## Premises to eliminate (from TODO.md)
 
 | Chapter | Premise | Difficulty | Status |
 |---------|---------|------------|--------|
 | Ch33 | Hall's condition | Easy | ✅ DONE |
-| Ch03 | Sylvester smoothness | Medium-Hard | ⬜ Partial |
+| Ch03 | Sylvester smoothness | Medium-Hard | ✅ DONE |
 | Ch31 | Prüfer encoding | Medium | ⬜ |
 | Ch34 | Kernel-perfect extension | Medium-Hard | ⬜ |
 | Ch11 | Rotating calipers | Medium | ⬜ |
@@ -39,7 +40,7 @@ times |S|, ≤ total filled cells ≤ n-1. If Hall failed, the product would be 
 (total used symbols across any set of columns ≤ n-1). Either works. The committed approach
 uses the P-representation.
 
-## Ch03 — Sylvester-Schur (PARTIAL)
+## Ch03 — Sylvester-Schur (DONE)
 
 ### What the book says
 
@@ -105,24 +106,41 @@ The factorization/product lemmas require precise knowledge of Mathlib4 API:
 
 A stronger model (Claude Opus) with better Mathlib4 knowledge should fix these in one pass.
 
-### What the current file has
+### Current file status
 
-`ProofsInTheBook/Chapter03.lean` is the original WORKING version (0 errors):
-- `sylvester_general (n k) (hn2k) (hkpos) (hsmooth)` — takes `hsmooth` as premise
-- `hsmooth : n.descFactorial k ∉ (k+1).smoothNumbers` — the Sylvester-Schur conclusion
-- All subsidiary lemmas about `HasPrimeFactorAbove`, `smoothNumbers` are complete
+`ProofsInTheBook/Chapter03.lean` now proves:
+
+```lean
+theorem sylvester_general (n k : ℕ) (hn : 2 * k ≤ n) (hk : 0 < k) :
+    ∃ p, k < p ∧ p.Prime ∧ p ∣ n.choose k
+```
+
+The proof combines Erdős-style factorization bounds, entropy/Stirling lower bounds,
+Chebyshev estimates, and finite certificates. See `CHAPTER03_EXPERIENCE.md`.
 
 ## Ch31 — Prüfer encoding (NOT STARTED)
 
 Premise: `hCayley : Fintype.card (LabeledTree n) ≤ n ^ (n-2)`
 
-Task: Construct the actual Prüfer encoding algorithm (repeatedly remove smallest leaf,
-record neighbor) to produce an injective map `LabeledTree n → Fin (n-2) → Fin n`.
+Task: Prove Cayley's upper bound for labeled trees, ideally by an explicit coding
+or by one of the book's enumerative proofs.
+
+Book reference: `proofs_in_the_book.pdf`, book Chapter 30, "Cayley's formula for the number of trees".
+The book first mentions Prüfer codes, but then develops Joyal's function-to-doubly-rooted-tree
+bijection, Kirchhoff's matrix-tree proof, Riordan-Rényi recursion, and Pitman's double-counting
+proof for rooted forests.
 
 This is algorithmic graph theory. Key lemmas needed:
 - `SimpleGraph.IsTree.exists_vert_degree_one_of_nontrivial` (leaf extraction)
 - Well-founded recursion on tree size
 - Injectivity: different trees → different Prüfer sequences
+
+Useful Mathlib API found:
+- `SimpleGraph.IsTree.card_edgeFinset`
+- `SimpleGraph.isTree_iff_connected_and_card`
+- `SimpleGraph.IsTree.exists_vert_degree_one_of_nontrivial`
+- `SimpleGraph.Connected.induce_compl_singleton_of_degree_eq_one`
+- `SimpleGraph.card_edgeFinset_deleteIncidenceSet`
 
 ## Ch34 — Kernel-perfect orientation
 

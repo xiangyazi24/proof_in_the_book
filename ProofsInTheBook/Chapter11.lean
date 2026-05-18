@@ -466,11 +466,14 @@ theorem ungar_adjacent_gap_sum_identity_int (c : ℕ) (hc : 1 ≤ c) (a : ℕ �
 
 /--
 Finite schedule of crossing moves in Ungar's middle-barrier proof.  The
-additional `idx` and gap fields are the data coming from the T/O/C pattern;
-the inherited `blocks_fit` is the arithmetic consequence currently used by
-the downstream certificate.
+`idx` and gap fields are the data coming from the T/O/C pattern; the
+`blocks_fit` part of the downstream counting certificate is proved from
+these gap assumptions by `UngarMoveSchedule.sum_orders_le_moves`.
 -/
-structure UngarMoveSchedule (k r : ℕ) extends UngarCountingCertificate (2 * k) r where
+structure UngarMoveSchedule (k r : ℕ) where
+  crossingCount : ℕ
+  order : Fin crossingCount → ℕ
+  letters_cross : 2 * k ≤ ∑ i : Fin crossingCount, 2 * order i
   two_le_crossingCount : 2 ≤ crossingCount
   idx : Fin crossingCount → Fin r
   idx_strict : ∀ {i j : Fin crossingCount}, i < j → (idx i).val < (idx j).val

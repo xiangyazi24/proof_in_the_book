@@ -1938,6 +1938,19 @@ def moveOrder {k r : ℕ} (A : CountedGeneralizedAllowableSequence k r) (j : Fin
 def IsCrossing {k r : ℕ} (A : CountedGeneralizedAllowableSequence k r) (j : Fin r) : Prop :=
   0 < A.moveOrder j
 
+def ConsecutiveCrossing {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) (i j : Fin r) : Prop :=
+  A.IsCrossing i ∧ A.IsCrossing j ∧ i.val < j.val ∧
+    ∀ l : Fin r, i.val < l.val → l.val < j.val → ¬ A.IsCrossing l
+
+def FirstCrossing {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) (i : Fin r) : Prop :=
+  A.IsCrossing i ∧ ∀ l : Fin r, l.val < i.val → ¬ A.IsCrossing l
+
+def LastCrossing {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) (i : Fin r) : Prop :=
+  A.IsCrossing i ∧ ∀ l : Fin r, i.val < l.val → ¬ A.IsCrossing l
+
 noncomputable def crossingMoves {k r : ℕ}
     (A : CountedGeneralizedAllowableSequence k r) : Finset (Fin r) := by
   classical
@@ -2135,6 +2148,37 @@ theorem not_isCrossing_after_last_crossingIdx {k r : ℕ}
       (A.crossingIdx ⟨A.crossingMoves.card - 1, by omega⟩).val :=
     hidxle
   omega
+
+theorem consecutive_crossingIdx_succ {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r)
+    (i : ℕ) (hi : i + 1 < A.crossingMoves.card) :
+    A.ConsecutiveCrossing (A.crossingIdx ⟨i, by omega⟩)
+      (A.crossingIdx ⟨i + 1, by omega⟩) := by
+  refine ⟨A.crossingIdx_isCrossing _, A.crossingIdx_isCrossing _, ?_, ?_⟩
+  · have hfinlt :
+        (⟨i, by omega⟩ : Fin A.crossingMoves.card) <
+          (⟨i + 1, by omega⟩ : Fin A.crossingMoves.card) := by
+        change i < i + 1
+        omega
+    exact A.crossingIdx_strict hfinlt
+  · intro l hlo hhi
+    exact A.not_isCrossing_between_crossingIdx_succ i hi hlo hhi
+
+theorem first_crossingIdx {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r)
+    (hpos : 0 < A.crossingMoves.card) :
+    A.FirstCrossing (A.crossingIdx ⟨0, hpos⟩) := by
+  refine ⟨A.crossingIdx_isCrossing _, ?_⟩
+  intro l hlt
+  exact A.not_isCrossing_before_first_crossingIdx hpos hlt
+
+theorem last_crossingIdx {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r)
+    (hpos : 0 < A.crossingMoves.card) :
+    A.LastCrossing (A.crossingIdx ⟨A.crossingMoves.card - 1, by omega⟩) := by
+  refine ⟨A.crossingIdx_isCrossing _, ?_⟩
+  intro l hlt
+  exact A.not_isCrossing_after_last_crossingIdx hpos hlt
 
 theorem sum_crossingIdx_eq_sum_crossingMoves {k r : ℕ}
     (A : CountedGeneralizedAllowableSequence k r) :

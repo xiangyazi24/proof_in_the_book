@@ -52,6 +52,27 @@ open Nat
 def HasPrimeFactorAbove (k m : ℕ) : Prop :=
   ∃ p, k < p ∧ p.Prime ∧ p ∣ m
 
+def NoLargePrimeFactor (k m : ℕ) : Prop :=
+  ∀ p, p.Prime → p ∣ m → p ≤ k
+
+theorem not_hasPrimeFactorAbove_iff_noLargePrimeFactor {k m : ℕ} :
+    ¬ HasPrimeFactorAbove k m ↔ NoLargePrimeFactor k m := by
+  constructor
+  · intro h p hp hpdvd
+    by_contra hkp
+    exact h ⟨p, by omega, hp, hpdvd⟩
+  · rintro h ⟨p, hkp, hp, hpdvd⟩
+    exact (not_lt_of_ge (h p hp hpdvd)) hkp
+
+theorem factorization_choose_eq_zero_of_noLargePrimeFactor
+    {n k p : ℕ} (hno : NoLargePrimeFactor k (n.choose k)) (hkp : k < p) :
+    (n.choose k).factorization p = 0 := by
+  by_cases hp : p.Prime
+  · by_contra hne
+    have hpdvd : p ∣ n.choose k := Nat.dvd_of_factorization_pos hne
+    exact (not_lt_of_ge (hno p hp hpdvd)) hkp
+  · exact Nat.factorization_eq_zero_of_not_prime (n.choose k) hp
+
 /--
 Factorial form of the standard binomial-divisibility argument: if a prime
 divides `n!` but not the two factorial factors in
@@ -214,6 +235,12 @@ theorem chapter03_sylvester (k : ℕ) (hk : 0 < k) :
 theorem chapter03_sylvester_descFactorial (k : ℕ) (hk : 0 < k) :
     HasPrimeFactorAbove k ((2 * k).descFactorial k) :=
   exists_large_prime_dvd_descFactorial_of_choose (chapter03_sylvester k hk)
+
+theorem sylvester_schur_descFactorial_one {n : ℕ} (hn : 2 * 1 ≤ n) :
+    HasPrimeFactorAbove 1 (n.descFactorial 1) := by
+  have hn_ne_one : n ≠ 1 := by omega
+  rcases Nat.ne_one_iff_exists_prime_dvd.mp hn_ne_one with ⟨p, hp, hpdvd⟩
+  exact ⟨p, hp.one_lt, hp, by simpa [Nat.descFactorial_one] using hpdvd⟩
 
 /-!
 ### Binomial coefficients are almost never powers

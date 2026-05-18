@@ -656,6 +656,63 @@ theorem every_label_crosses {k r : ℕ} (A : GeneralizedAllowableSequence k r)
   · exact (hbad.mp h0) h0
   · exact h0 (hbad.mpr h0)
 
+/-- The number of labels crossing the middle barrier in one step. -/
+noncomputable def crossingLabelsCard {k r : ℕ} (A : GeneralizedAllowableSequence k r)
+    (j : Fin r) : ℕ := by
+  classical
+  exact Fintype.card
+    {a : Fin (2 * k) //
+      crossesMiddle k (A.π (stepFrom j)) (A.π (stepTo j)) a}
+
+/--
+Step-level crossing counts for a generalized allowable sequence.  The
+geometric block-reversal layer will prove `crossed_labels_card`; this finite
+layer only uses the count.
+-/
+structure StepCounting {k r : ℕ} (A : GeneralizedAllowableSequence k r) where
+  order : Fin r → ℕ
+  crossed_labels_card :
+    ∀ j : Fin r, crossingLabelsCard A j = 2 * order j
+
+/--
+Every label crosses the middle at least once, so the sum of step crossing
+counts is at least the number of labels.
+-/
+theorem StepCounting.letters_cross {k r : ℕ} {A : GeneralizedAllowableSequence k r}
+    (C : StepCounting A) :
+    2 * k ≤ ∑ j : Fin r, 2 * C.order j := by
+  classical
+  let pick : Fin (2 * k) → Fin r := fun a =>
+    Classical.choose (A.every_label_crosses a)
+  let packed :
+      Fin (2 * k) →
+        Σ j : Fin r,
+          {a : Fin (2 * k) //
+            crossesMiddle k (A.π (stepFrom j)) (A.π (stepTo j)) a} :=
+    fun a => ⟨pick a, ⟨a, Classical.choose_spec (A.every_label_crosses a)⟩⟩
+  let unpack :
+      (Σ j : Fin r,
+        {a : Fin (2 * k) //
+          crossesMiddle k (A.π (stepFrom j)) (A.π (stepTo j)) a}) →
+        Fin (2 * k) :=
+    fun x => x.2.1
+  have hinj : Function.Injective packed := by
+    intro a b h
+    have hval := congrArg unpack h
+    simpa [packed, unpack] using hval
+  have hcard := Fintype.card_le_of_injective packed hinj
+  have hcard' :
+      2 * k ≤
+        ∑ j : Fin r, crossingLabelsCard A j := by
+    simpa [crossingLabelsCard, Fintype.card_fin, Fintype.card_sigma] using hcard
+  have hsum :
+      (∑ j : Fin r, crossingLabelsCard A j) =
+        ∑ j : Fin r, 2 * C.order j := by
+    apply Finset.sum_congr rfl
+    intro j _hj
+    exact C.crossed_labels_card j
+  rwa [hsum] at hcard'
+
 end GeneralizedAllowableSequence
 
 /--

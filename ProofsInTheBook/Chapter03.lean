@@ -55,6 +55,11 @@ def HasPrimeFactorAbove (k m : ℕ) : Prop :=
 def NoLargePrimeFactor (k m : ℕ) : Prop :=
   ∀ p, p.Prime → p ∣ m → p ≤ k
 
+noncomputable def entropyTerm (n k : ℕ) : ℝ :=
+  (n : ℝ) * Real.log n
+    - (k : ℝ) * Real.log k
+    - ((n - k : ℕ) : ℝ) * Real.log (n - k)
+
 theorem not_hasPrimeFactorAbove_iff_noLargePrimeFactor {k m : ℕ} :
     ¬ HasPrimeFactorAbove k m ↔ NoLargePrimeFactor k m := by
   constructor
@@ -253,6 +258,54 @@ theorem mul_log_sub_mul_log_le_log_choose {n k : ℕ}
         (pow_ne_zero _ (by exact_mod_cast hkpos.ne' : (k : ℝ) ≠ 0))
         (by exact_mod_cast hchoose_pos.ne')]
       ring
+
+theorem log_factorial_le_stirling_upper {m : ℕ} (hm : m ≠ 0) :
+    Real.log (m !) ≤ (m : ℝ) * Real.log m - (m : ℝ) + Real.log m / 2 + 1 := by
+  have hlogseq : Real.log (Stirling.stirlingSeq m) ≤ Real.log (Stirling.stirlingSeq 1) := by
+    obtain ⟨t, rfl⟩ := Nat.exists_eq_succ_of_ne_zero hm
+    exact Real.log_le_log (Stirling.stirlingSeq'_pos t)
+      (Stirling.stirlingSeq'_antitone (Nat.zero_le t))
+  have hformula := Stirling.log_stirlingSeq_formula m
+  have hone : Real.log (Stirling.stirlingSeq 1) = 1 - Real.log 2 / 2 := by
+    rw [Stirling.stirlingSeq_one, Real.log_div, Real.log_exp]
+    · rw [Real.log_sqrt (by norm_num : (0 : ℝ) ≤ 2)]
+    · positivity
+    · positivity
+  rw [hformula, hone] at hlogseq
+  rw [Real.log_mul (x := (2 : ℝ)) (y := (m : ℝ)), Real.log_div, Real.log_exp] at hlogseq
+  · nlinarith
+  all_goals positivity
+
+theorem entropy_lower_le_log_choose {n k : ℕ} (hkpos : 0 < k) (hklt : k < n) :
+    entropyTerm n k
+      + Real.log n / 2 - Real.log k / 2 - Real.log (n - k) / 2
+      + Real.log (2 * Real.pi) / 2 - 2
+      ≤ Real.log (n.choose k) := by
+  have hkn : k ≤ n := le_of_lt hklt
+  have hnpos : 0 < n := hkpos.trans hklt
+  have hrpos : 0 < n - k := Nat.sub_pos_of_lt hklt
+  have hchoose_pos : 0 < n.choose k := Nat.choose_pos hkn
+  have hfac_nat := Nat.choose_mul_factorial_mul_factorial hkn
+  have hfac : (n.choose k : ℝ) * (k ! : ℝ) * ((n - k)! : ℝ) = (n ! : ℝ) := by
+    exact_mod_cast hfac_nat
+  have hlogfac :
+      Real.log (n !) = Real.log (n.choose k) + Real.log (k !) + Real.log ((n - k)!) := by
+    rw [← hfac]
+    rw [Real.log_mul
+        (mul_ne_zero (by exact_mod_cast hchoose_pos.ne') (by exact_mod_cast (Nat.factorial_pos k).ne'))
+        (by exact_mod_cast (Nat.factorial_pos (n - k)).ne'),
+      Real.log_mul
+        (by exact_mod_cast hchoose_pos.ne')
+        (by exact_mod_cast (Nat.factorial_pos k).ne')]
+  have hN := Stirling.le_log_factorial_stirling (show n ≠ 0 from hnpos.ne')
+  have hK := log_factorial_le_stirling_upper (m := k) hkpos.ne'
+  have hR := log_factorial_le_stirling_upper (m := n - k) hrpos.ne'
+  have hcast_sub : ((n - k : ℕ) : ℝ) = (n : ℝ) - (k : ℝ) := by
+    exact Nat.cast_sub hkn
+  rw [hlogfac] at hN
+  unfold entropyTerm
+  rw [hcast_sub] at hR ⊢
+  nlinarith
 
 theorem erdos_log_sandwich_of_noLargePrimeFactor
     {n k : ℕ} (hkpos : 0 < k) (hnpos : 0 < n) (hkn : k ≤ n)

@@ -181,6 +181,30 @@ theorem choose_le_sqrt_mul_four_pow_min_third_of_noLargePrimeFactor
     refine Finset.prod_le_prod_of_subset_of_one_le' (Finset.filter_subset _ _) ?_
     exact fun p hp _ => (Finset.mem_filter.1 hp).2.one_lt.le
 
+theorem pow_mul_self_descFactorial_le_pow_mul_descFactorial {n k : ℕ} (hkn : k ≤ n) :
+    n ^ k * k.descFactorial k ≤ k ^ k * n.descFactorial k := by
+  have hnprod : n ^ k = ∏ _i ∈ Finset.range k, n := by
+    rw [Finset.prod_const, Finset.card_range]
+  have hkprod : k ^ k = ∏ _i ∈ Finset.range k, k := by
+    rw [Finset.prod_const, Finset.card_range]
+  rw [Nat.descFactorial_eq_prod_range k, Nat.descFactorial_eq_prod_range n,
+    hnprod, hkprod, ← Finset.prod_mul_distrib, ← Finset.prod_mul_distrib]
+  exact Finset.prod_le_prod' fun i hi => by
+    rw [Finset.mem_range] at hi
+    have hik : i ≤ k := le_of_lt hi
+    have hki : k * i ≤ n * i := Nat.mul_le_mul_right i hkn
+    rw [Nat.mul_sub_left_distrib, Nat.mul_sub_left_distrib, Nat.mul_comm k n]
+    exact Nat.sub_le_sub_left hki (n * k)
+
+theorem pow_le_pow_mul_choose {n k : ℕ} (hkn : k ≤ n) :
+    n ^ k ≤ k ^ k * n.choose k := by
+  have h :=
+    pow_mul_self_descFactorial_le_pow_mul_descFactorial (n := n) (k := k) hkn
+  rw [Nat.descFactorial_self, Nat.descFactorial_eq_factorial_mul_choose] at h
+  have hcancel : k ! * n ^ k ≤ k ! * (k ^ k * n.choose k) := by
+    simpa [mul_assoc, mul_comm, mul_left_comm] using h
+  exact le_of_mul_le_mul_left hcancel (Nat.factorial_pos k)
+
 /--
 Factorial form of the standard binomial-divisibility argument: if a prime
 divides `n!` but not the two factorial factors in

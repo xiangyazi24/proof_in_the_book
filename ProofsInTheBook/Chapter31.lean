@@ -138,6 +138,47 @@ noncomputable def deleteSmallestLeafTreeSucc (m : ℕ) (hm : 1 ≤ m)
   exact (SimpleGraph.Iso.isTree_iff
     (SimpleGraph.Iso.comap e (T.1.induce ({leaf}ᶜ : Set (Fin (m + 1)))))).mpr hdel
 
+/-- A labeled tree with two distinguished vertices, the object counted in Joyal's proof. -/
+abbrev DoublyRootedLabeledTree (n : ℕ) : Type :=
+  LabeledTree n × Fin n × Fin n
+
+theorem doublyRootedLabeledTree_card (n : ℕ) :
+    Fintype.card (DoublyRootedLabeledTree n) = Fintype.card (LabeledTree n) * n * n := by
+  simp [DoublyRootedLabeledTree, Nat.mul_assoc]
+
+theorem endofunction_card (n : ℕ) :
+    Fintype.card (Fin n → Fin n) = n ^ n := by
+  simp
+
+/--
+The numerical part of Joyal's proof: an injection from doubly-rooted labeled trees
+to endofunctions on `Fin n` implies Cayley's upper bound.
+-/
+theorem cayley_upper_bound_of_joyal_injection (n : ℕ) (hn : 2 ≤ n)
+    (hcard : Fintype.card (DoublyRootedLabeledTree n) ≤ Fintype.card (Fin n → Fin n)) :
+    Fintype.card (LabeledTree n) ≤ n ^ (n - 2) := by
+  rw [doublyRootedLabeledTree_card, endofunction_card] at hcard
+  have hnpos : 0 < n := by omega
+  have hfactor_pos : 0 < n * n := Nat.mul_pos hnpos hnpos
+  have hpow : n ^ n = n ^ (n - 2) * (n * n) := by
+    calc
+      n ^ n = n ^ ((n - 2) + 2) := by congr; omega
+      _ = n ^ (n - 2) * n ^ 2 := by rw [pow_add]
+      _ = n ^ (n - 2) * (n * n) := by rw [pow_two]
+  have hmul : Fintype.card (LabeledTree n) * (n * n) ≤ n ^ (n - 2) * (n * n) := by
+    simpa [Nat.mul_assoc, hpow] using hcard
+  exact Nat.le_of_mul_le_mul_right hmul hfactor_pos
+
+/--
+Joyal's theorem specialized to the direction needed here.  The book constructs
+a bijection between endofunctions on `Fin n` and doubly-rooted labeled trees;
+this cardinal inequality is the remaining formal content of that bijection.
+-/
+theorem joyal_doubly_rooted_card_bound (n : ℕ) :
+    Fintype.card (DoublyRootedLabeledTree n) ≤ Fintype.card (Fin n → Fin n) := by
+  classical
+  sorry
+
 /-!
 ### Current target: eliminate the Cayley upper-bound premise
 
@@ -163,7 +204,7 @@ chapter. The likely formalization route is still under evaluation:
 theorem cayley_upper_bound (n : ℕ) (_hn : 2 ≤ n) :
     Fintype.card (LabeledTree n) ≤ n ^ (n - 2) := by
   classical
-  sorry
+  exact cayley_upper_bound_of_joyal_injection n _hn (joyal_doubly_rooted_card_bound n)
 
 /--
 The counting conclusion of Prüfer's proof once the actual Prüfer bijection is

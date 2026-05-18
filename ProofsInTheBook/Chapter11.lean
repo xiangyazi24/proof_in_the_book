@@ -344,6 +344,36 @@ theorem UngarBlockPacking.blocks_fit {t crossingCount : ℕ}
   simpa [Fintype.card_sigma, Fintype.card_fin] using hcard
 
 /--
+An equivalent, more geometric way to certify the T/O/C block packing: assign
+to each crossing move a block of positions inside one period, with the blocks
+pairwise disjoint and of the prescribed size.
+-/
+structure UngarDisjointBlockPacking (t crossingCount : ℕ)
+    (order : Fin crossingCount → ℕ) where
+  block : Fin crossingCount → Finset (Fin t)
+  block_card : ∀ i, (block i).card = 2 * order i
+  pairwise_disjoint :
+    ((Finset.univ : Finset (Fin crossingCount)) : Set (Fin crossingCount)).PairwiseDisjoint block
+
+theorem UngarDisjointBlockPacking.blocks_fit {t crossingCount : ℕ}
+    {order : Fin crossingCount → ℕ}
+    (packing : UngarDisjointBlockPacking t crossingCount order) :
+    (∑ i : Fin crossingCount, 2 * order i) ≤ t := by
+  classical
+  have hcard :
+      ((Finset.univ : Finset (Fin crossingCount)).biUnion packing.block).card =
+        ∑ i : Fin crossingCount, (packing.block i).card := by
+    simpa using
+      (Finset.card_biUnion (s := (Finset.univ : Finset (Fin crossingCount)))
+        (t := packing.block) packing.pairwise_disjoint)
+  have hle :
+      ((Finset.univ : Finset (Fin crossingCount)).biUnion packing.block).card ≤ t := by
+    simpa [Fintype.card_fin] using
+      (((Finset.univ : Finset (Fin crossingCount)).biUnion packing.block).card_le_univ)
+  rw [hcard] at hle
+  simpa [packing.block_card] using hle
+
+/--
 The finite sweep certificate that remains to be extracted from the rotating
 projection sequence: crossing orders, enough letter crossings, and a block
 packing inside one period.
@@ -353,6 +383,16 @@ structure UngarSweepCertificate (n t : ℕ) where
   order : Fin crossingCount → ℕ
   letters_cross : n ≤ ∑ i : Fin crossingCount, 2 * order i
   packing : UngarBlockPacking t crossingCount order
+
+/--
+Same sweep certificate, but using explicit disjoint blocks in the period.
+This is usually the easier object to extract from the T/O/C pattern.
+-/
+structure UngarFinsetSweepCertificate (n t : ℕ) where
+  crossingCount : ℕ
+  order : Fin crossingCount → ℕ
+  letters_cross : n ≤ ∑ i : Fin crossingCount, 2 * order i
+  packing : UngarDisjointBlockPacking t crossingCount order
 
 def UngarSweepCertificate.toCountingCertificate {n t : ℕ}
     (cert : UngarSweepCertificate n t) : UngarCountingCertificate n t where
@@ -365,6 +405,17 @@ theorem UngarSweepCertificate.length_lower_bound {n t : ℕ}
     (cert : UngarSweepCertificate n t) : n ≤ t :=
   cert.toCountingCertificate.length_lower_bound
 
+def UngarFinsetSweepCertificate.toCountingCertificate {n t : ℕ}
+    (cert : UngarFinsetSweepCertificate n t) : UngarCountingCertificate n t where
+  crossingCount := cert.crossingCount
+  order := cert.order
+  letters_cross := cert.letters_cross
+  blocks_fit := cert.packing.blocks_fit
+
+theorem UngarFinsetSweepCertificate.length_lower_bound {n t : ℕ}
+    (cert : UngarFinsetSweepCertificate n t) : n ≤ t :=
+  cert.toCountingCertificate.length_lower_bound
+
 theorem even_direction_bound_of_ungar_counting_certificate (points : Finset Point2)
     (cert : UngarCountingCertificate points.card (directionsDeterminedBy points).card) :
     points.card ≤ (directionsDeterminedBy points).card :=
@@ -372,6 +423,11 @@ theorem even_direction_bound_of_ungar_counting_certificate (points : Finset Poin
 
 theorem even_direction_bound_of_ungar_sweep_certificate (points : Finset Point2)
     (cert : UngarSweepCertificate points.card (directionsDeterminedBy points).card) :
+    points.card ≤ (directionsDeterminedBy points).card :=
+  cert.length_lower_bound
+
+theorem even_direction_bound_of_ungar_finset_sweep_certificate (points : Finset Point2)
+    (cert : UngarFinsetSweepCertificate points.card (directionsDeterminedBy points).card) :
     points.card ≤ (directionsDeterminedBy points).card :=
   cert.length_lower_bound
 

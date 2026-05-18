@@ -1021,6 +1021,79 @@ theorem leftMirrorCrossingPositions_card_eq_crossOrder_of_crossing {k : ℕ}
     simp
     omega
 
+/-- Positions in `I` on the right of the middle whose mirror lies on the left. -/
+noncomputable def rightMirrorCrossingPositions (k : ℕ) (I : PositionInterval (2 * k)) :
+    Finset (Fin (2 * k)) := by
+  classical
+  exact I.toFinset.filter fun p => k ≤ p.val ∧ I.lo + I.hi + 1 - k ≤ p.val
+
+theorem rightMirrorCrossingPositions_card_eq_crossOrder_of_crossing {k : ℕ}
+    (I : PositionInterval (2 * k)) (hcross : I.lo < k ∧ k ≤ I.hi) :
+    (rightMirrorCrossingPositions k I).card = I.crossOrder k := by
+  classical
+  let e : Fin (2 * k) ↪ ℕ := ⟨Fin.val, by intro a b h; exact Fin.ext h⟩
+  by_cases hle : k - I.lo ≤ I.hi + 1 - k
+  · have hmap :
+        (rightMirrorCrossingPositions k I).map e =
+          Finset.Icc (I.lo + I.hi + 1 - k) I.hi := by
+      ext n
+      constructor
+      · intro hn
+        rcases Finset.mem_map.mp hn with ⟨p, hp, hpval⟩
+        rw [rightMirrorCrossingPositions, Finset.mem_filter, mem_toFinset] at hp
+        simp [e] at hpval
+        subst n
+        exact Finset.mem_Icc.mpr ⟨hp.2.2, hp.1.2⟩
+      · intro hn
+        rcases Finset.mem_Icc.mp hn with ⟨hlo, hhi⟩
+        have hlow_ge_k : k ≤ I.lo + I.hi + 1 - k := by omega
+        have hnlt : n < 2 * k := lt_of_le_of_lt hhi I.hi_lt
+        refine Finset.mem_map.mpr ⟨⟨n, hnlt⟩, ?_, ?_⟩
+        · rw [rightMirrorCrossingPositions, Finset.mem_filter, mem_toFinset]
+          exact ⟨⟨le_trans hcross.1.le (le_trans hlow_ge_k hlo), hhi⟩,
+            le_trans hlow_ge_k hlo, hlo⟩
+        · simp [e]
+    have hcard_map :
+        ((rightMirrorCrossingPositions k I).map e).card =
+          (rightMirrorCrossingPositions k I).card :=
+      Finset.card_map e
+    rw [hmap] at hcard_map
+    rw [← hcard_map, crossOrder_eq_min_of_crossing hcross]
+    have hmin : Nat.min (k - I.lo) (I.hi + 1 - k) = k - I.lo :=
+      Nat.min_eq_left hle
+    rw [hmin]
+    simp
+    omega
+  · have hle' : I.hi + 1 - k < k - I.lo := Nat.lt_of_not_ge hle
+    have hmap :
+        (rightMirrorCrossingPositions k I).map e = Finset.Icc k I.hi := by
+      ext n
+      constructor
+      · intro hn
+        rcases Finset.mem_map.mp hn with ⟨p, hp, hpval⟩
+        rw [rightMirrorCrossingPositions, Finset.mem_filter, mem_toFinset] at hp
+        simp [e] at hpval
+        subst n
+        exact Finset.mem_Icc.mpr ⟨hp.2.1, hp.1.2⟩
+      · intro hn
+        rcases Finset.mem_Icc.mp hn with ⟨hk, hhi⟩
+        have hthreshold_le_k : I.lo + I.hi + 1 - k ≤ k := by omega
+        have hnlt : n < 2 * k := lt_of_le_of_lt hhi I.hi_lt
+        refine Finset.mem_map.mpr ⟨⟨n, hnlt⟩, ?_, ?_⟩
+        · rw [rightMirrorCrossingPositions, Finset.mem_filter, mem_toFinset]
+          exact ⟨⟨le_trans hcross.1.le hk, hhi⟩, hk, le_trans hthreshold_le_k hk⟩
+        · simp [e]
+    have hcard_map :
+        ((rightMirrorCrossingPositions k I).map e).card =
+          (rightMirrorCrossingPositions k I).card :=
+      Finset.card_map e
+    rw [hmap] at hcard_map
+    rw [← hcard_map, crossOrder_eq_min_of_crossing hcross]
+    have hmin : Nat.min (k - I.lo) (I.hi + 1 - k) = I.hi + 1 - k :=
+      Nat.min_eq_right hle'.le
+    rw [hmin]
+    simp
+
 theorem crossOrder_eq_min_side_cards_of_crossing {k : ℕ} (I : PositionInterval (2 * k))
     (hcross : I.lo < k ∧ k ≤ I.hi) :
     I.crossOrder k =

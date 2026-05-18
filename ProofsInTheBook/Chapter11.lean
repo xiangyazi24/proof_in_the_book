@@ -1698,6 +1698,12 @@ structure CountedReversalStep (k : ℕ) (π ρ : State (2 * k)) extends
     ReversalStep k π ρ where
   crossed_labels_card : stepCrossingLabelsCard k π ρ = 2 * toReversalStep.order
 
+noncomputable def CountedReversalStep.ofReversesBlocks {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) :
+    CountedReversalStep k π ρ where
+  toReversalStep := M
+  crossed_labels_card := crossed_labels_card_of_reversesBlocks M hrev
+
 /-- A generalized allowable sequence with counted reversal data on every step. -/
 structure CountedGeneralizedAllowableSequence (k r : ℕ) where
   seq : GeneralizedAllowableSequence k r

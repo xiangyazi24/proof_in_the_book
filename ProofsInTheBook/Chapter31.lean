@@ -255,6 +255,46 @@ theorem joyalTreeToFunction_apply_of_not_mem (X : DoublyRootedLabeledTree n)
     joyalTreeToFunction X v = joyalOffPathValue X v hv := by
   simp [joyalTreeToFunction, hv]
 
+noncomputable def periodicCore (f : Fin n → Fin n) : Finset (Fin n) := by
+  classical
+  exact Finset.univ.filter fun v => ∃ m : ℕ, 0 < m ∧ f^[m] v = v
+
+theorem mem_periodicCore_iff (f : Fin n → Fin n) (v : Fin n) :
+    v ∈ periodicCore f ↔ ∃ m : ℕ, 0 < m ∧ f^[m] v = v := by
+  simp [periodicCore]
+
+theorem joyalPathTableValue_mem_pathVertices (X : DoublyRootedLabeledTree n)
+    {v : Fin n} (hv : v ∈ joyalPathVertices X) :
+    joyalPathTableValue X v hv ∈ joyalPathVertices X := by
+  classical
+  unfold joyalPathTableValue
+  simp only
+  have hvd : v ∈ joyalPathDomainOrder X := by
+    simpa [joyalPathDomainOrder] using hv
+  have hidx : List.idxOf v (joyalPathDomainOrder X) <
+      (treePath X.1 X.2.1 X.2.2).support.length := by
+    have hdom : List.idxOf v (joyalPathDomainOrder X) < (joyalPathDomainOrder X).length :=
+      List.idxOf_lt_length_iff.mpr hvd
+    rwa [joyalPathOrders_length_eq X, joyalPathRangeOrder] at hdom
+  change (treePath X.1 X.2.1 X.2.2).support[List.idxOf v (joyalPathDomainOrder X)]'hidx ∈
+    (treePath X.1 X.2.1 X.2.2).support.toFinset
+  exact List.mem_toFinset.mpr (List.get_mem (treePath X.1 X.2.1 X.2.2).support _)
+
+theorem joyalTreeToFunction_maps_pathVertices (X : DoublyRootedLabeledTree n)
+    {v : Fin n} (hv : v ∈ joyalPathVertices X) :
+    joyalTreeToFunction X v ∈ joyalPathVertices X := by
+  rw [joyalTreeToFunction_apply_of_mem X hv]
+  exact joyalPathTableValue_mem_pathVertices X hv
+
+/--
+Joyal's path vertices are exactly the periodic core of the associated endofunction.
+This is the formal version of the book's subset `M`.
+-/
+theorem periodicCore_joyalTreeToFunction (X : DoublyRootedLabeledTree n) :
+    periodicCore (joyalTreeToFunction X) = joyalPathVertices X := by
+  classical
+  sorry
+
 theorem joyalPathRangeOrder_zero (X : DoublyRootedLabeledTree n)
     (h : 0 < (joyalPathRangeOrder X).length) :
     (joyalPathRangeOrder X)[0]'h = X.2.1 := by

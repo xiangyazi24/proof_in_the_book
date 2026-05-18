@@ -428,6 +428,21 @@ theorem UngarMoveSchedule.sum_orders_le_moves {k r : ℕ}
     (∑ i : Fin C.crossingCount, 2 * C.order i) ≤ r :=
   C.blocks_fit
 
+theorem UngarMoveSchedule.crossingCount_le_moves {k r : ℕ}
+    (C : UngarMoveSchedule k r) :
+    C.crossingCount ≤ r := by
+  have hinj : Function.Injective C.idx := by
+    intro i j hij
+    rcases lt_trichotomy i j with hlt | heq | hgt
+    · have hval_lt := C.idx_strict hlt
+      have hval_eq : (C.idx i).val = (C.idx j).val := congrArg Fin.val hij
+      omega
+    · exact heq
+    · have hval_lt := C.idx_strict hgt
+      have hval_eq : (C.idx j).val = (C.idx i).val := congrArg Fin.val hij.symm
+      omega
+  simpa [Fintype.card_fin] using Fintype.card_le_of_injective C.idx hinj
+
 def UngarMoveSchedule.toCountingCertificate {k r : ℕ}
     (C : UngarMoveSchedule k r) : UngarCountingCertificate (2 * k) r where
   crossingCount := C.crossingCount

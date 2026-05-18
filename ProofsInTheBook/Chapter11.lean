@@ -1932,6 +1932,36 @@ noncomputable def toStepCounting {k r : ℕ} (A : CountedGeneralizedAllowableSeq
     simpa [GeneralizedAllowableSequence.crossingLabelsCard, stepCrossingLabelsCard]
       using (A.step j).crossed_labels_card
 
+def moveOrder {k r : ℕ} (A : CountedGeneralizedAllowableSequence k r) (j : Fin r) : ℕ :=
+  (A.step j).toReversalStep.order
+
+def IsCrossing {k r : ℕ} (A : CountedGeneralizedAllowableSequence k r) (j : Fin r) : Prop :=
+  0 < A.moveOrder j
+
+theorem crossingLabelsCard_eq_two_mul_moveOrder {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) (j : Fin r) :
+    GeneralizedAllowableSequence.crossingLabelsCard A.seq j = 2 * A.moveOrder j := by
+  exact A.toStepCounting.crossed_labels_card j
+
+theorem letters_cross {k r : ℕ} (A : CountedGeneralizedAllowableSequence k r) :
+    2 * k ≤ ∑ j : Fin r, 2 * A.moveOrder j := by
+  exact A.toStepCounting.letters_cross
+
+theorem exists_crossing_move {k r : ℕ} (A : CountedGeneralizedAllowableSequence k r)
+    (hk : 0 < k) :
+    ∃ j : Fin r, A.IsCrossing j := by
+  classical
+  let a : Fin (2 * k) := ⟨0, by omega⟩
+  rcases A.seq.every_label_crosses a with ⟨j, hj⟩
+  refine ⟨j, ?_⟩
+  have hcard_pos :
+      0 < GeneralizedAllowableSequence.crossingLabelsCard A.seq j := by
+    unfold GeneralizedAllowableSequence.crossingLabelsCard
+    exact Fintype.card_pos_iff.mpr ⟨⟨a, hj⟩⟩
+  have hcount := A.crossingLabelsCard_eq_two_mul_moveOrder j
+  unfold IsCrossing
+  omega
+
 /-- Counted reversal steps plus a packing proof give a counting certificate. -/
 noncomputable def toCountingCertificate {k r : ℕ}
     (A : CountedGeneralizedAllowableSequence k r)

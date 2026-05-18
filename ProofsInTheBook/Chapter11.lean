@@ -964,6 +964,21 @@ theorem isCrossing_iff_exists_crossing_block {k : ℕ} {π ρ : State (2 * k)}
   · rintro ⟨i, hcross⟩
     exact ⟨i, by simp, (M.move.block i).crossOrder_pos_iff.mpr hcross⟩
 
+theorem order_eq_crossOrder_of_crossing_block {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) {i : Fin M.move.blockCount}
+    (hi : (M.move.block i).lo < k ∧ k ≤ (M.move.block i).hi) :
+    M.order = (M.move.block i).crossOrder k := by
+  classical
+  unfold order
+  rw [Finset.sum_eq_single i]
+  · intro j _hj hji
+    have hnot : ¬ ((M.move.block j).lo < k ∧ k ≤ (M.move.block j).hi) := by
+      intro hjcross
+      exact hji ((M.move.crossing_blocks_eq hi hjcross).symm)
+    exact PositionInterval.crossOrder_eq_zero_of_not_crossing hnot
+  · intro hi_not
+    exact False.elim (hi_not (by simp))
+
 /-- The labels crossing in one reversal step fit inside the full position set. -/
 theorem two_mul_order_le_positions {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) :

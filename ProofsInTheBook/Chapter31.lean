@@ -499,6 +499,23 @@ theorem joyalPathDomainOrder_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
     joyalPathDomainOrder X = joyalPathDomainOrder Y := by
   simp [joyalPathDomainOrder, joyalPathVertices_eq_of_function_eq hXY]
 
+theorem joyalPathRangeOrder_get_eq_function_domain_get (X : DoublyRootedLabeledTree n)
+    (i : ℕ) (hir : i < (joyalPathRangeOrder X).length)
+    (hid : i < (joyalPathDomainOrder X).length) :
+    (joyalPathRangeOrder X)[i]'hir =
+      joyalTreeToFunction X ((joyalPathDomainOrder X)[i]'hid) := by
+  classical
+  let v := (joyalPathDomainOrder X)[i]'hid
+  have hvd : v ∈ joyalPathDomainOrder X := List.get_mem _ _
+  have hv : v ∈ joyalPathVertices X := by
+    exact (Finset.mem_sort (s := joyalPathVertices X) (r := fun x y : Fin n => x ≤ y)).mp hvd
+  rw [joyalTreeToFunction_apply_of_mem X hv]
+  unfold joyalPathTableValue
+  simp only
+  have hidx : List.idxOf v (joyalPathDomainOrder X) = i := by
+    simpa [v] using (joyalPathDomainOrder_nodup X).idxOf_getElem i hid
+  simpa [hidx]
+
 theorem joyalPathRangeOrder_zero (X : DoublyRootedLabeledTree n)
     (h : 0 < (joyalPathRangeOrder X).length) :
     (joyalPathRangeOrder X)[0]'h = X.2.1 := by

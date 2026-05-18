@@ -226,7 +226,7 @@ noncomputable def joyalPathTableValue (X : DoublyRootedLabeledTree n)
   exact range.get ⟨i.1, by
     change i.1 < (joyalPathRangeOrder X).length
     rw [← joyalPathOrders_length_eq X]
-    simpa [domain] using i.2⟩
+    simp [domain]⟩
 
 /-- For a vertex off the left-right path, point to the next vertex on its path toward the left end. -/
 noncomputable def joyalOffPathValue (X : DoublyRootedLabeledTree n)
@@ -234,7 +234,8 @@ noncomputable def joyalOffPathValue (X : DoublyRootedLabeledTree n)
   let p := treePath X.1 v X.2.1
   have hne : v ≠ X.2.1 := by
     intro h
-    exact hv (by simpa [h] using joyal_left_mem_pathVertices X)
+    subst h
+    exact hv (joyal_left_mem_pathVertices X)
   have hp : ¬ p.Nil := SimpleGraph.Walk.not_nil_of_ne hne
   exact p.snd
 
@@ -244,7 +245,8 @@ theorem joyalOffPathValue_adj (X : DoublyRootedLabeledTree n)
   let p := treePath X.1 v X.2.1
   have hne : v ≠ X.2.1 := by
     intro h
-    exact hv (by simpa [h] using joyal_left_mem_pathVertices X)
+    subst h
+    exact hv (joyal_left_mem_pathVertices X)
   have hp : ¬ p.Nil := SimpleGraph.Walk.not_nil_of_ne hne
   change X.1.1.Adj v p.snd
   exact SimpleGraph.Walk.adj_snd hp
@@ -256,7 +258,8 @@ theorem joyalOffPathValue_mem_tail_path_to_left (X : DoublyRootedLabeledTree n)
   let p := treePath X.1 v X.2.1
   have hne : v ≠ X.2.1 := by
     intro h
-    exact hv (by simpa [h] using joyal_left_mem_pathVertices X)
+    subst h
+    exact hv (joyal_left_mem_pathVertices X)
   have hp : ¬ p.Nil := SimpleGraph.Walk.not_nil_of_ne hne
   change p.snd ∈ p.support.tail
   exact SimpleGraph.Walk.snd_mem_tail_support hp
@@ -272,7 +275,8 @@ theorem joyalOffPathValue_dist_left_add_one (X : DoublyRootedLabeledTree n)
   let p := treePath X.1 v X.2.1
   have hne : v ≠ X.2.1 := by
     intro h
-    exact hv (by simpa [h] using joyal_left_mem_pathVertices X)
+    subst h
+    exact hv (joyal_left_mem_pathVertices X)
   have hpNotNil : ¬ p.Nil := SimpleGraph.Walk.not_nil_of_ne hne
   have hpPath : p.IsPath := treePath_isPath X.1 v X.2.1
   have htailPath : p.tail.IsPath := by
@@ -423,7 +427,7 @@ theorem joyalPathSelfMap_iterate_val (X : DoublyRootedLabeledTree n) (m : ℕ)
   induction m generalizing v with
   | zero => simp
   | succ m ih =>
-      simp [Function.iterate_succ, Function.comp_def, joyalPathSelfMap, ih]
+      simp [Function.iterate_succ, joyalPathSelfMap, ih]
 
 theorem joyalPathVertices_subset_periodicCore (X : DoublyRootedLabeledTree n) :
     joyalPathVertices X ⊆ periodicCore (joyalTreeToFunction X) := by
@@ -538,7 +542,7 @@ theorem joyalPathRangeOrder_get_eq_function_domain_get (X : DoublyRootedLabeledT
   simp only
   have hidx : List.idxOf v (joyalPathDomainOrder X) = i := by
     simpa [v] using (joyalPathDomainOrder_nodup X).idxOf_getElem i hid
-  simpa [hidx]
+  simp [hidx]
 
 theorem joyalPathRangeOrder_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
     (hXY : joyalTreeToFunction X = joyalTreeToFunction Y) :
@@ -563,7 +567,7 @@ theorem joyalPathRangeOrder_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
       _ = joyalTreeToFunction Y ((joyalPathDomainOrder Y)[i]'hdy) := by
             have harg : (joyalPathDomainOrder X)[i]'hdx =
                 (joyalPathDomainOrder Y)[i]'hdy := by
-              simpa [hdom]
+              simp [hdom]
             rw [hXY, harg]
       _ = (joyalPathRangeOrder Y)[i]'hy :=
             (joyalPathRangeOrder_get_eq_function_domain_get Y i hy hdy).symm
@@ -571,8 +575,7 @@ theorem joyalPathRangeOrder_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
 theorem joyalPathRangeOrder_zero (X : DoublyRootedLabeledTree n)
     (h : 0 < (joyalPathRangeOrder X).length) :
     (joyalPathRangeOrder X)[0]'h = X.2.1 := by
-  simpa [joyalPathRangeOrder] using
-    SimpleGraph.Walk.support_getElem_zero (treePath X.1 X.2.1 X.2.2)
+  simp [joyalPathRangeOrder]
 
 theorem joyalPathRangeOrder_length_pos (X : DoublyRootedLabeledTree n) :
     0 < (joyalPathRangeOrder X).length := by
@@ -581,8 +584,7 @@ theorem joyalPathRangeOrder_length_pos (X : DoublyRootedLabeledTree n) :
 theorem joyalPathRangeOrder_last (X : DoublyRootedLabeledTree n)
     (h : 0 < (joyalPathRangeOrder X).length) :
     (joyalPathRangeOrder X)[(joyalPathRangeOrder X).length - 1]'(Nat.pred_lt (Nat.ne_of_gt h)) = X.2.2 := by
-  simpa [joyalPathRangeOrder, SimpleGraph.Walk.length_support] using
-    SimpleGraph.Walk.support_getElem_length (treePath X.1 X.2.1 X.2.2)
+  simp [joyalPathRangeOrder, SimpleGraph.Walk.length_support]
 
 theorem mem_joyalPathVertices_of_mem_treePath_to_left (X : DoublyRootedLabeledTree n)
     {z y : Fin n} (hz : z ∈ joyalPathVertices X)
@@ -591,7 +593,9 @@ theorem mem_joyalPathVertices_of_mem_treePath_to_left (X : DoublyRootedLabeledTr
   classical
   let p := treePath X.1 X.2.1 X.2.2
   have hzsup : z ∈ p.support := by
-    simpa [joyalPathVertices, p] using hz
+    have hz' := hz
+    simp [joyalPathVertices] at hz'
+    exact hz'
   let q : X.1.1.Walk z X.2.1 := (p.takeUntil z hzsup).reverse
   have hqPath : q.IsPath := by
     exact ((treePath_isPath X.1 X.2.1 X.2.2).takeUntil hzsup).reverse
@@ -599,9 +603,12 @@ theorem mem_joyalPathVertices_of_mem_treePath_to_left (X : DoublyRootedLabeledTr
   have hyq : y ∈ q.support := by
     rwa [hqEq]
   have hytake : y ∈ (p.takeUntil z hzsup).support := by
-    simpa [q, SimpleGraph.Walk.support_reverse] using hyq
+    have hyq' := hyq
+    simp [q, SimpleGraph.Walk.support_reverse] at hyq'
+    exact hyq'
   have hyp : y ∈ p.support := SimpleGraph.Walk.support_takeUntil_subset p hzsup hytake
-  simpa [joyalPathVertices, p] using hyp
+  change y ∈ p.support.toFinset
+  exact List.mem_toFinset.mpr hyp
 
 theorem not_offpath_adj_path_farther_from_left (X : DoublyRootedLabeledTree n)
     {w z : Fin n} (hw : w ∉ joyalPathVertices X) (hz : z ∈ joyalPathVertices X)
@@ -633,7 +640,7 @@ theorem joyal_left_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
   have hY := joyalPathRangeOrder_length_pos Y
   calc
     X.2.1 = (joyalPathRangeOrder X)[0]'hX := (joyalPathRangeOrder_zero X hX).symm
-    _ = (joyalPathRangeOrder Y)[0]'hY := by simpa [hrange]
+    _ = (joyalPathRangeOrder Y)[0]'hY := by simp [hrange]
     _ = Y.2.1 := joyalPathRangeOrder_zero Y hY
 
 theorem joyal_right_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
@@ -649,7 +656,7 @@ theorem joyal_right_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
         (joyalPathRangeOrder X)[(joyalPathRangeOrder X).length - 1]'(Nat.pred_lt (Nat.ne_of_gt hX)) :=
           (joyalPathRangeOrder_last X hX).symm
     _ = (joyalPathRangeOrder Y)[(joyalPathRangeOrder Y).length - 1]'(Nat.pred_lt (Nat.ne_of_gt hY)) := by
-          simpa [hrange]
+          simp [hrange]
     _ = Y.2.2 := joyalPathRangeOrder_last Y hY
 
 def adjacentInList (l : List (Fin n)) (u v : Fin n) : Prop :=

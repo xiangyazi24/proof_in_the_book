@@ -292,6 +292,30 @@ theorem joyalOffPathValue_dist_left_add_one (X : DoublyRootedLabeledTree n)
     _ = X.1.1.dist v X.2.1 := hpLen
     _ = X.1.1.dist X.2.1 v := SimpleGraph.dist_comm
 
+theorem joyalOffPathValue_eq_of_adj_dist_left_add_one (X : DoublyRootedLabeledTree n)
+    {w z : Fin n} (hw : w ∉ joyalPathVertices X) (hadj : X.1.1.Adj w z)
+    (hdist : X.1.1.dist X.2.1 z + 1 = X.1.1.dist X.2.1 w) :
+    joyalOffPathValue X w hw = z := by
+  classical
+  let q := treePath X.1 z X.2.1
+  let r : X.1.1.Walk w X.2.1 := SimpleGraph.Walk.cons hadj q
+  have hqLen : q.length = X.1.1.dist z X.2.1 := treePath_length_eq_dist X.1 z X.2.1
+  have hrLen : r.length = X.1.1.dist w X.2.1 := by
+    change q.length + 1 = X.1.1.dist w X.2.1
+    rw [hqLen]
+    rw [SimpleGraph.dist_comm (u := z) (v := X.2.1)]
+    rw [SimpleGraph.dist_comm (u := w) (v := X.2.1)]
+    exact hdist
+  have hrPath : r.IsPath := SimpleGraph.Walk.isPath_of_length_eq_dist r hrLen
+  have hrEq : treePath X.1 w X.2.1 = r := (treePath_unique X.1 w X.2.1 hrPath).symm
+  calc
+    joyalOffPathValue X w hw = r.snd := by
+      change (treePath X.1 w X.2.1).snd = r.snd
+      rw [hrEq]
+    _ = z := by
+      change (SimpleGraph.Walk.cons hadj q).snd = z
+      simp
+
 /-- Joyal's map from a doubly-rooted tree to an endofunction on its label set. -/
 noncomputable def joyalTreeToFunction (X : DoublyRootedLabeledTree n) : Fin n → Fin n :=
   fun v =>

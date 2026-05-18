@@ -1297,6 +1297,40 @@ theorem exists_crossing_block_of_position_crosses {k : ℕ}
     exact Fintype.card_pos_iff.mpr ⟨⟨p, hp⟩⟩
   omega
 
+theorem exists_mem_crossing_block_of_position_crosses {k : ℕ}
+    {M : BlockMove (2 * k)} (hrev : M.ReversesBlocks) {p : Fin (2 * k)}
+    (hp : middleLeft k p ↔ ¬ middleLeft k (M.map p)) :
+    ∃ i : Fin M.blockCount,
+      (M.block i).Mem p ∧ (M.block i).lo < k ∧ k ≤ (M.block i).hi := by
+  classical
+  by_cases hmem : ∃ i : Fin M.blockCount, (M.block i).Mem p
+  · rcases hmem with ⟨i, hpi⟩
+    refine ⟨i, hpi, ?_⟩
+    by_contra hnotcross
+    have hpmap : (M.block i).Mem (M.map p) :=
+      M.map_mem_of_reversesBlocks hrev hpi
+    have hside : (M.block i).hi < k ∨ k ≤ (M.block i).lo := by
+      have hlohi := (M.block i).lo_le_hi
+      omega
+    rcases hside with hleft | hright
+    · have hp_left : middleLeft k p := lt_of_le_of_lt hpi.2 hleft
+      have hmap_left : middleLeft k (M.map p) := lt_of_le_of_lt hpmap.2 hleft
+      exact (hp.mp hp_left) hmap_left
+    · have hp_not_left : ¬ middleLeft k p := by
+        intro hp_left
+        exact not_lt_of_ge (le_trans hright hpi.1) hp_left
+      have hmap_not_left : ¬ middleLeft k (M.map p) := by
+        intro hmap_left
+        exact not_lt_of_ge (le_trans hright hpmap.1) hmap_left
+      exact hp_not_left (hp.mpr hmap_not_left)
+  · have hfix : M.map p = p := hrev.2 p (by
+      intro i hi
+      exact hmem ⟨i, hi⟩)
+    rw [hfix] at hp
+    by_cases hleft : middleLeft k p
+    · exact False.elim ((hp.mp hleft) hleft)
+    · exact False.elim (hleft (hp.mpr hleft))
+
 /-- The labels crossing in one reversal step fit inside the full position set. -/
 theorem two_mul_order_le_positions {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) :

@@ -1781,6 +1781,145 @@ theorem below_square_B_core {K x : ℝ}
   · have hx31' : 31 ≤ x := by linarith
     exact below_square_B_core_large hK120 hx31' hxhi
 
+theorem below_square_far_theta_gap_of_120_le
+    {n k : ℕ} (hk120 : 120 ≤ k) (hn2k : 2 * k ≤ n)
+    (_hnsq : n < k * k) (hfar : 2 * sqrt n < min k (n / 3)) :
+    ((sqrt n : ℕ) : ℝ) / 3 * Real.log n
+        + ((min k (n / 3) : ℕ) : ℝ) * Real.log 4
+        - Chebyshev.theta ((sqrt n : ℕ) : ℝ) <
+      entropyTerm n k
+        + Real.log n / 2 - Real.log k / 2 - Real.log (n - k) / 2
+        + Real.log (2 * Real.pi) / 2 - 2 := by
+  let x : ℝ := (n : ℝ) / (k : ℝ)
+  let M : ℕ := min k (n / 3)
+  have hkpos : 0 < k := by omega
+  have hklt : k < n := by omega
+  have hkposR : (0 : ℝ) < k := by exact_mod_cast hkpos
+  have hkneR : (k : ℝ) ≠ 0 := ne_of_gt hkposR
+  have hn_ge_one : (1 : ℝ) ≤ n := by exact_mod_cast (by omega : 1 ≤ n)
+  have hx2 : 2 ≤ x := by
+    dsimp [x]
+    rw [le_div_iff₀ hkposR]
+    exact_mod_cast hn2k
+  have hfar_k : 2 * sqrt n < k :=
+    lt_of_lt_of_le hfar (min_le_left k (n / 3))
+  have hxhi : x ≤ (k : ℝ) / 4 + 1 := by
+    have hroot : (n : ℝ) < ((sqrt n : ℝ) + 1) ^ 2 := by
+      have h := Nat.lt_succ_sqrt' n
+      exact_mod_cast h
+    have h2root : 2 * ((sqrt n : ℝ) + 1) ≤ (k : ℝ) + 1 := by
+      exact_mod_cast (by omega : 2 * (sqrt n + 1) ≤ k + 1)
+    have hsquare :
+        ((sqrt n : ℝ) + 1) ^ 2 ≤ ((k : ℝ) + 1) ^ 2 / 4 := by
+      nlinarith [sq_nonneg ((k : ℝ) + 1 - 2 * ((sqrt n : ℝ) + 1))]
+    have hn_bound : (n : ℝ) ≤ ((k : ℝ) / 4 + 1) * (k : ℝ) := by
+      have hn_bound0 : (n : ℝ) ≤ ((k : ℝ) + 1) ^ 2 / 4 :=
+        le_trans hroot.le hsquare
+      nlinarith [hkposR]
+    dsimp [x]
+    exact (div_le_iff₀ hkposR).mpr hn_bound
+  have hlogkx_eq : Real.log ((k : ℝ) * x) = Real.log n := by
+    congr 1
+    dsimp [x]
+    field_simp [hkneR]
+  have hlogkx_nonneg : 0 ≤ Real.log ((k : ℝ) * x) := by
+    rw [hlogkx_eq]
+    exact Real.log_nonneg hn_ge_one
+  have hsqrt_ratio := nat_sqrt_div_le_sqrt_ratio (n := n) (k := k) hkpos
+  have hsqrt_term :
+      ((sqrt n : ℕ) : ℝ) / 3 * Real.log n
+        ≤ (k : ℝ) * (Real.sqrt (x / (k : ℝ)) / 3 * Real.log ((k : ℝ) * x)) := by
+    have hcoeff_nonneg : 0 ≤ (k : ℝ) * Real.log ((k : ℝ) * x) / 3 := by
+      have hmul : 0 ≤ (k : ℝ) * Real.log ((k : ℝ) * x) :=
+        mul_nonneg hkposR.le hlogkx_nonneg
+      nlinarith
+    calc
+      ((sqrt n : ℕ) : ℝ) / 3 * Real.log n
+          = (((sqrt n : ℕ) : ℝ) / (k : ℝ))
+              * ((k : ℝ) * Real.log ((k : ℝ) * x) / 3) := by
+              rw [hlogkx_eq]
+              field_simp [hkneR]
+      _ ≤ Real.sqrt (x / (k : ℝ)) * ((k : ℝ) * Real.log ((k : ℝ) * x) / 3) := by
+              exact mul_le_mul_of_nonneg_right hsqrt_ratio hcoeff_nonneg
+      _ = (k : ℝ) * (Real.sqrt (x / (k : ℝ)) / 3 * Real.log ((k : ℝ) * x)) := by
+              ring
+  have hM_le_k : M ≤ k := min_le_left k (n / 3)
+  have hM_le_n_div3 : M * 3 ≤ n := by
+    have hM : M ≤ n / 3 := min_le_right k (n / 3)
+    exact (Nat.le_div_iff_mul_le (by norm_num : 0 < 3)).mp hM
+  have hMratio_left : ((M : ℕ) : ℝ) / (k : ℝ) ≤ 1 := by
+    rw [div_le_iff₀ hkposR]
+    have hMk : (M : ℝ) ≤ (k : ℝ) := by exact_mod_cast hM_le_k
+    nlinarith
+  have hMratio_right : ((M : ℕ) : ℝ) / (k : ℝ) ≤ x / 3 := by
+    rw [div_le_iff₀ hkposR]
+    have hMreal : (M : ℝ) ≤ (n : ℝ) / 3 := by
+      rw [le_div_iff₀ (by norm_num : (0 : ℝ) < 3)]
+      exact_mod_cast hM_le_n_div3
+    have hxmul : x / 3 * (k : ℝ) = (n : ℝ) / 3 := by
+      dsimp [x]
+      field_simp [hkneR]
+    nlinarith
+  have hMratio : ((M : ℕ) : ℝ) / (k : ℝ) ≤ min 1 (x / 3) :=
+    le_min hMratio_left hMratio_right
+  have hlog4_nonneg : 0 ≤ Real.log 4 := Real.log_nonneg (by norm_num)
+  have hM_term :
+      ((M : ℕ) : ℝ) * Real.log 4
+        ≤ (k : ℝ) * (min 1 (x / 3) * Real.log 4) := by
+    calc
+      ((M : ℕ) : ℝ) * Real.log 4
+          = (((M : ℕ) : ℝ) / (k : ℝ)) * ((k : ℝ) * Real.log 4) := by
+              field_simp [hkneR]
+      _ ≤ min 1 (x / 3) * ((k : ℝ) * Real.log 4) := by
+              exact mul_le_mul_of_nonneg_right hMratio (mul_nonneg hkposR.le hlog4_nonneg)
+      _ = (k : ℝ) * (min 1 (x / 3) * Real.log 4) := by
+              ring
+  have hcore := below_square_B_core (K := (k : ℝ)) (x := x)
+    (by exact_mod_cast hk120) hx2 hxhi
+  have hentropy_core :
+      (k : ℝ) *
+        (Real.sqrt (x / (k : ℝ)) / 3 * Real.log ((k : ℝ) * x)
+          + min 1 (x / 3) * Real.log 4 + (1 : ℝ) / 32)
+        ≤ entropyTerm n k := by
+    have hmul := mul_le_mul_of_nonneg_left hcore hkposR.le
+    rw [entropyTerm_eq_mul_entropyRatio (n := n) (k := k) hkpos hklt]
+    exact hmul
+  have hupper_plus :
+      ((sqrt n : ℕ) : ℝ) / 3 * Real.log n
+          + ((M : ℕ) : ℝ) * Real.log 4 + (k : ℝ) / 32
+        ≤ entropyTerm n k := by
+    have hsum :
+        ((sqrt n : ℕ) : ℝ) / 3 * Real.log n
+            + ((M : ℕ) : ℝ) * Real.log 4 + (k : ℝ) / 32
+          ≤ (k : ℝ) *
+            (Real.sqrt (x / (k : ℝ)) / 3 * Real.log ((k : ℝ) * x)
+              + min 1 (x / 3) * Real.log 4 + (1 : ℝ) / 32) := by
+      nlinarith [hsqrt_term, hM_term]
+    exact hsum.trans hentropy_core
+  have htail := large_k_stirling_tail_lt_div32 hk120
+  have hcorr := stirling_correction_ge_neg_log_k_sub_six_fifths (n := n) (k := k) hkpos hklt
+  have htheta_nonneg : 0 ≤ Chebyshev.theta ((sqrt n : ℕ) : ℝ) :=
+    Chebyshev.theta_nonneg _
+  dsimp [M] at hupper_plus
+  nlinarith
+
+theorem exists_large_prime_factor_choose_below_sq_far_of_120_le
+    {n k : ℕ} (hk120 : 120 ≤ k) (hn2k : 2 * k ≤ n)
+    (hnsq : n < k * k) (hsqrt33 : 33 ≤ sqrt n)
+    (hfar : 2 * sqrt n < min k (n / 3)) :
+    HasPrimeFactorAbove k (n.choose k) := by
+  have hkpos : 0 < k := by omega
+  have hklt : k < n := by omega
+  have hn6 : 6 ≤ n := by
+    have hsqrt_le_self : sqrt n ≤ n := Nat.sqrt_le_self n
+    omega
+  have hsqrtM : sqrt n ≤ min k (n / 3) := by omega
+  have hgap :=
+    below_square_far_theta_gap_of_120_le
+      (n := n) (k := k) hk120 hn2k hnsq hfar
+  exact exists_large_prime_factor_choose_of_theta_interval_entropy_gap
+    hkpos hklt hn2k hn6 hsqrt33 hsqrtM hgap
+
 set_option maxHeartbeats 800000 in
 theorem exists_large_prime_factor_choose_below_sq_close_of_sqrt33
     {n k : ℕ} (hk9 : 9 ≤ k) (hn2k : 2 * k ≤ n)

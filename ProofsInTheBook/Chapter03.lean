@@ -643,6 +643,20 @@ theorem exists_large_prime_factor_choose_sq_le_of_9_le
   exists_large_prime_factor_choose_of_sq_le_and_primeCounting_gap
     (by omega) hkn hsq (primeCounting_gap_of_9_le hk9)
 
+theorem exists_large_prime_factor_choose_below_sq_small_cert :
+    ∀ k : Fin 9, ∀ n : Fin 81,
+      0 < k.val → 2 * k.val ≤ n.val → n.val < k.val * k.val →
+        ∃ p : Fin 81, k.val < p.val ∧ p.val.Prime ∧ p.val ∣ n.val.choose k.val := by
+  native_decide
+
+theorem exists_large_prime_factor_choose_below_sq_of_lt_9
+    {n k : ℕ} (hkpos : 0 < k) (hk9 : k < 9) (hn2k : 2 * k ≤ n) (hnsq : n < k * k) :
+    HasPrimeFactorAbove k (n.choose k) := by
+  have hn81 : n < 81 := by nlinarith
+  rcases exists_large_prime_factor_choose_below_sq_small_cert ⟨k, hk9⟩ ⟨n, hn81⟩
+    hkpos hn2k hnsq with ⟨p, hkp, hp, hpdvd⟩
+  exact ⟨p.val, hkp, hp, hpdvd⟩
+
 theorem exists_large_prime_dvd_choose_sq_le_of_9_le
     {n k : ℕ} (hk9 : 9 ≤ k) (hkn : k ≤ n) (hsq : k * k ≤ n) :
     ∃ p, k < p ∧ p.Prime ∧ p ∣ n.choose k := by

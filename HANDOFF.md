@@ -136,3 +136,39 @@ Current investigation:
 
 ChatGPT bridge queries have been submitted on channels `ssem2` and `ssem` for proof-strategy help,
 but the work should proceed independently rather than waiting on them.
+
+## Chapter03 progress — 2026-05-18
+
+Implemented and pushed a Lean-checked estimate spine toward full Sylvester-Schur:
+
+- `NoLargePrimeFactor` and equivalence with `¬ HasPrimeFactorAbove`.
+- Valuation vanishing for primes above `k` under no-large assumption.
+- Choose/descFactorial divisibility bridges in both directions where applicable.
+- Base case `k = 1` for descFactorial.
+- No-large choose upper bound via factorization support:
+  `choose_le_pow_primeCounting_of_noLargePrimeFactor`.
+- Erdős-style §§2-4 upper-bound skeleton:
+  `choose_factorization_le_min_third_of_noLargePrimeFactor` and
+  `choose_le_sqrt_mul_four_pow_min_third_of_noLargePrimeFactor`.
+  This uses `factorization_choose_of_lt_three_mul`,
+  `factorization_choose_le_one`, and `primorial_le_four_pow`.
+- Product lower bound:
+  `pow_le_pow_mul_choose`, giving `n^k <= k^k * C(n,k)`.
+- Log upper/lower bounds and sandwich:
+  `log_choose_le_sqrt_log_add_min_third_log_four_of_noLargePrimeFactor`,
+  `mul_log_sub_mul_log_le_log_choose`, and
+  `erdos_log_sandwich_of_noLargePrimeFactor`.
+- Gap-to-prime interface:
+  `exists_large_prime_factor_choose_of_erdos_log_gap`.
+
+Current missing mathematical core:
+
+- A pure real/numeric gap lemma proving
+  `sqrt(n) log n + min(k,n/3) log 4 < k log n - k log k`
+  in the intended large range, or a stronger entropy lower bound replacing
+  `k(log n - log k)`.
+- Finite certificate for the remaining bounded cases.
+
+The bridge responses (`0dc2cefd`, `10e3ddde`) recommend the same route:
+upper-bound factorization + entropy lower bound + standalone real gap + finite certificate.
+No bridge response supplied a complete proof of the hard real/finite parts.

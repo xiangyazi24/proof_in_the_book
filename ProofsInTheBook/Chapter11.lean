@@ -1235,6 +1235,44 @@ theorem crossingLabelsCard_eq_positionCrossingCard_of_reversesBlocks {k : ℕ}
     apply Subtype.ext
     exact Equiv.symm_apply_apply π p.1
 
+theorem positionCrossingCard_eq_zero_of_no_crossing_block {k : ℕ}
+    {M : BlockMove (2 * k)} (hrev : M.ReversesBlocks)
+    (hnone : ∀ i : Fin M.blockCount, ¬ ((M.block i).lo < k ∧ k ≤ (M.block i).hi)) :
+    positionCrossingCard k M.map = 0 := by
+  classical
+  unfold positionCrossingCard
+  rw [Fintype.card_eq_zero_iff]
+  refine ⟨fun x => ?_⟩
+  rcases x with ⟨p, hp⟩
+  by_cases hmem : ∃ i : Fin M.blockCount, (M.block i).Mem p
+  · rcases hmem with ⟨i, hpi⟩
+    have hpmap : (M.block i).Mem (M.map p) :=
+      M.map_mem_of_reversesBlocks hrev hpi
+    have hside : (M.block i).hi < k ∨ k ≤ (M.block i).lo := by
+      have hlohi := (M.block i).lo_le_hi
+      have hnot := hnone i
+      omega
+    rcases hside with hleft | hright
+    · have hp_left : middleLeft k p := by
+        exact lt_of_le_of_lt hpi.2 hleft
+      have hmap_left : middleLeft k (M.map p) := by
+        exact lt_of_le_of_lt hpmap.2 hleft
+      exact (hp.mp hp_left) hmap_left
+    · have hp_not_left : ¬ middleLeft k p := by
+        intro hp_left
+        exact not_lt_of_ge (le_trans hright hpi.1) hp_left
+      have hmap_not_left : ¬ middleLeft k (M.map p) := by
+        intro hmap_left
+        exact not_lt_of_ge (le_trans hright hpmap.1) hmap_left
+      exact hp_not_left (hp.mpr hmap_not_left)
+  · have hfix : M.map p = p := hrev.2 p (by
+      intro i
+      exact fun hi => hmem ⟨i, hi⟩)
+    rw [hfix] at hp
+    by_cases hp_left : middleLeft k p
+    · exact (hp.mp hp_left) hp_left
+    · exact hp_left (hp.mpr hp_left)
+
 /-- The labels crossing in one reversal step fit inside the full position set. -/
 theorem two_mul_order_le_positions {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) :

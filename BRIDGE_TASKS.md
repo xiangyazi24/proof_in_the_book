@@ -475,3 +475,24 @@ Status:
 - Completed with `[BRIDGE_ERROR] response timeout`.
 - Local fallback implemented `piZSubmodule`, `AngleModPiZ`,
   `DehnPiTarget`, and `angleClass_pi`.
+
+## 2026-05-17 Batch G
+
+### Task G1: Chapter03 Sylvester-Schur Erdős §§2-4 decomposition
+
+- File: `ProofsInTheBook/Chapter03.lean`
+- Current local state:
+  - Central case `n = 2*k` is proved.
+  - Bridge lemmas between large prime divisors of `choose` and `descFactorial`
+    are proved and pushed.
+- Desired answer:
+  - Full Sylvester-Schur for `2*k <= n`, `0 < k`.
+  - Give a concrete Lean-feasible lemma chain for Erdős §§2-4 using existing
+    Mathlib facts when possible: binomial factorization, Bertrand, primorial,
+    and Chebyshev theta/psi/lcmUpto.
+  - Avoid vague historical proof sketches; return implementable inequalities
+    and theorem names.
+
+Status:
+- Submitted on channel `ssem` as `0dc2cefd` / seq 11.
+- Parallel long-form `ssem2` task currently active as `8ee23bc0` / seq 10.

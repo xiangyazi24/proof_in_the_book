@@ -520,7 +520,7 @@ Sylvester's theorem provides such a prime p > k, and if k ≥ 4 and n ≥ 2k,
 then p > k ≥ 4 > √n is achievable, giving the contradiction.
 -/
 theorem binomial_not_perfect_power_of_large_prime {n k l m p : ℕ}
-    (hp : p.Prime) (_hpdvd : p ∣ n.choose k) (_hpow : n.choose k = m ^ l)
+    (_hp : p.Prime) (_hpdvd : p ∣ n.choose k) (_hpow : n.choose k = m ^ l)
     (_hl : 2 ≤ l) (_hpsq : n < p * p)
     (hval : p.factorization (n.choose k) ≤ 1)
     (hpow_val : l ≤ p.factorization (n.choose k)) :

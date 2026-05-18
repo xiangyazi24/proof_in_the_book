@@ -394,6 +394,22 @@ theorem directions_lower_bound_of_even_ungar_sweep_certificates (points : Finset
       even_direction_bound_of_ungar_sweep_certificate S (hcert S hEven hS))
 
 /--
+The remaining geometric/combinatorial core of Ungar's proof: for every even
+non-collinear point set, the rotating projection sequence supplies the finite
+sweep certificate above.
+-/
+noncomputable def even_ungar_sweep_certificate (points : Finset Point2)
+    (_hEven : Even points.card) (_hncoll : NoncollinearSet points) :
+    UngarSweepCertificate points.card (directionsDeterminedBy points).card := by
+  sorry
+
+theorem ungar_directions_lower_bound_from_sweep (points : Finset Point2)
+    (hn : 3 ≤ points.card) (hncoll : NoncollinearSet points) :
+    points.card - 1 ≤ (directionsDeterminedBy points).card :=
+  directions_lower_bound_of_even_ungar_sweep_certificates points hn hncoll
+    (fun S hEven hS => even_ungar_sweep_certificate S hEven hS)
+
+/--
 Counting interface for Ungar's slope theorem: an injective family of witnessed
 slopes gives the corresponding lower bound on the number of slopes.
 -/
@@ -425,11 +441,10 @@ Ungar's rotating-calipers theorem, stated for projective directions. This is
 the coordinate-correct target: vertical lines count as one direction.
 -/
 theorem ungar_directions_lower_bound (points : Finset Point2)
-    (_hn : 2 ≤ points.card)
-    (_hncoll : NoncollinearSet points)
-    (hdirections : points.card - 1 ≤ (directionsDeterminedBy points).card) :
+    (hn : 3 ≤ points.card)
+    (hncoll : NoncollinearSet points) :
     points.card - 1 ≤ (directionsDeterminedBy points).card :=
-  hdirections
+  ungar_directions_lower_bound_from_sweep points hn hncoll
 
 theorem chapter11 {ι : Type*} [Fintype ι] (points : Finset Point2) (witness : ι → ℝ)
     (hwitness : ∀ i, witness i ∈ slopesDeterminedBy points)

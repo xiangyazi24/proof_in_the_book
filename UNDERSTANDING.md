@@ -7,7 +7,8 @@ Full-book formalization of *Proofs from THE BOOK* (Aigner & Ziegler) in Lean 4.
 
 **Current status after Ch31 completion (2026-05-18):**
 
-- 40 chapters compile with 0 `sorry` and 0 `axiom`.
+- 40 chapters compile; Ch11 currently has one intentional scaffold `sorry`
+  for the even-cardinality Ungar sweep certificate. There are no axioms.
 - Ch31 Cayley upper bound has been eliminated via Joyal's endofunction injection.
 - Ch34 Dinitz/Galvin premise has been eliminated via kernel-perfect orientation
   and stable-matching kernels.
@@ -182,6 +183,17 @@ Current progress:
 Remaining core: formalize Ungar's even-cardinality permutation/T-O-C counting
 argument enough to produce an `UngarCountingCertificate` from the rotating
 projection sweep.
+
+Current scaffold:
+
+```lean
+noncomputable def even_ungar_sweep_certificate (points : Finset Point2)
+    (_hEven : Even points.card) (_hncoll : NoncollinearSet points) :
+    UngarSweepCertificate points.card (directionsDeterminedBy points).card
+```
+
+This is the only intended Ch11 gap after the reductions. Proving it removes
+the rotating-calipers premise from the public `ungar_directions_lower_bound`.
 
 ## Working style notes
 

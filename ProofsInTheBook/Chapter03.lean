@@ -74,6 +74,13 @@ theorem primeIntervalProduct_le_choose {a M : ℕ} (haM : a ≤ M) (hd : M - a �
     primeIntervalProduct a M ≤ M.choose a := by
   exact le_of_dvd (Nat.choose_pos haM) (primeIntervalProduct_dvd_choose haM hd)
 
+theorem log_primeIntervalProduct_le_log_choose {a M : ℕ} (haM : a ≤ M) (hd : M - a ≤ a) :
+    Real.log (primeIntervalProduct a M) ≤ Real.log (M.choose a) := by
+  exact Real.log_le_log
+    (by exact_mod_cast (Finset.prod_pos fun p hp => (Finset.mem_filter.1 hp).2.pos :
+      0 < primeIntervalProduct a M))
+    (by exact_mod_cast primeIntervalProduct_le_choose haM hd)
+
 theorem not_hasPrimeFactorAbove_iff_noLargePrimeFactor {k m : ℕ} :
     ¬ HasPrimeFactorAbove k m ↔ NoLargePrimeFactor k m := by
   constructor
@@ -379,6 +386,18 @@ theorem log_choose_le_primeCounting_sqrt_log_add_log_primeIntervalProduct_of_noL
     _ = (Nat.primeCounting (sqrt n) : ℝ) * Real.log n
         + Real.log (primeIntervalProduct (sqrt n) (min k (n / 3))) := by
       simp [P]
+
+theorem log_choose_le_primeCounting_sqrt_log_add_log_choose_min_third_of_noLargePrimeFactor
+    {n k : ℕ} (hnpos : 0 < n) (hkn : k ≤ n) (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)
+    (hno : NoLargePrimeFactor k (n.choose k))
+    (hsqrtM : sqrt n ≤ min k (n / 3)) (hMsub : min k (n / 3) - sqrt n ≤ sqrt n) :
+    Real.log (n.choose k) ≤
+      (Nat.primeCounting (sqrt n) : ℝ) * Real.log n
+        + Real.log ((min k (n / 3)).choose (sqrt n)) := by
+  exact (log_choose_le_primeCounting_sqrt_log_add_log_primeIntervalProduct_of_noLargePrimeFactor
+    (n := n) (k := k) hnpos hkn hn2k hn6 hno).trans
+      (add_le_add_right (log_primeIntervalProduct_le_log_choose hsqrtM hMsub)
+        ((Nat.primeCounting (sqrt n) : ℝ) * Real.log n))
 
 theorem mul_log_sub_mul_log_le_log_choose {n k : ℕ}
     (hkpos : 0 < k) (hkn : k ≤ n) :

@@ -60,6 +60,9 @@ noncomputable def entropyTerm (n k : ℕ) : ℝ :=
     - (k : ℝ) * Real.log k
     - ((n - k : ℕ) : ℝ) * Real.log (n - k)
 
+def primeIntervalProduct (a b : ℕ) : ℕ :=
+  ∏ p ∈ Finset.Ioc a b with p.Prime, p
+
 theorem not_hasPrimeFactorAbove_iff_noLargePrimeFactor {k m : ℕ} :
     ¬ HasPrimeFactorAbove k m ↔ NoLargePrimeFactor k m := by
   constructor
@@ -217,6 +220,46 @@ theorem choose_le_primeCounting_sqrt_mul_four_pow_min_third_of_noLargePrimeFacto
     refine Finset.prod_le_prod_of_subset_of_one_le' (Finset.filter_subset _ _) ?_
     exact fun p hp _ => (Finset.mem_filter.1 hp).2.one_lt.le
 
+theorem choose_le_primeCounting_sqrt_mul_primeIntervalProduct_of_noLargePrimeFactor
+    {n k : ℕ} (hnpos : 0 < n) (hkn : k ≤ n) (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)
+    (hno : NoLargePrimeFactor k (n.choose k)) :
+    n.choose k ≤ n ^ Nat.primeCounting (sqrt n) * primeIntervalProduct (sqrt n) (min k (n / 3)) := by
+  let M := min k (n / 3)
+  let S := {p ∈ Finset.range (M + 1) | Nat.Prime p}
+  let f := fun p => p ^ (n.choose k).factorization p
+  have hprime_filter : ∏ p ∈ S, f p = ∏ p ∈ Finset.range (M + 1), f p := by
+    refine Finset.prod_filter_of_ne fun p _ hpprime => ?_
+    contrapose hpprime
+    dsimp only [f]
+    rw [Nat.factorization_eq_zero_of_not_prime (n.choose k) hpprime, pow_zero]
+  rw [choose_factorization_le_min_third_of_noLargePrimeFactor hkn hn2k hn6 hno, ← hprime_filter,
+    ← Finset.prod_filter_mul_prod_filter_not S (· ≤ sqrt n)]
+  apply mul_le_mul'
+  · refine (Finset.prod_le_prod' fun p _ => (?_ : f p ≤ n)).trans ?_
+    · exact Nat.pow_factorization_choose_le hnpos
+    rw [Finset.prod_const]
+    refine pow_right_mono₀ (Nat.succ_le_iff.mpr hnpos) ?_
+    rw [← Nat.primesLE_card_eq_primeCounting]
+    exact Finset.card_le_card fun p hp => by
+      obtain ⟨hpS, hpsqrt⟩ := Finset.mem_filter.1 hp
+      exact Nat.mem_primesLE.mpr ⟨hpsqrt, (Finset.mem_filter.1 hpS).2⟩
+  · refine (Finset.prod_le_prod' fun p hp => (?_ : f p ≤ p)).trans ?_
+    · obtain ⟨hpS, hpsqrt⟩ := Finset.mem_filter.1 hp
+      refine (pow_right_mono₀ (Finset.mem_filter.1 hpS).2.one_lt.le ?_).trans (pow_one p).le
+      exact Nat.factorization_choose_le_one (sqrt_lt'.mp <| not_le.1 hpsqrt)
+    change (∏ p ∈ Finset.filter (fun p => ¬p ≤ sqrt n) S, p) ≤
+      ∏ p ∈ Finset.Ioc (sqrt n) M with p.Prime, p
+    refine Finset.prod_le_prod_of_subset_of_one_le' ?_ ?_
+    · intro p hp
+      obtain ⟨hpS, hpsqrt⟩ := Finset.mem_filter.1 hp
+      obtain ⟨hpRange, hpPrime⟩ := Finset.mem_filter.1 hpS
+      rw [Finset.mem_range] at hpRange
+      rw [Finset.mem_filter, Finset.mem_Ioc]
+      exact ⟨⟨lt_of_not_ge hpsqrt, by omega⟩, hpPrime⟩
+    · intro p hp _hnot
+      rw [Finset.mem_filter, Finset.mem_Ioc] at hp
+      exact hp.2.one_lt.le
+
 theorem pow_mul_self_descFactorial_le_pow_mul_descFactorial {n k : ℕ} (hkn : k ≤ n) :
     n ^ k * k.descFactorial k ≤ k ^ k * n.descFactorial k := by
   have hnprod : n ^ k = ∏ _i ∈ Finset.range k, n := by
@@ -294,6 +337,37 @@ theorem log_choose_le_primeCounting_sqrt_log_add_min_third_log_four_of_noLargePr
     _ = (Nat.primeCounting (sqrt n) : ℝ) * Real.log n
         + ((min k (n / 3) : ℕ) : ℝ) * Real.log 4 := by
       simp [M]
+
+theorem log_choose_le_primeCounting_sqrt_log_add_log_primeIntervalProduct_of_noLargePrimeFactor
+    {n k : ℕ} (hnpos : 0 < n) (hkn : k ≤ n) (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)
+    (hno : NoLargePrimeFactor k (n.choose k)) :
+    Real.log (n.choose k) ≤
+      (Nat.primeCounting (sqrt n) : ℝ) * Real.log n
+        + Real.log (primeIntervalProduct (sqrt n) (min k (n / 3))) := by
+  let P := primeIntervalProduct (sqrt n) (min k (n / 3))
+  have hnat :
+      n.choose k ≤ n ^ Nat.primeCounting (sqrt n) * P :=
+    choose_le_primeCounting_sqrt_mul_primeIntervalProduct_of_noLargePrimeFactor
+      hnpos hkn hn2k hn6 hno
+  have hpos_choose_nat : 0 < n.choose k := Nat.choose_pos hkn
+  have hPpos : 0 < P := by
+    dsimp [P, primeIntervalProduct]
+    exact Finset.prod_pos fun p hp => (Finset.mem_filter.1 hp).2.pos
+  have hlogle :
+      Real.log (n.choose k) ≤ Real.log (n ^ Nat.primeCounting (sqrt n) * P) := by
+    exact Real.log_le_log (by exact_mod_cast hpos_choose_nat) (by exact_mod_cast hnat)
+  calc
+    Real.log (n.choose k) ≤ Real.log (n ^ Nat.primeCounting (sqrt n) * P) := hlogle
+    _ = Real.log ((n : ℝ) ^ Nat.primeCounting (sqrt n) * (P : ℝ)) := by
+      norm_num [Nat.cast_pow]
+    _ = (Nat.primeCounting (sqrt n) : ℝ) * Real.log n + Real.log P := by
+      rw [Real.log_mul
+        (pow_ne_zero _ (by exact_mod_cast hnpos.ne' : (n : ℝ) ≠ 0))
+        (by exact_mod_cast hPpos.ne' : (P : ℝ) ≠ 0),
+        Real.log_pow]
+    _ = (Nat.primeCounting (sqrt n) : ℝ) * Real.log n
+        + Real.log (primeIntervalProduct (sqrt n) (min k (n / 3))) := by
+      simp [P]
 
 theorem mul_log_sub_mul_log_le_log_choose {n k : ℕ}
     (hkpos : 0 < k) (hkn : k ≤ n) :

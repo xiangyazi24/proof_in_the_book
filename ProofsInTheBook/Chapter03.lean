@@ -205,6 +205,32 @@ theorem pow_le_pow_mul_choose {n k : ℕ} (hkn : k ≤ n) :
     simpa [mul_assoc, mul_comm, mul_left_comm] using h
   exact le_of_mul_le_mul_left hcancel (Nat.factorial_pos k)
 
+theorem log_choose_le_sqrt_log_add_min_third_log_four_of_noLargePrimeFactor
+    {n k : ℕ} (hnpos : 0 < n) (hkn : k ≤ n) (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)
+    (hno : NoLargePrimeFactor k (n.choose k)) :
+    Real.log (n.choose k) ≤
+      (sqrt n : ℝ) * Real.log n + ((min k (n / 3) : ℕ) : ℝ) * Real.log 4 := by
+  let M := min k (n / 3)
+  have hnat :
+      n.choose k ≤ n ^ sqrt n * 4 ^ M :=
+    choose_le_sqrt_mul_four_pow_min_third_of_noLargePrimeFactor
+      hnpos hkn hn2k hn6 hno
+  have hpos_choose_nat : 0 < n.choose k := Nat.choose_pos hkn
+  have hlogle :
+      Real.log (n.choose k) ≤ Real.log (n ^ sqrt n * 4 ^ M) := by
+    exact Real.log_le_log (by exact_mod_cast hpos_choose_nat) (by exact_mod_cast hnat)
+  calc
+    Real.log (n.choose k) ≤ Real.log (n ^ sqrt n * 4 ^ M) := hlogle
+    _ = Real.log ((n : ℝ) ^ sqrt n * (4 : ℝ) ^ M) := by
+      norm_num [Nat.cast_pow]
+    _ = (sqrt n : ℝ) * Real.log n + (M : ℝ) * Real.log 4 := by
+      rw [Real.log_mul
+        (pow_ne_zero _ (by exact_mod_cast hnpos.ne' : (n : ℝ) ≠ 0))
+        (pow_ne_zero _ (by norm_num : (4 : ℝ) ≠ 0)),
+        Real.log_pow, Real.log_pow]
+    _ = (sqrt n : ℝ) * Real.log n + ((min k (n / 3) : ℕ) : ℝ) * Real.log 4 := by
+      simp [M]
+
 /--
 Factorial form of the standard binomial-divisibility argument: if a prime
 divides `n!` but not the two factorial factors in

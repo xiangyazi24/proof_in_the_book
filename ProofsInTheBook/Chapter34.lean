@@ -18,9 +18,33 @@ namespace ProofsInTheBook.Chapter34
 /-- Cells in an `n × n` Dinitz array. -/
 abbrev Cell (n : ℕ) : Type := Fin n × Fin n
 
+/-- A directed orientation relation supported on an undirected adjacency relation. -/
+def OrientedEdge {V : Type*} (adj : V → V → Prop) (orient : V → V → Prop) : Prop :=
+  ∀ ⦃u v⦄, orient u v → adj u v
+
 /-- Two cells conflict when they are distinct and lie in a common row or column. -/
 def LatinConflict {n : ℕ} (a b : Cell n) : Prop :=
   a ≠ b ∧ (a.1 = b.1 ∨ a.2 = b.2)
+
+/-- The cyclic Latin square value used in Galvin's orientation. -/
+noncomputable def cyclicLatinValue {n : ℕ} (cell : Cell n) : Fin n :=
+  ⟨(cell.1.val + cell.2.val) % n,
+    Nat.mod_lt _ (lt_of_le_of_lt (Nat.zero_le cell.1.val) cell.1.isLt)⟩
+
+/--
+Galvin's orientation of the Dinitz conflict graph from the cyclic Latin square:
+within a row edges point toward larger entries, while within a column they
+point toward smaller entries.
+-/
+noncomputable def dinitzOrient {n : ℕ} (a b : Cell n) : Prop :=
+  LatinConflict a b ∧
+    ((a.1 = b.1 ∧ cyclicLatinValue a < cyclicLatinValue b) ∨
+      (a.2 = b.2 ∧ cyclicLatinValue b < cyclicLatinValue a))
+
+theorem dinitzOrient_orientedEdge {n : ℕ} :
+    OrientedEdge (LatinConflict : Cell n → Cell n → Prop) dinitzOrient := by
+  intro u v h
+  exact h.1
 
 /-- A proper Dinitz/Latin coloring: conflicting cells receive different colors. -/
 def ProperArrayColoring {n : ℕ} {α : Type*} (color : Cell n → α) : Prop :=
@@ -113,10 +137,6 @@ theorem galvin_greedy_step {V : Type*} [DecidableEq V] [Fintype V]
   exact hc.2 (Finset.mem_image.mpr ⟨w, hw, heq⟩)
 
 /-! ### Galvin's actual kernel-perfect list-coloring interface -/
-
-/-- A directed orientation relation used for Galvin's list-coloring lemma. -/
-def OrientedEdge {V : Type*} (adj : V → V → Prop) (orient : V → V → Prop) : Prop :=
-  ∀ ⦃u v⦄, orient u v → adj u v
 
 /-- Out-neighbors of `v` inside a finite vertex set `S`. -/
 def outNeighborsIn {V : Type*} [DecidableEq V] (S : Finset V)

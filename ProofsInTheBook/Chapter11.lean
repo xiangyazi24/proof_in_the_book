@@ -1206,6 +1206,35 @@ theorem crossesMiddle_iff_map_old_position {k : ℕ} {π ρ : State (2 * k)}
       (middleLeft k (π.symm a) ↔ ¬ middleLeft k (M.move.map (π.symm a))) := by
   rw [crossesMiddle, M.new_position_eq_map_old_position_of_reversesBlocks hrev a]
 
+noncomputable def positionCrossingCard (k : ℕ) (σ : State (2 * k)) : ℕ := by
+  classical
+  exact Fintype.card {p : Fin (2 * k) // middleLeft k p ↔ ¬ middleLeft k (σ p)}
+
+noncomputable def labelCrossingCard (k : ℕ) (π ρ : State (2 * k)) : ℕ := by
+  classical
+  exact Fintype.card {a : Fin (2 * k) // crossesMiddle k π ρ a}
+
+theorem crossingLabelsCard_eq_positionCrossingCard_of_reversesBlocks {k : ℕ}
+    {π ρ : State (2 * k)} (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) :
+    labelCrossingCard k π ρ = positionCrossingCard k M.move.map := by
+  classical
+  unfold labelCrossingCard positionCrossingCard
+  refine Fintype.card_congr ?_
+  refine
+  { toFun := fun a =>
+      ⟨π.symm a.1, (M.crossesMiddle_iff_map_old_position hrev a.1).mp a.2⟩
+    invFun := fun p =>
+      ⟨π p.1, (M.crossesMiddle_iff_map_old_position hrev (π p.1)).mpr ?_⟩
+    left_inv := ?_
+    right_inv := ?_ }
+  · simpa using p.2
+  · intro a
+    apply Subtype.ext
+    exact Equiv.apply_symm_apply π a.1
+  · intro p
+    apply Subtype.ext
+    exact Equiv.symm_apply_apply π p.1
+
 /-- The labels crossing in one reversal step fit inside the full position set. -/
 theorem two_mul_order_le_positions {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) :

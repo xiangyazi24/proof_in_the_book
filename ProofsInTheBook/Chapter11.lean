@@ -404,6 +404,38 @@ theorem UngarCountingCertificate.length_lower_bound {n t : ℕ}
   le_trans cert.letters_cross cert.blocks_fit
 
 /--
+Finite schedule of crossing moves in Ungar's middle-barrier proof.  The
+additional `idx` and gap fields are the data coming from the T/O/C pattern;
+the inherited `blocks_fit` is the arithmetic consequence currently used by
+the downstream certificate.
+-/
+structure UngarMoveSchedule (k r : ℕ) extends UngarCountingCertificate (2 * k) r where
+  two_le_crossingCount : 2 ≤ crossingCount
+  idx : Fin crossingCount → Fin r
+  idx_strict : ∀ {i j : Fin crossingCount}, i < j → (idx i).val < (idx j).val
+  order_pos : ∀ i, 0 < order i
+  gap_between :
+    ∀ (i : ℕ) (hi : i + 1 < crossingCount),
+      order ⟨i, by omega⟩ + order ⟨i + 1, by omega⟩ - 1 ≤
+        (idx ⟨i + 1, by omega⟩).val - (idx ⟨i, by omega⟩).val - 1
+  gap_ends :
+    order ⟨0, by omega⟩ + order ⟨crossingCount - 1, by omega⟩ - 1 ≤
+      (idx ⟨0, by omega⟩).val +
+        (r - 1 - (idx ⟨crossingCount - 1, by omega⟩).val)
+
+theorem UngarMoveSchedule.sum_orders_le_moves {k r : ℕ}
+    (C : UngarMoveSchedule k r) :
+    (∑ i : Fin C.crossingCount, 2 * C.order i) ≤ r :=
+  C.blocks_fit
+
+def UngarMoveSchedule.toCountingCertificate {k r : ℕ}
+    (C : UngarMoveSchedule k r) : UngarCountingCertificate (2 * k) r where
+  crossingCount := C.crossingCount
+  order := C.order
+  letters_cross := C.letters_cross
+  blocks_fit := C.sum_orders_le_moves
+
+/--
 A finite packing certificate for the T/O/C block argument: the `i`th crossing
 move of order `dᵢ` owns a block of `2dᵢ` slots, and all these slots inject
 into one period of length `t`.

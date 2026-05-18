@@ -160,11 +160,124 @@ theorem galvin_list_coloring_from_kernel_perfect_target
     (_hsize : ∀ v ∈ S, (outNeighborsIn S orient v).card < (lists v).card) :
     ∃ color : V → α, ListColoringOn S adj lists color := by
   classical
-  -- This is the next hard Ch34 target. The proof follows the book's Lemma 1:
-  -- choose a color `c`, take a kernel in the subgraph induced by vertices whose
-  -- lists contain `c`, color the kernel with `c`, delete the kernel and `c`,
-  -- and recurse on the remaining vertex set.
-  sorry
+  let P : ℕ → Prop := fun m =>
+    ∀ (S : Finset V) (lists : V → Finset α),
+      S.card = m →
+      KernelPerfectOn S adj orient →
+      (∀ v ∈ S, (outNeighborsIn S orient v).card < (lists v).card) →
+      ∃ color : V → α, ListColoringOn S adj lists color
+  have hP : ∀ m, P m := by
+    intro m
+    induction m using Nat.strong_induction_on with
+    | h m ih =>
+      intro S lists hcard hkernel hsize
+      by_cases hS : S.Nonempty
+      · obtain ⟨v₀, hv₀⟩ := hS
+        have hlist₀ : (lists v₀).Nonempty := by
+          apply Finset.card_pos.mp
+          exact lt_of_le_of_lt (Nat.zero_le _) (hsize v₀ hv₀)
+        obtain ⟨c, hc⟩ := hlist₀
+        let A : Finset V := S.filter fun v => c ∈ lists v
+        have hAsub : A ⊆ S := Finset.filter_subset _ _
+        have hAnonempty : A.Nonempty := ⟨v₀, by simp [A, hv₀, hc]⟩
+        obtain ⟨K, hK⟩ := hkernel A hAsub hAnonempty
+        rcases hK with ⟨hKsubA, hKind, hAbsorb⟩
+        have hKsubS : K ⊆ S := fun x hx => hAsub (hKsubA hx)
+        have hKnonempty : K.Nonempty := by
+          obtain ⟨a, ha⟩ := hAnonempty
+          by_cases haK : a ∈ K
+          · exact ⟨a, haK⟩
+          · obtain ⟨b, hbK, _⟩ := hAbsorb a ha haK
+            exact ⟨b, hbK⟩
+        let S' : Finset V := S \ K
+        let lists' : V → Finset α := fun v => (lists v).erase c
+        have hcardlt : S'.card < S.card := by
+          have hcardK : 0 < K.card := Finset.card_pos.mpr hKnonempty
+          have hKle : K.card ≤ S.card := Finset.card_le_card hKsubS
+          have hsdiff := Finset.card_sdiff_of_subset hKsubS
+          dsimp [S']
+          rw [hsdiff]
+          omega
+        have hkernel' : KernelPerfectOn S' adj orient := by
+          intro T hT hTne
+          apply hkernel T ?_ hTne
+          intro x hx
+          exact (Finset.mem_sdiff.mp (hT hx)).1
+        have hsize' : ∀ v ∈ S', (outNeighborsIn S' orient v).card < (lists' v).card := by
+          intro v hvS'
+          have hvS : v ∈ S := (Finset.mem_sdiff.mp hvS').1
+          have hvnotK : v ∉ K := (Finset.mem_sdiff.mp hvS').2
+          by_cases hcv : c ∈ lists v
+          · have hvA : v ∈ A := by simp [A, hvS, hcv]
+            obtain ⟨y, hyK, hvy⟩ := hAbsorb v hvA hvnotK
+            have hsubOut : outNeighborsIn S' orient v ⊂ outNeighborsIn S orient v := by
+              constructor
+              · intro x hx
+                simp [outNeighborsIn] at hx ⊢
+                exact ⟨(Finset.mem_sdiff.mp hx.1).1, hx.2⟩
+              · intro hsubReverse
+                have hyOutS : y ∈ outNeighborsIn S orient v := by
+                  simp [outNeighborsIn, hKsubS hyK, hvy]
+                have hyNotOutS' : y ∉ outNeighborsIn S' orient v := by
+                  intro hy
+                  have hyS' : y ∈ S' := by
+                    simpa [outNeighborsIn] using (Finset.mem_filter.mp hy).1
+                  exact (Finset.mem_sdiff.mp hyS').2 hyK
+                exact hyNotOutS' (hsubReverse hyOutS)
+            have houtlt : (outNeighborsIn S' orient v).card < (outNeighborsIn S orient v).card :=
+              Finset.card_lt_card hsubOut
+            have hlistErase : (lists' v).card + 1 = (lists v).card := by
+              dsimp [lists']
+              exact Finset.card_erase_add_one hcv
+            have hmain := hsize v hvS
+            omega
+          · have hsubOut : outNeighborsIn S' orient v ⊆ outNeighborsIn S orient v := by
+              intro x hx
+              simp [outNeighborsIn] at hx ⊢
+              exact ⟨(Finset.mem_sdiff.mp hx.1).1, hx.2⟩
+            have houtle : (outNeighborsIn S' orient v).card ≤ (outNeighborsIn S orient v).card :=
+              Finset.card_le_card hsubOut
+            have hlistEq : (lists' v).card = (lists v).card := by
+              dsimp [lists']
+              rw [Finset.erase_eq_of_notMem hcv]
+            have hmain := hsize v hvS
+            omega
+        have hcardltm : S'.card < m := by omega
+        obtain ⟨color', hcolor'⟩ := ih S'.card hcardltm S' lists' rfl hkernel' hsize'
+        rcases hcolor' with ⟨hlist', hproper'⟩
+        let color : V → α := fun v => if v ∈ K then c else color' v
+        refine ⟨color, ?_⟩
+        constructor
+        · intro v hv
+          by_cases hvK : v ∈ K
+          · have hvA : v ∈ A := hKsubA hvK
+            simpa [color, hvK, A] using (Finset.mem_filter.mp hvA).2
+          · have hvS' : v ∈ S' := by simp [S', hv, hvK]
+            have hvlist' := hlist' v hvS'
+            simp [color, hvK]
+            exact Finset.mem_of_mem_erase hvlist'
+        · intro u hu v hv huv hne
+          by_cases huK : u ∈ K <;> by_cases hvK : v ∈ K
+          · exact False.elim (hne (hKind u huK v hvK huv))
+          · have hvS' : v ∈ S' := by simp [S', hv, hvK]
+            have hvlist' := hlist' v hvS'
+            simp [color, huK, hvK]
+            exact (Finset.ne_of_mem_erase hvlist').symm
+          · have huS' : u ∈ S' := by simp [S', hu, huK]
+            have hulist' := hlist' u huS'
+            simp [color, huK, hvK]
+            exact Finset.ne_of_mem_erase hulist'
+          · have huS' : u ∈ S' := by simp [S', hu, huK]
+            have hvS' : v ∈ S' := by simp [S', hv, hvK]
+            simp [color, huK, hvK]
+            exact hproper' u huS' v hvS' huv hne
+      · refine ⟨fun _ => default, ?_⟩
+        constructor
+        · intro v hv
+          exact False.elim (hS ⟨v, hv⟩)
+        · intro u hu _ _ _ _
+          exact False.elim (hS ⟨u, hu⟩)
+  exact hP S.card S lists rfl _hkernel _hsize
 
 /--
 Galvin's theorem (the Dinitz conjecture): given an n×n array where each cell

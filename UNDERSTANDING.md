@@ -5,13 +5,16 @@
 Full-book formalization of *Proofs from THE BOOK* (Aigner & Ziegler) in Lean 4.
 40 chapters, each formalizing one "book proof."
 
-**Current status after Ch03 completion (2026-05-18):**
+**Current status after Ch31 completion (2026-05-18):**
 
-- 40 chapters compiled with 0 `sorry` and 0 `axiom` before the active Ch31 scaffold.
-- Ch31 now has one localized `sorry` target, `cayley_upper_bound`, while the old external `hCayley` parameter is being eliminated.
+- 40 chapters compile with 0 `sorry` and 0 `axiom`.
+- Ch31 Cayley upper bound has been eliminated via Joyal's endofunction injection.
 - Ch33 Hall's condition premise eliminated.
 - Ch03 Sylvester-Schur premise eliminated; `sylvester_general` now proves the binomial coefficient form directly from `2 * k ≤ n` and `0 < k`.
-- Next target: Ch31 Cayley upper bound / labeled tree enumeration.
+- Next target: Ch34 Dinitz/Galvin. The current `hextension` interface is too
+  strong: arbitrary partial proper list-colorings are not always one-cell
+  extendable. The correct route is the book's kernel-perfect orientation plus
+  stable-matching kernel argument.
 
 ## Premises to eliminate (from TODO.md)
 
@@ -19,7 +22,7 @@ Full-book formalization of *Proofs from THE BOOK* (Aigner & Ziegler) in Lean 4.
 |---------|---------|------------|--------|
 | Ch33 | Hall's condition | Easy | ✅ DONE |
 | Ch03 | Sylvester smoothness | Medium-Hard | ✅ DONE |
-| Ch31 | Prüfer encoding | Medium | ⬜ |
+| Ch31 | Joyal/Cayley upper bound | Medium | ✅ DONE |
 | Ch34 | Kernel-perfect extension | Medium-Hard | ⬜ |
 | Ch11 | Rotating calipers | Medium | ⬜ |
 | Ch09 | arccos(1/3) irrationality | Hard | ⬜ |
@@ -118,36 +121,38 @@ theorem sylvester_general (n k : ℕ) (hn : 2 * k ≤ n) (hk : 0 < k) :
 The proof combines Erdős-style factorization bounds, entropy/Stirling lower bounds,
 Chebyshev estimates, and finite certificates. See `CHAPTER03_EXPERIENCE.md`.
 
-## Ch31 — Prüfer encoding (NOT STARTED)
+## Ch31 — Cayley upper bound / Joyal encoding (DONE)
 
-Premise: `hCayley : Fintype.card (LabeledTree n) ≤ n ^ (n-2)`
+Premise eliminated: `hCayley : Fintype.card (LabeledTree n) ≤ n ^ (n-2)`.
 
-Task: Prove Cayley's upper bound for labeled trees, ideally by an explicit coding
-or by one of the book's enumerative proofs.
+Approach: formalized Joyal's injection from doubly rooted labeled trees to
+endofunctions on `Fin n`. Since there are `n^n` endofunctions and `n^2` root
+choices, this gives `Fintype.card (LabeledTree n) ≤ n^(n-2)` in the required
+range.
 
-Book reference: `proofs_in_the_book.pdf`, book Chapter 30, "Cayley's formula for the number of trees".
-The book first mentions Prüfer codes, but then develops Joyal's function-to-doubly-rooted-tree
-bijection, Kirchhoff's matrix-tree proof, Riordan-Rényi recursion, and Pitman's double-counting
-proof for rooted forests.
+Key theorem:
 
-This is algorithmic graph theory. Key lemmas needed:
-- `SimpleGraph.IsTree.exists_vert_degree_one_of_nontrivial` (leaf extraction)
-- Well-founded recursion on tree size
-- Injectivity: different trees → different Prüfer sequences
+```lean
+theorem joyal_tree_adj_iff_recovered (X : DoublyRootedLabeledTree n) (u v : Fin n) :
+    X.1.1.Adj u v ↔ joyalRecoveredAdj X u v
+```
 
-Useful Mathlib API found:
-- `SimpleGraph.IsTree.card_edgeFinset`
-- `SimpleGraph.isTree_iff_connected_and_card`
-- `SimpleGraph.IsTree.exists_vert_degree_one_of_nontrivial`
-- `SimpleGraph.Connected.induce_compl_singleton_of_degree_eq_one`
-- `SimpleGraph.card_edgeFinset_deleteIncidenceSet`
+This reconstructs all original tree edges from the Joyal endofunction data.
+The final proof is remote-build checked and has no `sorry`.
 
 ## Ch34 — Kernel-perfect orientation
 
 Premise: `hextension : ∀ colored partialColor, ... → ∃ v c, ...`
 
-The book uses kernel-perfect orientations of row-column bipartite graphs.
-Needs Galvin's theorem / kernel-perfect lemma.
+The current premise is mathematically too strong: a partial proper coloring of
+an `n × n` Dinitz array with lists of size `n` need not be extendable by coloring
+one additional arbitrary-uncolored cell. The correct proof is not greedy over
+arbitrary partial colorings. It must be replaced by Galvin's proof:
+
+1. Prove list-colorability from a kernel-perfect orientation with
+   `|C(v)| > outdegree(v)` for every vertex.
+2. Construct the Dinitz orientation from a Latin square order.
+3. Prove every induced subgraph has a kernel via the stable-matching lemma.
 
 ## Ch11 — Rotating calipers (slopes count)
 

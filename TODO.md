@@ -1,9 +1,7 @@
 # TODO: Remaining Premises to Prove
 
-All 40 chapters compiled with 0 `sorry` and 0 `axiom` before the active Ch31
-work began. During the Ch31 work-in-progress, the Cayley upper bound is
-localized as one explicit `sorry` target. The project goal remains to return
-to 0 `sorry` and 0 `axiom` after each premise is fully eliminated.
+All 40 chapters compile with 0 `sorry` and 0 `axiom`. Ch03, Ch31, and Ch33
+have had their original explicit premises eliminated.
 
 ## Priority 1: Provable with current Mathlib
 
@@ -26,19 +24,25 @@ to 0 `sorry` and 0 `axiom` after each premise is fully eliminated.
 - **How to prove:** Ungar's rotating-calipers argument: rotate a directed line through all angles. At each of n-1 "events" (line passes through a new pair), a new slope appears. Needs convex hull infrastructure.
 - **Estimated effort:** ~120 lines. Convex hull + angular sweep formalization.
 
-### Ch31: Cayley's upper bound (Prüfer encoding)
+### ~~Ch31: Cayley's upper bound (Prüfer/Joyal encoding)~~ ✅
 - **File:** `Chapter31.lean` line 126
 - **Premise:** `hCayley : Fintype.card (LabeledTree n) ≤ n ^ (n-2)`
 - **What it says:** There are at most n^{n-2} labeled trees on n vertices.
-- **How to prove:** Construct the Prüfer encoding: repeatedly remove the smallest leaf and record its neighbor. This gives an injective map to sequences. Needs well-founded recursion on tree size, `SimpleGraph.IsTree.exists_vert_degree_one_of_nontrivial` for leaf extraction.
-- **Estimated effort:** ~150 lines. The recursive algorithm + injectivity proof.
+- **Status:** Proved via Joyal's doubly rooted tree to endofunction injection.
+  The key theorem is `joyal_tree_adj_iff_recovered`, which reconstructs all tree
+  edges from the endofunction.
 
 ### Ch34: Kernel-perfect extension step
 - **File:** `Chapter34.lean` line 124
 - **Premise:** `hextension : ∀ colored partialColor, ... → ∃ v c, ...`
 - **What it says:** Given a partial proper list-coloring, one more cell can always be colored.
-- **How to prove:** Construct a kernel-perfect orientation of the row-column bipartite graph using list orderings. The kernel property guarantees a sink vertex whose list has more colors than colored neighbors. Use `galvin_greedy_step` (already proved) at that vertex.
-- **Estimated effort:** ~100 lines. Orientation construction is the core.
+- **Important correction:** This premise is too strong as stated: arbitrary partial
+  proper list-colorings need not be greedily extendable. The next step is to
+  replace this false greedy-extension interface with the actual Galvin proof:
+  list coloring from a kernel-perfect orientation, then the Dinitz orientation
+  and stable-matching kernel argument.
+- **Estimated effort:** Medium-hard. The proof must formalize the correct
+  kernel-perfect induction, not a one-cell greedy extension.
 
 ## Priority 2: Needs infrastructure not yet in Mathlib
 
@@ -72,7 +76,7 @@ to 0 `sorry` and 0 `axiom` after each premise is fully eliminated.
 |---------|---------|------------|---------|--------|
 | Ch33 | Hall's condition | Easy | None | ✅ **Done** |
 | Ch03 | Sylvester smoothness | Medium | None | ✅ **Done** |
-| Ch31 | Prüfer encoding | Medium | Algorithm formalization | ⬜ |
+| Ch31 | Joyal/Cayley upper bound | Medium | None | ✅ **Done** |
 | Ch34 | Kernel-perfect orientation | Medium-Hard | None | ⬜ |
 | Ch11 | Rotating calipers | Medium | Convex hull | ⬜ |
 | Ch09 | arccos(1/3) irrationality | Hard | Niven's theorem | ⬜ |
@@ -80,4 +84,4 @@ to 0 `sorry` and 0 `axiom` after each premise is fully eliminated.
 | Ch39 | Kneser lower bound | Very Hard | Borsuk-Ulam | ⬜ |
 
 Total estimated effort: ~1200 lines across 7 remaining chapters.
-Recommended attack order: Ch31 → Ch34 → Ch11 → Ch09 → Ch10 → Ch39.
+Recommended attack order: Ch34 → Ch11 → Ch09 → Ch10 → Ch39.

@@ -749,9 +749,44 @@ def Mem {N : ℕ} (I : PositionInterval N) (p : Fin N) : Prop :=
 def toSet {N : ℕ} (I : PositionInterval N) : Set (Fin N) :=
   {p | I.Mem p}
 
+/-- The finite set of positions in a consecutive interval. -/
+noncomputable def toFinset {N : ℕ} (I : PositionInterval N) : Finset (Fin N) := by
+  classical
+  exact Finset.univ.filter I.Mem
+
+theorem mem_toFinset {N : ℕ} {I : PositionInterval N} {p : Fin N} :
+    p ∈ I.toFinset ↔ I.Mem p := by
+  simp [toFinset]
+
 /-- The number of positions in a consecutive interval. -/
 def length {N : ℕ} (I : PositionInterval N) : ℕ :=
   I.hi + 1 - I.lo
+
+theorem toFinset_card {N : ℕ} (I : PositionInterval N) :
+    I.toFinset.card = I.length := by
+  classical
+  let e : Fin N ↪ ℕ := ⟨Fin.val, by intro a b h; exact Fin.ext h⟩
+  have hmap : I.toFinset.map e = Finset.Icc I.lo I.hi := by
+    ext n
+    constructor
+    · intro hn
+      rcases Finset.mem_map.mp hn with ⟨p, hp, hpval⟩
+      rw [mem_toFinset] at hp
+      simp [e] at hpval
+      subst n
+      exact Finset.mem_Icc.mpr hp
+    · intro hn
+      rcases Finset.mem_Icc.mp hn with ⟨hlo, hhi⟩
+      have hnlt : n < N := lt_of_le_of_lt hhi I.hi_lt
+      refine Finset.mem_map.mpr ⟨⟨n, hnlt⟩, ?_, ?_⟩
+      · rw [mem_toFinset]
+        exact ⟨hlo, hhi⟩
+      · simp [e]
+  have hcard_map : (I.toFinset.map e).card = I.toFinset.card :=
+    Finset.card_map e
+  rw [hmap] at hcard_map
+  rw [← hcard_map]
+  simp [length]
 
 /--
 For `2 * k` positions, the order of an interval crossing the middle barrier.

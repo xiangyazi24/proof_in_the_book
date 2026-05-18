@@ -81,6 +81,18 @@ theorem log_primeIntervalProduct_le_log_choose {a M : ℕ} (haM : a ≤ M) (hd :
       0 < primeIntervalProduct a M))
     (by exact_mod_cast primeIntervalProduct_le_choose haM hd)
 
+theorem sqrt_le_div_three_of_nine_le {n : ℕ} (hn : 9 ≤ n) : sqrt n ≤ n / 3 := by
+  rw [← Nat.lt_succ_iff]
+  rw [Nat.sqrt_lt]
+  have hq : 3 ≤ n / 3 := by omega
+  have hnle : n ≤ 3 * (n / 3) + 2 := by omega
+  nlinarith [sq_nonneg ((n / 3 : ℕ) : ℤ)]
+
+theorem sqrt_le_min_of_nine_le_and_lt_sq {n k : ℕ} (hn : 9 ≤ n) (hlt : n < k * k) :
+    sqrt n ≤ min k (n / 3) := by
+  refine le_min ?_ (sqrt_le_div_three_of_nine_le hn)
+  exact (Nat.sqrt_lt.mpr hlt).le
+
 theorem not_hasPrimeFactorAbove_iff_noLargePrimeFactor {k m : ℕ} :
     ¬ HasPrimeFactorAbove k m ↔ NoLargePrimeFactor k m := by
   constructor

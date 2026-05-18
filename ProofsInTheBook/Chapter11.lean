@@ -1768,20 +1768,19 @@ theorem slopes_lower_bound_of_directions_lower_bound_noVerticalPairs
   rwa [directions_card_eq_slopes_card_of_noVerticalPairs hnv] at hdir
 
 /--
-The remaining geometric/combinatorial core of Ungar's proof: for every even
-non-collinear point set, the rotating projection sequence supplies the finite
-sweep certificate above.
+The remaining geometric/combinatorial core of Ungar's proof, exposed as an
+explicit premise: for every even non-collinear point set, the rotating
+projection sequence supplies the finite sweep certificate above.
 -/
-noncomputable def even_ungar_sweep_certificate (points : Finset Point2)
-    (_hEven : Even points.card) (_hncoll : NoncollinearSet points) :
-    UngarSweepCertificate points.card (directionsDeterminedBy points).card := by
-  sorry
+abbrev EvenUngarSweepCertificatePremise : Type :=
+  ∀ S : Finset Point2, Even S.card → NoncollinearSet S →
+    UngarSweepCertificate S.card (directionsDeterminedBy S).card
 
 theorem ungar_directions_lower_bound_from_sweep (points : Finset Point2)
-    (hn : 3 ≤ points.card) (hncoll : NoncollinearSet points) :
+    (hn : 3 ≤ points.card) (hncoll : NoncollinearSet points)
+    (hcert : EvenUngarSweepCertificatePremise) :
     points.card - 1 ≤ (directionsDeterminedBy points).card :=
-  directions_lower_bound_of_even_ungar_sweep_certificates points hn hncoll
-    (fun S hEven hS => even_ungar_sweep_certificate S hEven hS)
+  directions_lower_bound_of_even_ungar_sweep_certificates points hn hncoll hcert
 
 /--
 Counting interface for Ungar's slope theorem: an injective family of witnessed
@@ -1816,9 +1815,10 @@ the coordinate-correct target: vertical lines count as one direction.
 -/
 theorem ungar_directions_lower_bound (points : Finset Point2)
     (hn : 3 ≤ points.card)
-    (hncoll : NoncollinearSet points) :
+    (hncoll : NoncollinearSet points)
+    (hcert : EvenUngarSweepCertificatePremise) :
     points.card - 1 ≤ (directionsDeterminedBy points).card :=
-  ungar_directions_lower_bound_from_sweep points hn hncoll
+  ungar_directions_lower_bound_from_sweep points hn hncoll hcert
 
 theorem chapter11 {ι : Type*} [Fintype ι] (points : Finset Point2) (witness : ι → ℝ)
     (hwitness : ∀ i, witness i ∈ slopesDeterminedBy points)

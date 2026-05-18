@@ -378,13 +378,25 @@ theorem joyalPathVertices_subset_periodicCore (X : DoublyRootedLabeledTree n) :
   simpa [g, joyalPathSelfMap_iterate_val] using hval
 
 /--
+No vertex off the left-right path is periodic under Joyal's endofunction.
+The intended proof uses `joyalOffPathValue_mem_tail_path_to_left`: while outside
+the path, iterating strictly shortens the unique path to the left endpoint.
+-/
+theorem periodicCore_subset_joyalPathVertices (X : DoublyRootedLabeledTree n) :
+    periodicCore (joyalTreeToFunction X) ⊆ joyalPathVertices X := by
+  classical
+  sorry
+
+/--
 Joyal's path vertices are exactly the periodic core of the associated endofunction.
 This is the formal version of the book's subset `M`.
 -/
 theorem periodicCore_joyalTreeToFunction (X : DoublyRootedLabeledTree n) :
     periodicCore (joyalTreeToFunction X) = joyalPathVertices X := by
   classical
-  sorry
+  exact Finset.Subset.antisymm
+    (periodicCore_subset_joyalPathVertices X)
+    (joyalPathVertices_subset_periodicCore X)
 
 theorem joyalPathRangeOrder_zero (X : DoublyRootedLabeledTree n)
     (h : 0 < (joyalPathRangeOrder X).length) :

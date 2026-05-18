@@ -550,6 +550,43 @@ theorem joyalPathRangeOrder_zero (X : DoublyRootedLabeledTree n)
   simpa [joyalPathRangeOrder] using
     SimpleGraph.Walk.support_getElem_zero (treePath X.1 X.2.1 X.2.2)
 
+theorem joyalPathRangeOrder_length_pos (X : DoublyRootedLabeledTree n) :
+    0 < (joyalPathRangeOrder X).length := by
+  simp [joyalPathRangeOrder]
+
+theorem joyalPathRangeOrder_last (X : DoublyRootedLabeledTree n)
+    (h : 0 < (joyalPathRangeOrder X).length) :
+    (joyalPathRangeOrder X)[(joyalPathRangeOrder X).length - 1]'(Nat.pred_lt (Nat.ne_of_gt h)) = X.2.2 := by
+  simpa [joyalPathRangeOrder, SimpleGraph.Walk.length_support] using
+    SimpleGraph.Walk.support_getElem_length (treePath X.1 X.2.1 X.2.2)
+
+theorem joyal_left_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
+    (hXY : joyalTreeToFunction X = joyalTreeToFunction Y) :
+    X.2.1 = Y.2.1 := by
+  have hrange := joyalPathRangeOrder_eq_of_function_eq hXY
+  have hX := joyalPathRangeOrder_length_pos X
+  have hY := joyalPathRangeOrder_length_pos Y
+  calc
+    X.2.1 = (joyalPathRangeOrder X)[0]'hX := (joyalPathRangeOrder_zero X hX).symm
+    _ = (joyalPathRangeOrder Y)[0]'hY := by simpa [hrange]
+    _ = Y.2.1 := joyalPathRangeOrder_zero Y hY
+
+theorem joyal_right_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
+    (hXY : joyalTreeToFunction X = joyalTreeToFunction Y) :
+    X.2.2 = Y.2.2 := by
+  have hrange := joyalPathRangeOrder_eq_of_function_eq hXY
+  have hX := joyalPathRangeOrder_length_pos X
+  have hY := joyalPathRangeOrder_length_pos Y
+  have hlen : (joyalPathRangeOrder X).length = (joyalPathRangeOrder Y).length := by
+    rw [hrange]
+  calc
+    X.2.2 =
+        (joyalPathRangeOrder X)[(joyalPathRangeOrder X).length - 1]'(Nat.pred_lt (Nat.ne_of_gt hX)) :=
+          (joyalPathRangeOrder_last X hX).symm
+    _ = (joyalPathRangeOrder Y)[(joyalPathRangeOrder Y).length - 1]'(Nat.pred_lt (Nat.ne_of_gt hY)) := by
+          simpa [hrange]
+    _ = Y.2.2 := joyalPathRangeOrder_last Y hY
+
 theorem joyalTreeToFunction_injective (n : ℕ) :
     Function.Injective (joyalTreeToFunction : DoublyRootedLabeledTree n → Fin n → Fin n) := by
   intro X Y hXY

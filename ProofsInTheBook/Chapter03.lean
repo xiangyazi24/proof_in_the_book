@@ -1684,6 +1684,103 @@ theorem below_square_B_core_compact {x : ℝ} (hx2 : 2 ≤ x) (hx31 : x ≤ 31) 
               · have hx24' : 24 ≤ x := by linarith
                 exact below_square_B_core_24_31 hx24' hx31
 
+theorem below_square_B_core_large {K x : ℝ}
+    (_hK120 : 120 ≤ K) (hx31 : 31 ≤ x) (hxhi : x ≤ K / 4 + 1) :
+    Real.sqrt (x / K) / 3 * Real.log (K * x)
+        + min 1 (x / 3) * Real.log 4 + (1 : ℝ) / 32
+      ≤ x * Real.log x - (x - 1) * Real.log (x - 1) := by
+  have hxpos : 0 < x := by linarith
+  have hx1 : 1 < x := by linarith
+  let K0 : ℝ := 4 * x - 4
+  have hK0pos : 0 < K0 := by
+    dsimp [K0]
+    linarith
+  have hK0K : K0 ≤ K := by
+    dsimp [K0]
+    linarith
+  have hexp : Real.exp 2 ≤ K0 * x := by
+    have hexp1 : Real.exp 1 < 3 := Real.exp_one_lt_three
+    have hexp1pos : 0 < Real.exp 1 := Real.exp_pos 1
+    have hexp2 : Real.exp 2 < 9 := by
+      rw [show (2 : ℝ) = 1 + 1 by norm_num, Real.exp_add]
+      nlinarith
+    dsimp [K0]
+    nlinarith
+  have hmono :=
+    sqrt_div_mul_log_mul_le_of_base_le
+      (K0 := K0) (K := K) (x := x) hK0pos hK0K hxpos hexp
+  have hmono_div :
+      Real.sqrt (x / K) / 3 * Real.log (K * x)
+        ≤ Real.sqrt (x / K0) / 3 * Real.log (K0 * x) := by
+    have h3 : (0 : ℝ) ≤ 3 := by norm_num
+    have h := div_le_div_of_nonneg_right hmono h3
+    convert h using 1 <;> ring
+  have hsqrt : Real.sqrt (x / K0) ≤ (13 : ℝ) / 25 := by
+    rw [Real.sqrt_le_left (by norm_num : (0 : ℝ) ≤ (13 : ℝ) / 25)]
+    dsimp [K0]
+    have hdenpos : 0 < (4 : ℝ) * x - 4 := by nlinarith
+    rw [div_le_iff₀ hdenpos]
+    nlinarith [hx31]
+  have hlogbase :
+      Real.log (K0 * x) ≤ Real.log 4 + 2 * Real.log x := by
+    have hbasepos : 0 < K0 * x := mul_pos hK0pos hxpos
+    have hlearg : K0 * x ≤ 4 * x ^ 2 := by
+      dsimp [K0]
+      nlinarith
+    have hlogle := Real.log_le_log hbasepos hlearg
+    have hrewrite : Real.log (4 * x ^ 2) = Real.log 4 + 2 * Real.log x := by
+      have hx_ne : x ≠ 0 := ne_of_gt hxpos
+      have hx2_ne : x ^ 2 ≠ 0 := pow_ne_zero 2 hx_ne
+      rw [Real.log_mul (by norm_num : (4 : ℝ) ≠ 0) hx2_ne, Real.log_pow]
+      norm_num
+    linarith
+  have hlogbase_nonneg : 0 ≤ Real.log (K0 * x) := by
+    have hbase_one : (1 : ℝ) ≤ K0 * x := by
+      dsimp [K0]
+      nlinarith
+    exact Real.log_nonneg hbase_one
+  have hterm_base :
+      Real.sqrt (x / K0) / 3 * Real.log (K0 * x)
+        ≤ ((13 : ℝ) / 25) / 3 * (Real.log 4 + 2 * Real.log x) := by
+    have hmul := mul_le_mul hsqrt hlogbase hlogbase_nonneg (by norm_num : (0 : ℝ) ≤ (13 : ℝ) / 25)
+    nlinarith
+  have hlog4_nonneg : 0 ≤ Real.log 4 := Real.log_nonneg (by norm_num)
+  have hminlog : min 1 (x / 3) * Real.log 4 ≤ (7 : ℝ) / 5 := by
+    calc
+      min 1 (x / 3) * Real.log 4 ≤ 1 * Real.log 4 := by
+        exact mul_le_mul_of_nonneg_right (min_le_left 1 (x / 3)) hlog4_nonneg
+      _ ≤ (7 : ℝ) / 5 := by nlinarith [log4_lt_7_5]
+  have hlogx : (69 : ℝ) / 25 ≤ Real.log x := by
+    have hlelog := Real.log_le_log (by norm_num : (0 : ℝ) < 16) (by linarith : (16 : ℝ) ≤ x)
+    nlinarith [hlelog, log16_gt_69_25]
+  have hinv : 1 / x ≤ (1 : ℝ) / 31 := by
+    exact one_div_le_one_div_of_le (by norm_num) hx31
+  have haux :
+      ((13 : ℝ) / 25) / 3 * (Real.log 4 + 2 * Real.log x) + (7 : ℝ) / 5 + (1 : ℝ) / 32
+        ≤ Real.log x + 1 - 1 / x := by
+    nlinarith [log4_lt_7_5, hlogx, hinv]
+  have hlower := entropyRatio_lower_log_add hx1
+  linarith
+
+theorem below_square_B_core {K x : ℝ}
+    (hK120 : 120 ≤ K) (hx2 : 2 ≤ x) (hxhi : x ≤ K / 4 + 1) :
+    Real.sqrt (x / K) / 3 * Real.log (K * x)
+        + min 1 (x / 3) * Real.log 4 + (1 : ℝ) / 32
+      ≤ x * Real.log x - (x - 1) * Real.log (x - 1) := by
+  by_cases hx31 : x ≤ 31
+  · have hmono :=
+      sqrt_div_mul_log_mul_le_of_120_le (K := K) (x := x) hK120 hx2
+    have hmono_div :
+        Real.sqrt (x / K) / 3 * Real.log (K * x)
+          ≤ Real.sqrt (x / 120) / 3 * Real.log (120 * x) := by
+      have h3 : (0 : ℝ) ≤ 3 := by norm_num
+      have h := div_le_div_of_nonneg_right hmono h3
+      convert h using 1 <;> ring
+    have hcompact := below_square_B_core_compact hx2 hx31
+    linarith
+  · have hx31' : 31 ≤ x := by linarith
+    exact below_square_B_core_large hK120 hx31' hxhi
+
 set_option maxHeartbeats 800000 in
 theorem exists_large_prime_factor_choose_below_sq_close_of_sqrt33
     {n k : ℕ} (hk9 : 9 ≤ k) (hn2k : 2 * k ≤ n)

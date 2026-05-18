@@ -603,6 +603,28 @@ theorem mem_joyalPathVertices_of_mem_treePath_to_left (X : DoublyRootedLabeledTr
   have hyp : y ∈ p.support := SimpleGraph.Walk.support_takeUntil_subset p hzsup hytake
   simpa [joyalPathVertices, p] using hyp
 
+theorem not_offpath_adj_path_farther_from_left (X : DoublyRootedLabeledTree n)
+    {w z : Fin n} (hw : w ∉ joyalPathVertices X) (hz : z ∈ joyalPathVertices X)
+    (hadj : X.1.1.Adj w z)
+    (hdist : X.1.1.dist X.2.1 w + 1 = X.1.1.dist X.2.1 z) :
+    False := by
+  classical
+  let q := treePath X.1 w X.2.1
+  let r : X.1.1.Walk z X.2.1 := SimpleGraph.Walk.cons hadj.symm q
+  have hqLen : q.length = X.1.1.dist w X.2.1 := treePath_length_eq_dist X.1 w X.2.1
+  have hrLen : r.length = X.1.1.dist z X.2.1 := by
+    change q.length + 1 = X.1.1.dist z X.2.1
+    rw [hqLen]
+    rw [SimpleGraph.dist_comm (u := w) (v := X.2.1)]
+    rw [SimpleGraph.dist_comm (u := z) (v := X.2.1)]
+    exact hdist
+  have hrPath : r.IsPath := SimpleGraph.Walk.isPath_of_length_eq_dist r hrLen
+  have hrEq : treePath X.1 z X.2.1 = r := (treePath_unique X.1 z X.2.1 hrPath).symm
+  have hwmem : w ∈ (treePath X.1 z X.2.1).support := by
+    rw [hrEq]
+    simp [r]
+  exact hw (mem_joyalPathVertices_of_mem_treePath_to_left X hz hwmem)
+
 theorem joyal_left_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
     (hXY : joyalTreeToFunction X = joyalTreeToFunction Y) :
     X.2.1 = Y.2.1 := by

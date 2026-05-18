@@ -506,3 +506,12 @@ Update for Task G1:
   `ssem2`, so tasks sent to `ssem` were resolved to `ssem2`. Registered group
   `ssem = [ssem, ssem2]` and submitted `e1853e3c`, confirmed resolved to
   physical channel `ssem`.
+
+Update for Task G1 physical `ssem`:
+- `e1853e3c` completed. It proposed a descending-factorial divisibility route:
+  large-prime-free `n.descFactorial k` should imply `n.descFactorial k ∣ k!`,
+  then contradict `k! < n.descFactorial k`.
+- This still isolates the full Schur/Erdős core in a counting lemma over
+  prime-power multiples in the descending block, so it is not a shortcut around
+  §§2-4. Useful pieces: product comparison `k! < n.descFactorial k` and a
+  possible factorization-counting alternative to the choose-estimate route.

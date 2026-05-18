@@ -587,10 +587,58 @@ theorem joyal_right_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
           simpa [hrange]
     _ = Y.2.2 := joyalPathRangeOrder_last Y hY
 
+def adjacentInList (l : List (Fin n)) (u v : Fin n) : Prop :=
+  ∃ i : ℕ, ∃ hi : i < l.length, ∃ hi' : i + 1 < l.length,
+    (l[i]'hi = u ∧ l[i + 1]'hi' = v) ∨ (l[i]'hi = v ∧ l[i + 1]'hi' = u)
+
+def joyalRecoveredAdj (X : DoublyRootedLabeledTree n) (u v : Fin n) : Prop :=
+  adjacentInList (joyalPathRangeOrder X) u v ∨
+    (u ∉ joyalPathVertices X ∧ joyalTreeToFunction X u = v) ∨
+    (v ∉ joyalPathVertices X ∧ joyalTreeToFunction X v = u)
+
+theorem joyalRecoveredAdj_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
+    (hXY : joyalTreeToFunction X = joyalTreeToFunction Y) (u v : Fin n) :
+    joyalRecoveredAdj X u v ↔ joyalRecoveredAdj Y u v := by
+  have hpath := joyalPathVertices_eq_of_function_eq hXY
+  have hrange := joyalPathRangeOrder_eq_of_function_eq hXY
+  simp [joyalRecoveredAdj, hpath, hrange, hXY]
+
+/--
+The Joyal endofunction data reconstructs the original tree edges: consecutive
+vertices on the left-right path give the path edges, and every off-path vertex
+is connected to its image.
+-/
+theorem joyal_tree_adj_iff_recovered (X : DoublyRootedLabeledTree n) (u v : Fin n) :
+    X.1.1.Adj u v ↔ joyalRecoveredAdj X u v := by
+  classical
+  sorry
+
+theorem joyal_tree_eq_of_function_eq {X Y : DoublyRootedLabeledTree n}
+    (hXY : joyalTreeToFunction X = joyalTreeToFunction Y) :
+    X.1 = Y.1 := by
+  apply Subtype.ext
+  ext u v
+  rw [joyal_tree_adj_iff_recovered X u v, joyal_tree_adj_iff_recovered Y u v]
+  exact joyalRecoveredAdj_eq_of_function_eq hXY u v
+
 theorem joyalTreeToFunction_injective (n : ℕ) :
     Function.Injective (joyalTreeToFunction : DoublyRootedLabeledTree n → Fin n → Fin n) := by
   intro X Y hXY
-  sorry
+  cases X with
+  | mk XT Xroots =>
+    cases Xroots with
+    | mk Xleft Xright =>
+      cases Y with
+      | mk YT Yroots =>
+        cases Yroots with
+        | mk Yleft Yright =>
+          have htree : XT = YT := joyal_tree_eq_of_function_eq hXY
+          have hleft : Xleft = Yleft := joyal_left_eq_of_function_eq hXY
+          have hright : Xright = Yright := joyal_right_eq_of_function_eq hXY
+          subst htree
+          subst hleft
+          subst hright
+          rfl
 
 theorem doublyRootedLabeledTree_card (n : ℕ) :
     Fintype.card (DoublyRootedLabeledTree n) = Fintype.card (LabeledTree n) * n * n := by

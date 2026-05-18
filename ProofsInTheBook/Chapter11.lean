@@ -1016,6 +1016,27 @@ theorem order_eq_crossOrder_of_crossing_block {k : ℕ} {π ρ : State (2 * k)}
   · intro hi_not
     exact False.elim (hi_not (by simp))
 
+noncomputable def crossingBlockIndex {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing) : Fin M.move.blockCount :=
+  Classical.choose (M.isCrossing_iff_exists_crossing_block.mp hM)
+
+theorem crossingBlockIndex_spec {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing) :
+    (M.move.block (M.crossingBlockIndex hM)).lo < k ∧
+      k ≤ (M.move.block (M.crossingBlockIndex hM)).hi :=
+  Classical.choose_spec (M.isCrossing_iff_exists_crossing_block.mp hM)
+
+theorem crossingBlockIndex_unique {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing) {i : Fin M.move.blockCount}
+    (hi : (M.move.block i).lo < k ∧ k ≤ (M.move.block i).hi) :
+    i = M.crossingBlockIndex hM :=
+  M.move.crossing_blocks_eq hi (M.crossingBlockIndex_spec hM)
+
+theorem order_eq_crossingBlockIndex_crossOrder {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing) :
+    M.order = (M.move.block (M.crossingBlockIndex hM)).crossOrder k :=
+  M.order_eq_crossOrder_of_crossing_block (M.crossingBlockIndex_spec hM)
+
 /-- The labels crossing in one reversal step fit inside the full position set. -/
 theorem two_mul_order_le_positions {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) :

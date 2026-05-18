@@ -56,6 +56,37 @@ theorem pruferCodeSpace_card (n : ℕ) :
     Fintype.card (pruferCodeSpace n) = n ^ (n - 2) := by
   simp [pruferCodeSpace]
 
+noncomputable def treeLeaves (T : LabeledTree n) : Finset (Fin n) :=
+  by
+    classical
+    exact Finset.univ.filter fun v => ∃! w, T.1.Adj v w
+
+theorem treeLeaves_nonempty (n : ℕ) (hn : 2 ≤ n) (T : LabeledTree n) :
+    (treeLeaves T).Nonempty := by
+  classical
+  haveI : Nontrivial (Fin n) := Fin.nontrivial_iff_two_le.mpr hn
+  obtain ⟨v, hv⟩ := T.2.exists_vert_degree_one_of_nontrivial
+  have hv' : ∃! w, T.1.Adj v w :=
+    existsUnique_adj_of_degree_eq_one hv
+  exact ⟨v, Finset.mem_filter.mpr ⟨Finset.mem_univ v, hv'⟩⟩
+
+noncomputable def smallestTreeLeaf (n : ℕ) (hn : 2 ≤ n) (T : LabeledTree n) : Fin n :=
+  (treeLeaves T).min' (treeLeaves_nonempty n hn T)
+
+theorem smallestTreeLeaf_mem_leaves (n : ℕ) (hn : 2 ≤ n) (T : LabeledTree n) :
+    smallestTreeLeaf n hn T ∈ treeLeaves T :=
+  Finset.min'_mem _ _
+
+theorem unique_adj_smallestTreeLeaf (n : ℕ) (hn : 2 ≤ n) (T : LabeledTree n) :
+    ∃! w, T.1.Adj (smallestTreeLeaf n hn T) w := by
+  have hmem := smallestTreeLeaf_mem_leaves n hn T
+  simpa [treeLeaves] using hmem
+
+theorem smallestTreeLeaf_le_of_unique_adj (n : ℕ) (hn : 2 ≤ n) (T : LabeledTree n)
+    {v : Fin n} (hv : ∃! w, T.1.Adj v w) :
+    smallestTreeLeaf n hn T ≤ v := by
+  exact Finset.min'_le _ _ (by simp [treeLeaves, hv])
+
 /-!
 ### Current target: eliminate the Cayley upper-bound premise
 

@@ -39,6 +39,19 @@ noncomputable instance (n : ℕ) : DecidableEq (LabeledTree n) := by
   classical
   exact Classical.decEq _
 
+theorem isTree_induce_compl_singleton_of_degree_eq_one
+    {V : Type*} [Fintype V] {G : SimpleGraph V} [DecidableRel G.Adj] {v : V}
+    (hG : G.IsTree) (hdeg : G.degree v = 1) :
+    (G.induce ({v}ᶜ : Set V)).IsTree := by
+  exact ⟨hG.connected.induce_compl_singleton_of_degree_eq_one hdeg,
+    hG.isAcyclic.induce ({v}ᶜ : Set V)⟩
+
+theorem existsUnique_adj_of_degree_eq_one
+    {V : Type*} [Fintype V] {G : SimpleGraph V} [DecidableRel G.Adj] {v : V}
+    (hdeg : G.degree v = 1) :
+    ∃! w, G.Adj v w :=
+  SimpleGraph.degree_eq_one_iff_existsUnique_adj.mp hdeg
+
 theorem pruferCodeSpace_card (n : ℕ) :
     Fintype.card (pruferCodeSpace n) = n ^ (n - 2) := by
   simp [pruferCodeSpace]
@@ -161,7 +174,7 @@ theorem prufer_encoding_exists (n : ℕ) (hn : 2 ≤ n) :
 Cayley's formula: there are exactly n^{n-2} labeled trees on n vertices.
 This follows immediately from the Prüfer bijection.
 -/
-theorem cayley_formula (n : ℕ) (hn : 2 ≤ n)
+theorem cayley_formula (n : ℕ) (_hn : 2 ≤ n)
     (prufer_equiv : LabeledTree n ≃ pruferCodeSpace n) :
     Fintype.card (LabeledTree n) = n ^ (n - 2) :=
   cayley_count_of_prufer_equiv n prufer_equiv

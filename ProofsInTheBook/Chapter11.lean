@@ -1026,6 +1026,15 @@ theorem mirror_mirror {N : ℕ} (I : PositionInterval N) (p : Fin N) (hp : I.Mem
   dsimp [mirror]
   omega
 
+theorem mirror_strictAnti {N : ℕ} (I : PositionInterval N)
+    {p q : Fin N} (hp : I.Mem p) (hq : I.Mem q) (hpq : p < q) :
+    I.mirror q hq < I.mirror p hp := by
+  rcases hp with ⟨hplo, hphi⟩
+  rcases hq with ⟨hqlo, hqhi⟩
+  change (I.mirror q ⟨hqlo, hqhi⟩).val < (I.mirror p ⟨hplo, hphi⟩).val
+  dsimp [mirror]
+  omega
+
 theorem le_mirror_iff_le_sub {N k : ℕ} (I : PositionInterval N)
     (p : Fin N) (hp : I.Mem p) (hk : k ≤ I.hi) :
     k ≤ (I.mirror p hp).val ↔ p.val ≤ I.lo + I.hi - k := by
@@ -1519,6 +1528,21 @@ def order {k : ℕ} {π ρ : State (2 * k)} (M : ReversalStep k π ρ) : ℕ :=
 /-- A reversal step is crossing exactly when its total order is positive. -/
 def IsCrossing {k : ℕ} {π ρ : State (2 * k)} (M : ReversalStep k π ρ) : Prop :=
   0 < M.order
+
+theorem label_decreases_after_block_of_reversesBlocks {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (i : Fin M.move.blockCount)
+    {p q : Fin (2 * k)} (hp : (M.move.block i).Mem p) (hq : (M.move.block i).Mem q)
+    (hpq : p < q) :
+    (ρ q).val < (ρ p).val := by
+  have hmirror_lt :
+      (M.move.block i).mirror q hq < (M.move.block i).mirror p hp :=
+    (M.move.block i).mirror_strictAnti hp hq hpq
+  have hmono :=
+    M.increasing_before i ((M.move.block i).mirror_mem q hq)
+      ((M.move.block i).mirror_mem p hp) hmirror_lt
+  rw [M.step_apply q, M.step_apply p]
+  rw [hrev.1 i q hq, hrev.1 i p hp]
+  exact hmono
 
 theorem isCrossing_iff_exists_crossing_block {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) :

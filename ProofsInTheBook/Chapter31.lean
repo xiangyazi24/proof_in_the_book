@@ -216,6 +216,27 @@ noncomputable def joyalPathTableValue (X : DoublyRootedLabeledTree n)
     rw [← joyalPathOrders_length_eq X]
     simpa [domain] using i.2⟩
 
+/-- For a vertex off the left-right path, point to the next vertex on its path toward the left end. -/
+noncomputable def joyalOffPathValue (X : DoublyRootedLabeledTree n)
+    (v : Fin n) (hv : v ∉ joyalPathVertices X) : Fin n := by
+  let p := treePath X.1 v X.2.1
+  have hne : v ≠ X.2.1 := by
+    intro h
+    exact hv (by simpa [h] using joyal_left_mem_pathVertices X)
+  have hp : ¬ p.Nil := SimpleGraph.Walk.not_nil_of_ne hne
+  exact p.snd
+
+theorem joyalOffPathValue_adj (X : DoublyRootedLabeledTree n)
+    (v : Fin n) (hv : v ∉ joyalPathVertices X) :
+    X.1.1.Adj v (joyalOffPathValue X v hv) := by
+  let p := treePath X.1 v X.2.1
+  have hne : v ≠ X.2.1 := by
+    intro h
+    exact hv (by simpa [h] using joyal_left_mem_pathVertices X)
+  have hp : ¬ p.Nil := SimpleGraph.Walk.not_nil_of_ne hne
+  change X.1.1.Adj v p.snd
+  exact SimpleGraph.Walk.adj_snd hp
+
 theorem doublyRootedLabeledTree_card (n : ℕ) :
     Fintype.card (DoublyRootedLabeledTree n) = Fintype.card (LabeledTree n) * n * n := by
   simp [DoublyRootedLabeledTree, Nat.mul_assoc]

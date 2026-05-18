@@ -201,6 +201,21 @@ theorem joyalPathOrders_length_eq (X : DoublyRootedLabeledTree n) :
     _ = (joyalPathRangeOrder X).length := by
       rw [List.toFinset_card_of_nodup (joyalPathRangeOrder_nodup X)]
 
+/-- The path-row part of Joyal's inverse map: first-row vertex ↦ same-column second-row vertex. -/
+noncomputable def joyalPathTableValue (X : DoublyRootedLabeledTree n)
+    (v : Fin n) (hv : v ∈ joyalPathVertices X) : Fin n := by
+  let domain := joyalPathDomainOrder X
+  let range := joyalPathRangeOrder X
+  have hvd : v ∈ domain := by
+    simpa [domain, joyalPathDomainOrder] using hv
+  let i : Fin domain.length :=
+    (List.Nodup.getEquiv domain (by simpa [domain] using joyalPathDomainOrder_nodup X)).symm
+      ⟨v, hvd⟩
+  exact range.get ⟨i.1, by
+    change i.1 < (joyalPathRangeOrder X).length
+    rw [← joyalPathOrders_length_eq X]
+    simpa [domain] using i.2⟩
+
 theorem doublyRootedLabeledTree_card (n : ℕ) :
     Fintype.card (DoublyRootedLabeledTree n) = Fintype.card (LabeledTree n) * n * n := by
   simp [DoublyRootedLabeledTree, Nat.mul_assoc]

@@ -1022,6 +1022,36 @@ namespace BlockMove
 def SameBlock {N : ℕ} (M : BlockMove N) (p q : Fin N) : Prop :=
   ∃ b : Fin M.blockCount, (M.block b).Mem p ∧ (M.block b).Mem q
 
+/--
+Semantic predicate for a block move: inside each block the map is the interval
+mirror, and outside all blocks it fixes positions.
+-/
+def ReversesBlocks {N : ℕ} (M : BlockMove N) : Prop :=
+  (∀ i : Fin M.blockCount, ∀ p : Fin N, ∀ hp : (M.block i).Mem p,
+    M.map p = (M.block i).mirror p hp) ∧
+  ∀ p : Fin N, (∀ i : Fin M.blockCount, ¬ (M.block i).Mem p) → M.map p = p
+
+theorem map_mem_of_reversesBlocks {N : ℕ} {M : BlockMove N}
+    (hM : M.ReversesBlocks) {i : Fin M.blockCount} {p : Fin N}
+    (hp : (M.block i).Mem p) :
+    (M.block i).Mem (M.map p) := by
+  rw [hM.1 i p hp]
+  exact (M.block i).mirror_mem p hp
+
+theorem map_map_eq_of_reversesBlocks_mem {N : ℕ} {M : BlockMove N}
+    (hM : M.ReversesBlocks) {i : Fin M.blockCount} {p : Fin N}
+    (hp : (M.block i).Mem p) :
+    M.map (M.map p) = p := by
+  have hmap : M.map p = (M.block i).mirror p hp := hM.1 i p hp
+  have hpmap : (M.block i).Mem (M.map p) := map_mem_of_reversesBlocks hM hp
+  have hvalmap : (M.map p).val = (M.block i).lo + (M.block i).hi - p.val :=
+    congrArg Fin.val hmap
+  apply Fin.ext
+  rw [hM.1 i (M.map p) hpmap]
+  dsimp [PositionInterval.mirror]
+  rcases hp with ⟨hlo, hhi⟩
+  omega
+
 theorem pairwise_disjoint_toFinset {N : ℕ} (M : BlockMove N) :
     ((Finset.univ : Finset (Fin M.blockCount)) : Set (Fin M.blockCount)).PairwiseDisjoint
       (fun i => (M.block i).toFinset) := by

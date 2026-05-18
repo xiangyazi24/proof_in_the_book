@@ -821,6 +821,18 @@ theorem mirror_mirror {N : ℕ} (I : PositionInterval N) (p : Fin N) (hp : I.Mem
   dsimp [mirror]
   omega
 
+theorem le_mirror_iff_le_sub {N k : ℕ} (I : PositionInterval N)
+    (p : Fin N) (hp : I.Mem p) (hk : k ≤ I.hi) :
+    k ≤ (I.mirror p hp).val ↔ p.val ≤ I.lo + I.hi - k := by
+  rcases hp with ⟨hlo, hhi⟩
+  dsimp [mirror]
+  omega
+
+theorem mirror_lt_iff_sub_lt {N k : ℕ} (I : PositionInterval N)
+    (p : Fin N) (hp : I.Mem p) :
+    (I.mirror p hp).val < k ↔ I.lo + I.hi - p.val < k := by
+  rfl
+
 /-- The number of positions in a consecutive interval. -/
 def length {N : ℕ} (I : PositionInterval N) : ℕ :=
   I.hi + 1 - I.lo

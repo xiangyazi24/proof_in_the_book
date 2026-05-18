@@ -326,6 +326,40 @@ theorem joyalPathTableValue_injective (X : DoublyRootedLabeledTree n)
         (List.idxOf_lt_length_iff.mpr hwd) := by simp [hidx]
     _ = w := hwget
 
+noncomputable def joyalPathSelfMap (X : DoublyRootedLabeledTree n) :
+    {v : Fin n // v ∈ joyalPathVertices X} → {v : Fin n // v ∈ joyalPathVertices X} :=
+  fun v => ⟨joyalTreeToFunction X v.1, joyalTreeToFunction_maps_pathVertices X v.2⟩
+
+theorem joyalPathSelfMap_injective (X : DoublyRootedLabeledTree n) :
+    Function.Injective (joyalPathSelfMap X) := by
+  intro v w h
+  apply Subtype.ext
+  apply joyalPathTableValue_injective X v.2 w.2
+  have hval := congrArg Subtype.val h
+  simpa [joyalPathSelfMap, joyalTreeToFunction_apply_of_mem] using hval
+
+theorem joyalPathSelfMap_iterate_val (X : DoublyRootedLabeledTree n) (m : ℕ)
+    (v : {v : Fin n // v ∈ joyalPathVertices X}) :
+    ((joyalPathSelfMap X)^[m] v).1 = (joyalTreeToFunction X)^[m] v.1 := by
+  induction m generalizing v with
+  | zero => simp
+  | succ m ih =>
+      simp [Function.iterate_succ, Function.comp_def, joyalPathSelfMap, ih]
+
+theorem joyalPathVertices_subset_periodicCore (X : DoublyRootedLabeledTree n) :
+    joyalPathVertices X ⊆ periodicCore (joyalTreeToFunction X) := by
+  classical
+  intro v hv
+  rw [mem_periodicCore_iff]
+  let g := joyalPathSelfMap X
+  have hper : (⟨v, hv⟩ : {v : Fin n // v ∈ joyalPathVertices X}) ∈ Function.periodicPts g :=
+    (joyalPathSelfMap_injective X).mem_periodicPts _
+  rw [Function.mem_periodicPts] at hper
+  rcases hper with ⟨m, hmpos, hm⟩
+  refine ⟨m, hmpos, ?_⟩
+  have hval := congrArg Subtype.val hm
+  simpa [g, joyalPathSelfMap_iterate_val] using hval
+
 /--
 Joyal's path vertices are exactly the periodic core of the associated endofunction.
 This is the formal version of the book's subset `M`.

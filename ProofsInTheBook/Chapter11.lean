@@ -2004,6 +2004,29 @@ theorem crossingMoves_card_pos {k r : ℕ} (A : CountedGeneralizedAllowableSeque
     0 < A.crossingMoves.card := by
   exact Finset.card_pos.mpr (A.crossingMoves_nonempty hk)
 
+noncomputable def crossingIdx {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) :
+    Fin A.crossingMoves.card → Fin r :=
+  A.crossingMoves.orderEmbOfFin rfl
+
+theorem crossingIdx_mem {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) (i : Fin A.crossingMoves.card) :
+    A.crossingIdx i ∈ A.crossingMoves := by
+  classical
+  simp [crossingIdx]
+
+theorem crossingIdx_isCrossing {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) (i : Fin A.crossingMoves.card) :
+    A.IsCrossing (A.crossingIdx i) := by
+  exact A.mem_crossingMoves.mp (A.crossingIdx_mem i)
+
+theorem crossingIdx_strict {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) {i j : Fin A.crossingMoves.card}
+    (hij : i < j) :
+    (A.crossingIdx i).val < (A.crossingIdx j).val := by
+  change A.crossingIdx i < A.crossingIdx j
+  exact (A.crossingMoves.orderEmbOfFin rfl).strictMono hij
+
 /-- Counted reversal steps plus a packing proof give a counting certificate. -/
 noncomputable def toCountingCertificate {k r : ℕ}
     (A : CountedGeneralizedAllowableSequence k r)

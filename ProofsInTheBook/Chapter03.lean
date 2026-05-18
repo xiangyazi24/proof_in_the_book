@@ -411,6 +411,30 @@ theorem log_choose_le_primeCounting_sqrt_log_add_log_choose_min_third_of_noLarge
       (add_le_add_right (log_primeIntervalProduct_le_log_choose hsqrtM hMsub)
         ((Nat.primeCounting (sqrt n) : ℝ) * Real.log n))
 
+theorem log_choose_le_primeCounting_sqrt_log_add_min_third_log_two_of_noLargePrimeFactor
+    {n k : ℕ} (hnpos : 0 < n) (hkn : k ≤ n) (hn2k : 2 * k ≤ n) (hn6 : 6 ≤ n)
+    (hno : NoLargePrimeFactor k (n.choose k))
+    (hsqrtM : sqrt n ≤ min k (n / 3)) (hMsub : min k (n / 3) - sqrt n ≤ sqrt n) :
+    Real.log (n.choose k) ≤
+      (Nat.primeCounting (sqrt n) : ℝ) * Real.log n
+        + ((min k (n / 3) : ℕ) : ℝ) * Real.log 2 := by
+  let M := min k (n / 3)
+  have hupper :=
+    log_choose_le_primeCounting_sqrt_log_add_log_choose_min_third_of_noLargePrimeFactor
+      (n := n) (k := k) hnpos hkn hn2k hn6 hno hsqrtM hMsub
+  have hchoose_pos : 0 < M.choose (sqrt n) := Nat.choose_pos hsqrtM
+  have hchoose_le : M.choose (sqrt n) ≤ 2 ^ M := Nat.choose_le_two_pow M (sqrt n)
+  have hlog_choose_le :
+      Real.log (M.choose (sqrt n)) ≤ Real.log (2 ^ M) := by
+    exact Real.log_le_log (by exact_mod_cast hchoose_pos) (by exact_mod_cast hchoose_le)
+  exact hupper.trans <| add_le_add_right
+    (by
+      calc
+        Real.log (M.choose (sqrt n)) ≤ Real.log (2 ^ M) := hlog_choose_le
+        _ = Real.log ((2 : ℝ) ^ M) := by norm_num [Nat.cast_pow]
+        _ = (M : ℝ) * Real.log 2 := by rw [Real.log_pow])
+    ((Nat.primeCounting (sqrt n) : ℝ) * Real.log n)
+
 theorem mul_log_sub_mul_log_le_log_choose {n k : ℕ}
     (hkpos : 0 < k) (hkn : k ≤ n) :
     (k : ℝ) * Real.log n - (k : ℝ) * Real.log k ≤ Real.log (n.choose k) := by

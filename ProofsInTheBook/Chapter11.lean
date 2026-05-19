@@ -1359,6 +1359,30 @@ theorem crossOrder_le_right {k : ℕ} (I : PositionInterval (2 * k)) :
   · rw [crossOrder_eq_zero_of_not_crossing h]
     omega
 
+/-- The `crossOrder` positions immediately to the left of the middle barrier inside `I`. -/
+noncomputable def leftCentralPositions (k : ℕ) (I : PositionInterval (2 * k)) :
+    Finset (Fin (2 * k)) := by
+  classical
+  exact I.toFinset.filter fun p => k - I.crossOrder k ≤ p.val ∧ p.val < k
+
+/-- The `crossOrder` positions immediately to the right of the middle barrier inside `I`. -/
+noncomputable def rightCentralPositions (k : ℕ) (I : PositionInterval (2 * k)) :
+    Finset (Fin (2 * k)) := by
+  classical
+  exact I.toFinset.filter fun p => k ≤ p.val ∧ p.val < k + I.crossOrder k
+
+theorem mem_leftCentralPositions {k : ℕ} {I : PositionInterval (2 * k)}
+    {p : Fin (2 * k)} :
+    p ∈ I.leftCentralPositions k ↔
+      I.Mem p ∧ k - I.crossOrder k ≤ p.val ∧ p.val < k := by
+  simp [leftCentralPositions, mem_toFinset]
+
+theorem mem_rightCentralPositions {k : ℕ} {I : PositionInterval (2 * k)}
+    {p : Fin (2 * k)} :
+    p ∈ I.rightCentralPositions k ↔
+      I.Mem p ∧ k ≤ p.val ∧ p.val < k + I.crossOrder k := by
+  simp [rightCentralPositions, mem_toFinset]
+
 theorem crossOrder_pos_iff {k : ℕ} (I : PositionInterval (2 * k)) :
     0 < I.crossOrder k ↔ I.lo < k ∧ k ≤ I.hi := by
   constructor
@@ -1666,6 +1690,30 @@ theorem decreasing_after_rightMirrorCrossingPositions {k : ℕ} {π ρ : State (
   exact M.label_decreases_after_block_of_reversesBlocks hrev (M.crossingBlockIndex hM)
     hpB hqB hpq
 
+theorem decreasing_after_leftCentralPositions {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (hM : M.IsCrossing) :
+    DecreasingOnPositions ρ
+      ((M.move.block (M.crossingBlockIndex hM)).leftCentralPositions k) := by
+  intro p hp q hq hpq
+  have hpB : (M.move.block (M.crossingBlockIndex hM)).Mem p := by
+    exact (PositionInterval.mem_leftCentralPositions.mp hp).1
+  have hqB : (M.move.block (M.crossingBlockIndex hM)).Mem q := by
+    exact (PositionInterval.mem_leftCentralPositions.mp hq).1
+  exact M.label_decreases_after_block_of_reversesBlocks hrev (M.crossingBlockIndex hM)
+    hpB hqB hpq
+
+theorem decreasing_after_rightCentralPositions {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (hM : M.IsCrossing) :
+    DecreasingOnPositions ρ
+      ((M.move.block (M.crossingBlockIndex hM)).rightCentralPositions k) := by
+  intro p hp q hq hpq
+  have hpB : (M.move.block (M.crossingBlockIndex hM)).Mem p := by
+    exact (PositionInterval.mem_rightCentralPositions.mp hp).1
+  have hqB : (M.move.block (M.crossingBlockIndex hM)).Mem q := by
+    exact (PositionInterval.mem_rightCentralPositions.mp hq).1
+  exact M.label_decreases_after_block_of_reversesBlocks hrev (M.crossingBlockIndex hM)
+    hpB hqB hpq
+
 theorem increasing_before_leftMirrorCrossingPositions {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) (hM : M.IsCrossing) :
     IncreasingOnPositions π
@@ -1694,6 +1742,28 @@ theorem increasing_before_rightMirrorCrossingPositions {k : ℕ} {π ρ : State 
     rw [PositionInterval.rightMirrorCrossingPositions, Finset.mem_filter,
       PositionInterval.mem_toFinset] at hq
     exact hq.1
+  exact M.increasing_before (M.crossingBlockIndex hM) hpB hqB hpq
+
+theorem increasing_before_leftCentralPositions {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing) :
+    IncreasingOnPositions π
+      ((M.move.block (M.crossingBlockIndex hM)).leftCentralPositions k) := by
+  intro p hp q hq hpq
+  have hpB : (M.move.block (M.crossingBlockIndex hM)).Mem p := by
+    exact (PositionInterval.mem_leftCentralPositions.mp hp).1
+  have hqB : (M.move.block (M.crossingBlockIndex hM)).Mem q := by
+    exact (PositionInterval.mem_leftCentralPositions.mp hq).1
+  exact M.increasing_before (M.crossingBlockIndex hM) hpB hqB hpq
+
+theorem increasing_before_rightCentralPositions {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing) :
+    IncreasingOnPositions π
+      ((M.move.block (M.crossingBlockIndex hM)).rightCentralPositions k) := by
+  intro p hp q hq hpq
+  have hpB : (M.move.block (M.crossingBlockIndex hM)).Mem p := by
+    exact (PositionInterval.mem_rightCentralPositions.mp hp).1
+  have hqB : (M.move.block (M.crossingBlockIndex hM)).Mem q := by
+    exact (PositionInterval.mem_rightCentralPositions.mp hq).1
   exact M.increasing_before (M.crossingBlockIndex hM) hpB hqB hpq
 
 theorem leftMirrorCrossingPositions_card_eq_order {k : ℕ} {π ρ : State (2 * k)}

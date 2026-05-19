@@ -1785,6 +1785,21 @@ def DecreasingOnPositions {N : ℕ} (π : State N) (s : Finset (Fin N)) : Prop :
 def IncreasingOnPositions {N : ℕ} (π : State N) (s : Finset (Fin N)) : Prop :=
   ∀ ⦃p⦄, p ∈ s → ∀ ⦃q⦄, q ∈ s → p < q → (π p).val < (π q).val
 
+theorem not_increasing_and_decreasing_on_two_positions {N : ℕ}
+    {π : State N} {s : Finset (Fin N)}
+    (hinc : IncreasingOnPositions π s) (hdec : DecreasingOnPositions π s)
+    (hcard : 2 ≤ s.card) :
+    False := by
+  have hcard' : 1 < s.card := by omega
+  rcases Finset.one_lt_card.mp hcard' with ⟨p, hp, q, hq, hpq⟩
+  rcases lt_or_gt_of_ne hpq with hpq_lt | hqp_lt
+  · have hlt1 := hinc hp hq hpq_lt
+    have hlt2 := hdec hp hq hpq_lt
+    omega
+  · have hlt1 := hinc hq hp hqp_lt
+    have hlt2 := hdec hq hp hqp_lt
+    omega
+
 theorem increasing_before_block {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) (i : Fin M.move.blockCount) :
     IncreasingOnPositions π (M.move.block i).toFinset := by

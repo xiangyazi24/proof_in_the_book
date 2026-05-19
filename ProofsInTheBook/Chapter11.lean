@@ -163,6 +163,14 @@ theorem PointLabeling.direction_mem {points : Finset Point2} {k : ℕ}
   exact direction_mem_directionsDeterminedBy (L.mem_point a) (L.mem_point b)
     (fun hp => hab (L.point_injective hp))
 
+theorem DirectionLabeling.exists_dir_eq_labeled_pair {points : Finset Point2} {k : ℕ}
+    (D : DirectionLabeling points) (L : PointLabeling points k)
+    {a b : Fin (2 * k)} (hab : a ≠ b) :
+    ∃ j, D.dir j = direction (L.point a) (L.point b) := by
+  rcases D.dir_surjective_on (direction (L.point a) (L.point b))
+      (L.direction_mem hab) with ⟨j, hj⟩
+  exact ⟨j, hj⟩
+
 theorem directions_from_noncollinear_triple_ne {p q r : Point2}
     (hnon : NoncollinearTriple p q r) :
     direction p q ≠ direction p r := by

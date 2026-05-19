@@ -232,6 +232,8 @@ Current progress:
   pair directions in `directionsDeterminedBy`.
 - Added `DirectionLabeling.ofDirections`, a reusable enumeration of
   `directionsDeterminedBy points` by `Fin (directionsDeterminedBy points).card`.
+  Any direction determined by two distinct point labels now has a corresponding
+  direction index.
 - Added a direct `EvenConcreteEndGapSequencePremise` route.  The endpoint can
   now be supplied either by a cyclic witness, which reuses the adjacent-gap
   theorem, or by proving `CyclicEndGap` directly from the geometric sweep.

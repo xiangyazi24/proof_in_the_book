@@ -201,6 +201,10 @@ Current progress:
   proves the general `d_i + d_{i+1} - 1` lower bound.  The counted-sequence
   endpoint is reduced to the cyclic first/last `gap_ends` condition plus the
   no-full-crossing condition.
+- Added `CyclicEndGapWitness`, matching Ungar's periodic-extension argument
+  for the first/last crossing pair, and connected concrete cyclic sequences
+  back to the even direction bound via
+  `even_direction_bound_of_concrete_cyclic_sequence`.
 
 Remaining core: formalize Ungar's even-cardinality permutation/T-O-C counting
 argument enough to produce an `UngarCountingCertificate` from the rotating

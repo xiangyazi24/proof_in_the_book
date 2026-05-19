@@ -4337,6 +4337,54 @@ theorem gap_between_crossingIdx {k r : ℕ}
     A.toCountedGeneralizedAllowableSequence.consecutive_crossingIdx_succ i hi
   exact A.gap_between_consecutive_crossings hij
 
+def CyclicEndGap {k r : ℕ} (A : ConcreteGeneralizedAllowableSequence k r)
+    (hpos : 0 < A.toCountedGeneralizedAllowableSequence.crossingMoves.card) : Prop :=
+  A.toCountedGeneralizedAllowableSequence.moveOrder
+      (A.toCountedGeneralizedAllowableSequence.crossingIdx ⟨0, hpos⟩) +
+      A.toCountedGeneralizedAllowableSequence.moveOrder
+        (A.toCountedGeneralizedAllowableSequence.crossingIdx
+          ⟨A.toCountedGeneralizedAllowableSequence.crossingMoves.card - 1, by omega⟩) - 1 ≤
+    (A.toCountedGeneralizedAllowableSequence.crossingIdx ⟨0, hpos⟩).val +
+      (r - 1 -
+        (A.toCountedGeneralizedAllowableSequence.crossingIdx
+          ⟨A.toCountedGeneralizedAllowableSequence.crossingMoves.card - 1, by omega⟩).val)
+
+structure CyclicEndGapWitness {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r)
+    (hpos : 0 < A.toCountedGeneralizedAllowableSequence.crossingMoves.card) where
+  periodMoves : ℕ
+  cyclic : ConcreteGeneralizedAllowableSequence k periodMoves
+  lastCrossing : Fin periodMoves
+  nextFirstCrossing : Fin periodMoves
+  consecutive :
+    cyclic.toCountedGeneralizedAllowableSequence.ConsecutiveCrossing
+      lastCrossing nextFirstCrossing
+  last_order :
+    cyclic.toCountedGeneralizedAllowableSequence.moveOrder lastCrossing =
+      A.toCountedGeneralizedAllowableSequence.moveOrder
+        (A.toCountedGeneralizedAllowableSequence.crossingIdx
+          ⟨A.toCountedGeneralizedAllowableSequence.crossingMoves.card - 1, by omega⟩)
+  next_order :
+    cyclic.toCountedGeneralizedAllowableSequence.moveOrder nextFirstCrossing =
+      A.toCountedGeneralizedAllowableSequence.moveOrder
+        (A.toCountedGeneralizedAllowableSequence.crossingIdx ⟨0, hpos⟩)
+  cyclic_gap_eq :
+    nextFirstCrossing.val - lastCrossing.val - 1 =
+      (A.toCountedGeneralizedAllowableSequence.crossingIdx ⟨0, hpos⟩).val +
+        (r - 1 -
+          (A.toCountedGeneralizedAllowableSequence.crossingIdx
+            ⟨A.toCountedGeneralizedAllowableSequence.crossingMoves.card - 1, by omega⟩).val)
+
+theorem cyclicEndGap_of_witness {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r)
+    {hpos : 0 < A.toCountedGeneralizedAllowableSequence.crossingMoves.card}
+    (W : A.CyclicEndGapWitness hpos) :
+    A.CyclicEndGap hpos := by
+  have hgap := W.cyclic.gap_between_consecutive_crossings W.consecutive
+  dsimp [CyclicEndGap]
+  rw [← W.last_order, ← W.next_order, ← W.cyclic_gap_eq]
+  simpa [add_comm] using hgap
+
 theorem length_lower_bound_from_end_gap {k r : ℕ}
     (A : ConcreteGeneralizedAllowableSequence k r) (hk : 0 < k)
     (hnoFull :
@@ -4372,6 +4420,18 @@ theorem length_lower_bound_from_end_gap {k r : ℕ}
     (by
       simpa using hgap_ends)
 
+theorem length_lower_bound_from_cyclic_end_gap {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) (hk : 0 < k)
+    (hnoFull :
+      ∀ j : Fin r, A.toCountedGeneralizedAllowableSequence.IsCrossing j →
+        A.toCountedGeneralizedAllowableSequence.moveOrder j < k)
+    (hend :
+      A.CyclicEndGap
+        (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk)) :
+    2 * k ≤ r := by
+  exact A.length_lower_bound_from_end_gap hk hnoFull (by
+    simpa [CyclicEndGap] using hend)
+
 theorem crossingIdx_decreases_common_central_after {k r d : ℕ}
     (A : ConcreteGeneralizedAllowableSequence k r)
     (i : ℕ) (hi : i + 1 <
@@ -4403,6 +4463,20 @@ theorem crossingIdx_increases_common_central_before_next {k r d : ℕ}
   exact A.consecutive_crossing_increases_common_central_before_second hij hd
 
 end ConcreteGeneralizedAllowableSequence
+
+theorem even_direction_bound_of_concrete_cyclic_sequence (points : Finset Point2)
+    {k : ℕ} (hk : 0 < k) (hcard : points.card = 2 * k)
+    (A : ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy points).card)
+    (hnoFull :
+      ∀ j : Fin (directionsDeterminedBy points).card,
+        A.toCountedGeneralizedAllowableSequence.IsCrossing j →
+          A.toCountedGeneralizedAllowableSequence.moveOrder j < k)
+    (W : A.CyclicEndGapWitness
+      (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk)) :
+    points.card ≤ (directionsDeterminedBy points).card := by
+  rw [hcard]
+  exact A.length_lower_bound_from_cyclic_end_gap hk hnoFull
+    (A.cyclicEndGap_of_witness W)
 
 /--
 The universally valid fixed-axis finite-slope consequence of a projective

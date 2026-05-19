@@ -1658,6 +1658,7 @@ crossing count from the block fields.
 -/
 structure BlockMove (N : ℕ) where
   blockCount : ℕ
+  blockCount_pos : 0 < blockCount
   block : Fin blockCount → PositionInterval N
   pairwise_disjoint :
     ((Finset.univ : Finset (Fin blockCount)) : Set (Fin blockCount)).PairwiseDisjoint

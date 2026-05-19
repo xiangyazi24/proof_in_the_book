@@ -3185,6 +3185,41 @@ theorem letters_cross_crossingIdx {k r : ℕ}
   rw [A.sum_crossingIdx_eq_sum_crossingMoves]
   exact A.letters_cross_crossingMoves
 
+theorem crossingMoves_card_ne_one_of_no_full_crossing {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r)
+    (hnoFull : ∀ j : Fin r, A.IsCrossing j → A.moveOrder j < k) :
+    A.crossingMoves.card ≠ 1 := by
+  intro hcard
+  have hpos : 0 < A.crossingMoves.card := by omega
+  let i0 : Fin A.crossingMoves.card := ⟨0, hpos⟩
+  have hall : ∀ i : Fin A.crossingMoves.card, i = i0 := by
+    intro i
+    apply Fin.ext
+    dsimp [i0]
+    omega
+  have hsum_eq :
+      (∑ i : Fin A.crossingMoves.card, 2 * A.moveOrder (A.crossingIdx i)) =
+        2 * A.moveOrder (A.crossingIdx i0) := by
+    rw [Finset.sum_eq_single i0]
+    · intro b _hb hbne
+      exact False.elim (hbne (hall b))
+    · intro hnot
+      exact False.elim (hnot (by simp))
+  have hletters := A.letters_cross_crossingIdx
+  rw [hsum_eq] at hletters
+  have hlt : A.moveOrder (A.crossingIdx i0) < k :=
+    hnoFull (A.crossingIdx i0) (A.crossingIdx_isCrossing i0)
+  omega
+
+theorem two_le_crossingMoves_card_of_no_full_crossing {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) (hk : 0 < k)
+    (hnoFull : ∀ j : Fin r, A.IsCrossing j → A.moveOrder j < k) :
+    2 ≤ A.crossingMoves.card := by
+  have hpos := A.crossingMoves_card_pos hk
+  by_contra hnot
+  have hcard : A.crossingMoves.card = 1 := by omega
+  exact A.crossingMoves_card_ne_one_of_no_full_crossing hnoFull hcard
+
 noncomputable def toMoveSchedule {k r : ℕ}
     (A : CountedGeneralizedAllowableSequence k r)
     (htwo : 2 ≤ A.crossingMoves.card)
@@ -3657,6 +3692,26 @@ theorem gap_between_consecutive_crossings_of_unit_orders {k r : ℕ}
       j.val - i.val - 1 := by
   have hgap := A.one_le_gap_between_consecutive_crossings hij hk
   omega
+
+theorem gap_between_crossingIdx_of_unit_orders {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r)
+    (hk : 0 < k)
+    (hunit :
+      ∀ i : Fin A.toCountedGeneralizedAllowableSequence.crossingMoves.card,
+        A.toCountedGeneralizedAllowableSequence.moveOrder
+          (A.toCountedGeneralizedAllowableSequence.crossingIdx i) = 1)
+    (i : ℕ) (hi : i + 1 <
+      A.toCountedGeneralizedAllowableSequence.crossingMoves.card) :
+    A.toCountedGeneralizedAllowableSequence.moveOrder
+          (A.toCountedGeneralizedAllowableSequence.crossingIdx ⟨i, by omega⟩) +
+        A.toCountedGeneralizedAllowableSequence.moveOrder
+          (A.toCountedGeneralizedAllowableSequence.crossingIdx ⟨i + 1, by omega⟩) - 1 ≤
+      (A.toCountedGeneralizedAllowableSequence.crossingIdx ⟨i + 1, by omega⟩).val -
+        (A.toCountedGeneralizedAllowableSequence.crossingIdx ⟨i, by omega⟩).val - 1 := by
+  have hij :=
+    A.toCountedGeneralizedAllowableSequence.consecutive_crossingIdx_succ i hi
+  exact A.gap_between_consecutive_crossings_of_unit_orders hij hk
+    (hunit ⟨i, by omega⟩) (hunit ⟨i + 1, by omega⟩)
 
 end ConcreteGeneralizedAllowableSequence
 

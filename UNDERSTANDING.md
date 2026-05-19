@@ -186,6 +186,10 @@ Current progress:
   crossing steps are increasing/decreasing on the whole central window, and
   every offset `s < min(d_i,d_j)` between consecutive crossings has a
   noncrossing switch witness.
+- Proved the finite counted-sequence fact that if no crossing move has full
+  order `k`, then there are at least two crossing moves; also connected the
+  existing unit-order consecutive gap lemma to the ordered `crossingIdx`
+  interface used by `toMoveSchedule`.
 
 Remaining core: formalize Ungar's even-cardinality permutation/T-O-C counting
 argument enough to produce an `UngarCountingCertificate` from the rotating

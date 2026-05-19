@@ -190,6 +190,10 @@ Current progress:
   order `k`, then there are at least two crossing moves; also connected the
   existing unit-order consecutive gap lemma to the ordered `crossingIdx`
   interface used by `toMoveSchedule`.
+- Added central-window monotonicity, restriction lemmas for increasing/decreasing
+  states, and the block-intersection fact needed for the T/O/C persistence
+  proof: in a state decreasing on a central window, an increasing reversal
+  block intersects that window in at most one position.
 
 Remaining core: formalize Ungar's even-cardinality permutation/T-O-C counting
 argument enough to produce an `UngarCountingCertificate` from the rotating

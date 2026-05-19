@@ -230,6 +230,8 @@ Current progress:
 - Added `PointLabeling.ofCard`, a reusable equivalence from `Fin (2*k)` labels
   to the points of an even-cardinality finite set, plus membership of labeled
   pair directions in `directionsDeterminedBy`.
+- Added `DirectionLabeling.ofDirections`, a reusable enumeration of
+  `directionsDeterminedBy points` by `Fin (directionsDeterminedBy points).card`.
 - Added a direct `EvenConcreteEndGapSequencePremise` route.  The endpoint can
   now be supplied either by a cyclic witness, which reuses the adjacent-gap
   theorem, or by proving `CyclicEndGap` directly from the geometric sweep.

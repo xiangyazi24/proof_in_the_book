@@ -70,6 +70,12 @@ structure PointLabeling (points : Finset Point2) (k : ℕ) where
   point_injective : Function.Injective point
   point_surjective_on : ∀ p ∈ points, ∃ a, point a = p
 
+structure DirectionLabeling (points : Finset Point2) where
+  dir : Fin (directionsDeterminedBy points).card → Direction
+  mem_dir : ∀ j, dir j ∈ directionsDeterminedBy points
+  dir_injective : Function.Injective dir
+  dir_surjective_on : ∀ d ∈ directionsDeterminedBy points, ∃ j, dir j = d
+
 namespace PointLabeling
 
 noncomputable def ofCard {points : Finset Point2} {k : ℕ}
@@ -89,6 +95,25 @@ noncomputable def ofCard {points : Finset Point2} {k : ℕ}
     simp
 
 end PointLabeling
+
+namespace DirectionLabeling
+
+noncomputable def ofDirections (points : Finset Point2) : DirectionLabeling points where
+  dir := fun j => (Finset.equivFin (directionsDeterminedBy points)).symm j
+  mem_dir := fun j => ((Finset.equivFin (directionsDeterminedBy points)).symm j).2
+  dir_injective := by
+    intro i j h
+    have hsub :
+        (Finset.equivFin (directionsDeterminedBy points)).symm i =
+          (Finset.equivFin (directionsDeterminedBy points)).symm j := by
+      exact Subtype.ext h
+    exact (Finset.equivFin (directionsDeterminedBy points)).symm.injective hsub
+  dir_surjective_on := by
+    intro d hd
+    refine ⟨(Finset.equivFin (directionsDeterminedBy points)) ⟨d, hd⟩, ?_⟩
+    simp
+
+end DirectionLabeling
 
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by

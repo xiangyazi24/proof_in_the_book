@@ -3050,6 +3050,99 @@ theorem consecutive_crossing_middlePair_increasing_before_second {k r : ℕ}
     ReversalStep.MiddlePairIncreasing (A.seq.π (stepFrom j)) hk :=
   A.crossing_step_middlePair_increasing_before hij.2.1 hk
 
+theorem exists_middlePair_switch_between_consecutive_crossings {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {i j : Fin r}
+    (hij : A.toCountedGeneralizedAllowableSequence.ConsecutiveCrossing i j)
+    (hk : 0 < k) :
+    ∃ m : Fin r,
+      i.val < m.val ∧ m.val < j.val ∧
+        ReversalStep.MiddlePairDecreasing (A.seq.π (stepFrom m)) hk ∧
+        ReversalStep.MiddlePairIncreasing (A.seq.π (stepTo m)) hk ∧
+        ¬ A.toCountedGeneralizedAllowableSequence.IsCrossing m := by
+  classical
+  let a : ℕ := i.val + 1
+  let b : ℕ := j.val
+  let P : ℕ → Prop := fun t =>
+    if h : t ≤ r then
+      ReversalStep.MiddlePairIncreasing (A.stateAt t h) hk
+    else
+      False
+  have ha_le_r : a ≤ r := by
+    dsimp [a]
+    exact Nat.succ_le_of_lt i.isLt
+  have hb_le_r : b ≤ r := by
+    dsimp [b]
+    exact le_of_lt j.isLt
+  have hijlt : i.val < j.val := hij.2.2.1
+  have hab : a ≤ b := by
+    dsimp [a, b]
+    omega
+  have hdec_a :
+      ReversalStep.MiddlePairDecreasing (A.stateAt a ha_le_r) hk := by
+    have hdec := A.consecutive_crossing_middlePair_decreasing_after_first hij hk
+    have hstate : A.stateAt a ha_le_r = A.seq.π (stepTo i) := by
+      apply congrArg A.seq.π
+      apply Fin.ext
+      simp [stepTo, a]
+    rw [hstate]
+    exact hdec
+  have hnot_a : ¬ P a := by
+    intro hPa
+    unfold P at hPa
+    rw [dif_pos ha_le_r] at hPa
+    exact ReversalStep.not_middlePair_increasing_and_decreasing hk ⟨hPa, hdec_a⟩
+  have hP_b : P b := by
+    have hinc := A.consecutive_crossing_middlePair_increasing_before_second hij hk
+    have hinc_b :
+        ReversalStep.MiddlePairIncreasing (A.stateAt b hb_le_r) hk := by
+      have hstate : A.stateAt b hb_le_r = A.seq.π (stepFrom j) := by
+        apply congrArg A.seq.π
+        apply Fin.ext
+        simp [stepFrom, b]
+      rw [hstate]
+      exact hinc
+    unfold P
+    rw [dif_pos hb_le_r]
+    exact hinc_b
+  rcases exists_false_true_switch_between (P := P) hab hnot_a hP_b with
+    ⟨m, hma, hmb, hmfalse, hmtrue⟩
+  have hm_lt_r : m < r := lt_trans hmb j.isLt
+  have him : i.val < m := by
+    dsimp [a] at hma
+    omega
+  let mFin : Fin r := ⟨m, hm_lt_r⟩
+  refine ⟨mFin, ?_, ?_, ?_, ?_, ?_⟩
+  · simpa [mFin] using him
+  · simpa [mFin] using hmb
+  · have hm_le_r : m ≤ r := le_of_lt hm_lt_r
+    have hnot_inc :
+        ¬ ReversalStep.MiddlePairIncreasing (A.stateAt m hm_le_r) hk := by
+      intro hinc
+      have hPm : P m := by
+        unfold P
+        rw [dif_pos hm_le_r]
+        exact hinc
+      exact hmfalse hPm
+    have hdec := ReversalStep.middlePair_decreasing_of_not_increasing hk hnot_inc
+    have hstate :
+        A.stateAt m hm_le_r = A.seq.π (stepFrom mFin) := by
+      apply congrArg A.seq.π
+      apply Fin.ext
+      simp [stepFrom, mFin]
+    rw [hstate] at hdec
+    exact hdec
+  · have hm1_le_r : m + 1 ≤ r := by omega
+    unfold P at hmtrue
+    rw [dif_pos hm1_le_r] at hmtrue
+    have hstate :
+        A.stateAt (m + 1) hm1_le_r = A.seq.π (stepTo mFin) := by
+      apply congrArg A.seq.π
+      apply Fin.ext
+      simp [stepTo, mFin]
+    rw [hstate] at hmtrue
+    exact hmtrue
+  · exact hij.2.2.2 mFin (by simpa [mFin] using him) (by simpa [mFin] using hmb)
+
 end ConcreteGeneralizedAllowableSequence
 
 /--

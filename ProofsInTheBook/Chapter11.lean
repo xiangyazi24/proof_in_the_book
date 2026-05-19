@@ -4478,6 +4478,29 @@ theorem even_direction_bound_of_concrete_cyclic_sequence (points : Finset Point2
   exact A.length_lower_bound_from_cyclic_end_gap hk hnoFull
     (A.cyclicEndGap_of_witness W)
 
+theorem directions_lower_bound_of_even_concrete_cyclic_sequences (points : Finset Point2)
+    (hcard : 3 ≤ points.card) (hncoll : NoncollinearSet points)
+    (hcert : ∀ S : Finset Point2, ∀ k : ℕ, ∀ hk : 0 < k, S.card = 2 * k →
+      NoncollinearSet S →
+        ∃ A : ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy S).card,
+          ∃ _hnoFull :
+            ∀ j : Fin (directionsDeterminedBy S).card,
+              A.toCountedGeneralizedAllowableSequence.IsCrossing j →
+                A.toCountedGeneralizedAllowableSequence.moveOrder j < k,
+            Nonempty (A.CyclicEndGapWitness
+              (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk))) :
+    points.card - 1 ≤ (directionsDeterminedBy points).card :=
+  directions_lower_bound_of_even_direction_bound_all points hcard hncoll
+    (fun S hEven hS => by
+      rcases hEven with ⟨k, hk_even⟩
+      have hcardS : S.card = 2 * k := by omega
+      have hkpos : 0 < k := by
+        rcases hS with ⟨p, hp, _q, _hq, _r, _hr, _hnon⟩
+        have hSpos : 0 < S.card := Finset.card_pos.mpr ⟨p, hp⟩
+        omega
+      rcases hcert S k hkpos hcardS hS with ⟨A, hnoFull, ⟨W⟩⟩
+      exact even_direction_bound_of_concrete_cyclic_sequence S hkpos hcardS A hnoFull W)
+
 /--
 The universally valid fixed-axis finite-slope consequence of a projective
 direction bound: losing the vertical direction costs at most one slope.

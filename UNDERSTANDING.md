@@ -205,6 +205,10 @@ Current progress:
   for the first/last crossing pair, and connected concrete cyclic sequences
   back to the even direction bound via
   `even_direction_bound_of_concrete_cyclic_sequence`.
+- Added `directions_lower_bound_of_even_concrete_cyclic_sequences`, so the
+  book reduction now accepts a concrete cyclic allowable-sequence certificate
+  for every even non-collinear set, rather than a raw sweep-counting
+  certificate.
 
 Remaining core: formalize Ungar's even-cardinality permutation/T-O-C counting
 argument enough to produce an `UngarCountingCertificate` from the rotating

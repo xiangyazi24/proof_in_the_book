@@ -2992,6 +2992,20 @@ theorem crossing_step_middlePair_increasing_before {k r : ℕ}
     ReversalStep.MiddlePairIncreasing (A.seq.π (stepFrom j)) hk :=
   (A.step j).toReversalStep.middlePair_increasing_before_crossing hj hk
 
+theorem consecutive_crossing_middlePair_decreasing_after_first {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {i j : Fin r}
+    (hij : A.toCountedGeneralizedAllowableSequence.ConsecutiveCrossing i j)
+    (hk : 0 < k) :
+    ReversalStep.MiddlePairDecreasing (A.seq.π (stepTo i)) hk :=
+  A.crossing_step_middlePair_decreasing_after hij.1 hk
+
+theorem consecutive_crossing_middlePair_increasing_before_second {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {i j : Fin r}
+    (hij : A.toCountedGeneralizedAllowableSequence.ConsecutiveCrossing i j)
+    (hk : 0 < k) :
+    ReversalStep.MiddlePairIncreasing (A.seq.π (stepFrom j)) hk :=
+  A.crossing_step_middlePair_increasing_before hij.2.1 hk
+
 end ConcreteGeneralizedAllowableSequence
 
 /--

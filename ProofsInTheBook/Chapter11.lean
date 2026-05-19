@@ -1563,6 +1563,17 @@ theorem label_decreases_after_block_of_reversesBlocks {k : ℕ} {π ρ : State (
   rw [hrev.1 i q hq, hrev.1 i p hp]
   exact hmono
 
+/-- A state is strictly decreasing on a finite set of positions. -/
+def DecreasingOnPositions {N : ℕ} (π : State N) (s : Finset (Fin N)) : Prop :=
+  ∀ ⦃p⦄, p ∈ s → ∀ ⦃q⦄, q ∈ s → p < q → (π q).val < (π p).val
+
+theorem decreasing_after_block_of_reversesBlocks {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (i : Fin M.move.blockCount) :
+    DecreasingOnPositions ρ (M.move.block i).toFinset := by
+  intro p hp q hq hpq
+  rw [PositionInterval.mem_toFinset] at hp hq
+  exact M.label_decreases_after_block_of_reversesBlocks hrev i hp hq hpq
+
 theorem isCrossing_iff_exists_crossing_block {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) :
     M.IsCrossing ↔
@@ -1611,6 +1622,38 @@ theorem order_eq_crossingBlockIndex_crossOrder {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) (hM : M.IsCrossing) :
     M.order = (M.move.block (M.crossingBlockIndex hM)).crossOrder k :=
   M.order_eq_crossOrder_of_crossing_block (M.crossingBlockIndex_spec hM)
+
+theorem decreasing_after_leftMirrorCrossingPositions {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (hM : M.IsCrossing) :
+    DecreasingOnPositions ρ
+      ((M.move.block (M.crossingBlockIndex hM)).leftMirrorCrossingPositions k) := by
+  intro p hp q hq hpq
+  have hpB : (M.move.block (M.crossingBlockIndex hM)).Mem p := by
+    rw [PositionInterval.leftMirrorCrossingPositions, Finset.mem_filter,
+      PositionInterval.mem_toFinset] at hp
+    exact hp.1
+  have hqB : (M.move.block (M.crossingBlockIndex hM)).Mem q := by
+    rw [PositionInterval.leftMirrorCrossingPositions, Finset.mem_filter,
+      PositionInterval.mem_toFinset] at hq
+    exact hq.1
+  exact M.label_decreases_after_block_of_reversesBlocks hrev (M.crossingBlockIndex hM)
+    hpB hqB hpq
+
+theorem decreasing_after_rightMirrorCrossingPositions {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (hM : M.IsCrossing) :
+    DecreasingOnPositions ρ
+      ((M.move.block (M.crossingBlockIndex hM)).rightMirrorCrossingPositions k) := by
+  intro p hp q hq hpq
+  have hpB : (M.move.block (M.crossingBlockIndex hM)).Mem p := by
+    rw [PositionInterval.rightMirrorCrossingPositions, Finset.mem_filter,
+      PositionInterval.mem_toFinset] at hp
+    exact hp.1
+  have hqB : (M.move.block (M.crossingBlockIndex hM)).Mem q := by
+    rw [PositionInterval.rightMirrorCrossingPositions, Finset.mem_filter,
+      PositionInterval.mem_toFinset] at hq
+    exact hq.1
+  exact M.label_decreases_after_block_of_reversesBlocks hrev (M.crossingBlockIndex hM)
+    hpB hqB hpq
 
 theorem move_middleLeft_iff_of_not_isCrossing {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)

@@ -249,6 +249,8 @@ Current progress:
 - Proved a direct full step has full crossing order:
   `moveOrder_eq_middle_of_directFullMove`.  This links the identity-to-reverse
   endpoint pattern to the existing full-block/order lemmas.
+- Added the concrete version `crossingBlock_eq_full_of_directFullMove`, giving
+  the actual full crossing block for a direct full move when `0 < k`.
 - Added a direct `EvenConcreteEndGapSequencePremise` route.  The endpoint can
   now be supplied either by a cyclic witness, which reuses the adjacent-gap
   theorem, or by proving `CyclicEndGap` directly from the geometric sweep.

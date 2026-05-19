@@ -3457,6 +3457,15 @@ theorem moveOrder_eq_middle_of_directFullMove {k r : ℕ}
   rw [hfull] at hcount
   omega
 
+theorem isCrossing_of_directFullMove {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) (hk : 0 < k) {j : Fin r}
+    (hsource : A.seq.π (stepFrom j) = Equiv.refl (Fin (2 * k)))
+    (htarget : A.seq.π (stepTo j) = reverseFin (2 * k)) :
+    A.IsCrossing j := by
+  unfold IsCrossing
+  rw [A.moveOrder_eq_middle_of_directFullMove hsource htarget]
+  exact hk
+
 theorem not_isCrossing_iff_moveOrder_eq_zero {k r : ℕ}
     (A : CountedGeneralizedAllowableSequence k r) (j : Fin r) :
     ¬ A.IsCrossing j ↔ A.moveOrder j = 0 := by
@@ -3900,6 +3909,39 @@ theorem moveOrder_lt_middle_of_noDirectFullMove {k r : ℕ}
   rcases hnoFull j with hbad | hbad
   · exact hbad hsource
   · exact hbad htarget
+
+theorem crossingBlock_eq_full_of_directFullMove {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) (hk : 0 < k) {j : Fin r}
+    (hsource : A.seq.π (stepFrom j) = Equiv.refl (Fin (2 * k)))
+    (htarget : A.seq.π (stepTo j) = reverseFin (2 * k)) :
+    ((A.step j).toReversalStep.move.block
+          ((A.step j).toReversalStep.crossingBlockIndex (by
+            have hj :=
+              A.toCountedGeneralizedAllowableSequence.isCrossing_of_directFullMove
+                hk hsource htarget
+            simpa [CountedGeneralizedAllowableSequence.IsCrossing,
+              CountedGeneralizedAllowableSequence.moveOrder, ReversalStep.IsCrossing] using hj))).lo = 0 ∧
+      ((A.step j).toReversalStep.move.block
+          ((A.step j).toReversalStep.crossingBlockIndex (by
+            have hj :=
+              A.toCountedGeneralizedAllowableSequence.isCrossing_of_directFullMove
+                hk hsource htarget
+            simpa [CountedGeneralizedAllowableSequence.IsCrossing,
+              CountedGeneralizedAllowableSequence.moveOrder, ReversalStep.IsCrossing] using hj))).hi =
+        2 * k - 1 := by
+  have hj :
+      (A.step j).toReversalStep.IsCrossing := by
+    have hjA :=
+      A.toCountedGeneralizedAllowableSequence.isCrossing_of_directFullMove
+        hk hsource htarget
+    simpa [CountedGeneralizedAllowableSequence.IsCrossing,
+      CountedGeneralizedAllowableSequence.moveOrder, ReversalStep.IsCrossing] using hjA
+  have horder :
+      (A.step j).toReversalStep.order = k :=
+    A.toCountedGeneralizedAllowableSequence.moveOrder_eq_middle_of_directFullMove
+      hsource htarget
+  simpa using
+    (A.step j).toReversalStep.crossingBlock_eq_full_of_order_eq_middle hj hk horder
 
 noncomputable def ofReversesBlocks {k r : ℕ} (A : GeneralizedAllowableSequence k r)
     (step : ∀ j : Fin r, ReversalStep k (A.π (stepFrom j)) (A.π (stepTo j)))

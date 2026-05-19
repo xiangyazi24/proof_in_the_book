@@ -1814,6 +1814,22 @@ theorem middlePair_increasing_or_decreasing {k : ℕ} (π : State (2 * k)) (hk :
   · exact Or.inl hlt
   · exact Or.inr hgt
 
+theorem not_middlePair_increasing_and_decreasing {k : ℕ}
+    {π : State (2 * k)} (hk : 0 < k) :
+    ¬ (MiddlePairIncreasing π hk ∧ MiddlePairDecreasing π hk) := by
+  rintro ⟨hinc, hdec⟩
+  change (π (middleLeftPosition k hk)).val < (π (middleRightPosition k hk)).val at hinc
+  change (π (middleRightPosition k hk)).val < (π (middleLeftPosition k hk)).val at hdec
+  omega
+
+theorem middlePair_decreasing_of_not_increasing {k : ℕ}
+    {π : State (2 * k)} (hk : 0 < k)
+    (hnot : ¬ MiddlePairIncreasing π hk) :
+    MiddlePairDecreasing π hk := by
+  rcases middlePair_increasing_or_decreasing π hk with hinc | hdec
+  · exact False.elim (hnot hinc)
+  · exact hdec
+
 theorem not_increasing_and_decreasing_on_two_positions {N : ℕ}
     {π : State N} {s : Finset (Fin N)}
     (hinc : IncreasingOnPositions π s) (hdec : DecreasingOnPositions π s)

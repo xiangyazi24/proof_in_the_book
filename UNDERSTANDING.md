@@ -271,6 +271,9 @@ Current progress:
 - Added `directionLevel_ne_of_not_mem_directions`: directions outside
   `directionsDeterminedBy` produce no equal-level ties among distinct point
   labels.
+- Added the converse event characterization:
+  `d ∈ directionsDeterminedBy points` iff two distinct points have equal
+  `directionLevel d`.
 - Proved a direct full step has full crossing order:
   `moveOrder_eq_middle_of_directFullMove`.  This links the identity-to-reverse
   endpoint pattern to the existing full-block/order lemmas.

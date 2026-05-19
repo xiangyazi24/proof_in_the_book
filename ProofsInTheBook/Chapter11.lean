@@ -202,6 +202,24 @@ theorem direction_mem_directionsDeterminedBy {points : Finset Point2} {p q : Poi
     direction p q ∈ directionsDeterminedBy points := by
   exact Finset.mem_image.mpr ⟨(p, q), by simp [hp, hq, hpq], rfl⟩
 
+theorem mem_directionsDeterminedBy_iff_exists_equal_level {points : Finset Point2}
+    {d : Direction} :
+    d ∈ directionsDeterminedBy points ↔
+      ∃ p ∈ points, ∃ q ∈ points, p ≠ q ∧
+        directionLevel d p = directionLevel d q := by
+  constructor
+  · intro hd
+    rcases Finset.mem_image.mp hd with ⟨pq, hpq_mem, hpq_dir⟩
+    rcases pq with ⟨p, q⟩
+    rcases Finset.mem_filter.mp hpq_mem with ⟨hpq_prod, hpq_ne⟩
+    rcases Finset.mem_product.mp hpq_prod with ⟨hp, hq⟩
+    exact ⟨p, hp, q, hq, hpq_ne, directionLevel_eq_of_direction_eq hpq_dir⟩
+  · rintro ⟨p, hp, q, hq, hpq_ne, hlevel⟩
+    have hdir : direction p q = d :=
+      direction_eq_of_directionLevel_eq hpq_ne hlevel
+    rw [← hdir]
+    exact direction_mem_directionsDeterminedBy hp hq hpq_ne
+
 theorem PointLabeling.direction_mem {points : Finset Point2} {k : ℕ}
     (L : PointLabeling points k) {a b : Fin (2 * k)}
     (hab : a ≠ b) :

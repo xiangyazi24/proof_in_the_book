@@ -1854,6 +1854,33 @@ theorem state_eq_refl_of_increasingOn_univ {N : ℕ} {π : State N}
   have hfun : (fun x : Fin N => π x) = fun x : Fin N => x := hπ.trans hid.symm
   exact congrFun hfun p
 
+theorem state_eq_reverseFin_of_decreasingOn_univ {N : ℕ} {π : State N}
+    (hdec : DecreasingOnPositions π Finset.univ) :
+    π = reverseFin N := by
+  apply Equiv.ext
+  intro p
+  have hmono : StrictMono (fun x : Fin N => π (Fin.rev x)) := by
+    intro a b hab
+    have hrev : Fin.rev b < Fin.rev a := by
+      rw [← Fin.rev_lt_rev]
+      simpa using hab
+    change (π (Fin.rev a)).val < (π (Fin.rev b)).val
+    exact hdec (by simp) (by simp) hrev
+  have hπ :
+      (fun x : Fin N => π (Fin.rev x)) =
+        (Finset.univ : Finset (Fin N)).orderEmbOfFin (by simp) :=
+    Finset.orderEmbOfFin_unique (s := (Finset.univ : Finset (Fin N)))
+      (k := N) (by simp) (fun _ => by simp) hmono
+  have hid :
+      (fun x : Fin N => x) =
+        (Finset.univ : Finset (Fin N)).orderEmbOfFin (by simp) :=
+    Finset.orderEmbOfFin_unique (s := (Finset.univ : Finset (Fin N)))
+      (k := N) (by simp) (fun _ => by simp) (by intro a b hab; exact hab)
+  have hfun : (fun x : Fin N => π (Fin.rev x)) = fun x : Fin N => x :=
+    hπ.trans hid.symm
+  have hp := congrFun hfun (Fin.rev p)
+  simpa [reverseFin] using hp
+
 def middleLeftPosition (k : ℕ) (hk : 0 < k) : Fin (2 * k) :=
   ⟨k - 1, by omega⟩
 

@@ -252,6 +252,9 @@ Current progress:
   `EvenBlockLevelConcreteEndGapSequencePremise`: it is enough to show each
   reversed block is a same-`directionLevel` class for that step direction,
   plus the cyclic end gap.
+- Proved block-level compatibility implies concrete direction membership:
+  two distinct labels in the same block determine the step direction, and every
+  step direction is in `directionsDeterminedBy points`.
 - Proved a direct full step has full crossing order:
   `moveOrder_eq_middle_of_directFullMove`.  This links the identity-to-reverse
   endpoint pattern to the existing full-block/order lemmas.

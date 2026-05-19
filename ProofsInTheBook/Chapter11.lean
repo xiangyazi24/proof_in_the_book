@@ -1876,6 +1876,24 @@ theorem two_mul_crossOrder_le_length {k : ℕ} (I : PositionInterval (2 * k)) :
   · rw [crossOrder_eq_zero_of_not_crossing h]
     omega
 
+theorem exists_two_mem_of_two_le_length {N : ℕ} (I : PositionInterval N)
+    (hlen : 2 ≤ I.length) :
+    ∃ p q : Fin N, I.Mem p ∧ I.Mem q ∧ p ≠ q := by
+  let p : Fin N := ⟨I.lo, lt_of_le_of_lt I.lo_le_hi I.hi_lt⟩
+  have hlo_succ_le_hi : I.lo + 1 ≤ I.hi := by
+    dsimp [length] at hlen
+    omega
+  let q : Fin N := ⟨I.lo + 1, lt_of_le_of_lt hlo_succ_le_hi I.hi_lt⟩
+  refine ⟨p, q, ?_, ?_, ?_⟩
+  · dsimp [p, Mem]
+    omega
+  · dsimp [q, Mem]
+    omega
+  · intro hpq
+    have hval := congrArg Fin.val hpq
+    dsimp [p, q] at hval
+    omega
+
 end PositionInterval
 
 /--
@@ -3899,6 +3917,51 @@ theorem directFullMoveForcesCommonLevel_of_blocksHaveCommonLevel {k r : ℕ}
     rw [hsource]
     rfl
   simpa [hstate] using hc a ha_mem
+
+theorem direction_eq_stepDir_of_same_block {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {points : Finset Point2}
+    (L : PointLabeling points k) (stepDir : Fin r → Direction)
+    (hblocks : A.BlocksHaveCommonLevel L stepDir) {j : Fin r}
+    {b : Fin (A.step j).toReversalStep.move.blockCount} {p q : Fin (2 * k)}
+    (hp : ((A.step j).toReversalStep.move.block b).Mem p)
+    (hq : ((A.step j).toReversalStep.move.block b).Mem q)
+    (hlabels :
+      A.seq.π (stepFrom j) p ≠ A.seq.π (stepFrom j) q) :
+    direction
+        (L.point (A.seq.π (stepFrom j) p))
+        (L.point (A.seq.π (stepFrom j) q)) = stepDir j := by
+  rcases hblocks j b with ⟨c, hc⟩
+  have hpoints :
+      L.point (A.seq.π (stepFrom j) p) ≠
+        L.point (A.seq.π (stepFrom j) q) := by
+    intro hpoint
+    exact hlabels (L.point_injective hpoint)
+  exact direction_eq_of_directionLevel_eq hpoints ((hc p hp).trans (hc q hq).symm)
+
+theorem stepDir_mem_of_blocksHaveCommonLevel {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {points : Finset Point2}
+    (L : PointLabeling points k) (stepDir : Fin r → Direction)
+    (hblocks : A.BlocksHaveCommonLevel L stepDir) (j : Fin r) :
+    stepDir j ∈ directionsDeterminedBy points := by
+  let b : Fin (A.step j).toReversalStep.move.blockCount :=
+    ⟨0, (A.step j).toReversalStep.move.blockCount_pos⟩
+  rcases PositionInterval.exists_two_mem_of_two_le_length
+      ((A.step j).toReversalStep.move.block b)
+      ((A.step j).toReversalStep.move.nontrivial b) with
+    ⟨p, q, hp, hq, hpq⟩
+  have hlabels :
+      A.seq.π (stepFrom j) p ≠ A.seq.π (stepFrom j) q := by
+    intro h
+    exact hpq ((A.seq.π (stepFrom j)).injective h)
+  have hdir :=
+    A.direction_eq_stepDir_of_same_block L stepDir hblocks hp hq hlabels
+  rw [← hdir]
+  exact direction_mem_directionsDeterminedBy
+    (L.mem_point (A.seq.π (stepFrom j) p))
+    (L.mem_point (A.seq.π (stepFrom j) q))
+    (by
+      intro hpoint
+      exact hlabels (L.point_injective hpoint))
 
 theorem fullMoveForcesCommonDirection_of_directFullMoveForcesCommonLevel {k r : ℕ}
     (A : ConcreteGeneralizedAllowableSequence k r) {points : Finset Point2}

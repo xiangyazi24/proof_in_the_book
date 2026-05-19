@@ -200,9 +200,12 @@ the rotating-calipers premise from the public `ungar_directions_lower_bound`.
 
 ## Working style notes
 
-- Remote build: `scripts/remote-build.sh` on uisai1 (32 cores / 251GB RAM).
-  Local Mac mini cannot handle `lake build`.
-- `lake env lean File.lean` works locally for single-file checks.
+- Remote build/check only.  Do not run Lean locally on the Mac mini, including
+  single-file `lake env lean` checks.
+- Single-file check:
+  `/Users/huangx/.openclaw/workspace/scripts/remote-build.sh proof_in_the_book --file ProofsInTheBook/Chapter11.lean`
+- Full build:
+  `/Users/huangx/.openclaw/workspace/scripts/remote-build.sh proof_in_the_book`
 - Commit often, use `git diff --check` before committing (whitespace rule from CLAUDE.md).
 - The ChatGPT bridge at `~/repos/chatgpt-bridge/` is available for collaboration.
   Channel `ssem2` has extended thinking (ChatGPT Pro).

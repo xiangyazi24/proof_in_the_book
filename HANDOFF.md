@@ -79,10 +79,12 @@ Uses `P : Fin n → Fin n → Option (Fin n)` partial Latin square representatio
 ## Remote build
 
 ```bash
-scripts/remote-build.sh  # runs lake build on uisai1 (32C/251GB)
+/Users/huangx/.openclaw/workspace/scripts/remote-build.sh proof_in_the_book
 ```
 
-Local `lake env lean File.lean` for single-file checks (do NOT run `lake build` locally).
+Do not run Lean locally on the Mac mini, including single-file
+`lake env lean` checks.  Use the workspace-level remote build script for both
+single-file checks and full builds.
 
 ## ChatGPT bridge
 
@@ -90,31 +92,34 @@ Local `lake env lean File.lean` for single-file checks (do NOT run `lake build` 
 ~/repos/chatgpt-bridge/ask-chatgpt.sh --pipe --channel ssem2 --no-channel-guard --stdin
 ```
 
-## Build SOP update — 2026-05-17
+## Build SOP update — 2026-05-19
 
-Full local `lake build` is forbidden on the Mac mini: it can exhaust memory and hang.
+Local Lean runs are forbidden on the Mac mini: full `lake build` can exhaust
+memory and hang, and single-file checks should also go through the remote
+script.
 
-Use local single-file checks only:
-
-```bash
-lake env lean ProofsInTheBook/Chapter03.lean
-```
-
-Use the workspace-level remote build script for full builds:
+Use remote single-file checks:
 
 ```bash
-/Users/huangx/.openclaw/workspace/scripts/remote-build.sh $(basename $PWD)
+/Users/huangx/.openclaw/workspace/scripts/remote-build.sh proof_in_the_book --file ProofsInTheBook/Chapter11.lean
 ```
 
-For this repository, from inside `~/repos/proof_in_the_book`, this expands to:
+Use the same remote build script for full builds:
 
 ```bash
 /Users/huangx/.openclaw/workspace/scripts/remote-build.sh proof_in_the_book
 ```
 
-The script rsyncs the local repo to `uisai1`, checks/installs the Lean toolchain as needed, runs
-`lake build` remotely with 32-core parallelism, and returns output. `uisai1` cannot directly reach
-GitHub; the script handles this through the Mac mini relay.
+From inside `~/repos/proof_in_the_book`, this equivalent form is also allowed:
+
+```bash
+/Users/huangx/.openclaw/workspace/scripts/remote-build.sh $(basename $PWD)
+```
+
+The script rsyncs the local repo to `uisai1`, checks/installs the Lean
+toolchain as needed, runs `lake env lean <file>` or `lake build` remotely with
+32-core parallelism, and returns output. `uisai1` cannot directly reach GitHub;
+the script handles this through the Mac mini relay.
 
 ## Current Ch03 direction — 2026-05-17
 

@@ -11,7 +11,7 @@ proof structure in Lean, with key arguments formally verified against Mathlib.
 | Chapters | 40/40 |
 | `sorry` | 0 |
 | `axiom` | 0 |
-| Build | `lake build` passes |
+| Build | remote `lake build` passes |
 | Lines | ~5300 |
 | Lean | v4.30.0-rc2 |
 | Mathlib | latest |
@@ -51,11 +51,17 @@ Each `ChapterNN.lean` file contains:
 ## Building
 
 ```bash
-lake exe cache get   # fetch Mathlib oleans
-lake build           # build all 40 chapters
+/Users/huangx/.openclaw/workspace/scripts/remote-build.sh proof_in_the_book
 ```
 
-Requires Lean 4 (via elan) and internet access for Mathlib.
+For a single file:
+
+```bash
+/Users/huangx/.openclaw/workspace/scripts/remote-build.sh proof_in_the_book --file ProofsInTheBook/Chapter11.lean
+```
+
+Do not run Lean locally on the Mac mini; the remote script syncs the repo to
+`uisai1` and runs Lean there.
 
 ## Design Principles
 

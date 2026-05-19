@@ -268,6 +268,9 @@ Current progress:
   enumerate determined directions, non-collinearity gives no direct full move,
   hence no full crossing, at least two crossing moves, and the even direction
   bound.
+- Added `directionLevel_ne_of_not_mem_directions`: directions outside
+  `directionsDeterminedBy` produce no equal-level ties among distinct point
+  labels.
 - Proved a direct full step has full crossing order:
   `moveOrder_eq_middle_of_directFullMove`.  This links the identity-to-reverse
   endpoint pattern to the existing full-block/order lemmas.

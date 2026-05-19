@@ -217,6 +217,22 @@ theorem DirectionLabeling.exists_dir_eq_labeled_pair {points : Finset Point2} {k
       (L.direction_mem hab) with ⟨j, hj⟩
   exact ⟨j, hj⟩
 
+theorem directionLevel_ne_of_not_mem_directions {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) {d : Direction}
+    (hd : d ∉ directionsDeterminedBy points) {a b : Fin (2 * k)}
+    (hab : a ≠ b) :
+    directionLevel d (L.point a) ≠ directionLevel d (L.point b) := by
+  intro hlevel
+  have hdir : direction (L.point a) (L.point b) = d :=
+    direction_eq_of_directionLevel_eq
+      (by
+        intro hpoint
+        exact hab (L.point_injective hpoint))
+      hlevel
+  exact hd (by
+    rw [← hdir]
+    exact L.direction_mem hab)
+
 theorem directions_from_noncollinear_triple_ne {p q r : Point2}
     (hnon : NoncollinearTriple p q r) :
     direction p q ≠ direction p r := by

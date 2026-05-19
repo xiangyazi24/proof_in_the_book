@@ -242,32 +242,35 @@ Current progress:
 - Added `DirectFullMoveForcesCommonLevel`; if a direct full reversal makes all
   point labels share one level for the step direction, then it implies
   `FullMoveForcesCommonDirection`, hence non-collinearity rules the move out.
+- Added `EvenLevelConcreteEndGapSequencePremise` and made the public
+  `ungar_directions_lower_bound` use it.  This is the current exposed gap:
+  build the concrete sequence, assign step directions, prove direct full moves
+  force one common level, and prove the cyclic end gap.
 - Added a direct `EvenConcreteEndGapSequencePremise` route.  The endpoint can
   now be supplied either by a cyclic witness, which reuses the adjacent-gap
   theorem, or by proving `CyclicEndGap` directly from the geometric sweep.
 - Added `EvenGeometricConcreteEndGapSequencePremise`, combining the direct
-  end-gap route with the geometric full-move explanation; this is currently
-  the closest public interface to the remaining rotating-sweep construction.
-- The public `ungar_directions_lower_bound` now uses
-  `EvenGeometricConcreteEndGapSequencePremise`; older concrete/cyclic
-  interfaces remain as intermediate reduction theorems.
+  end-gap route with the geometric full-move explanation; older
+  concrete/cyclic interfaces remain as intermediate reduction theorems.
 
-Remaining core: construct `EvenGeometricConcreteEndGapSequencePremise` from the
+Remaining core: construct `EvenLevelConcreteEndGapSequencePremise` from the
 rotating projection sweep of every even non-collinear point set.  The adjacent
 T/O/C gaps are proved; the remaining geometric content is the actual sweep
-construction, the full-move-implies-common-direction fact for the sweep, and
-the cyclic first/last crossing gap.
+construction, the direct-full-implies-common-level fact for the sweep, and the
+cyclic first/last crossing gap.
 
 Current premise:
 
 ```lean
-abbrev EvenGeometricConcreteEndGapSequencePremise : Prop :=
+abbrev EvenLevelConcreteEndGapSequencePremise : Prop :=
   ∀ S : Finset Point2, ∀ k : ℕ, ∀ hk : 0 < k, S.card = 2 * k →
     NoncollinearSet S →
-      ∃ A : ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy S).card,
-        A.FullMoveForcesCommonDirection S ∧
-          A.CyclicEndGap
-            (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk))
+      ∃ L : PointLabeling S k,
+        ∃ A : ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy S).card,
+          ∃ stepDir : Fin (directionsDeterminedBy S).card → Direction,
+            A.DirectFullMoveForcesCommonLevel L stepDir ∧
+              A.CyclicEndGap
+                (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk)
 ```
 
 This is the only intended Ch11 gap after the reductions. Proving it removes

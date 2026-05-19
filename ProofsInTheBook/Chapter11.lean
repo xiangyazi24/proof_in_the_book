@@ -1696,6 +1696,22 @@ theorem increasing_before_rightMirrorCrossingPositions {k : ℕ} {π ρ : State 
     exact hq.1
   exact M.increasing_before (M.crossingBlockIndex hM) hpB hqB hpq
 
+theorem leftMirrorCrossingPositions_card_eq_order {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing) :
+    ((M.move.block (M.crossingBlockIndex hM)).leftMirrorCrossingPositions k).card =
+      M.order := by
+  rw [PositionInterval.leftMirrorCrossingPositions_card_eq_crossOrder_of_crossing
+    (M.move.block (M.crossingBlockIndex hM)) (M.crossingBlockIndex_spec hM)]
+  rw [M.order_eq_crossingBlockIndex_crossOrder hM]
+
+theorem rightMirrorCrossingPositions_card_eq_order {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing) :
+    ((M.move.block (M.crossingBlockIndex hM)).rightMirrorCrossingPositions k).card =
+      M.order := by
+  rw [PositionInterval.rightMirrorCrossingPositions_card_eq_crossOrder_of_crossing
+    (M.move.block (M.crossingBlockIndex hM)) (M.crossingBlockIndex_spec hM)]
+  rw [M.order_eq_crossingBlockIndex_crossOrder hM]
+
 theorem move_middleLeft_iff_of_not_isCrossing {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)
     (hM : ¬ M.IsCrossing) (p : Fin (2 * k)) :

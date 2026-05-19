@@ -2335,6 +2335,22 @@ theorem two_mul_order_le_positions {k : ℕ} {π ρ : State (2 * k)}
             (by intro i _hi; exact PositionInterval.two_mul_crossOrder_le_length (M.move.block i))
     _ ≤ 2 * k := M.move.sum_block_lengths_le
 
+theorem order_le_middle {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) :
+    M.order ≤ k := by
+  have h := M.two_mul_order_le_positions
+  omega
+
+theorem leftBarrierPositions_card_eq_order {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) :
+    (PositionInterval.leftBarrierPositions k M.order).card = M.order :=
+  PositionInterval.leftBarrierPositions_card_eq M.order_le_middle
+
+theorem rightBarrierPositions_card_eq_order {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) :
+    (PositionInterval.rightBarrierPositions k M.order).card = M.order :=
+  PositionInterval.rightBarrierPositions_card_eq M.order_le_middle
+
 end ReversalStep
 
 /-- The number of labels crossing the middle barrier in one concrete step. -/

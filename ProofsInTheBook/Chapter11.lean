@@ -1785,6 +1785,18 @@ def DecreasingOnPositions {N : ℕ} (π : State N) (s : Finset (Fin N)) : Prop :
 def IncreasingOnPositions {N : ℕ} (π : State N) (s : Finset (Fin N)) : Prop :=
   ∀ ⦃p⦄, p ∈ s → ∀ ⦃q⦄, q ∈ s → p < q → (π p).val < (π q).val
 
+def middleLeftPosition (k : ℕ) (hk : 0 < k) : Fin (2 * k) :=
+  ⟨k - 1, by omega⟩
+
+def middleRightPosition (k : ℕ) (hk : 0 < k) : Fin (2 * k) :=
+  ⟨k, by omega⟩
+
+def MiddlePairIncreasing (π : State (2 * k)) (hk : 0 < k) : Prop :=
+  (π (middleLeftPosition k hk)).val < (π (middleRightPosition k hk)).val
+
+def MiddlePairDecreasing (π : State (2 * k)) (hk : 0 < k) : Prop :=
+  (π (middleRightPosition k hk)).val < (π (middleLeftPosition k hk)).val
+
 theorem not_increasing_and_decreasing_on_two_positions {N : ℕ}
     {π : State N} {s : Finset (Fin N)}
     (hinc : IncreasingOnPositions π s) (hdec : DecreasingOnPositions π s)
@@ -2036,6 +2048,50 @@ theorem increasing_before_rightBarrierPositions {k : ℕ} {π ρ : State (2 * k)
     (M.move.block (M.crossingBlockIndex hM)) (M.crossingBlockIndex_spec hM)] at hcentral
   rw [M.order_eq_crossingBlockIndex_crossOrder hM]
   exact hcentral
+
+theorem middlePair_decreasing_after_crossing {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)
+    (hM : M.IsCrossing) (hk : 0 < k) :
+    MiddlePairDecreasing ρ hk := by
+  let p := middleLeftPosition k hk
+  let q := middleRightPosition k hk
+  have hcross := M.crossingBlockIndex_spec hM
+  have hp : (M.move.block (M.crossingBlockIndex hM)).Mem p := by
+    dsimp [p, middleLeftPosition]
+    change (M.move.block (M.crossingBlockIndex hM)).lo ≤ k - 1 ∧
+      k - 1 ≤ (M.move.block (M.crossingBlockIndex hM)).hi
+    constructor <;> omega
+  have hq : (M.move.block (M.crossingBlockIndex hM)).Mem q := by
+    dsimp [q, middleRightPosition]
+    change (M.move.block (M.crossingBlockIndex hM)).lo ≤ k ∧
+      k ≤ (M.move.block (M.crossingBlockIndex hM)).hi
+    constructor <;> omega
+  have hpq : p < q := by
+    change k - 1 < k
+    omega
+  exact M.label_decreases_after_block_of_reversesBlocks hrev (M.crossingBlockIndex hM)
+    hp hq hpq
+
+theorem middlePair_increasing_before_crossing {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing) (hk : 0 < k) :
+    MiddlePairIncreasing π hk := by
+  let p := middleLeftPosition k hk
+  let q := middleRightPosition k hk
+  have hcross := M.crossingBlockIndex_spec hM
+  have hp : (M.move.block (M.crossingBlockIndex hM)).Mem p := by
+    dsimp [p, middleLeftPosition]
+    change (M.move.block (M.crossingBlockIndex hM)).lo ≤ k - 1 ∧
+      k - 1 ≤ (M.move.block (M.crossingBlockIndex hM)).hi
+    constructor <;> omega
+  have hq : (M.move.block (M.crossingBlockIndex hM)).Mem q := by
+    dsimp [q, middleRightPosition]
+    change (M.move.block (M.crossingBlockIndex hM)).lo ≤ k ∧
+      k ≤ (M.move.block (M.crossingBlockIndex hM)).hi
+    constructor <;> omega
+  have hpq : p < q := by
+    change k - 1 < k
+    omega
+  exact M.increasing_before (M.crossingBlockIndex hM) hp hq hpq
 
 theorem move_middleLeft_iff_of_not_isCrossing {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)

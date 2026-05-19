@@ -223,6 +223,10 @@ Current progress:
 - Added the point-set geometry lemma
   `not_all_pair_directions_eq_of_noncollinearSet`: a non-collinear set cannot
   have all distinct point pairs determining one common projective direction.
+- Added `FullMoveForcesCommonDirection` and
+  `EvenGeometricConcreteCyclicSequencePremise`; non-collinearity now turns this
+  geometric explanation of a full reversal into `NoDirectFullMove`, then into
+  the `moveOrder < k` condition needed by the counting proof.
 
 Remaining core: construct `EvenConcreteCyclicSequencePremise` from the
 rotating projection sweep of every even non-collinear point set.  The adjacent

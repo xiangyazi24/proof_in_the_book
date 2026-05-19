@@ -1966,6 +1966,44 @@ theorem crossingBlock_eq_full_of_order_eq_middle {k : ℕ} {π ρ : State (2 * k
   exact PositionInterval.eq_full_of_crossOrder_eq_middle
     (M.move.block (M.crossingBlockIndex hM)) hk hcrossOrder
 
+theorem increasing_before_univ_of_order_eq_middle {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing)
+    (hk : 0 < k) (horder : M.order = k) :
+    IncreasingOnPositions π Finset.univ := by
+  intro p _hp q _hq hpq
+  have hfull := M.crossingBlock_eq_full_of_order_eq_middle hM hk horder
+  let b := M.crossingBlockIndex hM
+  have hb_lo : (M.move.block b).lo = 0 := by
+    simpa [b] using hfull.1
+  have hb_hi : (M.move.block b).hi = 2 * k - 1 := by
+    simpa [b] using hfull.2
+  have hp : (M.move.block b).Mem p := by
+    dsimp [PositionInterval.Mem]
+    omega
+  have hq : (M.move.block b).Mem q := by
+    dsimp [PositionInterval.Mem]
+    omega
+  exact M.increasing_before b hp hq hpq
+
+theorem decreasing_after_univ_of_order_eq_middle {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (hM : M.IsCrossing)
+    (hk : 0 < k) (horder : M.order = k) :
+    DecreasingOnPositions ρ Finset.univ := by
+  intro p _hp q _hq hpq
+  have hfull := M.crossingBlock_eq_full_of_order_eq_middle hM hk horder
+  let b := M.crossingBlockIndex hM
+  have hb_lo : (M.move.block b).lo = 0 := by
+    simpa [b] using hfull.1
+  have hb_hi : (M.move.block b).hi = 2 * k - 1 := by
+    simpa [b] using hfull.2
+  have hp : (M.move.block b).Mem p := by
+    dsimp [PositionInterval.Mem]
+    omega
+  have hq : (M.move.block b).Mem q := by
+    dsimp [PositionInterval.Mem]
+    omega
+  exact M.label_decreases_after_block_of_reversesBlocks hrev b hp hq hpq
+
 theorem decreasing_after_leftMirrorCrossingPositions {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (hM : M.IsCrossing) :
     DecreasingOnPositions ρ

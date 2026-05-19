@@ -236,6 +236,9 @@ Current progress:
 - Added `EvenGeometricConcreteEndGapSequencePremise`, combining the direct
   end-gap route with the geometric full-move explanation; this is currently
   the closest public interface to the remaining rotating-sweep construction.
+- The public `ungar_directions_lower_bound` now uses
+  `EvenGeometricConcreteEndGapSequencePremise`; older concrete/cyclic
+  interfaces remain as intermediate reduction theorems.
 
 Remaining core: construct `EvenConcreteCyclicSequencePremise` from the
 rotating projection sweep of every even non-collinear point set.  The adjacent

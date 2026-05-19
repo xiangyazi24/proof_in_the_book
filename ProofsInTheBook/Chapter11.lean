@@ -4823,9 +4823,9 @@ the coordinate-correct target: vertical lines count as one direction.
 theorem ungar_directions_lower_bound (points : Finset Point2)
     (hn : 3 ≤ points.card)
     (hncoll : NoncollinearSet points)
-    (hcert : EvenConcreteCyclicSequencePremise) :
+    (hcert : EvenGeometricConcreteEndGapSequencePremise) :
     points.card - 1 ≤ (directionsDeterminedBy points).card :=
-  ungar_directions_lower_bound_from_concrete_cyclic points hn hncoll hcert
+  ungar_directions_lower_bound_from_geometric_concrete_end_gap points hn hncoll hcert
 
 theorem chapter11 {ι : Type*} [Fintype ι] (points : Finset Point2) (witness : ι → ℝ)
     (hwitness : ∀ i, witness i ∈ slopesDeterminedBy points)

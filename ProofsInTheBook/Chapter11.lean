@@ -251,6 +251,31 @@ theorem directionLevel_ne_of_not_mem_directions {points : Finset Point2} {k : �
     rw [← hdir]
     exact L.direction_mem hab)
 
+theorem mem_directionsDeterminedBy_iff_exists_labeled_equal_level
+    {points : Finset Point2} {k : ℕ} (L : PointLabeling points k)
+    {d : Direction} :
+    d ∈ directionsDeterminedBy points ↔
+      ∃ a b : Fin (2 * k), a ≠ b ∧
+        directionLevel d (L.point a) = directionLevel d (L.point b) := by
+  constructor
+  · intro hd
+    rcases mem_directionsDeterminedBy_iff_exists_equal_level.mp hd with
+      ⟨p, hp, q, hq, hpq, hlevel⟩
+    rcases L.point_surjective_on p hp with ⟨a, ha⟩
+    rcases L.point_surjective_on q hq with ⟨b, hb⟩
+    refine ⟨a, b, ?_, ?_⟩
+    · intro hab
+      exact hpq (by rw [← ha, ← hb, hab])
+    · rw [ha, hb]
+      exact hlevel
+  · rintro ⟨a, b, hab, hlevel⟩
+    exact mem_directionsDeterminedBy_iff_exists_equal_level.mpr
+      ⟨L.point a, L.mem_point a, L.point b, L.mem_point b,
+        (by
+          intro hpoint
+          exact hab (L.point_injective hpoint)),
+        hlevel⟩
+
 theorem directions_from_noncollinear_triple_ne {p q r : Point2}
     (hnon : NoncollinearTriple p q r) :
     direction p q ≠ direction p r := by

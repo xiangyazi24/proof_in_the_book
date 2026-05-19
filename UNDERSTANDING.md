@@ -179,6 +179,9 @@ Current progress:
   theorem, including the `n = 3` base case.
 - Formalized Ungar's final numerical counting endpoint as
   `UngarCountingCertificate.length_lower_bound`.
+- Added `CountedGeneralizedAllowableSequence.length_lower_bound_from_gaps`,
+  reducing the counted-sequence endpoint to the two T/O/C gap inequalities
+  on ordered crossing moves.
 
 Remaining core: formalize Ungar's even-cardinality permutation/T-O-C counting
 argument enough to produce an `UngarCountingCertificate` from the rotating

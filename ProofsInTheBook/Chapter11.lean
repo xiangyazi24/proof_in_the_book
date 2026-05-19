@@ -3018,6 +3018,27 @@ noncomputable def toMoveSchedule {k r : ℕ}
   gap_between := hgap_between
   gap_ends := hgap_ends
 
+/--
+The finite Ungar conclusion extracted from a counted sequence once the T/O/C
+gap inequalities have been proved for the ordered crossing moves.
+-/
+theorem length_lower_bound_from_gaps {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r)
+    (htwo : 2 ≤ A.crossingMoves.card)
+    (hgap_between :
+      ∀ (i : ℕ) (hi : i + 1 < A.crossingMoves.card),
+        A.moveOrder (A.crossingIdx ⟨i, by omega⟩) +
+            A.moveOrder (A.crossingIdx ⟨i + 1, by omega⟩) - 1 ≤
+          (A.crossingIdx ⟨i + 1, by omega⟩).val -
+            (A.crossingIdx ⟨i, by omega⟩).val - 1)
+    (hgap_ends :
+      A.moveOrder (A.crossingIdx ⟨0, by omega⟩) +
+          A.moveOrder (A.crossingIdx ⟨A.crossingMoves.card - 1, by omega⟩) - 1 ≤
+        (A.crossingIdx ⟨0, by omega⟩).val +
+          (r - 1 - (A.crossingIdx ⟨A.crossingMoves.card - 1, by omega⟩).val)) :
+    2 * k ≤ r :=
+  (A.toMoveSchedule htwo hgap_between hgap_ends).toCountingCertificate.length_lower_bound
+
 /-- Counted reversal steps plus a packing proof give a counting certificate. -/
 noncomputable def toCountingCertificate {k r : ℕ}
     (A : CountedGeneralizedAllowableSequence k r)

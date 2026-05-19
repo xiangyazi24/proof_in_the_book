@@ -64,6 +64,32 @@ def HasVerticalPair (points : Finset Point2) : Prop :=
 def NoVerticalPairs (points : Finset Point2) : Prop :=
   ∀ ⦃p q⦄, p ∈ points → q ∈ points → p ≠ q → p.1 ≠ q.1
 
+structure PointLabeling (points : Finset Point2) (k : ℕ) where
+  point : Fin (2 * k) → Point2
+  mem_point : ∀ a, point a ∈ points
+  point_injective : Function.Injective point
+  point_surjective_on : ∀ p ∈ points, ∃ a, point a = p
+
+namespace PointLabeling
+
+noncomputable def ofCard {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k) : PointLabeling points k where
+  point := fun a => (Finset.equivFinOfCardEq hcard).symm a
+  mem_point := fun a => ((Finset.equivFinOfCardEq hcard).symm a).2
+  point_injective := by
+    intro a b h
+    have hsub :
+        (Finset.equivFinOfCardEq hcard).symm a =
+          (Finset.equivFinOfCardEq hcard).symm b := by
+      exact Subtype.ext h
+    exact (Finset.equivFinOfCardEq hcard).symm.injective hsub
+  point_surjective_on := by
+    intro p hp
+    refine ⟨(Finset.equivFinOfCardEq hcard) ⟨p, hp⟩, ?_⟩
+    simp
+
+end PointLabeling
+
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by
   intro hpq
@@ -104,6 +130,13 @@ theorem direction_mem_directionsDeterminedBy {points : Finset Point2} {p q : Poi
     (hp : p ∈ points) (hq : q ∈ points) (hpq : p ≠ q) :
     direction p q ∈ directionsDeterminedBy points := by
   exact Finset.mem_image.mpr ⟨(p, q), by simp [hp, hq, hpq], rfl⟩
+
+theorem PointLabeling.direction_mem {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) {a b : Fin (2 * k)}
+    (hab : a ≠ b) :
+    direction (L.point a) (L.point b) ∈ directionsDeterminedBy points := by
+  exact direction_mem_directionsDeterminedBy (L.mem_point a) (L.mem_point b)
+    (fun hp => hab (L.point_injective hp))
 
 theorem directions_from_noncollinear_triple_ne {p q r : Point2}
     (hnon : NoncollinearTriple p q r) :

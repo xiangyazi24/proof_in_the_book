@@ -227,6 +227,9 @@ Current progress:
   `EvenGeometricConcreteCyclicSequencePremise`; non-collinearity now turns this
   geometric explanation of a full reversal into `NoDirectFullMove`, then into
   the `moveOrder < k` condition needed by the counting proof.
+- Added `PointLabeling.ofCard`, a reusable equivalence from `Fin (2*k)` labels
+  to the points of an even-cardinality finite set, plus membership of labeled
+  pair directions in `directionsDeterminedBy`.
 
 Remaining core: construct `EvenConcreteCyclicSequencePremise` from the
 rotating projection sweep of every even non-collinear point set.  The adjacent

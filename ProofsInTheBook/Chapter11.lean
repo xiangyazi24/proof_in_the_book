@@ -660,6 +660,26 @@ def UngarMoveSchedule.toCountingCertificate {k r : ℕ}
   blocks_fit := C.sum_orders_le_moves
 
 /--
+Discrete intermediate-value lemma for a Boolean/decidable property on a Nat
+interval.  If `P` is false at `a` and true at `a + n + 1`, then at some
+adjacent step it switches from false to true.
+-/
+theorem exists_false_true_switch {P : ℕ → Prop} [DecidablePred P]
+    (a n : ℕ) (h0 : ¬ P a) (h1 : P (a + n + 1)) :
+    ∃ m : ℕ, a ≤ m ∧ m ≤ a + n ∧ ¬ P m ∧ P (m + 1) := by
+  induction n with
+  | zero =>
+      refine ⟨a, le_rfl, by omega, h0, ?_⟩
+      simpa using h1
+  | succ n ih =>
+      by_cases hmid : P (a + n + 1)
+      · rcases ih hmid with ⟨m, hma, hmn, hmfalse, hmtrue⟩
+        refine ⟨m, hma, ?_, hmfalse, hmtrue⟩
+        omega
+      · refine ⟨a + n + 1, by omega, by omega, hmid, ?_⟩
+        simpa [Nat.add_assoc] using h1
+
+/--
 A finite packing certificate for the T/O/C block argument: the `i`th crossing
 move of order `dᵢ` owns a block of `2dᵢ` slots, and all these slots inject
 into one period of length `t`.

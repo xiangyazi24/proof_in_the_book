@@ -1871,6 +1871,20 @@ theorem rightMirrorCrossingPositions_card_eq_order {k : ℕ} {π ρ : State (2 *
     (M.move.block (M.crossingBlockIndex hM)) (M.crossingBlockIndex_spec hM)]
   rw [M.order_eq_crossingBlockIndex_crossOrder hM]
 
+theorem leftCentralPositions_card_eq_order {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing) :
+    ((M.move.block (M.crossingBlockIndex hM)).leftCentralPositions k).card =
+      M.order := by
+  rw [PositionInterval.leftCentralPositions_card_eq_crossOrder]
+  rw [M.order_eq_crossingBlockIndex_crossOrder hM]
+
+theorem rightCentralPositions_card_eq_order {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing) :
+    ((M.move.block (M.crossingBlockIndex hM)).rightCentralPositions k).card =
+      M.order := by
+  rw [PositionInterval.rightCentralPositions_card_eq_crossOrder]
+  rw [M.order_eq_crossingBlockIndex_crossOrder hM]
+
 theorem move_middleLeft_iff_of_not_isCrossing {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)
     (hM : ¬ M.IsCrossing) (p : Fin (2 * k)) :

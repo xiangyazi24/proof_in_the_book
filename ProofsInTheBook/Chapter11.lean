@@ -2768,6 +2768,70 @@ theorem length_lower_bound {k r : ℕ}
 end CountedGeneralizedAllowableSequence
 
 /--
+A counted generalized allowable sequence that still remembers the concrete
+block-reversal semantics of every step.  The counting layer alone is enough
+for `letters_cross`; the gap proof needs this pointwise reversal information.
+-/
+structure ConcreteGeneralizedAllowableSequence (k r : ℕ) extends
+    CountedGeneralizedAllowableSequence k r where
+  reversesBlocks :
+    ∀ j : Fin r, (step j).toReversalStep.move.ReversesBlocks
+
+namespace ConcreteGeneralizedAllowableSequence
+
+noncomputable def ofReversesBlocks {k r : ℕ} (A : GeneralizedAllowableSequence k r)
+    (step : ∀ j : Fin r, ReversalStep k (A.π (stepFrom j)) (A.π (stepTo j)))
+    (hrev : ∀ j : Fin r, (step j).move.ReversesBlocks) :
+    ConcreteGeneralizedAllowableSequence k r where
+  seq := A
+  step := fun j => CountedReversalStep.ofReversesBlocks (step j) (hrev j)
+  reversesBlocks := hrev
+
+theorem noncrossing_step_preserves_label_side {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {j : Fin r}
+    (hj : ¬ A.toCountedGeneralizedAllowableSequence.IsCrossing j) (a : Fin (2 * k)) :
+    middleLeft k ((A.seq.π (stepTo j)).symm a) ↔
+      middleLeft k ((A.seq.π (stepFrom j)).symm a) := by
+  exact (A.step j).toReversalStep.middleLeft_new_position_iff_of_not_isCrossing
+    (A.reversesBlocks j) hj a
+
+theorem crossing_step_decreases_left_barrier {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {j : Fin r}
+    (hj : A.toCountedGeneralizedAllowableSequence.IsCrossing j) :
+    ReversalStep.DecreasingOnPositions (A.seq.π (stepTo j))
+      (PositionInterval.leftBarrierPositions k
+        (A.toCountedGeneralizedAllowableSequence.moveOrder j)) := by
+  exact (A.step j).toReversalStep.decreasing_after_leftBarrierPositions
+    (A.reversesBlocks j) hj
+
+theorem crossing_step_decreases_right_barrier {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {j : Fin r}
+    (hj : A.toCountedGeneralizedAllowableSequence.IsCrossing j) :
+    ReversalStep.DecreasingOnPositions (A.seq.π (stepTo j))
+      (PositionInterval.rightBarrierPositions k
+        (A.toCountedGeneralizedAllowableSequence.moveOrder j)) := by
+  exact (A.step j).toReversalStep.decreasing_after_rightBarrierPositions
+    (A.reversesBlocks j) hj
+
+theorem crossing_step_needs_left_barrier_increasing {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {j : Fin r}
+    (hj : A.toCountedGeneralizedAllowableSequence.IsCrossing j) :
+    ReversalStep.IncreasingOnPositions (A.seq.π (stepFrom j))
+      (PositionInterval.leftBarrierPositions k
+        (A.toCountedGeneralizedAllowableSequence.moveOrder j)) := by
+  exact (A.step j).toReversalStep.increasing_before_leftBarrierPositions hj
+
+theorem crossing_step_needs_right_barrier_increasing {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {j : Fin r}
+    (hj : A.toCountedGeneralizedAllowableSequence.IsCrossing j) :
+    ReversalStep.IncreasingOnPositions (A.seq.π (stepFrom j))
+      (PositionInterval.rightBarrierPositions k
+        (A.toCountedGeneralizedAllowableSequence.moveOrder j)) := by
+  exact (A.step j).toReversalStep.increasing_before_rightBarrierPositions hj
+
+end ConcreteGeneralizedAllowableSequence
+
+/--
 The universally valid fixed-axis finite-slope consequence of a projective
 direction bound: losing the vertical direction costs at most one slope.
 -/

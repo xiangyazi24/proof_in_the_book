@@ -5107,6 +5107,44 @@ structure UngarLevelSweepCertificate (S : Finset Point2) (k : ℕ) (hk : 0 < k) 
     sequence.CyclicEndGap
       (sequence.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk)
 
+namespace UngarLevelSweepCertificate
+
+theorem stepDirectionsEnumerate {S : Finset Point2} {k : ℕ} {hk : 0 < k}
+    (C : UngarLevelSweepCertificate S k hk) :
+    ConcreteGeneralizedAllowableSequence.StepDirectionsEnumerate S C.stepDir :=
+  C.sequence.stepDirectionsEnumerate_of_blocksHaveCommonLevel_of_injective
+    C.labeling C.stepDir C.blocks_level C.stepDir_injective
+
+theorem noDirectFullMove {S : Finset Point2} {k : ℕ} {hk : 0 < k}
+    (C : UngarLevelSweepCertificate S k hk) (hncoll : NoncollinearSet S) :
+    C.sequence.NoDirectFullMove :=
+  C.sequence.noDirectFullMove_of_directFullMoveForcesCommonLevel
+    C.labeling C.stepDir hncoll
+    (C.sequence.directFullMoveForcesCommonLevel_of_blocksHaveCommonLevel
+      hk C.labeling C.stepDir C.blocks_level)
+
+theorem noFullCrossing {S : Finset Point2} {k : ℕ} {hk : 0 < k}
+    (C : UngarLevelSweepCertificate S k hk) (hncoll : NoncollinearSet S) :
+    ∀ j : Fin (directionsDeterminedBy S).card,
+      C.sequence.toCountedGeneralizedAllowableSequence.IsCrossing j →
+        C.sequence.toCountedGeneralizedAllowableSequence.moveOrder j < k :=
+  C.sequence.moveOrder_lt_middle_of_noDirectFullMove hk (C.noDirectFullMove hncoll)
+
+theorem two_le_crossingMoves_card {S : Finset Point2} {k : ℕ} {hk : 0 < k}
+    (C : UngarLevelSweepCertificate S k hk) (hncoll : NoncollinearSet S) :
+    2 ≤ C.sequence.toCountedGeneralizedAllowableSequence.crossingMoves.card :=
+  C.sequence.toCountedGeneralizedAllowableSequence
+    |>.two_le_crossingMoves_card_of_no_full_crossing hk (C.noFullCrossing hncoll)
+
+theorem even_direction_bound {S : Finset Point2} {k : ℕ} {hk : 0 < k}
+    (C : UngarLevelSweepCertificate S k hk)
+    (hcard : S.card = 2 * k) (hncoll : NoncollinearSet S) :
+    S.card ≤ (directionsDeterminedBy S).card :=
+  even_direction_bound_of_concrete_end_gap_sequence S hk hcard C.sequence
+    (C.noFullCrossing hncoll) C.cyclic_end_gap
+
+end UngarLevelSweepCertificate
+
 abbrev EvenUngarLevelSweepCertificatePremise : Prop :=
   ∀ S : Finset Point2, ∀ k : ℕ, ∀ hk : 0 < k, S.card = 2 * k →
     NoncollinearSet S → Nonempty (UngarLevelSweepCertificate S k hk)

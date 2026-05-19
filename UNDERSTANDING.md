@@ -264,6 +264,10 @@ Current progress:
   "one step per determined direction" rotating sweep.
 - Packaged the current remaining data as `UngarLevelSweepCertificate`; the
   public premise is now `EvenUngarLevelSweepCertificatePremise`.
+- Added derived methods on `UngarLevelSweepCertificate`: step directions
+  enumerate determined directions, non-collinearity gives no direct full move,
+  hence no full crossing, at least two crossing moves, and the even direction
+  bound.
 - Proved a direct full step has full crossing order:
   `moveOrder_eq_middle_of_directFullMove`.  This links the identity-to-reverse
   endpoint pattern to the existing full-block/order lemmas.

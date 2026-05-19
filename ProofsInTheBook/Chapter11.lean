@@ -2779,6 +2779,10 @@ structure ConcreteGeneralizedAllowableSequence (k r : ℕ) extends
 
 namespace ConcreteGeneralizedAllowableSequence
 
+def stateAt {k r : ℕ} (A : ConcreteGeneralizedAllowableSequence k r)
+    (m : ℕ) (hm : m ≤ r) : State (2 * k) :=
+  A.seq.π ⟨m, Nat.lt_succ_of_le hm⟩
+
 noncomputable def ofReversesBlocks {k r : ℕ} (A : GeneralizedAllowableSequence k r)
     (step : ∀ j : Fin r, ReversalStep k (A.π (stepFrom j)) (A.π (stepTo j)))
     (hrev : ∀ j : Fin r, (step j).move.ReversesBlocks) :
@@ -2794,6 +2798,45 @@ theorem noncrossing_step_preserves_label_side {k r : ℕ}
       middleLeft k ((A.seq.π (stepFrom j)).symm a) := by
   exact (A.step j).toReversalStep.middleLeft_new_position_iff_of_not_isCrossing
     (A.reversesBlocks j) hj a
+
+theorem noncrossing_range_preserves_label_side {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r)
+    {i j : ℕ} (hij : i ≤ j) (hj : j ≤ r)
+    (hnc : ∀ l : Fin r, i ≤ l.val → l.val < j →
+      ¬ A.toCountedGeneralizedAllowableSequence.IsCrossing l)
+    (a : Fin (2 * k)) :
+      middleLeft k ((A.stateAt j hj).symm a) ↔
+      middleLeft k ((A.stateAt i (le_trans hij hj)).symm a) := by
+  have hmain :
+      ∀ (n : ℕ) (hn : n ≤ j - i),
+        middleLeft k ((A.stateAt (i + n) (by omega)).symm a) ↔
+          middleLeft k ((A.stateAt i (by omega)).symm a) := by
+    intro n
+    induction n with
+    | zero =>
+        refine fun _hn => ?_
+        simp [stateAt]
+    | succ n ih =>
+        refine fun hn => ?_
+        have hnlt : i + n < r := by omega
+        have hnc_step :
+            ¬ A.toCountedGeneralizedAllowableSequence.IsCrossing ⟨i + n, hnlt⟩ :=
+          hnc ⟨i + n, hnlt⟩
+            (by
+              change i ≤ i + n
+              omega)
+            (by
+              change i + n < j
+              omega)
+        have hstep :=
+          A.noncrossing_step_preserves_label_side (j := ⟨i + n, hnlt⟩) hnc_step a
+        have ih_n := ih (by omega)
+        change middleLeft k ((A.stateAt (i + (n + 1)) (by omega)).symm a) ↔
+          middleLeft k ((A.stateAt i (by omega)).symm a)
+        exact hstep.trans ih_n
+  have hsum : i + (j - i) = j := Nat.add_sub_of_le hij
+  have h := hmain (j - i) (by omega)
+  simpa [hsum] using h
 
 theorem crossing_step_decreases_left_barrier {k r : ℕ}
     (A : ConcreteGeneralizedAllowableSequence k r) {j : Fin r}

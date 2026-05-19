@@ -215,11 +215,16 @@ Current progress:
   `EvenConcreteCyclicSequencePremise`; the older
   `EvenUngarSweepCertificatePremise` interface remains available only as a
   coarser compatibility layer.
+- Added `ConcreteGeneralizedAllowableSequence.NoDirectFullMove` and proved
+  `moveOrder < k` from it: a crossing step of order `k` would have source
+  equal to the identity and target equal to the full reverse permutation.
+  Thus the geometric no-full condition can be proved as "no sweep direction
+  collapses all points into one reversing block."
 
 Remaining core: construct `EvenConcreteCyclicSequencePremise` from the
 rotating projection sweep of every even non-collinear point set.  The adjacent
 T/O/C gaps are proved; the remaining geometric content is the actual sweep
-construction, no-full-crossing property, and cyclic first/last crossing witness.
+construction, no-direct-full property, and cyclic first/last crossing witness.
 
 Current premise:
 

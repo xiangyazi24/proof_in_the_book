@@ -3666,6 +3666,35 @@ theorem stateAt_eq_of_proofs {k r : ℕ}
     A.stateAt m hm₁ = A.stateAt m hm₂ := by
   simp [stateAt]
 
+def NoDirectFullMove {k r : ℕ} (A : ConcreteGeneralizedAllowableSequence k r) : Prop :=
+  ∀ j : Fin r,
+    A.seq.π (stepFrom j) ≠ Equiv.refl (Fin (2 * k)) ∨
+      A.seq.π (stepTo j) ≠ reverseFin (2 * k)
+
+theorem moveOrder_lt_middle_of_noDirectFullMove {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) (hk : 0 < k)
+    (hnoFull : A.NoDirectFullMove) :
+    ∀ j : Fin r, A.toCountedGeneralizedAllowableSequence.IsCrossing j →
+      A.toCountedGeneralizedAllowableSequence.moveOrder j < k := by
+  intro j hj
+  by_contra hnot_lt
+  have hle :
+      A.toCountedGeneralizedAllowableSequence.moveOrder j ≤ k :=
+    (A.step j).toReversalStep.order_le_middle
+  have horder :
+      A.toCountedGeneralizedAllowableSequence.moveOrder j = k := by
+    omega
+  have hsource :
+      A.seq.π (stepFrom j) = Equiv.refl (Fin (2 * k)) :=
+    (A.step j).toReversalStep.source_eq_refl_of_order_eq_middle hj hk horder
+  have htarget :
+      A.seq.π (stepTo j) = reverseFin (2 * k) :=
+    (A.step j).toReversalStep.target_eq_reverseFin_of_order_eq_middle
+      (A.reversesBlocks j) hj hk horder
+  rcases hnoFull j with hbad | hbad
+  · exact hbad hsource
+  · exact hbad htarget
+
 noncomputable def ofReversesBlocks {k r : ℕ} (A : GeneralizedAllowableSequence k r)
     (step : ∀ j : Fin r, ReversalStep k (A.π (stepFrom j)) (A.π (stepTo j)))
     (hrev : ∀ j : Fin r, (step j).move.ReversesBlocks) :
@@ -4545,6 +4574,21 @@ abbrev EvenConcreteCyclicSequencePremise : Prop :=
           Nonempty (A.CyclicEndGapWitness
             (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk))
 
+abbrev EvenConcreteCyclicNoDirectFullSequencePremise : Prop :=
+  ∀ S : Finset Point2, ∀ k : ℕ, ∀ hk : 0 < k, S.card = 2 * k →
+    NoncollinearSet S →
+      ∃ A : ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy S).card,
+        A.NoDirectFullMove ∧
+          Nonempty (A.CyclicEndGapWitness
+            (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk))
+
+theorem evenConcreteCyclicSequencePremise_of_noDirectFull
+    (hcert : EvenConcreteCyclicNoDirectFullSequencePremise) :
+    EvenConcreteCyclicSequencePremise := by
+  intro S k hk hcard hncoll
+  rcases hcert S k hk hcard hncoll with ⟨A, hnoDirect, hcyclic⟩
+  exact ⟨A, A.moveOrder_lt_middle_of_noDirectFullMove hk hnoDirect, hcyclic⟩
+
 theorem ungar_directions_lower_bound_from_sweep (points : Finset Point2)
     (hn : 3 ≤ points.card) (hncoll : NoncollinearSet points)
     (hcert : EvenUngarSweepCertificatePremise) :
@@ -4556,6 +4600,14 @@ theorem ungar_directions_lower_bound_from_concrete_cyclic (points : Finset Point
     (hcert : EvenConcreteCyclicSequencePremise) :
     points.card - 1 ≤ (directionsDeterminedBy points).card :=
   directions_lower_bound_of_even_concrete_cyclic_sequences points hn hncoll hcert
+
+theorem ungar_directions_lower_bound_from_no_direct_full_concrete_cyclic
+    (points : Finset Point2)
+    (hn : 3 ≤ points.card) (hncoll : NoncollinearSet points)
+    (hcert : EvenConcreteCyclicNoDirectFullSequencePremise) :
+    points.card - 1 ≤ (directionsDeterminedBy points).card :=
+  ungar_directions_lower_bound_from_concrete_cyclic points hn hncoll
+    (evenConcreteCyclicSequencePremise_of_noDirectFull hcert)
 
 /--
 Counting interface for Ungar's slope theorem: an injective family of witnessed

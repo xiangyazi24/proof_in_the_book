@@ -5086,6 +5086,17 @@ abbrev EvenBlockLevelConcreteEndGapSequencePremise : Prop :=
               A.CyclicEndGap
                 (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk)
 
+abbrev EvenInjectiveBlockLevelConcreteEndGapSequencePremise : Prop :=
+  ∀ S : Finset Point2, ∀ k : ℕ, ∀ hk : 0 < k, S.card = 2 * k →
+    NoncollinearSet S →
+      ∃ L : PointLabeling S k,
+        ∃ A : ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy S).card,
+          ∃ stepDir : Fin (directionsDeterminedBy S).card → Direction,
+            A.BlocksHaveCommonLevel L stepDir ∧
+              Function.Injective stepDir ∧
+                A.CyclicEndGap
+                  (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk)
+
 theorem evenConcreteCyclicSequencePremise_of_noDirectFull
     (hcert : EvenConcreteCyclicNoDirectFullSequencePremise) :
     EvenConcreteCyclicSequencePremise := by
@@ -5126,6 +5137,13 @@ theorem evenLevelConcreteEndGapSequencePremise_of_blockLevel
   rcases hcert S k hk hcard hncoll with ⟨L, A, stepDir, hblocks, hend⟩
   exact ⟨L, A, stepDir,
     A.directFullMoveForcesCommonLevel_of_blocksHaveCommonLevel hk L stepDir hblocks, hend⟩
+
+theorem evenBlockLevelConcreteEndGapSequencePremise_of_injective
+    (hcert : EvenInjectiveBlockLevelConcreteEndGapSequencePremise) :
+    EvenBlockLevelConcreteEndGapSequencePremise := by
+  intro S k hk hcard hncoll
+  rcases hcert S k hk hcard hncoll with ⟨L, A, stepDir, hblocks, _hinj, hend⟩
+  exact ⟨L, A, stepDir, hblocks, hend⟩
 
 theorem evenConcreteCyclicNoDirectFullSequencePremise_of_geometric
     (hcert : EvenGeometricConcreteCyclicSequencePremise) :
@@ -5198,6 +5216,14 @@ theorem ungar_directions_lower_bound_from_block_level_concrete_end_gap
   ungar_directions_lower_bound_from_level_concrete_end_gap points hn hncoll
     (evenLevelConcreteEndGapSequencePremise_of_blockLevel hcert)
 
+theorem ungar_directions_lower_bound_from_injective_block_level_concrete_end_gap
+    (points : Finset Point2)
+    (hn : 3 ≤ points.card) (hncoll : NoncollinearSet points)
+    (hcert : EvenInjectiveBlockLevelConcreteEndGapSequencePremise) :
+    points.card - 1 ≤ (directionsDeterminedBy points).card :=
+  ungar_directions_lower_bound_from_block_level_concrete_end_gap points hn hncoll
+    (evenBlockLevelConcreteEndGapSequencePremise_of_injective hcert)
+
 /--
 Counting interface for Ungar's slope theorem: an injective family of witnessed
 slopes gives the corresponding lower bound on the number of slopes.
@@ -5232,9 +5258,10 @@ the coordinate-correct target: vertical lines count as one direction.
 theorem ungar_directions_lower_bound (points : Finset Point2)
     (hn : 3 ≤ points.card)
     (hncoll : NoncollinearSet points)
-    (hcert : EvenBlockLevelConcreteEndGapSequencePremise) :
+    (hcert : EvenInjectiveBlockLevelConcreteEndGapSequencePremise) :
     points.card - 1 ≤ (directionsDeterminedBy points).card :=
-  ungar_directions_lower_bound_from_block_level_concrete_end_gap points hn hncoll hcert
+  ungar_directions_lower_bound_from_injective_block_level_concrete_end_gap
+    points hn hncoll hcert
 
 theorem chapter11 {ι : Type*} [Fintype ι] (points : Finset Point2) (witness : ι → ℝ)
     (hwitness : ∀ i, witness i ∈ slopesDeterminedBy points)

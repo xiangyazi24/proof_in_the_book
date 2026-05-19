@@ -258,6 +258,10 @@ Current progress:
 - Added `StepDirectionsEnumerate`: if those step directions are injective, then
   since the domain has cardinality `directionsDeterminedBy.card`, they enumerate
   all determined directions.
+- Added `EvenInjectiveBlockLevelConcreteEndGapSequencePremise` and made the
+  public `ungar_directions_lower_bound` use it.  The current exposed sweep gap
+  now includes injectivity of the step direction list, matching the intended
+  "one step per determined direction" rotating sweep.
 - Proved a direct full step has full crossing order:
   `moveOrder_eq_middle_of_directFullMove`.  This links the identity-to-reverse
   endpoint pattern to the existing full-block/order lemmas.
@@ -270,24 +274,25 @@ Current progress:
   end-gap route with the geometric full-move explanation; older
   concrete/cyclic interfaces remain as intermediate reduction theorems.
 
-Remaining core: construct `EvenBlockLevelConcreteEndGapSequencePremise` from the
+Remaining core: construct `EvenInjectiveBlockLevelConcreteEndGapSequencePremise` from the
 rotating projection sweep of every even non-collinear point set.  The adjacent
 T/O/C gaps are proved; the remaining geometric content is the actual sweep
-construction, the same-level block property for each sweep event, and the
-cyclic first/last crossing gap.
+construction, injectivity of the step directions, the same-level block
+property for each sweep event, and the cyclic first/last crossing gap.
 
 Current premise:
 
 ```lean
-abbrev EvenBlockLevelConcreteEndGapSequencePremise : Prop :=
+abbrev EvenInjectiveBlockLevelConcreteEndGapSequencePremise : Prop :=
   ∀ S : Finset Point2, ∀ k : ℕ, ∀ hk : 0 < k, S.card = 2 * k →
     NoncollinearSet S →
       ∃ L : PointLabeling S k,
         ∃ A : ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy S).card,
           ∃ stepDir : Fin (directionsDeterminedBy S).card → Direction,
             A.BlocksHaveCommonLevel L stepDir ∧
-              A.CyclicEndGap
-                (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk)
+              Function.Injective stepDir ∧
+                A.CyclicEndGap
+                  (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk)
 ```
 
 This is the only intended Ch11 gap after the reductions. Proving it removes

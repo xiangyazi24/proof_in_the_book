@@ -303,6 +303,40 @@ theorem mem_directionsDeterminedBy_iff_exists_labeled_equal_level
           exact hab (L.point_injective hpoint)),
         hlevel⟩
 
+namespace DirectionLabeling
+
+noncomputable def tieLabelPair {points : Finset Point2} {k : ℕ}
+    (D : DirectionLabeling points) (L : PointLabeling points k)
+    (j : Fin (directionsDeterminedBy points).card) :
+    {ab : Fin (2 * k) × Fin (2 * k) //
+      ab.1 ≠ ab.2 ∧
+        directionLevel (D.dir j) (L.point ab.1) =
+          directionLevel (D.dir j) (L.point ab.2)} := by
+  classical
+  let h :=
+    (mem_directionsDeterminedBy_iff_exists_labeled_equal_level L).mp
+      (D.mem_dir j)
+  let a := Classical.choose h
+  let hb := Classical.choose_spec h
+  let b := Classical.choose hb
+  let hspec := Classical.choose_spec hb
+  exact ⟨(a, b), hspec.1, hspec.2⟩
+
+theorem tieLabelPair_ne {points : Finset Point2} {k : ℕ}
+    (D : DirectionLabeling points) (L : PointLabeling points k)
+    (j : Fin (directionsDeterminedBy points).card) :
+    (D.tieLabelPair L j).1.1 ≠ (D.tieLabelPair L j).1.2 :=
+  (D.tieLabelPair L j).2.1
+
+theorem tieLabelPair_level_eq {points : Finset Point2} {k : ℕ}
+    (D : DirectionLabeling points) (L : PointLabeling points k)
+    (j : Fin (directionsDeterminedBy points).card) :
+    directionLevel (D.dir j) (L.point (D.tieLabelPair L j).1.1) =
+      directionLevel (D.dir j) (L.point (D.tieLabelPair L j).1.2) :=
+  (D.tieLabelPair L j).2.2
+
+end DirectionLabeling
+
 theorem directions_from_noncollinear_triple_ne {p q r : Point2}
     (hnon : NoncollinearTriple p q r) :
     direction p q ≠ direction p r := by

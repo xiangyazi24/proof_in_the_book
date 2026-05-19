@@ -277,6 +277,8 @@ Current progress:
 - Added symmetry of the projective direction determined by a pair:
   `direction p q = direction q p`.
 - Added `directionLevel_eq_iff_direction_eq` for distinct point pairs.
+- Added `DirectionLabeling.tieLabelPair`, choosing a concrete pair of distinct
+  labels witnessing the level tie for each determined direction.
 - Proved a direct full step has full crossing order:
   `moveOrder_eq_middle_of_directFullMove`.  This links the identity-to-reverse
   endpoint pattern to the existing full-block/order lemmas.

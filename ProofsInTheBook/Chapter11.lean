@@ -3143,6 +3143,37 @@ theorem exists_middlePair_switch_between_consecutive_crossings {k r : ℕ}
     exact hmtrue
   · exact hij.2.2.2 mFin (by simpa [mFin] using him) (by simpa [mFin] using hmb)
 
+theorem one_le_gap_between_consecutive_crossings {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {i j : Fin r}
+    (hij : A.toCountedGeneralizedAllowableSequence.ConsecutiveCrossing i j)
+    (hk : 0 < k) :
+    1 ≤ j.val - i.val - 1 := by
+  rcases A.exists_middlePair_switch_between_consecutive_crossings hij hk with
+    ⟨m, him, hmj, _hdec, _hinc, _hnc⟩
+  omega
+
+theorem consecutive_crossings_not_adjacent {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {i j : Fin r}
+    (hij : A.toCountedGeneralizedAllowableSequence.ConsecutiveCrossing i j)
+    (hk : 0 < k) :
+    i.val + 1 < j.val := by
+  have hgap := A.one_le_gap_between_consecutive_crossings hij hk
+  omega
+
+theorem gap_between_consecutive_crossings_of_unit_orders {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {i j : Fin r}
+    (hij : A.toCountedGeneralizedAllowableSequence.ConsecutiveCrossing i j)
+    (hk : 0 < k)
+    (hi_order :
+      A.toCountedGeneralizedAllowableSequence.moveOrder i = 1)
+    (hj_order :
+      A.toCountedGeneralizedAllowableSequence.moveOrder j = 1) :
+    A.toCountedGeneralizedAllowableSequence.moveOrder i +
+        A.toCountedGeneralizedAllowableSequence.moveOrder j - 1 ≤
+      j.val - i.val - 1 := by
+  have hgap := A.one_le_gap_between_consecutive_crossings hij hk
+  omega
+
 end ConcreteGeneralizedAllowableSequence
 
 /--

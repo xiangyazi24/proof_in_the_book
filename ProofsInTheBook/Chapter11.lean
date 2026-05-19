@@ -2366,6 +2366,24 @@ theorem rightBarrierPositions_card_eq_order {k : ℕ} {π ρ : State (2 * k)}
     (PositionInterval.rightBarrierPositions k M.order).card = M.order :=
   PositionInterval.rightBarrierPositions_card_eq M.order_le_middle
 
+theorem not_increasing_and_decreasing_leftBarrierPositions {k d : ℕ}
+    {π : State (2 * k)} (hd : 2 ≤ d) (hdk : d ≤ k)
+    (hinc : IncreasingOnPositions π (PositionInterval.leftBarrierPositions k d))
+    (hdec : DecreasingOnPositions π (PositionInterval.leftBarrierPositions k d)) :
+    False :=
+  not_increasing_and_decreasing_on_two_positions hinc hdec (by
+    rw [PositionInterval.leftBarrierPositions_card_eq hdk]
+    exact hd)
+
+theorem not_increasing_and_decreasing_rightBarrierPositions {k d : ℕ}
+    {π : State (2 * k)} (hd : 2 ≤ d) (hdk : d ≤ k)
+    (hinc : IncreasingOnPositions π (PositionInterval.rightBarrierPositions k d))
+    (hdec : DecreasingOnPositions π (PositionInterval.rightBarrierPositions k d)) :
+    False :=
+  not_increasing_and_decreasing_on_two_positions hinc hdec (by
+    rw [PositionInterval.rightBarrierPositions_card_eq hdk]
+    exact hd)
+
 end ReversalStep
 
 /-- The number of labels crossing the middle barrier in one concrete step. -/

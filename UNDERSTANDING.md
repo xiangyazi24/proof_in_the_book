@@ -194,6 +194,13 @@ Current progress:
   states, and the block-intersection fact needed for the T/O/C persistence
   proof: in a state decreasing on a central window, an increasing reversal
   block intersects that window in at most one position.
+- Proved the T/O/C persistence facts: across a noncrossing range, a decreasing
+  (respectively increasing, backwards) central window loses at most one layer
+  per move.  This removes the `gap_between` assumption for adjacent crossing
+  moves: `ConcreteGeneralizedAllowableSequence.gap_between_crossingIdx` now
+  proves the general `d_i + d_{i+1} - 1` lower bound.  The counted-sequence
+  endpoint is reduced to the cyclic first/last `gap_ends` condition plus the
+  no-full-crossing condition.
 
 Remaining core: formalize Ungar's even-cardinality permutation/T-O-C counting
 argument enough to produce an `UngarCountingCertificate` from the rotating

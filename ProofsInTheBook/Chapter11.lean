@@ -1546,6 +1546,40 @@ theorem centralBarrierPositions_mono {k d e : ℕ} (hde : d ≤ e) :
   · exact Or.inl (by omega)
   · exact Or.inr (by omega)
 
+theorem pred_mem_centralBarrierPositions_of_mem_pred {k d : ℕ}
+    {p : Fin (2 * k)} (hp : p ∈ centralBarrierPositions k (d - 1))
+    (hp_pos : 0 < p.val) :
+    (⟨p.val - 1, by omega⟩ : Fin (2 * k)) ∈ centralBarrierPositions k d := by
+  rw [mem_centralBarrierPositions] at hp ⊢
+  rcases hp with hp | hp
+  · refine Or.inl ?_
+    change k - d ≤ p.val - 1 ∧ p.val - 1 < k
+    omega
+  · by_cases hpk : p.val = k
+    · refine Or.inl ?_
+      change k - d ≤ p.val - 1 ∧ p.val - 1 < k
+      omega
+    · refine Or.inr ?_
+      change k ≤ p.val - 1 ∧ p.val - 1 < k + d
+      omega
+
+theorem succ_mem_centralBarrierPositions_of_mem_pred {k d : ℕ}
+    {p : Fin (2 * k)} (hp : p ∈ centralBarrierPositions k (d - 1))
+    (hp_succ : p.val + 1 < 2 * k) :
+    (⟨p.val + 1, hp_succ⟩ : Fin (2 * k)) ∈ centralBarrierPositions k d := by
+  rw [mem_centralBarrierPositions] at hp ⊢
+  rcases hp with hp | hp
+  · by_cases hpk : p.val + 1 = k
+    · refine Or.inr ?_
+      change k ≤ p.val + 1 ∧ p.val + 1 < k + d
+      omega
+    · refine Or.inl ?_
+      change k - d ≤ p.val + 1 ∧ p.val + 1 < k
+      omega
+  · refine Or.inr ?_
+    change k ≤ p.val + 1 ∧ p.val + 1 < k + d
+    omega
+
 theorem leftCentralPositions_eq_leftBarrierPositions_of_crossing {k : ℕ}
     (I : PositionInterval (2 * k)) (hcross : I.lo < k ∧ k ≤ I.hi) :
     I.leftCentralPositions k = leftBarrierPositions k (I.crossOrder k) := by
@@ -2097,12 +2131,245 @@ theorem ne_of_mem_block_and_central_contradicts_decreasing_before {k d : ℕ}
     Finset.one_lt_card.mpr ⟨p, hp_inter, q, hq_inter, hpq⟩
   omega
 
+theorem fixed_on_smaller_central_of_decreasing_before_nonCrossing {k d : ℕ}
+    {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)
+    (hM : ¬ M.IsCrossing)
+    (hdec : DecreasingOnPositions π (PositionInterval.centralBarrierPositions k d))
+    {p : Fin (2 * k)} (hp : p ∈ PositionInterval.centralBarrierPositions k (d - 1)) :
+    M.move.map p = p := by
+  classical
+  have hp_big : p ∈ PositionInterval.centralBarrierPositions k d :=
+    PositionInterval.centralBarrierPositions_mono (Nat.sub_le d 1) hp
+  by_cases hmem : ∃ i : Fin M.move.blockCount, (M.move.block i).Mem p
+  · rcases hmem with ⟨i, hpi⟩
+    have hnot_cross_i :
+        ¬ ((M.move.block i).lo < k ∧ k ≤ (M.move.block i).hi) := by
+      intro hi
+      apply hM
+      unfold IsCrossing order
+      rw [Finset.sum_pos_iff]
+      exact ⟨i, by simp, (M.move.block i).crossOrder_pos_iff.mpr hi⟩
+    have hmap : M.move.map p = (M.move.block i).mirror p hpi := hrev.1 i p hpi
+    by_contra hneq
+    have hval_ne : (M.move.map p).val ≠ p.val := by
+      intro hval
+      exact hneq (Fin.ext hval)
+    rcases lt_or_gt_of_ne hval_ne with hlt | hgt
+    · have hp_pos : 0 < p.val := by
+        rw [hmap] at hlt
+        change (M.move.block i).lo + (M.move.block i).hi - p.val < p.val at hlt
+        omega
+      let q : Fin (2 * k) := ⟨p.val - 1, by omega⟩
+      have hq_block : (M.move.block i).Mem q := by
+        rw [hmap] at hlt
+        change (M.move.block i).lo + (M.move.block i).hi - p.val < p.val at hlt
+        rcases hpi with ⟨hlo, hhi⟩
+        dsimp [q]
+        change (M.move.block i).lo ≤ p.val - 1 ∧
+          p.val - 1 ≤ (M.move.block i).hi
+        constructor <;> omega
+      have hq_big : q ∈ PositionInterval.centralBarrierPositions k d := by
+        dsimp [q]
+        exact PositionInterval.pred_mem_centralBarrierPositions_of_mem_pred hp hp_pos
+      have hpq : p ≠ q := by
+        intro hpq
+        have hval := congrArg Fin.val hpq
+        dsimp [q] at hval
+        omega
+      exact M.ne_of_mem_block_and_central_contradicts_decreasing_before i hdec
+        hp_big hq_big hpi hq_block hpq
+    · have hp_succ : p.val + 1 < 2 * k := by
+        rw [hmap] at hgt
+        have hmirror_lt : ((M.move.block i).mirror p hpi).val < 2 * k :=
+          (M.move.block i).mirror p hpi |>.isLt
+        change p.val < (M.move.block i).lo + (M.move.block i).hi - p.val at hgt
+        rcases hpi with ⟨hlo, hhi⟩
+        have hhi_lt := (M.move.block i).hi_lt
+        omega
+      let q : Fin (2 * k) := ⟨p.val + 1, hp_succ⟩
+      have hq_block : (M.move.block i).Mem q := by
+        rw [hmap] at hgt
+        change p.val < (M.move.block i).lo + (M.move.block i).hi - p.val at hgt
+        rcases hpi with ⟨hlo, hhi⟩
+        dsimp [q]
+        change (M.move.block i).lo ≤ p.val + 1 ∧
+          p.val + 1 ≤ (M.move.block i).hi
+        constructor <;> omega
+      have hq_big : q ∈ PositionInterval.centralBarrierPositions k d := by
+        dsimp [q]
+        exact PositionInterval.succ_mem_centralBarrierPositions_of_mem_pred hp hp_succ
+      have hpq : p ≠ q := by
+        intro hpq
+        have hval := congrArg Fin.val hpq
+        dsimp [q] at hval
+        omega
+      exact M.ne_of_mem_block_and_central_contradicts_decreasing_before i hdec
+        hp_big hq_big hpi hq_block hpq
+  · exact hrev.2 p (by
+      intro i hi
+      exact hmem ⟨i, hi⟩)
+
+theorem decreasing_after_smaller_central_of_decreasing_before_nonCrossing {k d : ℕ}
+    {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)
+    (hM : ¬ M.IsCrossing)
+    (hdec : DecreasingOnPositions π (PositionInterval.centralBarrierPositions k d)) :
+    DecreasingOnPositions ρ (PositionInterval.centralBarrierPositions k (d - 1)) := by
+  intro p hp q hq hpq
+  have hp_big : p ∈ PositionInterval.centralBarrierPositions k d :=
+    PositionInterval.centralBarrierPositions_mono (Nat.sub_le d 1) hp
+  have hq_big : q ∈ PositionInterval.centralBarrierPositions k d :=
+    PositionInterval.centralBarrierPositions_mono (Nat.sub_le d 1) hq
+  have hfixp := M.fixed_on_smaller_central_of_decreasing_before_nonCrossing
+    hrev hM hdec hp
+  have hfixq := M.fixed_on_smaller_central_of_decreasing_before_nonCrossing
+    hrev hM hdec hq
+  rw [M.step_apply q, M.step_apply p, hfixq, hfixp]
+  exact hdec hp_big hq_big hpq
+
 theorem decreasing_after_block_of_reversesBlocks {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (i : Fin M.move.blockCount) :
     DecreasingOnPositions ρ (M.move.block i).toFinset := by
   intro p hp q hq hpq
   rw [PositionInterval.mem_toFinset] at hp hq
   exact M.label_decreases_after_block_of_reversesBlocks hrev i hp hq hpq
+
+theorem block_inter_central_le_one_of_increasing_after {k d : ℕ}
+    {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)
+    (i : Fin M.move.blockCount)
+    (hinc : IncreasingOnPositions ρ (PositionInterval.centralBarrierPositions k d)) :
+    (PositionInterval.centralBarrierPositions k d ∩ (M.move.block i).toFinset).card ≤ 1 :=
+  by
+    have hle := card_inter_le_one_of_increasing_decreasing hinc
+      (M.decreasing_after_block_of_reversesBlocks hrev i)
+    simpa [Finset.inter_comm] using hle
+
+theorem ne_of_mem_block_and_central_contradicts_increasing_after {k d : ℕ}
+    {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)
+    (i : Fin M.move.blockCount)
+    (hinc : IncreasingOnPositions ρ (PositionInterval.centralBarrierPositions k d))
+    {p q : Fin (2 * k)}
+    (hpC : p ∈ PositionInterval.centralBarrierPositions k d)
+    (hqC : q ∈ PositionInterval.centralBarrierPositions k d)
+    (hpB : (M.move.block i).Mem p) (hqB : (M.move.block i).Mem q)
+    (hpq : p ≠ q) :
+    False := by
+  have hle := M.block_inter_central_le_one_of_increasing_after hrev i hinc
+  have hp_inter :
+      p ∈ PositionInterval.centralBarrierPositions k d ∩ (M.move.block i).toFinset := by
+    rw [Finset.mem_inter, PositionInterval.mem_toFinset]
+    exact ⟨hpC, hpB⟩
+  have hq_inter :
+      q ∈ PositionInterval.centralBarrierPositions k d ∩ (M.move.block i).toFinset := by
+    rw [Finset.mem_inter, PositionInterval.mem_toFinset]
+    exact ⟨hqC, hqB⟩
+  have htwo :
+      1 < (PositionInterval.centralBarrierPositions k d ∩
+        (M.move.block i).toFinset).card :=
+    Finset.one_lt_card.mpr ⟨p, hp_inter, q, hq_inter, hpq⟩
+  omega
+
+theorem fixed_on_smaller_central_of_increasing_after_nonCrossing {k d : ℕ}
+    {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)
+    (hM : ¬ M.IsCrossing)
+    (hinc : IncreasingOnPositions ρ (PositionInterval.centralBarrierPositions k d))
+    {p : Fin (2 * k)} (hp : p ∈ PositionInterval.centralBarrierPositions k (d - 1)) :
+    M.move.map p = p := by
+  classical
+  have hp_big : p ∈ PositionInterval.centralBarrierPositions k d :=
+    PositionInterval.centralBarrierPositions_mono (Nat.sub_le d 1) hp
+  by_cases hmem : ∃ i : Fin M.move.blockCount, (M.move.block i).Mem p
+  · rcases hmem with ⟨i, hpi⟩
+    have hnot_cross_i :
+        ¬ ((M.move.block i).lo < k ∧ k ≤ (M.move.block i).hi) := by
+      intro hi
+      apply hM
+      unfold IsCrossing order
+      rw [Finset.sum_pos_iff]
+      exact ⟨i, by simp, (M.move.block i).crossOrder_pos_iff.mpr hi⟩
+    have hmap : M.move.map p = (M.move.block i).mirror p hpi := hrev.1 i p hpi
+    by_contra hneq
+    have hval_ne : (M.move.map p).val ≠ p.val := by
+      intro hval
+      exact hneq (Fin.ext hval)
+    rcases lt_or_gt_of_ne hval_ne with hlt | hgt
+    · have hp_pos : 0 < p.val := by
+        rw [hmap] at hlt
+        change (M.move.block i).lo + (M.move.block i).hi - p.val < p.val at hlt
+        omega
+      let q : Fin (2 * k) := ⟨p.val - 1, by omega⟩
+      have hq_block : (M.move.block i).Mem q := by
+        rw [hmap] at hlt
+        change (M.move.block i).lo + (M.move.block i).hi - p.val < p.val at hlt
+        rcases hpi with ⟨hlo, hhi⟩
+        dsimp [q]
+        change (M.move.block i).lo ≤ p.val - 1 ∧
+          p.val - 1 ≤ (M.move.block i).hi
+        constructor <;> omega
+      have hq_big : q ∈ PositionInterval.centralBarrierPositions k d := by
+        dsimp [q]
+        exact PositionInterval.pred_mem_centralBarrierPositions_of_mem_pred hp hp_pos
+      have hpq : p ≠ q := by
+        intro hpq
+        have hval := congrArg Fin.val hpq
+        dsimp [q] at hval
+        omega
+      exact M.ne_of_mem_block_and_central_contradicts_increasing_after hrev i hinc
+        hp_big hq_big hpi hq_block hpq
+    · have hp_succ : p.val + 1 < 2 * k := by
+        rw [hmap] at hgt
+        change p.val < (M.move.block i).lo + (M.move.block i).hi - p.val at hgt
+        rcases hpi with ⟨hlo, hhi⟩
+        have hhi_lt := (M.move.block i).hi_lt
+        omega
+      let q : Fin (2 * k) := ⟨p.val + 1, hp_succ⟩
+      have hq_block : (M.move.block i).Mem q := by
+        rw [hmap] at hgt
+        change p.val < (M.move.block i).lo + (M.move.block i).hi - p.val at hgt
+        rcases hpi with ⟨hlo, hhi⟩
+        dsimp [q]
+        change (M.move.block i).lo ≤ p.val + 1 ∧
+          p.val + 1 ≤ (M.move.block i).hi
+        constructor <;> omega
+      have hq_big : q ∈ PositionInterval.centralBarrierPositions k d := by
+        dsimp [q]
+        exact PositionInterval.succ_mem_centralBarrierPositions_of_mem_pred hp hp_succ
+      have hpq : p ≠ q := by
+        intro hpq
+        have hval := congrArg Fin.val hpq
+        dsimp [q] at hval
+        omega
+      exact M.ne_of_mem_block_and_central_contradicts_increasing_after hrev i hinc
+        hp_big hq_big hpi hq_block hpq
+  · exact hrev.2 p (by
+      intro i hi
+      exact hmem ⟨i, hi⟩)
+
+theorem increasing_before_smaller_central_of_increasing_after_nonCrossing {k d : ℕ}
+    {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)
+    (hM : ¬ M.IsCrossing)
+    (hinc : IncreasingOnPositions ρ (PositionInterval.centralBarrierPositions k d)) :
+    IncreasingOnPositions π (PositionInterval.centralBarrierPositions k (d - 1)) := by
+  intro p hp q hq hpq
+  have hp_big : p ∈ PositionInterval.centralBarrierPositions k d :=
+    PositionInterval.centralBarrierPositions_mono (Nat.sub_le d 1) hp
+  have hq_big : q ∈ PositionInterval.centralBarrierPositions k d :=
+    PositionInterval.centralBarrierPositions_mono (Nat.sub_le d 1) hq
+  have hfixp := M.fixed_on_smaller_central_of_increasing_after_nonCrossing
+    hrev hM hinc hp
+  have hfixq := M.fixed_on_smaller_central_of_increasing_after_nonCrossing
+    hrev hM hinc hq
+  have hp_step := M.step_apply p
+  have hq_step := M.step_apply q
+  rw [hfixp] at hp_step
+  rw [hfixq] at hq_step
+  have h := hinc hp_big hq_big hpq
+  rwa [hp_step, hq_step] at h
 
 theorem isCrossing_iff_exists_crossing_block {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) :
@@ -3454,6 +3721,94 @@ theorem noncrossing_range_preserves_label_side {k r : ℕ}
   have h := hmain (j - i) (by omega)
   simpa [hsum] using h
 
+theorem decreasing_persists_over_noncrossing_steps {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r)
+    (a n d : ℕ) (hend : a + n ≤ r)
+    (hnc : ∀ l : Fin r, a ≤ l.val → l.val < a + n →
+      ¬ A.toCountedGeneralizedAllowableSequence.IsCrossing l)
+    (hdec :
+      ReversalStep.DecreasingOnPositions (A.stateAt a (by omega))
+        (PositionInterval.centralBarrierPositions k d)) :
+    ReversalStep.DecreasingOnPositions (A.stateAt (a + n) hend)
+      (PositionInterval.centralBarrierPositions k (d - n)) := by
+  induction n generalizing a d with
+  | zero =>
+      simpa [stateAt]
+  | succ n ih =>
+      have hend_n : a + n ≤ r := by omega
+      have hnc_n :
+          ∀ l : Fin r, a ≤ l.val → l.val < a + n →
+            ¬ A.toCountedGeneralizedAllowableSequence.IsCrossing l := by
+        intro l hla hln
+        exact hnc l hla (by omega)
+      have hdec_n := ih a d hend_n hnc_n hdec
+      have hnlt : a + n < r := by omega
+      let j : Fin r := ⟨a + n, hnlt⟩
+      have hnc_j : ¬ A.toCountedGeneralizedAllowableSequence.IsCrossing j :=
+        hnc j (by dsimp [j]; omega) (by dsimp [j]; omega)
+      have hsource :
+          A.stateAt (a + n) hend_n = A.seq.π (stepFrom j) := by
+        apply congrArg A.seq.π
+        apply Fin.ext
+        simp [stepFrom, j]
+      have htarget :
+          A.stateAt (a + (n + 1)) hend = A.seq.π (stepTo j) := by
+        apply congrArg A.seq.π
+        apply Fin.ext
+        simp [stepTo, j]
+        omega
+      rw [hsource] at hdec_n
+      have hstep :=
+        (A.step j).toReversalStep.decreasing_after_smaller_central_of_decreasing_before_nonCrossing
+          (A.reversesBlocks j) hnc_j hdec_n
+      rw [← htarget] at hstep
+      have hrad : d - (n + 1) = d - n - 1 := by omega
+      simpa [Nat.add_assoc, hrad] using hstep
+
+theorem increasing_persists_back_over_noncrossing_steps {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r)
+    (a n d : ℕ) (hend : a + n ≤ r)
+    (hnc : ∀ l : Fin r, a ≤ l.val → l.val < a + n →
+      ¬ A.toCountedGeneralizedAllowableSequence.IsCrossing l)
+    (hinc :
+      ReversalStep.IncreasingOnPositions (A.stateAt (a + n) hend)
+        (PositionInterval.centralBarrierPositions k d)) :
+    ReversalStep.IncreasingOnPositions (A.stateAt a (by omega))
+      (PositionInterval.centralBarrierPositions k (d - n)) := by
+  induction n generalizing a d with
+  | zero =>
+      simpa [stateAt] using hinc
+  | succ n ih =>
+      have hend_n : a + n ≤ r := by omega
+      have hnlt : a + n < r := by omega
+      let j : Fin r := ⟨a + n, hnlt⟩
+      have hnc_j : ¬ A.toCountedGeneralizedAllowableSequence.IsCrossing j :=
+        hnc j (by dsimp [j]; omega) (by dsimp [j]; omega)
+      have htarget :
+          A.stateAt (a + (n + 1)) hend = A.seq.π (stepTo j) := by
+        apply congrArg A.seq.π
+        apply Fin.ext
+        simp [stepTo, j]
+        omega
+      rw [htarget] at hinc
+      have hprev_step :=
+        (A.step j).toReversalStep.increasing_before_smaller_central_of_increasing_after_nonCrossing
+          (A.reversesBlocks j) hnc_j hinc
+      have hsource :
+          A.stateAt (a + n) hend_n = A.seq.π (stepFrom j) := by
+        apply congrArg A.seq.π
+        apply Fin.ext
+        simp [stepFrom, j]
+      rw [← hsource] at hprev_step
+      have hnc_n :
+          ∀ l : Fin r, a ≤ l.val → l.val < a + n →
+            ¬ A.toCountedGeneralizedAllowableSequence.IsCrossing l := by
+        intro l hla hln
+        exact hnc l hla (by omega)
+      have hstart := ih a (d - 1) hend_n hnc_n hprev_step
+      have hrad : d - (n + 1) = d - 1 - n := by omega
+      simpa [Nat.add_assoc, hrad] using hstart
+
 theorem crossing_step_decreases_left_barrier {k r : ℕ}
     (A : ConcreteGeneralizedAllowableSequence k r) {j : Fin r}
     (hj : A.toCountedGeneralizedAllowableSequence.IsCrossing j) :
@@ -3803,6 +4158,137 @@ theorem consecutive_crossings_not_adjacent {k r : ℕ}
   have hgap := A.one_le_gap_between_consecutive_crossings hij hk
   omega
 
+theorem gap_between_consecutive_crossings {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {i j : Fin r}
+    (hij : A.toCountedGeneralizedAllowableSequence.ConsecutiveCrossing i j) :
+    A.toCountedGeneralizedAllowableSequence.moveOrder i +
+        A.toCountedGeneralizedAllowableSequence.moveOrder j - 1 ≤
+      j.val - i.val - 1 := by
+  classical
+  by_contra hnot
+  let di := A.toCountedGeneralizedAllowableSequence.moveOrder i
+  let dj := A.toCountedGeneralizedAllowableSequence.moveOrder j
+  let g := j.val - i.val - 1
+  have hijlt : i.val < j.val := hij.2.2.1
+  have hgap_lt : g < di + dj - 1 := by
+    dsimp [g, di, dj]
+    omega
+  have hdi_pos : 0 < di := by
+    dsimp [di]
+    exact hij.1
+  have hdj_pos : 0 < dj := by
+    dsimp [dj]
+    exact hij.2.1
+  let n₁ := Nat.min g (di - 1)
+  have hn₁_le_g : n₁ ≤ g := Nat.min_le_left _ _
+  have hn₁_lt_di : n₁ < di := by
+    dsimp [n₁]
+    have hmin_le : Nat.min g (di - 1) ≤ di - 1 := Nat.min_le_right _ _
+    omega
+  have hg_sub_lt_dj : g - n₁ < dj := by
+    dsimp [n₁]
+    by_cases hg_le : g ≤ di - 1
+    · have hn : Nat.min g (di - 1) = g := Nat.min_eq_left hg_le
+      rw [hn]
+      omega
+    · have hdi_le_g : di ≤ g := by omega
+      have hn : Nat.min g (di - 1) = di - 1 := Nat.min_eq_right (by omega)
+      rw [hn]
+      omega
+  let D := Nat.min (di - n₁) (dj - (g - n₁))
+  have hD_pos : 0 < D := by
+    dsimp [D]
+    have hleft : 0 < di - n₁ := by omega
+    have hright : 0 < dj - (g - n₁) := by omega
+    exact Nat.lt_min.mpr ⟨hleft, hright⟩
+  have hD_le_left : D ≤ di - n₁ := Nat.min_le_left _ _
+  have hD_le_right : D ≤ dj - (g - n₁) := Nat.min_le_right _ _
+  let a := i.val + 1
+  have ha_eq_to : A.stateAt a (by
+      dsimp [a]
+      exact Nat.succ_le_of_lt i.isLt) = A.seq.π (stepTo i) := by
+    apply congrArg A.seq.π
+    apply Fin.ext
+    simp [a, stepTo]
+  have hb_eq_from : A.stateAt j.val (le_of_lt j.isLt) = A.seq.π (stepFrom j) := by
+    apply congrArg A.seq.π
+    apply Fin.ext
+    simp [stepFrom]
+  have ha_add_g : a + g = j.val := by
+    dsimp [a, g]
+    omega
+  have hend_dec : a + n₁ ≤ r := by
+    have hjle : j.val ≤ r := le_of_lt j.isLt
+    omega
+  have hnc_dec :
+      ∀ l : Fin r, a ≤ l.val → l.val < a + n₁ →
+        ¬ A.toCountedGeneralizedAllowableSequence.IsCrossing l := by
+    intro l hla hln
+    exact hij.2.2.2 l (by dsimp [a] at hla; omega) (by
+      have hng : n₁ ≤ g := hn₁_le_g
+      dsimp [a, g] at hln hng
+      omega)
+  have hdec_start :
+      ReversalStep.DecreasingOnPositions (A.stateAt a (by
+        dsimp [a]
+        exact Nat.succ_le_of_lt i.isLt))
+        (PositionInterval.centralBarrierPositions k di) := by
+    have hdec := A.crossing_step_decreases_central_barrier hij.1
+    rw [ha_eq_to]
+    simpa [di] using hdec
+  have hdec_mid :=
+    A.decreasing_persists_over_noncrossing_steps a n₁ di hend_dec hnc_dec hdec_start
+  have hend_inc : a + n₁ + (g - n₁) ≤ r := by
+    have hjle : j.val ≤ r := le_of_lt j.isLt
+    omega
+  have hnc_inc :
+      ∀ l : Fin r, a + n₁ ≤ l.val → l.val < a + n₁ + (g - n₁) →
+        ¬ A.toCountedGeneralizedAllowableSequence.IsCrossing l := by
+    intro l hla hln
+    exact hij.2.2.2 l (by dsimp [a] at hla; omega) (by
+      dsimp [a, g] at hln
+      omega)
+  have hinc_end :
+      ReversalStep.IncreasingOnPositions
+        (A.stateAt (a + n₁ + (g - n₁)) hend_inc)
+        (PositionInterval.centralBarrierPositions k dj) := by
+    have hsum : a + n₁ + (g - n₁) = j.val := by
+      omega
+    have hinc := A.crossing_step_needs_central_barrier_increasing hij.2.1
+    have hstate :
+        A.stateAt (a + n₁ + (g - n₁)) hend_inc = A.seq.π (stepFrom j) := by
+      have hstateAt :
+          A.stateAt (a + n₁ + (g - n₁)) hend_inc =
+            A.stateAt j.val (le_of_lt j.isLt) := by
+        apply congrArg A.seq.π
+        apply Fin.ext
+        exact hsum
+      exact hstateAt.trans hb_eq_from
+    rw [hstate]
+    simpa [dj] using hinc
+  have hinc_mid :=
+    A.increasing_persists_back_over_noncrossing_steps
+      (a + n₁) (g - n₁) dj hend_inc hnc_inc hinc_end
+  have hmid_same :
+      A.stateAt (a + n₁) (by omega) = A.stateAt (a + n₁) hend_dec := by
+    apply A.stateAt_eq_of_proofs
+  rw [hmid_same] at hinc_mid
+  have hdec_D :
+      ReversalStep.DecreasingOnPositions (A.stateAt (a + n₁) hend_dec)
+        (PositionInterval.centralBarrierPositions k D) :=
+    hdec_mid.mono (PositionInterval.centralBarrierPositions_mono hD_le_left)
+  have hinc_D :
+      ReversalStep.IncreasingOnPositions (A.stateAt (a + n₁) hend_dec)
+        (PositionInterval.centralBarrierPositions k D) :=
+    hinc_mid.mono (PositionInterval.centralBarrierPositions_mono hD_le_right)
+  have hD_le_k : D ≤ k := by
+    have hdi_le : di ≤ k := by
+      dsimp [di]
+      exact (A.step i).toReversalStep.order_le_middle
+    omega
+  exact ReversalStep.not_increasing_and_decreasing_centralBarrierPositions
+    hD_pos hD_le_k hinc_D hdec_D
+
 theorem gap_between_consecutive_crossings_of_unit_orders {k r : ℕ}
     (A : ConcreteGeneralizedAllowableSequence k r) {i j : Fin r}
     (hij : A.toCountedGeneralizedAllowableSequence.ConsecutiveCrossing i j)
@@ -3836,6 +4322,55 @@ theorem gap_between_crossingIdx_of_unit_orders {k r : ℕ}
     A.toCountedGeneralizedAllowableSequence.consecutive_crossingIdx_succ i hi
   exact A.gap_between_consecutive_crossings_of_unit_orders hij hk
     (hunit ⟨i, by omega⟩) (hunit ⟨i + 1, by omega⟩)
+
+theorem gap_between_crossingIdx {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r)
+    (i : ℕ) (hi : i + 1 <
+      A.toCountedGeneralizedAllowableSequence.crossingMoves.card) :
+    A.toCountedGeneralizedAllowableSequence.moveOrder
+          (A.toCountedGeneralizedAllowableSequence.crossingIdx ⟨i, by omega⟩) +
+        A.toCountedGeneralizedAllowableSequence.moveOrder
+          (A.toCountedGeneralizedAllowableSequence.crossingIdx ⟨i + 1, by omega⟩) - 1 ≤
+      (A.toCountedGeneralizedAllowableSequence.crossingIdx ⟨i + 1, by omega⟩).val -
+        (A.toCountedGeneralizedAllowableSequence.crossingIdx ⟨i, by omega⟩).val - 1 := by
+  have hij :=
+    A.toCountedGeneralizedAllowableSequence.consecutive_crossingIdx_succ i hi
+  exact A.gap_between_consecutive_crossings hij
+
+theorem length_lower_bound_from_end_gap {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) (hk : 0 < k)
+    (hnoFull :
+      ∀ j : Fin r, A.toCountedGeneralizedAllowableSequence.IsCrossing j →
+        A.toCountedGeneralizedAllowableSequence.moveOrder j < k)
+    (hgap_ends :
+      A.toCountedGeneralizedAllowableSequence.moveOrder
+          (A.toCountedGeneralizedAllowableSequence.crossingIdx ⟨0, by
+            exact A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk⟩) +
+          A.toCountedGeneralizedAllowableSequence.moveOrder
+            (A.toCountedGeneralizedAllowableSequence.crossingIdx
+              ⟨A.toCountedGeneralizedAllowableSequence.crossingMoves.card - 1, by
+                have htwo :=
+                  A.toCountedGeneralizedAllowableSequence.two_le_crossingMoves_card_of_no_full_crossing
+                    hk hnoFull
+                omega⟩) - 1 ≤
+        (A.toCountedGeneralizedAllowableSequence.crossingIdx ⟨0, by
+          exact A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk⟩).val +
+          (r - 1 -
+            (A.toCountedGeneralizedAllowableSequence.crossingIdx
+              ⟨A.toCountedGeneralizedAllowableSequence.crossingMoves.card - 1, by
+                have htwo :=
+                  A.toCountedGeneralizedAllowableSequence.two_le_crossingMoves_card_of_no_full_crossing
+                    hk hnoFull
+                omega⟩).val)) :
+    2 * k ≤ r := by
+  have htwo :=
+    A.toCountedGeneralizedAllowableSequence.two_le_crossingMoves_card_of_no_full_crossing
+      hk hnoFull
+  exact A.toCountedGeneralizedAllowableSequence.length_lower_bound_from_gaps
+    htwo
+    (fun i hi => A.gap_between_crossingIdx i hi)
+    (by
+      simpa using hgap_ends)
 
 theorem crossingIdx_decreases_common_central_after {k r d : ℕ}
     (A : ConcreteGeneralizedAllowableSequence k r)

@@ -182,6 +182,10 @@ Current progress:
 - Added `CountedGeneralizedAllowableSequence.length_lower_bound_from_gaps`,
   reducing the counted-sequence endpoint to the two T/O/C gap inequalities
   on ordered crossing moves.
+- Added central-barrier windows and offset-pair switch lemmas in Ch11:
+  crossing steps are increasing/decreasing on the whole central window, and
+  every offset `s < min(d_i,d_j)` between consecutive crossings has a
+  noncrossing switch witness.
 
 Remaining core: formalize Ungar's even-cardinality permutation/T-O-C counting
 argument enough to produce an `UngarCountingCertificate` from the rotating

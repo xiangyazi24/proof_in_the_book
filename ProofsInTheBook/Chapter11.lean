@@ -1440,6 +1440,10 @@ noncomputable def rightBarrierPositions (k d : ℕ) : Finset (Fin (2 * k)) := by
   classical
   exact Finset.univ.filter fun p => k ≤ p.val ∧ p.val < k + d
 
+/-- The `2d` positions centered at the middle barrier. -/
+noncomputable def centralBarrierPositions (k d : ℕ) : Finset (Fin (2 * k)) :=
+  leftBarrierPositions k d ∪ rightBarrierPositions k d
+
 theorem mem_leftBarrierPositions {k d : ℕ} {p : Fin (2 * k)} :
     p ∈ leftBarrierPositions k d ↔ k - d ≤ p.val ∧ p.val < k := by
   simp [leftBarrierPositions]
@@ -1447,6 +1451,19 @@ theorem mem_leftBarrierPositions {k d : ℕ} {p : Fin (2 * k)} :
 theorem mem_rightBarrierPositions {k d : ℕ} {p : Fin (2 * k)} :
     p ∈ rightBarrierPositions k d ↔ k ≤ p.val ∧ p.val < k + d := by
   simp [rightBarrierPositions]
+
+theorem mem_centralBarrierPositions {k d : ℕ} {p : Fin (2 * k)} :
+    p ∈ centralBarrierPositions k d ↔
+      (k - d ≤ p.val ∧ p.val < k) ∨ (k ≤ p.val ∧ p.val < k + d) := by
+  simp [centralBarrierPositions, mem_leftBarrierPositions, mem_rightBarrierPositions]
+
+theorem left_rightBarrierPositions_disjoint {k d : ℕ} :
+    Disjoint (leftBarrierPositions k d) (rightBarrierPositions k d) := by
+  rw [Finset.disjoint_left]
+  intro p hp_left hp_right
+  rw [mem_leftBarrierPositions] at hp_left
+  rw [mem_rightBarrierPositions] at hp_right
+  omega
 
 theorem leftBarrierPositions_card_eq {k d : ℕ} (hd : d ≤ k) :
     (leftBarrierPositions k d).card = d := by
@@ -1502,6 +1519,12 @@ theorem rightBarrierPositions_card_eq {k d : ℕ} (hd : d ≤ k) :
   rw [hmap] at hcard_map
   rw [← hcard_map]
   simp
+
+theorem centralBarrierPositions_card_eq {k d : ℕ} (hd : d ≤ k) :
+    (centralBarrierPositions k d).card = 2 * d := by
+  rw [centralBarrierPositions, Finset.card_union_of_disjoint left_rightBarrierPositions_disjoint]
+  rw [leftBarrierPositions_card_eq hd, rightBarrierPositions_card_eq hd]
+  omega
 
 theorem leftCentralPositions_eq_leftBarrierPositions_of_crossing {k : ℕ}
     (I : PositionInterval (2 * k)) (hcross : I.lo < k ∧ k ≤ I.hi) :
@@ -1888,11 +1911,23 @@ def middleLeftPosition (k : ℕ) (hk : 0 < k) : Fin (2 * k) :=
 def middleRightPosition (k : ℕ) (hk : 0 < k) : Fin (2 * k) :=
   ⟨k, by omega⟩
 
+def leftOffsetPosition (k s : ℕ) (hs : s < k) : Fin (2 * k) :=
+  ⟨k - 1 - s, by omega⟩
+
+def rightOffsetPosition (k s : ℕ) (_hs : s < k) : Fin (2 * k) :=
+  ⟨k + s, by omega⟩
+
 def MiddlePairIncreasing (π : State (2 * k)) (hk : 0 < k) : Prop :=
   (π (middleLeftPosition k hk)).val < (π (middleRightPosition k hk)).val
 
 def MiddlePairDecreasing (π : State (2 * k)) (hk : 0 < k) : Prop :=
   (π (middleRightPosition k hk)).val < (π (middleLeftPosition k hk)).val
+
+def OffsetPairIncreasing (π : State (2 * k)) (s : ℕ) (hs : s < k) : Prop :=
+  (π (leftOffsetPosition k s hs)).val < (π (rightOffsetPosition k s hs)).val
+
+def OffsetPairDecreasing (π : State (2 * k)) (s : ℕ) (hs : s < k) : Prop :=
+  (π (rightOffsetPosition k s hs)).val < (π (leftOffsetPosition k s hs)).val
 
 theorem middlePair_increasing_or_decreasing {k : ℕ} (π : State (2 * k)) (hk : 0 < k) :
     MiddlePairIncreasing π hk ∨ MiddlePairDecreasing π hk := by
@@ -1911,6 +1946,25 @@ theorem middlePair_increasing_or_decreasing {k : ℕ} (π : State (2 * k)) (hk :
   · exact Or.inl hlt
   · exact Or.inr hgt
 
+theorem offsetPair_increasing_or_decreasing {k s : ℕ} (π : State (2 * k))
+    (hs : s < k) :
+    OffsetPairIncreasing π s hs ∨ OffsetPairDecreasing π s hs := by
+  have hpos_ne : leftOffsetPosition k s hs ≠ rightOffsetPosition k s hs := by
+    intro h
+    have hval := congrArg Fin.val h
+    change k - 1 - s = k + s at hval
+    omega
+  have hlabel_ne :
+      (π (leftOffsetPosition k s hs)).val ≠
+        (π (rightOffsetPosition k s hs)).val := by
+    intro hval
+    have hlabel_eq :
+        π (leftOffsetPosition k s hs) = π (rightOffsetPosition k s hs) := Fin.ext hval
+    exact hpos_ne (π.injective hlabel_eq)
+  rcases lt_or_gt_of_ne hlabel_ne with hlt | hgt
+  · exact Or.inl hlt
+  · exact Or.inr hgt
+
 theorem not_middlePair_increasing_and_decreasing {k : ℕ}
     {π : State (2 * k)} (hk : 0 < k) :
     ¬ (MiddlePairIncreasing π hk ∧ MiddlePairDecreasing π hk) := by
@@ -1919,11 +1973,29 @@ theorem not_middlePair_increasing_and_decreasing {k : ℕ}
   change (π (middleRightPosition k hk)).val < (π (middleLeftPosition k hk)).val at hdec
   omega
 
+theorem not_offsetPair_increasing_and_decreasing {k s : ℕ}
+    {π : State (2 * k)} (hs : s < k) :
+    ¬ (OffsetPairIncreasing π s hs ∧ OffsetPairDecreasing π s hs) := by
+  rintro ⟨hinc, hdec⟩
+  change (π (leftOffsetPosition k s hs)).val <
+      (π (rightOffsetPosition k s hs)).val at hinc
+  change (π (rightOffsetPosition k s hs)).val <
+      (π (leftOffsetPosition k s hs)).val at hdec
+  omega
+
 theorem middlePair_decreasing_of_not_increasing {k : ℕ}
     {π : State (2 * k)} (hk : 0 < k)
     (hnot : ¬ MiddlePairIncreasing π hk) :
     MiddlePairDecreasing π hk := by
   rcases middlePair_increasing_or_decreasing π hk with hinc | hdec
+  · exact False.elim (hnot hinc)
+  · exact hdec
+
+theorem offsetPair_decreasing_of_not_increasing {k s : ℕ}
+    {π : State (2 * k)} (hs : s < k)
+    (hnot : ¬ OffsetPairIncreasing π s hs) :
+    OffsetPairDecreasing π s hs := by
+  rcases offsetPair_increasing_or_decreasing π hs with hinc | hdec
   · exact False.elim (hnot hinc)
   · exact hdec
 
@@ -2242,6 +2314,60 @@ theorem increasing_before_rightBarrierPositions {k : ℕ} {π ρ : State (2 * k)
   rw [M.order_eq_crossingBlockIndex_crossOrder hM]
   exact hcentral
 
+theorem increasing_before_centralBarrierPositions {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing) :
+    IncreasingOnPositions π (PositionInterval.centralBarrierPositions k M.order) := by
+  intro p hp q hq hpq
+  let b := M.crossingBlockIndex hM
+  have hcross : (M.move.block b).lo < k ∧ k ≤ (M.move.block b).hi := by
+    simpa [b] using M.crossingBlockIndex_spec hM
+  have horder : M.order = (M.move.block b).crossOrder k := by
+    simpa [b] using M.order_eq_crossingBlockIndex_crossOrder hM
+  have hleft : (M.move.block b).crossOrder k ≤ k - (M.move.block b).lo :=
+    (M.move.block b).crossOrder_le_left
+  have hright : (M.move.block b).crossOrder k ≤ (M.move.block b).hi + 1 - k :=
+    (M.move.block b).crossOrder_le_right
+  have hpB : (M.move.block b).Mem p := by
+    rw [PositionInterval.mem_centralBarrierPositions] at hp
+    rw [horder] at hp
+    rcases hp with hp | hp
+    · exact ⟨by omega, by omega⟩
+    · exact ⟨by omega, by omega⟩
+  have hqB : (M.move.block b).Mem q := by
+    rw [PositionInterval.mem_centralBarrierPositions] at hq
+    rw [horder] at hq
+    rcases hq with hq | hq
+    · exact ⟨by omega, by omega⟩
+    · exact ⟨by omega, by omega⟩
+  exact M.increasing_before b hpB hqB hpq
+
+theorem decreasing_after_centralBarrierPositions {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (hM : M.IsCrossing) :
+    DecreasingOnPositions ρ (PositionInterval.centralBarrierPositions k M.order) := by
+  intro p hp q hq hpq
+  let b := M.crossingBlockIndex hM
+  have hcross : (M.move.block b).lo < k ∧ k ≤ (M.move.block b).hi := by
+    simpa [b] using M.crossingBlockIndex_spec hM
+  have horder : M.order = (M.move.block b).crossOrder k := by
+    simpa [b] using M.order_eq_crossingBlockIndex_crossOrder hM
+  have hleft : (M.move.block b).crossOrder k ≤ k - (M.move.block b).lo :=
+    (M.move.block b).crossOrder_le_left
+  have hright : (M.move.block b).crossOrder k ≤ (M.move.block b).hi + 1 - k :=
+    (M.move.block b).crossOrder_le_right
+  have hpB : (M.move.block b).Mem p := by
+    rw [PositionInterval.mem_centralBarrierPositions] at hp
+    rw [horder] at hp
+    rcases hp with hp | hp
+    · exact ⟨by omega, by omega⟩
+    · exact ⟨by omega, by omega⟩
+  have hqB : (M.move.block b).Mem q := by
+    rw [PositionInterval.mem_centralBarrierPositions] at hq
+    rw [horder] at hq
+    rcases hq with hq | hq
+    · exact ⟨by omega, by omega⟩
+    · exact ⟨by omega, by omega⟩
+  exact M.label_decreases_after_block_of_reversesBlocks hrev b hpB hqB hpq
+
 theorem middlePair_decreasing_after_crossing {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)
     (hM : M.IsCrossing) (hk : 0 < k) :
@@ -2285,6 +2411,67 @@ theorem middlePair_increasing_before_crossing {k : ℕ} {π ρ : State (2 * k)}
     change k - 1 < k
     omega
   exact M.increasing_before (M.crossingBlockIndex hM) hp hq hpq
+
+theorem offsetPair_decreasing_after_crossing {k s : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)
+    (hM : M.IsCrossing) (hsk : s < k) (hs : s < M.order) :
+    OffsetPairDecreasing ρ s hsk := by
+  let p := leftOffsetPosition k s hsk
+  let q := rightOffsetPosition k s hsk
+  let b := M.crossingBlockIndex hM
+  have hcross : (M.move.block b).lo < k ∧ k ≤ (M.move.block b).hi := by
+    simpa [b] using M.crossingBlockIndex_spec hM
+  have horder : M.order = (M.move.block b).crossOrder k := by
+    simpa [b] using M.order_eq_crossingBlockIndex_crossOrder hM
+  have hleft : (M.move.block b).crossOrder k ≤ k - (M.move.block b).lo :=
+    (M.move.block b).crossOrder_le_left
+  have hright : (M.move.block b).crossOrder k ≤ (M.move.block b).hi + 1 - k :=
+    (M.move.block b).crossOrder_le_right
+  have hs_cross : s < (M.move.block b).crossOrder k := by
+    rwa [horder] at hs
+  have hp : (M.move.block b).Mem p := by
+    dsimp [p, leftOffsetPosition]
+    change (M.move.block b).lo ≤ k - 1 - s ∧
+      k - 1 - s ≤ (M.move.block b).hi
+    constructor <;> omega
+  have hq : (M.move.block b).Mem q := by
+    dsimp [q, rightOffsetPosition]
+    change (M.move.block b).lo ≤ k + s ∧ k + s ≤ (M.move.block b).hi
+    constructor <;> omega
+  have hpq : p < q := by
+    change k - 1 - s < k + s
+    omega
+  exact M.label_decreases_after_block_of_reversesBlocks hrev b hp hq hpq
+
+theorem offsetPair_increasing_before_crossing {k s : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing) (hsk : s < k) (hs : s < M.order) :
+    OffsetPairIncreasing π s hsk := by
+  let p := leftOffsetPosition k s hsk
+  let q := rightOffsetPosition k s hsk
+  let b := M.crossingBlockIndex hM
+  have hcross : (M.move.block b).lo < k ∧ k ≤ (M.move.block b).hi := by
+    simpa [b] using M.crossingBlockIndex_spec hM
+  have horder : M.order = (M.move.block b).crossOrder k := by
+    simpa [b] using M.order_eq_crossingBlockIndex_crossOrder hM
+  have hleft : (M.move.block b).crossOrder k ≤ k - (M.move.block b).lo :=
+    (M.move.block b).crossOrder_le_left
+  have hright : (M.move.block b).crossOrder k ≤ (M.move.block b).hi + 1 - k :=
+    (M.move.block b).crossOrder_le_right
+  have hs_cross : s < (M.move.block b).crossOrder k := by
+    rwa [horder] at hs
+  have hp : (M.move.block b).Mem p := by
+    dsimp [p, leftOffsetPosition]
+    change (M.move.block b).lo ≤ k - 1 - s ∧
+      k - 1 - s ≤ (M.move.block b).hi
+    constructor <;> omega
+  have hq : (M.move.block b).Mem q := by
+    dsimp [q, rightOffsetPosition]
+    change (M.move.block b).lo ≤ k + s ∧ k + s ≤ (M.move.block b).hi
+    constructor <;> omega
+  have hpq : p < q := by
+    change k - 1 - s < k + s
+    omega
+  exact M.increasing_before b hp hq hpq
 
 theorem move_middleLeft_iff_of_not_isCrossing {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)
@@ -2632,6 +2819,15 @@ theorem not_increasing_and_decreasing_rightBarrierPositions {k d : ℕ}
   not_increasing_and_decreasing_on_two_positions hinc hdec (by
     rw [PositionInterval.rightBarrierPositions_card_eq hdk]
     exact hd)
+
+theorem not_increasing_and_decreasing_centralBarrierPositions {k d : ℕ}
+    {π : State (2 * k)} (hd : 0 < d) (hdk : d ≤ k)
+    (hinc : IncreasingOnPositions π (PositionInterval.centralBarrierPositions k d))
+    (hdec : DecreasingOnPositions π (PositionInterval.centralBarrierPositions k d)) :
+    False :=
+  not_increasing_and_decreasing_on_two_positions hinc hdec (by
+    rw [PositionInterval.centralBarrierPositions_card_eq hdk]
+    omega)
 
 end ReversalStep
 
@@ -3166,6 +3362,23 @@ theorem crossing_step_needs_right_barrier_increasing {k r : ℕ}
         (A.toCountedGeneralizedAllowableSequence.moveOrder j)) := by
   exact (A.step j).toReversalStep.increasing_before_rightBarrierPositions hj
 
+theorem crossing_step_decreases_central_barrier {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {j : Fin r}
+    (hj : A.toCountedGeneralizedAllowableSequence.IsCrossing j) :
+    ReversalStep.DecreasingOnPositions (A.seq.π (stepTo j))
+      (PositionInterval.centralBarrierPositions k
+        (A.toCountedGeneralizedAllowableSequence.moveOrder j)) := by
+  exact (A.step j).toReversalStep.decreasing_after_centralBarrierPositions
+    (A.reversesBlocks j) hj
+
+theorem crossing_step_needs_central_barrier_increasing {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {j : Fin r}
+    (hj : A.toCountedGeneralizedAllowableSequence.IsCrossing j) :
+    ReversalStep.IncreasingOnPositions (A.seq.π (stepFrom j))
+      (PositionInterval.centralBarrierPositions k
+        (A.toCountedGeneralizedAllowableSequence.moveOrder j)) := by
+  exact (A.step j).toReversalStep.increasing_before_centralBarrierPositions hj
+
 theorem crossing_step_middlePair_decreasing_after {k r : ℕ}
     (A : ConcreteGeneralizedAllowableSequence k r) {j : Fin r}
     (hj : A.toCountedGeneralizedAllowableSequence.IsCrossing j) (hk : 0 < k) :
@@ -3178,6 +3391,23 @@ theorem crossing_step_middlePair_increasing_before {k r : ℕ}
     (hj : A.toCountedGeneralizedAllowableSequence.IsCrossing j) (hk : 0 < k) :
     ReversalStep.MiddlePairIncreasing (A.seq.π (stepFrom j)) hk :=
   (A.step j).toReversalStep.middlePair_increasing_before_crossing hj hk
+
+theorem crossing_step_offsetPair_decreasing_after {k r s : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {j : Fin r}
+    (hj : A.toCountedGeneralizedAllowableSequence.IsCrossing j)
+    (hsk : s < k)
+    (hs : s < A.toCountedGeneralizedAllowableSequence.moveOrder j) :
+    ReversalStep.OffsetPairDecreasing (A.seq.π (stepTo j)) s hsk :=
+  (A.step j).toReversalStep.offsetPair_decreasing_after_crossing
+    (A.reversesBlocks j) hj hsk hs
+
+theorem crossing_step_offsetPair_increasing_before {k r s : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {j : Fin r}
+    (hj : A.toCountedGeneralizedAllowableSequence.IsCrossing j)
+    (hsk : s < k)
+    (hs : s < A.toCountedGeneralizedAllowableSequence.moveOrder j) :
+    ReversalStep.OffsetPairIncreasing (A.seq.π (stepFrom j)) s hsk :=
+  (A.step j).toReversalStep.offsetPair_increasing_before_crossing hj hsk hs
 
 theorem consecutive_crossing_middlePair_decreasing_after_first {k r : ℕ}
     (A : ConcreteGeneralizedAllowableSequence k r) {i j : Fin r}
@@ -3192,6 +3422,22 @@ theorem consecutive_crossing_middlePair_increasing_before_second {k r : ℕ}
     (hk : 0 < k) :
     ReversalStep.MiddlePairIncreasing (A.seq.π (stepFrom j)) hk :=
   A.crossing_step_middlePair_increasing_before hij.2.1 hk
+
+theorem consecutive_crossing_offsetPair_decreasing_after_first {k r s : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {i j : Fin r}
+    (hij : A.toCountedGeneralizedAllowableSequence.ConsecutiveCrossing i j)
+    (hsk : s < k)
+    (hs : s < A.toCountedGeneralizedAllowableSequence.moveOrder i) :
+    ReversalStep.OffsetPairDecreasing (A.seq.π (stepTo i)) s hsk :=
+  A.crossing_step_offsetPair_decreasing_after hij.1 hsk hs
+
+theorem consecutive_crossing_offsetPair_increasing_before_second {k r s : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {i j : Fin r}
+    (hij : A.toCountedGeneralizedAllowableSequence.ConsecutiveCrossing i j)
+    (hsk : s < k)
+    (hs : s < A.toCountedGeneralizedAllowableSequence.moveOrder j) :
+    ReversalStep.OffsetPairIncreasing (A.seq.π (stepFrom j)) s hsk :=
+  A.crossing_step_offsetPair_increasing_before hij.2.1 hsk hs
 
 theorem exists_middlePair_switch_between_consecutive_crossings {k r : ℕ}
     (A : ConcreteGeneralizedAllowableSequence k r) {i j : Fin r}
@@ -3267,6 +3513,101 @@ theorem exists_middlePair_switch_between_consecutive_crossings {k r : ℕ}
         exact hinc
       exact hmfalse hPm
     have hdec := ReversalStep.middlePair_decreasing_of_not_increasing hk hnot_inc
+    have hstate :
+        A.stateAt m hm_le_r = A.seq.π (stepFrom mFin) := by
+      apply congrArg A.seq.π
+      apply Fin.ext
+      simp [stepFrom, mFin]
+    rw [hstate] at hdec
+    exact hdec
+  · have hm1_le_r : m + 1 ≤ r := by omega
+    unfold P at hmtrue
+    rw [dif_pos hm1_le_r] at hmtrue
+    have hstate :
+        A.stateAt (m + 1) hm1_le_r = A.seq.π (stepTo mFin) := by
+      apply congrArg A.seq.π
+      apply Fin.ext
+      simp [stepTo, mFin]
+    rw [hstate] at hmtrue
+    exact hmtrue
+  · exact hij.2.2.2 mFin (by simpa [mFin] using him) (by simpa [mFin] using hmb)
+
+theorem exists_offsetPair_switch_between_consecutive_crossings {k r s : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {i j : Fin r}
+    (hij : A.toCountedGeneralizedAllowableSequence.ConsecutiveCrossing i j)
+    (hsk : s < k)
+    (hsi : s < A.toCountedGeneralizedAllowableSequence.moveOrder i)
+    (hsj : s < A.toCountedGeneralizedAllowableSequence.moveOrder j) :
+    ∃ m : Fin r,
+      i.val < m.val ∧ m.val < j.val ∧
+        ReversalStep.OffsetPairDecreasing (A.seq.π (stepFrom m)) s hsk ∧
+        ReversalStep.OffsetPairIncreasing (A.seq.π (stepTo m)) s hsk ∧
+        ¬ A.toCountedGeneralizedAllowableSequence.IsCrossing m := by
+  classical
+  let a : ℕ := i.val + 1
+  let b : ℕ := j.val
+  let P : ℕ → Prop := fun t =>
+    if h : t ≤ r then
+      ReversalStep.OffsetPairIncreasing (A.stateAt t h) s hsk
+    else
+      False
+  have ha_le_r : a ≤ r := by
+    dsimp [a]
+    exact Nat.succ_le_of_lt i.isLt
+  have hb_le_r : b ≤ r := by
+    dsimp [b]
+    exact le_of_lt j.isLt
+  have hijlt : i.val < j.val := hij.2.2.1
+  have hab : a ≤ b := by
+    dsimp [a, b]
+    omega
+  have hdec_a :
+      ReversalStep.OffsetPairDecreasing (A.stateAt a ha_le_r) s hsk := by
+    have hdec := A.consecutive_crossing_offsetPair_decreasing_after_first hij hsk hsi
+    have hstate : A.stateAt a ha_le_r = A.seq.π (stepTo i) := by
+      apply congrArg A.seq.π
+      apply Fin.ext
+      simp [stepTo, a]
+    rw [hstate]
+    exact hdec
+  have hnot_a : ¬ P a := by
+    intro hPa
+    unfold P at hPa
+    rw [dif_pos ha_le_r] at hPa
+    exact ReversalStep.not_offsetPair_increasing_and_decreasing hsk ⟨hPa, hdec_a⟩
+  have hP_b : P b := by
+    have hinc := A.consecutive_crossing_offsetPair_increasing_before_second hij hsk hsj
+    have hinc_b :
+        ReversalStep.OffsetPairIncreasing (A.stateAt b hb_le_r) s hsk := by
+      have hstate : A.stateAt b hb_le_r = A.seq.π (stepFrom j) := by
+        apply congrArg A.seq.π
+        apply Fin.ext
+        simp [stepFrom, b]
+      rw [hstate]
+      exact hinc
+    unfold P
+    rw [dif_pos hb_le_r]
+    exact hinc_b
+  rcases exists_false_true_switch_between (P := P) hab hnot_a hP_b with
+    ⟨m, hma, hmb, hmfalse, hmtrue⟩
+  have hm_lt_r : m < r := lt_trans hmb j.isLt
+  have him : i.val < m := by
+    dsimp [a] at hma
+    omega
+  let mFin : Fin r := ⟨m, hm_lt_r⟩
+  refine ⟨mFin, ?_, ?_, ?_, ?_, ?_⟩
+  · simpa [mFin] using him
+  · simpa [mFin] using hmb
+  · have hm_le_r : m ≤ r := le_of_lt hm_lt_r
+    have hnot_inc :
+        ¬ ReversalStep.OffsetPairIncreasing (A.stateAt m hm_le_r) s hsk := by
+      intro hinc
+      have hPm : P m := by
+        unfold P
+        rw [dif_pos hm_le_r]
+        exact hinc
+      exact hmfalse hPm
+    have hdec := ReversalStep.offsetPair_decreasing_of_not_increasing hsk hnot_inc
     have hstate :
         A.stateAt m hm_le_r = A.seq.π (stepFrom mFin) := by
       apply congrArg A.seq.π

@@ -679,6 +679,24 @@ theorem exists_false_true_switch {P : ℕ → Prop} [DecidablePred P]
       · refine ⟨a + n + 1, by omega, by omega, hmid, ?_⟩
         simpa [Nat.add_assoc] using h1
 
+theorem exists_false_true_switch_between {P : ℕ → Prop} [DecidablePred P]
+    {a b : ℕ} (hab : a ≤ b) (h0 : ¬ P a) (h1 : P b) :
+    ∃ m : ℕ, a ≤ m ∧ m < b ∧ ¬ P m ∧ P (m + 1) := by
+  by_cases hlt : a < b
+  · let n := b - a - 1
+    have hend : P (a + n + 1) := by
+      have hsum : a + n + 1 = b := by
+        dsimp [n]
+        omega
+      simpa [hsum] using h1
+    rcases exists_false_true_switch a n h0 hend with ⟨m, hma, hmn, hmfalse, hmtrue⟩
+    refine ⟨m, hma, ?_, hmfalse, hmtrue⟩
+    dsimp [n] at hmn
+    omega
+  · have hba : b = a := by omega
+    subst b
+    exact False.elim (h0 h1)
+
 /--
 A finite packing certificate for the T/O/C block argument: the `i`th crossing
 move of order `dᵢ` owns a block of `2dᵢ` slots, and all these slots inject

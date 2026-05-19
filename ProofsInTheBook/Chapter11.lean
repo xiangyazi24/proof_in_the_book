@@ -35,6 +35,12 @@ noncomputable def slope (p q : Point2) : ℝ :=
 noncomputable def direction (p q : Point2) : Direction :=
   if p.1 = q.1 then Direction.vertical else Direction.finite (slope p q)
 
+/-- Coordinate of the line parallel to a projective direction through `p`. -/
+noncomputable def directionLevel (d : Direction) (p : Point2) : ℝ :=
+  match d with
+  | Direction.vertical => p.1
+  | Direction.finite m => p.2 - m * p.1
+
 /--
 The finite set of slopes determined by nonvertical ordered pairs of distinct
 points in a configuration.
@@ -150,6 +156,46 @@ theorem determinant_eq_zero_of_same_direction_from_left {p q r : Point2}
       unfold slope at hslope
       field_simp [hqden, hrden] at hslope
       linarith
+
+theorem directionLevel_eq_of_direction_eq {p q : Point2} {d : Direction}
+    (hdir : direction p q = d) :
+    directionLevel d p = directionLevel d q := by
+  cases d with
+  | vertical =>
+      by_cases hx : p.1 = q.1
+      · simp [directionLevel, hx]
+      · simp [direction, hx] at hdir
+  | finite m =>
+      by_cases hx : p.1 = q.1
+      · simp [direction, hx] at hdir
+      · have hslope : slope p q = m := by
+          simpa [direction, hx] using hdir
+        have hden : q.1 - p.1 ≠ 0 := by
+          exact sub_ne_zero.mpr (Ne.symm hx)
+        unfold slope at hslope
+        field_simp [hden] at hslope
+        simp [directionLevel]
+        linarith
+
+theorem direction_eq_of_directionLevel_eq {p q : Point2} {d : Direction}
+    (hpq : p ≠ q) (hlevel : directionLevel d p = directionLevel d q) :
+    direction p q = d := by
+  cases d with
+  | vertical =>
+      simp [directionLevel] at hlevel
+      simp [direction, hlevel]
+  | finite m =>
+      simp [directionLevel] at hlevel
+      by_cases hx : p.1 = q.1
+      · have hy : p.2 = q.2 := by
+          rw [hx] at hlevel
+          linarith
+        exact False.elim (hpq (Prod.ext hx hy))
+      · have hden : q.1 - p.1 ≠ 0 := by
+          exact sub_ne_zero.mpr (Ne.symm hx)
+        simp [direction, hx, slope]
+        field_simp [hden]
+        linarith
 
 theorem direction_mem_directionsDeterminedBy {points : Finset Point2} {p q : Point2}
     (hp : p ∈ points) (hq : q ∈ points) (hpq : p ≠ q) :

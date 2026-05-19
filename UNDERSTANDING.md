@@ -234,6 +234,9 @@ Current progress:
   `directionsDeterminedBy points` by `Fin (directionsDeterminedBy points).card`.
   Any direction determined by two distinct point labels now has a corresponding
   direction index.
+- Added `directionLevel` for the parallel-line coordinate of a projective
+  direction, with both directions of the equivalence between equal levels for
+  distinct points and equality of their determined projective direction.
 - Added a direct `EvenConcreteEndGapSequencePremise` route.  The endpoint can
   now be supplied either by a cyclic witness, which reuses the adjacent-gap
   theorem, or by proving `CyclicEndGap` directly from the geometric sweep.

@@ -35,6 +35,26 @@ noncomputable def slope (p q : Point2) : ℝ :=
 noncomputable def direction (p q : Point2) : Direction :=
   if p.1 = q.1 then Direction.vertical else Direction.finite (slope p q)
 
+theorem slope_comm {p q : Point2} : slope p q = slope q p := by
+  by_cases hx : q.1 - p.1 = 0
+  · have hx' : p.1 - q.1 = 0 := by linarith
+    simp [slope, hx, hx']
+  · have hx' : p.1 - q.1 ≠ 0 := by
+      intro h
+      exact hx (by linarith)
+    unfold slope
+    field_simp [hx, hx']
+    ring
+
+theorem direction_comm {p q : Point2} : direction p q = direction q p := by
+  by_cases hx : p.1 = q.1
+  · have hx' : q.1 = p.1 := hx.symm
+    unfold direction
+    rw [if_pos hx, if_pos hx']
+  · have hx' : q.1 ≠ p.1 := by exact fun h => hx h.symm
+    unfold direction
+    rw [if_neg hx, if_neg hx', slope_comm]
+
 /-- Coordinate of the line parallel to a projective direction through `p`. -/
 noncomputable def directionLevel (d : Direction) (p : Point2) : ℝ :=
   match d with

@@ -274,6 +274,8 @@ Current progress:
 - Added the converse event characterization:
   `d ∈ directionsDeterminedBy points` iff two distinct points have equal
   `directionLevel d`; also proved the labeled-point version.
+- Added symmetry of the projective direction determined by a pair:
+  `direction p q = direction q p`.
 - Proved a direct full step has full crossing order:
   `moveOrder_eq_middle_of_directFullMove`.  This links the identity-to-reverse
   endpoint pattern to the existing full-block/order lemmas.

@@ -3873,6 +3873,25 @@ theorem fullMoveForcesCommonDirection_of_directFullMoveForcesCommonLevel {k r : 
     exact hpq (by rw [← ha, ← hb, hsame])
   exact direction_eq_of_directionLevel_eq hab ((hcommon a).trans (hcommon b).symm)
 
+theorem noDirectFullMove_of_directFullMoveForcesCommonLevel {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {points : Finset Point2}
+    (L : PointLabeling points k) (stepDir : Fin r → Direction)
+    (hncoll : NoncollinearSet points)
+    (hlevel : A.DirectFullMoveForcesCommonLevel L stepDir) :
+    A.NoDirectFullMove := by
+  intro j
+  by_cases hsource : A.seq.π (stepFrom j) = Equiv.refl (Fin (2 * k))
+  · right
+    intro htarget
+    rcases hlevel j hsource htarget with ⟨c, hcommon⟩
+    exact not_all_directionLevels_eq_of_noncollinearSet hncoll (stepDir j)
+      ⟨c, by
+        intro p hp
+        rcases L.point_surjective_on p hp with ⟨a, ha⟩
+        rw [← ha]
+        exact hcommon a⟩
+  · exact Or.inl hsource
+
 theorem noDirectFullMove_of_fullMoveForcesCommonDirection {k r : ℕ}
     (A : ConcreteGeneralizedAllowableSequence k r) {points : Finset Point2}
     (hncoll : NoncollinearSet points)
@@ -4920,6 +4939,15 @@ theorem evenConcreteEndGapSequencePremise_of_geometric
     A.noDirectFullMove_of_fullMoveForcesCommonDirection hncoll hfull
   exact ⟨A, A.moveOrder_lt_middle_of_noDirectFullMove hk hnoDirect, hend⟩
 
+theorem evenConcreteEndGapSequencePremise_of_level
+    (hcert : EvenLevelConcreteEndGapSequencePremise) :
+    EvenConcreteEndGapSequencePremise := by
+  intro S k hk hcard hncoll
+  rcases hcert S k hk hcard hncoll with ⟨L, A, stepDir, hlevel, hend⟩
+  have hnoDirect : A.NoDirectFullMove :=
+    A.noDirectFullMove_of_directFullMoveForcesCommonLevel L stepDir hncoll hlevel
+  exact ⟨A, A.moveOrder_lt_middle_of_noDirectFullMove hk hnoDirect, hend⟩
+
 theorem evenGeometricConcreteEndGapSequencePremise_of_level
     (hcert : EvenLevelConcreteEndGapSequencePremise) :
     EvenGeometricConcreteEndGapSequencePremise := by
@@ -4988,8 +5016,8 @@ theorem ungar_directions_lower_bound_from_level_concrete_end_gap
     (hn : 3 ≤ points.card) (hncoll : NoncollinearSet points)
     (hcert : EvenLevelConcreteEndGapSequencePremise) :
     points.card - 1 ≤ (directionsDeterminedBy points).card :=
-  ungar_directions_lower_bound_from_geometric_concrete_end_gap points hn hncoll
-    (evenGeometricConcreteEndGapSequencePremise_of_level hcert)
+  ungar_directions_lower_bound_from_concrete_end_gap points hn hncoll
+    (evenConcreteEndGapSequencePremise_of_level hcert)
 
 /--
 Counting interface for Ungar's slope theorem: an injective family of witnessed

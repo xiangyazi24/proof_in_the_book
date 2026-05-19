@@ -242,6 +242,8 @@ Current progress:
 - Added `DirectFullMoveForcesCommonLevel`; if a direct full reversal makes all
   point labels share one level for the step direction, then it implies
   `FullMoveForcesCommonDirection`, hence non-collinearity rules the move out.
+  There is also now a direct reduction from this level condition to
+  `NoDirectFullMove`, using `not_all_directionLevels_eq_of_noncollinearSet`.
 - Added `EvenLevelConcreteEndGapSequencePremise` and made the public
   `ungar_directions_lower_bound` use it.  This is the current exposed gap:
   build the concrete sequence, assign step directions, prove direct full moves

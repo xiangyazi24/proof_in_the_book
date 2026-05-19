@@ -217,6 +217,13 @@ theorem direction_eq_of_directionLevel_eq {p q : Point2} {d : Direction}
         field_simp [hden]
         linarith
 
+theorem directionLevel_eq_iff_direction_eq {p q : Point2} {d : Direction}
+    (hpq : p ≠ q) :
+    directionLevel d p = directionLevel d q ↔ direction p q = d := by
+  constructor
+  · exact direction_eq_of_directionLevel_eq hpq
+  · exact directionLevel_eq_of_direction_eq
+
 theorem direction_mem_directionsDeterminedBy {points : Finset Point2} {p q : Point2}
     (hp : p ∈ points) (hq : q ∈ points) (hpq : p ≠ q) :
     direction p q ∈ directionsDeterminedBy points := by

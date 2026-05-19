@@ -4534,11 +4534,28 @@ abbrev EvenUngarSweepCertificatePremise : Type :=
   ∀ S : Finset Point2, Even S.card → NoncollinearSet S →
     UngarSweepCertificate S.card (directionsDeterminedBy S).card
 
+abbrev EvenConcreteCyclicSequencePremise : Prop :=
+  ∀ S : Finset Point2, ∀ k : ℕ, ∀ hk : 0 < k, S.card = 2 * k →
+    NoncollinearSet S →
+      ∃ A : ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy S).card,
+        ∃ _hnoFull :
+          ∀ j : Fin (directionsDeterminedBy S).card,
+            A.toCountedGeneralizedAllowableSequence.IsCrossing j →
+              A.toCountedGeneralizedAllowableSequence.moveOrder j < k,
+          Nonempty (A.CyclicEndGapWitness
+            (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk))
+
 theorem ungar_directions_lower_bound_from_sweep (points : Finset Point2)
     (hn : 3 ≤ points.card) (hncoll : NoncollinearSet points)
     (hcert : EvenUngarSweepCertificatePremise) :
     points.card - 1 ≤ (directionsDeterminedBy points).card :=
   directions_lower_bound_of_even_ungar_sweep_certificates points hn hncoll hcert
+
+theorem ungar_directions_lower_bound_from_concrete_cyclic (points : Finset Point2)
+    (hn : 3 ≤ points.card) (hncoll : NoncollinearSet points)
+    (hcert : EvenConcreteCyclicSequencePremise) :
+    points.card - 1 ≤ (directionsDeterminedBy points).card :=
+  directions_lower_bound_of_even_concrete_cyclic_sequences points hn hncoll hcert
 
 /--
 Counting interface for Ungar's slope theorem: an injective family of witnessed
@@ -4574,9 +4591,9 @@ the coordinate-correct target: vertical lines count as one direction.
 theorem ungar_directions_lower_bound (points : Finset Point2)
     (hn : 3 ≤ points.card)
     (hncoll : NoncollinearSet points)
-    (hcert : EvenUngarSweepCertificatePremise) :
+    (hcert : EvenConcreteCyclicSequencePremise) :
     points.card - 1 ≤ (directionsDeterminedBy points).card :=
-  ungar_directions_lower_bound_from_sweep points hn hncoll hcert
+  ungar_directions_lower_bound_from_concrete_cyclic points hn hncoll hcert
 
 theorem chapter11 {ι : Type*} [Fintype ι] (points : Finset Point2) (witness : ι → ℝ)
     (hwitness : ∀ i, witness i ∈ slopesDeterminedBy points)

@@ -5,10 +5,12 @@
 Full-book formalization of *Proofs from THE BOOK* (Aigner & Ziegler) in Lean 4.
 40 chapters, each formalizing one "book proof."
 
-**Current status after Ch31 completion (2026-05-18):**
+**Current status after Ch11 reduction work (2026-05-19):**
 
-- 40 chapters compile; Ch11 currently has one intentional scaffold `sorry`
-  for the even-cardinality Ungar sweep certificate. There are no axioms.
+- 40 chapters compiled before the current Ch11 push; Ch11 is currently
+  remote single-file checked with no `sorry`/`admit` and no axioms. The Ungar
+  theorem still has a geometric rotating-sweep premise, now narrowed to a
+  concrete cyclic generalized allowable-sequence certificate.
 - Ch31 Cayley upper bound has been eliminated via Joyal's endofunction injection.
 - Ch34 Dinitz/Galvin premise has been eliminated via kernel-perfect orientation
   and stable-matching kernels.
@@ -209,17 +211,29 @@ Current progress:
   book reduction now accepts a concrete cyclic allowable-sequence certificate
   for every even non-collinear set, rather than a raw sweep-counting
   certificate.
+- The public `ungar_directions_lower_bound` now uses
+  `EvenConcreteCyclicSequencePremise`; the older
+  `EvenUngarSweepCertificatePremise` interface remains available only as a
+  coarser compatibility layer.
 
-Remaining core: formalize Ungar's even-cardinality permutation/T-O-C counting
-argument enough to produce an `UngarCountingCertificate` from the rotating
-projection sweep.
+Remaining core: construct `EvenConcreteCyclicSequencePremise` from the
+rotating projection sweep of every even non-collinear point set.  The adjacent
+T/O/C gaps are proved; the remaining geometric content is the actual sweep
+construction, no-full-crossing property, and cyclic first/last crossing witness.
 
-Current scaffold:
+Current premise:
 
 ```lean
-noncomputable def even_ungar_sweep_certificate (points : Finset Point2)
-    (_hEven : Even points.card) (_hncoll : NoncollinearSet points) :
-    UngarSweepCertificate points.card (directionsDeterminedBy points).card
+abbrev EvenConcreteCyclicSequencePremise : Prop :=
+  ∀ S : Finset Point2, ∀ k : ℕ, ∀ hk : 0 < k, S.card = 2 * k →
+    NoncollinearSet S →
+      ∃ A : ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy S).card,
+        ∃ _hnoFull :
+          ∀ j : Fin (directionsDeterminedBy S).card,
+            A.toCountedGeneralizedAllowableSequence.IsCrossing j →
+              A.toCountedGeneralizedAllowableSequence.moveOrder j < k,
+          Nonempty (A.CyclicEndGapWitness
+            (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk))
 ```
 
 This is the only intended Ch11 gap after the reductions. Proving it removes

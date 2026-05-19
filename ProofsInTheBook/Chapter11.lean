@@ -1401,6 +1401,61 @@ theorem mem_rightBarrierPositions {k d : ℕ} {p : Fin (2 * k)} :
     p ∈ rightBarrierPositions k d ↔ k ≤ p.val ∧ p.val < k + d := by
   simp [rightBarrierPositions]
 
+theorem leftBarrierPositions_card_eq {k d : ℕ} (hd : d ≤ k) :
+    (leftBarrierPositions k d).card = d := by
+  classical
+  let e : Fin (2 * k) ↪ ℕ := ⟨Fin.val, by intro a b h; exact Fin.ext h⟩
+  have hmap :
+      (leftBarrierPositions k d).map e = Finset.Ico (k - d) k := by
+    ext n
+    constructor
+    · intro hn
+      rcases Finset.mem_map.mp hn with ⟨p, hp, hpval⟩
+      rw [mem_leftBarrierPositions] at hp
+      simp [e] at hpval
+      subst n
+      exact Finset.mem_Ico.mpr hp
+    · intro hn
+      rcases Finset.mem_Ico.mp hn with ⟨hlo, hhi⟩
+      have hnlt : n < 2 * k := lt_trans hhi (by omega : k < 2 * k)
+      refine Finset.mem_map.mpr ⟨⟨n, hnlt⟩, ?_, ?_⟩
+      · rw [mem_leftBarrierPositions]
+        exact ⟨hlo, hhi⟩
+      · simp [e]
+  have hcard_map : ((leftBarrierPositions k d).map e).card =
+      (leftBarrierPositions k d).card := Finset.card_map e
+  rw [hmap] at hcard_map
+  rw [← hcard_map]
+  simp
+  omega
+
+theorem rightBarrierPositions_card_eq {k d : ℕ} (hd : d ≤ k) :
+    (rightBarrierPositions k d).card = d := by
+  classical
+  let e : Fin (2 * k) ↪ ℕ := ⟨Fin.val, by intro a b h; exact Fin.ext h⟩
+  have hmap :
+      (rightBarrierPositions k d).map e = Finset.Ico k (k + d) := by
+    ext n
+    constructor
+    · intro hn
+      rcases Finset.mem_map.mp hn with ⟨p, hp, hpval⟩
+      rw [mem_rightBarrierPositions] at hp
+      simp [e] at hpval
+      subst n
+      exact Finset.mem_Ico.mpr hp
+    · intro hn
+      rcases Finset.mem_Ico.mp hn with ⟨hlo, hhi⟩
+      have hnlt : n < 2 * k := by omega
+      refine Finset.mem_map.mpr ⟨⟨n, hnlt⟩, ?_, ?_⟩
+      · rw [mem_rightBarrierPositions]
+        exact ⟨hlo, hhi⟩
+      · simp [e]
+  have hcard_map : ((rightBarrierPositions k d).map e).card =
+      (rightBarrierPositions k d).card := Finset.card_map e
+  rw [hmap] at hcard_map
+  rw [← hcard_map]
+  simp
+
 theorem leftCentralPositions_eq_leftBarrierPositions_of_crossing {k : ℕ}
     (I : PositionInterval (2 * k)) (hcross : I.lo < k ∧ k ≤ I.hi) :
     I.leftCentralPositions k = leftBarrierPositions k (I.crossOrder k) := by

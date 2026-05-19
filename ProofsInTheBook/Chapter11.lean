@@ -1383,6 +1383,52 @@ theorem mem_rightCentralPositions {k : ℕ} {I : PositionInterval (2 * k)}
       I.Mem p ∧ k ≤ p.val ∧ p.val < k + I.crossOrder k := by
   simp [rightCentralPositions, mem_toFinset]
 
+/-- The `d` positions immediately to the left of the middle barrier. -/
+noncomputable def leftBarrierPositions (k d : ℕ) : Finset (Fin (2 * k)) := by
+  classical
+  exact Finset.univ.filter fun p => k - d ≤ p.val ∧ p.val < k
+
+/-- The `d` positions immediately to the right of the middle barrier. -/
+noncomputable def rightBarrierPositions (k d : ℕ) : Finset (Fin (2 * k)) := by
+  classical
+  exact Finset.univ.filter fun p => k ≤ p.val ∧ p.val < k + d
+
+theorem mem_leftBarrierPositions {k d : ℕ} {p : Fin (2 * k)} :
+    p ∈ leftBarrierPositions k d ↔ k - d ≤ p.val ∧ p.val < k := by
+  simp [leftBarrierPositions]
+
+theorem mem_rightBarrierPositions {k d : ℕ} {p : Fin (2 * k)} :
+    p ∈ rightBarrierPositions k d ↔ k ≤ p.val ∧ p.val < k + d := by
+  simp [rightBarrierPositions]
+
+theorem leftCentralPositions_eq_leftBarrierPositions_of_crossing {k : ℕ}
+    (I : PositionInterval (2 * k)) (hcross : I.lo < k ∧ k ≤ I.hi) :
+    I.leftCentralPositions k = leftBarrierPositions k (I.crossOrder k) := by
+  ext p
+  rw [mem_leftCentralPositions, mem_leftBarrierPositions]
+  constructor
+  · intro hp
+    exact hp.2
+  · intro hp
+    have horder_le_left : I.crossOrder k ≤ k - I.lo := I.crossOrder_le_left
+    have hlo : I.lo ≤ p.val := by omega
+    have hhi : p.val ≤ I.hi := le_trans hp.2.le hcross.2
+    exact ⟨⟨hlo, hhi⟩, hp⟩
+
+theorem rightCentralPositions_eq_rightBarrierPositions_of_crossing {k : ℕ}
+    (I : PositionInterval (2 * k)) (hcross : I.lo < k ∧ k ≤ I.hi) :
+    I.rightCentralPositions k = rightBarrierPositions k (I.crossOrder k) := by
+  ext p
+  rw [mem_rightCentralPositions, mem_rightBarrierPositions]
+  constructor
+  · intro hp
+    exact hp.2
+  · intro hp
+    have horder_le_right : I.crossOrder k ≤ I.hi + 1 - k := I.crossOrder_le_right
+    have hlo : I.lo ≤ p.val := le_trans hcross.1.le hp.1
+    have hhi : p.val ≤ I.hi := by omega
+    exact ⟨⟨hlo, hhi⟩, hp⟩
+
 theorem leftCentralPositions_card_eq_crossOrder {k : ℕ} (I : PositionInterval (2 * k)) :
     (I.leftCentralPositions k).card = I.crossOrder k := by
   classical
@@ -1884,6 +1930,42 @@ theorem rightCentralPositions_card_eq_order {k : ℕ} {π ρ : State (2 * k)}
       M.order := by
   rw [PositionInterval.rightCentralPositions_card_eq_crossOrder]
   rw [M.order_eq_crossingBlockIndex_crossOrder hM]
+
+theorem decreasing_after_leftBarrierPositions {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (hM : M.IsCrossing) :
+    DecreasingOnPositions ρ (PositionInterval.leftBarrierPositions k M.order) := by
+  have hcentral := M.decreasing_after_leftCentralPositions hrev hM
+  rw [PositionInterval.leftCentralPositions_eq_leftBarrierPositions_of_crossing
+    (M.move.block (M.crossingBlockIndex hM)) (M.crossingBlockIndex_spec hM)] at hcentral
+  rw [M.order_eq_crossingBlockIndex_crossOrder hM]
+  exact hcentral
+
+theorem decreasing_after_rightBarrierPositions {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (hM : M.IsCrossing) :
+    DecreasingOnPositions ρ (PositionInterval.rightBarrierPositions k M.order) := by
+  have hcentral := M.decreasing_after_rightCentralPositions hrev hM
+  rw [PositionInterval.rightCentralPositions_eq_rightBarrierPositions_of_crossing
+    (M.move.block (M.crossingBlockIndex hM)) (M.crossingBlockIndex_spec hM)] at hcentral
+  rw [M.order_eq_crossingBlockIndex_crossOrder hM]
+  exact hcentral
+
+theorem increasing_before_leftBarrierPositions {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing) :
+    IncreasingOnPositions π (PositionInterval.leftBarrierPositions k M.order) := by
+  have hcentral := M.increasing_before_leftCentralPositions hM
+  rw [PositionInterval.leftCentralPositions_eq_leftBarrierPositions_of_crossing
+    (M.move.block (M.crossingBlockIndex hM)) (M.crossingBlockIndex_spec hM)] at hcentral
+  rw [M.order_eq_crossingBlockIndex_crossOrder hM]
+  exact hcentral
+
+theorem increasing_before_rightBarrierPositions {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing) :
+    IncreasingOnPositions π (PositionInterval.rightBarrierPositions k M.order) := by
+  have hcentral := M.increasing_before_rightCentralPositions hM
+  rw [PositionInterval.rightCentralPositions_eq_rightBarrierPositions_of_crossing
+    (M.move.block (M.crossingBlockIndex hM)) (M.crossingBlockIndex_spec hM)] at hcentral
+  rw [M.order_eq_crossingBlockIndex_crossOrder hM]
+  exact hcentral
 
 theorem move_middleLeft_iff_of_not_isCrossing {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)

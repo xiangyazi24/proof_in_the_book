@@ -2053,6 +2053,20 @@ theorem decreasing_after_univ_of_order_eq_middle {k : ℕ} {π ρ : State (2 * k
     omega
   exact M.label_decreases_after_block_of_reversesBlocks hrev b hp hq hpq
 
+theorem source_eq_refl_of_order_eq_middle {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing)
+    (hk : 0 < k) (horder : M.order = k) :
+    π = Equiv.refl (Fin (2 * k)) :=
+  state_eq_refl_of_increasingOn_univ
+    (M.increasing_before_univ_of_order_eq_middle hM hk horder)
+
+theorem target_eq_reverseFin_of_order_eq_middle {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (hM : M.IsCrossing)
+    (hk : 0 < k) (horder : M.order = k) :
+    ρ = reverseFin (2 * k) :=
+  state_eq_reverseFin_of_decreasingOn_univ
+    (M.decreasing_after_univ_of_order_eq_middle hrev hM hk horder)
+
 theorem decreasing_after_leftMirrorCrossingPositions {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (hM : M.IsCrossing) :
     DecreasingOnPositions ρ

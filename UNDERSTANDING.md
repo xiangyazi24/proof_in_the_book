@@ -239,6 +239,9 @@ Current progress:
   distinct points and equality of their determined projective direction.
   Non-collinearity now also rules out all points having one common
   `directionLevel` for a fixed direction.
+- Added `DirectFullMoveForcesCommonLevel`; if a direct full reversal makes all
+  point labels share one level for the step direction, then it implies
+  `FullMoveForcesCommonDirection`, hence non-collinearity rules the move out.
 - Added a direct `EvenConcreteEndGapSequencePremise` route.  The endpoint can
   now be supplied either by a cyclic witness, which reuses the adjacent-gap
   theorem, or by proving `CyclicEndGap` directly from the geometric sweep.

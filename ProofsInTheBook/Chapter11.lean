@@ -3819,6 +3819,31 @@ def FullMoveForcesCommonDirection {k r : ℕ}
         ∃ d : Direction,
           ∀ p ∈ points, ∀ q ∈ points, p ≠ q → direction p q = d
 
+def DirectFullMoveForcesCommonLevel {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {points : Finset Point2}
+    (L : PointLabeling points k) (stepDir : Fin r → Direction) : Prop :=
+  ∀ j : Fin r,
+    A.seq.π (stepFrom j) = Equiv.refl (Fin (2 * k)) →
+      A.seq.π (stepTo j) = reverseFin (2 * k) →
+        ∃ c : ℝ, ∀ a : Fin (2 * k), directionLevel (stepDir j) (L.point a) = c
+
+theorem fullMoveForcesCommonDirection_of_directFullMoveForcesCommonLevel {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {points : Finset Point2}
+    (L : PointLabeling points k) (stepDir : Fin r → Direction)
+    (hlevel : A.DirectFullMoveForcesCommonLevel L stepDir) :
+    A.FullMoveForcesCommonDirection points := by
+  intro j hsource htarget
+  rcases hlevel j hsource htarget with ⟨c, hcommon⟩
+  refine ⟨stepDir j, ?_⟩
+  intro p hp q hq hpq
+  rcases L.point_surjective_on p hp with ⟨a, ha⟩
+  rcases L.point_surjective_on q hq with ⟨b, hb⟩
+  rw [← ha, ← hb]
+  have hab : L.point a ≠ L.point b := by
+    intro hsame
+    exact hpq (by rw [← ha, ← hb, hsame])
+  exact direction_eq_of_directionLevel_eq hab ((hcommon a).trans (hcommon b).symm)
+
 theorem noDirectFullMove_of_fullMoveForcesCommonDirection {k r : ℕ}
     (A : ConcreteGeneralizedAllowableSequence k r) {points : Finset Point2}
     (hncoll : NoncollinearSet points)

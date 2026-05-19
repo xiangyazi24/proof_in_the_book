@@ -1832,6 +1832,28 @@ def DecreasingOnPositions {N : ℕ} (π : State N) (s : Finset (Fin N)) : Prop :
 def IncreasingOnPositions {N : ℕ} (π : State N) (s : Finset (Fin N)) : Prop :=
   ∀ ⦃p⦄, p ∈ s → ∀ ⦃q⦄, q ∈ s → p < q → (π p).val < (π q).val
 
+theorem state_eq_refl_of_increasingOn_univ {N : ℕ} {π : State N}
+    (hinc : IncreasingOnPositions π Finset.univ) :
+    π = Equiv.refl (Fin N) := by
+  apply Equiv.ext
+  intro p
+  have hmono : StrictMono (fun x : Fin N => π x) := by
+    intro a b hab
+    change (π a).val < (π b).val
+    exact hinc (by simp) (by simp) hab
+  have hπ :
+      (fun x : Fin N => π x) =
+        (Finset.univ : Finset (Fin N)).orderEmbOfFin (by simp) :=
+    Finset.orderEmbOfFin_unique (s := (Finset.univ : Finset (Fin N)))
+      (k := N) (by simp) (fun _ => by simp) hmono
+  have hid :
+      (fun x : Fin N => x) =
+        (Finset.univ : Finset (Fin N)).orderEmbOfFin (by simp) :=
+    Finset.orderEmbOfFin_unique (s := (Finset.univ : Finset (Fin N)))
+      (k := N) (by simp) (fun _ => by simp) (by intro a b hab; exact hab)
+  have hfun : (fun x : Fin N => π x) = fun x : Fin N => x := hπ.trans hid.symm
+  exact congrFun hfun p
+
 def middleLeftPosition (k : ℕ) (hk : 0 < k) : Fin (2 * k) :=
   ⟨k - 1, by omega⟩
 

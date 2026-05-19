@@ -3874,6 +3874,10 @@ def DirectFullMoveForcesCommonLevel {k r : ℕ}
       A.seq.π (stepTo j) = reverseFin (2 * k) →
         ∃ c : ℝ, ∀ a : Fin (2 * k), directionLevel (stepDir j) (L.point a) = c
 
+def StepDirectionsEnumerate (points : Finset Point2)
+    (stepDir : Fin (directionsDeterminedBy points).card → Direction) : Prop :=
+  (∀ j, stepDir j ∈ directionsDeterminedBy points) ∧ Function.Injective stepDir
+
 def BlocksHaveCommonLevel {k r : ℕ}
     (A : ConcreteGeneralizedAllowableSequence k r) {points : Finset Point2}
     (L : PointLabeling points k) (stepDir : Fin r → Direction) : Prop :=
@@ -3962,6 +3966,48 @@ theorem stepDir_mem_of_blocksHaveCommonLevel {k r : ℕ}
     (by
       intro hpoint
       exact hlabels (L.point_injective hpoint))
+
+theorem stepDirectionsEnumerate_of_blocksHaveCommonLevel_of_injective
+    {points : Finset Point2} {k : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy points).card)
+    (L : PointLabeling points k)
+    (stepDir : Fin (directionsDeterminedBy points).card → Direction)
+    (hblocks : A.BlocksHaveCommonLevel L stepDir)
+    (hinj : Function.Injective stepDir) :
+    StepDirectionsEnumerate points stepDir :=
+  ⟨A.stepDir_mem_of_blocksHaveCommonLevel L stepDir hblocks, hinj⟩
+
+theorem stepDirectionsEnumerate_surjective_on {points : Finset Point2}
+    {stepDir : Fin (directionsDeterminedBy points).card → Direction}
+    (henum : StepDirectionsEnumerate points stepDir) :
+    ∀ d ∈ directionsDeterminedBy points, ∃ j, stepDir j = d := by
+  intro d hd
+  by_contra hnot
+  simp at hnot
+  have hsub :
+      (Finset.univ.image stepDir) ⊆ directionsDeterminedBy points := by
+    intro x hx
+    rcases Finset.mem_image.mp hx with ⟨j, _hj, rfl⟩
+    exact henum.1 j
+  have hd_not_image : d ∉ Finset.univ.image stepDir := by
+    intro hdimg
+    rcases Finset.mem_image.mp hdimg with ⟨j, _hj, hj⟩
+    exact hnot j hj
+  have hproper :
+      (Finset.univ.image stepDir) ⊂ directionsDeterminedBy points := by
+    exact ⟨hsub, by
+      intro hle
+      exact hd_not_image (hle hd)⟩
+  have hcard_lt :
+      (Finset.univ.image stepDir).card < (directionsDeterminedBy points).card :=
+    Finset.card_lt_card hproper
+  have hcard_image :
+      (Finset.univ.image stepDir).card =
+        Fintype.card (Fin (directionsDeterminedBy points).card) := by
+    rw [Finset.card_image_of_injective _ henum.2]
+    simp
+  rw [hcard_image, Fintype.card_fin] at hcard_lt
+  omega
 
 theorem fullMoveForcesCommonDirection_of_directFullMoveForcesCommonLevel {k r : ℕ}
     (A : ConcreteGeneralizedAllowableSequence k r) {points : Finset Point2}

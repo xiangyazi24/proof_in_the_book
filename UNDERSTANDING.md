@@ -255,6 +255,9 @@ Current progress:
 - Proved block-level compatibility implies concrete direction membership:
   two distinct labels in the same block determine the step direction, and every
   step direction is in `directionsDeterminedBy points`.
+- Added `StepDirectionsEnumerate`: if those step directions are injective, then
+  since the domain has cardinality `directionsDeterminedBy.card`, they enumerate
+  all determined directions.
 - Proved a direct full step has full crossing order:
   `moveOrder_eq_middle_of_directFullMove`.  This links the identity-to-reverse
   endpoint pattern to the existing full-block/order lemmas.

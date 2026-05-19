@@ -235,6 +235,16 @@ theorem not_all_pair_directions_eq_of_noncollinearSet {points : Finset Point2}
   have hdir_pr : direction p r = d := hall p hp r hr hpr
   exact directions_from_noncollinear_triple_ne hnon (hdir_pq.trans hdir_pr.symm)
 
+theorem not_all_directionLevels_eq_of_noncollinearSet {points : Finset Point2}
+    (hncoll : NoncollinearSet points) (d : Direction) :
+    ¬ ∃ c : ℝ, ∀ p ∈ points, directionLevel d p = c := by
+  rintro ⟨c, hall⟩
+  exact not_all_pair_directions_eq_of_noncollinearSet hncoll
+    ⟨d, by
+      intro p hp q hq hpq
+      exact direction_eq_of_directionLevel_eq hpq
+        ((hall p hp).trans (hall q hq).symm)⟩
+
 theorem slopesDeterminedBy_mono {A B : Finset Point2} (hAB : A ⊆ B) :
     slopesDeterminedBy A ⊆ slopesDeterminedBy B := by
   classical

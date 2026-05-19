@@ -237,6 +237,8 @@ Current progress:
 - Added `directionLevel` for the parallel-line coordinate of a projective
   direction, with both directions of the equivalence between equal levels for
   distinct points and equality of their determined projective direction.
+  Non-collinearity now also rules out all points having one common
+  `directionLevel` for a fixed direction.
 - Added a direct `EvenConcreteEndGapSequencePremise` route.  The endpoint can
   now be supplied either by a cyclic witness, which reuses the adjacent-gap
   theorem, or by proving `CyclicEndGap` directly from the geometric sweep.

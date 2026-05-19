@@ -1797,6 +1797,23 @@ def MiddlePairIncreasing (π : State (2 * k)) (hk : 0 < k) : Prop :=
 def MiddlePairDecreasing (π : State (2 * k)) (hk : 0 < k) : Prop :=
   (π (middleRightPosition k hk)).val < (π (middleLeftPosition k hk)).val
 
+theorem middlePair_increasing_or_decreasing {k : ℕ} (π : State (2 * k)) (hk : 0 < k) :
+    MiddlePairIncreasing π hk ∨ MiddlePairDecreasing π hk := by
+  have hpos_ne : middleLeftPosition k hk ≠ middleRightPosition k hk := by
+    intro h
+    have hval := congrArg Fin.val h
+    change k - 1 = k at hval
+    omega
+  have hlabel_ne :
+      (π (middleLeftPosition k hk)).val ≠ (π (middleRightPosition k hk)).val := by
+    intro hval
+    have hlabel_eq :
+        π (middleLeftPosition k hk) = π (middleRightPosition k hk) := Fin.ext hval
+    exact hpos_ne (π.injective hlabel_eq)
+  rcases lt_or_gt_of_ne hlabel_ne with hlt | hgt
+  · exact Or.inl hlt
+  · exact Or.inr hgt
+
 theorem not_increasing_and_decreasing_on_two_positions {N : ℕ}
     {π : State N} {s : Finset (Fin N)}
     (hinc : IncreasingOnPositions π s) (hdec : DecreasingOnPositions π s)
@@ -2945,6 +2962,19 @@ theorem crossing_step_needs_right_barrier_increasing {k r : ℕ}
       (PositionInterval.rightBarrierPositions k
         (A.toCountedGeneralizedAllowableSequence.moveOrder j)) := by
   exact (A.step j).toReversalStep.increasing_before_rightBarrierPositions hj
+
+theorem crossing_step_middlePair_decreasing_after {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {j : Fin r}
+    (hj : A.toCountedGeneralizedAllowableSequence.IsCrossing j) (hk : 0 < k) :
+    ReversalStep.MiddlePairDecreasing (A.seq.π (stepTo j)) hk :=
+  (A.step j).toReversalStep.middlePair_decreasing_after_crossing
+    (A.reversesBlocks j) hj hk
+
+theorem crossing_step_middlePair_increasing_before {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {j : Fin r}
+    (hj : A.toCountedGeneralizedAllowableSequence.IsCrossing j) (hk : 0 < k) :
+    ReversalStep.MiddlePairIncreasing (A.seq.π (stepFrom j)) hk :=
+  (A.step j).toReversalStep.middlePair_increasing_before_crossing hj hk
 
 end ConcreteGeneralizedAllowableSequence
 

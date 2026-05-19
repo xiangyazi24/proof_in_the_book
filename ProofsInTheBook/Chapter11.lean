@@ -1397,6 +1397,15 @@ theorem crossOrder_le_right {k : ℕ} (I : PositionInterval (2 * k)) :
   · rw [crossOrder_eq_zero_of_not_crossing h]
     omega
 
+theorem eq_full_of_crossOrder_eq_middle {k : ℕ} (I : PositionInterval (2 * k))
+    (hk : 0 < k) (horder : I.crossOrder k = k) :
+    I.lo = 0 ∧ I.hi = 2 * k - 1 := by
+  have hleft := I.crossOrder_le_left
+  have hright := I.crossOrder_le_right
+  have hhi := I.hi_lt
+  rw [horder] at hleft hright
+  omega
+
 /-- The `crossOrder` positions immediately to the left of the middle barrier inside `I`. -/
 noncomputable def leftCentralPositions (k : ℕ) (I : PositionInterval (2 * k)) :
     Finset (Fin (2 * k)) := by
@@ -1945,6 +1954,17 @@ theorem order_eq_crossingBlockIndex_crossOrder {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) (hM : M.IsCrossing) :
     M.order = (M.move.block (M.crossingBlockIndex hM)).crossOrder k :=
   M.order_eq_crossOrder_of_crossing_block (M.crossingBlockIndex_spec hM)
+
+theorem crossingBlock_eq_full_of_order_eq_middle {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hM : M.IsCrossing)
+    (hk : 0 < k) (horder : M.order = k) :
+    (M.move.block (M.crossingBlockIndex hM)).lo = 0 ∧
+      (M.move.block (M.crossingBlockIndex hM)).hi = 2 * k - 1 := by
+  have hcrossOrder :
+      (M.move.block (M.crossingBlockIndex hM)).crossOrder k = k := by
+    rw [← M.order_eq_crossingBlockIndex_crossOrder hM, horder]
+  exact PositionInterval.eq_full_of_crossOrder_eq_middle
+    (M.move.block (M.crossingBlockIndex hM)) hk hcrossOrder
 
 theorem decreasing_after_leftMirrorCrossingPositions {k : ℕ} {π ρ : State (2 * k)}
     (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks) (hM : M.IsCrossing) :

@@ -1383,6 +1383,95 @@ theorem mem_rightCentralPositions {k : ℕ} {I : PositionInterval (2 * k)}
       I.Mem p ∧ k ≤ p.val ∧ p.val < k + I.crossOrder k := by
   simp [rightCentralPositions, mem_toFinset]
 
+theorem leftCentralPositions_card_eq_crossOrder {k : ℕ} (I : PositionInterval (2 * k)) :
+    (I.leftCentralPositions k).card = I.crossOrder k := by
+  classical
+  let e : Fin (2 * k) ↪ ℕ := ⟨Fin.val, by intro a b h; exact Fin.ext h⟩
+  have hmap :
+      (I.leftCentralPositions k).map e =
+        Finset.Ico (k - I.crossOrder k) k := by
+    ext n
+    constructor
+    · intro hn
+      rcases Finset.mem_map.mp hn with ⟨p, hp, hpval⟩
+      rw [mem_leftCentralPositions] at hp
+      simp [e] at hpval
+      subst n
+      exact Finset.mem_Ico.mpr ⟨hp.2.1, hp.2.2⟩
+    · intro hn
+      rcases Finset.mem_Ico.mp hn with ⟨hlo, hnlt_k⟩
+      have hnlt : n < 2 * k := lt_trans hnlt_k (by omega : k < 2 * k)
+      refine Finset.mem_map.mpr ⟨⟨n, hnlt⟩, ?_, ?_⟩
+      · rw [mem_leftCentralPositions]
+        by_cases hcross : I.lo < k ∧ k ≤ I.hi
+        · have horder_le_left : I.crossOrder k ≤ k - I.lo := I.crossOrder_le_left
+          have hloI : I.lo ≤ n := by omega
+          have hhiI : n ≤ I.hi := le_trans hnlt_k.le hcross.2
+          exact ⟨⟨hloI, hhiI⟩, hlo, hnlt_k⟩
+        · have hzero : I.crossOrder k = 0 :=
+            PositionInterval.crossOrder_eq_zero_of_not_crossing hcross
+          exfalso
+          rw [hzero] at hlo
+          omega
+      · simp [e]
+  have hcard_map : ((I.leftCentralPositions k).map e).card =
+      (I.leftCentralPositions k).card := Finset.card_map e
+  rw [hmap] at hcard_map
+  rw [← hcard_map]
+  by_cases hzero : I.crossOrder k = 0
+  · simp [hzero]
+  · have hpos : 0 < I.crossOrder k := by omega
+    have hle : I.crossOrder k ≤ k := le_trans I.crossOrder_le_left (by omega)
+    simp
+    omega
+
+theorem rightCentralPositions_card_eq_crossOrder {k : ℕ} (I : PositionInterval (2 * k)) :
+    (I.rightCentralPositions k).card = I.crossOrder k := by
+  classical
+  let e : Fin (2 * k) ↪ ℕ := ⟨Fin.val, by intro a b h; exact Fin.ext h⟩
+  have hmap :
+      (I.rightCentralPositions k).map e =
+        Finset.Ico k (k + I.crossOrder k) := by
+    ext n
+    constructor
+    · intro hn
+      rcases Finset.mem_map.mp hn with ⟨p, hp, hpval⟩
+      rw [mem_rightCentralPositions] at hp
+      simp [e] at hpval
+      subst n
+      exact Finset.mem_Ico.mpr ⟨hp.2.1, hp.2.2⟩
+    · intro hn
+      rcases Finset.mem_Ico.mp hn with ⟨hk, hnlt_order⟩
+      have hnlt : n < 2 * k := by
+        have horder_le_k : I.crossOrder k ≤ k := by
+          by_cases hcross : I.lo < k ∧ k ≤ I.hi
+          · exact le_trans I.crossOrder_le_right (by
+              have hhi2 : I.hi < 2 * k := I.hi_lt
+              omega)
+          · rw [PositionInterval.crossOrder_eq_zero_of_not_crossing hcross]
+            omega
+        omega
+      refine Finset.mem_map.mpr ⟨⟨n, hnlt⟩, ?_, ?_⟩
+      · rw [mem_rightCentralPositions]
+        by_cases hcross : I.lo < k ∧ k ≤ I.hi
+        · have horder_le_right : I.crossOrder k ≤ I.hi + 1 - k := I.crossOrder_le_right
+          have hloI : I.lo ≤ n := le_trans hcross.1.le hk
+          have hhiI : n ≤ I.hi := by omega
+          exact ⟨⟨hloI, hhiI⟩, hk, hnlt_order⟩
+        · have hzero : I.crossOrder k = 0 :=
+            PositionInterval.crossOrder_eq_zero_of_not_crossing hcross
+          exfalso
+          rw [hzero] at hnlt_order
+          omega
+      · simp [e]
+  have hcard_map : ((I.rightCentralPositions k).map e).card =
+      (I.rightCentralPositions k).card := Finset.card_map e
+  rw [hmap] at hcard_map
+  rw [← hcard_map]
+  by_cases hzero : I.crossOrder k = 0
+  · simp [hzero]
+  · simp
+
 theorem crossOrder_pos_iff {k : ℕ} (I : PositionInterval (2 * k)) :
     0 < I.crossOrder k ↔ I.lo < k ∧ k ≤ I.hi := by
   constructor

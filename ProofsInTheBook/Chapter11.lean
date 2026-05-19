@@ -4710,12 +4710,29 @@ abbrev EvenGeometricConcreteCyclicSequencePremise : Prop :=
           Nonempty (A.CyclicEndGapWitness
             (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk))
 
+abbrev EvenGeometricConcreteEndGapSequencePremise : Prop :=
+  ∀ S : Finset Point2, ∀ k : ℕ, ∀ hk : 0 < k, S.card = 2 * k →
+    NoncollinearSet S →
+      ∃ A : ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy S).card,
+        A.FullMoveForcesCommonDirection S ∧
+          A.CyclicEndGap
+            (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk)
+
 theorem evenConcreteCyclicSequencePremise_of_noDirectFull
     (hcert : EvenConcreteCyclicNoDirectFullSequencePremise) :
     EvenConcreteCyclicSequencePremise := by
   intro S k hk hcard hncoll
   rcases hcert S k hk hcard hncoll with ⟨A, hnoDirect, hcyclic⟩
   exact ⟨A, A.moveOrder_lt_middle_of_noDirectFullMove hk hnoDirect, hcyclic⟩
+
+theorem evenConcreteEndGapSequencePremise_of_geometric
+    (hcert : EvenGeometricConcreteEndGapSequencePremise) :
+    EvenConcreteEndGapSequencePremise := by
+  intro S k hk hcard hncoll
+  rcases hcert S k hk hcard hncoll with ⟨A, hfull, hend⟩
+  have hnoDirect : A.NoDirectFullMove :=
+    A.noDirectFullMove_of_fullMoveForcesCommonDirection hncoll hfull
+  exact ⟨A, A.moveOrder_lt_middle_of_noDirectFullMove hk hnoDirect, hend⟩
 
 theorem evenConcreteCyclicNoDirectFullSequencePremise_of_geometric
     (hcert : EvenGeometricConcreteCyclicSequencePremise) :
@@ -4763,6 +4780,14 @@ theorem ungar_directions_lower_bound_from_geometric_concrete_cyclic
     points.card - 1 ≤ (directionsDeterminedBy points).card :=
   ungar_directions_lower_bound_from_concrete_cyclic points hn hncoll
     (evenConcreteCyclicSequencePremise_of_geometric hcert)
+
+theorem ungar_directions_lower_bound_from_geometric_concrete_end_gap
+    (points : Finset Point2)
+    (hn : 3 ≤ points.card) (hncoll : NoncollinearSet points)
+    (hcert : EvenGeometricConcreteEndGapSequencePremise) :
+    points.card - 1 ≤ (directionsDeterminedBy points).card :=
+  ungar_directions_lower_bound_from_concrete_end_gap points hn hncoll
+    (evenConcreteEndGapSequencePremise_of_geometric hcert)
 
 /--
 Counting interface for Ungar's slope theorem: an injective family of witnessed

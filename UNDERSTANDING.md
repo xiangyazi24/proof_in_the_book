@@ -233,6 +233,9 @@ Current progress:
 - Added a direct `EvenConcreteEndGapSequencePremise` route.  The endpoint can
   now be supplied either by a cyclic witness, which reuses the adjacent-gap
   theorem, or by proving `CyclicEndGap` directly from the geometric sweep.
+- Added `EvenGeometricConcreteEndGapSequencePremise`, combining the direct
+  end-gap route with the geometric full-move explanation; this is currently
+  the closest public interface to the remaining rotating-sweep construction.
 
 Remaining core: construct `EvenConcreteCyclicSequencePremise` from the
 rotating projection sweep of every even non-collinear point set.  The adjacent

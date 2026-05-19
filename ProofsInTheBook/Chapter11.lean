@@ -3856,6 +3856,50 @@ def DirectFullMoveForcesCommonLevel {k r : ℕ}
       A.seq.π (stepTo j) = reverseFin (2 * k) →
         ∃ c : ℝ, ∀ a : Fin (2 * k), directionLevel (stepDir j) (L.point a) = c
 
+def BlocksHaveCommonLevel {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) {points : Finset Point2}
+    (L : PointLabeling points k) (stepDir : Fin r → Direction) : Prop :=
+  ∀ j : Fin r, ∀ b : Fin (A.step j).toReversalStep.move.blockCount,
+    ∃ c : ℝ, ∀ p : Fin (2 * k),
+      ((A.step j).toReversalStep.move.block b).Mem p →
+        directionLevel (stepDir j)
+          (L.point (A.seq.π (stepFrom j) p)) = c
+
+theorem directFullMoveForcesCommonLevel_of_blocksHaveCommonLevel {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r) (hk : 0 < k)
+    {points : Finset Point2} (L : PointLabeling points k)
+    (stepDir : Fin r → Direction)
+    (hblocks : A.BlocksHaveCommonLevel L stepDir) :
+    A.DirectFullMoveForcesCommonLevel L stepDir := by
+  intro j hsource htarget
+  have hj :
+      (A.step j).toReversalStep.IsCrossing := by
+    have hjA :=
+      A.toCountedGeneralizedAllowableSequence.isCrossing_of_directFullMove
+        hk hsource htarget
+    simpa [CountedGeneralizedAllowableSequence.IsCrossing,
+      CountedGeneralizedAllowableSequence.moveOrder, ReversalStep.IsCrossing] using hjA
+  let b := (A.step j).toReversalStep.crossingBlockIndex hj
+  rcases hblocks j b with ⟨c, hc⟩
+  refine ⟨c, ?_⟩
+  intro a
+  have hfull :=
+    (A.step j).toReversalStep.crossingBlock_eq_full_of_order_eq_middle hj hk
+      (A.toCountedGeneralizedAllowableSequence.moveOrder_eq_middle_of_directFullMove
+        hsource htarget)
+  have ha_mem :
+      ((A.step j).toReversalStep.move.block b).Mem a := by
+    dsimp [PositionInterval.Mem, b]
+    constructor
+    · rw [hfull.1]
+      exact Nat.zero_le _
+    · rw [hfull.2]
+      exact Nat.le_sub_one_of_lt a.isLt
+  have hstate : A.seq.π (stepFrom j) a = a := by
+    rw [hsource]
+    rfl
+  simpa [hstate] using hc a ha_mem
+
 theorem fullMoveForcesCommonDirection_of_directFullMoveForcesCommonLevel {k r : ℕ}
     (A : ConcreteGeneralizedAllowableSequence k r) {points : Finset Point2}
     (L : PointLabeling points k) (stepDir : Fin r → Direction)
@@ -4923,6 +4967,16 @@ abbrev EvenLevelConcreteEndGapSequencePremise : Prop :=
               A.CyclicEndGap
                 (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk)
 
+abbrev EvenBlockLevelConcreteEndGapSequencePremise : Prop :=
+  ∀ S : Finset Point2, ∀ k : ℕ, ∀ hk : 0 < k, S.card = 2 * k →
+    NoncollinearSet S →
+      ∃ L : PointLabeling S k,
+        ∃ A : ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy S).card,
+          ∃ stepDir : Fin (directionsDeterminedBy S).card → Direction,
+            A.BlocksHaveCommonLevel L stepDir ∧
+              A.CyclicEndGap
+                (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk)
+
 theorem evenConcreteCyclicSequencePremise_of_noDirectFull
     (hcert : EvenConcreteCyclicNoDirectFullSequencePremise) :
     EvenConcreteCyclicSequencePremise := by
@@ -4955,6 +5009,14 @@ theorem evenGeometricConcreteEndGapSequencePremise_of_level
   rcases hcert S k hk hcard hncoll with ⟨L, A, stepDir, hlevel, hend⟩
   exact ⟨A, A.fullMoveForcesCommonDirection_of_directFullMoveForcesCommonLevel
     L stepDir hlevel, hend⟩
+
+theorem evenLevelConcreteEndGapSequencePremise_of_blockLevel
+    (hcert : EvenBlockLevelConcreteEndGapSequencePremise) :
+    EvenLevelConcreteEndGapSequencePremise := by
+  intro S k hk hcard hncoll
+  rcases hcert S k hk hcard hncoll with ⟨L, A, stepDir, hblocks, hend⟩
+  exact ⟨L, A, stepDir,
+    A.directFullMoveForcesCommonLevel_of_blocksHaveCommonLevel hk L stepDir hblocks, hend⟩
 
 theorem evenConcreteCyclicNoDirectFullSequencePremise_of_geometric
     (hcert : EvenGeometricConcreteCyclicSequencePremise) :
@@ -5019,6 +5081,14 @@ theorem ungar_directions_lower_bound_from_level_concrete_end_gap
   ungar_directions_lower_bound_from_concrete_end_gap points hn hncoll
     (evenConcreteEndGapSequencePremise_of_level hcert)
 
+theorem ungar_directions_lower_bound_from_block_level_concrete_end_gap
+    (points : Finset Point2)
+    (hn : 3 ≤ points.card) (hncoll : NoncollinearSet points)
+    (hcert : EvenBlockLevelConcreteEndGapSequencePremise) :
+    points.card - 1 ≤ (directionsDeterminedBy points).card :=
+  ungar_directions_lower_bound_from_level_concrete_end_gap points hn hncoll
+    (evenLevelConcreteEndGapSequencePremise_of_blockLevel hcert)
+
 /--
 Counting interface for Ungar's slope theorem: an injective family of witnessed
 slopes gives the corresponding lower bound on the number of slopes.
@@ -5053,9 +5123,9 @@ the coordinate-correct target: vertical lines count as one direction.
 theorem ungar_directions_lower_bound (points : Finset Point2)
     (hn : 3 ≤ points.card)
     (hncoll : NoncollinearSet points)
-    (hcert : EvenLevelConcreteEndGapSequencePremise) :
+    (hcert : EvenBlockLevelConcreteEndGapSequencePremise) :
     points.card - 1 ≤ (directionsDeterminedBy points).card :=
-  ungar_directions_lower_bound_from_level_concrete_end_gap points hn hncoll hcert
+  ungar_directions_lower_bound_from_block_level_concrete_end_gap points hn hncoll hcert
 
 theorem chapter11 {ι : Type*} [Fintype ι] (points : Finset Point2) (witness : ι → ℝ)
     (hwitness : ∀ i, witness i ∈ slopesDeterminedBy points)

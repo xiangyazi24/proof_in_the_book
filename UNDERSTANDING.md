@@ -248,6 +248,10 @@ Current progress:
   `ungar_directions_lower_bound` use it.  This is the current exposed gap:
   build the concrete sequence, assign step directions, prove direct full moves
   force one common level, and prove the cyclic end gap.
+- Added `BlocksHaveCommonLevel` and promoted the public premise to
+  `EvenBlockLevelConcreteEndGapSequencePremise`: it is enough to show each
+  reversed block is a same-`directionLevel` class for that step direction,
+  plus the cyclic end gap.
 - Proved a direct full step has full crossing order:
   `moveOrder_eq_middle_of_directFullMove`.  This links the identity-to-reverse
   endpoint pattern to the existing full-block/order lemmas.
@@ -260,22 +264,22 @@ Current progress:
   end-gap route with the geometric full-move explanation; older
   concrete/cyclic interfaces remain as intermediate reduction theorems.
 
-Remaining core: construct `EvenLevelConcreteEndGapSequencePremise` from the
+Remaining core: construct `EvenBlockLevelConcreteEndGapSequencePremise` from the
 rotating projection sweep of every even non-collinear point set.  The adjacent
 T/O/C gaps are proved; the remaining geometric content is the actual sweep
-construction, the direct-full-implies-common-level fact for the sweep, and the
+construction, the same-level block property for each sweep event, and the
 cyclic first/last crossing gap.
 
 Current premise:
 
 ```lean
-abbrev EvenLevelConcreteEndGapSequencePremise : Prop :=
+abbrev EvenBlockLevelConcreteEndGapSequencePremise : Prop :=
   ∀ S : Finset Point2, ∀ k : ℕ, ∀ hk : 0 < k, S.card = 2 * k →
     NoncollinearSet S →
       ∃ L : PointLabeling S k,
         ∃ A : ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy S).card,
           ∃ stepDir : Fin (directionsDeterminedBy S).card → Direction,
-            A.DirectFullMoveForcesCommonLevel L stepDir ∧
+            A.BlocksHaveCommonLevel L stepDir ∧
               A.CyclicEndGap
                 (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk)
 ```

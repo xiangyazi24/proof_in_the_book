@@ -1636,6 +1636,23 @@ theorem crossesMiddle_iff_map_old_position {k : ℕ} {π ρ : State (2 * k)}
       (middleLeft k (π.symm a) ↔ ¬ middleLeft k (M.move.map (π.symm a))) := by
   rw [crossesMiddle, M.new_position_eq_map_old_position_of_reversesBlocks hrev a]
 
+theorem not_crossesMiddle_of_not_isCrossing {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)
+    (hM : ¬ M.IsCrossing) (a : Fin (2 * k)) :
+    ¬ crossesMiddle k π ρ a := by
+  rw [M.crossesMiddle_iff_map_old_position hrev a]
+  have hside := M.move_middleLeft_iff_of_not_isCrossing hrev hM (π.symm a)
+  by_cases hleft : middleLeft k (π.symm a)
+  · simp [hleft, hside.mpr hleft]
+  · simp [hleft, hside.not.mpr hleft]
+
+theorem middleLeft_new_position_iff_of_not_isCrossing {k : ℕ} {π ρ : State (2 * k)}
+    (M : ReversalStep k π ρ) (hrev : M.move.ReversesBlocks)
+    (hM : ¬ M.IsCrossing) (a : Fin (2 * k)) :
+    middleLeft k (ρ.symm a) ↔ middleLeft k (π.symm a) := by
+  rw [M.new_position_eq_map_old_position_of_reversesBlocks hrev a]
+  exact M.move_middleLeft_iff_of_not_isCrossing hrev hM (π.symm a)
+
 noncomputable def positionCrossingCard (k : ℕ) (σ : State (2 * k)) : ℕ := by
   classical
   exact Fintype.card {p : Fin (2 * k) // middleLeft k p ↔ ¬ middleLeft k (σ p)}

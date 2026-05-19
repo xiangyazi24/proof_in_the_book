@@ -105,6 +105,24 @@ theorem direction_mem_directionsDeterminedBy {points : Finset Point2} {p q : Poi
     direction p q ∈ directionsDeterminedBy points := by
   exact Finset.mem_image.mpr ⟨(p, q), by simp [hp, hq, hpq], rfl⟩
 
+theorem directions_from_noncollinear_triple_ne {p q r : Point2}
+    (hnon : NoncollinearTriple p q r) :
+    direction p q ≠ direction p r := by
+  intro hdir
+  exact hnon (determinant_eq_zero_of_same_direction_from_left hdir)
+
+theorem not_all_pair_directions_eq_of_noncollinearSet {points : Finset Point2}
+    (hncoll : NoncollinearSet points) :
+    ¬ ∃ d : Direction,
+      ∀ p ∈ points, ∀ q ∈ points, p ≠ q → direction p q = d := by
+  rintro ⟨d, hall⟩
+  rcases hncoll with ⟨p, hp, q, hq, r, hr, hnon⟩
+  have hpq : p ≠ q := left_ne_right_of_noncollinear hnon
+  have hpr : p ≠ r := left_ne_third_of_noncollinear hnon
+  have hdir_pq : direction p q = d := hall p hp q hq hpq
+  have hdir_pr : direction p r = d := hall p hp r hr hpr
+  exact directions_from_noncollinear_triple_ne hnon (hdir_pq.trans hdir_pr.symm)
+
 theorem slopesDeterminedBy_mono {A B : Finset Point2} (hAB : A ⊆ B) :
     slopesDeterminedBy A ⊆ slopesDeterminedBy B := by
   classical

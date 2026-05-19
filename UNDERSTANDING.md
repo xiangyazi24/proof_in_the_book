@@ -220,6 +220,9 @@ Current progress:
   equal to the identity and target equal to the full reverse permutation.
   Thus the geometric no-full condition can be proved as "no sweep direction
   collapses all points into one reversing block."
+- Added the point-set geometry lemma
+  `not_all_pair_directions_eq_of_noncollinearSet`: a non-collinear set cannot
+  have all distinct point pairs determining one common projective direction.
 
 Remaining core: construct `EvenConcreteCyclicSequencePremise` from the
 rotating projection sweep of every even non-collinear point set.  The adjacent

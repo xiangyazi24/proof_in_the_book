@@ -240,23 +240,21 @@ Current progress:
   `EvenGeometricConcreteEndGapSequencePremise`; older concrete/cyclic
   interfaces remain as intermediate reduction theorems.
 
-Remaining core: construct `EvenConcreteCyclicSequencePremise` from the
+Remaining core: construct `EvenGeometricConcreteEndGapSequencePremise` from the
 rotating projection sweep of every even non-collinear point set.  The adjacent
 T/O/C gaps are proved; the remaining geometric content is the actual sweep
-construction, no-direct-full property, and cyclic first/last crossing witness.
+construction, the full-move-implies-common-direction fact for the sweep, and
+the cyclic first/last crossing gap.
 
 Current premise:
 
 ```lean
-abbrev EvenConcreteCyclicSequencePremise : Prop :=
+abbrev EvenGeometricConcreteEndGapSequencePremise : Prop :=
   ∀ S : Finset Point2, ∀ k : ℕ, ∀ hk : 0 < k, S.card = 2 * k →
     NoncollinearSet S →
       ∃ A : ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy S).card,
-        ∃ _hnoFull :
-          ∀ j : Fin (directionsDeterminedBy S).card,
-            A.toCountedGeneralizedAllowableSequence.IsCrossing j →
-              A.toCountedGeneralizedAllowableSequence.moveOrder j < k,
-          Nonempty (A.CyclicEndGapWitness
+        A.FullMoveForcesCommonDirection S ∧
+          A.CyclicEndGap
             (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk))
 ```
 

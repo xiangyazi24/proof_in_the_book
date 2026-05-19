@@ -2928,6 +2928,12 @@ def stateAt {k r : ℕ} (A : ConcreteGeneralizedAllowableSequence k r)
     (m : ℕ) (hm : m ≤ r) : State (2 * k) :=
   A.seq.π ⟨m, Nat.lt_succ_of_le hm⟩
 
+theorem stateAt_eq_of_proofs {k r : ℕ}
+    (A : ConcreteGeneralizedAllowableSequence k r)
+    {m : ℕ} (hm₁ hm₂ : m ≤ r) :
+    A.stateAt m hm₁ = A.stateAt m hm₂ := by
+  simp [stateAt]
+
 noncomputable def ofReversesBlocks {k r : ℕ} (A : GeneralizedAllowableSequence k r)
     (step : ∀ j : Fin r, ReversalStep k (A.π (stepFrom j)) (A.π (stepTo j)))
     (hrev : ∀ j : Fin r, (step j).move.ReversesBlocks) :

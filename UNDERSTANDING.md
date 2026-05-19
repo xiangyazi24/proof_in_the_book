@@ -246,6 +246,9 @@ Current progress:
   `ungar_directions_lower_bound` use it.  This is the current exposed gap:
   build the concrete sequence, assign step directions, prove direct full moves
   force one common level, and prove the cyclic end gap.
+- Proved a direct full step has full crossing order:
+  `moveOrder_eq_middle_of_directFullMove`.  This links the identity-to-reverse
+  endpoint pattern to the existing full-block/order lemmas.
 - Added a direct `EvenConcreteEndGapSequencePremise` route.  The endpoint can
   now be supplied either by a cyclic witness, which reuses the adjacent-gap
   theorem, or by proving `CyclicEndGap` directly from the geometric sweep.

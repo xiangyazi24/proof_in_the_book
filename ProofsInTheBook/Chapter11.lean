@@ -1084,6 +1084,16 @@ noncomputable def crossingLabelsCard {k r : ℕ} (A : GeneralizedAllowableSequen
     {a : Fin (2 * k) //
       crossesMiddle k (A.π (stepFrom j)) (A.π (stepTo j)) a}
 
+theorem crossingLabelsCard_eq_two_mul_of_refl_reverse {k r : ℕ}
+    (A : GeneralizedAllowableSequence k r) (j : Fin r)
+    (hsource : A.π (stepFrom j) = Equiv.refl (Fin (2 * k)))
+    (htarget : A.π (stepTo j) = reverseFin (2 * k)) :
+    A.crossingLabelsCard j = 2 * k := by
+  classical
+  unfold crossingLabelsCard
+  rw [hsource, htarget]
+  simp [crossesMiddle, middleLeft_reverseFin_symm_iff_not]
+
 /--
 Step-level crossing counts for a generalized allowable sequence.  The
 geometric block-reversal layer will prove `crossed_labels_card`; this finite
@@ -3436,6 +3446,16 @@ theorem crossingLabelsCard_eq_two_mul_moveOrder {k r : ℕ}
     (A : CountedGeneralizedAllowableSequence k r) (j : Fin r) :
     GeneralizedAllowableSequence.crossingLabelsCard A.seq j = 2 * A.moveOrder j := by
   exact A.toStepCounting.crossed_labels_card j
+
+theorem moveOrder_eq_middle_of_directFullMove {k r : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r) {j : Fin r}
+    (hsource : A.seq.π (stepFrom j) = Equiv.refl (Fin (2 * k)))
+    (htarget : A.seq.π (stepTo j) = reverseFin (2 * k)) :
+    A.moveOrder j = k := by
+  have hcount := A.crossingLabelsCard_eq_two_mul_moveOrder j
+  have hfull := A.seq.crossingLabelsCard_eq_two_mul_of_refl_reverse j hsource htarget
+  rw [hfull] at hcount
+  omega
 
 theorem not_isCrossing_iff_moveOrder_eq_zero {k r : ℕ}
     (A : CountedGeneralizedAllowableSequence k r) (j : Fin r) :

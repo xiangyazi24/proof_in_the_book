@@ -242,6 +242,55 @@ theorem sweepSort_reindex_add_pi_eq_revPerm {points : Finset Point2} {k : ℕ}
   rw [key]
   exact sort_neg_eq_revPerm (sweepSort_strictMono_of_injective L θ₀ hinj)
 
+theorem sinusoid_at_most_one_zero_in_Ico_pi {a b : ℝ} (hab : a ≠ 0 ∨ b ≠ 0)
+    {θ₁ θ₂ : ℝ} (hθ₁ : 0 ≤ θ₁) (hθ₁' : θ₁ < Real.pi)
+    (hθ₂ : 0 ≤ θ₂) (hθ₂' : θ₂ < Real.pi)
+    (h1 : a * Real.sin θ₁ + b * Real.cos θ₁ = 0)
+    (h2 : a * Real.sin θ₂ + b * Real.cos θ₂ = 0) :
+    θ₁ = θ₂ := by
+  by_contra hne
+  have hsin : Real.sin (θ₁ - θ₂) = 0 := by
+    have hsub : Real.sin θ₁ * Real.cos θ₂ - Real.sin θ₂ * Real.cos θ₁ =
+        Real.sin (θ₁ - θ₂) := by rw [Real.sin_sub]; ring
+    rcases hab with ha | hb
+    · have h3 : a * (Real.sin θ₁ * Real.cos θ₂ - Real.sin θ₂ * Real.cos θ₁) = 0 := by
+        linear_combination Real.cos θ₂ * h1 - Real.cos θ₁ * h2
+      rw [hsub] at h3
+      exact (mul_eq_zero.mp h3).resolve_left ha
+    · have h3 : b * (Real.sin θ₁ * Real.cos θ₂ - Real.sin θ₂ * Real.cos θ₁) = 0 := by
+        linear_combination -(Real.sin θ₂ * h1 - Real.sin θ₁ * h2)
+      rw [hsub] at h3
+      exact (mul_eq_zero.mp h3).resolve_left hb
+  rw [Real.sin_eq_zero_iff] at hsin
+  rcases hsin with ⟨n, hn⟩
+  have hbound : |θ₁ - θ₂| < Real.pi := by
+    rw [abs_lt]; constructor <;> linarith
+  have : n = 0 := by
+    by_contra hn0
+    have h1le : (1 : ℤ) ≤ |n| := Int.one_le_abs hn0
+    have h1le_r : (1 : ℝ) ≤ |(n : ℝ)| := by exact_mod_cast h1le
+    have hpi_le : Real.pi ≤ |↑n * Real.pi| := by
+      rw [abs_mul, abs_of_pos Real.pi_pos]
+      exact le_mul_of_one_le_left (le_of_lt Real.pi_pos) h1le_r
+    linarith [show |↑n * Real.pi| = |θ₁ - θ₂| from by rw [hn]]
+  have h0 : (0 : ℝ) = θ₁ - θ₂ := by rw [← hn]; simp [this]
+  exact hne (by linarith)
+
+theorem orientedLevel_unique_tie_angle {p q : Point2} (hpq : p ≠ q)
+    {θ₁ θ₂ : ℝ} (hθ₁ : 0 ≤ θ₁) (hθ₁' : θ₁ < Real.pi)
+    (hθ₂ : 0 ≤ θ₂) (hθ₂' : θ₂ < Real.pi)
+    (h1 : orientedLevel θ₁ p = orientedLevel θ₁ q)
+    (h2 : orientedLevel θ₂ p = orientedLevel θ₂ q) :
+    θ₁ = θ₂ := by
+  have hab : -(p.1 - q.1) ≠ 0 ∨ (p.2 - q.2) ≠ 0 := by
+    by_contra h; push Not at h
+    exact hpq (Prod.ext (by linarith [h.1]) (by linarith [h.2]))
+  have heq1 : -(p.1 - q.1) * Real.sin θ₁ + (p.2 - q.2) * Real.cos θ₁ = 0 := by
+    have := orientedLevel_sub_eq θ₁ p q; linarith
+  have heq2 : -(p.1 - q.1) * Real.sin θ₂ + (p.2 - q.2) * Real.cos θ₂ = 0 := by
+    have := orientedLevel_sub_eq θ₂ p q; linarith
+  exact sinusoid_at_most_one_zero_in_Ico_pi hab hθ₁ hθ₁' hθ₂ hθ₂' heq1 heq2
+
 theorem sweepSort_eq_of_same_pairwise_order {points : Finset Point2} {k : ℕ}
     (L : PointLabeling points k) {θ₁ θ₂ : ℝ}
     (hinj₁ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₁ (L.point a)))

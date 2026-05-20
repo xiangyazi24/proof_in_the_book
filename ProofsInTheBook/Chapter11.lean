@@ -61,6 +61,41 @@ noncomputable def directionLevel (d : Direction) (p : Point2) : ℝ :=
   | Direction.vertical => p.1
   | Direction.finite m => p.2 - m * p.1
 
+/-- Oriented projection level: the signed projection of point `p` onto the
+line perpendicular to angle `θ`. Unlike `directionLevel`, this is continuous
+in `θ` across the vertical direction. -/
+noncomputable def orientedLevel (θ : ℝ) (p : Point2) : ℝ :=
+  -p.1 * Real.sin θ + p.2 * Real.cos θ
+
+theorem orientedLevel_zero (p : Point2) : orientedLevel 0 p = p.2 := by
+  simp [orientedLevel]
+
+theorem orientedLevel_add_pi (θ : ℝ) (p : Point2) :
+    orientedLevel (θ + Real.pi) p = -orientedLevel θ p := by
+  simp [orientedLevel, Real.sin_add, Real.cos_add, Real.sin_pi, Real.cos_pi]
+  ring
+
+theorem orientedLevel_sub_eq (θ : ℝ) (p q : Point2) :
+    orientedLevel θ p - orientedLevel θ q =
+      -(p.1 - q.1) * Real.sin θ + (p.2 - q.2) * Real.cos θ := by
+  simp [orientedLevel]; ring
+
+theorem orientedLevel_eq_cos_mul_directionLevel {θ : ℝ} (hcos : Real.cos θ ≠ 0)
+    (p : Point2) :
+    orientedLevel θ p = Real.cos θ * directionLevel (Direction.finite (Real.tan θ)) p := by
+  simp [orientedLevel, directionLevel, Real.tan_eq_sin_div_cos]
+  field_simp; ring
+
+theorem directionLevel_eq_of_orientedLevel_eq {θ : ℝ} (hcos : Real.cos θ ≠ 0)
+    {p q : Point2} (h : orientedLevel θ p = orientedLevel θ q) :
+    directionLevel (Direction.finite (Real.tan θ)) p =
+      directionLevel (Direction.finite (Real.tan θ)) q := by
+  have hp := orientedLevel_eq_cos_mul_directionLevel hcos p
+  have hq := orientedLevel_eq_cos_mul_directionLevel hcos q
+  linarith [mul_left_cancel₀ hcos (by linarith : Real.cos θ *
+    directionLevel (Direction.finite (Real.tan θ)) p =
+    Real.cos θ * directionLevel (Direction.finite (Real.tan θ)) q)]
+
 /--
 The finite set of slopes determined by nonvertical ordered pairs of distinct
 points in a configuration.
@@ -140,6 +175,72 @@ noncomputable def ofDirections (points : Finset Point2) : DirectionLabeling poin
     simp
 
 end DirectionLabeling
+
+/-! ### Sweep construction via oriented levels -/
+
+noncomputable def sweepSort {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) (θ : ℝ) : Equiv.Perm (Fin (2 * k)) :=
+  Tuple.sort (fun a : Fin (2 * k) => orientedLevel θ (L.point a))
+
+theorem sweepSort_monotone {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) (θ : ℝ) :
+    Monotone (fun i => orientedLevel θ (L.point (sweepSort L θ i))) := by
+  have := Tuple.monotone_sort (fun a : Fin (2 * k) => orientedLevel θ (L.point a))
+  exact this
+
+noncomputable def PointLabeling.reindex {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) (σ : Equiv.Perm (Fin (2 * k))) :
+    PointLabeling points k where
+  point := L.point ∘ σ
+  mem_point := fun a => L.mem_point (σ a)
+  point_injective := L.point_injective.comp σ.injective
+  point_surjective_on := fun p hp => by
+    rcases L.point_surjective_on p hp with ⟨a, ha⟩
+    exact ⟨σ.symm a, by simp [Function.comp, ha]⟩
+
+theorem sweepSort_reindex_eq_refl {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) (θ₀ : ℝ) :
+    sweepSort (L.reindex (sweepSort L θ₀)) θ₀ = Equiv.refl _ :=
+  Tuple.sort_eq_refl_iff_monotone.mpr (sweepSort_monotone L θ₀)
+
+theorem sort_neg_eq_revPerm {N : ℕ} {f : Fin N → ℝ}
+    (hf : StrictMono f) :
+    Tuple.sort (fun a => -f a) = Fin.revPerm := by
+  symm
+  rw [Tuple.eq_sort_iff]
+  refine ⟨?_, ?_⟩
+  · intro i j hij
+    simp only [Function.comp, Fin.revPerm_apply]
+    have : Fin.rev j ≤ Fin.rev i := Fin.rev_le_rev.mpr hij
+    linarith [hf.monotone this]
+  · intro i j hij heq
+    exfalso
+    simp only [Fin.revPerm_apply] at heq
+    have h1 : f (Fin.rev i) = f (Fin.rev j) := by linarith
+    exact absurd (Fin.rev_injective (hf.injective h1)) (ne_of_lt hij)
+
+theorem sweepSort_strictMono_of_injective {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) (θ : ℝ)
+    (hinj : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ (L.point a))) :
+    StrictMono (fun i => orientedLevel θ (L.point (sweepSort L θ i))) := by
+  intro i j hij
+  have hle := sweepSort_monotone L θ hij.le
+  have hne : orientedLevel θ (L.point (sweepSort L θ i)) ≠
+      orientedLevel θ (L.point (sweepSort L θ j)) :=
+    fun h => absurd ((hinj.comp (sweepSort L θ).injective) h) (ne_of_lt hij)
+  exact lt_of_le_of_ne hle hne
+
+theorem sweepSort_reindex_add_pi_eq_revPerm {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) (θ₀ : ℝ)
+    (hinj : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₀ (L.point a))) :
+    sweepSort (L.reindex (sweepSort L θ₀)) (θ₀ + Real.pi) = Fin.revPerm := by
+  have key : (fun a => orientedLevel (θ₀ + Real.pi) (L.point ((sweepSort L θ₀) a))) =
+      (fun a => -(orientedLevel θ₀ (L.point ((sweepSort L θ₀) a)))) := by
+    ext a; exact orientedLevel_add_pi θ₀ (L.point ((sweepSort L θ₀) a))
+  show Tuple.sort (fun a => orientedLevel (θ₀ + Real.pi)
+    (L.point ((sweepSort L θ₀) a))) = Fin.revPerm
+  rw [key]
+  exact sort_neg_eq_revPerm (sweepSort_strictMono_of_injective L θ₀ hinj)
 
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by

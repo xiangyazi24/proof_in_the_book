@@ -472,6 +472,39 @@ theorem sinusoid_sign_change_at_zero {a b : ℝ} (hab : a ≠ 0 ∨ b ≠ 0)
               (a * Real.sin θ₁ + b * Real.cos θ₁) *
               (a * Real.sin θ₂ + b * Real.cos θ₂) from by ring]
 
+theorem orientedLevel_order_reversed_at_event {p q : Point2} (hpq : p ≠ q)
+    {θ₁ θ_e θ₂ : ℝ} (h1e : θ₁ < θ_e) (he2 : θ_e < θ₂)
+    (h_span : θ₂ - θ₁ < Real.pi)
+    (hlt : orientedLevel θ₁ p < orientedLevel θ₁ q)
+    (htie : orientedLevel θ_e p = orientedLevel θ_e q)
+    (hne2 : orientedLevel θ₂ p ≠ orientedLevel θ₂ q) :
+    orientedLevel θ₂ q < orientedLevel θ₂ p := by
+  have hab : -(p.1 - q.1) ≠ 0 ∨ (p.2 - q.2) ≠ 0 := by
+    by_contra h; push Not at h
+    exact hpq (Prod.ext (by linarith [h.1]) (by linarith [h.2]))
+  have heq_e : -(p.1 - q.1) * Real.sin θ_e + (p.2 - q.2) * Real.cos θ_e = 0 := by
+    have := orientedLevel_sub_eq θ_e p q; linarith
+  have hneg : -(p.1 - q.1) * Real.sin θ₁ + (p.2 - q.2) * Real.cos θ₁ < 0 := by
+    have := orientedLevel_sub_eq θ₁ p q; linarith
+  have hpos := sinusoid_sign_change_at_zero hab h1e he2 h_span heq_e hneg
+  have hsub := orientedLevel_sub_eq θ₂ p q
+  linarith
+
+theorem orientedLevel_order_preserved_across_event {p q : Point2} (hpq : p ≠ q)
+    {θ₁ θ_e θ₂ : ℝ}
+    (hθ₁ : 0 ≤ θ₁) (hθ₂ : θ₂ < Real.pi)
+    (h1e : θ₁ < θ_e) (he2 : θ_e < θ₂)
+    (hlt : orientedLevel θ₁ p < orientedLevel θ₁ q)
+    (hno_tie_at_event : orientedLevel θ_e p ≠ orientedLevel θ_e q)
+    (hno_tie_between : ∀ θ ∈ Set.Icc θ₁ θ₂,
+      θ ≠ θ_e → orientedLevel θ p ≠ orientedLevel θ q) :
+    orientedLevel θ₂ p < orientedLevel θ₂ q := by
+  apply orientedLevel_order_preserved (le_of_lt (lt_trans h1e he2)) hlt
+  intro θ hθ
+  rcases eq_or_ne θ θ_e with rfl | hne
+  · exact hno_tie_at_event
+  · exact hno_tie_between θ hθ hne
+
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by
   intro hpq

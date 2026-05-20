@@ -408,6 +408,70 @@ theorem orientedLevel_order_preserved {p q : Point2}
     orientedLevel θ p - orientedLevel θ q) θ₁ < 0)
     (fun x hx h => hno_tie x hx (by linarith))]
 
+theorem sinusoid_product_formula {a b : ℝ}
+    {θ₁ θ₀ θ₂ : ℝ}
+    (hzero : a * Real.sin θ₀ + b * Real.cos θ₀ = 0) :
+    (a * Real.sin θ₁ + b * Real.cos θ₁) * (a * Real.sin θ₂ + b * Real.cos θ₂) =
+      (a ^ 2 + b ^ 2) * Real.sin (θ₁ - θ₀) * Real.sin (θ₂ - θ₀) := by
+  have h1 : (a * Real.sin θ₁ + b * Real.cos θ₁) * Real.cos θ₀ =
+      a * Real.sin (θ₁ - θ₀) := by
+    rw [Real.sin_sub]; linear_combination Real.cos θ₁ * hzero
+  have h2 : (a * Real.sin θ₂ + b * Real.cos θ₂) * Real.cos θ₀ =
+      a * Real.sin (θ₂ - θ₀) := by
+    rw [Real.sin_sub]; linear_combination Real.cos θ₂ * hzero
+  have h3 : (a * Real.sin θ₁ + b * Real.cos θ₁) * Real.sin θ₀ =
+      -(b * Real.sin (θ₁ - θ₀)) := by
+    rw [Real.sin_sub]; linear_combination Real.sin θ₁ * hzero
+  have h4 : (a * Real.sin θ₂ + b * Real.cos θ₂) * Real.sin θ₀ =
+      -(b * Real.sin (θ₂ - θ₀)) := by
+    rw [Real.sin_sub]; linear_combination Real.sin θ₂ * hzero
+  set d₁ := a * Real.sin θ₁ + b * Real.cos θ₁
+  set d₂ := a * Real.sin θ₂ + b * Real.cos θ₂
+  set s₁ := Real.sin (θ₁ - θ₀)
+  set s₂ := Real.sin (θ₂ - θ₀)
+  have h12 : d₁ * d₂ * Real.cos θ₀ ^ 2 = a ^ 2 * s₁ * s₂ := by
+    calc d₁ * d₂ * Real.cos θ₀ ^ 2
+        = (d₁ * Real.cos θ₀) * (d₂ * Real.cos θ₀) := by ring
+      _ = (a * s₁) * (a * s₂) := by rw [h1, h2]
+      _ = a ^ 2 * s₁ * s₂ := by ring
+  have h34 : d₁ * d₂ * Real.sin θ₀ ^ 2 = b ^ 2 * s₁ * s₂ := by
+    calc d₁ * d₂ * Real.sin θ₀ ^ 2
+        = (d₁ * Real.sin θ₀) * (d₂ * Real.sin θ₀) := by ring
+      _ = (-(b * s₁)) * (-(b * s₂)) := by rw [h3, h4]
+      _ = b ^ 2 * s₁ * s₂ := by ring
+  calc d₁ * d₂
+      = d₁ * d₂ * 1 := by ring
+    _ = d₁ * d₂ * (Real.sin θ₀ ^ 2 + Real.cos θ₀ ^ 2) := by
+        rw [Real.sin_sq_add_cos_sq]
+    _ = d₁ * d₂ * Real.sin θ₀ ^ 2 + d₁ * d₂ * Real.cos θ₀ ^ 2 := by ring
+    _ = b ^ 2 * s₁ * s₂ + a ^ 2 * s₁ * s₂ := by linarith
+    _ = (a ^ 2 + b ^ 2) * s₁ * s₂ := by ring
+
+theorem sinusoid_sign_change_at_zero {a b : ℝ} (hab : a ≠ 0 ∨ b ≠ 0)
+    {θ₁ θ₀ θ₂ : ℝ}
+    (h10 : θ₁ < θ₀) (h02 : θ₀ < θ₂) (h_span : θ₂ - θ₁ < Real.pi)
+    (hzero : a * Real.sin θ₀ + b * Real.cos θ₀ = 0)
+    (hneg : a * Real.sin θ₁ + b * Real.cos θ₁ < 0) :
+    0 < a * Real.sin θ₂ + b * Real.cos θ₂ := by
+  have hab2 : 0 < a ^ 2 + b ^ 2 := by
+    rcases hab with ha | hb
+    · positivity
+    · positivity
+  have hsin1 : Real.sin (θ₁ - θ₀) < 0 :=
+    Real.sin_neg_of_neg_of_neg_pi_lt (by linarith) (by linarith)
+  have hsin2 : 0 < Real.sin (θ₂ - θ₀) :=
+    Real.sin_pos_of_pos_of_lt_pi (by linarith) (by linarith)
+  have hprod := sinusoid_product_formula hzero (θ₁ := θ₁) (θ₂ := θ₂)
+  by_contra hge
+  push Not at hge
+  have hprod_neg : (a ^ 2 + b ^ 2) * Real.sin (θ₁ - θ₀) * Real.sin (θ₂ - θ₀) < 0 :=
+    mul_neg_of_neg_of_pos (mul_neg_of_pos_of_neg hab2 hsin1) hsin2
+  linarith [mul_nonneg (le_of_lt (neg_pos.mpr hneg)) (neg_nonneg.mpr hge),
+            show -(a * Real.sin θ₁ + b * Real.cos θ₁) *
+              -(a * Real.sin θ₂ + b * Real.cos θ₂) =
+              (a * Real.sin θ₁ + b * Real.cos θ₁) *
+              (a * Real.sin θ₂ + b * Real.cos θ₂) from by ring]
+
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by
   intro hpq

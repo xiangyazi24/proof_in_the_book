@@ -161,6 +161,19 @@ noncomputable def directionsDeterminedBy (points : Finset Point2) : Finset Direc
   ((points.product points).filter fun pq => pq.1 ≠ pq.2).image
     (fun pq => direction pq.1 pq.2)
 
+noncomputable def sortedDirectionAngles (points : Finset Point2) : List ℝ :=
+  ((directionsDeterminedBy points).image Direction.angle).sort (· ≤ ·)
+
+noncomputable def genericAngleBetween (θ₁ θ₂ : ℝ) : ℝ := (θ₁ + θ₂) / 2
+
+theorem genericAngleBetween_lt {θ₁ θ₂ : ℝ} (h : θ₁ < θ₂) :
+    θ₁ < genericAngleBetween θ₁ θ₂ := by
+  simp [genericAngleBetween]; linarith
+
+theorem genericAngleBetween_lt' {θ₁ θ₂ : ℝ} (h : θ₁ < θ₂) :
+    genericAngleBetween θ₁ θ₂ < θ₂ := by
+  simp [genericAngleBetween]; linarith
+
 /-- Three points are non-collinear, expressed by a nonzero determinant. -/
 def NoncollinearTriple (p q r : Point2) : Prop :=
   ¬ (q.2 - p.2) * (r.1 - p.1) = (r.2 - p.2) * (q.1 - p.1)

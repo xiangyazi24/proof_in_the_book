@@ -144,6 +144,10 @@ theorem Direction.angle_injective : Function.Injective Direction.angle := by
     · linarith [Real.arctan_lt_pi_div_two m2, Real.neg_pi_div_two_lt_arctan m1]
     · exact congr_arg _ (Real.arctan_injective (by linarith))
 
+theorem Direction.angle_ne_of_ne {d₁ d₂ : Direction} (h : d₁ ≠ d₂) :
+    d₁.angle ≠ d₂.angle := by
+  exact fun h_eq => h (Direction.angle_injective h_eq)
+
 /--
 The finite set of slopes determined by nonvertical ordered pairs of distinct
 points in a configuration.

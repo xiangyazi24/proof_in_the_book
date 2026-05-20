@@ -576,6 +576,30 @@ theorem levelBlockMirror_val {N : ℕ} {f : Fin N → ℝ} (hf : Monotone f) (p 
   · exact Fin.le_def.mpr (levelBlockMirror_mem_block p).1
   · exact Fin.le_def.mpr (levelBlockMirror_mem_block p).2
 
+theorem sweepSort_event_level_monotone {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) {θ₁ θ_e : ℝ}
+    (hinj : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₁ (L.point a)))
+    (h1e : θ₁ ≤ θ_e)
+    (hno_tie_before : ∀ a b : Fin (2 * k), a ≠ b →
+      ∀ θ ∈ Set.Ioo θ₁ θ_e, orientedLevel θ (L.point a) ≠ orientedLevel θ (L.point b)) :
+    Monotone (fun i => orientedLevel θ_e (L.point (sweepSort L θ₁ i))) := by
+  intro i j hij
+  rcases eq_or_lt_of_le hij with rfl | hlt
+  · exact le_refl _
+  · have hstrict := sweepSort_strictMono_of_injective L θ₁ hinj hlt
+    by_cases heq : orientedLevel θ_e (L.point (sweepSort L θ₁ i)) =
+        orientedLevel θ_e (L.point (sweepSort L θ₁ j))
+    · exact le_of_eq heq
+    · apply le_of_lt
+      apply orientedLevel_order_preserved h1e hstrict
+      intro θ hθ
+      rcases eq_or_lt_of_le hθ.1 with rfl | h_lt₁
+      · exact fun h => absurd h (ne_of_lt hstrict)
+      · rcases eq_or_lt_of_le hθ.2 with rfl | h_lt_e
+        · exact heq
+        · exact hno_tie_before _ _ (fun h =>
+            ne_of_lt hlt ((sweepSort L θ₁).injective h)) θ ⟨h_lt₁, h_lt_e⟩
+
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by
   intro hpq

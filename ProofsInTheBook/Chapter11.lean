@@ -600,6 +600,43 @@ theorem sweepSort_event_level_monotone {points : Finset Point2} {k : ℕ}
         · exact hno_tie_before _ _ (fun h =>
             ne_of_lt hlt ((sweepSort L θ₁).injective h)) θ ⟨h_lt₁, h_lt_e⟩
 
+theorem levelBlockMirror_reverses_within_block {N : ℕ} {f : Fin N → ℝ}
+    (hf : Monotone f) {i j : Fin N} (hij : i < j) (hfij : f i = f j) :
+    levelBlockMirror f j < levelBlockMirror f i := by
+  simp [levelBlockMirror]
+  have hlo_i := levelBlockLo_le (f := f) (i := i)
+  have hhi_i := levelBlockHi_ge (f := f) (i := i)
+  have hlo_j := levelBlockLo_le (f := f) (i := j)
+  have hhi_j := levelBlockHi_ge (f := f) (i := j)
+  have h_i_in_j_lo : i ∈ Finset.univ.filter (fun k : Fin N => f k = f j ∧ k ≤ j) :=
+    Finset.mem_filter.mpr ⟨Finset.mem_univ _, hfij, le_of_lt hij⟩
+  have h_j_in_i_hi : j ∈ Finset.univ.filter (fun k : Fin N => f k = f i ∧ i ≤ k) :=
+    Finset.mem_filter.mpr ⟨Finset.mem_univ _, hfij.symm, le_of_lt hij⟩
+  have hlo_j_le_i : levelBlockLo f j ≤ i :=
+    Finset.min'_le _ _ h_i_in_j_lo
+  have hlo_eq : levelBlockLo f i = levelBlockLo f j := by
+    apply le_antisymm
+    · apply Finset.min'_le
+      exact Finset.mem_filter.mpr ⟨Finset.mem_univ _,
+        (levelBlockLo_val (i := j)).trans hfij.symm, hlo_j_le_i⟩
+    · apply Finset.min'_le
+      exact Finset.mem_filter.mpr ⟨Finset.mem_univ _,
+        (levelBlockLo_val (i := i)).trans hfij,
+        (levelBlockLo_le (i := i)).trans (le_of_lt hij)⟩
+  have hhi_i_ge_j : j ≤ levelBlockHi f i :=
+    Finset.le_max' _ _ h_j_in_i_hi
+  have hhi_eq : levelBlockHi f i = levelBlockHi f j := by
+    apply le_antisymm
+    · apply Finset.le_max'
+      exact Finset.mem_filter.mpr ⟨Finset.mem_univ _,
+        (levelBlockHi_val (i := i)).trans hfij,
+        hhi_i_ge_j⟩
+    · apply Finset.le_max'
+      exact Finset.mem_filter.mpr ⟨Finset.mem_univ _,
+        (levelBlockHi_val (i := j)).trans hfij.symm,
+        (le_of_lt hij).trans (levelBlockHi_ge (i := j))⟩
+  omega
+
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by
   intro hpq

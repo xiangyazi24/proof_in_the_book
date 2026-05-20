@@ -100,6 +100,50 @@ theorem directionLevel_eq_of_orientedLevel_eq {θ : ℝ} (hcos : Real.cos θ ≠
     directionLevel (Direction.finite (Real.tan θ)) p =
     Real.cos θ * directionLevel (Direction.finite (Real.tan θ)) q)]
 
+noncomputable def Direction.angle : Direction → ℝ
+  | .vertical => Real.pi / 2
+  | .finite m => if 0 ≤ Real.arctan m then Real.arctan m else Real.arctan m + Real.pi
+
+theorem Direction.angle_nonneg (d : Direction) : 0 ≤ d.angle := by
+  cases d with
+  | vertical => exact le_of_lt (div_pos Real.pi_pos two_pos)
+  | finite m =>
+    simp only [Direction.angle]
+    split_ifs with h
+    · exact h
+    · linarith [Real.neg_pi_div_two_lt_arctan m]
+
+theorem Direction.angle_lt_pi (d : Direction) : d.angle < Real.pi := by
+  cases d with
+  | vertical => show Real.pi / 2 < Real.pi; linarith [Real.pi_pos]
+  | finite m =>
+    simp only [Direction.angle]
+    split_ifs with h
+    · linarith [Real.arctan_lt_pi_div_two m]
+    · linarith [Real.neg_pi_div_two_lt_arctan m]
+
+theorem Direction.angle_injective : Function.Injective Direction.angle := by
+  intro d1 d2 h
+  match d1, d2 with
+  | .vertical, .vertical => rfl
+  | .vertical, .finite m =>
+    simp only [Direction.angle] at h
+    split_ifs at h with hm
+    · linarith [Real.arctan_lt_pi_div_two m]
+    · linarith [Real.neg_pi_div_two_lt_arctan m]
+  | .finite m, .vertical =>
+    simp only [Direction.angle] at h
+    split_ifs at h with hm
+    · linarith [Real.arctan_lt_pi_div_two m]
+    · linarith [Real.neg_pi_div_two_lt_arctan m]
+  | .finite m1, .finite m2 =>
+    simp only [Direction.angle] at h
+    split_ifs at h with h1 h2 h1 h2
+    · exact congr_arg _ (Real.arctan_injective h)
+    · linarith [Real.arctan_lt_pi_div_two m1, Real.neg_pi_div_two_lt_arctan m2]
+    · linarith [Real.arctan_lt_pi_div_two m2, Real.neg_pi_div_two_lt_arctan m1]
+    · exact congr_arg _ (Real.arctan_injective (by linarith))
+
 /--
 The finite set of slopes determined by nonvertical ordered pairs of distinct
 points in a configuration.

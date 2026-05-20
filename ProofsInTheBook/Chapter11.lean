@@ -6225,4 +6225,189 @@ theorem chapter11 {ι : Type*} [Fintype ι] (points : Finset Point2) (witness : 
     Fintype.card ι ≤ (slopesDeterminedBy points).card :=
   card_le_slopes_of_injective_witness points witness hwitness hinj
 
+/-! ## Sweep certificate construction
+
+The remaining geometric core: construct `UngarLevelSweepCertificate` from the
+rotating projection sweep of every even non-collinear point set.
+-/
+
+/-! ### BlockMove from monotone level function -/
+
+noncomputable def nontrivialLevelValues {N : ℕ} (g : Fin N → ℝ) : Finset ℝ :=
+  (Finset.univ.image g).filter fun v =>
+    (Finset.univ.filter fun i : Fin N => g i = v).card ≥ 2
+
+noncomputable def nontrivialLevelRep {N : ℕ} (g : Fin N → ℝ) (v : ℝ)
+    (hv : v ∈ nontrivialLevelValues g) : Fin N :=
+  (Finset.univ.filter fun i : Fin N => g i = v).min' (by
+    have hmem := (Finset.mem_filter.mp hv).2
+    exact Finset.card_pos.mp (by omega))
+
+theorem nontrivialLevelRep_val {N : ℕ} {g : Fin N → ℝ} {v : ℝ}
+    (hv : v ∈ nontrivialLevelValues g) :
+    g (nontrivialLevelRep g v hv) = v := by
+  have hmem : nontrivialLevelRep g v hv ∈
+      Finset.univ.filter (fun i : Fin N => g i = v) :=
+    Finset.min'_mem _ _
+  exact (Finset.mem_filter.mp hmem).2
+
+private theorem levelBlockLo_le_of_monotone_eq' {N : ℕ}
+    {g : Fin N → ℝ} (_hg : Monotone g) {rep p : Fin N}
+    (hval : g p = g rep) :
+    levelBlockLo g rep ≤ p := by
+  by_contra h
+  push_neg at h
+  have hp_le_rep : p ≤ rep :=
+    le_of_lt (lt_of_lt_of_le h levelBlockLo_le)
+  have hp_in : p ∈ Finset.univ.filter fun j : Fin N => g j = g rep ∧ j ≤ rep :=
+    Finset.mem_filter.mpr ⟨Finset.mem_univ _, hval, hp_le_rep⟩
+  exact not_le.mpr h (Finset.min'_le _ _ hp_in)
+
+private theorem le_levelBlockHi_of_monotone_eq' {N : ℕ}
+    {g : Fin N → ℝ} (_hg : Monotone g) {rep p : Fin N}
+    (hval : g p = g rep) :
+    p ≤ levelBlockHi g rep := by
+  by_contra h
+  push_neg at h
+  have hrep_le_p : rep ≤ p :=
+    le_of_lt (lt_of_le_of_lt levelBlockHi_ge h)
+  have hp_in : p ∈ Finset.univ.filter fun j : Fin N => g j = g rep ∧ rep ≤ j :=
+    Finset.mem_filter.mpr ⟨Finset.mem_univ _, hval, hrep_le_p⟩
+  exact not_le.mpr h (Finset.le_max' _ _ hp_in)
+
+theorem nontrivialLevelRep_block {N : ℕ} {g : Fin N → ℝ} (hg : Monotone g) {v : ℝ}
+    (hv : v ∈ nontrivialLevelValues g) :
+    (levelBlockLo g (nontrivialLevelRep g v hv)).val <
+      (levelBlockHi g (nontrivialLevelRep g v hv)).val := by
+  by_contra h
+  push_neg at h
+  have hle := Fin.le_def.mp (levelBlockLo_le (f := g) (i := nontrivialLevelRep g v hv))
+  have hge := Fin.le_def.mp (levelBlockHi_ge (f := g) (i := nontrivialLevelRep g v hv))
+  have hrep := nontrivialLevelRep_val hv
+  have hsingleton : ∀ j : Fin N, g j = v → j = nontrivialLevelRep g v hv := by
+    intro j hj
+    have hj_ge := levelBlockLo_le_of_monotone_eq' hg (hj.trans hrep.symm)
+    have hj_le := le_levelBlockHi_of_monotone_eq' hg (hj.trans hrep.symm)
+    exact Fin.ext (by
+      have := Fin.le_def.mp hj_ge
+      have := Fin.le_def.mp hj_le
+      omega)
+  have : (Finset.univ.filter fun i : Fin N => g i = v).card ≤ 1 := by
+    rw [Finset.card_le_one]
+    intro a ha b hb
+    exact (hsingleton a (Finset.mem_filter.mp ha).2).trans
+      (hsingleton b (Finset.mem_filter.mp hb).2).symm
+  have := (Finset.mem_filter.mp hv).2
+  omega
+
+private theorem mem_levelBlockMoveInterval_of_same_value {N : ℕ}
+    {g : Fin N → ℝ} (hg : Monotone g) {rep p : Fin N}
+    (hrep_lo_lt : (levelBlockLo g rep).val < (levelBlockHi g rep).val)
+    (hval : g p = g rep) :
+    (levelBlockMoveInterval g rep hrep_lo_lt).Mem p :=
+  ⟨Fin.le_def.mp (levelBlockLo_le_of_monotone_eq' hg hval),
+   Fin.le_def.mp (le_levelBlockHi_of_monotone_eq' hg hval)⟩
+
+private theorem levelBlockMirror_eq_mirror_of_mem_levelBlockMoveInterval {N : ℕ}
+    {g : Fin N → ℝ} (hg : Monotone g) {rep p : Fin N}
+    (hrep_lo_lt : (levelBlockLo g rep).val < (levelBlockHi g rep).val)
+    (hp : (levelBlockMoveInterval g rep hrep_lo_lt).Mem p) :
+    levelBlockMirror g p = (levelBlockMoveInterval g rep hrep_lo_lt).mirror p hp := by
+  apply Fin.ext
+  simp only [levelBlockMirror, PositionInterval.mirror, levelBlockMoveInterval]
+  rcases hp with ⟨hlo, hhi⟩
+  have hp_val := monotone_levelBlock_eq hg
+    (Fin.le_def.mpr (show (levelBlockLo g rep).val ≤ p.val from hlo))
+    (Fin.le_def.mpr (show p.val ≤ (levelBlockHi g rep).val from hhi))
+  have hlo_eq := levelBlockLo_of_mem_block hp_val hlo
+  have hhi_eq := levelBlockHi_of_mem_block hp_val hhi
+  rw [← congrArg Fin.val hlo_eq, ← congrArg Fin.val hhi_eq]
+
+private theorem levelBlockMirror_eq_self_of_singleton {N : ℕ}
+    {g : Fin N → ℝ} (p : Fin N)
+    (hsingleton : levelBlockLo g p = levelBlockHi g p) :
+    levelBlockMirror g p = p := by
+  apply Fin.ext
+  simp [levelBlockMirror]
+  have := congrArg Fin.val hsingleton
+  have := Fin.le_def.mp (levelBlockLo_le (f := g) (i := p))
+  have := Fin.le_def.mp (levelBlockHi_ge (f := g) (i := p))
+  omega
+
+private theorem mem_nontrivialLevelValues_of_nontrivial_block {N : ℕ}
+    {g : Fin N → ℝ} {p : Fin N}
+    (hlt : (levelBlockLo g p).val < (levelBlockHi g p).val) :
+    g p ∈ nontrivialLevelValues g := by
+  simp only [nontrivialLevelValues, Finset.mem_filter, Finset.mem_image]
+  refine ⟨⟨p, Finset.mem_univ _, rfl⟩, ?_⟩
+  have hlo_in : levelBlockLo g p ∈
+      Finset.univ.filter fun i : Fin N => g i = g p :=
+    Finset.mem_filter.mpr ⟨Finset.mem_univ _, levelBlockLo_val⟩
+  have hhi_in : levelBlockHi g p ∈
+      Finset.univ.filter fun i : Fin N => g i = g p :=
+    Finset.mem_filter.mpr ⟨Finset.mem_univ _, levelBlockHi_val⟩
+  exact Finset.one_lt_card.mpr ⟨levelBlockLo g p, hlo_in,
+    levelBlockHi g p, hhi_in, fun h => absurd (congrArg Fin.val h) (by omega)⟩
+
+noncomputable def levelBlockMoveBlock {N : ℕ} (g : Fin N → ℝ) (hg : Monotone g)
+    (i : Fin (nontrivialLevelValues g).card) : PositionInterval N :=
+  levelBlockMoveInterval g
+    (nontrivialLevelRep g ((nontrivialLevelValues g).equivFin.symm i).val
+      ((nontrivialLevelValues g).equivFin.symm i).property)
+    (nontrivialLevelRep_block hg ((nontrivialLevelValues g).equivFin.symm i).property)
+
+noncomputable def levelBlockMoveOfMonotone {N : ℕ} (g : Fin N → ℝ) (hg : Monotone g)
+    (hnt : (nontrivialLevelValues g).Nonempty) : BlockMove N where
+  blockCount := (nontrivialLevelValues g).card
+  blockCount_pos := Finset.card_pos.mpr hnt
+  block := levelBlockMoveBlock g hg
+  pairwise_disjoint := by
+    intro i _hi j _hj hij
+    have hne : ((nontrivialLevelValues g).equivFin.symm i).val ≠
+        ((nontrivialLevelValues g).equivFin.symm j).val := by
+      intro h
+      exact hij ((nontrivialLevelValues g).equivFin.symm.injective (Subtype.ext h))
+    have hgne : g (nontrivialLevelRep g _ ((nontrivialLevelValues g).equivFin.symm i).property) ≠
+        g (nontrivialLevelRep g _ ((nontrivialLevelValues g).equivFin.symm j).property) := by
+      simp only [nontrivialLevelRep_val]; exact hne
+    exact Set.disjoint_of_subset_left (le_refl _)
+      (Set.disjoint_of_subset_right (le_refl _)
+        (levelBlockMoveInterval_disjoint hg _ _ hgne))
+  nontrivial := by
+    intro i
+    show 2 ≤ (levelBlockMoveBlock g hg i).length
+    simp only [levelBlockMoveBlock, PositionInterval.length, levelBlockMoveInterval]
+    have := nontrivialLevelRep_block hg ((nontrivialLevelValues g).equivFin.symm i).property
+    omega
+  map := levelBlockMirrorPerm g hg
+
+theorem levelBlockMoveOfMonotone_reversesBlocks {N : ℕ} {g : Fin N → ℝ} {hg : Monotone g}
+    {hnt : (nontrivialLevelValues g).Nonempty} :
+    (levelBlockMoveOfMonotone g hg hnt).ReversesBlocks := by
+  constructor
+  · intro i p hp
+    show (levelBlockMirrorPerm g hg) p = _
+    simp only [levelBlockMirrorPerm]
+    show levelBlockMirror g p = ((levelBlockMoveBlock g hg i).mirror p hp)
+    exact levelBlockMirror_eq_mirror_of_mem_levelBlockMoveInterval hg _ hp
+  · intro p hnot
+    show (levelBlockMirrorPerm g hg) p = p
+    simp only [levelBlockMirrorPerm]
+    apply levelBlockMirror_eq_self_of_singleton
+    by_contra hne
+    have hlt : (levelBlockLo g p).val < (levelBlockHi g p).val := by
+      have := Fin.le_def.mp (levelBlockLo_le (f := g) (i := p))
+      have := Fin.le_def.mp (levelBlockHi_ge (f := g) (i := p))
+      omega
+    have hv_mem := mem_nontrivialLevelValues_of_nontrivial_block hlt
+    let idx := (nontrivialLevelValues g).equivFin ⟨g p, hv_mem⟩
+    have hval_eq : ((nontrivialLevelValues g).equivFin.symm idx).val = g p := by
+      simp [idx]
+    have hv' := ((nontrivialLevelValues g).equivFin.symm idx).property
+    have hrep_val : g (nontrivialLevelRep g
+        ((nontrivialLevelValues g).equivFin.symm idx).val hv') = g p := by
+      rw [nontrivialLevelRep_val hv', hval_eq]
+    exact absurd (mem_levelBlockMoveInterval_of_same_value hg
+      (nontrivialLevelRep_block hg hv') hrep_val.symm) (hnot idx)
+
 end ProofsInTheBook.Chapter11

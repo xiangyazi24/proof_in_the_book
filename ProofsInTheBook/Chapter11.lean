@@ -652,6 +652,49 @@ theorem levelBlockMirror_preserves_across_blocks {N : ℕ} {f : Fin N → ℝ}
   simp only [levelBlockMirror, Fin.lt_def, Fin.val_mk]
   omega
 
+theorem levelBlockLo_of_mem_block {N : ℕ} {f : Fin N → ℝ}
+    {i j : Fin N} (hfij : f j = f i)
+    (hlo : (levelBlockLo f i).val ≤ j.val) :
+    levelBlockLo f j = levelBlockLo f i := by
+  have h1 : levelBlockLo f j ≤ levelBlockLo f i :=
+    Finset.min'_le _ _ (Finset.mem_filter.mpr ⟨Finset.mem_univ _,
+      (levelBlockLo_val (i := i)).trans hfij.symm, Fin.le_def.mpr hlo⟩)
+  have h2 : levelBlockLo f i ≤ levelBlockLo f j :=
+    Finset.min'_le _ _ (Finset.mem_filter.mpr ⟨Finset.mem_univ _,
+      (levelBlockLo_val (i := j)).trans hfij,
+      h1.trans levelBlockLo_le⟩)
+  exact le_antisymm h1 h2
+
+theorem levelBlockHi_of_mem_block {N : ℕ} {f : Fin N → ℝ}
+    {i j : Fin N} (hfij : f j = f i)
+    (hhi : j.val ≤ (levelBlockHi f i).val) :
+    levelBlockHi f j = levelBlockHi f i := by
+  have h1 : levelBlockHi f i ≤ levelBlockHi f j :=
+    Finset.le_max' _ _ (Finset.mem_filter.mpr ⟨Finset.mem_univ _,
+      (levelBlockHi_val (i := i)).trans hfij.symm, Fin.le_def.mpr hhi⟩)
+  have h2 : levelBlockHi f j ≤ levelBlockHi f i :=
+    Finset.le_max' _ _ (Finset.mem_filter.mpr ⟨Finset.mem_univ _,
+      (levelBlockHi_val (i := j)).trans hfij,
+      levelBlockHi_ge.trans h1⟩)
+  exact le_antisymm h2 h1
+
+theorem levelBlockMirror_involutive {N : ℕ} {f : Fin N → ℝ} (hf : Monotone f)
+    (p : Fin N) : levelBlockMirror f (levelBlockMirror f p) = p := by
+  have hmem := levelBlockMirror_mem_block (f := f) p
+  have hval := levelBlockMirror_val hf p
+  have hlo_eq := levelBlockLo_of_mem_block hval hmem.1
+  have hhi_eq := levelBlockHi_of_mem_block hval hmem.2
+  have hlo_v := congrArg Fin.val hlo_eq
+  have hhi_v := congrArg Fin.val hhi_eq
+  apply Fin.ext
+  show (levelBlockLo f (levelBlockMirror f p)).val +
+    (levelBlockHi f (levelBlockMirror f p)).val -
+    (levelBlockMirror f p).val = p.val
+  rw [hlo_v, hhi_v]; simp [levelBlockMirror]
+  have := (Fin.le_def.mp (levelBlockLo_le (f := f) (i := p)))
+  have := (Fin.le_def.mp (levelBlockHi_ge (f := f) (i := p)))
+  omega
+
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by
   intro hpq

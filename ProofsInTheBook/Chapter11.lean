@@ -556,6 +556,26 @@ theorem monotone_levelBlock_eq {N : ℕ} {f : Fin N → ℝ} (hf : Monotone f)
     (levelBlockLo_val (i := i) |>.trans (levelBlockHi_val (i := i) |>.symm)),
     levelBlockLo_val (f := f) (i := i)]
 
+noncomputable def levelBlockMirror {N : ℕ} (f : Fin N → ℝ) (p : Fin N) : Fin N :=
+  ⟨(levelBlockLo f p).val + (levelBlockHi f p).val - p.val, by
+    have hlo := levelBlockLo_le (f := f) (i := p)
+    have hhi := levelBlockHi_ge (f := f) (i := p)
+    omega⟩
+
+theorem levelBlockMirror_mem_block {N : ℕ} {f : Fin N → ℝ} (p : Fin N) :
+    (levelBlockLo f p).val ≤ (levelBlockMirror f p).val ∧
+      (levelBlockMirror f p).val ≤ (levelBlockHi f p).val := by
+  simp [levelBlockMirror]
+  have hlo := levelBlockLo_le (f := f) (i := p)
+  have hhi := levelBlockHi_ge (f := f) (i := p)
+  exact ⟨by omega, by omega⟩
+
+theorem levelBlockMirror_val {N : ℕ} {f : Fin N → ℝ} (hf : Monotone f) (p : Fin N) :
+    f (levelBlockMirror f p) = f p := by
+  apply monotone_levelBlock_eq hf
+  · exact Fin.le_def.mpr (levelBlockMirror_mem_block p).1
+  · exact Fin.le_def.mpr (levelBlockMirror_mem_block p).2
+
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by
   intro hpq

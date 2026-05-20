@@ -808,6 +808,29 @@ theorem sweepSort_increasing_within_block {points : Finset Point2} {k : ℕ}
     (fun θ hθ => hno_tie (σ p) (σ q) hne htie θ hθ)
   exact label_index_lt_of_orientedLevel_lt L θ₀ hid hord₀
 
+noncomputable def blockStarts {N : ℕ} (g : Fin N → ℝ) : Finset (Fin N) :=
+  Finset.univ.filter (fun p =>
+    p = levelBlockLo g p ∧ (levelBlockLo g p).val < (levelBlockHi g p).val)
+
+theorem blockStarts_nonempty_of_tie {N : ℕ} {g : Fin N → ℝ} (hg : Monotone g)
+    {i j : Fin N} (hij : i < j) (hgij : g i = g j) :
+    (blockStarts g).Nonempty := by
+  have hlo_idem : levelBlockLo g (levelBlockLo g i) = levelBlockLo g i := by
+    apply levelBlockLo_of_mem_block
+    · exact levelBlockLo_val
+    · exact le_refl _
+  have h_j_in : j.val ≤ (levelBlockHi g i).val :=
+    Fin.le_def.mp (Finset.le_max' _ _ (Finset.mem_filter.mpr
+      ⟨Finset.mem_univ _, hgij.symm, le_of_lt hij⟩))
+  refine ⟨levelBlockLo g i, Finset.mem_filter.mpr ⟨Finset.mem_univ _, hlo_idem.symm, ?_⟩⟩
+  have h_lo := (Fin.le_def.mp (levelBlockLo_le (f := g) (i := i)))
+  rw [hlo_idem]
+  have hhi_eq : levelBlockHi g (levelBlockLo g i) = levelBlockHi g i := by
+    apply levelBlockHi_of_mem_block
+    · exact levelBlockLo_val
+    · exact Fin.le_def.mp (levelBlockLo_le.trans levelBlockHi_ge)
+  rw [hhi_eq]; omega
+
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by
   intro hpq

@@ -75,6 +75,10 @@ theorem orientedLevel_add_pi (θ : ℝ) (p : Point2) :
   simp [orientedLevel, Real.sin_add, Real.cos_add, Real.sin_pi, Real.cos_pi]
   ring
 
+theorem orientedLevel_pi_div_two (p : Point2) :
+    orientedLevel (Real.pi / 2) p = -p.1 := by
+  simp [orientedLevel, Real.sin_pi_div_two, Real.cos_pi_div_two]
+
 theorem orientedLevel_sub_eq (θ : ℝ) (p q : Point2) :
     orientedLevel θ p - orientedLevel θ q =
       -(p.1 - q.1) * Real.sin θ + (p.2 - q.2) * Real.cos θ := by

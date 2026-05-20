@@ -397,6 +397,19 @@ theorem orientedLevel_diff_continuous (p q : Point2) :
     Continuous (fun θ => orientedLevel θ p - orientedLevel θ q) := by
   simp only [orientedLevel]; fun_prop
 
+theorem neg_at_start_of_neg_at_end {f : ℝ → ℝ} {a b : ℝ} (hab : a ≤ b)
+    (hcont : ContinuousOn f (Set.Icc a b))
+    (hfb : f b < 0) (hno_zero : ∀ x ∈ Set.Icc a b, f x ≠ 0) :
+    f a < 0 := by
+  by_contra hge
+  push Not at hge
+  have hfa_pos : 0 < f a :=
+    lt_of_le_of_ne hge (Ne.symm (hno_zero a (Set.left_mem_Icc.mpr hab)))
+  exact hno_zero _ (intermediate_value_Icc' hab hcont
+    (⟨le_of_lt hfb, le_of_lt hfa_pos⟩ : (0 : ℝ) ∈ Set.Icc (f b) (f a))).choose_spec.1
+    (intermediate_value_Icc' hab hcont
+    (⟨le_of_lt hfb, le_of_lt hfa_pos⟩ : (0 : ℝ) ∈ Set.Icc (f b) (f a))).choose_spec.2
+
 theorem orientedLevel_order_preserved {p q : Point2}
     {θ₁ θ₂ : ℝ} (h12 : θ₁ ≤ θ₂)
     (hlt : orientedLevel θ₁ p < orientedLevel θ₁ q)
@@ -406,6 +419,17 @@ theorem orientedLevel_order_preserved {p q : Point2}
   have hcont := (orientedLevel_diff_continuous p q).continuousOn (s := Set.Icc θ₁ θ₂)
   linarith [neg_of_neg_of_continuousOn_of_no_zero h12 hcont (by linarith : (fun θ =>
     orientedLevel θ p - orientedLevel θ q) θ₁ < 0)
+    (fun x hx h => hno_tie x hx (by linarith))]
+
+theorem orientedLevel_order_preserved_backward {p q : Point2}
+    {θ₁ θ₂ : ℝ} (h12 : θ₁ ≤ θ₂)
+    (hlt : orientedLevel θ₂ p < orientedLevel θ₂ q)
+    (hno_tie : ∀ θ ∈ Set.Icc θ₁ θ₂,
+      orientedLevel θ p ≠ orientedLevel θ q) :
+    orientedLevel θ₁ p < orientedLevel θ₁ q := by
+  have hcont := (orientedLevel_diff_continuous p q).continuousOn (s := Set.Icc θ₁ θ₂)
+  linarith [neg_at_start_of_neg_at_end h12 hcont (by linarith : (fun θ =>
+    orientedLevel θ p - orientedLevel θ q) θ₂ < 0)
     (fun x hx h => hno_tie x hx (by linarith))]
 
 theorem sinusoid_product_formula {a b : ℝ}
@@ -750,6 +774,39 @@ theorem sweepSort_event_compose {points : Finset Point2} {k : ℕ}
         change g (levelBlockMirror g i) = g (levelBlockMirror g j) at h
         linarith)
     · exact honly_event _ _ hne θ hθ hne_θ
+
+theorem label_index_lt_of_orientedLevel_lt {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) (θ₀ : ℝ)
+    (hid : sweepSort L θ₀ = Equiv.refl _)
+    {a b : Fin (2 * k)}
+    (h : orientedLevel θ₀ (L.point a) < orientedLevel θ₀ (L.point b)) :
+    a.val < b.val := by
+  by_contra hge
+  push Not at hge
+  linarith [(show Monotone (fun a => orientedLevel θ₀ (L.point a)) from
+    Tuple.sort_eq_refl_iff_monotone.mp hid) (Fin.le_def.mpr hge)]
+
+theorem sweepSort_increasing_within_block {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) {θ₀ θ_j θ_ej : ℝ}
+    (hid : sweepSort L θ₀ = Equiv.refl _)
+    (hinj₀ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₀ (L.point a)))
+    (hinj_j : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ_j (L.point a)))
+    (hθ₀ : 0 ≤ θ₀) (hθ_ej : θ_ej < Real.pi)
+    (h0j : θ₀ ≤ θ_j) (hj_ej : θ_j < θ_ej)
+    (hno_tie : ∀ a b : Fin (2 * k), L.point a ≠ L.point b →
+      orientedLevel θ_ej (L.point a) = orientedLevel θ_ej (L.point b) →
+        ∀ θ ∈ Set.Icc θ₀ θ_j, orientedLevel θ (L.point a) ≠ orientedLevel θ (L.point b))
+    {p q : Fin (2 * k)} (hpq : p < q)
+    (htie : orientedLevel θ_ej (L.point (sweepSort L θ_j p)) =
+      orientedLevel θ_ej (L.point (sweepSort L θ_j q))) :
+    (sweepSort L θ_j p).val < (sweepSort L θ_j q).val := by
+  let σ := sweepSort L θ_j
+  have hstrict := sweepSort_strictMono_of_injective L θ_j hinj_j hpq
+  have hne : L.point (σ p) ≠ L.point (σ q) :=
+    fun h => ne_of_lt hstrict (congr_arg (orientedLevel θ_j) h)
+  have hord₀ := orientedLevel_order_preserved_backward h0j hstrict
+    (fun θ hθ => hno_tie (σ p) (σ q) hne htie θ hθ)
+  exact label_index_lt_of_orientedLevel_lt L θ₀ hid hord₀
 
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by

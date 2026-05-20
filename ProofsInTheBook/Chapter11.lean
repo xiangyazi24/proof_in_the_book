@@ -637,6 +637,21 @@ theorem levelBlockMirror_reverses_within_block {N : ℕ} {f : Fin N → ℝ}
         (le_of_lt hij).trans (levelBlockHi_ge (i := j))⟩
   omega
 
+theorem levelBlockMirror_preserves_across_blocks {N : ℕ} {f : Fin N → ℝ}
+    (hf : Monotone f) {i j : Fin N} (hij : i < j) (hfij : f i < f j) :
+    levelBlockMirror f i < levelBlockMirror f j := by
+  have hlo_i := levelBlockLo_le (f := f) (i := i)
+  have hhi_i := levelBlockHi_ge (f := f) (i := i)
+  have hlo_j := levelBlockLo_le (f := f) (i := j)
+  have hhi_j := levelBlockHi_ge (f := f) (i := j)
+  have hhi_lt_lo : levelBlockHi f i < levelBlockLo f j := by
+    by_contra h
+    push Not at h
+    linarith [hf h, levelBlockLo_val (f := f) (i := j),
+              levelBlockHi_val (f := f) (i := i)]
+  simp only [levelBlockMirror, Fin.lt_def, Fin.val_mk]
+  omega
+
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by
   intro hpq

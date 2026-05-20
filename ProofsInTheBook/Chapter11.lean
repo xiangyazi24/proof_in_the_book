@@ -505,6 +505,16 @@ theorem orientedLevel_order_preserved_across_event {p q : Point2} (hpq : p ≠ q
   · exact hno_tie_at_event
   · exact hno_tie_between θ hθ hne
 
+theorem sweepSort_eq_of_strictMono {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) {θ : ℝ}
+    (σ : Equiv.Perm (Fin (2 * k)))
+    (hstrict : StrictMono (fun i => orientedLevel θ (L.point (σ i)))) :
+    sweepSort L θ = σ := by
+  show Tuple.sort (fun a => orientedLevel θ (L.point a)) = σ
+  symm; rw [Tuple.eq_sort_iff]
+  exact ⟨hstrict.monotone, fun i j hij heq =>
+    absurd heq (ne_of_lt (hstrict hij))⟩
+
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by
   intro hpq

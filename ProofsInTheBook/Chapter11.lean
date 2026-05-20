@@ -310,6 +310,11 @@ theorem sweepSort_eq_of_same_pairwise_order {points : Finset Point2} {k : ℕ}
   · intro i j hij heq
     exact absurd ((hinj₂.comp (sweepSort L θ₁).injective) heq) (ne_of_lt hij)
 
+theorem monotone_contiguity {N : ℕ} {g : Fin N → ℝ}
+    (hg : Monotone g) {a b c : Fin N} (hab : a ≤ b) (hbc : b ≤ c)
+    (hac : g a = g c) : g a = g b := by
+  linarith [hg hab, hg hbc]
+
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by
   intro hpq

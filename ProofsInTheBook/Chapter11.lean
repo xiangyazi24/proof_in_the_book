@@ -6469,4 +6469,52 @@ noncomputable def sweepReversalStep {points : Finset Point2} {k : ℕ}
       (fun θ hθ => hno_tie_0_to_1 _ _ hne htie θ hθ)
     exact label_index_lt_of_orientedLevel_lt L θ₀ hid hord₀
 
+/-! ### Sorted direction angle infrastructure -/
+
+theorem sortedDirectionAngles_length (points : Finset Point2) :
+    (sortedDirectionAngles points).length =
+      (directionsDeterminedBy points).card := by
+  simp [sortedDirectionAngles, Finset.card_image_of_injective _ Direction.angle_injective]
+
+theorem sortedDirectionAngles_sortedLT (points : Finset Point2) :
+    (sortedDirectionAngles points).SortedLT :=
+  Finset.sortedLT_sort _
+
+theorem sortedDirectionAngles_nodup (points : Finset Point2) :
+    (sortedDirectionAngles points).Nodup :=
+  Finset.sort_nodup _ _
+
+noncomputable def sortedAngleAt (points : Finset Point2)
+    (j : Fin (directionsDeterminedBy points).card) : ℝ :=
+  (sortedDirectionAngles points).get
+    ⟨j.val, by rw [sortedDirectionAngles_length]; exact j.isLt⟩
+
+theorem sortedAngleAt_strictMono (points : Finset Point2) :
+    StrictMono (sortedAngleAt points) := by
+  intro i j hij
+  have hsorted := sortedDirectionAngles_sortedLT points
+  show (sortedDirectionAngles points).get ⟨i.val, _⟩ <
+    (sortedDirectionAngles points).get ⟨j.val, _⟩
+  exact hsorted.strictMono_get hij
+
+theorem sortedAngleAt_mem (points : Finset Point2)
+    (j : Fin (directionsDeterminedBy points).card) :
+    sortedAngleAt points j ∈
+      (directionsDeterminedBy points).image Direction.angle := by
+  have hmem : sortedAngleAt points j ∈ sortedDirectionAngles points :=
+    List.get_mem _ _
+  rwa [sortedDirectionAngles, Finset.mem_sort] at hmem
+
+theorem sortedAngleAt_nonneg (points : Finset Point2)
+    (j : Fin (directionsDeterminedBy points).card) :
+    0 ≤ sortedAngleAt points j := by
+  rcases Finset.mem_image.mp (sortedAngleAt_mem points j) with ⟨d, _, hangle⟩
+  rw [← hangle]; exact d.angle_nonneg
+
+theorem sortedAngleAt_lt_pi (points : Finset Point2)
+    (j : Fin (directionsDeterminedBy points).card) :
+    sortedAngleAt points j < Real.pi := by
+  rcases Finset.mem_image.mp (sortedAngleAt_mem points j) with ⟨d, _, hangle⟩
+  rw [← hangle]; exact d.angle_lt_pi
+
 end ProofsInTheBook.Chapter11

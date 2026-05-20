@@ -242,6 +242,25 @@ theorem sweepSort_reindex_add_pi_eq_revPerm {points : Finset Point2} {k : ℕ}
   rw [key]
   exact sort_neg_eq_revPerm (sweepSort_strictMono_of_injective L θ₀ hinj)
 
+theorem sweepSort_eq_of_same_pairwise_order {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) {θ₁ θ₂ : ℝ}
+    (hinj₁ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₁ (L.point a)))
+    (hinj₂ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₂ (L.point a)))
+    (hsame : ∀ a b : Fin (2 * k),
+      orientedLevel θ₁ (L.point a) < orientedLevel θ₁ (L.point b) →
+        orientedLevel θ₂ (L.point a) < orientedLevel θ₂ (L.point b)) :
+    sweepSort L θ₁ = sweepSort L θ₂ := by
+  suffices h : sweepSort L θ₁ =
+      Tuple.sort (fun a => orientedLevel θ₂ (L.point a)) from h
+  rw [Tuple.eq_sort_iff]
+  refine ⟨?_, ?_⟩
+  · intro i j hij
+    rcases eq_or_lt_of_le hij with rfl | hlt
+    · exact le_refl _
+    · exact le_of_lt (hsame _ _ (sweepSort_strictMono_of_injective L θ₁ hinj₁ hlt))
+  · intro i j hij heq
+    exact absurd ((hinj₂.comp (sweepSort L θ₁).injective) heq) (ne_of_lt hij)
+
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by
   intro hpq
@@ -324,6 +343,18 @@ theorem directionLevel_eq_iff_direction_eq {p q : Point2} {d : Direction}
   constructor
   · exact direction_eq_of_directionLevel_eq hpq
   · exact directionLevel_eq_of_direction_eq
+
+theorem orientedLevel_eq_iff_direction_finite {p q : Point2} (hpq : p ≠ q)
+    {θ : ℝ} (hcos : Real.cos θ ≠ 0) :
+    orientedLevel θ p = orientedLevel θ q ↔
+      direction p q = Direction.finite (Real.tan θ) := by
+  rw [orientedLevel_eq_cos_mul_directionLevel hcos p,
+      orientedLevel_eq_cos_mul_directionLevel hcos q]
+  constructor
+  · intro h
+    exact direction_eq_of_directionLevel_eq hpq (mul_left_cancel₀ hcos h)
+  · intro h
+    congr 1; exact directionLevel_eq_of_direction_eq h
 
 theorem direction_mem_directionsDeterminedBy {points : Finset Point2} {p q : Point2}
     (hp : p ∈ points) (hq : q ∈ points) (hpq : p ≠ q) :

@@ -702,6 +702,55 @@ noncomputable def levelBlockMirrorPerm {N : ℕ} (f : Fin N → ℝ) (hf : Monot
   left_inv := levelBlockMirror_involutive hf
   right_inv := levelBlockMirror_involutive hf
 
+theorem sweepSort_event_compose {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k)
+    {θ₁ θ_e θ₂ : ℝ}
+    (hinj₁ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₁ (L.point a)))
+    (hinj₂ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₂ (L.point a)))
+    (h1e : θ₁ < θ_e) (he2 : θ_e < θ₂) (h_span : θ₂ - θ₁ < Real.pi)
+    (honly_event : ∀ a b : Fin (2 * k), L.point a ≠ L.point b →
+      ∀ θ ∈ Set.Icc θ₁ θ₂, θ ≠ θ_e →
+        orientedLevel θ (L.point a) ≠ orientedLevel θ (L.point b))
+    (hg_mono : Monotone (fun i => orientedLevel θ_e (L.point (sweepSort L θ₁ i)))) :
+    sweepSort L θ₂ =
+      (levelBlockMirrorPerm (fun i => orientedLevel θ_e (L.point (sweepSort L θ₁ i))) hg_mono).trans
+        (sweepSort L θ₁) := by
+  set σ₁ := sweepSort L θ₁
+  set g : Fin (2 * k) → ℝ := fun i => orientedLevel θ_e (L.point (σ₁ i))
+  apply sweepSort_eq_of_strictMono
+  intro i j hij
+  show orientedLevel θ₂ (L.point (σ₁ (levelBlockMirror g i))) <
+    orientedLevel θ₂ (L.point (σ₁ (levelBlockMirror g j)))
+  by_cases hcase : g i = g j
+  · -- Same block: mirror reverses, then event reverses back
+    have hm := levelBlockMirror_reverses_within_block hg_mono hij hcase
+    have hord := sweepSort_strictMono_of_injective L θ₁ hinj₁ hm
+    have hne : L.point (σ₁ (levelBlockMirror g j)) ≠ L.point (σ₁ (levelBlockMirror g i)) :=
+      fun h => ne_of_lt hord (congr_arg (orientedLevel θ₁) h)
+    have htie : orientedLevel θ_e (L.point (σ₁ (levelBlockMirror g j))) =
+        orientedLevel θ_e (L.point (σ₁ (levelBlockMirror g i))) := by
+      show g (levelBlockMirror g j) = g (levelBlockMirror g i)
+      simp only [levelBlockMirror_val hg_mono, hcase]
+    have hne₂ : orientedLevel θ₂ (L.point (σ₁ (levelBlockMirror g j))) ≠
+        orientedLevel θ₂ (L.point (σ₁ (levelBlockMirror g i))) :=
+      fun h => ne_of_lt hm (σ₁.injective (hinj₂ h))
+    exact orientedLevel_order_reversed_at_event hne h1e he2 h_span hord htie hne₂
+  · -- Different blocks: mirror preserves, event preserves
+    have hlt : g i < g j := lt_of_le_of_ne (hg_mono hij.le) hcase
+    have hm := levelBlockMirror_preserves_across_blocks hg_mono hij hlt
+    have hord := sweepSort_strictMono_of_injective L θ₁ hinj₁ hm
+    have hne : L.point (σ₁ (levelBlockMirror g i)) ≠ L.point (σ₁ (levelBlockMirror g j)) :=
+      fun h => ne_of_lt hord (congr_arg (orientedLevel θ₁) h)
+    apply orientedLevel_order_preserved (le_of_lt (lt_trans h1e he2)) hord
+    intro θ hθ
+    rcases eq_or_ne θ θ_e with rfl | hne_θ
+    · exact fun h => ne_of_lt hlt (by
+        have h1 := levelBlockMirror_val hg_mono (f := g) (p := i)
+        have h2 := levelBlockMirror_val hg_mono (f := g) (p := j)
+        change g (levelBlockMirror g i) = g (levelBlockMirror g j) at h
+        linarith)
+    · exact honly_event _ _ hne θ hθ hne_θ
+
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by
   intro hpq

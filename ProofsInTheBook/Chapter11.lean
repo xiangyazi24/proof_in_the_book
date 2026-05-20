@@ -1559,6 +1559,40 @@ def StepCounting.toCountingCertificate {k r : ℕ} {A : GeneralizedAllowableSequ
 
 end GeneralizedAllowableSequence
 
+/-! ### Sweep → GeneralizedAllowableSequence bridge -/
+
+theorem reverseFin_eq_revPerm (N : ℕ) : reverseFin N = Fin.revPerm := rfl
+
+theorem sweepSort_reindex_refl {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) (θ : ℝ) :
+    sweepSort (L.reindex (Equiv.refl _)) θ = sweepSort L θ := rfl
+
+theorem sweepSort_add_pi_eq_reverseFin {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) (θ₀ : ℝ)
+    (hstart : sweepSort L θ₀ = Equiv.refl _)
+    (hinj : Function.Injective (fun a : Fin (2 * k) =>
+      orientedLevel θ₀ (L.point a))) :
+    sweepSort L (θ₀ + Real.pi) = reverseFin (2 * k) := by
+  rw [reverseFin_eq_revPerm]
+  have h := sweepSort_reindex_add_pi_eq_revPerm L θ₀ hinj
+  rwa [hstart, sweepSort_reindex_refl] at h
+
+noncomputable def GeneralizedAllowableSequence.ofSweepAngles
+    {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k)
+    (θ : Fin ((directionsDeterminedBy points).card + 1) → ℝ)
+    (hstart : sweepSort L (θ ⟨0, Nat.succ_pos _⟩) = Equiv.refl _)
+    (hfinish_eq : θ ⟨(directionsDeterminedBy points).card, Nat.lt_succ_self _⟩ =
+      θ ⟨0, Nat.succ_pos _⟩ + Real.pi)
+    (hinj : Function.Injective (fun a : Fin (2 * k) =>
+      orientedLevel (θ ⟨0, Nat.succ_pos _⟩) (L.point a))) :
+    GeneralizedAllowableSequence k (directionsDeterminedBy points).card where
+  π := fun j => sweepSort L (θ j)
+  start := hstart
+  finish := by
+    rw [hfinish_eq]
+    exact sweepSort_add_pi_eq_reverseFin L _ hstart hinj
+
 /-! ### Consecutive block moves -/
 
 /-- A consecutive interval of positions in `Fin N`. -/

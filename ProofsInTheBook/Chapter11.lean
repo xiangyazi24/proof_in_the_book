@@ -2890,6 +2890,38 @@ theorem crossing_blocks_eq {k : ℕ} (M : BlockMove (2 * k))
 
 end BlockMove
 
+/-! ### BlockMove from level function -/
+
+noncomputable def levelBlockMoveInterval {N : ℕ} (g : Fin N → ℝ) (p : Fin N)
+    (hp : (levelBlockLo g p).val < (levelBlockHi g p).val) :
+    PositionInterval N where
+  lo := (levelBlockLo g p).val
+  hi := (levelBlockHi g p).val
+  lo_le_hi := le_of_lt hp
+  hi_lt := (levelBlockHi g p).isLt
+
+theorem levelBlockMoveInterval_nontrivial {N : ℕ} {g : Fin N → ℝ} {p : Fin N}
+    (hp : (levelBlockLo g p).val < (levelBlockHi g p).val) :
+    2 ≤ (levelBlockMoveInterval g p hp).hi - (levelBlockMoveInterval g p hp).lo + 1 := by
+  simp [levelBlockMoveInterval]; omega
+
+theorem levelBlockMoveInterval_disjoint {N : ℕ} {g : Fin N → ℝ} (hg : Monotone g)
+    {p q : Fin N}
+    (hp : (levelBlockLo g p).val < (levelBlockHi g p).val)
+    (hq : (levelBlockLo g q).val < (levelBlockHi g q).val)
+    (hne : g p ≠ g q) :
+    Disjoint (levelBlockMoveInterval g p hp).toSet (levelBlockMoveInterval g q hq).toSet := by
+  intro S hSp hSq
+  simp only [Set.le_eq_subset, Set.bot_eq_empty, Set.subset_empty_iff]
+  ext x; simp only [Set.mem_empty_iff_false, iff_false]
+  intro hx
+  have hxp := hSp hx
+  have hxq := hSq hx
+  simp [PositionInterval.toSet, PositionInterval.Mem, levelBlockMoveInterval] at hxp hxq
+  have h1 := monotone_levelBlock_eq hg (Fin.le_def.mpr hxp.1) (Fin.le_def.mpr hxp.2)
+  have h2 := monotone_levelBlock_eq hg (Fin.le_def.mpr hxq.1) (Fin.le_def.mpr hxq.2)
+  exact hne (h1.symm.trans h2)
+
 /--
 One legal step of a generalized allowable sequence.  The increasing-block
 condition is the finite Goodman--Pollack/Ungar rule before reversal.

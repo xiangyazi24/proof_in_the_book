@@ -515,6 +515,47 @@ theorem sweepSort_eq_of_strictMono {points : Finset Point2} {k : ℕ}
   exact ⟨hstrict.monotone, fun i j hij heq =>
     absurd heq (ne_of_lt (hstrict hij))⟩
 
+/-! ### Level-block extraction from monotone functions -/
+
+noncomputable def levelBlockLo {N : ℕ} (f : Fin N → ℝ) (i : Fin N) : Fin N :=
+  (Finset.univ.filter (fun j : Fin N => f j = f i ∧ j ≤ i)).min'
+    ⟨i, Finset.mem_filter.mpr ⟨Finset.mem_univ _, rfl, le_refl _⟩⟩
+
+noncomputable def levelBlockHi {N : ℕ} (f : Fin N → ℝ) (i : Fin N) : Fin N :=
+  (Finset.univ.filter (fun j : Fin N => f j = f i ∧ i ≤ j)).max'
+    ⟨i, Finset.mem_filter.mpr ⟨Finset.mem_univ _, rfl, le_refl _⟩⟩
+
+private theorem levelBlockLo_mem {N : ℕ} {f : Fin N → ℝ} {i : Fin N} :
+    f (levelBlockLo f i) = f i ∧ levelBlockLo f i ≤ i := by
+  have h := Finset.min'_mem (Finset.univ.filter (fun j : Fin N => f j = f i ∧ j ≤ i))
+    ⟨i, Finset.mem_filter.mpr ⟨Finset.mem_univ _, rfl, le_refl _⟩⟩
+  exact (Finset.mem_filter.mp h).2
+
+theorem levelBlockLo_le {N : ℕ} {f : Fin N → ℝ} {i : Fin N} :
+    levelBlockLo f i ≤ i := levelBlockLo_mem.2
+
+theorem levelBlockLo_val {N : ℕ} {f : Fin N → ℝ} {i : Fin N} :
+    f (levelBlockLo f i) = f i := levelBlockLo_mem.1
+
+private theorem levelBlockHi_mem {N : ℕ} {f : Fin N → ℝ} {i : Fin N} :
+    f (levelBlockHi f i) = f i ∧ i ≤ levelBlockHi f i := by
+  have h := Finset.max'_mem (Finset.univ.filter (fun j : Fin N => f j = f i ∧ i ≤ j))
+    ⟨i, Finset.mem_filter.mpr ⟨Finset.mem_univ _, rfl, le_refl _⟩⟩
+  exact (Finset.mem_filter.mp h).2
+
+theorem levelBlockHi_ge {N : ℕ} {f : Fin N → ℝ} {i : Fin N} :
+    i ≤ levelBlockHi f i := levelBlockHi_mem.2
+
+theorem levelBlockHi_val {N : ℕ} {f : Fin N → ℝ} {i : Fin N} :
+    f (levelBlockHi f i) = f i := levelBlockHi_mem.1
+
+theorem monotone_levelBlock_eq {N : ℕ} {f : Fin N → ℝ} (hf : Monotone f)
+    {i j : Fin N} (hij : levelBlockLo f i ≤ j) (hji : j ≤ levelBlockHi f i) :
+    f j = f i := by
+  linarith [monotone_contiguity hf hij hji
+    (levelBlockLo_val (i := i) |>.trans (levelBlockHi_val (i := i) |>.symm)),
+    levelBlockLo_val (f := f) (i := i)]
+
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by
   intro hpq

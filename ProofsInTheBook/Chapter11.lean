@@ -6410,4 +6410,63 @@ theorem levelBlockMoveOfMonotone_reversesBlocks {N : ℕ} {g : Fin N → ℝ} {h
     exact absurd (mem_levelBlockMoveInterval_of_same_value hg
       (nontrivialLevelRep_block hg hv') hrep_val.symm) (hnot idx)
 
+/-! ### ReversalStep from sweep event -/
+
+private theorem same_g_value_of_same_block {N : ℕ} {g : Fin N → ℝ}
+    (hg : Monotone g) {hnt : (nontrivialLevelValues g).Nonempty}
+    {i : Fin (levelBlockMoveOfMonotone g hg hnt).blockCount}
+    {p q : Fin N}
+    (hp : ((levelBlockMoveOfMonotone g hg hnt).block i).Mem p)
+    (hq : ((levelBlockMoveOfMonotone g hg hnt).block i).Mem q) :
+    g p = g q := by
+  have hrep_block := nontrivialLevelRep_block hg
+    ((nontrivialLevelValues g).equivFin.symm i).property
+  have hp_val := monotone_levelBlock_eq hg (Fin.le_def.mpr hp.1) (Fin.le_def.mpr hp.2)
+  have hq_val := monotone_levelBlock_eq hg (Fin.le_def.mpr hq.1) (Fin.le_def.mpr hq.2)
+  exact hp_val.trans hq_val.symm
+
+noncomputable def sweepReversalStep {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k)
+    {θ₁ θ_e θ₂ θ₀ : ℝ}
+    (hinj₀ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₀ (L.point a)))
+    (hinj₁ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₁ (L.point a)))
+    (hinj₂ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₂ (L.point a)))
+    (hid : sweepSort L θ₀ = Equiv.refl _)
+    (h1e : θ₁ < θ_e) (he2 : θ_e < θ₂) (h_span : θ₂ - θ₁ < Real.pi)
+    (honly_event : ∀ a b : Fin (2 * k), L.point a ≠ L.point b →
+      ∀ θ ∈ Set.Icc θ₁ θ₂, θ ≠ θ_e →
+        orientedLevel θ (L.point a) ≠ orientedLevel θ (L.point b))
+    (hno_tie_0_to_1 : ∀ a b : Fin (2 * k), L.point a ≠ L.point b →
+      orientedLevel θ_e (L.point a) = orientedLevel θ_e (L.point b) →
+        ∀ θ ∈ Set.Icc θ₀ θ₁, orientedLevel θ (L.point a) ≠ orientedLevel θ (L.point b))
+    (h01 : θ₀ ≤ θ₁)
+    (hg_mono : Monotone (fun i => orientedLevel θ_e
+      (L.point (sweepSort L θ₁ i))))
+    (hnt : (nontrivialLevelValues (fun i => orientedLevel θ_e
+      (L.point (sweepSort L θ₁ i)))).Nonempty) :
+    ReversalStep k (sweepSort L θ₁) (sweepSort L θ₂) where
+  move := levelBlockMoveOfMonotone
+    (fun i => orientedLevel θ_e (L.point (sweepSort L θ₁ i))) hg_mono hnt
+  step_apply := by
+    intro p
+    have hcomp := sweepSort_event_compose L hinj₁ hinj₂ h1e he2 h_span honly_event hg_mono
+    show (sweepSort L θ₂) p = (sweepSort L θ₁)
+      ((levelBlockMoveOfMonotone _ hg_mono hnt).map p)
+    simp only [levelBlockMoveOfMonotone]
+    rw [hcomp]; rfl
+  increasing_before := by
+    set g := fun i => orientedLevel θ_e (L.point (sweepSort L θ₁ i))
+    intro i
+    intro p hp q hq hpq
+    simp only [PositionInterval.toSet, Set.mem_setOf_eq] at hp hq
+    have htie : orientedLevel θ_e (L.point (sweepSort L θ₁ p)) =
+        orientedLevel θ_e (L.point (sweepSort L θ₁ q)) :=
+      same_g_value_of_same_block hg_mono hp hq
+    have hstrict := sweepSort_strictMono_of_injective L θ₁ hinj₁ hpq
+    have hne : L.point (sweepSort L θ₁ p) ≠ L.point (sweepSort L θ₁ q) :=
+      fun h => ne_of_lt hstrict (congr_arg (orientedLevel θ₁) h)
+    have hord₀ := orientedLevel_order_preserved_backward h01 hstrict
+      (fun θ hθ => hno_tie_0_to_1 _ _ hne htie θ hθ)
+    exact label_index_lt_of_orientedLevel_lt L θ₀ hid hord₀
+
 end ProofsInTheBook.Chapter11

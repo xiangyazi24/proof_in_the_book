@@ -315,6 +315,34 @@ theorem monotone_contiguity {N : ℕ} {g : Fin N → ℝ}
     (hac : g a = g c) : g a = g b := by
   linarith [hg hab, hg hbc]
 
+theorem neg_of_neg_of_continuousOn_of_no_zero {f : ℝ → ℝ} {a b : ℝ} (hab : a ≤ b)
+    (hcont : ContinuousOn f (Set.Icc a b))
+    (hfa : f a < 0) (hno_zero : ∀ x ∈ Set.Icc a b, f x ≠ 0) :
+    f b < 0 := by
+  by_contra hge
+  push Not at hge
+  have hfb_pos : 0 < f b :=
+    lt_of_le_of_ne hge (Ne.symm (hno_zero b (Set.right_mem_Icc.mpr hab)))
+  exact hno_zero _ (intermediate_value_Icc hab hcont
+    (⟨le_of_lt hfa, le_of_lt hfb_pos⟩ : (0 : ℝ) ∈ Set.Icc (f a) (f b))).choose_spec.1
+    (intermediate_value_Icc hab hcont
+    (⟨le_of_lt hfa, le_of_lt hfb_pos⟩ : (0 : ℝ) ∈ Set.Icc (f a) (f b))).choose_spec.2
+
+theorem orientedLevel_diff_continuous (p q : Point2) :
+    Continuous (fun θ => orientedLevel θ p - orientedLevel θ q) := by
+  simp only [orientedLevel]; fun_prop
+
+theorem orientedLevel_order_preserved {p q : Point2}
+    {θ₁ θ₂ : ℝ} (h12 : θ₁ ≤ θ₂)
+    (hlt : orientedLevel θ₁ p < orientedLevel θ₁ q)
+    (hno_tie : ∀ θ ∈ Set.Icc θ₁ θ₂,
+      orientedLevel θ p ≠ orientedLevel θ q) :
+    orientedLevel θ₂ p < orientedLevel θ₂ q := by
+  have hcont := (orientedLevel_diff_continuous p q).continuousOn (s := Set.Icc θ₁ θ₂)
+  linarith [neg_of_neg_of_continuousOn_of_no_zero h12 hcont (by linarith : (fun θ =>
+    orientedLevel θ p - orientedLevel θ q) θ₁ < 0)
+    (fun x hx h => hno_tie x hx (by linarith))]
+
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by
   intro hpq

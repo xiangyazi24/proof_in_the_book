@@ -695,6 +695,13 @@ theorem levelBlockMirror_involutive {N : ℕ} {f : Fin N → ℝ} (hf : Monotone
   have := (Fin.le_def.mp (levelBlockHi_ge (f := f) (i := p)))
   omega
 
+noncomputable def levelBlockMirrorPerm {N : ℕ} (f : Fin N → ℝ) (hf : Monotone f) :
+    Equiv.Perm (Fin N) where
+  toFun := levelBlockMirror f
+  invFun := levelBlockMirror f
+  left_inv := levelBlockMirror_involutive hf
+  right_inv := levelBlockMirror_involutive hf
+
 theorem left_ne_right_of_noncollinear {p q r : Point2}
     (h : NoncollinearTriple p q r) : p ≠ q := by
   intro hpq

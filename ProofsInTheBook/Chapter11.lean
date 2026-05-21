@@ -7205,4 +7205,29 @@ noncomputable def sweepConcreteGAS {points : Finset Point2} {k : ℕ}
     reversesBlocks := hrev
   }
 
+/-! ### Step directions -/
+
+noncomputable def sweepStepDir (points : Finset Point2)
+    (j : Fin (directionsDeterminedBy points).card) : Direction :=
+  (Finset.mem_image.mp (sortedAngleAt_mem points j)).choose
+
+theorem sweepStepDir_mem (points : Finset Point2)
+    (j : Fin (directionsDeterminedBy points).card) :
+    sweepStepDir points j ∈ directionsDeterminedBy points :=
+  (Finset.mem_image.mp (sortedAngleAt_mem points j)).choose_spec.1
+
+theorem sweepStepDir_angle (points : Finset Point2)
+    (j : Fin (directionsDeterminedBy points).card) :
+    (sweepStepDir points j).angle = sortedAngleAt points j :=
+  (Finset.mem_image.mp (sortedAngleAt_mem points j)).choose_spec.2
+
+theorem sweepStepDir_injective (points : Finset Point2) :
+    Function.Injective (sweepStepDir points) := by
+  intro i j hij
+  have hi := sweepStepDir_angle points i
+  have hj := sweepStepDir_angle points j
+  have hangle_eq : sortedAngleAt points i = sortedAngleAt points j := by
+    rw [← hi, ← hj, hij]
+  exact (sortedAngleAt_strictMono points).injective hangle_eq
+
 end ProofsInTheBook.Chapter11

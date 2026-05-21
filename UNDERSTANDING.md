@@ -310,13 +310,29 @@ property for each sweep event, and the cyclic first/last crossing gap.
 - `sweepGAS`: constructs `GeneralizedAllowableSequence` from sweep (id → reverse)
 - `no_direction_angle_in_open_interval/below_first/above_last`: no-direction lemmas
 
-Remaining for ConcreteGAS:
-1. Span bound (θ₂ - θ₁ < π) — math done, Fin arithmetic tedious
-2. Only-event condition for each step
-3. Assembly of ReversalSteps into ConcreteGAS
-4. BlocksHaveCommonLevel (via orientedLevel = cos * directionLevel)
-5. stepDir_injective (from angular ordering)
-6. CyclicEndGap (via shifted sweep)
+**Sweep construction complete (2026-05-21):** 29 commits, +1080 lines, 0 sorry
+except CyclicEndGap. ALL components proved:
+- `sweepConcreteGAS`: full ConcreteGAS from sweep (with all 12 hypotheses)
+- `sweepConcreteGAS_blocksHaveCommonLevel`: block-level property
+- `sweepStepDir` + `sweepStepDir_injective`: step directions
+- `directionsDeterminedBy_nonempty/card_ge_two_of_noncollinear`: from NoncollinearSet
+- `interEventAngle_span`: θ₂ - θ₁ < π (requires card ≥ 2)
+- `only_event_between_interEventAngles`: single event per step
+- `no_tie_from_start_to_interEvent`: no-tie from θ₀ to inter-event
+- `inj_at_interEventAngle`: injectivity at all inter-event angles
+- `mono_at_event`: monotonicity of level function at events
+- `nontrivial_blocks_at_event`: nontrivial blocks exist
+
+**Single remaining blocker: CyclicEndGap.** Cannot be proved via T/O/C
+persistence alone (reverse/id restore full barrier, giving trivial bounds).
+Requires `CyclicEndGapWitness` via shifted sweep: build a second
+`ConcreteGAS` starting from a different angle (between the last and first
+crossing events), making the cyclic gap an interior gap. Then
+`gap_between_consecutive_crossings` applies. This requires parameterizing
+the sweep construction by starting angle (~300 lines of generalization).
+
+The `evenUngarLevelSweepCertificatePremise` theorem is stated with 1 sorry
+(only CyclicEndGap). Once proved, `ungar_directions_lower_bound` follows.
 
 Current premise:
 

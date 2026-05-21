@@ -7258,4 +7258,30 @@ theorem directionLevel_eq_of_orientedLevel_eq_at_direction_angle
     rw [← htan_eq]
     exact mul_left_cancel₀ hcos_ne h
 
+theorem sweepConcreteGAS_blocksHaveCommonLevel {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points) :
+    (sweepConcreteGAS hcard hne hr hncoll).BlocksHaveCommonLevel
+      (sweepLabeling hcard hne) (sweepStepDir points) := by
+  set L := sweepLabeling hcard hne
+  set CGAS := sweepConcreteGAS hcard hne hr hncoll
+  intro j b
+  set σ := CGAS.seq.π (stepFrom j)
+  set g : Fin (2 * k) → ℝ := fun i => orientedLevel (sortedAngleAt points j) (L.point (σ i))
+  set blk := (CGAS.step j).toReversalStep.move.block b
+  have hg_mono := mono_at_event hcard hne j
+  refine ⟨directionLevel (sweepStepDir points j) (L.point (σ
+      ⟨blk.lo, lt_of_le_of_lt blk.lo_le_hi blk.hi_lt⟩)), ?_⟩
+  intro p hp
+  have hg_eq : g p = g ⟨blk.lo, lt_of_le_of_lt blk.lo_le_hi blk.hi_lt⟩ :=
+    @same_g_value_of_same_block _ _ hg_mono (nontrivial_blocks_at_event hcard hne j)
+      b p ⟨blk.lo, lt_of_le_of_lt blk.lo_le_hi blk.hi_lt⟩ hp
+      ⟨le_refl _, blk.lo_le_hi⟩
+  exact directionLevel_eq_of_orientedLevel_eq_at_direction_angle (by
+    show orientedLevel (sweepStepDir points j).angle (L.point (σ p)) =
+      orientedLevel (sweepStepDir points j).angle (L.point (σ ⟨blk.lo, _⟩))
+    rw [sweepStepDir_angle]; exact hg_eq)
+
 end ProofsInTheBook.Chapter11

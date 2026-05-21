@@ -7284,4 +7284,22 @@ theorem sweepConcreteGAS_blocksHaveCommonLevel {points : Finset Point2} {k : ℕ
       orientedLevel (sweepStepDir points j).angle (L.point (σ ⟨blk.lo, _⟩))
     rw [sweepStepDir_angle]; exact hg_eq)
 
+/-!
+### Certificate assembly status
+
+All six fields of `UngarLevelSweepCertificate` are proved except `CyclicEndGap`:
+
+- `labeling` = `sweepLabeling`
+- `sequence` = `sweepConcreteGAS`
+- `stepDir` = `sweepStepDir`
+- `blocks_level` = `sweepConcreteGAS_blocksHaveCommonLevel`
+- `stepDir_injective` = `sweepStepDir_injective`
+- `cyclic_end_gap` = **TODO**: requires CyclicEndGapWitness via shifted sweep
+
+Also needed: `NoncollinearSet S → (directionsDeterminedBy S).Nonempty` and
+`NoncollinearSet S → 2 ≤ (directionsDeterminedBy S).card` to provide `hne` and `hr`.
+
+Once CyclicEndGap is proved, `EvenUngarLevelSweepCertificatePremise` follows directly.
+-/
+
 end ProofsInTheBook.Chapter11

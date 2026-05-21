@@ -7230,4 +7230,32 @@ theorem sweepStepDir_injective (points : Finset Point2) :
     rw [← hi, ← hj, hij]
   exact (sortedAngleAt_strictMono points).injective hangle_eq
 
+/-! ### BlocksHaveCommonLevel -/
+
+theorem directionLevel_eq_of_orientedLevel_eq_at_direction_angle
+    {d : Direction} {p q : Point2}
+    (h : orientedLevel d.angle p = orientedLevel d.angle q) :
+    directionLevel d p = directionLevel d q := by
+  cases d with
+  | vertical =>
+    simp [orientedLevel, Direction.angle, Real.sin_pi_div_two, Real.cos_pi_div_two] at h
+    simp [directionLevel]; linarith
+  | finite m =>
+    have hcos_ne : Real.cos (Direction.finite m).angle ≠ 0 := by
+      simp only [Direction.angle]
+      split_ifs with h
+      · exact ne_of_gt (Real.cos_arctan_pos m)
+      · rw [Real.cos_add, Real.cos_pi, Real.sin_pi]
+        simp; exact ne_of_lt (Real.cos_arctan_pos m) |>.symm
+    have htan_eq : Direction.finite (Real.tan (Direction.finite m).angle) =
+        Direction.finite m := by
+      congr 1; simp only [Direction.angle]
+      split_ifs with h
+      · exact Real.tan_arctan m
+      · rw [Real.tan_add_pi]; exact Real.tan_arctan m
+    rw [orientedLevel_eq_cos_mul_directionLevel hcos_ne,
+        orientedLevel_eq_cos_mul_directionLevel hcos_ne] at h
+    rw [← htan_eq]
+    exact mul_left_cancel₀ hcos_ne h
+
 end ProofsInTheBook.Chapter11

@@ -7032,10 +7032,19 @@ theorem no_tie_from_start_to_interEvent {points : Finset Point2} {k : ℕ}
     intro heq; linarith [interEventAngle_lt_sortedAngle hne j, hθ.2,
       show (direction (L.point a) (L.point b)).angle = sortedAngleAt points j from hangle_eq]
 
-/-! ### ConcreteGAS assembly -/
+/-! ### Injectivity at inter-event angles -/
 
--- TODO: Assemble sweepReversalStep for each step, prove ReversesBlocks,
--- construct CountedGAS and ConcreteGAS. Then add stepDir, BlocksHaveCommonLevel,
--- stepDir_injective, CyclicEndGap, and eliminate the premise.
+theorem sweepLabeling_inj_at_interEvent {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (j : Fin ((directionsDeterminedBy points).card + 1))
+    (hj0 : 0 ≤ interEventAngle points hne j)
+    (hj_pi : interEventAngle points hne j < Real.pi)
+    (hne_dir : ∀ d ∈ directionsDeterminedBy points,
+      d.angle ≠ interEventAngle points hne j) :
+    Function.Injective (fun a : Fin (2 * k) =>
+      orientedLevel (interEventAngle points hne j)
+        ((sweepLabeling hcard hne).point a)) :=
+  orientedLevel_injective_at_non_direction_angle _ hj0 hj_pi hne_dir
 
 end ProofsInTheBook.Chapter11

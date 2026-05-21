@@ -6978,4 +6978,37 @@ theorem only_event_between_interEventAngles {points : Finset Point2} {k : ℕ}
                   sweepStartAngle_lt_min points hne _ hdir_mem, hθ.2])
     hθ_ne_dir
 
+/-! ### No-tie from θ₀ to inter-event angle -/
+
+theorem no_tie_from_start_to_interEvent {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (j : Fin (directionsDeterminedBy points).card)
+    (a b : Fin (2 * k)) (hab : L.point a ≠ L.point b)
+    (htie : orientedLevel (sortedAngleAt points j) (L.point a) =
+      orientedLevel (sortedAngleAt points j) (L.point b))
+    {θ : ℝ} (hθ : θ ∈ Set.Icc (sweepStartAngle points hne)
+      (interEventAngle points hne ⟨j.val, by omega⟩)) :
+    orientedLevel θ (L.point a) ≠ orientedLevel θ (L.point b) := by
+  have hab' : a ≠ b := fun h => hab (congr_arg L.point h)
+  have hdir_mem := L.direction_mem hab'
+  apply orientedLevel_ne_of_ne_mod_pi hab
+  · linarith [sweepStartAngle_gt_max_sub_pi points hne _ hdir_mem, hθ.1]
+  · linarith [sweepStartAngle_lt_min points hne _ hdir_mem,
+              interEventAngle_le_start_add_pi hne ⟨j.val, by omega⟩, hθ.2]
+  · rcases direction_angle_eq_sortedAngleAt _ hdir_mem with ⟨idx, hangle_eq⟩
+    have htie_at_idx := orientedLevel_eq_at_direction_angle hab
+    rw [show (direction (L.point a) (L.point b)).angle = sortedAngleAt points idx from
+      hangle_eq] at htie_at_idx
+    have hidx_eq_j : idx = j := by
+      by_contra hne_idx
+      exact absurd (orientedLevel_unique_tie_angle hab
+        (sortedAngleAt_nonneg _ _) (sortedAngleAt_lt_pi _ _)
+        (sortedAngleAt_nonneg _ _) (sortedAngleAt_lt_pi _ _)
+        htie_at_idx htie)
+        (fun h => hne_idx (sortedAngleAt_strictMono points |>.injective h))
+    rw [hidx_eq_j] at hangle_eq
+    intro heq; linarith [interEventAngle_lt_sortedAngle hne j, hθ.2,
+      show (direction (L.point a) (L.point b)).angle = sortedAngleAt points j from hangle_eq]
+
 end ProofsInTheBook.Chapter11

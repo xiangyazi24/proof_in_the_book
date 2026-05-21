@@ -6604,4 +6604,70 @@ theorem orientedLevel_injective_at_non_direction_angle {points : Finset Point2} 
       hθ₁ hθ₂ (orientedLevel_eq_at_direction_angle hpq) hab
   exact hne _ hdir_mem hdir_angle
 
+/-! ### Starting angle selection -/
+
+noncomputable def sweepStartAngle (points : Finset Point2)
+    (hne : (directionsDeterminedBy points).Nonempty) : ℝ :=
+  let angles := (directionsDeterminedBy points).image Direction.angle
+  let minA := angles.min' (Finset.Nonempty.image hne _)
+  let maxA := angles.max' (Finset.Nonempty.image hne _)
+  (maxA - Real.pi + minA) / 2
+
+theorem sweepStartAngle_lt_min (points : Finset Point2)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (d : Direction) (hd : d ∈ directionsDeterminedBy points) :
+    sweepStartAngle points hne < d.angle := by
+  simp only [sweepStartAngle]
+  set angles := (directionsDeterminedBy points).image Direction.angle
+  have hmin := Finset.min'_le angles d.angle
+    (Finset.mem_image.mpr ⟨d, hd, rfl⟩)
+  have hmax_lt : angles.max' (Finset.Nonempty.image hne _) < Real.pi := by
+    have hmem := Finset.max'_mem angles (Finset.Nonempty.image hne _)
+    rcases Finset.mem_image.mp hmem with ⟨d', _, h⟩
+    rw [← h] at hmem ⊢; exact d'.angle_lt_pi
+  linarith
+
+theorem sweepStartAngle_gt_max_sub_pi (points : Finset Point2)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (d : Direction) (hd : d ∈ directionsDeterminedBy points) :
+    d.angle - Real.pi < sweepStartAngle points hne := by
+  simp only [sweepStartAngle]
+  set angles := (directionsDeterminedBy points).image Direction.angle
+  have hmax := Finset.le_max' angles d.angle
+    (Finset.mem_image.mpr ⟨d, hd, rfl⟩)
+  have hmin_nonneg : 0 ≤ angles.min' (Finset.Nonempty.image hne _) := by
+    have hmem := Finset.min'_mem angles (Finset.Nonempty.image hne _)
+    rcases Finset.mem_image.mp hmem with ⟨d', _, h⟩
+    rw [← h] at hmem ⊢; exact d'.angle_nonneg
+  linarith
+
+/-! ### Inter-event angles -/
+
+noncomputable def interEventAngle (points : Finset Point2)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (j : Fin ((directionsDeterminedBy points).card + 1)) : ℝ :=
+  let θ₀ := sweepStartAngle points hne
+  if hj0 : j.val = 0 then θ₀
+  else if hjr : j.val = (directionsDeterminedBy points).card then θ₀ + Real.pi
+  else
+    let j_pred : Fin (directionsDeterminedBy points).card :=
+      ⟨j.val - 1, by omega⟩
+    let j_curr : Fin (directionsDeterminedBy points).card :=
+      ⟨j.val, by omega⟩
+    genericAngleBetween (sortedAngleAt points j_pred) (sortedAngleAt points j_curr)
+
+theorem interEventAngle_zero (points : Finset Point2)
+    (hne : (directionsDeterminedBy points).Nonempty) :
+    interEventAngle points hne ⟨0, Nat.succ_pos _⟩ = sweepStartAngle points hne := by
+  simp [interEventAngle]
+
+theorem interEventAngle_last (points : Finset Point2)
+    (hne : (directionsDeterminedBy points).Nonempty) :
+    interEventAngle points hne ⟨(directionsDeterminedBy points).card,
+      Nat.lt_succ_self _⟩ = sweepStartAngle points hne + Real.pi := by
+  simp only [interEventAngle]
+  have : ¬ (directionsDeterminedBy points).card = 0 :=
+    Finset.card_ne_zero.mpr (Finset.nonempty_iff_ne_empty.mp hne)
+  simp [this]
+
 end ProofsInTheBook.Chapter11

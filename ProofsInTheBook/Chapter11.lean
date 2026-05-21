@@ -7011,4 +7011,28 @@ theorem no_tie_from_start_to_interEvent {points : Finset Point2} {k : ℕ}
     intro heq; linarith [interEventAngle_lt_sortedAngle hne j, hθ.2,
       show (direction (L.point a) (L.point b)).angle = sortedAngleAt points j from hangle_eq]
 
+/-! ### Sweep labeling -/
+
+noncomputable def sweepLabeling {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty) :
+    PointLabeling points k :=
+  (PointLabeling.ofCard hcard).reindex (sweepSort (PointLabeling.ofCard hcard)
+    (sweepStartAngle points hne))
+
+theorem sweepLabeling_id {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty) :
+    sweepSort (sweepLabeling hcard hne) (sweepStartAngle points hne) = Equiv.refl _ :=
+  sweepSort_reindex_eq_refl _ _
+
+theorem sweepLabeling_inj {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty) :
+    Function.Injective (fun a : Fin (2 * k) =>
+      orientedLevel (sweepStartAngle points hne) ((sweepLabeling hcard hne).point a)) :=
+  orientedLevel_injective_of_all_angles_between _
+    (fun d hd => sweepStartAngle_gt_max_sub_pi points hne d hd)
+    (fun d hd => sweepStartAngle_lt_min points hne d hd)
+
 end ProofsInTheBook.Chapter11

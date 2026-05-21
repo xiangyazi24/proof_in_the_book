@@ -7032,6 +7032,10 @@ theorem no_tie_from_start_to_interEvent {points : Finset Point2} {k : ℕ}
     intro heq; linarith [interEventAngle_lt_sortedAngle hne j, hθ.2,
       show (direction (L.point a) (L.point b)).angle = sortedAngleAt points j from hangle_eq]
 
-/-! ### Sweep labeling -/
+/-! ### ConcreteGAS assembly -/
+
+-- TODO: Assemble sweepReversalStep for each step, prove ReversesBlocks,
+-- construct CountedGAS and ConcreteGAS. Then add stepDir, BlocksHaveCommonLevel,
+-- stepDir_injective, CyclicEndGap, and eliminate the premise.
 
 end ProofsInTheBook.Chapter11

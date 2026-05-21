@@ -6486,8 +6486,8 @@ theorem sortedDirectionAngles_nodup (points : Finset Point2) :
 
 noncomputable def sortedAngleAt (points : Finset Point2)
     (j : Fin (directionsDeterminedBy points).card) : ℝ :=
-  (sortedDirectionAngles points).get
-    ⟨j.val, by rw [sortedDirectionAngles_length]; exact j.isLt⟩
+  (sortedDirectionAngles points).get ⟨j.val, by
+    have := sortedDirectionAngles_length points; omega⟩
 
 theorem sortedAngleAt_strictMono (points : Finset Point2) :
     StrictMono (sortedAngleAt points) := by
@@ -6613,33 +6613,37 @@ noncomputable def sweepStartAngle (points : Finset Point2)
   let maxA := angles.max' (Finset.Nonempty.image hne _)
   (maxA - Real.pi + minA) / 2
 
+private theorem angles_max_lt_pi (points : Finset Point2)
+    (hne : (directionsDeterminedBy points).Nonempty) :
+    ((directionsDeterminedBy points).image Direction.angle).max'
+      (Finset.Nonempty.image hne _) < Real.pi := by
+  rcases Finset.mem_image.mp (Finset.max'_mem _
+    (Finset.Nonempty.image hne Direction.angle)) with ⟨d', _, h⟩
+  linarith [d'.angle_lt_pi]
+
+private theorem angles_min_nonneg (points : Finset Point2)
+    (hne : (directionsDeterminedBy points).Nonempty) :
+    0 ≤ ((directionsDeterminedBy points).image Direction.angle).min'
+      (Finset.Nonempty.image hne _) := by
+  rcases Finset.mem_image.mp (Finset.min'_mem _
+    (Finset.Nonempty.image hne Direction.angle)) with ⟨d', _, h⟩
+  linarith [d'.angle_nonneg]
+
 theorem sweepStartAngle_lt_min (points : Finset Point2)
     (hne : (directionsDeterminedBy points).Nonempty)
     (d : Direction) (hd : d ∈ directionsDeterminedBy points) :
     sweepStartAngle points hne < d.angle := by
   simp only [sweepStartAngle]
-  set angles := (directionsDeterminedBy points).image Direction.angle
-  have hmin := Finset.min'_le angles d.angle
-    (Finset.mem_image.mpr ⟨d, hd, rfl⟩)
-  have hmax_lt : angles.max' (Finset.Nonempty.image hne _) < Real.pi := by
-    have hmem := Finset.max'_mem angles (Finset.Nonempty.image hne _)
-    rcases Finset.mem_image.mp hmem with ⟨d', _, h⟩
-    rw [← h] at hmem ⊢; exact d'.angle_lt_pi
-  linarith
+  have hmin := Finset.min'_le _ d.angle (Finset.mem_image.mpr ⟨d, hd, rfl⟩)
+  linarith [angles_max_lt_pi points hne, angles_min_nonneg points hne]
 
 theorem sweepStartAngle_gt_max_sub_pi (points : Finset Point2)
     (hne : (directionsDeterminedBy points).Nonempty)
     (d : Direction) (hd : d ∈ directionsDeterminedBy points) :
     d.angle - Real.pi < sweepStartAngle points hne := by
   simp only [sweepStartAngle]
-  set angles := (directionsDeterminedBy points).image Direction.angle
-  have hmax := Finset.le_max' angles d.angle
-    (Finset.mem_image.mpr ⟨d, hd, rfl⟩)
-  have hmin_nonneg : 0 ≤ angles.min' (Finset.Nonempty.image hne _) := by
-    have hmem := Finset.min'_mem angles (Finset.Nonempty.image hne _)
-    rcases Finset.mem_image.mp hmem with ⟨d', _, h⟩
-    rw [← h] at hmem ⊢; exact d'.angle_nonneg
-  linarith
+  have hmax := Finset.le_max' _ d.angle (Finset.mem_image.mpr ⟨d, hd, rfl⟩)
+  linarith [angles_max_lt_pi points hne, angles_min_nonneg points hne]
 
 /-! ### Inter-event angles -/
 
@@ -6667,7 +6671,67 @@ theorem interEventAngle_last (points : Finset Point2)
       Nat.lt_succ_self _⟩ = sweepStartAngle points hne + Real.pi := by
   simp only [interEventAngle]
   have : ¬ (directionsDeterminedBy points).card = 0 :=
-    Finset.card_ne_zero.mpr (Finset.nonempty_iff_ne_empty.mp hne)
+    Finset.card_ne_zero.mpr hne
   simp [this]
+
+/-! ### No-tie conditions between inter-event angles -/
+
+theorem direction_angle_eq_sortedAngleAt {points : Finset Point2}
+    (d : Direction) (hd : d ∈ directionsDeterminedBy points) :
+    ∃ j : Fin (directionsDeterminedBy points).card,
+      d.angle = sortedAngleAt points j := by
+  have hmem := (sortedDirectionAngles_sortedLT points).strictMono_get
+  have hd_mem : d.angle ∈ sortedDirectionAngles points := by
+    rw [sortedDirectionAngles, Finset.mem_sort]
+    exact Finset.mem_image.mpr ⟨d, hd, rfl⟩
+  rcases List.mem_iff_get.mp hd_mem with ⟨⟨i, hi_lt⟩, hi⟩
+  have hi_len : i < (directionsDeterminedBy points).card := by
+    rwa [← sortedDirectionAngles_length]
+  refine ⟨⟨i, hi_len⟩, ?_⟩
+  show d.angle = sortedAngleAt points ⟨i, hi_len⟩
+  unfold sortedAngleAt
+  show d.angle = (sortedDirectionAngles points).get ⟨i, _⟩
+  exact hi.symm
+
+theorem no_direction_angle_in_open_interval {points : Finset Point2}
+    {j : Fin (directionsDeterminedBy points).card}
+    {θ : ℝ}
+    (hj_lt : j.val + 1 < (directionsDeterminedBy points).card)
+    (hlo : sortedAngleAt points j < θ)
+    (hhi : θ < sortedAngleAt points ⟨j.val + 1, hj_lt⟩) :
+    ∀ d ∈ directionsDeterminedBy points, d.angle ≠ θ := by
+  intro d hd hθ_eq
+  rcases direction_angle_eq_sortedAngleAt d hd with ⟨idx, hangle_eq⟩
+  rw [hθ_eq] at hangle_eq
+  rcases lt_trichotomy idx.val j.val with h | h | h
+  · linarith [(sortedAngleAt_strictMono points) (show idx < j from Fin.lt_def.mpr h)]
+  · linarith [show sortedAngleAt points idx = sortedAngleAt points j from
+      congr_arg _ (Fin.ext h)]
+  · linarith [(sortedAngleAt_strictMono points).monotone
+      (show (⟨j.val + 1, hj_lt⟩ : Fin _) ≤ idx from
+        Fin.le_def.mpr (Nat.succ_le_of_lt h))]
+
+theorem no_direction_angle_below_first {points : Finset Point2}
+    (hr : 0 < (directionsDeterminedBy points).card)
+    {θ : ℝ}
+    (hhi : θ < sortedAngleAt points ⟨0, hr⟩) :
+    ∀ d ∈ directionsDeterminedBy points, d.angle ≠ θ := by
+  intro d hd hθ_eq
+  rcases direction_angle_eq_sortedAngleAt d hd with ⟨idx, hangle_eq⟩
+  linarith [(sortedAngleAt_strictMono points).monotone
+    (show (⟨0, hr⟩ : Fin _) ≤ idx from Fin.le_def.mpr (Nat.zero_le _))]
+
+theorem no_direction_angle_above_last {points : Finset Point2}
+    (hr : 0 < (directionsDeterminedBy points).card)
+    {θ : ℝ}
+    (hlo : sortedAngleAt points ⟨(directionsDeterminedBy points).card - 1,
+      Nat.sub_one_lt_of_le hr (le_refl _)⟩ < θ) :
+    ∀ d ∈ directionsDeterminedBy points, d.angle ≠ θ := by
+  intro d hd hθ_eq
+  rcases direction_angle_eq_sortedAngleAt d hd with ⟨idx, hangle_eq⟩
+  linarith [(sortedAngleAt_strictMono points).monotone
+    (show idx ≤ (⟨(directionsDeterminedBy points).card - 1,
+      Nat.sub_one_lt_of_le hr (le_refl _)⟩ : Fin _) from
+      Fin.le_def.mpr (Nat.le_sub_one_of_lt idx.isLt))]
 
 end ProofsInTheBook.Chapter11

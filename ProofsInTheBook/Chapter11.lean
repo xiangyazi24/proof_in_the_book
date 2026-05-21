@@ -7284,6 +7284,24 @@ theorem sweepConcreteGAS_blocksHaveCommonLevel {points : Finset Point2} {k : ℕ
       orientedLevel (sweepStepDir points j).angle (L.point (σ ⟨blk.lo, _⟩))
     rw [sweepStepDir_angle]; exact hg_eq)
 
+theorem directionsDeterminedBy_nonempty_of_noncollinear {points : Finset Point2}
+    (hncoll : NoncollinearSet points) :
+    (directionsDeterminedBy points).Nonempty := by
+  rcases hncoll with ⟨p, hp, q, hq, _, _, hnon⟩
+  exact ⟨direction p q, direction_mem_directionsDeterminedBy hp hq
+    (left_ne_right_of_noncollinear hnon)⟩
+
+theorem directionsDeterminedBy_card_ge_two_of_noncollinear {points : Finset Point2}
+    (hncoll : NoncollinearSet points) :
+    2 ≤ (directionsDeterminedBy points).card := by
+  rcases hncoll with ⟨p, hp, q, hq, r, hr, hnon⟩
+  have hpq := left_ne_right_of_noncollinear hnon
+  have hpr := left_ne_third_of_noncollinear hnon
+  have hdir_ne := directions_from_noncollinear_triple_ne hnon
+  have h1 := direction_mem_directionsDeterminedBy hp hq hpq
+  have h2 := direction_mem_directionsDeterminedBy hp hr hpr
+  exact Finset.one_lt_card.mpr ⟨_, h1, _, h2, hdir_ne⟩
+
 /-!
 ### Certificate assembly status
 

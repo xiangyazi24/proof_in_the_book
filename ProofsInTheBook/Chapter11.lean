@@ -7047,4 +7047,66 @@ theorem sweepLabeling_inj_at_interEvent {points : Finset Point2} {k : ℕ}
         ((sweepLabeling hcard hne).point a)) :=
   orientedLevel_injective_at_non_direction_angle _ hj0 hj_pi hne_dir
 
+/-! ### ConcreteGAS assembly -/
+
+private theorem inj_at_interEventAngle {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (j : Fin ((directionsDeterminedBy points).card + 1)) :
+    Function.Injective (fun a : Fin (2 * k) =>
+      orientedLevel (interEventAngle points hne j)
+        ((sweepLabeling hcard hne).point a)) := by
+  set L := sweepLabeling hcard hne
+  rcases eq_or_ne j.val 0 with hj0 | hj0
+  · have : j = ⟨0, Nat.succ_pos _⟩ := Fin.ext hj0
+    rw [this, interEventAngle_zero]; exact sweepLabeling_inj hcard hne
+  · rcases eq_or_ne j.val (directionsDeterminedBy points).card with hjr | hjr
+    · have : j = ⟨(directionsDeterminedBy points).card, Nat.lt_succ_self _⟩ := Fin.ext hjr
+      rw [this, interEventAngle_last]
+      intro a b hab
+      have hinj₀ := sweepLabeling_inj hcard hne
+      by_contra hneq
+      have h₀ : orientedLevel (sweepStartAngle points hne) (L.point a) =
+          orientedLevel (sweepStartAngle points hne) (L.point b) := by
+        have := orientedLevel_add_pi (sweepStartAngle points hne) (L.point a)
+        have := orientedLevel_add_pi (sweepStartAngle points hne) (L.point b)
+        linarith
+      exact hneq (hinj₀ h₀)
+    · have hj_lt : j.val < (directionsDeterminedBy points).card := by
+        have := j.isLt; omega
+      have hj0' : 0 < j.val := Nat.pos_of_ne_zero hj0
+      have hge : 0 ≤ interEventAngle points hne j := by
+        have hpred : j.val - 1 < (directionsDeterminedBy points).card := by
+          have := j.isLt; omega
+        have hprev := sortedAngle_lt_interEventAngle_succ hne ⟨j.val - 1, hpred⟩
+        have hval_eq : (⟨(⟨j.val - 1, hpred⟩ : Fin _).val + 1,
+            lt_of_eq_of_lt (Nat.succ_pred_eq_of_pos hj0') (j.isLt)⟩ : Fin _) = j :=
+          Fin.ext (Nat.succ_pred_eq_of_pos hj0')
+        rw [hval_eq] at hprev
+        linarith [sortedAngleAt_nonneg points ⟨j.val - 1, hpred⟩]
+      have hlt : interEventAngle points hne j < Real.pi := by
+        linarith [interEventAngle_lt_sortedAngle hne ⟨j.val, hj_lt⟩,
+                  sortedAngleAt_lt_pi points ⟨j.val, hj_lt⟩]
+      exact orientedLevel_injective_at_non_direction_angle L hge hlt (by
+        intro d hd habs
+        rcases direction_angle_eq_sortedAngleAt d hd with ⟨idx, hangle_eq⟩
+        rw [hangle_eq] at habs
+        have hpred' : j.val - 1 < (directionsDeterminedBy points).card := by
+          have := j.isLt; omega
+        have h1 := interEventAngle_lt_sortedAngle hne ⟨j.val, hj_lt⟩
+        have h2 := sortedAngle_lt_interEventAngle_succ hne ⟨j.val - 1, hpred'⟩
+        have hconv' : (⟨(⟨j.val - 1, hpred'⟩ : Fin _).val + 1,
+            lt_of_eq_of_lt (Nat.succ_pred_eq_of_pos hj0') (Nat.lt_succ_of_lt hj_lt)⟩ :
+            Fin _) = j := Fin.ext (Nat.succ_pred_eq_of_pos hj0')
+        rw [hconv'] at h2
+        rcases lt_trichotomy idx.val j.val with h | h | h
+        · linarith [(sortedAngleAt_strictMono points).monotone
+              (show idx ≤ ⟨j.val - 1, hpred'⟩ from
+                Fin.le_def.mpr (Nat.le_sub_one_of_lt h))]
+        · have : idx = ⟨j.val, hj_lt⟩ := Fin.ext h
+          linarith [show sortedAngleAt points idx = sortedAngleAt points ⟨j.val, hj_lt⟩ from
+            congr_arg _ this]
+        · linarith [(sortedAngleAt_strictMono points)
+            (show (⟨j.val, hj_lt⟩ : Fin _) < idx from Fin.lt_def.mpr h)])
+
 end ProofsInTheBook.Chapter11

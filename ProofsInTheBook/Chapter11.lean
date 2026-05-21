@@ -7131,4 +7131,42 @@ private theorem mono_at_event {points : Finset Point2} {k : ℕ}
         (sortedAngle_lt_interEventAngle_succ hne j))⟩
       (ne_of_lt hθ_range.2)
 
+private theorem nontrivial_blocks_at_event {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (j : Fin (directionsDeterminedBy points).card) :
+    (nontrivialLevelValues (fun i => orientedLevel (sortedAngleAt points j)
+      ((sweepLabeling hcard hne).point
+        (sweepSort (sweepLabeling hcard hne)
+          (interEventAngle points hne ⟨j.val, by omega⟩) i)))).Nonempty := by
+  set L := sweepLabeling hcard hne
+  set g : Fin (2 * k) → ℝ := fun i => orientedLevel (sortedAngleAt points j)
+    (L.point (sweepSort L (interEventAngle points hne ⟨j.val, by omega⟩) i))
+  set σ := sweepSort L (interEventAngle points hne ⟨j.val, by omega⟩)
+  rcases Finset.mem_image.mp (sortedAngleAt_mem points j) with ⟨d, hd, hangle⟩
+  rcases (mem_directionsDeterminedBy_iff_exists_equal_level).mp hd with
+    ⟨p, hp, q, hq, hpq_ne, hlevel⟩
+  rcases L.point_surjective_on p hp with ⟨a, ha⟩
+  rcases L.point_surjective_on q hq with ⟨b, hb⟩
+  have hab : a ≠ b := fun h => hpq_ne (by rw [← ha, ← hb, h])
+  have hdir_eq : direction p q = d := direction_eq_of_directionLevel_eq hpq_ne hlevel
+  have htie_pq := orientedLevel_eq_at_direction_angle hpq_ne
+  rw [hdir_eq, hangle] at htie_pq
+  have htie : g (σ.symm a) = g (σ.symm b) := by
+    show orientedLevel _ (L.point (σ (σ.symm a))) =
+      orientedLevel _ (L.point (σ (σ.symm b)))
+    simp only [Equiv.apply_symm_apply, ha, hb]; exact htie_pq
+  have hii' : σ.symm a ≠ σ.symm b := fun h => hab (σ.symm.injective h)
+  rcases lt_or_gt_of_ne hii' with h | h
+  · have hhi_ge : σ.symm b ≤ levelBlockHi g (σ.symm a) :=
+      le_levelBlockHi_of_monotone_eq' (mono_at_event hcard hne j) htie.symm
+    have hlt : (levelBlockLo g (σ.symm a)).val < (levelBlockHi g (σ.symm a)).val :=
+      lt_of_le_of_lt (Fin.le_def.mp (levelBlockLo_le (f := g))) (lt_of_lt_of_le h (Fin.le_def.mp hhi_ge))
+    exact ⟨g (σ.symm a), mem_nontrivialLevelValues_of_nontrivial_block hlt⟩
+  · have hhi_ge : σ.symm a ≤ levelBlockHi g (σ.symm b) :=
+      le_levelBlockHi_of_monotone_eq' (mono_at_event hcard hne j) htie
+    have hlt : (levelBlockLo g (σ.symm b)).val < (levelBlockHi g (σ.symm b)).val :=
+      lt_of_le_of_lt (Fin.le_def.mp (levelBlockLo_le (f := g))) (lt_of_lt_of_le h (Fin.le_def.mp hhi_ge))
+    exact ⟨g (σ.symm b), mem_nontrivialLevelValues_of_nontrivial_block hlt⟩
+
 end ProofsInTheBook.Chapter11

@@ -6517,4 +6517,50 @@ theorem sortedAngleAt_lt_pi (points : Finset Point2)
   rcases Finset.mem_image.mp (sortedAngleAt_mem points j) with ⟨d, _, hangle⟩
   rw [← hangle]; exact d.angle_lt_pi
 
+theorem orientedLevel_injective_at_non_direction_angle {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) {θ : ℝ}
+    (hθ₁ : 0 ≤ θ) (hθ₂ : θ < Real.pi)
+    (hne : ∀ d ∈ directionsDeterminedBy points, d.angle ≠ θ) :
+    Function.Injective (fun a : Fin (2 * k) => orientedLevel θ (L.point a)) := by
+  intro a b hab
+  by_contra hneq
+  have hab' : a ≠ b := fun h => by subst h; exact hneq rfl
+  have hpq : L.point a ≠ L.point b := fun h => hab' (L.point_injective h)
+  have hdir_mem := L.direction_mem hab'
+  have hlevel : directionLevel (direction (L.point a) (L.point b))
+      (L.point a) = directionLevel (direction (L.point a) (L.point b)) (L.point b) :=
+    directionLevel_eq_of_direction_eq rfl
+  have hab_eq : orientedLevel θ (L.point a) = orientedLevel θ (L.point b) := hab
+  have htie_at_dir : orientedLevel (direction (L.point a) (L.point b)).angle
+      (L.point a) = orientedLevel (direction (L.point a) (L.point b)).angle (L.point b) := by
+    cases hd : direction (L.point a) (L.point b) with
+    | vertical =>
+      simp only [Direction.angle]
+      simp [orientedLevel, Real.sin_pi_div_two, Real.cos_pi_div_two]
+      have : (L.point a).1 = (L.point b).1 := by
+        unfold direction at hd; split_ifs at hd with hx; exact hx
+      linarith
+    | finite m =>
+      have hcos_ne : Real.cos (Direction.finite m).angle ≠ 0 := by
+        simp only [Direction.angle]
+        split_ifs with h
+        · exact ne_of_gt (Real.cos_arctan_pos m)
+        · rw [Real.cos_add, Real.cos_pi, Real.sin_pi]
+          simp; exact ne_of_lt (Real.cos_arctan_pos m) |>.symm
+      have htan_eq : Direction.finite (Real.tan (Direction.finite m).angle) =
+          Direction.finite m := by
+        congr 1; simp only [Direction.angle]
+        split_ifs with h
+        · exact Real.tan_arctan m
+        · rw [Real.tan_add_pi]; exact Real.tan_arctan m
+      have hlevel_m := directionLevel_eq_of_direction_eq hd
+      rw [orientedLevel_eq_cos_mul_directionLevel hcos_ne,
+          orientedLevel_eq_cos_mul_directionLevel hcos_ne,
+          htan_eq]
+      exact congrArg _ hlevel_m
+  have hdir_angle : (direction (L.point a) (L.point b)).angle = θ :=
+    orientedLevel_unique_tie_angle hpq (Direction.angle_nonneg _) (Direction.angle_lt_pi _)
+      hθ₁ hθ₂ htie_at_dir hab_eq
+  exact hne _ hdir_mem hdir_angle
+
 end ProofsInTheBook.Chapter11

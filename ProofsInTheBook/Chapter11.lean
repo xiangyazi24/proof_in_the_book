@@ -7109,4 +7109,26 @@ private theorem inj_at_interEventAngle {points : Finset Point2} {k : ℕ}
         · linarith [(sortedAngleAt_strictMono points)
             (show (⟨j.val, hj_lt⟩ : Fin _) < idx from Fin.lt_def.mpr h)])
 
+/-! ### Monotonicity and nontrivial blocks at events -/
+
+private theorem mono_at_event {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (j : Fin (directionsDeterminedBy points).card) :
+    Monotone (fun i => orientedLevel (sortedAngleAt points j)
+      ((sweepLabeling hcard hne).point
+        (sweepSort (sweepLabeling hcard hne)
+          (interEventAngle points hne ⟨j.val, by omega⟩) i))) := by
+  apply sweepSort_event_level_monotone
+  · exact inj_at_interEventAngle hcard hne ⟨j.val, by omega⟩
+  · exact le_of_lt (interEventAngle_lt_sortedAngle hne j)
+  · intro a b hab θ hθ
+    have hθ_range : θ ∈ Set.Ioo (interEventAngle points hne ⟨j.val, by omega⟩)
+        (sortedAngleAt points j) := hθ
+    exact only_event_between_interEventAngles (sweepLabeling hcard hne) hne j a b
+      (fun h => hab ((sweepLabeling hcard hne).point_injective h))
+      ⟨le_of_lt hθ_range.1, le_of_lt (lt_trans hθ_range.2
+        (sortedAngle_lt_interEventAngle_succ hne j))⟩
+      (ne_of_lt hθ_range.2)
+
 end ProofsInTheBook.Chapter11

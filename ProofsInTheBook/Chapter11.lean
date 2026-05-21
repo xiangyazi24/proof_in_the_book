@@ -7169,4 +7169,40 @@ private theorem nontrivial_blocks_at_event {points : Finset Point2} {k : ℕ}
       lt_of_le_of_lt (Fin.le_def.mp (levelBlockLo_le (f := g))) (lt_of_lt_of_le h (Fin.le_def.mp hhi_ge))
     exact ⟨g (σ.symm b), mem_nontrivialLevelValues_of_nontrivial_block hlt⟩
 
+/-! ### ConcreteGAS assembly -/
+
+noncomputable def sweepConcreteGAS {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points) :
+    ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy points).card := by
+  set L := sweepLabeling hcard hne
+  set A := sweepGAS hcard hne hncoll
+  let step : ∀ j : Fin (directionsDeterminedBy points).card,
+      ReversalStep k (A.π (stepFrom j)) (A.π (stepTo j)) :=
+    fun j => sweepReversalStep L
+      (sweepLabeling_inj hcard hne)
+      (inj_at_interEventAngle hcard hne ⟨j.val, by omega⟩)
+      (inj_at_interEventAngle hcard hne ⟨j.val + 1, by omega⟩)
+      (sweepLabeling_id hcard hne)
+      (interEventAngle_lt_sortedAngle hne j)
+      (sortedAngle_lt_interEventAngle_succ hne j)
+      (interEventAngle_span hne hr j)
+      (fun a b hab θ hθ hθ_ne =>
+        only_event_between_interEventAngles L hne j a b hab hθ hθ_ne)
+      (fun a b hab htie θ hθ =>
+        no_tie_from_start_to_interEvent L hne j a b hab htie hθ)
+      (sweepStartAngle_le_interEventAngle hne (stepFrom j))
+      (mono_at_event hcard hne j)
+      (nontrivial_blocks_at_event hcard hne j)
+  let hrev : ∀ j, (step j).move.ReversesBlocks :=
+    fun j => @levelBlockMoveOfMonotone_reversesBlocks _ _ (mono_at_event hcard hne j)
+      (nontrivial_blocks_at_event hcard hne j)
+  exact {
+    toCountedGeneralizedAllowableSequence :=
+      CountedGeneralizedAllowableSequence.ofReversesBlocks A step hrev
+    reversesBlocks := hrev
+  }
+
 end ProofsInTheBook.Chapter11

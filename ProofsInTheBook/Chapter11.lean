@@ -6734,4 +6734,26 @@ theorem no_direction_angle_above_last {points : Finset Point2}
       Nat.sub_one_lt_of_le hr (le_refl _)⟩ : Fin _) from
       Fin.le_def.mpr (Nat.le_sub_one_of_lt idx.isLt))]
 
+/-! ### GAS from sweep -/
+
+noncomputable def sweepGAS {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hncoll : NoncollinearSet points) :
+    GeneralizedAllowableSequence k (directionsDeterminedBy points).card := by
+  set θ₀ := sweepStartAngle points hne
+  set L₀ := PointLabeling.ofCard hcard
+  set L := L₀.reindex (sweepSort L₀ θ₀)
+  have hinj₀ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₀ (L.point a)) :=
+    orientedLevel_injective_of_all_angles_between L
+      (fun d hd => sweepStartAngle_gt_max_sub_pi points hne d hd)
+      (fun d hd => sweepStartAngle_lt_min points hne d hd)
+  have hid : sweepSort L θ₀ = Equiv.refl _ :=
+    sweepSort_reindex_eq_refl L₀ θ₀
+  exact GeneralizedAllowableSequence.ofSweepAngles L
+    (interEventAngle points hne)
+    (by rw [interEventAngle_zero]; exact hid)
+    (by rw [interEventAngle_last, interEventAngle_zero])
+    (by rw [interEventAngle_zero]; exact hinj₀)
+
 end ProofsInTheBook.Chapter11

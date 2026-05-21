@@ -6734,27 +6734,48 @@ theorem no_direction_angle_above_last {points : Finset Point2}
       Nat.sub_one_lt_of_le hr (le_refl _)⟩ : Fin _) from
       Fin.le_def.mpr (Nat.le_sub_one_of_lt idx.isLt))]
 
-/-! ### GAS from sweep -/
+/-! ### Sweep labeling and GAS -/
+
+noncomputable def sweepLabeling {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty) :
+    PointLabeling points k :=
+  (PointLabeling.ofCard hcard).reindex (sweepSort (PointLabeling.ofCard hcard)
+    (sweepStartAngle points hne))
+
+theorem sweepLabeling_id {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty) :
+    sweepSort (sweepLabeling hcard hne) (sweepStartAngle points hne) = Equiv.refl _ :=
+  sweepSort_reindex_eq_refl _ _
+
+theorem sweepLabeling_inj {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty) :
+    Function.Injective (fun a : Fin (2 * k) =>
+      orientedLevel (sweepStartAngle points hne) ((sweepLabeling hcard hne).point a)) :=
+  orientedLevel_injective_of_all_angles_between _
+    (fun d hd => sweepStartAngle_gt_max_sub_pi points hne d hd)
+    (fun d hd => sweepStartAngle_lt_min points hne d hd)
 
 noncomputable def sweepGAS {points : Finset Point2} {k : ℕ}
     (hcard : points.card = 2 * k)
     (hne : (directionsDeterminedBy points).Nonempty)
-    (hncoll : NoncollinearSet points) :
-    GeneralizedAllowableSequence k (directionsDeterminedBy points).card := by
-  set θ₀ := sweepStartAngle points hne
-  set L₀ := PointLabeling.ofCard hcard
-  set L := L₀.reindex (sweepSort L₀ θ₀)
-  have hinj₀ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₀ (L.point a)) :=
-    orientedLevel_injective_of_all_angles_between L
-      (fun d hd => sweepStartAngle_gt_max_sub_pi points hne d hd)
-      (fun d hd => sweepStartAngle_lt_min points hne d hd)
-  have hid : sweepSort L θ₀ = Equiv.refl _ :=
-    sweepSort_reindex_eq_refl L₀ θ₀
-  exact GeneralizedAllowableSequence.ofSweepAngles L
+    (_hncoll : NoncollinearSet points) :
+    GeneralizedAllowableSequence k (directionsDeterminedBy points).card :=
+  GeneralizedAllowableSequence.ofSweepAngles (sweepLabeling hcard hne)
     (interEventAngle points hne)
-    (by rw [interEventAngle_zero]; exact hid)
+    (by rw [interEventAngle_zero]; exact sweepLabeling_id hcard hne)
     (by rw [interEventAngle_last, interEventAngle_zero])
-    (by rw [interEventAngle_zero]; exact hinj₀)
+    (by rw [interEventAngle_zero]; exact sweepLabeling_inj hcard hne)
+
+theorem sweepGAS_π {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hncoll : NoncollinearSet points)
+    (j : Fin ((directionsDeterminedBy points).card + 1)) :
+    (sweepGAS hcard hne hncoll).π j =
+      sweepSort (sweepLabeling hcard hne) (interEventAngle points hne j) := rfl
 
 /-! ### Inter-event angle ordering -/
 
@@ -7012,27 +7033,5 @@ theorem no_tie_from_start_to_interEvent {points : Finset Point2} {k : ℕ}
       show (direction (L.point a) (L.point b)).angle = sortedAngleAt points j from hangle_eq]
 
 /-! ### Sweep labeling -/
-
-noncomputable def sweepLabeling {points : Finset Point2} {k : ℕ}
-    (hcard : points.card = 2 * k)
-    (hne : (directionsDeterminedBy points).Nonempty) :
-    PointLabeling points k :=
-  (PointLabeling.ofCard hcard).reindex (sweepSort (PointLabeling.ofCard hcard)
-    (sweepStartAngle points hne))
-
-theorem sweepLabeling_id {points : Finset Point2} {k : ℕ}
-    (hcard : points.card = 2 * k)
-    (hne : (directionsDeterminedBy points).Nonempty) :
-    sweepSort (sweepLabeling hcard hne) (sweepStartAngle points hne) = Equiv.refl _ :=
-  sweepSort_reindex_eq_refl _ _
-
-theorem sweepLabeling_inj {points : Finset Point2} {k : ℕ}
-    (hcard : points.card = 2 * k)
-    (hne : (directionsDeterminedBy points).Nonempty) :
-    Function.Injective (fun a : Fin (2 * k) =>
-      orientedLevel (sweepStartAngle points hne) ((sweepLabeling hcard hne).point a)) :=
-  orientedLevel_injective_of_all_angles_between _
-    (fun d hd => sweepStartAngle_gt_max_sub_pi points hne d hd)
-    (fun d hd => sweepStartAngle_lt_min points hne d hd)
 
 end ProofsInTheBook.Chapter11

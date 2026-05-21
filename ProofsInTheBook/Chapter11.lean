@@ -6517,6 +6517,78 @@ theorem sortedAngleAt_lt_pi (points : Finset Point2)
   rcases Finset.mem_image.mp (sortedAngleAt_mem points j) with ⟨d, _, hangle⟩
   rw [← hangle]; exact d.angle_lt_pi
 
+theorem orientedLevel_eq_at_direction_angle {p q : Point2} (hpq : p ≠ q) :
+    orientedLevel (direction p q).angle p = orientedLevel (direction p q).angle q := by
+  cases hd : direction p q with
+  | vertical =>
+    simp only [Direction.angle]
+    simp [orientedLevel, Real.sin_pi_div_two, Real.cos_pi_div_two]
+    have : p.1 = q.1 := by unfold direction at hd; split_ifs at hd with hx; exact hx
+    linarith
+  | finite m =>
+    have hcos_ne : Real.cos (Direction.finite m).angle ≠ 0 := by
+      simp only [Direction.angle]
+      split_ifs with h
+      · exact ne_of_gt (Real.cos_arctan_pos m)
+      · rw [Real.cos_add, Real.cos_pi, Real.sin_pi]
+        simp; exact ne_of_lt (Real.cos_arctan_pos m) |>.symm
+    have htan_eq : Direction.finite (Real.tan (Direction.finite m).angle) =
+        Direction.finite m := by
+      congr 1; simp only [Direction.angle]
+      split_ifs with h
+      · exact Real.tan_arctan m
+      · rw [Real.tan_add_pi]; exact Real.tan_arctan m
+    rw [orientedLevel_eq_cos_mul_directionLevel hcos_ne,
+        orientedLevel_eq_cos_mul_directionLevel hcos_ne, htan_eq]
+    exact congrArg _ (directionLevel_eq_of_direction_eq hd)
+
+private theorem orientedLevel_sub_zero_at_direction_angle' {p q : Point2} (hpq : p ≠ q) :
+    -(p.1 - q.1) * Real.sin (direction p q).angle +
+      (p.2 - q.2) * Real.cos (direction p q).angle = 0 := by
+  have h := orientedLevel_sub_eq (direction p q).angle p q
+  linarith [orientedLevel_eq_at_direction_angle hpq]
+
+theorem orientedLevel_ne_of_angle_between {p q : Point2} (hpq : p ≠ q)
+    {θ₀ : ℝ}
+    (hlo : (direction p q).angle - Real.pi < θ₀)
+    (hhi : θ₀ < (direction p q).angle) :
+    orientedLevel θ₀ p ≠ orientedLevel θ₀ q := by
+  intro htie
+  have hzero_d := orientedLevel_sub_zero_at_direction_angle' hpq
+  have hprod := sinusoid_product_formula hzero_d (θ₁ := θ₀) (θ₂ := θ₀)
+  have hzero₀ : -(p.1 - q.1) * Real.sin θ₀ + (p.2 - q.2) * Real.cos θ₀ = 0 := by
+    have := orientedLevel_sub_eq θ₀ p q; linarith
+  have hsin_neg : Real.sin (θ₀ - (direction p q).angle) < 0 :=
+    Real.sin_neg_of_neg_of_neg_pi_lt (by linarith) (by linarith)
+  have hpq_ne : -(p.1 - q.1) ≠ 0 ∨ (p.2 - q.2) ≠ 0 := by
+    by_contra h; push_neg at h
+    exact hpq (Prod.ext (by linarith [h.1]) (by linarith [h.2]))
+  have h_sq_pos : 0 < (-(p.1 - q.1)) ^ 2 + (p.2 - q.2) ^ 2 := by
+    rcases hpq_ne with ha | hb <;> positivity
+  have hsin_sq_pos : 0 < Real.sin (θ₀ - (direction p q).angle) *
+      Real.sin (θ₀ - (direction p q).angle) :=
+    mul_pos_of_neg_of_neg hsin_neg hsin_neg
+  have h_rhs_pos : 0 < ((-(p.1 - q.1)) ^ 2 + (p.2 - q.2) ^ 2) *
+      (Real.sin (θ₀ - (direction p q).angle) * Real.sin (θ₀ - (direction p q).angle)) :=
+    mul_pos h_sq_pos hsin_sq_pos
+  have h_lhs_zero : (-(p.1 - q.1) * Real.sin θ₀ + (p.2 - q.2) * Real.cos θ₀) *
+      (-(p.1 - q.1) * Real.sin θ₀ + (p.2 - q.2) * Real.cos θ₀) = 0 := by
+    rw [hzero₀]; ring
+  nlinarith [hprod, h_lhs_zero, h_rhs_pos]
+
+theorem orientedLevel_injective_of_all_angles_between {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k)
+    {θ₀ : ℝ}
+    (hlo : ∀ d ∈ directionsDeterminedBy points, d.angle - Real.pi < θ₀)
+    (hhi : ∀ d ∈ directionsDeterminedBy points, θ₀ < d.angle) :
+    Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₀ (L.point a)) := by
+  intro a b hab
+  by_contra hne
+  have hab' : a ≠ b := fun h => by subst h; exact hne rfl
+  have hpq : L.point a ≠ L.point b := fun h => hab' (L.point_injective h)
+  have hdir_mem := L.direction_mem hab'
+  exact orientedLevel_ne_of_angle_between hpq (hlo _ hdir_mem) (hhi _ hdir_mem) hab
+
 theorem orientedLevel_injective_at_non_direction_angle {points : Finset Point2} {k : ℕ}
     (L : PointLabeling points k) {θ : ℝ}
     (hθ₁ : 0 ≤ θ) (hθ₂ : θ < Real.pi)
@@ -6527,40 +6599,9 @@ theorem orientedLevel_injective_at_non_direction_angle {points : Finset Point2} 
   have hab' : a ≠ b := fun h => by subst h; exact hneq rfl
   have hpq : L.point a ≠ L.point b := fun h => hab' (L.point_injective h)
   have hdir_mem := L.direction_mem hab'
-  have hlevel : directionLevel (direction (L.point a) (L.point b))
-      (L.point a) = directionLevel (direction (L.point a) (L.point b)) (L.point b) :=
-    directionLevel_eq_of_direction_eq rfl
-  have hab_eq : orientedLevel θ (L.point a) = orientedLevel θ (L.point b) := hab
-  have htie_at_dir : orientedLevel (direction (L.point a) (L.point b)).angle
-      (L.point a) = orientedLevel (direction (L.point a) (L.point b)).angle (L.point b) := by
-    cases hd : direction (L.point a) (L.point b) with
-    | vertical =>
-      simp only [Direction.angle]
-      simp [orientedLevel, Real.sin_pi_div_two, Real.cos_pi_div_two]
-      have : (L.point a).1 = (L.point b).1 := by
-        unfold direction at hd; split_ifs at hd with hx; exact hx
-      linarith
-    | finite m =>
-      have hcos_ne : Real.cos (Direction.finite m).angle ≠ 0 := by
-        simp only [Direction.angle]
-        split_ifs with h
-        · exact ne_of_gt (Real.cos_arctan_pos m)
-        · rw [Real.cos_add, Real.cos_pi, Real.sin_pi]
-          simp; exact ne_of_lt (Real.cos_arctan_pos m) |>.symm
-      have htan_eq : Direction.finite (Real.tan (Direction.finite m).angle) =
-          Direction.finite m := by
-        congr 1; simp only [Direction.angle]
-        split_ifs with h
-        · exact Real.tan_arctan m
-        · rw [Real.tan_add_pi]; exact Real.tan_arctan m
-      have hlevel_m := directionLevel_eq_of_direction_eq hd
-      rw [orientedLevel_eq_cos_mul_directionLevel hcos_ne,
-          orientedLevel_eq_cos_mul_directionLevel hcos_ne,
-          htan_eq]
-      exact congrArg _ hlevel_m
   have hdir_angle : (direction (L.point a) (L.point b)).angle = θ :=
     orientedLevel_unique_tie_angle hpq (Direction.angle_nonneg _) (Direction.angle_lt_pi _)
-      hθ₁ hθ₂ htie_at_dir hab_eq
+      hθ₁ hθ₂ (orientedLevel_eq_at_direction_angle hpq) hab
   exact hne _ hdir_mem hdir_angle
 
 end ProofsInTheBook.Chapter11

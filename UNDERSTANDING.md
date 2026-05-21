@@ -297,6 +297,27 @@ T/O/C gaps are proved; the remaining geometric content is the actual sweep
 construction, injectivity of the step directions, the same-level block
 property for each sweep event, and the cyclic first/last crossing gap.
 
+**Sweep construction progress (2026-05-20):** Major infrastructure added:
+- `levelBlockMoveOfMonotone` + `ReversesBlocks`: builds `BlockMove` from monotone level function
+- `sweepReversalStep`: builds `ReversalStep` from sweep event (with `increasing_before`)
+- `orientedLevel_eq_at_direction_angle`: proves tie at direction angle
+- `orientedLevel_ne_of_angle_between`: proves non-tie between consecutive zeros
+- `orientedLevel_injective_of_all_angles_between`: θ₀ injectivity (θ₀ < 0)
+- `orientedLevel_injective_at_non_direction_angle`: injectivity in [0, π)
+- `sweepStartAngle` + bounds: angle selection
+- `sortedAngleAt` + strict mono: direction enumeration
+- `interEventAngle` + ordering: inter-event angle infrastructure
+- `sweepGAS`: constructs `GeneralizedAllowableSequence` from sweep (id → reverse)
+- `no_direction_angle_in_open_interval/below_first/above_last`: no-direction lemmas
+
+Remaining for ConcreteGAS:
+1. Span bound (θ₂ - θ₁ < π) — math done, Fin arithmetic tedious
+2. Only-event condition for each step
+3. Assembly of ReversalSteps into ConcreteGAS
+4. BlocksHaveCommonLevel (via orientedLevel = cos * directionLevel)
+5. stepDir_injective (from angular ordering)
+6. CyclicEndGap (via shifted sweep)
+
 Current premise:
 
 ```lean

@@ -6800,4 +6800,93 @@ theorem sortedAngle_lt_interEventAngle_succ {points : Finset Point2}
 
 /-! ### Span and bounds for inter-event angles -/
 
+theorem interEventAngle_le_start_add_pi {points : Finset Point2}
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (j : Fin ((directionsDeterminedBy points).card + 1)) :
+    interEventAngle points hne j ≤ sweepStartAngle points hne + Real.pi := by
+  rcases eq_or_ne j.val (directionsDeterminedBy points).card with hjr | hjr
+  · rw [show j = ⟨_, Nat.lt_succ_self _⟩ from Fin.ext hjr, interEventAngle_last]
+  · have hj_lt : j.val < (directionsDeterminedBy points).card := by
+      have := j.isLt; omega
+    have h := interEventAngle_lt_sortedAngle hne ⟨j.val, hj_lt⟩
+    rcases Finset.mem_image.mp (sortedAngleAt_mem points ⟨j.val, hj_lt⟩) with ⟨d, hd, hangle⟩
+    have : (⟨j.val, (by omega : j.val < _ + 1)⟩ : Fin _) = j := Fin.ext rfl
+    rw [this] at h
+    linarith [sweepStartAngle_gt_max_sub_pi points hne d hd,
+              sortedAngleAt_lt_pi points ⟨j.val, hj_lt⟩]
+
+theorem sweepStartAngle_le_interEventAngle {points : Finset Point2}
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (j : Fin ((directionsDeterminedBy points).card + 1)) :
+    sweepStartAngle points hne ≤ interEventAngle points hne j := by
+  rcases eq_or_ne j.val 0 with hj0 | hj0
+  · rw [show j = ⟨0, Nat.succ_pos _⟩ from Fin.ext hj0, interEventAngle_zero]
+  · rcases eq_or_ne j.val (directionsDeterminedBy points).card with hjr | hjr
+    · rw [show j = ⟨_, Nat.lt_succ_self _⟩ from Fin.ext hjr, interEventAngle_last]
+      linarith [Real.pi_pos]
+    · have hj_pos := Nat.pos_of_ne_zero hj0
+      have hj_lt : j.val < (directionsDeterminedBy points).card := by
+        have := j.isLt; omega
+      have hj_pred_lt : j.val - 1 < (directionsDeterminedBy points).card := by omega
+      rcases Finset.mem_image.mp (sortedAngleAt_mem points
+        ⟨j.val - 1, hj_pred_lt⟩) with ⟨d, hd, hangle⟩
+      have hprev := sortedAngle_lt_interEventAngle_succ hne ⟨j.val - 1, hj_pred_lt⟩
+      have hfin_eq : (⟨(⟨j.val - 1, hj_pred_lt⟩ : Fin _).val + 1,
+          (by have := j.isLt; have := hj_pos; omega :
+            (⟨j.val - 1, hj_pred_lt⟩ : Fin _).val + 1 <
+              (directionsDeterminedBy points).card + 1)⟩ :
+          Fin ((directionsDeterminedBy points).card + 1)) = j :=
+        Fin.ext (Nat.succ_pred_eq_of_pos hj_pos)
+      rw [hfin_eq] at hprev
+      linarith [sweepStartAngle_lt_min points hne d hd]
+
+theorem interEventAngle_span {points : Finset Point2}
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (j : Fin (directionsDeterminedBy points).card) :
+    interEventAngle points hne ⟨j.val + 1, by omega⟩ -
+      interEventAngle points hne ⟨j.val, by omega⟩ < Real.pi := by
+  have h1 := interEventAngle_lt_sortedAngle hne j
+  have h2 := sortedAngle_lt_interEventAngle_succ hne j
+  have hhi := sortedAngleAt_lt_pi points j
+  have hlo := sortedAngleAt_nonneg points j
+  have htop := interEventAngle_le_start_add_pi hne ⟨j.val + 1, by omega⟩
+  have hbot := sweepStartAngle_le_interEventAngle hne ⟨j.val, by omega⟩
+  have htop := interEventAngle_le_start_add_pi hne ⟨j.val + 1, by omega⟩
+  have hbot := sweepStartAngle_le_interEventAngle hne ⟨j.val, by omega⟩
+  by_cases hj0 : j.val = 0
+  · have hj_succ_lt : j.val + 1 < (directionsDeterminedBy points).card := by omega
+    have htop_strict : interEventAngle points hne ⟨j.val + 1, by omega⟩ <
+        sweepStartAngle points hne + Real.pi := by
+      have hlt := interEventAngle_lt_sortedAngle hne ⟨j.val + 1, hj_succ_lt⟩
+      rcases Finset.mem_image.mp (sortedAngleAt_mem points
+        ⟨j.val + 1, hj_succ_lt⟩) with ⟨d', hd', ha'⟩
+      linarith [sweepStartAngle_gt_max_sub_pi points hne d' hd',
+                sortedAngleAt_lt_pi points ⟨j.val + 1, hj_succ_lt⟩]
+    have hbot_eq : interEventAngle points hne ⟨j.val, by omega⟩ =
+        sweepStartAngle points hne := by
+      rw [show (⟨j.val, (by omega : j.val < _ + 1)⟩ : Fin _) =
+        ⟨0, Nat.succ_pos _⟩ from Fin.ext hj0, interEventAngle_zero]
+    linarith
+  · have hbot_strict : sweepStartAngle points hne <
+        interEventAngle points hne ⟨j.val, by omega⟩ := by
+      have hj_pos := Nat.pos_of_ne_zero hj0
+      rcases Finset.mem_image.mp (sortedAngleAt_mem points
+        ⟨j.val - 1, by have := j.isLt; omega⟩) with ⟨d', hd', ha'⟩
+      have hprev := sortedAngle_lt_interEventAngle_succ hne
+        ⟨j.val - 1, by have := j.isLt; omega⟩
+      have hval_eq : (⟨j.val - 1, (by have := j.isLt; omega)⟩ :
+          Fin (directionsDeterminedBy points).card).val + 1 = j.val :=
+        Nat.succ_pred_eq_of_pos hj_pos
+      have hfin_eq : (⟨(⟨j.val - 1, (by have := j.isLt; omega)⟩ :
+          Fin (directionsDeterminedBy points).card).val + 1,
+          (hval_eq ▸ (show j.val < (directionsDeterminedBy points).card + 1 from
+            by have := j.isLt; omega))⟩ :
+          Fin ((directionsDeterminedBy points).card + 1)) =
+          ⟨j.val, by have := j.isLt; omega⟩ :=
+        Fin.ext hval_eq
+      rw [hfin_eq] at hprev
+      linarith [sweepStartAngle_lt_min points hne d' hd']
+    linarith
+
 end ProofsInTheBook.Chapter11

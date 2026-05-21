@@ -6889,4 +6889,93 @@ theorem interEventAngle_span {points : Finset Point2}
       linarith [sweepStartAngle_lt_min points hne d' hd']
     linarith
 
+/-! ### Generalized non-tie and only-event condition -/
+
+theorem orientedLevel_ne_of_ne_mod_pi {p q : Point2} (hpq : p ≠ q)
+    {θ : ℝ}
+    (hlo : (direction p q).angle - Real.pi < θ)
+    (hhi : θ < (direction p q).angle + Real.pi)
+    (hne : θ ≠ (direction p q).angle) :
+    orientedLevel θ p ≠ orientedLevel θ q := by
+  intro htie
+  have hzero_d := orientedLevel_sub_zero_at_direction_angle' hpq
+  have hprod := sinusoid_product_formula hzero_d (θ₁ := θ) (θ₂ := θ)
+  have hzero₀ : -(p.1 - q.1) * Real.sin θ + (p.2 - q.2) * Real.cos θ = 0 := by
+    have := orientedLevel_sub_eq θ p q; linarith
+  have hpq_ne : -(p.1 - q.1) ≠ 0 ∨ (p.2 - q.2) ≠ 0 := by
+    by_contra h; push_neg at h
+    exact hpq (Prod.ext (by linarith [h.1]) (by linarith [h.2]))
+  have h_sq_pos : 0 < (-(p.1 - q.1)) ^ 2 + (p.2 - q.2) ^ 2 := by
+    rcases hpq_ne with ha | hb <;> positivity
+  have hsin_ne : Real.sin (θ - (direction p q).angle) ≠ 0 := by
+    intro hsin
+    rw [Real.sin_eq_zero_iff] at hsin
+    rcases hsin with ⟨n, hn⟩
+    have hbound : |θ - (direction p q).angle| < Real.pi := by
+      rw [abs_lt]; constructor <;> linarith
+    have : n = 0 := by
+      by_contra hn0
+      have := Int.one_le_abs hn0
+      have : Real.pi ≤ |↑n * Real.pi| := by
+        rw [abs_mul, abs_of_pos Real.pi_pos]
+        exact le_mul_of_one_le_left (le_of_lt Real.pi_pos) (by exact_mod_cast this)
+      linarith [show |↑n * Real.pi| = |θ - (direction p q).angle| from by rw [hn]]
+    simp [this] at hn; exact hne (by linarith)
+  have hsin_sq_pos : 0 < Real.sin (θ - (direction p q).angle) *
+      Real.sin (θ - (direction p q).angle) :=
+    mul_self_pos.mpr hsin_ne
+  have h_lhs_zero : (-(p.1 - q.1) * Real.sin θ + (p.2 - q.2) * Real.cos θ) *
+      (-(p.1 - q.1) * Real.sin θ + (p.2 - q.2) * Real.cos θ) = 0 := by
+    rw [hzero₀]; ring
+  nlinarith [hprod, h_lhs_zero, mul_pos h_sq_pos hsin_sq_pos]
+
+theorem only_event_between_interEventAngles {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (j : Fin (directionsDeterminedBy points).card)
+    (a b : Fin (2 * k)) (hab : L.point a ≠ L.point b)
+    {θ : ℝ} (hθ : θ ∈ Set.Icc (interEventAngle points hne ⟨j.val, by omega⟩)
+      (interEventAngle points hne ⟨j.val + 1, by omega⟩))
+    (hθ_ne : θ ≠ sortedAngleAt points j) :
+    orientedLevel θ (L.point a) ≠ orientedLevel θ (L.point b) := by
+  have hab' : a ≠ b := fun h => hab (congr_arg L.point h)
+  have hdir_mem := L.direction_mem hab'
+  rcases direction_angle_eq_sortedAngleAt _ hdir_mem with ⟨idx, hangle_eq⟩
+  rcases Finset.mem_image.mp (sortedAngleAt_mem points idx) with ⟨d_idx, hd_idx, ha_idx⟩
+  have hθ_ne_dir : θ ≠ (direction (L.point a) (L.point b)).angle := by
+    intro heq; rw [hangle_eq] at heq
+    rcases eq_or_ne idx j with hidx | hidx
+    · rw [hidx] at heq; exact hθ_ne heq
+    · rcases Nat.lt_or_gt_of_ne (Fin.val_ne_of_ne hidx) with h | h
+      · have hj_pos : 0 < j.val := by omega
+        have hj_pred_lt : j.val - 1 < (directionsDeterminedBy points).card :=
+          Nat.lt_of_le_of_lt (Nat.sub_le _ _) j.isLt
+        have := (sortedAngleAt_strictMono points).monotone
+          (show idx ≤ ⟨j.val - 1, hj_pred_lt⟩ from
+            Fin.le_def.mpr (Nat.le_sub_one_of_lt h))
+        have hprev := sortedAngle_lt_interEventAngle_succ hne ⟨j.val - 1, hj_pred_lt⟩
+        have hval_eq : (⟨j.val - 1, hj_pred_lt⟩ : Fin _).val + 1 = j.val :=
+          Nat.succ_pred_eq_of_pos hj_pos
+        have hfin_eq : (⟨(⟨j.val - 1, hj_pred_lt⟩ :
+            Fin (directionsDeterminedBy points).card).val + 1,
+            lt_of_eq_of_lt hval_eq (Nat.lt_succ_of_lt j.isLt)⟩ :
+            Fin ((directionsDeterminedBy points).card + 1)) =
+            ⟨j.val, Nat.lt_succ_of_lt j.isLt⟩ :=
+          Fin.ext hval_eq
+        rw [hfin_eq] at hprev
+        linarith [heq, hθ.1, hprev, this]
+      · have hj1 : j.val + 1 < (directionsDeterminedBy points).card := by
+          have := idx.isLt; omega
+        have := (sortedAngleAt_strictMono points).monotone
+          (show (⟨j.val + 1, hj1⟩ : Fin _) ≤ idx from
+            Fin.le_def.mpr (Nat.succ_le_of_lt h))
+        linarith [interEventAngle_lt_sortedAngle hne ⟨j.val + 1, hj1⟩,
+                  sortedAngle_lt_interEventAngle_succ hne j, hθ.2]
+  exact orientedLevel_ne_of_ne_mod_pi hab
+    (by linarith [sweepStartAngle_le_interEventAngle hne ⟨j.val, by omega⟩,
+                  sweepStartAngle_gt_max_sub_pi points hne _ hdir_mem, hθ.1])
+    (by linarith [interEventAngle_le_start_add_pi hne ⟨j.val + 1, by omega⟩,
+                  sweepStartAngle_lt_min points hne _ hdir_mem, hθ.2])
+    hθ_ne_dir
+
 end ProofsInTheBook.Chapter11

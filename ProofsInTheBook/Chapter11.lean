@@ -6798,4 +6798,6 @@ theorem sortedAngle_lt_interEventAngle_succ {points : Finset Point2}
       (show j < (⟨j.val + 1, hjr'⟩ : Fin _) from
         Fin.lt_def.mpr (Nat.lt_succ_self _)))
 
+/-! ### Span and bounds for inter-event angles -/
+
 end ProofsInTheBook.Chapter11

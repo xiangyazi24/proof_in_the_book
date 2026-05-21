@@ -7320,6 +7320,34 @@ Also needed: `NoncollinearSet S → (directionsDeterminedBy S).Nonempty` and
 Once CyclicEndGap is proved, `EvenUngarLevelSweepCertificatePremise` follows directly.
 -/
 
+/-! ### Parameterized sweep for CyclicEndGap -/
+
+noncomputable def sweepLabelingAt {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k) (θ₀ : ℝ) : PointLabeling points k :=
+  (PointLabeling.ofCard hcard).reindex (sweepSort (PointLabeling.ofCard hcard) θ₀)
+
+noncomputable def interEventAngleAt (points : Finset Point2)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (θ₀ : ℝ)
+    (s : Fin (directionsDeterminedBy points).card)
+    (j : Fin ((directionsDeterminedBy points).card + 1)) : ℝ :=
+  if hj0 : j.val = 0 then θ₀
+  else if hjr : j.val = (directionsDeterminedBy points).card then θ₀ + Real.pi
+  else
+    let r := (directionsDeterminedBy points).card
+    let idx := (s.val + j.val) % r
+    let idx_prev := (s.val + j.val - 1) % r
+    genericAngleBetween (sortedAngleAt points ⟨idx_prev, Nat.mod_lt _ (by omega)⟩)
+      (sortedAngleAt points ⟨idx, Nat.mod_lt _ (by omega)⟩)
+
+-- The shifted sweep ConcreteGAS starting from event index s
+-- Events are in order: s, s+1, ..., r-1, 0, 1, ..., s-1
+-- Starting angle θ₀ is between sortedAngleAt(s-1) and sortedAngleAt(s)
+-- (or equivalently, in the "gap" before event s)
+
+-- TODO: Build sweepConcreteGAS_at using parameterized versions of all
+-- the existing lemmas. Then construct CyclicEndGapWitness.
+
 theorem evenUngarLevelSweepCertificatePremise :
     EvenUngarLevelSweepCertificatePremise := by
   intro S k hk hcard hncoll

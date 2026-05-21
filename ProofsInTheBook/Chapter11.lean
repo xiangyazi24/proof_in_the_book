@@ -7320,4 +7320,16 @@ Also needed: `NoncollinearSet S → (directionsDeterminedBy S).Nonempty` and
 Once CyclicEndGap is proved, `EvenUngarLevelSweepCertificatePremise` follows directly.
 -/
 
+theorem evenUngarLevelSweepCertificatePremise :
+    EvenUngarLevelSweepCertificatePremise := by
+  intro S k hk hcard hncoll
+  have hne := directionsDeterminedBy_nonempty_of_noncollinear hncoll
+  have hr := directionsDeterminedBy_card_ge_two_of_noncollinear hncoll
+  exact ⟨⟨sweepLabeling hcard hne,
+    sweepConcreteGAS hcard hne hr hncoll,
+    sweepStepDir S,
+    sweepConcreteGAS_blocksHaveCommonLevel hcard hne hr hncoll,
+    sweepStepDir_injective S,
+    by sorry⟩⟩
+
 end ProofsInTheBook.Chapter11

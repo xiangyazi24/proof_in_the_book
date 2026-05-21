@@ -6756,4 +6756,46 @@ noncomputable def sweepGAS {points : Finset Point2} {k : ℕ}
     (by rw [interEventAngle_last, interEventAngle_zero])
     (by rw [interEventAngle_zero]; exact hinj₀)
 
+/-! ### Inter-event angle ordering -/
+
+theorem interEventAngle_lt_sortedAngle {points : Finset Point2}
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (j : Fin (directionsDeterminedBy points).card) :
+    interEventAngle points hne ⟨j.val, by omega⟩ < sortedAngleAt points j := by
+  rcases Finset.mem_image.mp (sortedAngleAt_mem points j) with ⟨d, hd, hangle⟩
+  unfold interEventAngle
+  by_cases hj0 : j.val = 0
+  · simp [hj0, ← hangle]; exact sweepStartAngle_lt_min points hne d hd
+  · have : ¬(j.val = (directionsDeterminedBy points).card) := by
+      have := j.isLt; omega
+    simp [hj0, this]
+    exact genericAngleBetween_lt' (sortedAngleAt_strictMono points
+      (show (⟨j.val - 1, Nat.lt_of_le_of_lt (Nat.sub_le _ _) j.isLt⟩ : Fin _) < j from
+        Fin.lt_def.mpr (Nat.sub_one_lt_of_le (Nat.pos_of_ne_zero hj0) (le_refl _))))
+
+theorem sortedAngle_lt_interEventAngle_succ {points : Finset Point2}
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (j : Fin (directionsDeterminedBy points).card) :
+    sortedAngleAt points j < interEventAngle points hne ⟨j.val + 1, by omega⟩ := by
+  rcases Finset.mem_image.mp (sortedAngleAt_mem points j) with ⟨d, hd, hangle⟩
+  unfold interEventAngle
+  have hne0 : ¬(j.val + 1 = 0) := by omega
+  by_cases hjr : j.val + 1 = (directionsDeterminedBy points).card
+  · show sortedAngleAt points j < interEventAngle points hne ⟨j.val + 1, by omega⟩
+    calc sortedAngleAt points j = d.angle := hangle.symm
+      _ < sweepStartAngle points hne + Real.pi := by
+            linarith [sweepStartAngle_gt_max_sub_pi points hne d hd]
+      _ = interEventAngle points hne ⟨(directionsDeterminedBy points).card,
+            Nat.lt_succ_self _⟩ := (interEventAngle_last points hne).symm
+      _ = interEventAngle points hne ⟨j.val + 1, by omega⟩ := by
+            congr 1; exact Fin.ext hjr.symm
+  · have hjr' : j.val + 1 < (directionsDeterminedBy points).card := by
+      cases Nat.lt_or_eq_of_le (Nat.succ_le_of_lt j.isLt) with
+      | inl h => exact h
+      | inr h => exact absurd h hjr
+    simp only [hne0, hjr, ↓reduceDIte]
+    exact genericAngleBetween_lt (sortedAngleAt_strictMono points
+      (show j < (⟨j.val + 1, hjr'⟩ : Fin _) from
+        Fin.lt_def.mpr (Nat.lt_succ_self _)))
+
 end ProofsInTheBook.Chapter11

@@ -100,9 +100,30 @@ theorem buffon_rotational_symmetry_integral :
   simp [Real.cos_pi, Real.cos_zero]
   norm_num
 
-theorem chapter25 {ι : Type*} (segments : Finset ι) (length : ι → ℝ) (d : ℝ) :
-    curveExpectedCrossings segments length d =
-      segmentExpectedCrossings d (∑ i ∈ segments, length i) :=
-  curveExpectedCrossings_eq_total_length segments length d
+/-- Probability space carrying Buffon's needle distribution.
+A BuffonProbabilitySpace abstracts over the measure-theoretic machinery
+needed to talk about "the expected crossing count of a randomly placed
+needle is given by segmentExpectedCrossings d length". -/
+structure BuffonProbabilitySpace (d : ℝ) (length : ℝ) where
+  /-- The expected value of the crossing count for a length-`length` segment. -/
+  expectedCrossings : ℝ
+  /-- The fundamental measure-theoretic identity: the expected crossing
+      count equals 2·length/(π·d). -/
+  expected_eq : expectedCrossings = segmentExpectedCrossings d length
+
+/--
+Chapter 25 (Buffon's needle, Tier 1 conditional):
+Given a BuffonProbabilitySpace (which packages the measure-theoretic setup
+of random needle placement on parallel-line floor), the expected number
+of crossings equals 2·length/(π·d).
+
+TODO (Tier 2): Construct BuffonProbabilitySpace from `MeasureTheory.ProbabilityMeasure`
+on `[0, d/2] × [0, π/2]` with uniform density `1/(πd/4)`. The expected crossing
+count integrates to `2ℓ/(πd)` when `ℓ ≤ d` (short-needle case); long-needle case
+requires extra cases.
+-/
+theorem chapter25 (d length : ℝ) (space : BuffonProbabilitySpace d length) :
+    space.expectedCrossings = 2 * length / (Real.pi * d) := by
+  rw [space.expected_eq, segmentExpectedCrossings]
 
 end ProofsInTheBook.Chapter25

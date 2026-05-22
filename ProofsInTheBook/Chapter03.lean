@@ -3703,6 +3703,48 @@ lemma erdos_step1_n_gt_k_sq {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (h
       _ ≤ k ^ l := Nat.pow_le_pow_right (by omega) hl
   omega
 
+/-! ### Step 2: l-th-power-free decomposition -/
+
+/-- The l-th-power-free core of m: for each prime p, retain p^(v_p(m) % l). -/
+def lPowerFreePart (l m : ℕ) : ℕ :=
+  ∏ p ∈ m.factorization.support, p ^ (m.factorization p % l)
+
+/-- The l-th-power root: p^(v_p(m) / l) per prime, so that
+m = (lPowerFreePart l m) * (lPowerRoot l m)^l. -/
+def lPowerRoot (l m : ℕ) : ℕ :=
+  ∏ p ∈ m.factorization.support, p ^ (m.factorization p / l)
+
+open scoped BigOperators in
+lemma self_eq_lPowerFreePart_mul_lPowerRoot_pow (l m : ℕ) (hm : m ≠ 0) :
+    m = lPowerFreePart l m * (lPowerRoot l m) ^ l := by
+  have h_prod := (Nat.prod_factorization_pow_eq_self hm).symm
+  have h_factor (p : ℕ) : p ^ (m.factorization p % l + l * (m.factorization p / l)) =
+      (p ^ (m.factorization p % l)) * ((p ^ (m.factorization p / l)) ^ l) := by
+    calc
+      p ^ (m.factorization p % l + l * (m.factorization p / l))
+          = p ^ (m.factorization p % l) * p ^ (l * (m.factorization p / l)) := by rw [pow_add]
+      _ = p ^ (m.factorization p % l) * (p ^ (m.factorization p / l)) ^ l := by
+        rw [mul_comm l (m.factorization p / l), ← pow_mul]
+      _ = (p ^ (m.factorization p % l)) * ((p ^ (m.factorization p / l)) ^ l) := rfl
+  dsimp [lPowerFreePart, lPowerRoot]
+  calc
+    m = m.factorization.prod (· ^ ·) := h_prod
+    _ = ∏ p ∈ m.factorization.support, p ^ (m.factorization p) := rfl
+    _ = ∏ p ∈ m.factorization.support, p ^ (m.factorization p % l + l * (m.factorization p / l)) := by
+      refine Finset.prod_congr rfl fun p hp => ?_
+      rw [Nat.mod_add_div (m.factorization p) l]
+    _ = ∏ p ∈ m.factorization.support,
+        (p ^ (m.factorization p % l)) * ((p ^ (m.factorization p / l)) ^ l) := by
+      refine Finset.prod_congr rfl fun p hp => ?_
+      rw [h_factor p]
+    _ = (∏ p ∈ m.factorization.support, p ^ (m.factorization p % l)) *
+        (∏ p ∈ m.factorization.support, (p ^ (m.factorization p / l)) ^ l) := by
+      rw [Finset.prod_mul_distrib]
+    _ = (∏ p ∈ m.factorization.support, p ^ (m.factorization p % l)) *
+        (∏ p ∈ m.factorization.support, p ^ (m.factorization p / l)) ^ l := by
+      rw [Finset.prod_pow]
+    _ = lPowerFreePart l m * (lPowerRoot l m) ^ l := rfl
+
 /-! ### Main theorem assembly -/
 
 /-- C(n,k) is never a perfect power for k ≥ 4, n ≥ 2k, l ≥ 2.

@@ -1464,8 +1464,17 @@ theorem cayley_formula (n : ℕ) (_hn : 2 ≤ n)
     Fintype.card (LabeledTree n) = n ^ (n - 2) :=
   cayley_count_of_prufer_equiv n prufer_equiv
 
-theorem chapter31 (n : ℕ) :
-    Fintype.card (pruferCodeSpace n) = n ^ (n - 2) :=
-  pruferCodeSpace_card n
+/--
+Chapter 31 (Cayley's Formula, Tier 1 conditional form):
+There are exactly `n^(n-2)` labeled trees on `n` vertices.
+This theorem takes the structural bijection between trees and Prüfer sequences
+as a hypothesis, capturing the core counting consequence of Prüfer's method.
+
+TODO (Tier 2): Prove `pruferDecode_pruferEncode` are mutually inverse to
+construct the explicit bijection `LabeledTree n ≃ pruferCodeSpace n`.
+-/
+theorem chapter31 (n : ℕ) (hn : 2 ≤ n) (h : LabeledTree n ≃ pruferCodeSpace n) :
+    Fintype.card (LabeledTree n) = n ^ (n - 2) :=
+  cayley_formula n hn h
 
 end ProofsInTheBook.Chapter31

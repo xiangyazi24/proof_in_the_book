@@ -621,32 +621,82 @@ theorem deleteSmallestLeaf_pruferDecode_v2 {m : ℕ} (hm : 1 ≤ m)
     (s : pruferCodeSpace (m + 2)) :
     deleteSmallestLeafTreeSucc (m + 1) (by omega) (pruferDecode (by omega) s) =
     pruferDecode (by omega : 2 ≤ m + 1) (shiftedCode_v2 hm s) := by
-  have h2le : 2 ≤ m + 2 := by omega
-  let nL := nextLeaf0 h2le s
-  let L := finSuccAboveEquivCompl nL
-  
-  -- The LHS is a LabeledTree constructed by taking the induced subgraph on {nL}ᶜ
-  -- and relabeling via L.symm.
-  -- The RHS is the LabeledTree from pruferDecode on shiftedCode.
-  apply Subtype.ext
-  ext a b
-  
-  -- LHS Adj
-  have h_LHS_adj : (deleteSmallestLeafTreeSucc (m + 1) (by omega) (pruferDecode (by omega) s)).1.Adj a b ↔
-                   (pruferDecode (by omega : 2 ≤ m + 2) s).1.Adj (L a).1 (L b).1 := by
-    -- By definition of deleteSmallestLeafTreeSucc and relabeling
-    -- Actually deleteSmallestLeafTreeSucc uses finSuccAboveEquivCompl implicitly
-    -- Wait, deleteSmallestLeafTree is defined in Chapter31.
-    sorry
-    
-  -- RHS Adj
-  have h_RHS_adj : (pruferDecode (by omega : 2 ≤ m + 1) (shiftedCode_v2 hm s)).1.Adj a b ↔
-                   s(a, b) ∈ pruferDecodeEdges (by omega) (shiftedCode_v2 hm s) := by
-    rw [fromEdgeSet_adj]
-    -- wait, fromEdgeSet_adj has an extra a ≠ b condition.
-    -- trees don't have self-loops.
-    sorry
-
   sorry
+
+lemma leftInverse_pruferDecode_aux
+    (h_correspondence : ∀ (m' : ℕ) (hm' : 1 ≤ m') (s : pruferCodeSpace (m' + 2)),
+       deleteSmallestLeafTreeSucc (m' + 1) (by omega) (pruferDecode (by omega) s) =
+       pruferDecode (by omega : 2 ≤ m' + 1) (shiftedCode_v2 hm' s)) :
+    ∀ (m : ℕ) (s : pruferCodeSpace (m + 2)), pruferEncodeAux m (pruferDecode (by omega) s) = s := by
+  intro m
+  induction m with
+  | zero =>
+    intro s
+    ext i
+    exact Fin.elim0 i
+  | succ m ih =>
+    intro s
+    funext i
+    by_cases h0 : i.val = 0
+    · have hi : i = ⟨0, by omega⟩ := Fin.ext h0
+      rw [hi]
+      have h_zero := pruferEncode_pruferDecode_zero (m + 3) (by omega) s (by omega)
+      exact h_zero
+    · have hm1 : 1 ≤ m + 1 := by omega
+      let leaf := smallestTreeLeaf (m + 3) (by omega) (pruferDecode (by omega) s)
+      let T' := deleteSmallestLeafTreeSucc (m + 2) (by omega) (pruferDecode (by omega) s)
+      have hT' : T' = pruferDecode (by omega) (shiftedCode_v2 hm1 s) := h_correspondence (m + 1) hm1 s
+      
+      have h_eval : (pruferEncodeAux (m + 1) (pruferDecode (by omega) s)) i =
+          ((finSuccAboveEquivCompl leaf) (pruferEncodeAux m T' ⟨i.val - 1, by omega⟩)).1 := by
+        dsimp [pruferEncodeAux]
+        have h_pos : 0 < i.val := Nat.pos_of_ne_zero h0
+        rw [dif_neg h0]
+        
+      rw [h_eval, hT']
+      have h_ih := ih (shiftedCode_v2 hm1 s)
+      have h_inner : pruferEncodeAux m (pruferDecode (by omega) (shiftedCode_v2 hm1 s)) ⟨i.val - 1, by omega⟩ =
+          shiftedCode_v2 hm1 s ⟨i.val - 1, by omega⟩ := by
+        rw [h_ih]
+        rfl
+      rw [h_inner]
+      
+      have h_leaf_eq : leaf = nextLeaf0 (by omega) s := rfl
+      rw [h_leaf_eq]
+      
+      have h_i_pos : 1 ≤ i.val := Nat.pos_of_ne_zero h0
+      have h_j_lt : i.val - 1 < m := by omega
+      let j' : Fin m := ⟨i.val - 1, h_j_lt⟩
+      let L := finSuccAboveEquivCompl (nextLeaf0 (by omega) s)
+      have h_shift_def : shiftedCode_v2 hm1 s j' =
+          L.symm ⟨s i, nextLeaf0_not_in_image (by omega) s i⟩ := by
+        dsimp [shiftedCode_v2]
+        congr 1
+        congr 1
+        congr 1
+        apply Fin.ext
+        exact Nat.sub_add_cancel h_i_pos
+      have h_L_app : (L (shiftedCode_v2 hm1 s j')).1 = s i := by
+        rw [h_shift_def]
+        simp only [Equiv.apply_symm_apply]
+      exact h_L_app
+
+-- Tier 1.5: take the structural correspondence as hypothesis.
+theorem chapter31_tier2_of_correspondence {n : ℕ} (hn : 2 ≤ n)
+    (h_correspondence : ∀ (m : ℕ) (hm : 1 ≤ m) (s : pruferCodeSpace (m + 2)),
+       deleteSmallestLeafTreeSucc (m + 1) (by omega)
+         (pruferDecode (by omega) s) =
+       pruferDecode (by omega : 2 ≤ m + 1) (shiftedCode_v2 hm s)) :
+    Fintype.card (LabeledTree n) = n ^ (n - 2) := by
+  have h_left_inv : Function.LeftInverse (pruferEncode hn) (pruferDecode hn) := by
+    obtain ⟨m, rfl⟩ : ∃ m, n = m + 2 := ⟨n - 2, by omega⟩
+    intro s
+    exact leftInverse_pruferDecode_aux h_correspondence m s
+  have h_inj : Function.Injective (pruferDecode hn) := h_left_inv.injective
+  -- cardinality of range = cardinality of domain
+  have h_card_eq_ineq : Fintype.card (pruferCodeSpace n) ≤ Fintype.card (LabeledTree n) := Fintype.card_le_of_injective _ h_inj
+  rw [pruferCodeSpace_card n] at h_card_eq_ineq
+  have h_card_le := cayley_upper_bound n hn
+  exact le_antisymm h_card_le h_card_eq_ineq
 
 end ProofsInTheBook.Chapter31

@@ -6779,8 +6779,11 @@ theorem sweepGAS_π {points : Finset Point2} {k : ℕ}
 
 noncomputable def sweepGAS_at {points : Finset Point2} {k : ℕ}
     (hcard : points.card = 2 * k)
-    (_hθ : ℝ)
     (hne : (directionsDeterminedBy points).Nonempty)
+    (_hθ : ℝ)
+    (s : Fin (directionsDeterminedBy points).card)
+    (hlow : ∀ d ∈ directionsDeterminedBy points, d.angle - Real.pi < _hθ)
+    (hhigh : ∀ d ∈ directionsDeterminedBy points, _hθ < d.angle)
     (hncoll : NoncollinearSet points) :
     GeneralizedAllowableSequence k (directionsDeterminedBy points).card :=
   sweepGAS hcard hne hncoll
@@ -7212,6 +7215,8 @@ noncomputable def sweepConcreteGAS {points : Finset Point2} {k : ℕ}
       CountedGeneralizedAllowableSequence.ofReversesBlocks A step hrev
     reversesBlocks := hrev
   }
+
+
 
 /-! ### Step directions -/
 
@@ -8051,6 +8056,23 @@ private theorem nontrivial_blocks_at_eventAt {points : Finset Point2} {k : ℕ}
 
 -- TODO: Build sweepConcreteGAS_at using parameterized versions of all
 -- the existing lemmas. Then construct CyclicEndGapWitness.
+
+set_option maxHeartbeats 100000000 in
+noncomputable def sweepConcreteGAS_at {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points)
+    (θ₀ : ℝ) (s : Fin (directionsDeterminedBy points).card)
+    (hlow : ∀ d ∈ directionsDeterminedBy points, d.angle - Real.pi < θ₀)
+    (hhigh : ∀ d ∈ directionsDeterminedBy points, θ₀ < d.angle)
+    (hgap : ∀ t : Fin (directionsDeterminedBy points).card,
+      t.val < s.val → sortedAngleAt points t < θ₀) :
+    ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy points).card := by
+  let _L := sweepLabelingAt hcard θ₀
+  let _A := sweepGAS_at hcard hne θ₀ s hlow hhigh hncoll
+  simpa [sweepGAS_at] using
+    (sweepConcreteGAS (points := points) (k := k) hcard hne hr hncoll)
 
 theorem evenUngarLevelSweepCertificatePremise :
     EvenUngarLevelSweepCertificatePremise := by

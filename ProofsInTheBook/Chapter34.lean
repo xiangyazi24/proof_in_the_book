@@ -667,9 +667,17 @@ theorem galvin_theorem {n : ℕ} {α : Type*} [DecidableEq α]
     haveI : Inhabited α := ⟨Classical.choose (Finset.card_pos.mp hcard_pos)⟩
     exact dinitzSolution_of_dinitzOrient lists hlists
 
-theorem chapter34 {n : ℕ} {α : Type*} {lists : Cell n → Finset α} {color : Cell n → α}
-    (hlist : RespectsLists lists color) (hinj : RowColumnInjective color) :
-    DinitzSolution lists color :=
-  dinitzSolution_of_respectsLists_rowColumnInjective hlist hinj
+/-- Chapter 34 (Galvin's theorem / Dinitz's conjecture):
+For every n × n grid with color lists of size at least n at each cell,
+there exists a proper list-coloring (a Dinitz solution).
+
+This is Galvin's celebrated 1995 proof using kernel-perfect orientations,
+constructed in this file via `dinitzSolution_of_kernel_perfect_orientation`
++ `stableMatching_exists`. -/
+theorem chapter34 {n : ℕ} {α : Type*} [DecidableEq α]
+    (lists : Cell n → Finset α)
+    (hlists : ∀ cell, n ≤ (lists cell).card) :
+    ∃ color : Cell n → α, DinitzSolution lists color :=
+  galvin_theorem lists hlists
 
 end ProofsInTheBook.Chapter34

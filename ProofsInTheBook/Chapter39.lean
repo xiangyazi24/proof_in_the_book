@@ -187,8 +187,31 @@ theorem kneser_chromatic_lower_bound (n k : ℕ) (hk : 1 ≤ k) (hn : 2 * k ≤ 
     exact absurd (hfin1 (C a) (C b)) (hC a b hadj)
   · exact hhard heq
 
-theorem chapter39 (n k : ℕ) :
-    Fintype.card (KneserVertex n k) = n.choose k :=
-  kneserVertex_card n k
+/-- Certificate that Kneser graph KG(n,k) is not (n - 2k + 1)-colorable.
+This is the hard direction of Lovász's theorem, traditionally proved via
+Borsuk-Ulam (not currently in Mathlib). -/
+structure KneserChromaticCertificate (n k : ℕ) where
+  /-- The non-colorability witness for the n ≠ 2*k case. -/
+  hhard : n ≠ 2 * k → ¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
+    ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b
+
+/--
+Chapter 39 (Lovász's theorem on Kneser graph chromatic number, Tier 1
+conditional): given the hard direction (no (n-2k+1)-coloring exists when
+n ≠ 2k), and combined with the upper bound (n-2k+2 colorable) already proved,
+χ(KG(n,k)) = n - 2k + 2.
+
+TODO (Tier 2): construct hhard via Borsuk-Ulam / Bárány simplicial argument
+deferred — requires building Borsuk-Ulam in Mathlib first.
+-/
+theorem chapter39 {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (cert : KneserChromaticCertificate n k) :
+    (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) := by
+  refine ⟨?_, ?_⟩
+  · exact kneser_chromatic_upper_bound n k hk hn
+  · exact kneser_chromatic_lower_bound n k hk hn cert.hhard
 
 end ProofsInTheBook.Chapter39

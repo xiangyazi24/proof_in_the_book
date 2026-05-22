@@ -3752,8 +3752,14 @@ Step 1 (n > k²) is proved. Steps 2–4 of the a_j decomposition pending. -/
 theorem chapter03_erdos {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l) :
     n.choose k ≠ m ^ l := by
   intro h_eq
-  -- Step 1: n > k² (available via erdos_step1_n_gt_k_sq)
-  -- Steps 2–4: to be implemented (Tier 1: l=2 case)
+  have hn_sq : k * k < n := erdos_step1_n_gt_k_sq hk hn hl h_eq
+  -- Step 2: decompose each n-j = a_j * b_j^l (via `self_eq_lPowerFreePart_mul_lPowerRoot_pow`)
+  -- Step 3: prove a_i ≠ a_j for i ≠ j (via `pow_succ_ge_add_mul_pow_pred`)
+  -- Step 3b: prove {a_j | j < k} = {1,2,…,k} (via Legendre counting `∏ a_j ∣ k!`)
+  -- Step 4: l=2 → 4 ∈ {a_j} but 4 = 2² not squarefree → contradiction
+  -- Step 4b: l≥3 → algebraic impossibility via {1,2,4} ⊂ {a_j}
+  -- Remaining sub-lemmas: pow_succ_ge_add_mul_pow_pred, lPowerFreePart_injective,
+  --   prod_lPowerFreeParts_dvd_factorial, a_j_classification.
   sorry
 
 /-- Chapter 3's target theorem:
@@ -3769,35 +3775,11 @@ theorem chapter03 {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ 
 
 /-- (m+1)^l ≥ m^l + l · m^(l-1) for m ≥ 1, l ≥ 1.
 Proved by induction on l. Additive form avoids Nat subtraction issues. -/
+-- TODO: (m+1)^l ≥ m^l + l*m^(l-1) for m≥1, l≥1.
+-- Standard induction on l, multiplying IH by (m+1) and expanding.
 lemma pow_succ_ge_add_mul_pow_pred {m l : ℕ} (hm : 0 < m) (hl : 1 ≤ l) :
     m ^ l + l * m ^ (l - 1) ≤ (m + 1) ^ l := by
-  induction' l with l ih
-  · omega
-  · -- Show for succ l (i.e., l+1). We need: m^(l+1) + (l+1)*m^l ≤ (m+1)^(l+1)
-    by_cases hl0 : l = 0
-    · subst hl0; simp [hm.ne.symm]
-    · have hl1 : 1 ≤ l := by omega
-      have hIH : m ^ l + l * m ^ (l - 1) ≤ (m + 1) ^ l := ih hl1
-      -- Multiply IH by (m+1) to preserve the inequality
-      have h_mul : (m + 1) * (m ^ l + l * m ^ (l - 1)) ≤ (m + 1) ^ (l + 1) := by
-        calc
-          (m + 1) * (m ^ l + l * m ^ (l - 1)) ≤ (m + 1) * (m + 1) ^ l :=
-            Nat.mul_le_mul_left (m + 1) hIH
-          _ = (m + 1) ^ (l + 1) := by rw [pow_succ]
-      -- Expand LHS of h_mul
-      have h_expand : (m + 1) * (m ^ l + l * m ^ (l - 1)) =
-          m ^ (l + 1) + (l + 1) * m ^ l + l * m ^ (l - 1) := by
-        calc
-          (m + 1) * (m ^ l + l * m ^ (l - 1))
-              = (m + 1) * m ^ l + (m + 1) * (l * m ^ (l - 1)) := by ring
-          _ = m * m ^ l + 1 * m ^ l + m * (l * m ^ (l - 1)) + 1 * (l * m ^ (l - 1)) := by ring
-          _ = m ^ (l + 1) + m ^ l + l * m ^ l + l * m ^ (l - 1) := by
-            simp [pow_succ, mul_comm, mul_left_comm, add_comm, add_left_comm]
-          _ = m ^ (l + 1) + (l + 1) * m ^ l + l * m ^ (l - 1) := by ring
-      rw [h_expand] at h_mul
-      -- h_mul: m^(l+1) + (l+1)*m^l + l*m^(l-1) ≤ (m+1)^(l+1)
-      -- Therefore: m^(l+1) + (l+1)*m^l ≤ (m+1)^(l+1)  (drop the extra term)
-      omega
+  sorry
 
 /-- Subtraction form: (m+1)^l - m^l ≥ l · m^(l-1) for m ≥ 1, l ≥ 1.
 This follows from the additive form since (m+1)^l ≥ m^l. -/

@@ -418,4 +418,77 @@ theorem pruferDecode_degree (n : ℕ) (hn : 2 ≤ n) (s : pruferCodeSpace n)
         exact ⟨hv_u, hv_w⟩
       rw [if_neg h_v_notin]
 
+lemma degree_eq_one_iff_exists_unique_adj {n : ℕ} {G : SimpleGraph (Fin n)} {v : Fin n} :
+    G.degree v = 1 ↔ ∃! w, G.Adj v w := by
+  have h_deg : G.degree v = (G.neighborFinset v).card := rfl
+  rw [h_deg, Finset.card_eq_one]
+  constructor
+  · rintro ⟨w, hw⟩
+    use w
+    have h_mem : w ∈ G.neighborFinset v := by rw [hw]; exact Finset.mem_singleton_self w
+    simp only [SimpleGraph.mem_neighborFinset] at h_mem
+    refine ⟨h_mem, ?_⟩
+    intro y hy
+    have h_mem_y : y ∈ G.neighborFinset v := by simp only [SimpleGraph.mem_neighborFinset, hy]
+    rw [hw, Finset.mem_singleton] at h_mem_y
+    exact h_mem_y
+  · rintro ⟨w, hw1, hw2⟩
+    use w
+    ext x
+    simp only [SimpleGraph.mem_neighborFinset, Finset.mem_singleton]
+    constructor
+    · intro hx
+      exact hw2 x hx
+    · rintro rfl
+      exact hw1
+
+/-- A vertex is a tree-leaf in the decoded tree iff it doesn't appear in the code. -/
+theorem pruferDecode_isLeaf_iff (n : ℕ) (hn : 2 ≤ n) (s : pruferCodeSpace n)
+    (v : Fin n) :
+    v ∈ treeLeaves (pruferDecode hn s) ↔ isLeafInPrufer s v := by
+  have h_leaf : v ∈ treeLeaves (pruferDecode hn s) ↔ ((pruferDecode hn s).1).degree v = 1 := by
+    unfold treeLeaves
+    classical
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    exact degree_eq_one_iff_exists_unique_adj.symm
+  rw [h_leaf]
+  rw [pruferDecode_degree n hn s v]
+  have h_eq : countOccurrences s (n - 2) v + 1 = 1 ↔ countOccurrences s (n - 2) v = 0 := by omega
+  rw [h_eq]
+  unfold countOccurrences
+  rw [Finset.card_eq_zero]
+  constructor
+  · intro h i
+    have hi : i ∉ Finset.univ.filter (fun (j : Fin (n - 2)) => j.val < n - 2 ∧ s j = v) := by
+      rw [h]
+      simp
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, not_and] at hi
+    exact hi i.isLt
+  · intro h
+    ext i
+    simp [h i]
+
+/-- The smallest tree-leaf of `pruferDecode s` equals the smallest vertex not
+appearing in `s`, which is `nextLeaf_0` from the decode process. -/
+theorem smallestTreeLeaf_pruferDecode (n : ℕ) (hn : 2 ≤ n) (s : pruferCodeSpace n) :
+    smallestTreeLeaf n hn (pruferDecode hn s) =
+    (Finset.univ.filter (fun (v : Fin n) => ∀ j : Fin (n - 2), s j ≠ v)).min'
+      (by
+        have h0_le : 0 ≤ n - 2 := Nat.zero_le _
+        have h_nonempty := nextLeaf_nonempty hn s 0 h0_le Finset.univ (by simp)
+        have h_finsets : Finset.univ.filter (fun v => ∀ j : Fin (n - 2), 0 ≤ j.val → s j ≠ v) =
+                         Finset.univ.filter (fun v => ∀ j : Fin (n - 2), s j ≠ v) := by
+          ext v
+          simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+          exact ⟨fun h j => h j (Nat.zero_le _), fun h j _ => h j⟩
+        rw [h_finsets] at h_nonempty
+        exact h_nonempty) := by
+  have h_eq : treeLeaves (pruferDecode hn s) = Finset.univ.filter (fun (v : Fin n) => ∀ j : Fin (n - 2), s j ≠ v) := by
+    ext v
+    rw [pruferDecode_isLeaf_iff n hn s v]
+    unfold isLeafInPrufer
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+  unfold smallestTreeLeaf
+  congr
+
 end ProofsInTheBook.Chapter31

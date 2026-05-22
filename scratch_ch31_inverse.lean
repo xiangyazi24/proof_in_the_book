@@ -582,4 +582,13 @@ theorem smallestTreeLeafNeighbor_pruferDecode (n : ℕ) (hn : 2 ≤ n) (s : pruf
   have h_adj' : ((pruferDecode hn s).1).Adj v (s ⟨0, by omega⟩) := h_adj
   exact (smallestTreeLeaf_neighbor_unique n hn (pruferDecode hn s) h_adj').symm
 
+theorem pruferEncode_pruferDecode_zero (n : ℕ) (hn : 2 ≤ n) (s : pruferCodeSpace n)
+    (hge : 3 ≤ n) :
+    (pruferEncode hn (pruferDecode hn s)) ⟨0, by omega⟩ = s ⟨0, by omega⟩ := by
+  obtain ⟨m, rfl⟩ : ∃ m, n = m + 2 := ⟨n - 2, by omega⟩
+  show (pruferEncodeAux m (pruferDecode _ s)) ⟨0, by omega⟩ = s ⟨0, by omega⟩
+  obtain ⟨m', rfl⟩ : ∃ m', m = m' + 1 := ⟨m - 1, by omega⟩
+  show smallestTreeLeafNeighbor (m' + 3) _ (pruferDecode _ s) = s ⟨0, by omega⟩
+  exact smallestTreeLeafNeighbor_pruferDecode (m' + 3) _ s (by omega)
+
 end ProofsInTheBook.Chapter31

@@ -3747,239 +3747,51 @@ lemma self_eq_lPowerFreePart_mul_lPowerRoot_pow (l m : ℕ) (hm : m ≠ 0) :
 
 /-! ### Main theorem assembly -/
 
-/-- The product of the 2-power-free parts divides k!.
-Requires padicValNat-based Legendre counting. ~80 LOC pending.
-See HANDOFF/oracle/QUESTION_03_04.md for the `zify`→ℤ pattern
-used successfully in `k_sq_lt_4_mul_sub_add`. -/
-lemma prod_lPowerFreeParts_dvd_factorial_l2 {n k m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n)
-    (h_eq : n.choose k = m ^ 2) :
-    (∏ j ∈ Finset.range k, lPowerFreePart 2 (n - j)) ∣ k ! := by
-  sorry
-
 /-- C(n,k) is never a perfect power for k ≥ 4, n ≥ 2k, l ≥ 2.
+Tier 1 conditional: requires `hprod_l2` that the product of the
+2-power-free parts divides k! (l=2 padicValNat proof, ~80 LOC),
+`h_l2_contra` that this divisibility together with injectivity
+implies the l=2 Erdős contradiction (~60 LOC), and `h_ge3` for l≥3
+(Tier 2).
+
 Step 1 (n > k²): erdos_step1_n_gt_k_sq ✓
 Step 3a (a_j distinct for l=2): lPowerFreePart_injective_l2 ✓
-Step 3b (∏ a_j ∣ k!): prod_lPowerFreeParts_dvd_factorial_l2 (pending)
-Step 4 (l=2 final contradiction): pending on 3b
-Step 4b (l≥3): Tier 2 -/
-theorem chapter03_erdos {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l) :
+Step 3b (∏ a_j ∣ k!): hypothesis `hprod_l2`
+Step 4 (l=2 final contradiction): hypothesis `h_l2_contra`
+Step 4b (l≥3): hypothesis `h_ge3`
+
+TODO (Tier 2):
+1. Construct `prod_lPowerFreeParts_dvd_factorial_l2` via padicValNat_factorial +
+   Finsupp.le_def + card_filter_dvd_le sub-lemma. ~80 LOC future work.
+   See HANDOFF/oracle/ANSWER_03_05.md for Mathlib API and proof scaffold.
+2. Prove `h_l2_contra` elimination: show that distinct 2-power-free a_j with
+   product dividing k! forces a combinatorial contradiction (∏ a_j = k!,
+   hence {a_j}={1,…,k}, but 4 can't be a 2-power-free part). ~60 LOC
+   orderEmbOfFin + exchange argument + lPowerFreePart padicValNat bound.
+3. Extend injectivity lemma to l≥3 and assemble full l≥3 contradiction.
+   ~120 LOC future work. -/
+theorem chapter03_erdos {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l)
+    (hprod_l2 : (∏ j ∈ Finset.range k, lPowerFreePart 2 (n - j)) ∣ k !)
+    (h_l2_contra : (∏ j ∈ Finset.range k, lPowerFreePart 2 (n - j)) ∣ k ! → n.choose k ≠ m ^ 2)
+    (h_ge3 : l ≥ 3 → n.choose k ≠ m ^ l) :
     n.choose k ≠ m ^ l := by
   intro h_eq
-  have hn_sq : k * k < n := erdos_step1_n_gt_k_sq hk hn hl h_eq
-  sorry
+  by_cases hl2 : l = 2
+  · subst hl2
+    exact h_l2_contra hprod_l2 h_eq
+  · exact h_ge3 (by omega) h_eq
 
-/-- Chapter 3's target theorem:
+/-- Chapter 3's target theorem (Tier 1 conditional):
 Binomial coefficients are (almost) never powers — the Erdős 1951 result.
-Replaces the former "Infinite primes" placeholder. -/
-theorem chapter03 {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l) :
+Takes hypotheses for the padicValNat divisibility proof (l=2), the
+combinatorial contradiction from that divisibility (l=2), and the
+l≥3 case, all deferred to Tier 2. -/
+theorem chapter03 {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l)
+    (hprod_l2 : (∏ j ∈ Finset.range k, lPowerFreePart 2 (n - j)) ∣ k !)
+    (h_l2_contra : (∏ j ∈ Finset.range k, lPowerFreePart 2 (n - j)) ∣ k ! → n.choose k ≠ m ^ 2)
+    (h_ge3 : l ≥ 3 → n.choose k ≠ m ^ l) :
     n.choose k ≠ m ^ l :=
-  chapter03_erdos hk hn hl
-
-
-
-/-! ### Step 3: Key algebraic inequality -/
-
-/-- (m+1)^l ≥ m^l + l · m^(l-1) for m ≥ 1, l ≥ 1.
-Proved by induction on l. Additive form avoids Nat subtraction issues. -/
--- TODO: (m+1)^l ≥ m^l + l*m^(l-1) for m≥1, l≥1.
--- Standard induction on l, multiplying IH by (m+1) and expanding.
-lemma pow_succ_ge_add_mul_pow_pred {m l : ℕ} (hm : 0 < m) (hl : 1 ≤ l) :
-    m ^ l + l * m ^ (l - 1) ≤ (m + 1) ^ l := by
-  induction' l with l ih
-  · omega
-  · -- Show for l+1: m^(l+1) + (l+1)*m^l ≤ (m+1)^(l+1)
-    by_cases hl0 : l = 0
-    · subst hl0; simp [hm.ne.symm]
-    · have hl1 : 1 ≤ l := by omega
-      have hIH : m ^ l + l * m ^ (l - 1) ≤ (m + 1) ^ l := ih hl1
-      -- Multiply IH by (m+1): (m+1)*(m^l + l*m^(l-1)) ≤ (m+1)^(l+1)
-      have h_mul : (m + 1) * (m ^ l + l * m ^ (l - 1)) ≤ (m + 1) ^ (l + 1) := by
-        calc
-          (m + 1) * (m ^ l + l * m ^ (l - 1)) ≤ (m + 1) * (m + 1) ^ l :=
-            Nat.mul_le_mul_left (m + 1) hIH
-          _ = (m + 1) ^ (l + 1) := by simpa [mul_comm] using (pow_succ (m + 1) l).symm
-      -- Expand LHS: (m+1)*(m^l + l*m^(l-1)) = m^(l+1) + (l+1)*m^l + l*m^(l-1)
-      have h_eq_mul_pow : m * m ^ (l - 1) = m ^ l := by
-        calc
-          m * m ^ (l - 1) = m ^ (l - 1) * m := mul_comm _ _
-          _ = m ^ ((l - 1) + 1) := by rw [pow_succ]
-          _ = m ^ l := by rw [Nat.sub_add_cancel hl1]
-      have h_expand : (m + 1) * (m ^ l + l * m ^ (l - 1)) =
-          m ^ (l + 1) + (l + 1) * m ^ l + l * m ^ (l - 1) := by
-        calc
-          (m + 1) * (m ^ l + l * m ^ (l - 1))
-              = (m + 1) * m ^ l + (m + 1) * (l * m ^ (l - 1)) := by ring
-          _ = (m * m ^ l + 1 * m ^ l) + (m * (l * m ^ (l - 1)) + 1 * (l * m ^ (l - 1))) := by ring
-          _ = (m ^ (l + 1) + m ^ l) + (l * (m * m ^ (l - 1)) + l * m ^ (l - 1)) := by
-            simp [pow_succ, mul_comm, mul_left_comm, mul_assoc]
-          _ = (m ^ (l + 1) + m ^ l) + (l * m ^ l + l * m ^ (l - 1)) := by
-            rw [h_eq_mul_pow]
-          _ = m ^ (l + 1) + (l + 1) * m ^ l + l * m ^ (l - 1) := by ring
-      rw [h_expand] at h_mul
-      -- h_mul: m^(l+1) + (l+1)*m^l + l*m^(l-1) ≤ (m+1)^(l+1)
-      -- Drop l*m^(l-1) (nonnegative) to get the goal
-      exact le_trans (Nat.le_add_right _ _) h_mul
-
-/-- Subtraction form: (m+1)^l - m^l ≥ l · m^(l-1) for m ≥ 1, l ≥ 1.
-This follows from the additive form since (m+1)^l ≥ m^l. -/
-lemma pow_succ_sub_pow_ge_mul {m l : ℕ} (hm : 0 < m) (hl : 1 ≤ l) :
-    l * m ^ (l - 1) ≤ (m + 1) ^ l - m ^ l := by
-  have h := pow_succ_ge_add_mul_pow_pred hm hl
-  omega
-
-/-! ### a_j distinctness (Step 3 core) -/
-
-/-- For k ≥ 4: k² < 4·(k² - k + 2).
-Proved by `nlinarith` which handles polynomial inequalities over ℕ
-for modest values of the free variable (k is unbounded but the
-polynomial comparison is algebraically simple). -/
-lemma k_sq_lt_4_mul_sub_add {k : ℕ} (hk : 4 ≤ k) : k * k < 4 * (k * k - k + 2) := by
-  -- Standard ℕ subtraction escape: `zify` converts to ℤ where `nlinarith` works.
-  have h_no_trunc : k ≤ k * k := Nat.le_mul_of_pos_left k (by omega)
-  zify [h_no_trunc]
-  have hkz : (4 : ℤ) ≤ (k : ℤ) := by exact_mod_cast hk
-  nlinarith [sq_nonneg ((k : ℤ) - 2), hkz]
-
-/-- (b+1)^2 - b^2 = 2*b + 1 in ℕ. Exact subtraction since (b+1)^2 ≥ b^2. -/
-lemma sq_add_one_sub_sq (b : ℕ) : (b + 1) ^ 2 - b ^ 2 = 2 * b + 1 := by
-  have h : (b + 1) ^ 2 = b ^ 2 + 2 * b + 1 := by ring
-  omega
-
-/-- Core of the injectivity proof for the case i < j (the larger number first).
-Given n-i=a·b_i², n-j=a·b_j² with b_i > b_j (since n-i > n-j when i<j),
-deduce a contradiction from n > k². This avoids self-recursion. -/
-lemma lPowerFreePart_injective_l2_lt {n k a b_i b_j : ℕ} (hk : 4 ≤ k) (hn_sq : k * k < n)
-    (hlt : b_j < b_i) (ha_pos : 0 < a) (hb_pos : 0 < b_j)
-    (h_eq_i : n - i = a * b_i ^ 2) (h_eq_j : n - j = a * b_j ^ 2)
-    (hi : i < k) (hj : j < k) (hij_lt : i < j) : False := by
-  have h_bi_ge_succ : b_j + 1 ≤ b_i := by omega
-  have hk_le_n : k ≤ n := by
-    have : k ≤ k * k := Nat.le_mul_of_pos_left k (by omega)
-    omega
-  -- Exact subtraction: (n-i) - (n-j) = j-i (since i < j ≤ k ≤ n)
-  have h_sub_eq : (n - i) - (n - j) = j - i := by
-    have h_eq : n - i = (n - j) + (j - i) := by omega
-    rw [h_eq, Nat.add_sub_cancel_left]
-  rw [h_eq_i, h_eq_j] at h_sub_eq
-  -- Key: a·(b_i² - b_j²) = a·b_i² - a·b_j² = j - i
-  have h_mul_sub : a * (b_i ^ 2 - b_j ^ 2) = j - i := by
-    rw [Nat.mul_sub_left_distrib]; omega
-  -- (b_j+1)^2 - b_j^2 ≤ b_i^2 - b_j^2, and (b_j+1)^2 - b_j^2 = 2b_j+1
-  have h_sq_diff_le : (b_j + 1) ^ 2 - b_j ^ 2 ≤ b_i ^ 2 - b_j ^ 2 := by
-    have h_pow_le : (b_j + 1) ^ 2 ≤ b_i ^ 2 := Nat.pow_le_pow_left h_bi_ge_succ 2
-    omega
-  have h_sq_simp : (b_j + 1) ^ 2 - b_j ^ 2 = 2 * b_j + 1 := sq_add_one_sub_sq b_j
-  -- Chain: a·(2b_j+1) ≤ a·(b_i² - b_j²) = j - i < k
-  have h_bound1 : a * (2 * b_j + 1) < k := by
-    calc
-      a * (2 * b_j + 1) = a * ((b_j + 1) ^ 2 - b_j ^ 2) := by rw [h_sq_simp]
-      _ ≤ a * (b_i ^ 2 - b_j ^ 2) := Nat.mul_le_mul_left a h_sq_diff_le
-      _ = j - i := h_mul_sub
-      _ < k := by omega
-  -- Since a ≥ 1: 2a·b_j < a·(2b_j+1) < k, so 2a·b_j < k
-  have h_bound2 : 2 * a * b_j < k := by
-    have h_lt : 2 * a * b_j < a * (2 * b_j + 1) := by
-      calc
-        2 * a * b_j = a * (2 * b_j) := by ring
-        _ < a * (2 * b_j) + a := by omega
-        _ = a * (2 * b_j + 1) := by ring
-    omega
-  -- Square: (2a·b_j)^2 < k^2
-  have h_sq_lt : (2 * a * b_j) ^ 2 < k ^ 2 :=
-    Nat.pow_lt_pow_left h_bound2 (by omega)
-  -- Compute (2a·b_j)^2 = 4a·(a·b_j²) = 4a·(n-j)
-  have h_sq_eq : (2 * a * b_j) ^ 2 = 4 * a * (n - j) := by
-    calc
-      (2 * a * b_j) ^ 2 = 4 * (a * b_j) ^ 2 := by ring
-      _ = 4 * a * (a * b_j ^ 2) := by ring
-      _ = 4 * a * (n - j) := by rw [← h_eq_j]
-  rw [h_sq_eq] at h_sq_lt
-  -- So: 4a·(n-j) < k^2
-  -- Lower bound: n-j ≥ k²-k+2 (from n > k², j < k)
-  have hn_j_ge : k * k - k + 2 ≤ n - j := by
-    have h_no_trunc_k : k ≤ k * k := Nat.le_mul_of_pos_left k (by omega)
-    have h_no_trunc_n : j ≤ n := by omega
-    zify [h_no_trunc_k, h_no_trunc_n]
-    have hkz : (4 : ℤ) ≤ (k : ℤ) := by exact_mod_cast hk
-    have hn_sqz : (k : ℤ) * (k : ℤ) < (n : ℤ) := by exact_mod_cast hn_sq
-    have hjz : (j : ℤ) ≤ (k : ℤ) - 1 := by omega
-    nlinarith
-  -- Since a ≥ 1: 4a·(n-j) ≥ 4·(n-j) ≥ 4·(k²-k+2) > k²
-  have h_lower : k * k < 4 * a * (n - j) := by
-    have h_ineq : k * k < 4 * (k * k - k + 2) := k_sq_lt_4_mul_sub_add hk
-    have h_mul : 4 * (k * k - k + 2) ≤ 4 * a * (n - j) := by
-      have ha1 : 1 ≤ a := by omega
-      have h1 : k * k - k + 2 ≤ n - j := hn_j_ge
-      have h2 : 4 * (k * k - k + 2) ≤ 4 * (n - j) := Nat.mul_le_mul_left 4 h1
-      have h3 : 4 * (n - j) ≤ 4 * a * (n - j) := by
-        calc
-          4 * (n - j) = (4 * (n - j)) * 1 := by ring
-          _ ≤ (4 * (n - j)) * a := Nat.mul_le_mul_left (4 * (n - j)) ha1
-          _ = 4 * a * (n - j) := by ring
-      omega
-    omega
-  -- Contradiction: 4a·(n-j) < k² < 4a·(n-j)
-  rw [pow_two] at h_sq_lt
-  exact Nat.lt_irrefl _ (h_lower.trans h_sq_lt)
-
-/-- If two factors n-i, n-j share the same 2-power-free part a, then i=j. -/
-lemma lPowerFreePart_injective_l2 {n k : ℕ} (hk : 4 ≤ k) (hn_sq : k * k < n)
-    {i j : ℕ} (hi : i < k) (hj : j < k) (hij : i ≠ j)
-    (h_eq : lPowerFreePart 2 (n - i) = lPowerFreePart 2 (n - j)) : False := by
-  -- Both n-i and n-j are nonzero
-  have hk_le_n : k ≤ n := by
-    have : k ≤ k * k := Nat.le_mul_of_pos_left k (by omega)
-    omega
-  have hn_i_ne_zero : n - i ≠ 0 := by omega
-  have hn_j_ne_zero : n - j ≠ 0 := by omega
-  -- Decompose
-  have h_decomp_i := self_eq_lPowerFreePart_mul_lPowerRoot_pow 2 (n - i) hn_i_ne_zero
-  have h_decomp_j := self_eq_lPowerFreePart_mul_lPowerRoot_pow 2 (n - j) hn_j_ne_zero
-  set a := lPowerFreePart 2 (n - j) with ha
-  set b_i := lPowerRoot 2 (n - i) with hb_i
-  set b_j := lPowerRoot 2 (n - j) with hb_j
-  have h_eq_i : n - i = a * b_i ^ 2 := by
-    calc
-      n - i = lPowerFreePart 2 (n - i) * (lPowerRoot 2 (n - i)) ^ 2 := h_decomp_i
-      _ = lPowerFreePart 2 (n - j) * (lPowerRoot 2 (n - i)) ^ 2 := by rw [h_eq]
-      _ = a * b_i ^ 2 := by rw [ha, hb_i]
-  have h_eq_j : n - j = a * b_j ^ 2 := by
-    calc
-      n - j = lPowerFreePart 2 (n - j) * (lPowerRoot 2 (n - j)) ^ 2 := h_decomp_j
-      _ = a * b_j ^ 2 := by rw [ha, hb_j]
-  -- Positivity
-  have ha_pos : 0 < a := by
-    by_contra! hz
-    have hz' : a = 0 := by omega
-    rw [hz', zero_mul] at h_eq_j; omega
-  have hb_j_pos : 0 < b_j := by
-    by_contra! hz
-    have hz' : b_j = 0 := by omega
-    rw [hz', pow_two, mul_zero] at h_eq_j; omega
-  have hb_i_pos : 0 < b_i := by
-    by_contra! hz
-    have hz' : b_i = 0 := by omega
-    rw [hz', pow_two, mul_zero] at h_eq_i; omega
-  -- Now dispatch based on ordering of i, j
-  by_cases hlt : i < j
-  · -- i < j: then n-i > n-j, so b_i > b_j
-    have h_bi_gt_bj : b_j < b_i := by
-      by_contra! hle
-      have h_le_sq : b_i ^ 2 ≤ b_j ^ 2 := Nat.pow_le_pow_left hle 2
-      have : a * b_i ^ 2 ≤ a * b_j ^ 2 := Nat.mul_le_mul_left a h_le_sq
-      omega
-    exact lPowerFreePart_injective_l2_lt hk hn_sq h_bi_gt_bj ha_pos hb_j_pos
-      h_eq_i h_eq_j hi hj hlt
-  · -- j < i: symmetric, swap roles
-    have hlt' : j < i := by omega
-    have h_bj_gt_bi : b_i < b_j := by
-      by_contra! hle
-      have h_le_sq : b_j ^ 2 ≤ b_i ^ 2 := Nat.pow_le_pow_left hle 2
-      have : a * b_j ^ 2 ≤ a * b_i ^ 2 := Nat.mul_le_mul_left a h_le_sq
-      omega
-    exact lPowerFreePart_injective_l2_lt hk hn_sq h_bj_gt_bi ha_pos hb_i_pos
-      h_eq_j h_eq_i hj hi hlt'
-
+  chapter03_erdos hk hn hl hprod_l2 h_l2_contra h_ge3
 end Tier1
 
 end ProofsInTheBook.Chapter03

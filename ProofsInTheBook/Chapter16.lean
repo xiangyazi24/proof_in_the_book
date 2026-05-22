@@ -71,28 +71,39 @@ theorem same_color_dist_lt_of_mem_colorClass {α : Type*} [PseudoMetricSpace α]
   rw [mem_colorClass_iff] at hx hy
   exact h x hx.1 y hy.1 (hx.2.trans hy.2.symm)
 
-theorem chapter16 {α : Type*} [PseudoMetricSpace α] {d : ℕ} [DecidableEq (Fin (d + 1))]
-    {points : Finset α} {diamBound : ℝ} {color : α → Fin (d + 1)}
-    (h : HasSmallColorClasses points diamBound color) (c : Fin (d + 1)) {x y : α}
-    (hx : x ∈ colorClass points color c) (hy : y ∈ colorClass points color c) :
-    dist x y < diamBound :=
-  same_color_dist_lt_of_mem_colorClass h hx hy
+/-- Borsuk's conjecture in dimension d: every bounded set with positive
+diameter can be partitioned into d+1 sets, each of strictly smaller diameter. -/
+def BorsukConjecture (d : ℕ) : Prop :=
+  ∀ (S : Set (EuclideanSpace ℝ (Fin d))),
+    Bornology.IsBounded S → 0 < Metric.diam S →
+    ∃ parts : Fin (d + 1) → Set (EuclideanSpace ℝ (Fin d)),
+      S ⊆ ⋃ i, parts i ∧
+      ∀ i, Metric.diam (parts i) < Metric.diam S
 
 /--
-The Kahn-Kalai counterexample to Borsuk's conjecture (1993):
-For d ≥ 298, there exists a bounded set in ℝ^d that cannot be partitioned
-into d + 1 parts of smaller diameter. The construction uses a subset of
-{-1,1}^d related to a binary error-correcting code.
-
-The book's proof shows that the number of color classes needed exceeds d + 1
-by a counting/Frankl-Wilson argument: the Frankl-Wilson theorem gives a lower
-bound on the chromatic number of the "distance graph" on {-1,1}^d.
+A Kahn-Kalai certificate is a counterexample set in `ℝ^d` that is bounded,
+has positive diameter, but cannot be partitioned into `d + 1` sets of strictly
+smaller diameter.
 -/
-theorem kahn_kalai_counterexample_bound (d : ℕ) (_hd : 298 ≤ d)
-    (_franklWilson : ∀ (S : Finset (Fin d → Bool)),
-      (∀ x ∈ S, ∀ y ∈ S, x ≠ y →
-        (Finset.univ.filter fun i => x i ≠ y i).card ≠ d / 2) →
-      d + 1 < S.card) :
-    True := trivial
+structure KahnKalaiCertificate (d : ℕ) where
+  S : Set (EuclideanSpace ℝ (Fin d))
+  bounded : Bornology.IsBounded S
+  pos_diam : 0 < Metric.diam S
+  no_partition : ¬ ∃ parts : Fin (d + 1) → Set (EuclideanSpace ℝ (Fin d)),
+    S ⊆ ⋃ i, parts i ∧ ∀ i, Metric.diam (parts i) < Metric.diam S
+
+/--
+Chapter 16 (Borsuk's conjecture in high dimensions, Tier 1 conditional):
+Given a Kahn-Kalai-style counterexample — a bounded set with positive diameter
+in ℝ^d that cannot be partitioned into d+1 pieces of strictly smaller diameter —
+Borsuk's conjecture fails in dimension d.
+
+TODO (Tier 2): Construct the actual Kahn-Kalai counterexample for `d ≥ 298`
+via Frankl-Wilson combinatorics on hypergraph color codes to produce a
+`KahnKalaiCertificate d`.
+-/
+theorem chapter16 {d : ℕ} (cert : KahnKalaiCertificate d) :
+    ¬ BorsukConjecture d := fun h =>
+  cert.no_partition (h cert.S cert.bounded cert.pos_diam)
 
 end ProofsInTheBook.Chapter16

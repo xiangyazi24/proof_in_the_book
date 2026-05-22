@@ -3747,19 +3747,25 @@ lemma self_eq_lPowerFreePart_mul_lPowerRoot_pow (l m : ℕ) (hm : m ≠ 0) :
 
 /-! ### Main theorem assembly -/
 
+/-- The product of the 2-power-free parts divides k!.
+Requires padicValNat-based Legendre counting. ~80 LOC pending.
+See HANDOFF/oracle/QUESTION_03_04.md for the `zify`→ℤ pattern
+used successfully in `k_sq_lt_4_mul_sub_add`. -/
+lemma prod_lPowerFreeParts_dvd_factorial_l2 {n k m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n)
+    (h_eq : n.choose k = m ^ 2) :
+    (∏ j ∈ Finset.range k, lPowerFreePart 2 (n - j)) ∣ k ! := by
+  sorry
+
 /-- C(n,k) is never a perfect power for k ≥ 4, n ≥ 2k, l ≥ 2.
-Step 1 (n > k²) is proved. Steps 2–4 of the a_j decomposition pending. -/
+Step 1 (n > k²): erdos_step1_n_gt_k_sq ✓
+Step 3a (a_j distinct for l=2): lPowerFreePart_injective_l2 ✓
+Step 3b (∏ a_j ∣ k!): prod_lPowerFreeParts_dvd_factorial_l2 (pending)
+Step 4 (l=2 final contradiction): pending on 3b
+Step 4b (l≥3): Tier 2 -/
 theorem chapter03_erdos {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l) :
     n.choose k ≠ m ^ l := by
   intro h_eq
   have hn_sq : k * k < n := erdos_step1_n_gt_k_sq hk hn hl h_eq
-  -- Step 2: decompose each n-j = a_j * b_j^l (via `self_eq_lPowerFreePart_mul_lPowerRoot_pow`)
-  -- Step 3: prove a_i ≠ a_j for i ≠ j (via `pow_succ_ge_add_mul_pow_pred`)
-  -- Step 3b: prove {a_j | j < k} = {1,2,…,k} (via Legendre counting `∏ a_j ∣ k!`)
-  -- Step 4: l=2 → 4 ∈ {a_j} but 4 = 2² not squarefree → contradiction
-  -- Step 4b: l≥3 → algebraic impossibility via {1,2,4} ⊂ {a_j}
-  -- Remaining sub-lemmas: pow_succ_ge_add_mul_pow_pred, lPowerFreePart_injective,
-  --   prod_lPowerFreeParts_dvd_factorial, a_j_classification.
   sorry
 
 /-- Chapter 3's target theorem:

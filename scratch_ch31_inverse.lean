@@ -325,4 +325,97 @@ private theorem pruferDecodeAux_degree (n : ℕ) (hn : 2 ≤ n) (s : pruferCodeS
         · rw [if_pos h, if_pos (h_erase_iff.mpr h)]
         · rw [if_neg h, if_neg (fun hh => h (h_erase_iff.mp hh))]
 
+/-- pruferFinalState.1 = {pruferLastU, pruferLastV}. -/
+private lemma pruferFinalState_1_eq_pair (n : ℕ) (hn : 2 ≤ n) (s : pruferCodeSpace n) :
+    (pruferDecodeAux hn s (n - 2) (by rfl)).val.1 = {pruferLastU hn s, pruferLastV hn s} := by
+  have h_uv_ne : pruferLastU hn s ≠ pruferLastV hn s := pruferLastU_ne_V hn s
+  have h_u_mem : pruferLastU hn s ∈ (pruferDecodeAux hn s (n - 2) (by rfl)).val.1 := pruferLastU_mem hn s
+  have h_v_mem : pruferLastV hn s ∈ (pruferDecodeAux hn s (n - 2) (by rfl)).val.1 := pruferLastV_mem hn s
+  have h_card : (pruferDecodeAux hn s (n - 2) (by rfl)).val.1.card = 2 := pruferFinalState_card hn s
+  have h_sub : ({pruferLastU hn s, pruferLastV hn s} : Finset (Fin n)) ⊆
+               (pruferDecodeAux hn s (n - 2) (by rfl)).val.1 := by
+    intro x hx
+    simp only [Finset.mem_insert, Finset.mem_singleton] at hx
+    rcases hx with rfl | rfl
+    · exact h_u_mem
+    · exact h_v_mem
+  have h_pair_card : ({pruferLastU hn s, pruferLastV hn s} : Finset (Fin n)).card = 2 :=
+    Finset.card_pair h_uv_ne
+  exact (Finset.eq_of_subset_of_card_le h_sub (by omega)).symm
+
+/-- The famous Prüfer degree formula: in the decoded tree, every vertex's
+degree equals `1 + (# times v appears in the code)`. -/
+theorem pruferDecode_degree (n : ℕ) (hn : 2 ≤ n) (s : pruferCodeSpace n)
+    (v : Fin n) :
+    ((pruferDecode hn s).1).degree v = countOccurrences s (n - 2) v + 1 := by
+  -- pruferDecode = ⟨fromEdgeSet (pruferDecodeEdges hn s : Set _), _⟩.
+  -- Both LHS and RHS interpret degree via SimpleGraph.degree; the underlying
+  -- graphs are defeq but Fintype instances differ. Use Nat.card via neighborSet.
+  have h_card_eq : ((pruferDecode hn s).1).degree v =
+      (fromEdgeSet (V := Fin n)
+        (pruferDecodeEdges hn s : Set (Sym2 (Fin n)))).degree v := by
+    -- Both degrees equal Nat.card (neighborSet v), independent of Fintype instance.
+    have h1 : ((pruferDecode hn s).1).degree v =
+              (((pruferDecode hn s).1).neighborFinset v).card := rfl
+    have h2 : (fromEdgeSet (V := Fin n)
+        (pruferDecodeEdges hn s : Set (Sym2 (Fin n)))).degree v =
+              ((fromEdgeSet (V := Fin n)
+        (pruferDecodeEdges hn s : Set (Sym2 (Fin n)))).neighborFinset v).card := rfl
+    rw [h1, h2]
+    -- Both neighborFinsets contain the same elements (Adj is the same).
+    congr 1
+    ext x
+    simp [SimpleGraph.mem_neighborFinset]
+    rfl
+  rw [h_card_eq]
+  unfold pruferDecodeEdges
+  set u := pruferLastU hn s with hu_def
+  set w := pruferLastV hn s with hw_def
+  -- pruferDecodeEdges = insert s(u, w) (pruferDecodeAux hn s (n - 2) (by rfl)).val.2.
+  have h_uw_ne : u ≠ w := pruferLastU_ne_V hn s
+  -- Unfold pruferFinalState to match pruferDecodeAux_degree's signature.
+  show (fromEdgeSet (V := Fin n)
+        ((insert s(u, w) (pruferDecodeAux hn s (n - 2) (by rfl)).val.2 :
+            Finset (Sym2 (Fin n))) : Set (Sym2 (Fin n)))).degree v =
+        countOccurrences s (n - 2) v + 1
+  -- Step 2: edge s(u, w) not in pruferFinalState.2 (forest invariant).
+  have h_edge_not_in : s(u, w) ∉ (pruferDecodeAux hn s (n - 2) (by rfl)).val.2 := by
+    intro hmem
+    have h_forest := (pruferDecodeAux hn s (n - 2) (by rfl)).property.1
+    have h_adj : (fromEdgeSet (V := Fin n)
+      ((pruferDecodeAux hn s (n - 2) (by rfl)).val.2 : Set (Sym2 (Fin n)))).Adj u w := by
+      rw [fromEdgeSet_adj]
+      exact ⟨by exact_mod_cast hmem, h_uw_ne⟩
+    exact h_forest.uniq u (pruferLastU_mem hn s) w (pruferLastV_mem hn s)
+      h_uw_ne h_adj.reachable
+  -- Step 3: case split on whether v = u or v = w or neither.
+  by_cases hv_u : v = u
+  · -- After subst, v ↦ u; use u throughout.
+    subst hv_u
+    rw [fromEdgeSet_finset_insert_degree_endpoint
+      (pruferDecodeAux hn s (n - 2) (by rfl)).val.2 u w h_uw_ne h_edge_not_in]
+    rw [pruferDecodeAux_degree n hn s (n - 2) (by rfl) u]
+    have h_u_mem : u ∈ (pruferDecodeAux hn s (n - 2) (by rfl)).val.1 := pruferLastU_mem hn s
+    rw [if_pos h_u_mem]
+  · by_cases hv_w : v = w
+    · subst hv_w
+      have h_swap : s(u, w) = s(w, u) := sym2_pair_swap _ _
+      rw [h_swap]
+      have h_edge_not_in' : s(w, u) ∉ (pruferDecodeAux hn s (n - 2) (by rfl)).val.2 := by
+        rw [← h_swap]; exact h_edge_not_in
+      have h_w_ne_u : w ≠ u := hv_u
+      rw [fromEdgeSet_finset_insert_degree_endpoint
+        (pruferDecodeAux hn s (n - 2) (by rfl)).val.2 w u h_w_ne_u h_edge_not_in']
+      rw [pruferDecodeAux_degree n hn s (n - 2) (by rfl) w]
+      have h_w_mem : w ∈ (pruferDecodeAux hn s (n - 2) (by rfl)).val.1 := pruferLastV_mem hn s
+      rw [if_pos h_w_mem]
+    · rw [fromEdgeSet_finset_insert_degree_other
+        (pruferDecodeAux hn s (n - 2) (by rfl)).val.2 u w v h_uw_ne hv_u hv_w]
+      rw [pruferDecodeAux_degree n hn s (n - 2) (by rfl) v]
+      have h_v_notin : v ∉ (pruferDecodeAux hn s (n - 2) (by rfl)).val.1 := by
+        rw [pruferFinalState_1_eq_pair]
+        simp only [Finset.mem_insert, Finset.mem_singleton, not_or]
+        exact ⟨hv_u, hv_w⟩
+      rw [if_neg h_v_notin]
+
 end ProofsInTheBook.Chapter31

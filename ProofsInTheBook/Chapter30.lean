@@ -212,10 +212,32 @@ theorem lgv_lemma_of_certificate {n : ℕ} {R : Type*} [Fintype (Equiv.Perm (Fin
         cert.signedWeight σ :=
   cert.total_sum_eq_good_sum
 
-theorem chapter30 {ι R : Type*}
-    [Fintype ι] [DecidableEq ι] [CommRing R] (M : Matrix ι ι R)
-    (hzero : ∀ i j, i ≠ j → M i j = 0) :
-    M.det = ∏ i, M i i :=
-  det_eq_diag_product_of_offdiag_zero M hzero
+/-- LGV determinant identity (conditional form):
+The determinant of a matrix M equals the signed sum over non-intersecting path families.
+(This abstracts the geometric core: M(i, j) is the number of paths from source i to sink j.
+If a sign-reversing involution `cert` on intersecting families is provided, the cancellation
+leaves only the non-intersecting families.)
+TODO: Construct the explicit `BadInvolutionCertificate` for concrete lattice paths (Tier 2). -/
+theorem chapter30 {n : ℕ} {R : Type*}
+    [CommRing R] [IsAddTorsionFree R]
+    (M : Matrix (Fin n) (Fin n) R)
+    (cert : BadInvolutionCertificate (Equiv.Perm (Fin n)) R)
+    (h_weight : ∀ σ : Equiv.Perm (Fin n),
+        cert.signedWeight σ = Equiv.Perm.sign σ • ∏ i, M (σ i) i) :
+    M.det = ∑ σ ∈ Finset.univ.filter (fun σ => ¬ cert.bad σ),
+      Equiv.Perm.sign σ • ∏ i, M (σ i) i := by
+  calc M.det
+      = ∑ σ : Equiv.Perm (Fin n), Equiv.Perm.sign σ • ∏ i, M (σ i) i := Matrix.det_apply M
+    _ = ∑ σ : Equiv.Perm (Fin n), cert.signedWeight σ := by
+        apply Finset.sum_congr rfl
+        intros σ _
+        exact (h_weight σ).symm
+    _ = ∑ σ ∈ Finset.univ.filter (fun σ => ¬ cert.bad σ),
+          cert.signedWeight σ := cert.total_sum_eq_good_sum
+    _ = ∑ σ ∈ Finset.univ.filter (fun σ => ¬ cert.bad σ),
+          Equiv.Perm.sign σ • ∏ i, M (σ i) i := by
+        apply Finset.sum_congr rfl
+        intros σ _
+        exact h_weight σ
 
 end ProofsInTheBook.Chapter30

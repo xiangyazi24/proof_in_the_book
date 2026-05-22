@@ -491,4 +491,95 @@ theorem smallestTreeLeaf_pruferDecode (n : ℕ) (hn : 2 ≤ n) (s : pruferCodeSp
   unfold smallestTreeLeaf
   congr
 
+private theorem smallestTreeLeaf_eq_min_filter (n : ℕ) (hn : 2 ≤ n) (s : pruferCodeSpace n) :
+    smallestTreeLeaf n hn (pruferDecode hn s) ∈
+    (Finset.univ.filter (fun (v : Fin n) => ∀ j : Fin (n - 2), s j ≠ v)) ∧
+    ∀ v ∈ (Finset.univ.filter (fun (v : Fin n) => ∀ j : Fin (n - 2), s j ≠ v)),
+      smallestTreeLeaf n hn (pruferDecode hn s) ≤ v := by
+  have h_eq := smallestTreeLeaf_pruferDecode n hn s
+  rw [h_eq]
+  exact ⟨Finset.min'_mem _ _, fun v hv => Finset.min'_le _ _ hv⟩
+
+lemma step_one_edge_mem (n : ℕ) (hn : 2 ≤ n) (s : pruferCodeSpace n) (hge : 3 ≤ n) (e : Sym2 (Fin n))
+    (he : e ∈ (pruferDecodeAux hn s 1 (by omega)).val.2) :
+    e ∈ pruferDecodeEdges hn s := by
+  have h_mono : ∀ m (h_ge1 : 1 ≤ m) (hm_le : m ≤ n - 2), e ∈ (pruferDecodeAux hn s m hm_le).val.2 := by
+    intro m
+    induction m with
+    | zero => intro h1 _; omega
+    | succ m ih =>
+      intro h_ge hm_le
+      by_cases h_eq : m = 0
+      · subst h_eq
+        have h_rw : (pruferDecodeAux hn s 1 (by omega)).val.2 = (pruferDecodeAux hn s 1 hm_le).val.2 := rfl
+        rw [← h_rw]
+        exact he
+      · have hm_ge1 : 1 ≤ m := by omega
+        have hm_le_prev : m ≤ n - 2 := by omega
+        have ih_m := ih hm_ge1 hm_le_prev
+        have h_succ : m + 1 ≤ n - 2 := hm_le
+        obtain ⟨_, _, _, h_edges, _⟩ := pruferDecodeAux_succ_val_2 hn s m h_succ
+        have h_rw : (pruferDecodeAux hn s (m + 1) hm_le).val.2 = (pruferDecodeAux hn s (m + 1) h_succ).val.2 := rfl
+        rw [h_rw, h_edges]
+        exact Finset.mem_insert_of_mem ih_m
+  have h_in_n2 := h_mono (n - 2) (by omega) (by rfl)
+  unfold pruferDecodeEdges
+  exact Finset.mem_insert_of_mem h_in_n2
+
+theorem smallestTreeLeafNeighbor_pruferDecode (n : ℕ) (hn : 2 ≤ n) (s : pruferCodeSpace n)
+    (hge : 3 ≤ n) :
+    smallestTreeLeafNeighbor n hn (pruferDecode hn s) = s ⟨0, by omega⟩ := by
+  set v := smallestTreeLeaf n hn (pruferDecode hn s)
+  have h1 : 0 + 1 ≤ n - 2 := by omega
+  have hv_min : v = (Finset.univ.filter (fun x => ∀ j : Fin (n - 2), 0 ≤ j.val → s j ≠ x)).min' (nextLeaf_nonempty hn s 0 (by omega) Finset.univ (by simp)) := by
+    apply le_antisymm
+    · apply Finset.le_min'
+      intro y hy
+      have hv_le : ∀ x ∈ Finset.univ.filter (fun (v : Fin n) => ∀ j : Fin (n - 2), s j ≠ v), v ≤ x :=
+        (smallestTreeLeaf_eq_min_filter n hn s).2
+      apply hv_le
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hy ⊢
+      intro j
+      exact hy j (Nat.zero_le _)
+    · apply Finset.min'_le
+      have hv_mem : v ∈ Finset.univ.filter (fun (v : Fin n) => ∀ j : Fin (n - 2), s j ≠ v) :=
+        (smallestTreeLeaf_eq_min_filter n hn s).1
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hv_mem ⊢
+      intro j _
+      exact hv_mem j
+  have h_step1 : (pruferDecodeAux hn s 1 h1).val.2 = {s(v, s ⟨0, by omega⟩)} := by
+    dsimp [pruferDecodeAux]
+    congr 2
+    exact hv_min.symm
+  have he : s(v, s ⟨0, by omega⟩) ∈ (pruferDecodeAux hn s 1 h1).val.2 := by
+    rw [h_step1]
+    exact Finset.mem_singleton_self _
+  have he_rewrite : s(v, s ⟨0, by omega⟩) ∈ (pruferDecodeAux hn s 1 (by omega)).val.2 := by
+    -- we can just change the proof of hm_le
+    have h_rw : (pruferDecodeAux hn s 1 h1).val.2 = (pruferDecodeAux hn s 1 (by omega)).val.2 := rfl
+    rw [← h_rw]
+    exact he
+  have h_in_final := step_one_edge_mem n hn s hge _ he_rewrite
+  have h_adj : (fromEdgeSet (V := Fin n) (pruferDecodeEdges hn s : Set (Sym2 (Fin n)))).Adj v (s ⟨0, by omega⟩) := by
+    rw [fromEdgeSet_adj]
+    refine ⟨by exact_mod_cast h_in_final, ?_⟩
+    have hv_mem : v ∈ Finset.univ.filter (fun (v : Fin n) => ∀ j : Fin (n - 2), s j ≠ v) :=
+      (smallestTreeLeaf_eq_min_filter n hn s).1
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hv_mem
+    exact (hv_mem ⟨0, by omega⟩).symm
+  
+  have h_deg : ((pruferDecode hn s).1).degree v = 1 := by
+    have h_leaf : v ∈ treeLeaves (pruferDecode hn s) := Finset.min'_mem _ _
+    rw [pruferDecode_isLeaf_iff n hn s v] at h_leaf
+    rw [pruferDecode_degree n hn s v]
+    have h_occur : countOccurrences s (n - 2) v = 0 := by
+      unfold countOccurrences
+      rw [Finset.card_eq_zero]
+      ext j
+      simp [h_leaf j]
+    rw [h_occur]
+  
+  have h_adj' : ((pruferDecode hn s).1).Adj v (s ⟨0, by omega⟩) := h_adj
+  exact (smallestTreeLeaf_neighbor_unique n hn (pruferDecode hn s) h_adj').symm
+
 end ProofsInTheBook.Chapter31

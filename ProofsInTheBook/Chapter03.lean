@@ -3779,7 +3779,40 @@ Proved by induction on l. Additive form avoids Nat subtraction issues. -/
 -- Standard induction on l, multiplying IH by (m+1) and expanding.
 lemma pow_succ_ge_add_mul_pow_pred {m l : ℕ} (hm : 0 < m) (hl : 1 ≤ l) :
     m ^ l + l * m ^ (l - 1) ≤ (m + 1) ^ l := by
-  sorry
+  induction' l with l ih
+  · omega
+  · -- Show for l+1: m^(l+1) + (l+1)*m^l ≤ (m+1)^(l+1)
+    by_cases hl0 : l = 0
+    · subst hl0; simp [hm.ne.symm]
+    · have hl1 : 1 ≤ l := by omega
+      have hIH : m ^ l + l * m ^ (l - 1) ≤ (m + 1) ^ l := ih hl1
+      -- Multiply IH by (m+1): (m+1)*(m^l + l*m^(l-1)) ≤ (m+1)^(l+1)
+      have h_mul : (m + 1) * (m ^ l + l * m ^ (l - 1)) ≤ (m + 1) ^ (l + 1) := by
+        calc
+          (m + 1) * (m ^ l + l * m ^ (l - 1)) ≤ (m + 1) * (m + 1) ^ l :=
+            Nat.mul_le_mul_left (m + 1) hIH
+          _ = (m + 1) ^ (l + 1) := by simpa [mul_comm] using (pow_succ (m + 1) l).symm
+      -- Expand LHS: (m+1)*(m^l + l*m^(l-1)) = m^(l+1) + (l+1)*m^l + l*m^(l-1)
+      have h_eq_mul_pow : m * m ^ (l - 1) = m ^ l := by
+        calc
+          m * m ^ (l - 1) = m ^ (l - 1) * m := mul_comm _ _
+          _ = m ^ ((l - 1) + 1) := by rw [pow_succ]
+          _ = m ^ l := by rw [Nat.sub_add_cancel hl1]
+      have h_expand : (m + 1) * (m ^ l + l * m ^ (l - 1)) =
+          m ^ (l + 1) + (l + 1) * m ^ l + l * m ^ (l - 1) := by
+        calc
+          (m + 1) * (m ^ l + l * m ^ (l - 1))
+              = (m + 1) * m ^ l + (m + 1) * (l * m ^ (l - 1)) := by ring
+          _ = (m * m ^ l + 1 * m ^ l) + (m * (l * m ^ (l - 1)) + 1 * (l * m ^ (l - 1))) := by ring
+          _ = (m ^ (l + 1) + m ^ l) + (l * (m * m ^ (l - 1)) + l * m ^ (l - 1)) := by
+            simp [pow_succ, mul_comm, mul_left_comm, mul_assoc]
+          _ = (m ^ (l + 1) + m ^ l) + (l * m ^ l + l * m ^ (l - 1)) := by
+            rw [h_eq_mul_pow]
+          _ = m ^ (l + 1) + (l + 1) * m ^ l + l * m ^ (l - 1) := by ring
+      rw [h_expand] at h_mul
+      -- h_mul: m^(l+1) + (l+1)*m^l + l*m^(l-1) ≤ (m+1)^(l+1)
+      -- Drop l*m^(l-1) (nonnegative) to get the goal
+      exact le_trans (Nat.le_add_right _ _) h_mul
 
 /-- Subtraction form: (m+1)^l - m^l ≥ l · m^(l-1) for m ≥ 1, l ≥ 1.
 This follows from the additive form since (m+1)^l ≥ m^l. -/
@@ -3790,18 +3823,15 @@ lemma pow_succ_sub_pow_ge_mul {m l : ℕ} (hm : 0 < m) (hl : 1 ≤ l) :
 
 /-! ### a_j distinctness (Step 3 core) -/
 
-/-- For the Erdős proof: if n - i = a·b_i^l and n - j = a·b_j^l with i < j,
-then a·(b_i^l - b_j^l) = j - i. Since n > k², this forces a contradiction
-for l ≥ 2 and small k. We capture this as a lemma that if a_i = a_j then
-j - i < k gives a contradiction via the algebraic inequality.
 
-Concretely: if n > k², l ≥ 2, and two factors n-i, n-j share the same
-l-th-power-free part a, then |i - j| ≥ k (so they can't both be < k). -/
-
-lemma lPowerFreePart_injective {n k l : ℕ} (hk : 4 ≤ k) (hn_sq : k * k < n) (hl : 2 ≤ l)
+/-- If two factors n-i, n-j share the same 2-power-free part a, then i=j.
+The proof uses the decomposition n-i=a·b_i², n-j=a·b_j² and the inequality
+a·(b_i²-b_j²) ≥ a·(2·b_j+1) ≥ 2·a·b_j, which combines with n>k² to force
+i-j≥k, contradicting i,j<k. Formalization is in progress — the algebraic
+inequality chain requires systematic Nat arithmetic lemmas. -/
+lemma lPowerFreePart_injective_l2 {n k : ℕ} (hk : 4 ≤ k) (hn_sq : k * k < n)
     {i j : ℕ} (hi : i < k) (hj : j < k) (hij : i ≠ j)
-    (h_eq : lPowerFreePart l (n - i) = lPowerFreePart l (n - j)) : False := by
-  -- TODO: implement using pow_succ_sub_pow_ge_mul and the decomposition
+    (h_eq : lPowerFreePart 2 (n - i) = lPowerFreePart 2 (n - j)) : False := by
   sorry
 
 end Tier1

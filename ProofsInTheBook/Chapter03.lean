@@ -3603,15 +3603,39 @@ theorem chapter03_binomials_coefficients_never_powers {n k l m p : ℕ}
     (hp : p.Prime) (hpdvd : p ∣ n.choose k) (hpow : n.choose k = m ^ l) : p ∣ m :=
   prime_dvd_base_of_binomial_perfect_power hp hpdvd hpow
 
-/--
-Infinitely many primes via Sylvester:
-C(2(q+1), q+1) has a prime factor > q+1 > q.
+/-!
+### Binomial coefficients are (almost) never powers
+
+Erdős's theorem (1951): C(n,k) ≠ m^l for k ≥ 4, n ≥ 2k, l ≥ 2.
+Reference: P. Erdős, On a diophantine equation, J. London Math. Soc. 26 (1951), 176-178.
+
+The Book's proof uses a 4-step a_j decomposition. Formalization is in progress.
 -/
-theorem chapter03 : Infinite {p : ℕ // p.Prime} := by
-  refine (Set.infinite_coe_iff (s := {p : ℕ | p.Prime})).2 ?_
-  apply Set.infinite_of_forall_exists_gt
-  intro q
-  obtain ⟨p, hpq, hp, _⟩ := chapter03_sylvester_central (q + 1) (succ_ne_zero q)
-  exact ⟨p, hp, by omega⟩
+
+/-- C(n,k) is never a perfect power for k ≥ 4, n ≥ 2k, l ≥ 2.
+This is the main result of Chapter 3 (Erdős 1951).
+
+The proof follows the Book's 4-step a_j decomposition:
+1. From Sylvester + C(n,k)=m^l, deduce n > k². [pending: concentration lemma]
+2. For each j, decompose n-j = a_j·b_j^l, a_j l-th-power-free; a_i ≠ a_j.
+3. Product of a_j's divides k!; hence {a_j} = {1,…,k}.
+4. l=2: 4 squarefree contradiction; l≥3: algebraic impossibility via {1,2,4}.
+
+Step 1 is partially proven (Sylvester → p^l divides descFactorial product).
+The concentration lemma "p^l | ∏(n-i) with p > k ⇒ p^l | some n-i"
+requires formalizing "at most one factor can be divisible by p" combined
+with coprimality, estimated ~60 lines. Steps 2–4 are estimated ~200 lines
+with l-th-power-free decomposition infrastructure. -/
+theorem chapter03_erdos {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l) :
+    n.choose k ≠ m ^ l := by
+  intro h_eq
+  sorry
+
+/-- Chapter 3's target theorem:
+Binomial coefficients are (almost) never powers — the Erdős 1951 result.
+This replaces the former placeholder "Infinite primes" (Ch01's content). -/
+theorem chapter03 {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l) :
+    n.choose k ≠ m ^ l :=
+  chapter03_erdos hk hn hl
 
 end ProofsInTheBook.Chapter03

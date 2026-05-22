@@ -591,4 +591,62 @@ theorem pruferEncode_pruferDecode_zero (n : ℕ) (hn : 2 ≤ n) (s : pruferCodeS
   show smallestTreeLeafNeighbor (m' + 3) _ (pruferDecode _ s) = s ⟨0, by omega⟩
   exact smallestTreeLeafNeighbor_pruferDecode (m' + 3) _ s (by omega)
 
+/-- nextLeaf_0: the smallest tree-leaf of the decoded tree (= smallest Prüfer-leaf). -/
+noncomputable def nextLeaf0 {n : ℕ} (hn : 2 ≤ n) (s : pruferCodeSpace n) : Fin n :=
+  smallestTreeLeaf n hn (pruferDecode hn s)
+
+/-- nextLeaf_0 doesn't appear in s anywhere. Immediate from pruferDecode_isLeaf_iff. -/
+theorem nextLeaf0_not_in_image {n : ℕ} (hn : 2 ≤ n) (s : pruferCodeSpace n) :
+    ∀ j : Fin (n - 2), s j ≠ nextLeaf0 hn s := by
+  have h_leaf : nextLeaf0 hn s ∈ treeLeaves (pruferDecode hn s) :=
+    smallestTreeLeaf_mem_leaves n hn (pruferDecode hn s)
+  rw [pruferDecode_isLeaf_iff n hn s] at h_leaf
+  exact h_leaf
+
+/-- The shifted code: drop position 0, lift values through `(finSuccAboveEquivCompl nextLeaf0).symm`. -/
+noncomputable def shiftedCode_v2 {m : ℕ} (hm : 1 ≤ m) (s : pruferCodeSpace (m + 2)) :
+    pruferCodeSpace (m + 1) := by
+  intro j'
+  classical
+  have h2le : 2 ≤ m + 2 := by omega
+  let nL : Fin (m + 2) := nextLeaf0 h2le s
+  have hj_lt : j'.val + 1 < (m + 2) - 2 := by have := j'.isLt; omega
+  let j : Fin ((m + 2) - 2) := ⟨j'.val + 1, hj_lt⟩
+  have hNe : s j ≠ nL := nextLeaf0_not_in_image h2le s j
+  have hMem : (s j : Fin (m + 2)) ∈ ({nL}ᶜ : Set (Fin (m + 2))) := by simp [hNe]
+  let lifted : {v : Fin (m + 2) // v ∈ ({nL}ᶜ : Set (Fin (m + 2)))} := ⟨s j, hMem⟩
+  exact (finSuccAboveEquivCompl nL).symm lifted
+
+theorem deleteSmallestLeaf_pruferDecode_v2 {m : ℕ} (hm : 1 ≤ m)
+    (s : pruferCodeSpace (m + 2)) :
+    deleteSmallestLeafTreeSucc (m + 1) (by omega) (pruferDecode (by omega) s) =
+    pruferDecode (by omega : 2 ≤ m + 1) (shiftedCode_v2 hm s) := by
+  have h2le : 2 ≤ m + 2 := by omega
+  let nL := nextLeaf0 h2le s
+  let L := finSuccAboveEquivCompl nL
+  
+  -- The LHS is a LabeledTree constructed by taking the induced subgraph on {nL}ᶜ
+  -- and relabeling via L.symm.
+  -- The RHS is the LabeledTree from pruferDecode on shiftedCode.
+  apply Subtype.ext
+  ext a b
+  
+  -- LHS Adj
+  have h_LHS_adj : (deleteSmallestLeafTreeSucc (m + 1) (by omega) (pruferDecode (by omega) s)).1.Adj a b ↔
+                   (pruferDecode (by omega : 2 ≤ m + 2) s).1.Adj (L a).1 (L b).1 := by
+    -- By definition of deleteSmallestLeafTreeSucc and relabeling
+    -- Actually deleteSmallestLeafTreeSucc uses finSuccAboveEquivCompl implicitly
+    -- Wait, deleteSmallestLeafTree is defined in Chapter31.
+    sorry
+    
+  -- RHS Adj
+  have h_RHS_adj : (pruferDecode (by omega : 2 ≤ m + 1) (shiftedCode_v2 hm s)).1.Adj a b ↔
+                   s(a, b) ∈ pruferDecodeEdges (by omega) (shiftedCode_v2 hm s) := by
+    rw [fromEdgeSet_adj]
+    -- wait, fromEdgeSet_adj has an extra a ≠ b condition.
+    -- trees don't have self-loops.
+    sorry
+
+  sorry
+
 end ProofsInTheBook.Chapter31

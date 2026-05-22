@@ -74,4 +74,37 @@ private lemma fromEdgeSet_insert_degree_other {n : ℕ}
   · rintro ⟨hmem, hne⟩
     exact ⟨Or.inr hmem, hne⟩
 
+/-- Degree at an endpoint of a newly inserted edge increases by 1, provided
+the edge was not already present and endpoints are distinct. -/
+private lemma fromEdgeSet_insert_degree_endpoint {n : ℕ}
+    (S : Finset (Sym2 (Fin n))) (u w : Fin n) (huw : u ≠ w)
+    (h_not_in : s(u, w) ∉ S) :
+    (fromEdgeSet (V := Fin n) (insert s(u, w) S : Set (Sym2 (Fin n)))).degree u =
+    (fromEdgeSet (V := Fin n) (S : Set (Sym2 (Fin n)))).degree u + 1 := by
+  unfold SimpleGraph.degree
+  -- neighborFinset of new graph at u = neighborFinset of old + {w}, disjoint.
+  have h_w_not_neighbor :
+      w ∉ (fromEdgeSet (V := Fin n) (S : Set (Sym2 (Fin n)))).neighborFinset u := by
+    rw [SimpleGraph.mem_neighborFinset, fromEdgeSet_adj]
+    rintro ⟨hmem, _⟩
+    exact h_not_in (by exact_mod_cast hmem)
+  have h_eq : (fromEdgeSet (V := Fin n) (insert s(u, w) S : Set _)).neighborFinset u =
+              insert w ((fromEdgeSet (V := Fin n) (S : Set _)).neighborFinset u) := by
+    ext x
+    simp only [SimpleGraph.mem_neighborFinset, fromEdgeSet_adj, Finset.coe_insert,
+               Set.mem_insert_iff, Finset.mem_insert, Sym2.eq_iff]
+    constructor
+    · rintro ⟨hmem, hne⟩
+      rcases hmem with hnew | hold
+      · rcases hnew with ⟨_, rfl⟩ | ⟨rfl, rfl⟩
+        · exact Or.inl rfl
+        · exact absurd rfl hne
+      · exact Or.inr ⟨hold, hne⟩
+    · rintro (rfl | ⟨hmem, hne⟩)
+      · refine ⟨Or.inl (Or.inl ?_), huw⟩
+        tauto
+      · exact ⟨Or.inr hmem, hne⟩
+  rw [h_eq]
+  exact Finset.card_insert_of_notMem h_w_not_neighbor
+
 end ProofsInTheBook.Chapter31

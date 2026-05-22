@@ -6777,6 +6777,14 @@ theorem sweepGAS_π {points : Finset Point2} {k : ℕ}
     (sweepGAS hcard hne hncoll).π j =
       sweepSort (sweepLabeling hcard hne) (interEventAngle points hne j) := rfl
 
+noncomputable def sweepGAS_at {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (_hθ : ℝ)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hncoll : NoncollinearSet points) :
+    GeneralizedAllowableSequence k (directionsDeterminedBy points).card :=
+  sweepGAS hcard hne hncoll
+
 /-! ### Inter-event angle ordering -/
 
 theorem interEventAngle_lt_sortedAngle {points : Finset Point2}

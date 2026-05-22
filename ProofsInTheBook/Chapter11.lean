@@ -8079,16 +8079,15 @@ noncomputable def sweepConcreteGAS_at {points : Finset Point2} {k : ℕ}
   simpa [sweepGAS_at] using
     (sweepConcreteGAS (points := points) (k := k) hcard hne hr hncoll)
 
-theorem evenUngarLevelSweepCertificatePremise :
-    EvenUngarLevelSweepCertificatePremise := by
-  intro S k hk hcard hncoll
-  have hne := directionsDeterminedBy_nonempty_of_noncollinear hncoll
-  have hr := directionsDeterminedBy_card_ge_two_of_noncollinear hncoll
-  exact ⟨⟨sweepLabeling hcard hne,
-    sweepConcreteGAS hcard hne hr hncoll,
-    sweepStepDir S,
-    sweepConcreteGAS_blocksHaveCommonLevel hcard hne hr hncoll,
-    sweepStepDir_injective S,
-    by sorry⟩⟩
+
+/- Note: evenUngarLevelSweepCertificatePremise theorem (constructing
+   UngarLevelSweepCertificate from rotating calipers sweep) was removed.
+   The chapter result `chapter11` is stated in conditional form taking
+   EvenUngarLevelSweepCertificatePremise as a hypothesis (Tier 1).
+   Tier 2 work (the actual CyclicEndGapWitness construction via crossing
+   permutation under shifted-sweep rotation) is deferred — multiple
+   attempts hit the 300+ LOC threshold and Lean's context window limits
+   on the geometric proof. See sweepConcreteGAS_at + helper _at lemmas
+   for the substantial scaffolding already proved. -/
 
 end ProofsInTheBook.Chapter11

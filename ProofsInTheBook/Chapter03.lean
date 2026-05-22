@@ -3619,52 +3619,53 @@ Proof by induction on k with coprimality:
 lemma pow_l_dvd_one_factor_of_descFactorial {n k l p : ℕ} (hp : p.Prime) (hkp : k < p)
     (hlp : 0 < l) (hk_le_n : k ≤ n) (hp_l_dvd : p ^ l ∣ n.descFactorial k) :
     ∃ i, i < k ∧ p ^ l ∣ n - i := by
-  induction' k with k ih generalizing n
-  · -- k = 0: n.descFactorial 0 = 1, p^l ∣ 1 impossible
-    have hp_gt_1 : 1 < p ^ l := by
-      calc
-        1 = 1 ^ l := by simp
-        _ < p ^ l := Nat.pow_lt_pow_left hp.one_lt hlp.ne.symm
-    have h1 : p ^ l ∣ 1 := hp_l_dvd
-    have hle_p : p ^ l ≤ 1 := Nat.le_of_dvd (by norm_num) h1
-    omega
-  · -- k → k+1: n.descFactorial (k+1) = (n−k) * n.descFactorial k
-    rw [Nat.descFactorial_succ] at hp_l_dvd
-    by_cases hdiv_nk : p ∣ n - k
-    · -- Case 1: p ∣ n−k. Show ∀ j < k, p ∤ n−j.
-      have h_no_other : ∀ j, j < k → ¬ p ∣ n - j := by
-        intro j hj
-        by_contra! h
-        have h_eq : n - j = (n - k) + (k - j) := by
-          have : k ≤ n := by omega
-          have : j ≤ k := by omega
+  induction k generalizing n with
+  | zero =>
+      -- k = 0: n.descFactorial 0 = 1, p^l ∣ 1 impossible
+      have hp_gt_1 : 1 < p ^ l := by
+        calc
+          1 = 1 ^ l := by simp
+          _ < p ^ l := Nat.pow_lt_pow_left hp.one_lt hlp.ne.symm
+      have h1 : p ^ l ∣ 1 := hp_l_dvd
+      have hle_p : p ^ l ≤ 1 := Nat.le_of_dvd (by norm_num) h1
+      omega
+  | succ k ih =>
+      -- k → k+1: n.descFactorial (k+1) = (n−k) * n.descFactorial k
+      -- In this branch: hkp : k+1 < p, hk_le_n : k+1 ≤ n
+      rw [Nat.descFactorial_succ] at hp_l_dvd
+      by_cases hdiv_nk : p ∣ n - k
+      · -- Case 1: p ∣ n−k. Show ∀ j < k, p ∤ n−j.
+        have h_no_other : ∀ j, j < k → ¬ p ∣ n - j := by
+          intro j hj
+          by_contra! h
+          have h_eq : n - j = (n - k) + (k - j) := by
+            have : k ≤ n := by omega
+            omega
+          have h_dvd_sum : p ∣ (n - k) + (k - j) := by rwa [← h_eq]
+          have hsub : p ∣ k - j := (Nat.dvd_add_right hdiv_nk).mp h_dvd_sum
+          have hpos : 0 < k - j := Nat.sub_pos_of_lt hj
+          have h_lt : k - j < p := by omega
+          have hle_p : p ≤ k - j := Nat.le_of_dvd hpos hsub
           omega
-        have h_dvd_sum : p ∣ (n - k) + (k - j) := by rwa [← h_eq]
-        have hsub : p ∣ k - j := (Nat.dvd_add_right hdiv_nk).mp h_dvd_sum
-        have hpos : 0 < k - j := Nat.sub_pos_of_lt hj
-        have h_lt : k - j < p := by omega
-        have hle_p : p ≤ k - j := Nat.le_of_dvd hpos hsub
-        omega
-      have h_not_dvd_desc : ¬ p ∣ n.descFactorial k := by
-        rw [Nat.descFactorial_eq_prod_range]
-        apply nat_prime_not_dvd_finset_prod hp
-        intro x hx; exact h_no_other x (Finset.mem_range.mp hx)
-      have h_cop_base : Nat.Coprime p (n.descFactorial k) :=
-        hp.coprime_iff_not_dvd.mpr h_not_dvd_desc
-      have h_cop : Nat.Coprime (p ^ l) (n.descFactorial k) := by
-        rw [Nat.coprime_pow_left_iff hlp]; exact h_cop_base
-      exact ⟨k, by omega, h_cop.dvd_of_dvd_mul_right hp_l_dvd⟩
-    · -- Case 2: p ∤ n−k. Coprime, push through to n.descFactorial k, apply IH.
-      have h_cop_nk : Nat.Coprime p (n - k) := hp.coprime_iff_not_dvd.mpr hdiv_nk
-      have h_cop_nk_pow : Nat.Coprime (p ^ l) (n - k) := by
-        rw [Nat.coprime_pow_left_iff hlp]; exact h_cop_nk
-      -- hp_l_dvd: p^l | (n−k) * n.descFactorial k. Put n.descFactorial k first.
-      rw [mul_comm] at hp_l_dvd
-      have h_dvd_desc : p ^ l ∣ n.descFactorial k :=
-        h_cop_nk_pow.dvd_of_dvd_mul_right hp_l_dvd
-      -- IH expects: (k < p) → (0 < l) → (k ≤ n) → (p^l ∣ n.descFactorial k) → ∃ i < k, p^l ∣ n - i
-      rcases ih (by omega) hlp (by omega) h_dvd_desc with ⟨i, hi, h_i_pow⟩
-      exact ⟨i, by omega, h_i_pow⟩
+        have h_not_dvd_desc : ¬ p ∣ n.descFactorial k := by
+          rw [Nat.descFactorial_eq_prod_range]
+          apply nat_prime_not_dvd_finset_prod hp
+          intro x hx; exact h_no_other x (Finset.mem_range.mp hx)
+        have h_cop_base : Nat.Coprime p (n.descFactorial k) :=
+          hp.coprime_iff_not_dvd.mpr h_not_dvd_desc
+        have h_cop : Nat.Coprime (p ^ l) (n.descFactorial k) := by
+          rw [Nat.coprime_pow_left_iff hlp]; exact h_cop_base
+        exact ⟨k, by omega, h_cop.dvd_of_dvd_mul_right hp_l_dvd⟩
+      · -- Case 2: p ∤ n−k. Coprime, push through to n.descFactorial k, apply IH.
+        have h_cop_nk : Nat.Coprime p (n - k) := hp.coprime_iff_not_dvd.mpr hdiv_nk
+        have h_cop_nk_pow : Nat.Coprime (p ^ l) (n - k) := by
+          rw [Nat.coprime_pow_left_iff hlp]; exact h_cop_nk
+        rw [mul_comm] at hp_l_dvd
+        have h_dvd_desc : p ^ l ∣ n.descFactorial k :=
+          h_cop_nk_pow.dvd_of_dvd_mul_right hp_l_dvd
+        -- ih: (k < p) → (k ≤ n) → (p^l ∣ n.descFactorial k) → ∃ i < k, p^l ∣ n - i
+        rcases ih (by omega) (by omega) h_dvd_desc with ⟨i, hi, h_i_pow⟩
+        exact ⟨i, by omega, h_i_pow⟩
 
 /-- Step 1: C(n,k) = m^l, k ≥ 4, n ≥ 2k, l ≥ 2 ⇒ n > k².
 Sylvester gives p > k dividing C(n,k). Since C(n,k) = m^l,

@@ -91,9 +91,20 @@ theorem min_three_color_classes_le_div_three (red green blue : ℕ) :
       h (le_trans (le_trans (min_le_right _ _) (min_le_right _ _)) hblue)
   omega
 
-theorem chapter36 (red green blue : ℕ) :
-    min red (min green blue) ≤ (red + green + blue) / 3 :=
-  min_three_color_classes_le_div_three red green blue
+/-- Witness for the Art Gallery theorem: a triangulation of a simple polygon
+where every triangle is 3-colored (each vertex assigned one of 3 colors,
+each triangle has all 3 colors). -/
+structure ArtGalleryWitness (V : Type*) [DecidableEq V] where
+  /-- Vertex set of the polygon. -/
+  vertices : Finset V
+  /-- Triangles in the triangulation, represented as sets of vertices. -/
+  triangles : Finset (Finset V)
+  /-- 3-coloring of vertices. -/
+  color : V → GuardColor
+  /-- Every triangle's vertices are contained in the polygon's vertex set. -/
+  tri_subset : ∀ tri ∈ triangles, tri ⊆ vertices
+  /-- Every triangle uses all 3 colors. -/
+  triangles_three_colored : ∀ tri ∈ triangles, ∀ c, triangleHasColor color tri c
 
 /--
 Fisk's guard-selection step after triangulation and 3-coloring: if every
@@ -145,21 +156,18 @@ theorem exists_small_guard_color_class {V : Type*} [DecidableEq V]
           (htri_color tri htri blue)
 
 /--
-The art gallery theorem (Chvátal, 1975): ⌊n/3⌋ guards suffice to watch
-any simple polygon with n vertices. Fisk's proof:
-1. Any simple polygon admits a triangulation (adding diagonals)
-2. The dual graph of the triangulation is a tree
-3. The triangulation graph is 3-colorable (Fisk's coloring lemma)
-4. The smallest color class gives ≤ ⌊n/3⌋ guards
+Chapter 36 (Art Gallery theorem, Tier 1 conditional):
+Given a triangulation 3-coloring witness, a guard set of size ≤ n/3 exists
+covering all triangles.
 
-Steps 1 and 3 are geometric; step 4 is `exists_small_guard_color_class` above.
+TODO (Tier 2): Construct ArtGalleryWitness from any simple polygon via
+Mathlib's triangulation (or build ear-cutting from scratch), then 3-color
+the resulting planar triangulation (each ear-cut preserves 3-colorability).
 -/
-theorem art_gallery_theorem (n : ℕ)
-    (_triangulation_exists : ∀ (V : Type*) [DecidableEq V] [Fintype V],
-      ∀ (vertices : Finset V), vertices.card = n →
-      ∃ (triangles : Finset (Finset V)) (color : V → GuardColor),
-        (∀ tri ∈ triangles, tri ⊆ vertices) ∧
-        (∀ tri ∈ triangles, ∀ c, triangleHasColor color tri c)) :
-    True := trivial
+theorem chapter36 {V : Type*} [DecidableEq V] (w : ArtGalleryWitness V) :
+    ∃ guards : Finset V, guards.card ≤ w.vertices.card / 3 ∧
+      ∀ tri ∈ w.triangles, ∃ v ∈ guards, v ∈ tri :=
+  exists_small_guard_color_class w.vertices w.triangles w.color
+    w.tri_subset w.triangles_three_colored
 
 end ProofsInTheBook.Chapter36

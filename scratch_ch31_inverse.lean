@@ -617,11 +617,516 @@ noncomputable def shiftedCode_v2 {m : ℕ} (hm : 1 ≤ m) (s : pruferCodeSpace (
   let lifted : {v : Fin (m + 2) // v ∈ ({nL}ᶜ : Set (Fin (m + 2)))} := ⟨s j, hMem⟩
   exact (finSuccAboveEquivCompl nL).symm lifted
 
+lemma L_monotone {m : ℕ} (nL : Fin (m + 2)) (a b : Fin (m + 1)) (h : a ≤ b) :
+    (finSuccAboveEquivCompl nL a).1 ≤ (finSuccAboveEquivCompl nL b).1 :=
+  StrictMono.monotone (Fin.strictMono_succAbove nL) h
+
+lemma min'_congr {α : Type} [LinearOrder α] {S1 S2 : Finset α} (h : S1 = S2)
+    (h1 : S1.Nonempty) (h2 : S2.Nonempty) : S1.min' h1 = S2.min' h2 := by
+  subst h
+  rfl
+
+lemma min'_commutes_L {m : ℕ} (nL : Fin (m + 2))
+    (S : Finset (Fin (m + 1))) (h_nonempty : S.Nonempty) :
+    (finSuccAboveEquivCompl nL (S.min' h_nonempty)).1 = (S.image (fun v => (finSuccAboveEquivCompl nL v).1)).min' (Finset.Nonempty.image h_nonempty _) := by
+  apply le_antisymm
+  · apply Finset.le_min'
+    intro y hy
+    simp only [Finset.mem_image] at hy
+    obtain ⟨v, hv, rfl⟩ := hy
+    have h_le : S.min' h_nonempty ≤ v := Finset.min'_le _ _ hv
+    exact StrictMono.monotone (Fin.strictMono_succAbove nL) h_le
+  · apply Finset.min'_le
+    simp only [Finset.mem_image]
+    exact ⟨S.min' h_nonempty, Finset.min'_mem _ _, rfl⟩
+
+lemma pruferDecodeAux_succ_step {n : ℕ} (hn : 2 ≤ n) (s : pruferCodeSpace n)
+    (k : ℕ) (hk : k + 1 ≤ n - 2) :
+    let state := (pruferDecodeAux hn s k (by omega)).val
+    let nL := (state.1.filter (fun v => ∀ j : Fin (n - 2), k ≤ j.val → s j ≠ v)).min' (nextLeaf_nonempty hn s k (by omega) state.1 (pruferDecodeAux hn s k (by omega)).property.2.1)
+    let si := s ⟨k, by omega⟩
+    (pruferDecodeAux hn s (k + 1) hk).val = (state.1.erase nL, insert s(nL, si) state.2) := rfl
+
+private lemma nextLeaf_correspond_lift {m : ℕ} (hm : 1 ≤ m) (s : pruferCodeSpace (m + 2)) (k : ℕ)
+    (hk : k + 1 ≤ m + 1 - 2)
+    (ih_avail : ∀ v : Fin (m + 1),
+       v ∈ (pruferDecodeAux (by omega) (shiftedCode_v2 hm s) k (by omega)).val.1 ↔
+       (finSuccAboveEquivCompl (nextLeaf0 (by omega) s) v).1 ∈ (pruferDecodeAux (by omega) s (k + 1) (by omega)).val.1) :
+    let state_shifted := (pruferDecodeAux (by omega) (shiftedCode_v2 hm s) k (by omega)).val
+    let state_orig := (pruferDecodeAux (by omega) s (k + 1) (by omega)).val
+    let nL_k := (state_shifted.1.filter
+      (fun v => ∀ j : Fin (m + 1 - 2), k ≤ j.val → shiftedCode_v2 hm s j ≠ v)).min'
+      (nextLeaf_nonempty (by omega) (shiftedCode_v2 hm s) k (by omega) state_shifted.1 (pruferDecodeAux (by omega) _ k (by omega)).property.2.1)
+    let nL_k' := (state_orig.1.filter
+      (fun v => ∀ j : Fin (m + 2 - 2), k + 1 ≤ j.val → s j ≠ v)).min'
+      (nextLeaf_nonempty (by omega) s (k + 1) (by omega) state_orig.1 (pruferDecodeAux (by omega) s (k + 1) (by omega)).property.2.1)
+    (finSuccAboveEquivCompl (nextLeaf0 (by omega) s) nL_k).1 = nL_k' := by
+  intro state_shifted state_orig nL_k nL_k'
+  let L := finSuccAboveEquivCompl (nextLeaf0 (by omega) s)
+  let S := state_shifted.1.filter (fun v => ∀ j : Fin (m + 1 - 2), k ≤ j.val → shiftedCode_v2 hm s j ≠ v)
+  let S' := state_orig.1.filter (fun v => ∀ j : Fin (m + 2 - 2), k + 1 ≤ j.val → s j ≠ v)
+  have h_card_shifted : state_shifted.1.card = m + 1 - k := (pruferDecodeAux (by omega) (shiftedCode_v2 hm s) k (by omega)).property.2.1
+  have h_card_orig : state_orig.1.card = m + 1 - k := by
+    have h : state_orig.1.card = m + 2 - (k + 1) := (pruferDecodeAux (by omega) s (k + 1) (by omega)).property.2.1
+    omega
+  have h_img : state_shifted.1.image (fun v => (L v).1) = state_orig.1 := by
+    apply Finset.eq_of_subset_of_card_le
+    · intro x hx
+      simp only [Finset.mem_image] at hx
+      obtain ⟨y, hy, rfl⟩ := hx
+      exact ih_avail y |>.mp hy
+    · rw [Finset.card_image_of_injective]
+      · omega
+      · intro y1 y2 h_eq
+        have h_L : L y1 = L y2 := Subtype.ext h_eq
+        exact Equiv.injective L h_L
+  have h_S_eq : S.image (fun v => (L v).1) = S' := by
+    ext x
+    dsimp [S, S']
+    simp only [Finset.mem_image, Finset.mem_filter]
+    constructor
+    · rintro ⟨y, ⟨hy_avail, hy_not_in⟩, rfl⟩
+      refine ⟨ih_avail y |>.mp hy_avail, ?_⟩
+      intro j hj
+      let j' : Fin (m + 1 - 2) := ⟨j.val - 1, by omega⟩
+      have hj_val : j'.val = j.val - 1 := rfl
+      have hj' : k ≤ j'.val := by omega
+      have hy_not := hy_not_in j' hj'
+      have h_shift_eval : (finSuccAboveEquivCompl (nextLeaf0 (by omega) s) (shiftedCode_v2 hm s j')).1 = s j := by
+        have h_j_eq : (⟨j'.val + 1, by omega⟩ : Fin (m + 2 - 2)) = j := by
+          apply Fin.ext
+          change j'.val + 1 = j.val
+          omega
+        dsimp [shiftedCode_v2]
+        simp only [Equiv.apply_symm_apply]
+        rw [h_j_eq]
+      intro h_eq
+      rw [← h_shift_eval] at h_eq
+      have h_eq2 : L (shiftedCode_v2 hm s j') = L y := Subtype.ext h_eq
+      have h_eq3 : shiftedCode_v2 hm s j' = y := Equiv.injective L h_eq2
+      exact hy_not h_eq3
+    · rintro ⟨hx_avail, hx_not_in⟩
+      have hx_img : x ∈ state_shifted.1.image (fun v => (L v).1) := by
+        rw [h_img]
+        exact hx_avail
+      simp only [Finset.mem_image] at hx_img
+      obtain ⟨y, hy_avail, rfl⟩ := hx_img
+      refine ⟨y, ⟨hy_avail, ?_⟩, rfl⟩
+      intro j' hj'
+      let j : Fin (m + 2 - 2) := ⟨j'.val + 1, by omega⟩
+      have hj_val : j.val = j'.val + 1 := rfl
+      have hj : k + 1 ≤ j.val := by omega
+      have hx_not := hx_not_in j hj
+      have h_shift_eval : (finSuccAboveEquivCompl (nextLeaf0 (by omega) s) (shiftedCode_v2 hm s j')).1 = s j := by
+        have h_j_eq : (⟨j'.val + 1, by omega⟩ : Fin (m + 2 - 2)) = j := by
+          apply Fin.ext
+          change j'.val + 1 = j.val
+          omega
+        dsimp [shiftedCode_v2]
+        simp only [Equiv.apply_symm_apply]
+        rw [h_j_eq]
+      intro h_eq
+      rw [h_eq] at h_shift_eval
+      exact hx_not h_shift_eval.symm
+  have h_min := min'_commutes_L (nextLeaf0 (by omega) s) S (nextLeaf_nonempty (by omega) (shiftedCode_v2 hm s) k (by omega) state_shifted.1 (pruferDecodeAux (by omega) (shiftedCode_v2 hm s) k (by omega)).property.2.1)
+  rw [h_min]
+  apply le_antisymm
+  · apply Finset.le_min'
+    intro y hy
+    have h_eq_elem := Finset.ext_iff.mp h_S_eq y
+    have hy_img := h_eq_elem.mpr hy
+    exact Finset.min'_le _ _ hy_img
+  · apply Finset.min'_le
+    have h_nonempty_S' : S'.Nonempty := nextLeaf_nonempty (by omega) s (k + 1) (by omega) state_orig.1 (pruferDecodeAux (by omega) s (k + 1) (by omega)).property.2.1
+    have h_nonempty_S_img : (S.image (fun v => (L v).1)).Nonempty := by
+      rw [h_S_eq]
+      exact h_nonempty_S'
+    have h_mem := Finset.min'_mem (S.image (fun v => (L v).1)) h_nonempty_S_img
+    have h_eq_elem := Finset.ext_iff.mp h_S_eq ((S.image (fun v => (L v).1)).min' h_nonempty_S_img)
+    exact h_eq_elem.mp h_mem
+
+lemma step_zero_min_eq_nextLeaf0 {m : ℕ} (hm : 1 ≤ m) (s : pruferCodeSpace (m + 2)) :
+    ((pruferDecodeAux (by omega) s 0 (by omega)).val.1.filter (fun v => ∀ j : Fin (m + 2 - 2), 0 ≤ j.val → s j ≠ v)).min' (nextLeaf_nonempty (by omega) s 0 (by omega) (pruferDecodeAux (by omega) s 0 (by omega)).val.1 (pruferDecodeAux (by omega) s 0 (by omega)).property.2.1) = nextLeaf0 (by omega) s := by
+  have h_val : (pruferDecodeAux (by omega) s 0 (by omega)).val.1 = Finset.univ := rfl
+  have h_S : ((pruferDecodeAux (by omega) s 0 (by omega)).val.1.filter (fun v => ∀ j : Fin (m + 2 - 2), 0 ≤ j.val → s j ≠ v)) = Finset.univ.filter (fun v => ∀ j : Fin (m + 2 - 2), s j ≠ v) := by
+    rw [h_val]
+    ext v
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    constructor
+    · intro h j
+      exact h j (by omega)
+    · intro h j _
+      exact h j
+  dsimp [nextLeaf0, smallestTreeLeaf]
+  apply le_antisymm
+  · apply Finset.le_min'
+    intro y hy
+    rw [pruferDecode_isLeaf_iff] at hy
+    have h_univ : y ∈ Finset.univ.filter (fun v => ∀ j : Fin (m + 2 - 2), s j ≠ v) := by
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+      exact hy
+    have hy' := Finset.ext_iff.mp h_S y |>.mpr h_univ
+    exact Finset.min'_le _ _ hy'
+  · apply Finset.min'_le
+    set m_elem := ((pruferDecodeAux (by omega) s 0 (by omega)).val.1.filter (fun v => ∀ j : Fin (m + 2 - 2), 0 ≤ j.val → s j ≠ v)).min' (nextLeaf_nonempty (by omega) s 0 (by omega) (pruferDecodeAux (by omega) s 0 (by omega)).val.1 (pruferDecodeAux (by omega) s 0 (by omega)).property.2.1)
+    have hy := Finset.min'_mem _ (nextLeaf_nonempty (by omega) s 0 (by omega) (pruferDecodeAux (by omega) s 0 (by omega)).val.1 (pruferDecodeAux (by omega) s 0 (by omega)).property.2.1)
+    have h_univ : m_elem ∈ Finset.univ.filter (fun v => ∀ j : Fin (m + 2 - 2), s j ≠ v) := Finset.ext_iff.mp h_S m_elem |>.mp hy
+    rw [Finset.mem_filter] at h_univ
+    rw [pruferDecode_isLeaf_iff]
+    exact h_univ.2
+
+private theorem pruferDecodeAux_shifted_correspondence {m : ℕ} (hm : 1 ≤ m)
+    (s : pruferCodeSpace (m + 2)) :
+    ∀ (k : ℕ) (hk : k ≤ (m + 1) - 2),
+    (∀ v : Fin (m + 1),
+       v ∈ (pruferDecodeAux (by omega) (shiftedCode_v2 hm s) k hk).val.1 ↔
+       (finSuccAboveEquivCompl (nextLeaf0 (by omega) s) v).1
+         ∈ (pruferDecodeAux (by omega) s (k + 1) (by omega)).val.1) ∧
+    (∀ a b : Fin (m + 1),
+       s(a, b) ∈ (pruferDecodeAux (by omega) (shiftedCode_v2 hm s) k hk).val.2 ↔
+       s((finSuccAboveEquivCompl (nextLeaf0 (by omega) s) a).1,
+          (finSuccAboveEquivCompl (nextLeaf0 (by omega) s) b).1)
+         ∈ (pruferDecodeAux (by omega) s (k + 1) (by omega)).val.2) := by
+  intro k
+  induction k with
+  | zero =>
+    intro hk
+    constructor
+    · intro v
+      have h_step_orig := pruferDecodeAux_succ_step (by omega) s 0 (by omega)
+      have h_state0_orig : (pruferDecodeAux (by omega) s 0 (by omega)).val = (Finset.univ, ∅) := rfl
+      have h_state0_shift : (pruferDecodeAux (by omega) (shiftedCode_v2 hm s) 0 hk).val = (Finset.univ, ∅) := rfl
+      have h_nL_eq := step_zero_min_eq_nextLeaf0 hm s
+      let L := finSuccAboveEquivCompl (nextLeaf0 (by omega) s)
+      rw [h_state0_shift]
+      have h_orig1 : (pruferDecodeAux (by omega) s 1 (by omega)).val.1 = Finset.univ.erase (nextLeaf0 (by omega) s) := by
+        rw [h_step_orig]
+        dsimp
+        rw [h_nL_eq]
+        rw [h_state0_orig]
+      rw [h_orig1]
+      simp only [Finset.mem_univ, Finset.mem_erase, ne_eq, and_true]
+      exact iff_of_true trivial (L v).property
+    · intro a b
+      have h_step_orig := pruferDecodeAux_succ_step (by omega) s 0 (by omega)
+      have h_state0_orig : (pruferDecodeAux (by omega) s 0 (by omega)).val = (Finset.univ, ∅) := rfl
+      have h_state0_shift : (pruferDecodeAux (by omega) (shiftedCode_v2 hm s) 0 hk).val = (Finset.univ, ∅) := rfl
+      have h_nL_eq := step_zero_min_eq_nextLeaf0 hm s
+      let L := finSuccAboveEquivCompl (nextLeaf0 (by omega) s)
+      rw [h_state0_shift]
+      have h_orig1 : (pruferDecodeAux (by omega) s 1 (by omega)).val.2 = {s(nextLeaf0 (by omega) s, s ⟨0, by omega⟩)} := by
+        rw [h_step_orig]
+        dsimp
+        rw [h_nL_eq]
+        rw [h_state0_orig]
+        rfl
+      rw [h_orig1]
+      simp only [Finset.mem_singleton, Sym2.eq_iff]
+      constructor
+      · intro h_empty
+        revert h_empty
+        simp
+      · rintro (⟨h1, h2⟩ | ⟨h1, h2⟩)
+        · exact (L a).property h1 |>.elim
+        · exact (L b).property h2 |>.elim
+  | succ k ih =>
+    intro hk
+    have hm1 : m + 1 - 2 = m - 1 := by omega
+    have hm2 : m + 2 - 2 = m := by omega
+    have hk_curr : k + 1 ≤ m + 1 - 2 := hk
+    have hk_prev : k ≤ m + 1 - 2 := by omega
+    have hk_next : k + 2 ≤ m + 2 - 2 := by omega
+    have hk_next_orig : k + 1 ≤ m + 2 - 2 := by omega
+    have ih_k := ih hk_prev
+    have ih_avail := ih_k.1
+    have ih_edges := ih_k.2
+    
+    let state_shifted := (pruferDecodeAux (by omega) (shiftedCode_v2 hm s) k hk_prev).val
+    let state_orig := (pruferDecodeAux (by omega) s (k + 1) hk_next_orig).val
+    let L := finSuccAboveEquivCompl (nextLeaf0 (by omega) s)
+    
+    have h_step_shift := pruferDecodeAux_succ_step (by omega) (shiftedCode_v2 hm s) k hk_curr
+    have h_step_orig := pruferDecodeAux_succ_step (by omega) s (k + 1) hk_next
+    
+    have h_nL_eq := nextLeaf_correspond_lift hm s k hk_curr ih_avail
+    have h_nonempty_shift := nextLeaf_nonempty (by omega) (shiftedCode_v2 hm s) k hk_prev state_shifted.1 (pruferDecodeAux (by omega) (shiftedCode_v2 hm s) k hk_prev).property.2.1
+    have h_nonempty_orig := nextLeaf_nonempty (by omega) s (k + 1) hk_next_orig state_orig.1 (pruferDecodeAux (by omega) s (k + 1) hk_next_orig).property.2.1
+    set nL_k := (state_shifted.1.filter (fun v => ∀ j : Fin (m + 1 - 2), k ≤ j.val → shiftedCode_v2 hm s j ≠ v)).min' h_nonempty_shift
+    set nL_k' := (state_orig.1.filter (fun v => ∀ j : Fin (m + 2 - 2), k + 1 ≤ j.val → s j ≠ v)).min' h_nonempty_orig
+    have h_L_nL : (L nL_k).1 = nL_k' := h_nL_eq
+    
+    constructor
+    · intro v
+      have h_shift_val : (pruferDecodeAux (by omega) (shiftedCode_v2 hm s) (k + 1) hk_curr).val.1 = state_shifted.1.erase nL_k := by
+        rw [h_step_shift]
+      have h_orig_val : (pruferDecodeAux (by omega) s (k + 2) hk_next).val.1 = state_orig.1.erase nL_k' := by
+        rw [h_step_orig]
+      rw [h_shift_val, h_orig_val]
+      simp only [Finset.mem_erase, ne_eq]
+      rw [ih_avail v]
+      constructor
+      · rintro ⟨h1, h2⟩
+        refine ⟨?_, h2⟩
+        intro h_eq
+        have h_L_eq : (L v).1 = (L nL_k).1 := by
+          rw [h_eq, h_L_nL]
+        have h_v_eq := Equiv.injective L (Subtype.ext h_L_eq)
+        exact h1 h_v_eq
+      · rintro ⟨h1, h2⟩
+        refine ⟨?_, h2⟩
+        intro h_eq
+        have h_L_eq : (L v).1 = nL_k' := by
+          rw [h_eq, h_L_nL]
+        exact h1 h_L_eq
+    · intro a b
+      have h_shift_val : (pruferDecodeAux (by omega) (shiftedCode_v2 hm s) (k + 1) hk_curr).val.2 = insert s(nL_k, shiftedCode_v2 hm s ⟨k, by omega⟩) state_shifted.2 := by
+        rw [h_step_shift]
+      have h_orig_val : (pruferDecodeAux (by omega) s (k + 2) hk_next).val.2 = insert s(nL_k', s ⟨k + 1, by omega⟩) state_orig.2 := by
+        rw [h_step_orig]
+      rw [h_shift_val, h_orig_val]
+      rw [Finset.mem_insert, Finset.mem_insert]
+      rw [ih_edges a b]
+      have hk_lt1 : k < m + 1 - 2 := by omega
+      have hk_lt2 : k + 1 < m + 2 - 2 := by omega
+      have h_shift_code_eval : (L (shiftedCode_v2 hm s ⟨k, hk_lt1⟩)).1 = s ⟨k + 1, hk_lt2⟩ := by
+        dsimp [L, shiftedCode_v2]
+        simp only [Equiv.apply_symm_apply]
+      have h_edge_eq : s((L a).1, (L b).1) = s(nL_k', s ⟨k + 1, hk_lt2⟩) ↔ s(a, b) = s(nL_k, shiftedCode_v2 hm s ⟨k, hk_lt1⟩) := by
+        simp only [Sym2.eq_iff]
+        constructor
+        · rintro (⟨h1, h2⟩ | ⟨h1, h2⟩)
+          · left
+            constructor
+            · have h_ext : L a = L nL_k := Subtype.ext (by rw [h1, ← h_L_nL])
+              exact Equiv.injective L h_ext
+            · have h_ext : L b = L (shiftedCode_v2 hm s ⟨k, by omega⟩) := Subtype.ext (by rw [h2, ← h_shift_code_eval])
+              exact Equiv.injective L h_ext
+          · right
+            constructor
+            · have h_ext : L a = L (shiftedCode_v2 hm s ⟨k, by omega⟩) := Subtype.ext (by rw [h1, ← h_shift_code_eval])
+              exact Equiv.injective L h_ext
+            · have h_ext : L b = L nL_k := Subtype.ext (by rw [h2, ← h_L_nL])
+              exact Equiv.injective L h_ext
+        · rintro (⟨h1, h2⟩ | ⟨h1, h2⟩)
+          · left
+            constructor
+            · rw [h1, h_L_nL]
+            · rw [h2, h_shift_code_eval]
+          · right
+            constructor
+            · rw [h1, h_shift_code_eval]
+            · rw [h2, h_L_nL]
+      rw [h_edge_eq]
+
+lemma deleteSmallestLeafTreeSucc_val_adj {m : ℕ} (hm : 1 ≤ m) (T : LabeledTree (m + 1)) (a b : Fin m) :
+    (↑(deleteSmallestLeafTreeSucc m hm T) : SimpleGraph (Fin m)).Adj a b ↔
+    (↑T : SimpleGraph (Fin (m + 1))).Adj ((finSuccAboveEquivCompl (smallestTreeLeaf (m + 1) (by omega) T)) a).1
+            ((finSuccAboveEquivCompl (smallestTreeLeaf (m + 1) (by omega) T)) b).1 := by
+  dsimp [deleteSmallestLeafTreeSucc]
+  simp only [SimpleGraph.comap_adj, Function.Embedding.coeFn_mk, SimpleGraph.induce_adj, Set.mem_compl_iff, Set.mem_singleton_iff]
+  have h_a : ((finSuccAboveEquivCompl (smallestTreeLeaf (m + 1) (by omega) T)) a).1 ≠ smallestTreeLeaf (m + 1) (by omega) T :=
+    ((finSuccAboveEquivCompl (smallestTreeLeaf (m + 1) (by omega) T)) a).2
+  have h_b : ((finSuccAboveEquivCompl (smallestTreeLeaf (m + 1) (by omega) T)) b).1 ≠ smallestTreeLeaf (m + 1) (by omega) T :=
+    ((finSuccAboveEquivCompl (smallestTreeLeaf (m + 1) (by omega) T)) b).2
+  tauto
+
+lemma pruferDecodeAux_val_1_congr {n : ℕ} (hn : 2 ≤ n) (s : pruferCodeSpace n) {k1 k2 : ℕ} (hk1 : k1 ≤ n - 2) (hk2 : k2 ≤ n - 2) (h : k1 = k2) :
+    (pruferDecodeAux hn s k1 hk1).val.1 = (pruferDecodeAux hn s k2 hk2).val.1 := by
+  subst h; rfl
+
+lemma pruferDecodeAux_val_2_congr {n : ℕ} (hn : 2 ≤ n) (s : pruferCodeSpace n) {k1 k2 : ℕ} (hk1 : k1 ≤ n - 2) (hk2 : k2 ≤ n - 2) (h : k1 = k2) :
+    (pruferDecodeAux hn s k1 hk1).val.2 = (pruferDecodeAux hn s k2 hk2).val.2 := by
+  subst h; rfl
+
+lemma pruferDecodeAux_val_1_subset {n : ℕ} (hn : 2 ≤ n) (s : pruferCodeSpace n) {k1 k2 : ℕ} (hk1 : k1 ≤ n - 2) (hk2 : k2 ≤ n - 2) (hle : k1 ≤ k2) :
+    (pruferDecodeAux hn s k2 hk2).val.1 ⊆ (pruferDecodeAux hn s k1 hk1).val.1 := by
+  revert hk2
+  induction hle with
+  | refl =>
+    intro hk2 x hx
+    exact hx
+  | @step k_mid h_le ih =>
+    intro hk2
+    have hk_succ : k_mid + 1 ≤ n - 2 := hk2
+    have hk_mid : k_mid ≤ n - 2 := by omega
+    have h_ih := ih hk_mid
+    have h_eq := pruferDecodeAux_succ_step hn s k_mid hk_succ
+    have h_c := pruferDecodeAux_val_1_congr hn s (by omega : k_mid + 1 ≤ n - 2) hk2 rfl
+    rw [← h_c]
+    have h_val : (pruferDecodeAux hn s (k_mid + 1) hk_succ).val.1 = (pruferDecodeAux hn s k_mid hk_mid).val.1.erase _ := congrArg Prod.fst h_eq
+    rw [h_val]
+    intro x hx
+    have h_erase := Finset.erase_subset _ _ hx
+    exact h_ih h_erase
+
 theorem deleteSmallestLeaf_pruferDecode_v2 {m : ℕ} (hm : 1 ≤ m)
     (s : pruferCodeSpace (m + 2)) :
     deleteSmallestLeafTreeSucc (m + 1) (by omega) (pruferDecode (by omega) s) =
     pruferDecode (by omega : 2 ≤ m + 1) (shiftedCode_v2 hm s) := by
-  sorry
+  ext a b
+  let shift_s := shiftedCode_v2 hm s
+  have hn_shift : 2 ≤ m + 1 := by omega
+  have hn_s : 2 ≤ m + 2 := by omega
+  have hm_sub : m - 1 ≤ (m + 1) - 2 := by omega
+  have h_corr := pruferDecodeAux_shifted_correspondence hm s (m - 1) hm_sub
+  have h_corr_v := h_corr.1
+  have h_corr_e := h_corr.2
+  
+  have h_state_shift : (pruferFinalState hn_shift shift_s).1 = (pruferDecodeAux hn_shift shift_s (m - 1) hm_sub).val.1 := rfl
+  have h_state_s : (pruferFinalState hn_s s).1 = (pruferDecodeAux hn_s s m (by omega)).val.1 := by
+    have h_idx : m + 2 - 2 = m := by omega
+    exact pruferDecodeAux_val_1_congr hn_s s (by omega) (by omega) h_idx
+  
+  have h_image_eq : (pruferFinalState hn_shift shift_s).1.image (fun v => (finSuccAboveEquivCompl (nextLeaf0 hn_s s) v).1) = (pruferFinalState hn_s s).1 := by
+    ext x
+    simp only [Finset.mem_image]
+    constructor
+    · rintro ⟨v, hv, rfl⟩
+      have h_corr_v_spec := h_corr_v v
+      have h_s_eq : (pruferDecodeAux hn_s s (m - 1 + 1) (by omega)).val.1 = (pruferFinalState hn_s s).1 := by
+        have h_idx : m - 1 + 1 = m + 2 - 2 := by omega
+        exact pruferDecodeAux_val_1_congr hn_s s (by omega) (by omega) h_idx
+      rw [h_s_eq] at h_corr_v_spec
+      exact h_corr_v_spec.mp hv
+    · intro hx
+      have h_not_nL : x ≠ nextLeaf0 hn_s s := by
+        have h_leaf_mem : nextLeaf0 hn_s s ∈ (pruferDecodeAux hn_s s 0 (by omega)).val.1 := Finset.mem_univ _
+        have h_not_in_final : nextLeaf0 hn_s s ∉ (pruferFinalState hn_s s).1 := by
+          have h_s_eq : (pruferFinalState hn_s s).1 = (pruferDecodeAux hn_s s (m + 2 - 2) (by omega)).val.1 := rfl
+          rw [h_s_eq]
+          have h_erase : (pruferDecodeAux hn_s s 1 (by omega)).val.1 = Finset.univ.erase (nextLeaf0 hn_s s) := by
+            have h_eq := pruferDecodeAux_succ_step hn_s s 0 (by omega)
+            dsimp at h_eq
+            have h_min_eq := step_zero_min_eq_nextLeaf0 hm s
+            rw [h_min_eq] at h_eq
+            exact congrArg Prod.fst h_eq
+          have h_subset := pruferDecodeAux_val_1_subset hn_s s (by omega) (by omega) (by omega : 1 ≤ m + 2 - 2)
+          intro h_mem
+          have h_mem_erase := h_subset h_mem
+          rw [h_erase] at h_mem_erase
+          simp only [Finset.mem_erase, ne_eq] at h_mem_erase
+          exact h_mem_erase.1 trivial
+        rintro rfl
+        exact h_not_in_final hx
+      have h_mem_compl : x ∈ ({nextLeaf0 hn_s s}ᶜ : Set (Fin (m + 2))) := h_not_nL
+      let x_lift : {v // v ∈ ({nextLeaf0 hn_s s}ᶜ : Set (Fin (m + 2)))} := ⟨x, h_mem_compl⟩
+      use (finSuccAboveEquivCompl (nextLeaf0 hn_s s)).symm x_lift
+      constructor
+      · have h_corr_v_spec := h_corr_v ((finSuccAboveEquivCompl (nextLeaf0 hn_s s)).symm x_lift)
+        have h_s_eq : (pruferDecodeAux hn_s s (m - 1 + 1) (by omega)).val.1 = (pruferFinalState hn_s s).1 := by
+          have h_idx : m - 1 + 1 = m + 2 - 2 := by omega
+          exact pruferDecodeAux_val_1_congr hn_s s (by omega) (by omega) h_idx
+        rw [h_s_eq] at h_corr_v_spec
+        apply h_corr_v_spec.mpr
+        have h_eval : ((finSuccAboveEquivCompl (nextLeaf0 hn_s s)) ((finSuccAboveEquivCompl (nextLeaf0 hn_s s)).symm x_lift)).1 = x := by
+          have h1 := Equiv.apply_symm_apply (finSuccAboveEquivCompl (nextLeaf0 hn_s s)) x_lift
+          rw [h1]
+        rw [h_eval]
+        exact hx
+      · have h_eval : ((finSuccAboveEquivCompl (nextLeaf0 hn_s s)) ((finSuccAboveEquivCompl (nextLeaf0 hn_s s)).symm x_lift)).1 = x := by
+          have h1 := Equiv.apply_symm_apply (finSuccAboveEquivCompl (nextLeaf0 hn_s s)) x_lift
+          rw [h1]
+        exact h_eval
+
+  have h_U_eq : ((finSuccAboveEquivCompl (nextLeaf0 hn_s s)) (pruferLastU hn_shift shift_s)).1 = pruferLastU hn_s s := by
+    have h_min := min'_commutes_L (nextLeaf0 hn_s s) (pruferFinalState hn_shift shift_s).1 (pruferFinalState_nonempty hn_shift shift_s)
+    have h_congr := min'_congr h_image_eq (Finset.Nonempty.image (pruferFinalState_nonempty hn_shift shift_s) _) (pruferFinalState_nonempty hn_s s)
+    exact h_min.trans h_congr
+
+  have h_erase_image : ((pruferFinalState hn_shift shift_s).1.erase (pruferLastU hn_shift shift_s)).image (fun v => ((finSuccAboveEquivCompl (nextLeaf0 hn_s s)) v).1) = (pruferFinalState hn_s s).1.erase (pruferLastU hn_s s) := by
+    have h_im := h_image_eq
+    ext x
+    simp only [Finset.mem_image, Finset.mem_erase]
+    constructor
+    · rintro ⟨v, ⟨hv_ne, hv_mem⟩, rfl⟩
+      constructor
+      · intro h_eq
+        have h_eq_val : ((finSuccAboveEquivCompl (nextLeaf0 hn_s s)) v).1 = ((finSuccAboveEquivCompl (nextLeaf0 hn_s s)) (pruferLastU hn_shift shift_s)).1 := by
+          rw [h_eq, h_U_eq]
+        have h_inj := (finSuccAboveEquivCompl (nextLeaf0 hn_s s)).injective
+        have h_eq_v := h_inj (Subtype.ext h_eq_val)
+        exact hv_ne h_eq_v
+      · rw [← h_im]
+        simp only [Finset.mem_image]
+        exact ⟨v, hv_mem, rfl⟩
+    · rintro ⟨hx_ne, hx_mem⟩
+      rw [← h_im] at hx_mem
+      simp only [Finset.mem_image] at hx_mem
+      rcases hx_mem with ⟨v, hv_mem, rfl⟩
+      use v
+      refine ⟨⟨?_, hv_mem⟩, rfl⟩
+      intro h_eq_v
+      rw [h_eq_v] at hx_ne
+      exact hx_ne h_U_eq
+
+  have h_V_eq : ((finSuccAboveEquivCompl (nextLeaf0 hn_s s)) (pruferLastV hn_shift shift_s)).1 = pruferLastV hn_s s := by
+    have h_min := min'_commutes_L (nextLeaf0 hn_s s) ((pruferFinalState hn_shift shift_s).1.erase (pruferLastU hn_shift shift_s)) (pruferFinalErase_nonempty hn_shift shift_s)
+    have h_congr := min'_congr h_erase_image (Finset.Nonempty.image (pruferFinalErase_nonempty hn_shift shift_s) _) (pruferFinalErase_nonempty hn_s s)
+    exact h_min.trans h_congr
+
+  have h_edges_corr : s(a, b) ∈ (pruferFinalState hn_shift shift_s).2 ↔ s(((finSuccAboveEquivCompl (nextLeaf0 hn_s s)) a).1, ((finSuccAboveEquivCompl (nextLeaf0 hn_s s)) b).1) ∈ (pruferFinalState hn_s s).2 := by
+    have h_corr_e_spec := h_corr_e a b
+    have h_s_eq : (pruferDecodeAux hn_s s (m - 1 + 1) (by omega)).val.2 = (pruferFinalState hn_s s).2 := by
+      have h_idx : m - 1 + 1 = m + 2 - 2 := by omega
+      exact pruferDecodeAux_val_2_congr hn_s s (by omega) (by omega) h_idx
+    rw [h_s_eq] at h_corr_e_spec
+    exact h_corr_e_spec
+
+  rw [deleteSmallestLeafTreeSucc_val_adj]
+  dsimp [pruferDecode]
+  simp only [SimpleGraph.fromEdgeSet_adj]
+  
+  change s(((finSuccAboveEquivCompl (nextLeaf0 hn_s s)) a).1, ((finSuccAboveEquivCompl (nextLeaf0 hn_s s)) b).1) ∈ pruferDecodeEdges hn_s s ∧
+    ((finSuccAboveEquivCompl (nextLeaf0 hn_s s)) a).1 ≠ ((finSuccAboveEquivCompl (nextLeaf0 hn_s s)) b).1 ↔
+    s(a, b) ∈ pruferDecodeEdges hn_shift shift_s ∧ a ≠ b
+  
+  have h_ne_iff : (((finSuccAboveEquivCompl (nextLeaf0 hn_s s)) a).1 ≠ ((finSuccAboveEquivCompl (nextLeaf0 hn_s s)) b).1) ↔ (a ≠ b) := by
+    constructor
+    · intro h h_eq
+      rw [h_eq] at h
+      exact h rfl
+    · intro h h_eq
+      have h_inj := (finSuccAboveEquivCompl (nextLeaf0 hn_s s)).injective
+      have h_eq_v := Subtype.ext h_eq
+      have h_eq_a := h_inj h_eq_v
+      exact h h_eq_a
+  
+  rw [h_ne_iff]
+  
+  dsimp [pruferDecodeEdges]
+  simp only [Finset.mem_insert]
+  
+  constructor
+  · rintro ⟨(h_eq | h_mem), h_ne⟩
+    · refine ⟨?_, h_ne⟩
+      left
+      simp only [Sym2.eq_iff] at h_eq ⊢
+      rcases h_eq with (⟨h1, h2⟩ | ⟨h1, h2⟩)
+      · left
+        have h_ext_a : (finSuccAboveEquivCompl (nextLeaf0 hn_s s)) a = (finSuccAboveEquivCompl (nextLeaf0 hn_s s)) (pruferLastU hn_shift shift_s) := Subtype.ext (by rw [h1, ← h_U_eq])
+        have h_ext_b : (finSuccAboveEquivCompl (nextLeaf0 hn_s s)) b = (finSuccAboveEquivCompl (nextLeaf0 hn_s s)) (pruferLastV hn_shift shift_s) := Subtype.ext (by rw [h2, ← h_V_eq])
+        exact ⟨Equiv.injective _ h_ext_a, Equiv.injective _ h_ext_b⟩
+      · right
+        have h_ext_a : (finSuccAboveEquivCompl (nextLeaf0 hn_s s)) a = (finSuccAboveEquivCompl (nextLeaf0 hn_s s)) (pruferLastV hn_shift shift_s) := Subtype.ext (by rw [h1, ← h_V_eq])
+        have h_ext_b : (finSuccAboveEquivCompl (nextLeaf0 hn_s s)) b = (finSuccAboveEquivCompl (nextLeaf0 hn_s s)) (pruferLastU hn_shift shift_s) := Subtype.ext (by rw [h2, ← h_U_eq])
+        exact ⟨Equiv.injective _ h_ext_a, Equiv.injective _ h_ext_b⟩
+    · refine ⟨?_, h_ne⟩
+      right
+      exact h_edges_corr.mpr h_mem
+  · rintro ⟨(h_eq | h_mem), h_ne⟩
+    · refine ⟨?_, h_ne⟩
+      left
+      simp only [Sym2.eq_iff] at h_eq ⊢
+      rcases h_eq with (⟨h1, h2⟩ | ⟨h1, h2⟩)
+      · left
+        rw [h1, h2, h_U_eq, h_V_eq]
+        exact ⟨rfl, rfl⟩
+      · right
+        rw [h1, h2, h_U_eq, h_V_eq]
+        exact ⟨rfl, rfl⟩
+    · refine ⟨?_, h_ne⟩
+      right
+      exact h_edges_corr.mp h_mem
 
 lemma leftInverse_pruferDecode_aux
     (h_correspondence : ∀ (m' : ℕ) (hm' : 1 ≤ m') (s : pruferCodeSpace (m' + 2)),

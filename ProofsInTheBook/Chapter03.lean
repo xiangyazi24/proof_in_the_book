@@ -3570,72 +3570,237 @@ theorem factorial_lt_descFactorial_of_two_mul_le {n k : ℕ}
   · exact Finset.nonempty_range_iff.mpr hk.ne'
 
 /-!
-### Binomial coefficients are almost never powers
-
-Using Sylvester's theorem: if C(n,k) = m^l with l ≥ 2 and n ≥ 2k, k ≥ 4,
-then every prime p > k dividing C(n,k) must appear with multiplicity ≥ l.
-But by the Legendre formula, v_p(C(n,k)) ≤ log_p(n), and for p > √n
-the multiplicity is ≤ 1 < l. Sylvester gives us such a prime, contradiction.
--/
-
-theorem prime_dvd_base_of_binomial_perfect_power {n k l m p : ℕ}
-    (hp : p.Prime) (hpdvd : p ∣ n.choose k) (hpow : n.choose k = m ^ l) : p ∣ m :=
-  hp.dvd_of_dvd_pow (hpow ▸ hpdvd)
-
-/--
-The book's "almost never powers" argument: if C(n,k) = m^l with l ≥ 2,
-then every prime p dividing C(n,k) satisfies p^l | C(n,k), so
-v_p(C(n,k)) ≥ l. By the Legendre formula, v_p(C(n,k)) = v_p(n!) - v_p(k!) - v_p((n-k)!),
-which is at most ⌊log_p(n)⌋ (Kummer's theorem: the number of carries when
-adding k and n-k in base p). For p > √n, v_p(C(n,k)) ≤ 1 < l.
-Sylvester's theorem provides such a prime p > k, and if k ≥ 4 and n ≥ 2k,
-then p > k ≥ 4 > √n is achievable, giving the contradiction.
--/
-theorem binomial_not_perfect_power_of_large_prime {n k l m p : ℕ}
-    (_hp : p.Prime) (_hpdvd : p ∣ n.choose k) (_hpow : n.choose k = m ^ l)
-    (_hl : 2 ≤ l) (_hpsq : n < p * p)
-    (hval : p.factorization (n.choose k) ≤ 1)
-    (hpow_val : l ≤ p.factorization (n.choose k)) :
-    False := by
-  omega
-
-theorem chapter03_binomials_coefficients_never_powers {n k l m p : ℕ}
-    (hp : p.Prime) (hpdvd : p ∣ n.choose k) (hpow : n.choose k = m ^ l) : p ∣ m :=
-  prime_dvd_base_of_binomial_perfect_power hp hpdvd hpow
-
-/-!
 ### Binomial coefficients are (almost) never powers
 
 Erdős's theorem (1951): C(n,k) ≠ m^l for k ≥ 4, n ≥ 2k, l ≥ 2.
-Reference: P. Erdős, On a diophantine equation, J. London Math. Soc. 26 (1951), 176-178.
+Reference: P. Erdős, On a diophantine equation,
+J. London Math. Soc. 26 (1951), 176-178.
 
-The Book's proof uses a 4-step a_j decomposition. Formalization is in progress.
+The Book's proof uses a 4-step a_j decomposition.
+Below: Step 1 (concentration lemma + n > k²) is complete.
+Steps 2–4 are in progress (see module-level TODO).
 -/
 
-/-- C(n,k) is never a perfect power for k ≥ 4, n ≥ 2k, l ≥ 2.
-This is the main result of Chapter 3 (Erdős 1951).
+section Tier1
 
-The proof follows the Book's 4-step a_j decomposition:
-1. From Sylvester + C(n,k)=m^l, deduce n > k². [pending: concentration lemma]
-2. For each j, decompose n-j = a_j·b_j^l, a_j l-th-power-free; a_i ≠ a_j.
-3. Product of a_j's divides k!; hence {a_j} = {1,…,k}.
-4. l=2: 4 squarefree contradiction; l≥3: algebraic impossibility via {1,2,4}.
+/-! ### Helper: prime divisibility in Finset products -/
 
-Step 1 is partially proven (Sylvester → p^l divides descFactorial product).
-The concentration lemma "p^l | ∏(n-i) with p > k ⇒ p^l | some n-i"
-requires formalizing "at most one factor can be divisible by p" combined
-with coprimality, estimated ~60 lines. Steps 2–4 are estimated ~200 lines
-with l-th-power-free decomposition infrastructure. -/
+lemma nat_prime_dvd_finset_prod {p : ℕ} {α : Type _} [DecidableEq α] {s : Finset α}
+    {f : α → ℕ} (hp : p.Prime) (h : p ∣ ∏ x ∈ s, f x) : ∃ x ∈ s, p ∣ f x := by
+  induction' s using Finset.induction_on with a s' has ih
+  · have : p ∣ 1 := by simpa using h
+    have hp1 : ¬ p ∣ 1 := by
+      intro h1
+      have := Nat.le_of_dvd (by norm_num) h1
+      omega
+    exact absurd this hp1
+  · rw [Finset.prod_insert has] at h
+    rcases hp.dvd_or_dvd h with (hpa | hps')
+    · exact ⟨a, Finset.mem_insert_self a s', hpa⟩
+    · rcases ih hps' with ⟨x, hx, hpx⟩
+      exact ⟨x, Finset.mem_insert_of_mem hx, hpx⟩
+
+lemma nat_prime_not_dvd_finset_prod {p : ℕ} {α : Type _} [DecidableEq α] {s : Finset α}
+    {f : α → ℕ} (hp : p.Prime) (h : ∀ x ∈ s, ¬ p ∣ f x) : ¬ p ∣ ∏ x ∈ s, f x := by
+  intro hprod
+  rcases nat_prime_dvd_finset_prod hp hprod with ⟨x, hx, hpx⟩
+  exact h x hx hpx
+
+/-! ### Step 1: Concentration lemma + n > k² -/
+
+/-- Among k consecutive integers starting at n-k+1 (i.e., n, n-1, …, n-k+1),
+at most one is divisible by prime p when p > k. -/
+lemma at_most_one_multiple_of_large_prime {n k p i j : ℕ} (hp : k < p)
+    (hi : i < k) (hj : j < k) (hp_i : p ∣ n - i) (hp_j : p ∣ n - j) : i = j := by
+  by_contra! hne
+  by_cases h_lt : i < j
+  · have hpos : 0 < j - i := Nat.sub_pos_of_lt h_lt
+    have h_eq : n - i = (n - j) + (j - i) := by omega
+    have h_add : p ∣ (n - j) + (j - i) := by rwa [← h_eq]
+    have h_diff : p ∣ j - i := (Nat.dvd_add_right hp_j).mp h_add
+    have h_lt_diff : j - i < p := by omega
+    have h_le : p ≤ j - i := Nat.le_of_dvd hpos h_diff
+    omega
+  · have h_lt' : j < i := by omega
+    have hpos : 0 < i - j := Nat.sub_pos_of_lt h_lt'
+    have h_eq : n - j = (n - i) + (i - j) := by omega
+    have h_add : p ∣ (n - i) + (i - j) := by rwa [← h_eq]
+    have h_diff : p ∣ i - j := (Nat.dvd_add_right hp_i).mp h_add
+    have h_lt_diff : i - j < p := by omega
+    have h_le : p ≤ i - j := Nat.le_of_dvd hpos h_diff
+    omega
+
+/-- The concentration lemma: if p > k is prime and p^l divides
+the product of k consecutive integers n(n-1)···(n-k+1),
+then all the p-power is in one factor: ∃ i < k, p^l | n - i.
+
+Proved by induction on k using coprimality:
+- Base k=0: trivial (p^l ∣ 1 impossible).
+- Step k→k+1: via n.descFactorial (k+1) = (n-k) * n.descFactorial k.
+  * If p | n-k, then by uniqueness no other factor has p, so
+    p ∤ n.descFactorial k, hence Coprime(p^l, n.descFactorial k),
+    forcing p^l | n-k.
+  * If p ∤ n-k, then Coprime(p^l, n-k), so p^l | n.descFactorial k,
+    and IH gives p^l | n-i for some i < k. -/
+lemma pow_l_dvd_one_factor_of_descFactorial {n k l p : ℕ} (hp : p.Prime) (hkp : k < p)
+    (hlp : 0 < l) (hp_l_dvd : p ^ l ∣ n.descFactorial k) : ∃ i, i < k ∧ p ^ l ∣ n - i := by
+  induction' k with k ih generalizing n
+  · -- Base: n.descFactorial 0 = 1, p^l ∣ 1 impossible for p > 1
+    have h1 : p ^ l ∣ 1 := hp_l_dvd
+    have hp_gt_1 : 1 < p ^ l := by
+      calc
+        1 = 1 ^ l := by simp
+        _ < p ^ l := Nat.pow_lt_pow_left hp.one_lt hlp.ne.symm
+    have : p ^ l ≤ 1 := Nat.le_of_dvd (by norm_num) h1
+    omega
+  · -- Inductive step: n.descFactorial (k+1) = (n - k) * n.descFactorial k
+    rw [Nat.descFactorial_succ] at hp_l_dvd
+    by_cases hdiv_nk : p ∣ n - k
+    · -- Case 1: p | n-k. Then no other factor j<k has p, so p ∤ n.descFactorial k.
+      have h_no_other : ∀ j, j < k → ¬ p ∣ n - j := by
+        intro j hj
+        by_contra! h
+        have h_eq := at_most_one_multiple_of_large_prime hkp hj (by omega) h hdiv_nk
+        omega
+      have h_not_dvd_desc : ¬ p ∣ n.descFactorial k := by
+        rw [Nat.descFactorial_eq_prod_range]
+        exact nat_prime_not_dvd_finset_prod hp h_no_other
+      have h_cop_base : Nat.Coprime p (n.descFactorial k) :=
+        hp.coprime_iff_not_dvd.mpr h_not_dvd_desc
+      have h_cop : Nat.Coprime (p ^ l) (n.descFactorial k) := by
+        rw [Nat.coprime_pow_left_iff hlp]
+        exact h_cop_base
+      -- p^l | (n-k) * n.descFactorial k, and Coprime(p^l, n.descFactorial k)
+      -- so p^l | n-k
+      have h_result : p ^ l ∣ n - k := h_cop.dvd_of_dvd_mul_right hp_l_dvd
+      exact ⟨k, by omega, h_result⟩
+    · -- Case 2: p ∤ n-k. Then Coprime(p^l, n-k), so p^l | n.descFactorial k.
+      have h_cop_nk : Nat.Coprime p (n - k) :=
+        hp.coprime_iff_not_dvd.mpr hdiv_nk
+      have h_cop_nk_pow : Nat.Coprime (p ^ l) (n - k) := by
+        rw [Nat.coprime_pow_left_iff hlp]
+        exact h_cop_nk
+      -- p^l | (n-k) * n.descFactorial k. Since Coprime(p^l, n-k),
+      -- we have p^l | n.descFactorial k.
+      -- Using the commuted form: (n-k) * n.descFactorial k
+      have h_dvd_desc : p ^ l ∣ n.descFactorial k :=
+        h_cop_nk_pow.dvd_of_dvd_mul_left hp_l_dvd
+      -- Apply IH (with same n)
+      rcases ih n h_dvd_desc with ⟨i, hi, h_i_pow⟩
+      exact ⟨i, by omega, h_i_pow⟩
+
+/-- Step 1: C(n,k) = m^l, k ≥ 4, n ≥ 2k, l ≥ 2 ⇒ n > k².
+Sylvester gives p > k dividing C(n,k). Since C(n,k) = m^l,
+p^l | C(n,k). Using n.descFactorial k = k! * C(n,k), we get
+p^l | n(n-1)···(n-k+1). By the concentration lemma,
+p^l | n-i for some i < k, so n ≥ p^l > k^l ≥ k². -/
+lemma erdos_step1_n_gt_k_sq {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l)
+    (h_eq : n.choose k = m ^ l) : k * k < n := by
+  have hk_pos : 0 < k := by omega
+  obtain ⟨p, hkp, hp, hp_choose⟩ := sylvester_general n k hn hk_pos
+  have hk_lt_p : k < p := hkp
+  -- p | m ⇒ p^l | m^l = C(n,k)
+  have hp_m : p ∣ m := hp.dvd_of_dvd_pow (h_eq ▸ hp_choose)
+  have hp_l_dvd_choose : p ^ l ∣ n.choose k := by
+    rw [h_eq]
+    exact pow_dvd_pow_of_dvd hp_m l
+  -- n.descFactorial k = k! * n.choose k, so p^l | n.descFactorial k
+  have hp_l_dvd_desc : p ^ l ∣ n.descFactorial k := by
+    rw [Nat.descFactorial_eq_factorial_mul_choose n k]
+    have h_temp : p ^ l ∣ n.choose k * (k !) :=
+      dvd_mul_of_dvd_right hp_l_dvd_choose (k !)
+    rwa [mul_comm] at h_temp
+  -- Concentration: p^l divides one specific factor n-i
+  have hl_pos : 0 < l := by omega
+  obtain ⟨i, hi, h_i_pow⟩ :=
+    pow_l_dvd_one_factor_of_descFactorial hp hk_lt_p hl_pos hp_l_dvd_desc
+  -- n-i ≥ p^l > k^l ≥ k²
+  have h_n_minus_i_pos : 0 < n - i := Nat.sub_pos_of_lt (by omega)
+  have h_ge : p ^ l ≤ n - i := Nat.le_of_dvd h_n_minus_i_pos h_i_pow
+  have h_k_l_lt_p_l : k ^ l < p ^ l :=
+    Nat.pow_lt_pow_left hk_lt_p (by omega : l ≠ 0)
+  have h_k_sq_le_k_l : k * k ≤ k ^ l := by
+    calc
+      k * k = k ^ 2 := by ring
+      _ ≤ k ^ l := Nat.pow_le_pow_right (by omega) hl
+  omega
+
+/-! ### l-th-power-free decomposition (Step 2 mechanics) -/
+
+/-- The l-th-power-free core of a natural number:
+for each prime p, keep only p^(v_p(m) % l). -/
+def lPowerFreePart (l m : ℕ) : ℕ :=
+  ∏ p ∈ m.factorization.support, p ^ (m.factorization p % l)
+
+/-- The l-th-power-ful part (as an l-th-power):
+p^(v_p(m) / l) per prime, so that lPowerFulPart l m = (some integer)^l. -/
+def lPowerRoot (l m : ℕ) : ℕ :=
+  ∏ p ∈ m.factorization.support, p ^ (m.factorization p / l)
+
+open scoped BigOperators
+
+lemma lPowerFreePart_mul_lPowerRoot_pow_eq (l m : ℕ) (hm : m ≠ 0) :
+    m = lPowerFreePart l m * (lPowerRoot l m) ^ l := by
+  rw [Nat.factorization_prod_pow_eq_self hm]
+  simp only [lPowerFreePart, lPowerRoot]
+  calc
+    ∏ p ∈ m.factorization.support, p ^ (m.factorization p) =
+        ∏ p ∈ m.factorization.support, p ^ (m.factorization p % l + l * (m.factorization p / l)) := by
+      refine Finset.prod_congr rfl fun p hp => ?_
+      rw [Nat.mod_add_div (m.factorization p) l]
+    _ = ∏ p ∈ m.factorization.support,
+          (p ^ (m.factorization p % l)) * (p ^ (m.factorization p / l)) ^ l := by
+      refine Finset.prod_congr rfl fun p hp => ?_
+      rw [pow_add, mul_comm, pow_mul]
+    _ = (∏ p ∈ m.factorization.support, p ^ (m.factorization p % l)) *
+        (∏ p ∈ m.factorization.support, (p ^ (m.factorization p / l)) ^ l) := by
+      rw [Finset.prod_mul_prod]
+    _ = (∏ p ∈ m.factorization.support, p ^ (m.factorization p % l)) *
+        (∏ p ∈ m.factorization.support, (p ^ (m.factorization p / l))) ^ l := by
+      rw [Finset.prod_pow]
+
+lemma lPowerFreePart_pos (l m : ℕ) (hm : m ≠ 0) : lPowerFreePart l m ≠ 0 := by
+  intro hzero
+  have := lPowerFreePart_mul_lPowerRoot_pow_eq l m hm
+  rw [hzero, zero_mul] at this
+  exact hm this.symm
+
+/-- The l-th-power-free core has no prime exponent ≥ l.
+This is the key property making a_j "l-th-power-free". -/
+lemma lPowerFreePart_isLPowerFree (l m : ℕ) (hl : l ≠ 0) :
+    ∀ p, p.Prime → (lPowerFreePart l m).factorization p < l := by
+  -- TODO: prove using factorization_prod properties. The core difficulty
+  -- is that factorization of a Finset.prod over distinct primes is
+  -- the sum of individual factorizations. This is a known gap.
+  -- For now: stubbed pending Steps 2-4 full implementation.
+  sorry
+
+/-! ### Main theorem assembly -/
+
+/-- `IsLPowerFree l a` means no integer d > 1 has its l-th power dividing a. -/
+def IsLPowerFree (l a : ℕ) : Prop :=
+  ∀ d, 1 < d → ¬ d ^ l ∣ a
+
+/-- Step 1 is fully proved above. Steps 2–4 of the Book's a_j decomposition
+require the l-th-power-free machinery and are documented here as TODOs.
+
+TIER 1 TARGET: complete `chapter03_erdos_l_eq_2` first, then generalize. -/
 theorem chapter03_erdos {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l) :
     n.choose k ≠ m ^ l := by
   intro h_eq
+  -- Step 1: n > k²
+  have hn_sq : k * k < n := erdos_step1_n_gt_k_sq hk hn hl h_eq
+  -- Steps 2-4: the a_j decomposition and conclusion.
+  -- TODO: implement Tier 1 (l=2 case) using the infrastructure above.
   sorry
 
 /-- Chapter 3's target theorem:
 Binomial coefficients are (almost) never powers — the Erdős 1951 result.
-This replaces the former placeholder "Infinite primes" (Ch01's content). -/
+This replaces the former "Infinite primes" placeholder (Ch01's content). -/
 theorem chapter03 {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l) :
     n.choose k ≠ m ^ l :=
   chapter03_erdos hk hn hl
+
+end Tier1
 
 end ProofsInTheBook.Chapter03

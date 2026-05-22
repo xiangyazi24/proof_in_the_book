@@ -3763,6 +3763,65 @@ theorem chapter03 {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ 
     n.choose k ≠ m ^ l :=
   chapter03_erdos hk hn hl
 
+
+
+/-! ### Step 3: Key algebraic inequality -/
+
+/-- (m+1)^l ≥ m^l + l · m^(l-1) for m ≥ 1, l ≥ 1.
+Proved by induction on l. Additive form avoids Nat subtraction issues. -/
+lemma pow_succ_ge_add_mul_pow_pred {m l : ℕ} (hm : 0 < m) (hl : 1 ≤ l) :
+    m ^ l + l * m ^ (l - 1) ≤ (m + 1) ^ l := by
+  induction' l with l ih
+  · omega
+  · -- Show for succ l (i.e., l+1). We need: m^(l+1) + (l+1)*m^l ≤ (m+1)^(l+1)
+    by_cases hl0 : l = 0
+    · subst hl0; simp [hm.ne.symm]
+    · have hl1 : 1 ≤ l := by omega
+      have hIH : m ^ l + l * m ^ (l - 1) ≤ (m + 1) ^ l := ih hl1
+      -- Multiply IH by (m+1) to preserve the inequality
+      have h_mul : (m + 1) * (m ^ l + l * m ^ (l - 1)) ≤ (m + 1) ^ (l + 1) := by
+        calc
+          (m + 1) * (m ^ l + l * m ^ (l - 1)) ≤ (m + 1) * (m + 1) ^ l :=
+            Nat.mul_le_mul_left (m + 1) hIH
+          _ = (m + 1) ^ (l + 1) := by rw [pow_succ]
+      -- Expand LHS of h_mul
+      have h_expand : (m + 1) * (m ^ l + l * m ^ (l - 1)) =
+          m ^ (l + 1) + (l + 1) * m ^ l + l * m ^ (l - 1) := by
+        calc
+          (m + 1) * (m ^ l + l * m ^ (l - 1))
+              = (m + 1) * m ^ l + (m + 1) * (l * m ^ (l - 1)) := by ring
+          _ = m * m ^ l + 1 * m ^ l + m * (l * m ^ (l - 1)) + 1 * (l * m ^ (l - 1)) := by ring
+          _ = m ^ (l + 1) + m ^ l + l * m ^ l + l * m ^ (l - 1) := by
+            simp [pow_succ, mul_comm, mul_left_comm, add_comm, add_left_comm]
+          _ = m ^ (l + 1) + (l + 1) * m ^ l + l * m ^ (l - 1) := by ring
+      rw [h_expand] at h_mul
+      -- h_mul: m^(l+1) + (l+1)*m^l + l*m^(l-1) ≤ (m+1)^(l+1)
+      -- Therefore: m^(l+1) + (l+1)*m^l ≤ (m+1)^(l+1)  (drop the extra term)
+      omega
+
+/-- Subtraction form: (m+1)^l - m^l ≥ l · m^(l-1) for m ≥ 1, l ≥ 1.
+This follows from the additive form since (m+1)^l ≥ m^l. -/
+lemma pow_succ_sub_pow_ge_mul {m l : ℕ} (hm : 0 < m) (hl : 1 ≤ l) :
+    l * m ^ (l - 1) ≤ (m + 1) ^ l - m ^ l := by
+  have h := pow_succ_ge_add_mul_pow_pred hm hl
+  omega
+
+/-! ### a_j distinctness (Step 3 core) -/
+
+/-- For the Erdős proof: if n - i = a·b_i^l and n - j = a·b_j^l with i < j,
+then a·(b_i^l - b_j^l) = j - i. Since n > k², this forces a contradiction
+for l ≥ 2 and small k. We capture this as a lemma that if a_i = a_j then
+j - i < k gives a contradiction via the algebraic inequality.
+
+Concretely: if n > k², l ≥ 2, and two factors n-i, n-j share the same
+l-th-power-free part a, then |i - j| ≥ k (so they can't both be < k). -/
+
+lemma lPowerFreePart_injective {n k l : ℕ} (hk : 4 ≤ k) (hn_sq : k * k < n) (hl : 2 ≤ l)
+    {i j : ℕ} (hi : i < k) (hj : j < k) (hij : i ≠ j)
+    (h_eq : lPowerFreePart l (n - i) = lPowerFreePart l (n - j)) : False := by
+  -- TODO: implement using pow_succ_sub_pow_ge_mul and the decomposition
+  sorry
+
 end Tier1
 
 end ProofsInTheBook.Chapter03

@@ -6777,17 +6777,6 @@ theorem sweepGAS_π {points : Finset Point2} {k : ℕ}
     (sweepGAS hcard hne hncoll).π j =
       sweepSort (sweepLabeling hcard hne) (interEventAngle points hne j) := rfl
 
-noncomputable def sweepGAS_at {points : Finset Point2} {k : ℕ}
-    (hcard : points.card = 2 * k)
-    (hne : (directionsDeterminedBy points).Nonempty)
-    (_hθ : ℝ)
-    (s : Fin (directionsDeterminedBy points).card)
-    (hlow : ∀ d ∈ directionsDeterminedBy points, d.angle - Real.pi < _hθ)
-    (hhigh : ∀ d ∈ directionsDeterminedBy points, _hθ < d.angle)
-    (hncoll : NoncollinearSet points) :
-    GeneralizedAllowableSequence k (directionsDeterminedBy points).card :=
-  sweepGAS hcard hne hncoll
-
 /-! ### Inter-event angle ordering -/
 
 theorem interEventAngle_lt_sortedAngle {points : Finset Point2}
@@ -7392,6 +7381,22 @@ theorem sweepLabelingAt_inj {points : Finset Point2} {k : ℕ}
     Function.Injective (fun a : Fin (2 * k) =>
       orientedLevel θ₀ ((sweepLabelingAt (points := points) hcard θ₀).point a)) :=
   orientedLevel_injective_of_all_angles_between _ hlow hhigh
+
+noncomputable def sweepGAS_at {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (θ₀ : ℝ)
+    (s : Fin (directionsDeterminedBy points).card)
+    (hlow : ∀ d ∈ directionsDeterminedBy points, d.angle - Real.pi < θ₀)
+    (hhigh : ∀ d ∈ directionsDeterminedBy points, θ₀ < d.angle)
+    (hncoll : NoncollinearSet points) :
+    GeneralizedAllowableSequence k (directionsDeterminedBy points).card :=
+  GeneralizedAllowableSequence.ofSweepAngles
+    (sweepLabelingAt hcard θ₀)
+    (interEventAngleAt points hne θ₀ s)
+    (by rw [interEventAngleAt_zero]; exact sweepLabelingAt_id hcard hne θ₀)
+    (by rw [interEventAngleAt_last, interEventAngleAt_zero])
+    (by rw [interEventAngleAt_zero]; exact sweepLabelingAt_inj hcard hne θ₀ hlow hhigh)
 
 private theorem shiftedSortedAngleAt_nonneg (points : Finset Point2)
     (hne : (directionsDeterminedBy points).Nonempty)

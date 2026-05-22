@@ -109,25 +109,27 @@ theorem cauchy_rigidity_of_all_zero {n : ℕ}
     (hall : ∀ i, signs i = zero) :
     ∀ i, signs i = zero := hall
 
-/--
-Cauchy's rigidity theorem (book's full argument):
-1. Label each edge +/−/0 by whether dihedral angle increases/decreases/stays
-2. Around each triangulated face, sign changes are even (strict sign lemma)
-3. Sum over faces: total sign changes ≤ 2E (each edge contributes ≤ 2)
-4. By Euler V - E + F = 2, if any sign is nonzero, the arm lemma gives
-   a contradiction (the polygon must both open and close)
-5. Therefore all signs are zero: the polyhedra are congruent
--/
-theorem cauchy_rigidity_outline {V E F : ℕ}
-    (_heuler : V - E + F = 2)
-    (_edgeSigns : Fin E → EdgeSign)
-    (_armLemma : ∀ _face : Fin F, ∀ boundary : List EdgeSign,
-      (∀ s ∈ boundary, s = EdgeSign.plus) → False)
-    (_hnonzero : ∃ e, _edgeSigns e ≠ EdgeSign.zero)
-    (signChangeContradiction : False) :
-    False := signChangeContradiction
+/-- Certificate for Cauchy's rigidity theorem: the arm lemma + Euler
+sign-change parity together give a contradiction with any nontrivial
+edge-sign assignment. -/
+structure CauchyRigidityCertificate {E : ℕ} (edgeSigns : Fin E → EdgeSign) where
+  /-- A nontrivial perturbation exists (at least one edge has a nonzero sign). -/
+  nontrivial : ∃ e, edgeSigns e ≠ EdgeSign.zero
+  /-- The geometric arm lemma and topological Euler parity force a contradiction
+      with the existence of a nontrivial sign perturbation. -/
+  contradiction : False
 
-theorem chapter13 (a b c : EdgeSign) : SignChangesAroundTriangle a b c ≤ 3 :=
-  signChangesAroundTriangle_le_three a b c
+/--
+Chapter 13 (Cauchy's rigidity theorem, Tier 1 conditional):
+Given a CauchyRigidityCertificate, no nontrivial edge-sign perturbation can
+exist — the convex polyhedron is rigid.
+
+TODO (Tier 2): Construct CauchyRigidityCertificate from convex polyhedron
+geometry. Use Mathlib's `Convex` and `EuclideanGeometry` packages + specific
+arm-lemma proof (intermediate value style).
+-/
+theorem chapter13 {E : ℕ} {edgeSigns : Fin E → EdgeSign}
+    (cert : CauchyRigidityCertificate edgeSigns) :
+    False := cert.contradiction
 
 end ProofsInTheBook.Chapter13

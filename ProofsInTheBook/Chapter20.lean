@@ -167,7 +167,57 @@ theorem exists_trichromatic_of_odd_boundary
   rcases hodd with ⟨k, hk⟩
   omega
 
-theorem chapter20 : TrichromaticTriangle red green blue :=
-  trichromatic_of_eq_red_green_blue rfl rfl rfl
+/-- Certificate for Monsky's theorem: a 2-adic-style coloring of triangle
+vertices together with the double-counting witness that boundary red-green
+edge count is odd. This is the part that requires 2-adic extension to ℝ
+(via transcendence basis / Hahn series, not in Mathlib). -/
+structure MonskyCertificate (n : ℕ) where
+  /-- The triangle colorings induced by a (hypothetical) equal-area
+      odd-triangulation of the unit square. -/
+  triangleColors : Fin n → MonskyColor × MonskyColor × MonskyColor
+  /-- The boundary red-green edge count (from the square's edge contour). -/
+  boundaryRGCount : ℕ
+  /-- Total RG edge count summed over all triangles. -/
+  totalRG : ℕ
+  /-- Total = sum of triangle-local RG counts (double-counting bookkeeping). -/
+  htotal : totalRG = ∑ i : Fin n,
+    ((if RedGreenEdge (triangleColors i).1 (triangleColors i).2.1 then 1 else 0) +
+     (if RedGreenEdge (triangleColors i).2.1 (triangleColors i).2.2 then 1 else 0) +
+     (if RedGreenEdge (triangleColors i).2.2 (triangleColors i).1 then 1 else 0))
+  /-- 2-adic constraint: parity of total RG = parity of boundary RG. -/
+  hparity : totalRG % 2 = boundaryRGCount % 2
+  /-- Crux of Monsky's argument: boundary RG count is ODD (from the unit
+      square's specific 2-adic coloring at corners). -/
+  hodd : Odd boundaryRGCount
+
+/- Tier 2 work (deferred): given a hypothetical equal-area triangulation of
+the unit square into an ODD number of triangles, construct a MonskyCertificate
+by:
+1. Using Hahn series / transcendence basis to extend the 2-adic valuation
+   v₂ : ℚ → ℤ to v₂' : ℝ → ℤ.
+2. Color each point (x, y) ∈ ℝ² by:
+   - red if v₂'(x) > 0 ∧ v₂'(y) > 0
+   - green if v₂'(x) ≤ 0 ∧ v₂'(x) ≤ v₂'(y)
+   - blue if v₂'(y) < 0 ∧ v₂'(y) < v₂'(x)
+3. Verify the unit square corners (0,0), (1,0), (0,1), (1,1) get 3 distinct
+   colors with odd boundary RG count.
+4. The "total RG = boundary RG mod 2" identity follows from double-counting
+   per Sperner.
+The 2-adic extension to ℝ is non-trivial in Lean — likely needs Mathlib's
+HahnSeries / WellOrderedExtension machinery. -/
+
+/-- Chapter 20 (Monsky's theorem, Tier 1 conditional):
+Given a Monsky 2-adic coloring certificate (which packages the 2-adic
+extension construction + the double-counting parity result + the odd-boundary
+witness), there exists a trichromatic triangle — corresponding to the
+contradiction that closes the proof (such a triangle has area with 2-adic
+valuation incompatible with 1/(odd integer)).
+-/
+theorem chapter20 {n : ℕ} (cert : MonskyCertificate n) :
+    ∃ i : Fin n,
+      TrichromaticTriangle (cert.triangleColors i).1
+        (cert.triangleColors i).2.1 (cert.triangleColors i).2.2 :=
+  exists_trichromatic_of_odd_boundary n cert.triangleColors
+    cert.boundaryRGCount cert.totalRG cert.htotal cert.hparity cert.hodd
 
 end ProofsInTheBook.Chapter20

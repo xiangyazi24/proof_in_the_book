@@ -267,6 +267,19 @@ theorem pi_cot_pi_int_eq_zero (n : ℤ) :
     Real.pi * Real.cot (Real.pi * (n : ℝ)) = 0 := by
   rw [show Real.pi * (n : ℝ) = (n : ℝ) * Real.pi from by ring, cot_int_mul_pi, mul_zero]
 
+/-- `cot(π/4) = 1`. -/
+@[simp]
+theorem cot_pi_div_four : Real.cot (Real.pi / 4) = 1 := by
+  rw [Real.cot_eq_cos_div_sin, Real.cos_pi_div_four, Real.sin_pi_div_four]
+  have h : Real.sqrt 2 / 2 ≠ 0 := by
+    have : Real.sqrt 2 ≠ 0 := Real.sqrt_ne_zero'.mpr (by norm_num)
+    intro hz
+    have := div_eq_zero_iff.mp hz
+    rcases this with h1 | h1
+    · exact this h1
+    · norm_num at h1
+  field_simp
+
 /-- `cot` is zero at all integer multiples of `π/2` whose multiple is odd
 (i.e., at `π/2, 3π/2, -π/2, ...`).  This is the union of the cot-zero set
 (odd multiples of `π/2`) together with the degenerate sin-zero set

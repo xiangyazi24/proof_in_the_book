@@ -56,6 +56,19 @@ theorem segmentExpectedCrossings_mono {d : ℝ} (hd : 0 < d)
   have hden : 0 < Real.pi * d := mul_pos Real.pi_pos hd
   apply div_le_div_of_nonneg_right (by linarith) hden.le
 
+/-- Linearity of expectation: expected crossings is additive in needle length. -/
+theorem segmentExpectedCrossings_add (d a b : ℝ) :
+    segmentExpectedCrossings d (a + b) =
+      segmentExpectedCrossings d a + segmentExpectedCrossings d b := by
+  unfold segmentExpectedCrossings
+  ring
+
+/-- Expected crossings scales linearly in needle length. -/
+theorem segmentExpectedCrossings_const_mul (d c length : ℝ) :
+    segmentExpectedCrossings d (c * length) = c * segmentExpectedCrossings d length := by
+  unfold segmentExpectedCrossings
+  ring
+
 theorem segmentExpectedCrossings_le_one {d length : ℝ} (hd : 0 < d) (hle : length ≤ d) :
     segmentExpectedCrossings d length ≤ 1 := by
   unfold segmentExpectedCrossings

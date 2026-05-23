@@ -150,6 +150,14 @@ theorem pointsOnLine_card_le {Point Line : Type*} [DecidableEq Point]
     (pointsOnLine points onLine line).card ≤ points.card :=
   Finset.card_le_card (pointsOnLine_subset points onLine line)
 
+/-- `OrdinaryLine` implies `≥ 2` configuration points lie on the line. -/
+theorem two_le_card_pointsOnLine_of_ordinaryLine {Point Line : Type*}
+    [DecidableEq Point] (points : Finset Point)
+    (onLine : Point → Line → Prop) [DecidableRel onLine] (line : Line)
+    (h : OrdinaryLine points onLine line) :
+    2 ≤ (pointsOnLine points onLine line).card := by
+  rw [card_pointsOnLine_eq_two_of_ordinaryLine points onLine line h]
+
 /-- `offLinePairs` is empty iff every configuration point lies on every
 candidate line — the "trivially collinear" degenerate case. -/
 theorem offLinePairs_eq_empty_iff {Point Line : Type*}

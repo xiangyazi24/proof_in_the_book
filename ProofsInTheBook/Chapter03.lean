@@ -3860,6 +3860,16 @@ theorem lPowerFreePart_two_ne_four (m : ℕ) (hm : m ≠ 0) :
   rw [h] at h_sf
   exact not_squarefree_four h_sf
 
+/-- More generally, `lPowerFreePart 2 m` is never equal to any non-squarefree
+positive number. -/
+theorem lPowerFreePart_ne_of_not_squarefree (m d : ℕ) (hm : m ≠ 0)
+    (h_not_sf : ¬ Squarefree d) :
+    lPowerFreePart 2 m ≠ d := by
+  intro h
+  have h_sf := lPowerFreePart_squarefree m hm
+  rw [h] at h_sf
+  exact h_not_sf h_sf
+
 /-- For `m ≠ 0`, the factorization of `lPowerFreePart 2 m` at `p` equals
 `m.factorization p % 2`. This is the key arithmetic identity used in the Erdős
 divisibility step. -/

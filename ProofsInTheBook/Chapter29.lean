@@ -100,6 +100,25 @@ theorem pileOfLabel_eq_of_mem (a n : ℕ) (labels : RiffleLabels a n)
     labels card = pile :=
   (mem_pileOfLabel_iff a n labels pile card).mp h
 
+/-- A pile is empty iff no card has its label. -/
+theorem pileOfLabel_eq_empty_iff (a n : ℕ) (labels : RiffleLabels a n) (pile : Fin a) :
+    pileOfLabel a n labels pile = ∅ ↔ ∀ card : Fin n, labels card ≠ pile := by
+  rw [Finset.eq_empty_iff_forall_notMem]
+  constructor
+  · intro h card heq
+    exact h card ((mem_pileOfLabel_iff a n labels pile card).mpr heq)
+  · intro h card hmem
+    exact h card ((mem_pileOfLabel_iff a n labels pile card).mp hmem)
+
+/-- A pile is nonempty iff some card has its label. -/
+theorem pileOfLabel_nonempty_iff (a n : ℕ) (labels : RiffleLabels a n) (pile : Fin a) :
+    (pileOfLabel a n labels pile).Nonempty ↔ ∃ card : Fin n, labels card = pile := by
+  constructor
+  · rintro ⟨card, hcard⟩
+    exact ⟨card, (mem_pileOfLabel_iff a n labels pile card).mp hcard⟩
+  · rintro ⟨card, hcard⟩
+    exact ⟨card, (mem_pileOfLabel_iff a n labels pile card).mpr hcard⟩
+
 /--
 The stable riffle order induced by a label assignment: card `i` comes before
 card `j` in the shuffled deck iff `labels i < labels j`, or `labels i = labels j`

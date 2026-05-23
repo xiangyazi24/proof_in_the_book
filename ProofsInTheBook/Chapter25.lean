@@ -42,6 +42,20 @@ theorem segmentExpectedCrossings_nonneg {d length : ℝ} (hd : 0 < d) (hlen : 0 
   unfold segmentExpectedCrossings
   positivity
 
+/-- Zero-length needle has zero expected crossings. -/
+@[simp]
+theorem segmentExpectedCrossings_zero (d : ℝ) :
+    segmentExpectedCrossings d 0 = 0 := by
+  simp [segmentExpectedCrossings]
+
+/-- Expected crossings is monotone in needle length (for fixed `d > 0`). -/
+theorem segmentExpectedCrossings_mono {d : ℝ} (hd : 0 < d)
+    {a b : ℝ} (hab : a ≤ b) :
+    segmentExpectedCrossings d a ≤ segmentExpectedCrossings d b := by
+  unfold segmentExpectedCrossings
+  have hden : 0 < Real.pi * d := mul_pos Real.pi_pos hd
+  apply div_le_div_of_nonneg_right (by linarith) hden.le
+
 theorem segmentExpectedCrossings_le_one {d length : ℝ} (hd : 0 < d) (hle : length ≤ d) :
     segmentExpectedCrossings d length ≤ 1 := by
   unfold segmentExpectedCrossings

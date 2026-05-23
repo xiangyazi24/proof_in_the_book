@@ -224,6 +224,18 @@ satisfy the duplication formula, and agree at `x = 1/2`.
 theorem cot_pi_partial_fraction_identity :
     True := trivial
 
+/-- `cot(π/2) = 0`.  This is the "eval at 1/2" property of `cot(π·)` that
+matches the Herglotz-class `eval_half` requirement (after multiplying by `π`). -/
+theorem cot_pi_div_two : Real.cot (Real.pi / 2) = 0 := by
+  rw [Real.cot_eq_cos_div_sin, Real.cos_pi_div_two]
+  simp
+
+/-- `π · cot(π · (1/2)) = 0`. Together with `cot_pi_herglotz_add_cancel` and
+periodicity, this gives the Herglotz-class membership of `x ↦ π · cot(π x)`. -/
+theorem pi_cot_pi_half_eq_zero :
+    (Real.pi * Real.cot (Real.pi * (1/2 : ℝ))) = 0 := by
+  rw [show Real.pi * (1/2 : ℝ) = Real.pi / 2 from by ring, cot_pi_div_two, mul_zero]
+
 /--
 The dyadic averaging identity: if `f` satisfies the duplication formula
 `f(x) = (1/2)(f(x/2) + f((x+1)/2))`, then iterating n times gives

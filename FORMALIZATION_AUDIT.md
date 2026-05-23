@@ -98,8 +98,13 @@ semantic TODO items may be advanced in logged, build-checked increments.
   bookkeeping, the finite off-line pair minimization step, the closer-pair
   contradiction structure (Gallai's argument that ≥3 points on a line yields
   a nearer off-line pair), and an abstract Sylvester-Gallai theorem statement.
-  It still lacks the actual Euclidean geometry linking the abstract and
-  concrete arguments.
+
+  **Tier 2 progress (2026-05-23):** `OrdinaryLine ↔ pointsOnLine.card = 2`
+  biconditional, `pointsOnLine_subset/card_le/eq_empty_iff`,
+  `offLinePairs_nonempty_iff/eq_empty_iff` (degenerate trivially-collinear
+  characterization), `two_le_card_pointsOnLine_of_ordinaryLine`, and
+  `sylvester_gallai_abstract_card_le` (combined ≤ 2 packaging).  Concrete
+  Euclidean instantiation of `dist`, `footLine`, `closerPoint` remains TODO.
 - [ ] Chapter11: prove Ungar's slope lower bound.  The current file now
   distinguishes finite slopes from the vertical direction, proves the
   nonvertical slope set embeds into the full direction set, and states the
@@ -108,12 +113,30 @@ semantic TODO items may be advanced in logged, build-checked increments.
 - [ ] Chapter13: formalize Cauchy's rigidity proof beyond local edge-sign
   bookkeeping.  The current file now separates zero edges from strict `+/-`
   signs, proves the strict triangular sign-change count is even, and states
-  the abstract arm lemma and Euler sign-change parity interfaces.  It still
-  lacks the concrete arm-lemma proof and convex polyhedron geometry.
+  the abstract arm lemma and Euler sign-change parity interfaces.
+
+  **Tier 2 progress (2026-05-23):** `arm_lemma_abstract` strengthened from
+  `True := trivial` placeholder to actual `chord < newChord` conclusion via
+  hypothesis disjunction.  `euler_sign_change_parity` strengthened from
+  `True := trivial` to actual `Even (∑ signChangesPerFace)` via
+  `Finset.even_sum`.  Plus `signChangesAroundTriangle_eq_zero_iff` (= 0 iff
+  all equal), `signChangesAroundTriangle_cycle` /
+  `strictSignChangesAroundTriangle_cycle` (cyclic invariance for both
+  edge-sign types), `strictSignChangesAroundTriangle_eq_zero_iff`.  The
+  concrete arm-lemma geometric proof and convex polyhedron infrastructure
+  remain TODO.
 - [ ] Chapter16: formalize a real Borsuk/Kahn-Kalai component.  The current
   file now proves basic finite color-class partition facts for a supplied
-  Borsuk-style coloring certificate, but it still lacks the Kahn-Kalai
-  combinatorial construction or any Euclidean counterexample.
+  Borsuk-style coloring certificate.
+
+  **Tier 2 progress (2026-05-23):** `borsukConjecture_iff_no_certificate`
+  (Iff packaging), `KahnKalaiCertificate.nonempty` (any cert has nonempty
+  underlying set, from pos_diam), `borsuk_no_certificate_of_conjecture`
+  (converse direction of chapter16), `borsukConjecture_zero` (Borsuk holds
+  vacuously in dim 0 since diam ≤ 0), `KahnKalaiCertificate.isEmpty_zero`
+  (no cert exists in dim 0), `colorClass_biUnion_eq_points` + `_card_sum`
+  + `_nonempty_of_mem` + `_nonempty_iff` + `_card_le`.  The Kahn-Kalai
+  Frankl-Wilson combinatorial construction for d ≥ 298 remains TODO.
 - [x] Chapter19: FTA endpoint `chapter19 (p : ℂ[X]) (hdeg : 1 ≤ p.natDegree)
   : ∃ z : ℂ, p.eval z = 0` is unconditional and proved.  The full chain
   exists: `complex_poly_local_norm_decrease` (real proof via small-t
@@ -125,8 +148,16 @@ semantic TODO items may be advanced in logged, build-checked increments.
   construction.  The current file proves the local parity atom, the
   `sum_nat_mod_two_eq_sum_mod_two` helper, the full `sperner_parity_abstract`
   theorem, and the `exists_trichromatic_of_odd_boundary` corollary — all
-  sorry-free.  It still lacks the 2-adic coloring construction and the
-  double-counting link between interior and boundary red-green edges.
+  sorry-free.
+
+  **Tier 2 progress (2026-05-23):** MonskyColor algebra:
+  `MonskyColor.card = 3`, `redGreenEdge_symm`, `redGreenEdge_ne`,
+  `redGreenEdge_not_blue`, `redGreenEdge_cases`, `not_redGreenEdge_self`,
+  `trichromaticTriangle_cycle/swap_outer/iff_red_green_blue_present`.
+  Certificate analysis: `MonskyCertificate.isEmpty_zero` (n=0 cert
+  impossible by parity), `MonskyCertificate.boundaryRGCount_pos`,
+  `MonskyCertificate.totalRG_pos`.  The 2-adic ℝ extension via Hahn
+  series / transcendence basis remains the major Tier 2 gap.
 - [ ] Chapter24: extend cotangent symmetries to the full Herglotz functional
   equation / partial-fraction argument.  The current file now proves the
   cotangent symmetries, abstracts the `HerglotzClass` structure with
@@ -153,12 +184,35 @@ semantic TODO items may be advanced in logged, build-checked increments.
   Buffon needle probability statement.  The current file now proves the
   single-segment crossing value is in `[0, 1]`, states Buffon's needle
   formula `P = 2ℓ/(πd)`, and proves the noodle generalization for curves.
-  It still lacks the measure-theoretic probability foundation.
+
+  **Tier 2 progress (2026-05-23):** Algebraic infrastructure:
+  `segmentExpectedCrossings_zero` (= 0 at length 0), `_mono` (monotone
+  in length), `_add` (additivity), `_const_mul` (linearity).
+  `curveExpectedCrossings_empty/_nonneg/_singleton/_eq_segment_of_total_length`.
+  `BuffonProbabilitySpace.canonical` constructor (with caveat: structurally
+  trivial — does NOT carry measure-theoretic content; the real Tier 2 goal
+  is to derive `expected_eq` from `MeasureTheory.ProbabilityMeasure` on
+  `[0, d/2] × [0, π/2]`).
 - [ ] Chapter29: connect riffle labels to the Gilbert-Shannon-Reeds shuffle
   distribution.  The current file counts label assignments, proves the
   label piles form a disjoint cover of the deck, defines the stable riffle
   order with irreflexivity, transitivity, and trichotomy, and states the
   pile-size counting interface.
+
+  **Tier 2 progress (2026-05-23):** Pile cardinality bounds:
+  `pileOfLabel_card_le`, `pileSizeVector_le`, `pileSizeVector_eq_filter_card`
+  (factored out the simp-friendly form).  Pile membership characterizations:
+  `mem_pileOfLabel_self`, `pileOfLabel_eq_of_mem`, `pileOfLabel_eq_empty_iff`,
+  `pileOfLabel_nonempty_iff`.  Order characterizations:
+  `riffleOrder_of_same_label`, `riffleOrder_of_label_lt`.  Canonical
+  candidates for the GSR certificate's `permFromLabels` field:
+  `riffleSort` via `Tuple.sort labels` (the sorting permutation by labels)
+  + `labels_comp_riffleSort_monotone` showing it produces a nondecreasing
+  composition.  `constantLabeling` + its pile sizes worked out
+  (`pileSizeVector_constantLabeling_zero` = n at pile 0; = 0 elsewhere).
+  The combinatorial `count_determined_by_piles` (multinomial count for the
+  riffle distribution) remains the open piece for a full
+  `GSRShuffleCertificate`.
 - [ ] Chapter30: formalize a real Lindstrom-Gessel-Viennot determinant/path
   statement.  The current file exposes the determinant's signed-permutation
   expansion, the diagonal determinant case, abstract sign-reversing
@@ -198,4 +252,16 @@ semantic TODO items may be advanced in logged, build-checked increments.
   the Kneser graph adjacency relation, the coloring separation property,
   the vertex count, and states both the chromatic upper bound
   (`n - 2k + 2`-colorability) and the lower bound (not `(n - 2k + 1)`-colorable).
-  Both bounds remain as sorry; the lower bound requires Borsuk-Ulam.
+
+  **Tier 2 progress (2026-05-23):** Structural lemmas:
+  `kneserVertex_nonempty_of_le` (vertex set nonempty when k ≤ n),
+  `kneserGraph_no_vertices_of_lt` (empty when n < k), `kneserVertex_card_zero`
+  (= 1 for k = 0), `kneserVertex_card_eq_one_of_eq` (= 1 for k = n),
+  `kneserGraph_exists_adj_of_two_mul_le` (edges exist when 2k ≤ n, via
+  explicit disjoint k-subsets `{0..k-1}` and `{k..2k-1}`),
+  `kneserGraph_no_adj_of_lt` (no edges when n < 2k),
+  `kneserGraph_zero_no_adj` + `kneserGraph_zero_eq_bot` (KG(n,0) = ⊥),
+  `kneserGraph_one_adj_of_ne` + `kneserGraph_one_eq_completeGraph`
+  (KG(n,1) = K_n as a SimpleGraph equality).  The Borsuk-Ulam-based hard
+  direction (no (n-2k+1)-coloring when n ≠ 2k) remains the major Tier 2
+  gap — requires building Borsuk-Ulam in Mathlib first.

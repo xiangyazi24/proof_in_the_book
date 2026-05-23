@@ -215,15 +215,6 @@ theorem herglotz_uniqueness_of_continuous_periodic_odd
     linarith [hx₀ x]
   linarith
 
-/--
-The cotangent partial-fraction identity (the book's conclusion):
-`π·cot(πx) = 1/x + ∑_{n=1}^∞ (1/(x+n) + 1/(x-n))`.
-The book proves this by showing both sides belong to the Herglotz class,
-satisfy the duplication formula, and agree at `x = 1/2`.
--/
-theorem cot_pi_partial_fraction_identity :
-    True := trivial
-
 /-- The standardized Tier 2 target for the cotangent partial-fraction expansion:
 the rational partial sum converges to `π·cot(πx)` for all non-integer `x`.
 This packages the remaining unproved limit identity as a hypothesis target
@@ -232,6 +223,17 @@ def CotPartialFractionLimit : Prop :=
   ∀ x : ℝ, (∀ n : ℤ, x ≠ (n : ℝ)) →
     Filter.Tendsto (fun N => rationalPartialSum N x) Filter.atTop
       (nhds (Real.pi * Real.cot (Real.pi * x)))
+
+/-- The cotangent partial-fraction identity, restated as a conditional theorem
+that takes the `CotPartialFractionLimit` hypothesis as input.  This replaces
+the earlier `True := trivial` placeholder with a meaningful conditional
+statement: given the limit identity (which is the Tier 2 gap), the partial
+sum converges to `π·cot(πx)` at every non-integer point.  -/
+theorem cot_pi_partial_fraction_identity (h : CotPartialFractionLimit)
+    (x : ℝ) (hx : ∀ n : ℤ, x ≠ (n : ℝ)) :
+    Filter.Tendsto (fun N => rationalPartialSum N x) Filter.atTop
+      (nhds (Real.pi * Real.cot (Real.pi * x))) :=
+  h x hx
 
 /-- `cot(π/2) = 0`.  This is the "eval at 1/2" property of `cot(π·)` that
 matches the Herglotz-class `eval_half` requirement (after multiplying by `π`). -/

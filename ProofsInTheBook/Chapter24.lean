@@ -267,6 +267,48 @@ theorem pi_cot_pi_int_eq_zero (n : ℤ) :
     Real.pi * Real.cot (Real.pi * (n : ℝ)) = 0 := by
   rw [show Real.pi * (n : ℝ) = (n : ℝ) * Real.pi from by ring, cot_int_mul_pi, mul_zero]
 
+/-- The cotangent half-angle/duplication identity:
+`cot α + cot(α + π/2) = 2 cot(2α)`.
+The proof handles all real `α` thanks to Lean's `0/0 = 0` convention at the
+degenerate points where `sin α = 0` or `cos α = 0`. -/
+theorem cot_add_cot_add_pi_div_two (α : ℝ) :
+    Real.cot α + Real.cot (α + Real.pi / 2) = 2 * Real.cot (2 * α) := by
+  rw [Real.cot_eq_cos_div_sin, Real.cot_eq_cos_div_sin, Real.cot_eq_cos_div_sin]
+  rw [Real.cos_add_pi_div_two, Real.sin_add_pi_div_two,
+      Real.cos_two_mul', Real.sin_two_mul]
+  -- LHS = cos α / sin α + (-sin α) / cos α
+  -- RHS = 2 · (cos²α - sin²α) / (2 sin α cos α)
+  rcases eq_or_ne (Real.sin α) 0 with hsin | hsin
+  · -- sin α = 0: both sides 0 by convention
+    rw [hsin]; simp
+  rcases eq_or_ne (Real.cos α) 0 with hcos | hcos
+  · -- cos α = 0: both sides 0 by convention
+    rw [hcos]; simp
+  -- Both sin α and cos α nonzero — do the algebra.
+  field_simp
+  ring
+
+/-- The Herglotz duplication formula for `f(x) := π · cot(π · x)`:
+`2 · f(x) = f(x/2) + f((x+1)/2)`.
+
+This is the algebraic engine that, combined with `pi_cot_pi_HerglotzClass`
+(periodic + odd), continuity of `cot` at non-integer points, and
+`pi_cot_pi_half_eq_zero` (value at `1/2`), invokes
+`herglotz_uniqueness_of_continuous_periodic_odd` to pin down `π·cot(π·x)`
+to any matching HerglotzClass member — the Herglotz uniqueness argument's
+key step. -/
+theorem pi_cot_pi_duplication (x : ℝ) :
+    2 * (Real.pi * Real.cot (Real.pi * x)) =
+      (Real.pi * Real.cot (Real.pi * (x / 2))) +
+        (Real.pi * Real.cot (Real.pi * ((x + 1) / 2))) := by
+  -- Specialize cot_add_cot_add_pi_div_two at α = π · x / 2.
+  have h := cot_add_cot_add_pi_div_two (Real.pi * x / 2)
+  rw [show (2 : ℝ) * (Real.pi * x / 2) = Real.pi * x from by ring] at h
+  rw [show Real.pi * x / 2 + Real.pi / 2 = Real.pi * ((x + 1) / 2) from by ring] at h
+  rw [show Real.pi * (x / 2) = Real.pi * x / 2 from by ring]
+  -- Multiply h (LHS = 2·cot(πx)) by π and rearrange.
+  linear_combination -(Real.pi * h)
+
 /--
 The dyadic averaging identity: if `f` satisfies the duplication formula
 `f(x) = (1/2)(f(x/2) + f((x+1)/2))`, then iterating n times gives

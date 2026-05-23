@@ -118,13 +118,18 @@ The global sign-change counting step via Euler's formula. In Cauchy's proof,
 each face contributes an even number of sign changes around its boundary,
 so the total sum of sign changes over all faces is even. But Euler's formula
 for convex polyhedra forces a parity contradiction if any edge has a nonzero sign.
+
+Strengthened: the conclusion now actually asserts that the total sum is even,
+extracted from `heven` via `Finset.even_sum`.  The book argument then derives
+a contradiction with a nontrivial edge sign assignment.
 -/
 theorem euler_sign_change_parity {V E F : ℕ}
     (_heuler : V - E + F = 2)
     (signChangesPerFace : Fin F → ℕ)
-    (_heven : ∀ f, Even (signChangesPerFace f))
+    (heven : ∀ f, Even (signChangesPerFace f))
     (_htotal : (∑ f : Fin F, signChangesPerFace f) = 2 * E) :
-    True := trivial
+    Even (∑ f : Fin F, signChangesPerFace f) :=
+  Finset.even_sum _ (fun f _ => heven f)
 
 /--
 The rigidity conclusion: if all edge signs are zero (no dihedral angle changes),

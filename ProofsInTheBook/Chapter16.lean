@@ -68,6 +68,12 @@ theorem colorClass_biUnion_eq_points {α : Type*} {d : ℕ} [DecidableEq (Fin (d
   · rintro ⟨_, hx, _⟩; exact hx
   · intro hx; exact ⟨color x, hx, rfl⟩
 
+/-- Each color class is bounded above by the total point count. -/
+theorem colorClass_card_le {α : Type*} {d : ℕ} [DecidableEq (Fin (d + 1))]
+    (points : Finset α) (color : α → Fin (d + 1)) (c : Fin (d + 1)) :
+    (colorClass points color c).card ≤ points.card :=
+  Finset.card_le_card (colorClass_subset_points points color c)
+
 /-- The color classes partition the point set; cardinalities sum to `|points|`. -/
 theorem colorClass_card_sum {α : Type*} {d : ℕ} [DecidableEq (Fin (d + 1))]
     [DecidableEq α] (points : Finset α) (color : α → Fin (d + 1)) :

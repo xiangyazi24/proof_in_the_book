@@ -3912,6 +3912,13 @@ theorem lPowerFreePart_eq_self_iff_squarefree {m : ℕ} (hm : m ≠ 0) :
     have h_le := (Nat.squarefree_iff_factorization_le_one hm).mp h_sf p
     omega
 
+/-- Applying `lPowerFreePart 2` twice gives the same as applying it once
+(idempotence). -/
+theorem lPowerFreePart_idem {m : ℕ} (hm : m ≠ 0) :
+    lPowerFreePart 2 (lPowerFreePart 2 m) = lPowerFreePart 2 m :=
+  (lPowerFreePart_eq_self_iff_squarefree
+    (lPowerFreePart_squarefree m hm).ne_zero).mpr (lPowerFreePart_squarefree m hm)
+
 /-! ### Interval count + Legendre / `padicValNat_factorial` helpers (Tier 2 building blocks for Ch03) -/
 
 /-- Count of `j ∈ range k` with `p ∣ (n - j)`, given `k ≤ n`, is at most `k / p + 1`.

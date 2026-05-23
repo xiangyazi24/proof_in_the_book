@@ -43,6 +43,21 @@ semantic TODO items may be advanced in logged, build-checked increments.
   divisor of such a factor is at most `k`; conversely, a large prime factor
   in any descending factor immediately witnesses non-smoothness of the whole
   descending product.
+
+  **Tier 2 progress (2026-05-23):** `chapter03_erdos` now has its first of
+  three hypotheses fully discharged.  `prod_lPowerFreeParts_dvd_factorial_l2`
+  (~300 LOC, Erdős l=2 divisibility step) is proved via 5 helpers:
+  `lPowerFreePart_factorization_eq_mod` (squarefree-based),
+  `card_filter_dvd_le_aux` (interval count of multiples),
+  `factorization_factorial_ge_div` / `_ge_div_succ` / `_eq_div_of_sq_lt`
+  (Legendre lemmas via `padicValNat_factorial`).  Plus
+  `lPowerFreePart_two_ne_four` and `lPowerFreePart_ne_of_not_squarefree`
+  (the squarefreeness obstruction for the `h_l2_contra` step),
+  `lPowerFreePart_eq_self_iff_squarefree` + `lPowerFreePart_idem`
+  (fixed-point characterization), plus basic dvd_self/le_self/pos/one
+  lemmas.  The remaining gaps are `lPowerFreePart_injective_l2` (Step 3a
+  distinctness, requires strengthening Step 1 from `n > k²` toward
+  `n ≥ (2k-1)²`-ish) and the l ≥ 3 case (`h_ge3`).
 - [x] Chapter04: replace the remaining comment-level gap for the
   sum-of-two-squares sufficiency/involution argument with an actual Lean proof
   path, or narrow the theorem statements and record the gap explicitly.  The
@@ -67,8 +82,17 @@ semantic TODO items may be advanced in logged, build-checked increments.
   defines the tensor-product target, concrete `ℝ/πℤ` quotient, edge-sum
   algebra, partition additivity, scissors certificate, obstruction lemma,
   and now states Hilbert's third problem via `hilbert_third_problem` and
-  `arccos_one_third_irrational_over_pi`.  It still lacks actual polyhedral
-  geometry and the full `πℚ` quotient.
+  `arccos_one_third_irrational_over_pi`.
+
+  **Tier 2 progress (2026-05-23):** The `πℚ` quotient is now built:
+  `piQSubmodule := ℚ • π`, `AngleModPiQ := ℝ ⧸ πℚ`, `angleClassQ` projection.
+  Algebra (`angleClassQ_pi`, `angleClassQ_rat_mul_pi`, `angleClassQ_pi_div_two`,
+  `angleClassQ_pi_div n`, `angleClassQ_int_mul_pi`, additivity, `_eq_zero_iff`,
+  `_sub_rat_mul_pi`).  Crucially `angleClassQ_arccos_one_third_ne_zero`
+  uses `arccos_one_third_irrational_over_pi` to certify the tetrahedron's
+  nontrivial Dehn-edge contribution in the new `πℚ` quotient.  The
+  polyhedral-geometry side (defining cube + regular tetrahedron with
+  dihedral angles in `EuclideanGeometry`) remains.
 - [ ] Chapter10: prove an incidence/geometric Sylvester-Gallai statement from
   the extremal-distance argument.  The current file now has ordinary-line
   bookkeeping, the finite off-line pair minimization step, the closer-pair
@@ -108,8 +132,23 @@ semantic TODO items may be advanced in logged, build-checked increments.
   cotangent symmetries, abstracts the `HerglotzClass` structure with
   `eval_half` and `cancel` lemmas, proves the duplication formula for
   periodic functions, and defines the finite rational partial-sum function.
-  It still lacks the limit argument connecting the partial sums to
-  `π·cot(πx)`.
+
+  **Tier 2 progress (2026-05-23):** The `π·cot(π·)` side is now complete
+  as a HerglotzClass + duplication + continuity package:
+  `cot_pi_div_two` (= 0), `pi_cot_pi_half_eq_zero` (eval-half anchor),
+  `pi_cot_pi_periodic`, `pi_cot_pi_odd`, `pi_cot_pi_HerglotzClass`
+  (HerglotzClass instance via periodic + odd), `cot_int_mul_pi` (degenerate
+  vanishing), `cot_add_cot_add_pi_div_two` (cot α + cot(α + π/2) = 2·cot 2α,
+  proved for ALL α via Lean's 0/0 = 0 convention), `pi_cot_pi_duplication`
+  (the Herglotz duplication identity), `cot_continuousAt` /
+  `pi_cot_pi_continuousAt` (continuity at non-integers), `cot_pi_div_four = 1`,
+  `cot_pi_mul_half_int` (vanishing on half-integer multiples).  The
+  remaining gap: build the matching partial-fraction series
+  `1/x + Σ 2x/(x²-n²)` as a HerglotzClass member with the same duplication,
+  then apply `chapter24` (or a weaker-continuity variant) to conclude
+  `π·cot(πx) = 1/x + Σ 2x/(x²-n²)`.  Note `chapter24` currently requires
+  `Continuous f` globally; cot is discontinuous at integers, so the chapter
+  statement itself may need weakening to `ContinuousOn f (ℝ \ ℤ)`.
 - [ ] Chapter25: extend the finite polygonal linearity step to the actual
   Buffon needle probability statement.  The current file now proves the
   single-segment crossing value is in `[0, 1]`, states Buffon's needle

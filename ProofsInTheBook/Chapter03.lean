@@ -3870,6 +3870,7 @@ theorem lPowerFreePart_ne_of_not_squarefree (m d : ℕ) (hm : m ≠ 0)
   rw [h] at h_sf
   exact h_not_sf h_sf
 
+
 /-- For `m ≠ 0`, the factorization of `lPowerFreePart 2 m` at `p` equals
 `m.factorization p % 2`. This is the key arithmetic identity used in the Erdős
 divisibility step. -/
@@ -3895,6 +3896,21 @@ private lemma lPowerFreePart_factorization_eq_mod (m p : ℕ) (hm : m ≠ 0) :
   have h_le : (lPowerFreePart 2 m).factorization p ≤ 1 :=
     Squarefree.natFactorization_le_one p h_sf
   omega
+
+/-- `lPowerFreePart 2 m = m` iff `m` is squarefree (for nonzero `m`).
+This characterizes the fixed points of the `lPowerFreePart 2` map. -/
+theorem lPowerFreePart_eq_self_iff_squarefree {m : ℕ} (hm : m ≠ 0) :
+    lPowerFreePart 2 m = m ↔ Squarefree m := by
+  constructor
+  · intro h
+    rw [← h]; exact lPowerFreePart_squarefree m hm
+  · intro h_sf
+    have hfree_ne : lPowerFreePart 2 m ≠ 0 :=
+      (lPowerFreePart_squarefree m hm).ne_zero
+    refine Nat.eq_of_factorization_eq hfree_ne hm (fun p => ?_)
+    rw [lPowerFreePart_factorization_eq_mod m p hm]
+    have h_le := (Nat.squarefree_iff_factorization_le_one hm).mp h_sf p
+    omega
 
 /-! ### Interval count + Legendre / `padicValNat_factorial` helpers (Tier 2 building blocks for Ch03) -/
 

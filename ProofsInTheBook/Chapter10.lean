@@ -158,6 +158,7 @@ theorem two_le_card_pointsOnLine_of_ordinaryLine {Point Line : Type*}
     2 ≤ (pointsOnLine points onLine line).card := by
   rw [card_pointsOnLine_eq_two_of_ordinaryLine points onLine line h]
 
+
 /-- `offLinePairs` is empty iff every configuration point lies on every
 candidate line — the "trivially collinear" degenerate case. -/
 theorem offLinePairs_eq_empty_iff {Point Line : Type*}
@@ -239,5 +240,22 @@ theorem chapter10 {Point Line : Type*} [DecidableEq Point]
     (line : Line) (hcard : (pointsOnLine points onLine line).card = 2) :
     OrdinaryLine points onLine line :=
   ordinaryLine_of_two_points_on_line points onLine line hcard
+
+/-- Stronger packaging of `sylvester_gallai_abstract`: there exists a line
+with at most 2 configuration points (combining the `card = 2 ∨ card ≤ 1`
+conclusion into a single bound). -/
+theorem sylvester_gallai_abstract_card_le {Point Line : Type*}
+    [DecidableEq Point] [DecidableEq Line]
+    (points : Finset Point) (lines : Finset Line)
+    (onLine : Point → Line → Prop) [DecidableRel onLine]
+    (dist : Point → Line → ℕ)
+    (hne : (offLinePairs points lines onLine).Nonempty)
+    (gallai : ∀ line ∈ lines, 2 < (pointsOnLine points onLine line).card →
+      ∃ line' ∈ lines, (pointsOnLine points onLine line').card ≤
+        (pointsOnLine points onLine line).card ∧
+        (pointsOnLine points onLine line').card ≤ 2) :
+    ∃ line ∈ lines, (pointsOnLine points onLine line).card ≤ 2 := by
+  obtain ⟨line, hline, h⟩ := sylvester_gallai_abstract points lines onLine dist hne gallai
+  exact ⟨line, hline, by rcases h with h | h <;> omega⟩
 
 end ProofsInTheBook.Chapter10

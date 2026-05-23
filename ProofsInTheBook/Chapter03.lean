@@ -3747,6 +3747,17 @@ lemma self_eq_lPowerFreePart_mul_lPowerRoot_pow (l m : ℕ) (hm : m ≠ 0) :
 
 /-! ### 2-power-free part: factorization mod 2 (Tier 2 building block for Ch03) -/
 
+/-- The 2-power-free part divides the original number: `lPowerFreePart 2 m ∣ m`. -/
+theorem lPowerFreePart_dvd_self (m : ℕ) (hm : m ≠ 0) :
+    lPowerFreePart 2 m ∣ m :=
+  ⟨(lPowerRoot 2 m) ^ 2, self_eq_lPowerFreePart_mul_lPowerRoot_pow 2 m hm⟩
+
+/-- The 2-power-root squared divides the original number. -/
+theorem lPowerRoot_sq_dvd_self (m : ℕ) (hm : m ≠ 0) :
+    (lPowerRoot 2 m) ^ 2 ∣ m :=
+  ⟨lPowerFreePart 2 m, by
+    rw [mul_comm]; exact self_eq_lPowerFreePart_mul_lPowerRoot_pow 2 m hm⟩
+
 /-- The 2-power-free part `lPowerFreePart 2 m` divides the squarefree radical
 `∏ q ∈ m.primeFactors, q` (since each prime appears with exponent in `{0, 1}`). -/
 private lemma lPowerFreePart_dvd_radical (m : ℕ) :

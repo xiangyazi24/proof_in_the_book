@@ -138,6 +138,26 @@ theorem riffleOrder_trichotomy (a n : ℕ) (labels : RiffleLabels a n) (i j : Fi
     · exact Or.inr (Or.inr ⟨h.symm, h2⟩)
   · exact Or.inr (Or.inl h)
 
+/-- Within-pile characterization of riffleOrder: when two cards share a pile
+label, riffleOrder reduces to the underlying `Fin n` order. -/
+theorem riffleOrder_of_same_label (a n : ℕ) (labels : RiffleLabels a n)
+    {i j : Fin n} (heq : labels i = labels j) :
+    riffleOrder a n labels i j ↔ i < j := by
+  unfold riffleOrder
+  constructor
+  · rintro (hlt | ⟨_, hlt⟩)
+    · rw [heq] at hlt; exact absurd hlt (lt_irrefl _)
+    · exact hlt
+  · intro hlt
+    exact Or.inr ⟨heq, hlt⟩
+
+/-- Across-pile characterization: when two cards have different pile labels and
+the first is smaller, riffleOrder follows the label order. -/
+theorem riffleOrder_of_label_lt (a n : ℕ) (labels : RiffleLabels a n)
+    {i j : Fin n} (hlt : labels i < labels j) :
+    riffleOrder a n labels i j :=
+  Or.inl hlt
+
 /-- Certificate for the Gilbert-Shannon-Reeds (GSR) shuffle.
 The combinatorial heart of the GSR shuffle is that the number of riffle labelings
 that map to a given permutation depends only on the pile sizes (or equivalently,

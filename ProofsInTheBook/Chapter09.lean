@@ -55,6 +55,47 @@ noncomputable def angleClass (x : ℝ) : AngleModPiZ :=
 theorem angleClass_pi : angleClass Real.pi = 0 := by
   exact (Submodule.Quotient.mk_eq_zero piZSubmodule).mpr (Submodule.subset_span (by simp))
 
+/-! ### Rational multiples of `π` quotient (Tier 2 building block)
+
+The Dehn-invariant proof of Hilbert's third problem requires the *rational*
+multiples of `π` to be quotiented out, not just integer multiples.  E.g., the
+cube's dihedral angle `π/2` is *not* an integer multiple of `π` but *is* a
+rational multiple, so it must vanish in the angle target.  The integer
+submodule `piZSubmodule` is too coarse — we need `piQSubmodule := ℚ • π`.
+-/
+
+/-- Rational multiples of `π`. -/
+noncomputable def piQSubmodule : Submodule ℚ ℝ :=
+  Submodule.span ℚ ({Real.pi} : Set ℝ)
+
+/-- Real angles modulo rational multiples of `π`. -/
+abbrev AngleModPiQ : Type :=
+  ℝ ⧸ piQSubmodule
+
+/-- The `ℝ ⧸ πℚ` projection. -/
+noncomputable def angleClassQ (x : ℝ) : AngleModPiQ :=
+  Submodule.Quotient.mk x
+
+@[simp]
+theorem angleClassQ_pi : angleClassQ Real.pi = 0 := by
+  exact (Submodule.Quotient.mk_eq_zero piQSubmodule).mpr (Submodule.subset_span (by simp))
+
+/-- Any rational multiple of `π` vanishes in the `πℚ` quotient. -/
+theorem angleClassQ_rat_mul_pi (q : ℚ) : angleClassQ ((q : ℝ) * Real.pi) = 0 := by
+  refine (Submodule.Quotient.mk_eq_zero piQSubmodule).mpr ?_
+  rw [show ((q : ℝ) * Real.pi) = q • Real.pi from by
+    rw [Rat.smul_def]]
+  exact Submodule.smul_mem _ q (Submodule.subset_span (by simp))
+
+/-- The cube's dihedral angle `π/2` is rational over `π`, so it vanishes. -/
+@[simp]
+theorem angleClassQ_pi_div_two : angleClassQ (Real.pi / 2) = 0 := by
+  have h : Real.pi / 2 = ((1/2 : ℚ) : ℝ) * Real.pi := by push_cast; ring
+  rw [h, angleClassQ_rat_mul_pi]
+
+-- (`angleClassQ_arccos_one_third_ne_zero` defined below, after
+-- `arccos_one_third_irrational_over_pi`.)
+
 /-- The contribution of one edge: length tensor angle. -/
 def dehnEdge {Angle : Type*} [AddCommGroup Angle] [Module ℤ Angle]
     (length : ℝ) (angle : Angle) : DehnTarget Angle :=
@@ -277,6 +318,17 @@ theorem arccos_one_third_irrational_over_pi (q : ℚ) :
   · rw [h_a_zmod] at h1; revert h1; decide
   · rw [h_a_zmod] at h2; revert h2; decide
 
+
+/-- `arccos(1/3)` is *not* a rational multiple of `π`, hence is nonzero in the
+`πℚ` quotient — this is the tetrahedron's nontrivial Dehn-edge contribution. -/
+theorem angleClassQ_arccos_one_third_ne_zero :
+    angleClassQ (Real.arccos (1/3)) ≠ 0 := by
+  intro h
+  rw [angleClassQ, Submodule.Quotient.mk_eq_zero] at h
+  rw [piQSubmodule, Submodule.mem_span_singleton] at h
+  obtain ⟨q, hq⟩ := h
+  rw [Rat.smul_def] at hq
+  exact arccos_one_third_irrational_over_pi q hq.symm
 
 /--
 Hilbert's third problem: a regular tetrahedron cannot be cut into finitely

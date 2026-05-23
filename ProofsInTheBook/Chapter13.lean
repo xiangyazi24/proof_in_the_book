@@ -62,6 +62,10 @@ theorem signChangesAroundTriangle_eq_zero_of_constant (s : EdgeSign) :
     SignChangesAroundTriangle s s s = 0 := by
   simp [SignChangesAroundTriangle]
 
+theorem signChangesAroundTriangle_eq_zero_iff (a b c : EdgeSign) :
+    SignChangesAroundTriangle a b c = 0 ↔ a = b ∧ b = c := by
+  cases a <;> cases b <;> cases c <;> decide
+
 def StrictSignChangesAroundTriangle (a b c : StrictEdgeSign) : ℕ :=
   (if a ≠ b then 1 else 0) + (if b ≠ c then 1 else 0) + (if c ≠ a then 1 else 0)
 

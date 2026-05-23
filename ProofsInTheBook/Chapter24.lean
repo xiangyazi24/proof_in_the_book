@@ -247,6 +247,14 @@ theorem pi_cot_pi_odd (x : ℝ) :
   rw [show Real.pi * (-x) = -(Real.pi * x) from by ring, cot_neg]
   ring
 
+/-- `x ↦ π · cot(π · x)` is in the Herglotz class: periodic of period 1 and odd.
+Together with `cot_pi_herglotz_add_cancel`, this exhibits the cotangent as one of
+the two anchors of the Herglotz uniqueness argument. -/
+theorem pi_cot_pi_HerglotzClass :
+    HerglotzClass (fun x => Real.pi * Real.cot (Real.pi * x)) where
+  periodic := pi_cot_pi_periodic
+  odd := pi_cot_pi_odd
+
 /--
 The dyadic averaging identity: if `f` satisfies the duplication formula
 `f(x) = (1/2)(f(x/2) + f((x+1)/2))`, then iterating n times gives

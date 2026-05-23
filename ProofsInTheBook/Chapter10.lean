@@ -150,6 +150,27 @@ theorem pointsOnLine_card_le {Point Line : Type*} [DecidableEq Point]
     (pointsOnLine points onLine line).card ≤ points.card :=
   Finset.card_le_card (pointsOnLine_subset points onLine line)
 
+/-- `offLinePairs` is empty iff every configuration point lies on every
+candidate line — the "trivially collinear" degenerate case. -/
+theorem offLinePairs_eq_empty_iff {Point Line : Type*}
+    [DecidableEq Point] [DecidableEq Line]
+    (points : Finset Point) (lines : Finset Line)
+    (onLine : Point → Line → Prop) [DecidableRel onLine] :
+    offLinePairs points lines onLine = ∅ ↔
+      ∀ p ∈ points, ∀ line ∈ lines, onLine p line := by
+  constructor
+  · intro h p hp line hline
+    by_contra hoff
+    have : (p, line) ∈ offLinePairs points lines onLine :=
+      mem_offLinePairs.mpr ⟨hp, hline, hoff⟩
+    rw [h] at this
+    exact absurd this (Finset.notMem_empty _)
+  · intro h
+    rw [Finset.eq_empty_iff_forall_notMem]
+    rintro ⟨p, line⟩ hmem
+    rcases mem_offLinePairs.mp hmem with ⟨hp, hline, hoff⟩
+    exact hoff (h p hp line hline)
+
 /--
 The key contradiction step in Gallai's proof: if a line contains ≥ 3 points
 and is part of a minimal-distance off-line pair, then a strictly closer

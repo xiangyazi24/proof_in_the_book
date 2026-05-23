@@ -255,6 +255,18 @@ theorem pi_cot_pi_HerglotzClass :
   periodic := pi_cot_pi_periodic
   odd := pi_cot_pi_odd
 
+/-- `Real.cot (n · π) = 0` for any integer `n`, by Lean's `0/0 = 0` convention
+applied to `cos / sin` at the zeros of sine. -/
+theorem cot_int_mul_pi (n : ℤ) :
+    Real.cot ((n : ℝ) * Real.pi) = 0 := by
+  rw [Real.cot_eq_cos_div_sin, Real.sin_int_mul_pi, div_zero]
+
+/-- `π · cot(π · n) = 0` for integer `n` (degenerate case of the cotangent
+formula, captured by Lean's 0/0 = 0 convention). -/
+theorem pi_cot_pi_int_eq_zero (n : ℤ) :
+    Real.pi * Real.cot (Real.pi * (n : ℝ)) = 0 := by
+  rw [show Real.pi * (n : ℝ) = (n : ℝ) * Real.pi from by ring, cot_int_mul_pi, mul_zero]
+
 /--
 The dyadic averaging identity: if `f` satisfies the duplication formula
 `f(x) = (1/2)(f(x/2) + f((x+1)/2))`, then iterating n times gives

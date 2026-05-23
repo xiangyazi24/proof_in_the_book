@@ -90,15 +90,13 @@ semantic TODO items may be advanced in logged, build-checked increments.
   file now proves basic finite color-class partition facts for a supplied
   Borsuk-style coloring certificate, but it still lacks the Kahn-Kalai
   combinatorial construction or any Euclidean counterexample.
-- [ ] Chapter19: restore the fundamental theorem of algebra statement and
-  replace the black-box root existence with the minimum-modulus proof path.
-  The current file now has the polynomial translation layer, first-nonzero
-  coefficient extraction, the local norm-decrease lemma statement
-  (`complex_poly_local_norm_decrease`), the shifted-polynomial specialization
-  (`shiftedPolynomial_local_norm_decrease`), and the minimum-modulus
-  contradiction theorem (`fta_minimum_modulus_contradiction`).  The core
-  analytic norm-decrease proof and the nonconstancy-implies-nonzero-shift
-  remain as sorry.
+- [x] Chapter19: FTA endpoint `chapter19 (p : ℂ[X]) (hdeg : 1 ≤ p.natDegree)
+  : ∃ z : ℂ, p.eval z = 0` is unconditional and proved.  The full chain
+  exists: `complex_poly_local_norm_decrease` (real proof via small-t
+  perturbation + compactness on `Set.Icc 0 1`), `poly_decompose`,
+  `shiftedPolynomial_local_norm_decrease`, `fta_minimum_modulus_contradiction`,
+  and the nonconstancy-via-natDegree argument inlined in `chapter19`.
+  No sorry, no axiom.  (Updated 2026-05-22; earlier audit entry was stale.)
 - [ ] Chapter20: formalize Monsky's parity/Sperner argument and 2-adic color
   construction.  The current file proves the local parity atom, the
   `sum_nat_mod_two_eq_sum_mod_two` helper, the full `sperner_parity_abstract`
@@ -129,11 +127,14 @@ semantic TODO items may be advanced in logged, build-checked increments.
   the path-swap sign-change lemma (`path_swap_changes_sign`), and the
   LGV identity-case framework.  It still lacks the concrete path-family
   intersection involution construction.
-- [ ] Chapter31: construct the actual Prüfer encode/decode bijection.  The
-  current file defines labeled trees, proves Cayley's count from a supplied
-  equivalence, defines Prüfer leaves (vertices not in the code), and proves
-  the leaf set is nonempty for `n ≥ 2` by a counting argument.  It still
-  lacks the actual encode/decode algorithms.
+- [x] Chapter31: construct the actual Prüfer encode/decode bijection.  The
+  file now contains `pruferDecode`, `pruferEncode`, and the structural
+  correspondence `deleteSmallestLeaf_pruferDecode_v2` linking removal of the
+  smallest leaf in the decoded tree to the shifted-code decode on `n - 1`
+  vertices.  Combined with `leftInverse_pruferDecode_aux`, this discharges
+  `chapter31_tier2_of_correspondence` and gives the unconditional
+  `chapter31 : Fintype.card (LabeledTree n) = n ^ (n - 2)`.  Tier 2 closed
+  end-to-end (0 sorry, 0 axiom).  (2026-05-22)
 - [ ] Chapter34: prove the list-coloring/Galvin step for Dinitz arrays.  The
   current file defines Dinitz solutions, row/column injectivity, a
   kernel-perfect orientation structure, and Galvin's greedy extension step

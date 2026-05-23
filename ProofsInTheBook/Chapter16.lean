@@ -155,4 +155,19 @@ theorem borsuk_no_certificate_of_conjecture {d : ℕ} (h : BorsukConjecture d) :
   intro cert
   exact cert.no_partition (h cert.S cert.bounded cert.pos_diam)
 
+/-- Borsuk's conjecture holds vacuously in dimension `0`: in `ℝ⁰` all subsets
+have zero diameter, so the hypothesis `0 < Metric.diam S` is never satisfied. -/
+theorem borsukConjecture_zero : BorsukConjecture 0 := by
+  intro S _ hdiam
+  -- In `EuclideanSpace ℝ (Fin 0)`, all points equal (there's only one).
+  -- So `diam S ≤ 0`, contradicting `hdiam`.
+  have h_diam_zero : Metric.diam S = 0 := by
+    rcases S.eq_empty_or_nonempty with hS | ⟨x, _⟩
+    · rw [hS]; simp
+    · -- Subsingleton: every two points in S are equal (since EuclideanSpace ℝ (Fin 0) is).
+      have hsub : S.Subsingleton := fun a _ b _ => Subsingleton.elim a b
+      exact Metric.diam_subsingleton hsub
+  rw [h_diam_zero] at hdiam
+  exact absurd hdiam (lt_irrefl _)
+
 end ProofsInTheBook.Chapter16

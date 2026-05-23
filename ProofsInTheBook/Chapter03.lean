@@ -3768,6 +3768,16 @@ theorem lPowerRoot_sq_le_self {m : ℕ} (hm : m ≠ 0) :
     (lPowerRoot 2 m) ^ 2 ≤ m :=
   Nat.le_of_dvd (Nat.pos_of_ne_zero hm) (lPowerRoot_sq_dvd_self m hm)
 
+/-- `lPowerFreePart` of `1` is `1`. -/
+@[simp]
+theorem lPowerFreePart_one (l : ℕ) : lPowerFreePart l 1 = 1 := by
+  simp [lPowerFreePart]
+
+/-- `lPowerRoot` of `1` is `1`. -/
+@[simp]
+theorem lPowerRoot_one (l : ℕ) : lPowerRoot l 1 = 1 := by
+  simp [lPowerRoot]
+
 
 /-- The 2-power-free part `lPowerFreePart 2 m` divides the squarefree radical
 `∏ q ∈ m.primeFactors, q` (since each prime appears with exponent in `{0, 1}`). -/

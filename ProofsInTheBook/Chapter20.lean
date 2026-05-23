@@ -263,4 +263,16 @@ theorem chapter20 {n : ℕ} (cert : MonskyCertificate n) :
   exists_trichromatic_of_odd_boundary n cert.triangleColors
     cert.boundaryRGCount cert.totalRG cert.htotal cert.hparity cert.hodd
 
+/-- The empty triangulation cannot carry a Monsky certificate: with 0 triangles,
+the local RG sum is 0 (even), but the certificate demands an odd boundary RG
+count of the same parity.  Contradiction. -/
+theorem MonskyCertificate.isEmpty_zero : IsEmpty (MonskyCertificate 0) := by
+  constructor
+  intro cert
+  have htot : cert.totalRG = 0 := by rw [cert.htotal]; simp
+  have hpar := cert.hparity
+  rw [htot] at hpar
+  rcases cert.hodd with ⟨k, hk⟩
+  omega
+
 end ProofsInTheBook.Chapter20

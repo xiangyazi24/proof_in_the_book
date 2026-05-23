@@ -77,6 +77,18 @@ theorem kneserGraph_no_vertices_of_lt {n k : ℕ} (h : n < k) :
   rw [← Fintype.card_eq_zero_iff, kneserVertex_card]
   exact Nat.choose_eq_zero_of_lt h
 
+/-- The Kneser graph has no edges when `2k > n` (no two disjoint k-subsets fit). -/
+theorem kneserGraph_no_adj_of_lt {n k : ℕ} (hk : 1 ≤ k) (h : n < 2 * k)
+    (a b : KneserVertex n k) :
+    ¬ (kneserGraph n k).Adj a b := by
+  intro ⟨_, hdisj⟩
+  have hcard : (↑a ∪ ↑b : Finset (Fin n)).card = 2 * k := by
+    rw [Finset.card_union_of_disjoint hdisj, a.2, b.2, two_mul]
+  have hle : (↑a ∪ ↑b : Finset (Fin n)).card ≤ Fintype.card (Fin n) :=
+    (↑a ∪ ↑b : Finset (Fin n)).card_le_univ
+  rw [Fintype.card_fin] at hle
+  omega
+
 /-- For `k = 1`, the Kneser graph is the complete graph: any two distinct
 singleton vertices are adjacent.  (KG(n, 1) ≅ K_n.) -/
 theorem kneserGraph_one_adj_of_ne (n : ℕ) (a b : KneserVertex n 1) (h_ne : a ≠ b) :

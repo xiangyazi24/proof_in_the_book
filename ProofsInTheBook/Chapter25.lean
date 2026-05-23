@@ -69,6 +69,19 @@ theorem segmentExpectedCrossings_const_mul (d c length : ℝ) :
   unfold segmentExpectedCrossings
   ring
 
+/-- `curveExpectedCrossings` of an empty segment family is `0`. -/
+@[simp]
+theorem curveExpectedCrossings_empty {ι : Type*} (length : ι → ℝ) (d : ℝ) :
+    curveExpectedCrossings (∅ : Finset ι) length d = 0 := by
+  simp [curveExpectedCrossings]
+
+/-- `curveExpectedCrossings` is nonneg when `d > 0` and all lengths are nonneg. -/
+theorem curveExpectedCrossings_nonneg {ι : Type*} {segments : Finset ι}
+    {length : ι → ℝ} {d : ℝ} (hd : 0 < d) (hlen : ∀ i ∈ segments, 0 ≤ length i) :
+    0 ≤ curveExpectedCrossings segments length d := by
+  unfold curveExpectedCrossings
+  exact Finset.sum_nonneg fun i hi => segmentExpectedCrossings_nonneg hd (hlen i hi)
+
 theorem segmentExpectedCrossings_le_one {d length : ℝ} (hd : 0 < d) (hle : length ≤ d) :
     segmentExpectedCrossings d length ≤ 1 := by
   unfold segmentExpectedCrossings

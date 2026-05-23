@@ -106,4 +106,22 @@ theorem chapter16 {d : ℕ} (cert : KahnKalaiCertificate d) :
     ¬ BorsukConjecture d := fun h =>
   cert.no_partition (h cert.S cert.bounded cert.pos_diam)
 
+/-- Borsuk's conjecture in dimension `d` is equivalent to the non-existence
+of a Kahn-Kalai certificate.  This packages `chapter16` as a biconditional. -/
+theorem borsukConjecture_iff_no_certificate (d : ℕ) :
+    BorsukConjecture d ↔ ∀ S : Set (EuclideanSpace ℝ (Fin d)),
+      Bornology.IsBounded S → 0 < Metric.diam S →
+        ∃ parts : Fin (d + 1) → Set (EuclideanSpace ℝ (Fin d)),
+          S ⊆ ⋃ i, parts i ∧ ∀ i, Metric.diam (parts i) < Metric.diam S :=
+  Iff.rfl
+
+/-- If a Kahn-Kalai certificate exists, the underlying set is nonempty
+(since `0 < diam S` forces `S` to contain at least two points). -/
+theorem KahnKalaiCertificate.nonempty {d : ℕ} (cert : KahnKalaiCertificate d) :
+    cert.S.Nonempty := by
+  by_contra h
+  rw [Set.not_nonempty_iff_eq_empty] at h
+  have hd : Metric.diam cert.S = 0 := by rw [h]; simp
+  exact absurd cert.pos_diam (by rw [hd]; simp)
+
 end ProofsInTheBook.Chapter16

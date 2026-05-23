@@ -361,6 +361,13 @@ theorem pi_cot_pi_continuousAt {x : ℝ}
   have h_cot : ContinuousAt Real.cot (Real.pi * x) := cot_continuousAt h_sin
   exact (continuous_const.continuousAt).mul (h_cot.comp h_inner)
 
+/-- `π · cot(π · x)` is continuous on the set of non-integers. -/
+theorem pi_cot_pi_continuousOn :
+    ContinuousOn (fun x => Real.pi * Real.cot (Real.pi * x))
+      {x : ℝ | ∀ n : ℤ, x ≠ (n : ℝ)} := by
+  intro x hx
+  exact (pi_cot_pi_continuousAt hx).continuousWithinAt
+
 /-- The Herglotz duplication formula for `f(x) := π · cot(π · x)`:
 `2 · f(x) = f(x/2) + f((x+1)/2)`.
 

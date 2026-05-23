@@ -167,6 +167,20 @@ structure BuffonProbabilitySpace (d : ℝ) (length : ℝ) where
       count equals 2·length/(π·d). -/
   expected_eq : expectedCrossings = segmentExpectedCrossings d length
 
+/-- The canonical (structurally trivial) `BuffonProbabilitySpace`: takes the
+expected-crossings field equal to the formula by definition.
+
+**Caveat**: this constructor does NOT carry any measure-theoretic content; it
+only matches the structure's algebraic shape.  The Tier 2 goal is to provide
+a constructor that DERIVES `expected_eq` from a real probability measure on
+needle placements rather than asserting it tautologically.  Use of this
+canonical instance to invoke `chapter25` is a structural rephrasing of
+`segmentExpectedCrossings`, not a probabilistic proof. -/
+noncomputable def BuffonProbabilitySpace.canonical (d length : ℝ) :
+    BuffonProbabilitySpace d length where
+  expectedCrossings := segmentExpectedCrossings d length
+  expected_eq := rfl
+
 /--
 Chapter 25 (Buffon's needle, Tier 1 conditional):
 Given a BuffonProbabilitySpace (which packages the measure-theoretic setup

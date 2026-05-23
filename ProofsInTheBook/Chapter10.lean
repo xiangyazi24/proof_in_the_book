@@ -110,6 +110,32 @@ theorem ordinaryLine_of_two_points_on_line {Point Line : Type*} [DecidableEq Poi
   have hrset : r ∈ pointsOnLine points onLine line := by simp [pointsOnLine, hr, hline]
   simpa [hset] using hrset
 
+/-- Converse of `ordinaryLine_of_two_points_on_line`: an ordinary line has
+exactly two configuration points on it. -/
+theorem card_pointsOnLine_eq_two_of_ordinaryLine {Point Line : Type*}
+    [DecidableEq Point] (points : Finset Point)
+    (onLine : Point → Line → Prop) [DecidableRel onLine] (line : Line)
+    (h : OrdinaryLine points onLine line) :
+    (pointsOnLine points onLine line).card = 2 := by
+  obtain ⟨p, q, hp, hq, hpq, hpl, hql, hall⟩ := h
+  refine Finset.card_eq_two.mpr ⟨p, q, hpq, ?_⟩
+  ext r
+  simp only [pointsOnLine, Finset.mem_filter, Finset.mem_insert, Finset.mem_singleton]
+  constructor
+  · rintro ⟨hr, hrl⟩
+    exact hall r hr hrl
+  · rintro (rfl | rfl)
+    · exact ⟨hp, hpl⟩
+    · exact ⟨hq, hql⟩
+
+/-- `OrdinaryLine` iff exactly two configuration points lie on the line. -/
+theorem ordinaryLine_iff_card_pointsOnLine_eq_two {Point Line : Type*}
+    [DecidableEq Point] (points : Finset Point)
+    (onLine : Point → Line → Prop) [DecidableRel onLine] (line : Line) :
+    OrdinaryLine points onLine line ↔ (pointsOnLine points onLine line).card = 2 :=
+  ⟨card_pointsOnLine_eq_two_of_ordinaryLine points onLine line,
+   ordinaryLine_of_two_points_on_line points onLine line⟩
+
 /--
 The key contradiction step in Gallai's proof: if a line contains ≥ 3 points
 and is part of a minimal-distance off-line pair, then a strictly closer

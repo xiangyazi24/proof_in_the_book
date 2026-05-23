@@ -119,6 +119,11 @@ theorem pileOfLabel_nonempty_iff (a n : ℕ) (labels : RiffleLabels a n) (pile :
   · rintro ⟨card, hcard⟩
     exact ⟨card, (mem_pileOfLabel_iff a n labels pile card).mpr hcard⟩
 
+/-- `pileSizeVector` is the cardinality of the label preimage. -/
+theorem pileSizeVector_eq_filter_card (a n : ℕ) (labels : RiffleLabels a n) (pile : Fin a) :
+    pileSizeVector a n labels pile =
+      (Finset.univ.filter (fun card : Fin n => labels card = pile)).card := rfl
+
 /--
 The stable riffle order induced by a label assignment: card `i` comes before
 card `j` in the shuffled deck iff `labels i < labels j`, or `labels i = labels j`

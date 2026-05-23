@@ -94,6 +94,11 @@ theorem kneserVertex_card_zero (n : ℕ) :
     Fintype.card (KneserVertex n 0) = 1 := by
   rw [kneserVertex_card, Nat.choose_zero_right]
 
+/-- For `k = n`, the Kneser graph has exactly one vertex (the full set `[n]`). -/
+theorem kneserVertex_card_eq_one_of_eq (n : ℕ) :
+    Fintype.card (KneserVertex n n) = 1 := by
+  rw [kneserVertex_card, Nat.choose_self]
+
 /-- For `k = 0`, the Kneser graph has no edges (only one vertex). -/
 theorem kneserGraph_zero_no_adj (n : ℕ) (a b : KneserVertex n 0) :
     ¬ (kneserGraph n 0).Adj a b := by

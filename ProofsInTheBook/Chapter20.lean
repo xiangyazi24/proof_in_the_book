@@ -18,9 +18,12 @@ namespace ProofsInTheBook.Chapter20
 /-- The three colors used in Monsky's 2-adic coloring argument. -/
 inductive MonskyColor where
   | red | green | blue
-  deriving DecidableEq, Repr
+  deriving DecidableEq, Repr, Fintype
 
 open MonskyColor
+
+@[simp]
+theorem MonskyColor.card : Fintype.card MonskyColor = 3 := rfl
 
 /-- A triangle is trichromatic when its three vertex colors are pairwise different. -/
 def TrichromaticTriangle (a b c : MonskyColor) : Prop :=

@@ -65,6 +65,42 @@ theorem kneserVertex_card (n k : ℕ) :
     simp [Finset.mem_powersetCard]
   rw [hset, Finset.card_powersetCard, Finset.card_univ, Fintype.card_fin]
 
+/-- The Kneser graph has at least one vertex when `k ≤ n`. -/
+theorem kneserVertex_nonempty_of_le {n k : ℕ} (h : k ≤ n) :
+    Nonempty (KneserVertex n k) := by
+  rw [← Fintype.card_pos_iff, kneserVertex_card]
+  exact Nat.choose_pos h
+
+/-- When `2k ≤ n`, the Kneser graph has at least one edge — there exist two
+disjoint k-subsets. -/
+theorem kneserGraph_exists_adj_of_two_mul_le {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
+    ∃ a b : KneserVertex n k, (kneserGraph n k).Adj a b := by
+  -- Build two explicit disjoint k-subsets: {0,...,k-1} and {k,...,2k-1}.
+  let A : Finset (Fin n) := (Finset.Ico 0 k).attachFin (fun m hm => by
+    rw [Finset.mem_Ico] at hm; omega)
+  let B : Finset (Fin n) := (Finset.Ico k (2 * k)).attachFin (fun m hm => by
+    rw [Finset.mem_Ico] at hm; omega)
+  have hA_card : A.card = k := by
+    simp [A, Finset.card_attachFin, Nat.Ico_eq_range']
+  have hB_card : B.card = k := by
+    simp [A, B, Finset.card_attachFin, Nat.Ico_eq_range', two_mul]
+  refine ⟨⟨A, hA_card⟩, ⟨B, hB_card⟩, ?_, ?_⟩
+  · intro h_eq
+    have h_eq_set : A = B := by
+      have := Subtype.ext_iff.mp h_eq
+      simpa using this
+    -- 0 ∈ A but 0 ∉ B (since the smallest element of B is k ≥ 1).
+    have h0_A : (⟨0, by omega⟩ : Fin n) ∈ A := by
+      simp [A, Finset.mem_attachFin, Finset.mem_Ico]; omega
+    have h0_B : (⟨0, by omega⟩ : Fin n) ∉ B := by
+      simp [B, Finset.mem_attachFin, Finset.mem_Ico]
+    rw [h_eq_set] at h0_A
+    exact h0_B h0_A
+  · rw [Finset.disjoint_left]
+    intro x hxA hxB
+    simp [A, B, Finset.mem_attachFin, Finset.mem_Ico] at hxA hxB
+    omega
+
 /--
 The minimum element of a k-subset (well-defined since k ≥ 1).
 -/

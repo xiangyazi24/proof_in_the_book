@@ -135,12 +135,14 @@ semantic TODO items may be advanced in logged, build-checked increments.
   `chapter31_tier2_of_correspondence` and gives the unconditional
   `chapter31 : Fintype.card (LabeledTree n) = n ^ (n - 2)`.  Tier 2 closed
   end-to-end (0 sorry, 0 axiom).  (2026-05-22)
-- [ ] Chapter34: prove the list-coloring/Galvin step for Dinitz arrays.  The
-  current file defines Dinitz solutions, row/column injectivity, a
-  kernel-perfect orientation structure, and Galvin's greedy extension step
-  (unused colors exist when the list is larger than the neighbor set).  It
-  still lacks the actual kernel-perfect orientation construction for
-  bipartite graphs.
+- [x] Chapter34: Galvin's theorem (Dinitz conjecture) is unconditional —
+  `chapter34 : ∃ color, DinitzSolution lists color` for any `lists` with
+  card ≥ n.  Chain: `galvin_theorem` →
+  `dinitzSolution_of_dinitzOrient` → `dinitzSolution_of_kernel_perfect_orientation`
+  + `dinitzOrient_kernelPerfectOn` (the actual kernel-perfect orientation
+  construction is in the file as `stableMatching_exists` →
+  `isKernelIn_of_stableMatching`).  No sorry, no axiom.
+  (Updated 2026-05-23; earlier audit entry was stale.)
 - [x] Chapter35: formalize the five-color induction/Kempe-chain step.  The
   file now proves the average-degree lemma, the low-degree extension,
   `swapColor` with injectivity, `kempeSwap_proper_abstract` (fully proved,

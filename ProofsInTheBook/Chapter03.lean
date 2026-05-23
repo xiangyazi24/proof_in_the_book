@@ -3778,6 +3778,16 @@ theorem lPowerFreePart_one (l : ℕ) : lPowerFreePart l 1 = 1 := by
 theorem lPowerRoot_one (l : ℕ) : lPowerRoot l 1 = 1 := by
   simp [lPowerRoot]
 
+/-- `lPowerRoot 2` is positive on positive input. -/
+theorem lPowerRoot_pos {m : ℕ} (hm : m ≠ 0) :
+    0 < lPowerRoot 2 m := by
+  by_contra h
+  push_neg at h
+  have h0 : lPowerRoot 2 m = 0 := Nat.le_zero.mp h
+  have hsplit := self_eq_lPowerFreePart_mul_lPowerRoot_pow 2 m hm
+  rw [h0, zero_pow (by norm_num : (2 : ℕ) ≠ 0), mul_zero] at hsplit
+  exact hm hsplit
+
 
 /-- The 2-power-free part `lPowerFreePart 2 m` divides the squarefree radical
 `∏ q ∈ m.primeFactors, q` (since each prime appears with exponent in `{0, 1}`). -/
@@ -3823,6 +3833,11 @@ private lemma lPowerFreePart_squarefree (m : ℕ) (hm : m ≠ 0) :
     · simp [Nat.factorization_eq_zero_of_not_prime _ hp]
   -- lPowerFreePart 2 m ∣ radical; divisors of squarefree are squarefree.
   exact h_radical_sf.squarefree_of_dvd (lPowerFreePart_dvd_radical m)
+
+/-- `lPowerFreePart 2` is positive on positive input. -/
+theorem lPowerFreePart_pos {m : ℕ} (hm : m ≠ 0) :
+    0 < lPowerFreePart 2 m :=
+  Nat.pos_of_ne_zero (lPowerFreePart_squarefree m hm).ne_zero
 
 /-- 4 is not squarefree (4 = 2² has factorization {2 ↦ 2}, exceeding the
 squarefree bound). -/

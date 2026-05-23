@@ -55,6 +55,15 @@ theorem not_trichromatic_of_first_two_same {a b c : MonskyColor}
 theorem redGreenEdge_symm {a b : MonskyColor} : RedGreenEdge a b ↔ RedGreenEdge b a := by
   unfold RedGreenEdge; tauto
 
+/-- A `RedGreenEdge` pair has distinct vertices. -/
+theorem redGreenEdge_ne {a b : MonskyColor} (h : RedGreenEdge a b) : a ≠ b := by
+  rcases h with ⟨ha, hb⟩ | ⟨ha, hb⟩ <;> subst ha <;> subst hb <;> decide
+
+/-- A `RedGreenEdge` pair never contains a blue vertex. -/
+theorem redGreenEdge_not_blue {a b : MonskyColor} (h : RedGreenEdge a b) :
+    a ≠ blue ∧ b ≠ blue := by
+  rcases h with ⟨ha, hb⟩ | ⟨ha, hb⟩ <;> subst ha <;> subst hb <;> exact ⟨by decide, by decide⟩
+
 /-- `TrichromaticTriangle` is invariant under cyclic permutation of vertices. -/
 theorem trichromaticTriangle_cycle {a b c : MonskyColor} :
     TrichromaticTriangle a b c ↔ TrichromaticTriangle b c a := by

@@ -94,6 +94,15 @@ theorem kneserVertex_card_zero (n : ℕ) :
     Fintype.card (KneserVertex n 0) = 1 := by
   rw [kneserVertex_card, Nat.choose_zero_right]
 
+/-- For `k = 0`, the Kneser graph has no edges (only one vertex). -/
+theorem kneserGraph_zero_no_adj (n : ℕ) (a b : KneserVertex n 0) :
+    ¬ (kneserGraph n 0).Adj a b := by
+  intro h
+  apply h.1
+  have ha : (a.1 : Finset (Fin n)) = ∅ := Finset.card_eq_zero.mp a.2
+  have hb : (b.1 : Finset (Fin n)) = ∅ := Finset.card_eq_zero.mp b.2
+  exact Subtype.ext (ha.trans hb.symm)
+
 /-- For `k = 1`, the Kneser graph is the complete graph: any two distinct
 singleton vertices are adjacent.  (KG(n, 1) ≅ K_n.) -/
 theorem kneserGraph_one_adj_of_ne (n : ℕ) (a b : KneserVertex n 1) (h_ne : a ≠ b) :

@@ -170,4 +170,9 @@ theorem borsukConjecture_zero : BorsukConjecture 0 := by
   rw [h_diam_zero] at hdiam
   exact absurd hdiam (lt_irrefl _)
 
+/-- No Kahn-Kalai certificate exists in dimension 0 (since Borsuk's conjecture
+holds vacuously there). -/
+theorem KahnKalaiCertificate.isEmpty_zero : IsEmpty (KahnKalaiCertificate 0) :=
+  borsuk_no_certificate_of_conjecture borsukConjecture_zero
+
 end ProofsInTheBook.Chapter16

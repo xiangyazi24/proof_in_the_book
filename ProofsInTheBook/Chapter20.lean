@@ -51,6 +51,20 @@ theorem not_trichromatic_of_first_two_same {a b c : MonskyColor}
   intro h
   exact h.1 hab
 
+/-- `RedGreenEdge` is symmetric in its two arguments. -/
+theorem redGreenEdge_symm {a b : MonskyColor} : RedGreenEdge a b ↔ RedGreenEdge b a := by
+  unfold RedGreenEdge; tauto
+
+/-- `TrichromaticTriangle` is invariant under cyclic permutation of vertices. -/
+theorem trichromaticTriangle_cycle {a b c : MonskyColor} :
+    TrichromaticTriangle a b c ↔ TrichromaticTriangle b c a := by
+  cases a <;> cases b <;> cases c <;> decide
+
+/-- `TrichromaticTriangle` is invariant under reverse-cyclic permutation. -/
+theorem trichromaticTriangle_swap_outer {a b c : MonskyColor} :
+    TrichromaticTriangle a b c ↔ TrichromaticTriangle c b a := by
+  cases a <;> cases b <;> cases c <;> decide
+
 /--
 Local Sperner parity atom: a triangle is trichromatic exactly when it has an
 odd number of red-green edges.

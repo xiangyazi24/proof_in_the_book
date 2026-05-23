@@ -447,4 +447,21 @@ theorem chapter24 {f g : ℝ → ℝ}
       (by rw [hf.eval_half, hg.eval_half])
   rw [heq]
 
+/-- Specialization of `chapter24` to `f = 0`: any continuous, periodic-1, odd
+function satisfying the Herglotz duplication formula is identically zero.
+
+This is a corollary of `chapter24` paired with the trivial fact that the zero
+function is in HerglotzClass + continuous + satisfies duplication. -/
+theorem chapter24_zero_unique {g : ℝ → ℝ}
+    (hg : HerglotzClass g) (hgc : Continuous g)
+    (hdup_g : ∀ x, 2 * g x = g (x / 2) + g ((x + 1) / 2))
+    (x : ℝ) : g x = 0 := by
+  have hf_HC : HerglotzClass (fun _ : ℝ => (0 : ℝ)) :=
+    ⟨fun _ => rfl, fun _ => by simp⟩
+  have hf_c : Continuous (fun _ : ℝ => (0 : ℝ)) := continuous_const
+  have hf_dup : ∀ x, 2 * (fun _ : ℝ => (0 : ℝ)) x =
+      (fun _ : ℝ => (0 : ℝ)) (x / 2) + (fun _ : ℝ => (0 : ℝ)) ((x + 1) / 2) :=
+    fun _ => by ring
+  exact (chapter24 hf_HC hg hf_c hgc hf_dup hdup_g x).symm
+
 end ProofsInTheBook.Chapter24

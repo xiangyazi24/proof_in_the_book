@@ -280,6 +280,20 @@ theorem cot_pi_div_four : Real.cot (Real.pi / 4) = 1 := by
     · norm_num at h1
   field_simp
 
+/-- `tan(π/4) = 1` corollary in cot form: `cot(π/4) = 1`.  (Same fact via tan.) -/
+theorem cot_pi_div_four_eq_one_via_tan :
+    Real.cot (Real.pi / 4) = 1 / Real.tan (Real.pi / 4) := by
+  rw [Real.cot_eq_cos_div_sin, Real.tan_eq_sin_div_cos]
+  have hcos : Real.cos (Real.pi / 4) ≠ 0 := by
+    rw [Real.cos_pi_div_four]
+    have : Real.sqrt 2 ≠ 0 := Real.sqrt_ne_zero'.mpr (by norm_num)
+    positivity
+  have hsin : Real.sin (Real.pi / 4) ≠ 0 := by
+    rw [Real.sin_pi_div_four]
+    have : Real.sqrt 2 ≠ 0 := Real.sqrt_ne_zero'.mpr (by norm_num)
+    positivity
+  field_simp
+
 /-- `cot` is zero at all integer multiples of `π/2` whose multiple is odd
 (i.e., at `π/2, 3π/2, -π/2, ...`).  This is the union of the cot-zero set
 (odd multiples of `π/2`) together with the degenerate sin-zero set

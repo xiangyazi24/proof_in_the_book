@@ -150,6 +150,14 @@ theorem pointsOnLine_card_le {Point Line : Type*} [DecidableEq Point]
     (pointsOnLine points onLine line).card ≤ points.card :=
   Finset.card_le_card (pointsOnLine_subset points onLine line)
 
+/-- `pointsOnLine` is empty iff no point lies on the line. -/
+theorem pointsOnLine_eq_empty_iff {Point Line : Type*} [DecidableEq Point]
+    (points : Finset Point) (onLine : Point → Line → Prop) [DecidableRel onLine]
+    (line : Line) :
+    pointsOnLine points onLine line = ∅ ↔ ∀ p ∈ points, ¬ onLine p line := by
+  rw [Finset.eq_empty_iff_forall_notMem]
+  simp [pointsOnLine, Finset.mem_filter]
+
 /-- `OrdinaryLine` implies `≥ 2` configuration points lie on the line. -/
 theorem two_le_card_pointsOnLine_of_ordinaryLine {Point Line : Type*}
     [DecidableEq Point] (points : Finset Point)

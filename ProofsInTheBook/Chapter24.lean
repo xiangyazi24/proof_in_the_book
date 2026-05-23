@@ -288,6 +288,32 @@ theorem cot_add_cot_add_pi_div_two (α : ℝ) :
   field_simp
   ring
 
+/-- `Real.cot` is continuous at any point where `sin` is nonzero. -/
+theorem cot_continuousAt {x : ℝ} (hsin : Real.sin x ≠ 0) :
+    ContinuousAt Real.cot x := by
+  have h_eq : Real.cot = fun y => Real.cos y / Real.sin y := by
+    ext y; exact Real.cot_eq_cos_div_sin y
+  rw [h_eq]
+  exact Real.continuous_cos.continuousAt.div Real.continuous_sin.continuousAt hsin
+
+/-- `π · cot(π · x)` is continuous at any non-integer point. -/
+theorem pi_cot_pi_continuousAt {x : ℝ}
+    (hx : ∀ n : ℤ, x ≠ (n : ℝ)) :
+    ContinuousAt (fun y => Real.pi * Real.cot (Real.pi * y)) x := by
+  have h_sin : Real.sin (Real.pi * x) ≠ 0 := by
+    intro h
+    rcases Real.sin_eq_zero_iff.mp h with ⟨n, hn⟩
+    -- hn : (n : ℝ) * π = π * x
+    have hπ : Real.pi ≠ 0 := Real.pi_ne_zero
+    have hxn : x = (n : ℝ) := by
+      have : (n : ℝ) * Real.pi = x * Real.pi := by linarith
+      exact (mul_right_cancel₀ hπ this).symm
+    exact hx n hxn
+  have h_inner : ContinuousAt (fun y => Real.pi * y) x :=
+    (continuous_const.mul continuous_id).continuousAt
+  have h_cot : ContinuousAt Real.cot (Real.pi * x) := cot_continuousAt h_sin
+  exact (continuous_const.continuousAt).mul (h_cot.comp h_inner)
+
 /-- The Herglotz duplication formula for `f(x) := π · cot(π · x)`:
 `2 · f(x) = f(x/2) + f((x+1)/2)`.
 

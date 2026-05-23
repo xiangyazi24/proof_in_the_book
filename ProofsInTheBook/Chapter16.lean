@@ -124,4 +124,12 @@ theorem KahnKalaiCertificate.nonempty {d : ℕ} (cert : KahnKalaiCertificate d) 
   have hd : Metric.diam cert.S = 0 := by rw [h]; simp
   exact absurd cert.pos_diam (by rw [hd]; simp)
 
+/-- Conversely, if Borsuk's conjecture holds in dimension `d`, no
+Kahn-Kalai certificate exists. -/
+theorem borsuk_no_certificate_of_conjecture {d : ℕ} (h : BorsukConjecture d) :
+    IsEmpty (KahnKalaiCertificate d) := by
+  constructor
+  intro cert
+  exact cert.no_partition (h cert.S cert.bounded cert.pos_diam)
+
 end ProofsInTheBook.Chapter16

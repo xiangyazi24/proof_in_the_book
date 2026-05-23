@@ -71,6 +71,12 @@ theorem kneserVertex_nonempty_of_le {n k : ℕ} (h : k ≤ n) :
   rw [← Fintype.card_pos_iff, kneserVertex_card]
   exact Nat.choose_pos h
 
+/-- The Kneser graph has no vertices when `k > n`. -/
+theorem kneserGraph_no_vertices_of_lt {n k : ℕ} (h : n < k) :
+    IsEmpty (KneserVertex n k) := by
+  rw [← Fintype.card_eq_zero_iff, kneserVertex_card]
+  exact Nat.choose_eq_zero_of_lt h
+
 /-- For `k = 1`, the Kneser graph is the complete graph: any two distinct
 singleton vertices are adjacent.  (KG(n, 1) ≅ K_n.) -/
 theorem kneserGraph_one_adj_of_ne (n : ℕ) (a b : KneserVertex n 1) (h_ne : a ≠ b) :

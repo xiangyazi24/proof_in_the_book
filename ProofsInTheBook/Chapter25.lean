@@ -82,6 +82,22 @@ theorem curveExpectedCrossings_nonneg {ι : Type*} {segments : Finset ι}
   unfold curveExpectedCrossings
   exact Finset.sum_nonneg fun i hi => segmentExpectedCrossings_nonneg hd (hlen i hi)
 
+/-- A single-segment curve's expected crossings equals the segment formula. -/
+@[simp]
+theorem curveExpectedCrossings_singleton {ι : Type*} [DecidableEq ι]
+    (i : ι) (length : ι → ℝ) (d : ℝ) :
+    curveExpectedCrossings ({i} : Finset ι) length d = segmentExpectedCrossings d (length i) := by
+  unfold curveExpectedCrossings
+  rw [Finset.sum_singleton]
+
+/-- Buffon's noodle additivity: total expected crossings of a curve equals
+the expected crossings of a single equivalent-length segment (provided d > 0). -/
+theorem curveExpectedCrossings_eq_segment_of_total_length
+    {ι : Type*} (segments : Finset ι) (length : ι → ℝ) (d L : ℝ)
+    (hL : (∑ i ∈ segments, length i) = L) :
+    curveExpectedCrossings segments length d = segmentExpectedCrossings d L := by
+  rw [curveExpectedCrossings_eq_total_length, hL]
+
 theorem segmentExpectedCrossings_le_one {d length : ℝ} (hd : 0 < d) (hle : length ≤ d) :
     segmentExpectedCrossings d length ≤ 1 := by
   unfold segmentExpectedCrossings

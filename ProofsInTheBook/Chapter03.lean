@@ -3758,6 +3758,7 @@ theorem lPowerRoot_sq_dvd_self (m : ℕ) (hm : m ≠ 0) :
   ⟨lPowerFreePart 2 m, by
     rw [mul_comm]; exact self_eq_lPowerFreePart_mul_lPowerRoot_pow 2 m hm⟩
 
+
 /-- The 2-power-free part `lPowerFreePart 2 m` divides the squarefree radical
 `∏ q ∈ m.primeFactors, q` (since each prime appears with exponent in `{0, 1}`). -/
 private lemma lPowerFreePart_dvd_radical (m : ℕ) :
@@ -3802,6 +3803,27 @@ private lemma lPowerFreePart_squarefree (m : ℕ) (hm : m ≠ 0) :
     · simp [Nat.factorization_eq_zero_of_not_prime _ hp]
   -- lPowerFreePart 2 m ∣ radical; divisors of squarefree are squarefree.
   exact h_radical_sf.squarefree_of_dvd (lPowerFreePart_dvd_radical m)
+
+/-- 4 is not squarefree (4 = 2² has factorization {2 ↦ 2}, exceeding the
+squarefree bound). -/
+theorem not_squarefree_four : ¬ Squarefree (4 : ℕ) := by
+  intro hsf
+  have h := (Nat.squarefree_iff_factorization_le_one (by norm_num : (4 : ℕ) ≠ 0)).mp hsf 2
+  have h4 : (4 : ℕ).factorization 2 = 2 := by
+    have : (4 : ℕ) = 2^2 := by norm_num
+    rw [this, Nat.factorization_pow_self Nat.prime_two]
+  omega
+
+/-- The 2-power-free part of any nonzero natural is never equal to 4 — because
+`lPowerFreePart 2 m` is squarefree but 4 is not. This is the obstruction used in
+Erdős's `h_l2_contra` step (since `{a_j} = {1, ..., k}` would require `4 ∈ {a_j}`
+for `k ≥ 4`). -/
+theorem lPowerFreePart_two_ne_four (m : ℕ) (hm : m ≠ 0) :
+    lPowerFreePart 2 m ≠ 4 := by
+  intro h
+  have h_sf := lPowerFreePart_squarefree m hm
+  rw [h] at h_sf
+  exact not_squarefree_four h_sf
 
 /-- For `m ≠ 0`, the factorization of `lPowerFreePart 2 m` at `p` equals
 `m.factorization p % 2`. This is the key arithmetic identity used in the Erdős

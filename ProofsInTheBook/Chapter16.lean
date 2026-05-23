@@ -74,6 +74,24 @@ theorem colorClass_card_le {α : Type*} {d : ℕ} [DecidableEq (Fin (d + 1))]
     (colorClass points color c).card ≤ points.card :=
   Finset.card_le_card (colorClass_subset_points points color c)
 
+/-- The color class containing `x` is nonempty (since it contains `x`). -/
+theorem colorClass_nonempty_of_mem {α : Type*} {d : ℕ} [DecidableEq (Fin (d + 1))]
+    {points : Finset α} {color : α → Fin (d + 1)} {x : α}
+    (hx : x ∈ points) :
+    (colorClass points color (color x)).Nonempty :=
+  ⟨x, mem_colorClass_of_mem hx⟩
+
+/-- A color class is nonempty iff some point gets that color. -/
+theorem colorClass_nonempty_iff {α : Type*} {d : ℕ} [DecidableEq (Fin (d + 1))]
+    (points : Finset α) (color : α → Fin (d + 1)) (c : Fin (d + 1)) :
+    (colorClass points color c).Nonempty ↔ ∃ x ∈ points, color x = c := by
+  constructor
+  · rintro ⟨x, hx⟩
+    rw [mem_colorClass_iff] at hx
+    exact ⟨x, hx.1, hx.2⟩
+  · rintro ⟨x, hxp, hxc⟩
+    exact ⟨x, (mem_colorClass_iff points color c x).mpr ⟨hxp, hxc⟩⟩
+
 /-- The color classes partition the point set; cardinalities sum to `|points|`. -/
 theorem colorClass_card_sum {α : Type*} {d : ℕ} [DecidableEq (Fin (d + 1))]
     [DecidableEq α] (points : Finset α) (color : α → Fin (d + 1)) :

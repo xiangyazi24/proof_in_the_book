@@ -64,6 +64,15 @@ theorem redGreenEdge_not_blue {a b : MonskyColor} (h : RedGreenEdge a b) :
     a ≠ blue ∧ b ≠ blue := by
   rcases h with ⟨ha, hb⟩ | ⟨ha, hb⟩ <;> subst ha <;> subst hb <;> exact ⟨by decide, by decide⟩
 
+/-- A self-loop is never a red-green edge. -/
+@[simp]
+theorem not_redGreenEdge_self (a : MonskyColor) : ¬ RedGreenEdge a a := by
+  cases a <;> decide
+
+/-- A red-green edge between `a` and `b` forces one to be red and the other green. -/
+theorem redGreenEdge_cases {a b : MonskyColor} (h : RedGreenEdge a b) :
+    (a = red ∧ b = green) ∨ (a = green ∧ b = red) := h
+
 /-- `TrichromaticTriangle` is invariant under cyclic permutation of vertices. -/
 theorem trichromaticTriangle_cycle {a b c : MonskyColor} :
     TrichromaticTriangle a b c ↔ TrichromaticTriangle b c a := by

@@ -78,6 +78,10 @@ theorem strictSignChangesAroundTriangle_even (a b c : StrictEdgeSign) :
     Even (StrictSignChangesAroundTriangle a b c) := by
   cases a <;> cases b <;> cases c <;> decide
 
+theorem strictSignChangesAroundTriangle_eq_zero_iff (a b c : StrictEdgeSign) :
+    StrictSignChangesAroundTriangle a b c = 0 ↔ a = b ∧ b = c := by
+  cases a <;> cases b <;> cases c <;> decide
+
 /-- `StrictSignChangesAroundTriangle` is invariant under cyclic permutation. -/
 theorem strictSignChangesAroundTriangle_cycle (a b c : StrictEdgeSign) :
     StrictSignChangesAroundTriangle a b c = StrictSignChangesAroundTriangle b c a := by

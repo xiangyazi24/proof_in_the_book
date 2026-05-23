@@ -89,6 +89,11 @@ theorem kneserGraph_no_adj_of_lt {n k : ℕ} (hk : 1 ≤ k) (h : n < 2 * k)
   rw [Fintype.card_fin] at hle
   omega
 
+/-- For `k = 0`, the Kneser graph has exactly one vertex (the empty set). -/
+theorem kneserVertex_card_zero (n : ℕ) :
+    Fintype.card (KneserVertex n 0) = 1 := by
+  rw [kneserVertex_card, Nat.choose_zero_right]
+
 /-- For `k = 1`, the Kneser graph is the complete graph: any two distinct
 singleton vertices are adjacent.  (KG(n, 1) ≅ K_n.) -/
 theorem kneserGraph_one_adj_of_ne (n : ℕ) (a b : KneserVertex n 1) (h_ne : a ≠ b) :

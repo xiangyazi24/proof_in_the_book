@@ -93,6 +93,33 @@ theorem angleClassQ_pi_div_two : angleClassQ (Real.pi / 2) = 0 := by
   have h : Real.pi / 2 = ((1/2 : ℚ) : ℝ) * Real.pi := by push_cast; ring
   rw [h, angleClassQ_rat_mul_pi]
 
+/-- Any divisor `π / n` with `0 < n` vanishes in the πℚ quotient. -/
+theorem angleClassQ_pi_div (n : ℕ) (hn : 0 < n) : angleClassQ (Real.pi / n) = 0 := by
+  have h : Real.pi / n = ((1/n : ℚ) : ℝ) * Real.pi := by
+    push_cast
+    rw [div_mul_eq_mul_div, one_mul]
+  rw [h, angleClassQ_rat_mul_pi]
+
+/-- Any integer multiple of `π` vanishes in the πℚ quotient
+(special case of `angleClassQ_rat_mul_pi` for integer `q`). -/
+theorem angleClassQ_int_mul_pi (n : ℤ) :
+    angleClassQ ((n : ℝ) * Real.pi) = 0 := by
+  have h : (n : ℝ) * Real.pi = ((n : ℚ) : ℝ) * Real.pi := by push_cast; ring
+  rw [h, angleClassQ_rat_mul_pi]
+
+/-- `angleClassQ` is additive. -/
+@[simp]
+theorem angleClassQ_add (x y : ℝ) :
+    angleClassQ (x + y) = angleClassQ x + angleClassQ y := rfl
+
+/-- `angleClassQ` of zero is zero. -/
+@[simp]
+theorem angleClassQ_zero : angleClassQ 0 = 0 := rfl
+
+/-- `angleClassQ` of a negation is the negation in the quotient. -/
+@[simp]
+theorem angleClassQ_neg (x : ℝ) : angleClassQ (-x) = -(angleClassQ x) := rfl
+
 -- (`angleClassQ_arccos_one_third_ne_zero` defined below, after
 -- `arccos_one_third_irrational_over_pi`.)
 

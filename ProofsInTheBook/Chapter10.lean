@@ -158,6 +158,19 @@ theorem pointsOnLine_eq_empty_iff {Point Line : Type*} [DecidableEq Point]
   rw [Finset.eq_empty_iff_forall_notMem]
   simp [pointsOnLine, Finset.mem_filter]
 
+/-- `offLinePairs` is nonempty iff some point is off some line — biconditional
+form of `offLinePairs_nonempty_of_exists`. -/
+theorem offLinePairs_nonempty_iff {Point Line : Type*}
+    [DecidableEq Point] [DecidableEq Line] {points : Finset Point}
+    {lines : Finset Line} {onLine : Point → Line → Prop} [DecidableRel onLine] :
+    (offLinePairs points lines onLine).Nonempty ↔
+      ∃ p ∈ points, ∃ line ∈ lines, ¬ onLine p line := by
+  constructor
+  · rintro ⟨⟨p, line⟩, hpair⟩
+    rcases mem_offLinePairs.mp hpair with ⟨hp, hline, hoff⟩
+    exact ⟨p, hp, line, hline, hoff⟩
+  · exact offLinePairs_nonempty_of_exists
+
 /-- `OrdinaryLine` implies `≥ 2` configuration points lie on the line. -/
 theorem two_le_card_pointsOnLine_of_ordinaryLine {Point Line : Type*}
     [DecidableEq Point] (points : Finset Point)

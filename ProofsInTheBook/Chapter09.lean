@@ -120,6 +120,22 @@ theorem angleClassQ_zero : angleClassQ 0 = 0 := rfl
 @[simp]
 theorem angleClassQ_neg (x : ℝ) : angleClassQ (-x) = -(angleClassQ x) := rfl
 
+/-- `angleClassQ x = 0` iff `x` is a rational multiple of `π`. -/
+theorem angleClassQ_eq_zero_iff (x : ℝ) :
+    angleClassQ x = 0 ↔ ∃ q : ℚ, x = (q : ℝ) * Real.pi := by
+  rw [angleClassQ, Submodule.Quotient.mk_eq_zero, piQSubmodule,
+      Submodule.mem_span_singleton]
+  constructor
+  · rintro ⟨q, hq⟩; exact ⟨q, by rw [← hq, Rat.smul_def]⟩
+  · rintro ⟨q, hq⟩; exact ⟨q, by rw [hq, Rat.smul_def]⟩
+
+/-- `angleClassQ` of a difference of two rational multiples of `π` is zero. -/
+theorem angleClassQ_sub_rat_mul_pi (q r : ℚ) :
+    angleClassQ ((q : ℝ) * Real.pi - (r : ℝ) * Real.pi) = 0 := by
+  rw [show (q : ℝ) * Real.pi - (r : ℝ) * Real.pi = ((q - r : ℚ) : ℝ) * Real.pi from by
+    push_cast; ring]
+  exact angleClassQ_rat_mul_pi (q - r)
+
 -- (`angleClassQ_arccos_one_third_ne_zero` defined below, after
 -- `arccos_one_third_irrational_over_pi`.)
 

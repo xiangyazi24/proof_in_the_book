@@ -124,6 +124,23 @@ theorem pileSizeVector_eq_filter_card (a n : ℕ) (labels : RiffleLabels a n) (p
     pileSizeVector a n labels pile =
       (Finset.univ.filter (fun card : Fin n => labels card = pile)).card := rfl
 
+/-- The all-zero labeling sends every card to pile 0. -/
+def constantLabeling {n : ℕ} (a : ℕ) [NeZero a] : RiffleLabels a n :=
+  fun _ => ⟨0, NeZero.pos a⟩
+
+/-- The constant labeling puts all cards in pile 0 and other piles are empty. -/
+theorem pileOfLabel_constantLabeling_zero {n : ℕ} (a : ℕ) [NeZero a]
+    (pile : Fin a) :
+    pileOfLabel a n (constantLabeling a) pile =
+      if pile = ⟨0, NeZero.pos a⟩ then (Finset.univ : Finset (Fin n)) else ∅ := by
+  ext card
+  simp only [mem_pileOfLabel_iff, constantLabeling]
+  split_ifs with h
+  · simp [h]
+  · simp only [Finset.notMem_empty, iff_false]
+    intro heq
+    exact h heq.symm
+
 /--
 The stable riffle order induced by a label assignment: card `i` comes before
 card `j` in the shuffled deck iff `labels i < labels j`, or `labels i = labels j`

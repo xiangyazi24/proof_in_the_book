@@ -108,6 +108,32 @@ theorem kneserGraph_zero_no_adj (n : ℕ) (a b : KneserVertex n 0) :
   have hb : (b.1 : Finset (Fin n)) = ∅ := Finset.card_eq_zero.mp b.2
   exact Subtype.ext (ha.trans hb.symm)
 
+/-- KG(n, 1) is the complete graph on n vertices, as a SimpleGraph equality. -/
+theorem kneserGraph_one_eq_completeGraph (n : ℕ) :
+    kneserGraph n 1 = SimpleGraph.completeGraph (KneserVertex n 1) := by
+  ext a b
+  rw [kneserGraph_adj_iff]
+  simp only [SimpleGraph.completeGraph_eq_top, SimpleGraph.top_adj, ne_eq]
+  constructor
+  · exact And.left
+  · intro h
+    refine ⟨h, ?_⟩
+    rw [Finset.disjoint_left]
+    intro x hxa hxb
+    have ha_card : (a.1 : Finset (Fin n)).card = 1 := a.2
+    have hb_card : (b.1 : Finset (Fin n)).card = 1 := b.2
+    have ha_eq : (a.1 : Finset (Fin n)) = {x} := by
+      rcases Finset.card_eq_one.mp ha_card with ⟨y, hy⟩
+      rw [hy] at hxa
+      rw [Finset.mem_singleton] at hxa
+      rw [hy, hxa]
+    have hb_eq : (b.1 : Finset (Fin n)) = {x} := by
+      rcases Finset.card_eq_one.mp hb_card with ⟨y, hy⟩
+      rw [hy] at hxb
+      rw [Finset.mem_singleton] at hxb
+      rw [hy, hxb]
+    exact h (Subtype.ext (ha_eq.trans hb_eq.symm))
+
 /-- For `k = 1`, the Kneser graph is the complete graph: any two distinct
 singleton vertices are adjacent.  (KG(n, 1) ≅ K_n.) -/
 theorem kneserGraph_one_adj_of_ne (n : ℕ) (a b : KneserVertex n 1) (h_ne : a ≠ b) :

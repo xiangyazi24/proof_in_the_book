@@ -236,6 +236,17 @@ theorem pi_cot_pi_half_eq_zero :
     (Real.pi * Real.cot (Real.pi * (1/2 : ℝ))) = 0 := by
   rw [show Real.pi * (1/2 : ℝ) = Real.pi / 2 from by ring, cot_pi_div_two, mul_zero]
 
+/-- `x ↦ π · cot(π · x)` is periodic with period 1. -/
+theorem pi_cot_pi_periodic (x : ℝ) :
+    Real.pi * Real.cot (Real.pi * (x + 1)) = Real.pi * Real.cot (Real.pi * x) := by
+  rw [cot_pi_add_one]
+
+/-- `x ↦ π · cot(π · x)` is odd: f(-x) = -f(x). -/
+theorem pi_cot_pi_odd (x : ℝ) :
+    Real.pi * Real.cot (Real.pi * (-x)) = -(Real.pi * Real.cot (Real.pi * x)) := by
+  rw [show Real.pi * (-x) = -(Real.pi * x) from by ring, cot_neg]
+  ring
+
 /--
 The dyadic averaging identity: if `f` satisfies the duplication formula
 `f(x) = (1/2)(f(x/2) + f((x+1)/2))`, then iterating n times gives

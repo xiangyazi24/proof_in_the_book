@@ -275,4 +275,23 @@ theorem MonskyCertificate.isEmpty_zero : IsEmpty (MonskyCertificate 0) := by
   rcases cert.hodd with ⟨k, hk⟩
   omega
 
+/-- A Monsky certificate has positive boundary RG count (since it's odd). -/
+theorem MonskyCertificate.boundaryRGCount_pos {n : ℕ} (cert : MonskyCertificate n) :
+    0 < cert.boundaryRGCount := by
+  rcases cert.hodd with ⟨k, hk⟩
+  omega
+
+/-- A Monsky certificate has positive total RG count. -/
+theorem MonskyCertificate.totalRG_pos {n : ℕ} (cert : MonskyCertificate n) :
+    0 < cert.totalRG := by
+  -- totalRG ≡ boundaryRGCount mod 2, both odd; so totalRG is odd, hence positive.
+  have hpos := cert.boundaryRGCount_pos
+  rcases cert.hodd with ⟨k, hk⟩
+  have hpar := cert.hparity
+  rw [hk] at hpar
+  -- hpar : totalRG % 2 = (2 * k + 1) % 2 = 1, so totalRG % 2 = 1, hence totalRG ≥ 1.
+  have h1 : (2 * k + 1) % 2 = 1 := by omega
+  rw [h1] at hpar
+  omega
+
 end ProofsInTheBook.Chapter20

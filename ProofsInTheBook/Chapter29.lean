@@ -89,6 +89,17 @@ theorem pileSizeVector_le (a n : ℕ) (labels : RiffleLabels a n) (pile : Fin a)
     pileSizeVector a n labels pile ≤ n :=
   pileOfLabel_card_le a n labels pile
 
+/-- A card belongs to exactly one pile, namely the one labeled by its label. -/
+theorem mem_pileOfLabel_self (a n : ℕ) (labels : RiffleLabels a n) (card : Fin n) :
+    card ∈ pileOfLabel a n labels (labels card) :=
+  (mem_pileOfLabel_iff a n labels (labels card) card).mpr rfl
+
+/-- The pile a card belongs to is unique. -/
+theorem pileOfLabel_eq_of_mem (a n : ℕ) (labels : RiffleLabels a n)
+    {card : Fin n} {pile : Fin a} (h : card ∈ pileOfLabel a n labels pile) :
+    labels card = pile :=
+  (mem_pileOfLabel_iff a n labels pile card).mp h
+
 /--
 The stable riffle order induced by a label assignment: card `i` comes before
 card `j` in the shuffled deck iff `labels i < labels j`, or `labels i = labels j`

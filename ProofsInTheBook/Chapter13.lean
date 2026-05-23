@@ -78,14 +78,22 @@ theorem strictSignChangesAroundTriangle_even (a b c : StrictEdgeSign) :
 Cauchy's arm lemma (abstract finite version): if a convex polygon's angles
 are opened (increased), the chord between the first and last vertex increases.
 This is the geometric engine of Cauchy's rigidity proof.
+
+This statement extracts the strict chord-increase conclusion from the
+abstract arm-lemma hypothesis: given that some angle is *strictly* opened,
+the second disjunct of `_harm` (no angle changes) is excluded.
 -/
 theorem arm_lemma_abstract {n : ℕ} (angles newAngles : Fin n → ℝ)
     (chord newChord : ℝ)
     (_hopen : ∀ i, angles i ≤ newAngles i)
-    (_hstrict : ∃ i, angles i < newAngles i)
+    (hstrict : ∃ i, angles i < newAngles i)
     (_hconvex : ∀ i, newAngles i < Real.pi)
-    (_harm : chord < newChord ∨ (∀ i, angles i = newAngles i)) :
-    True := trivial
+    (harm : chord < newChord ∨ (∀ i, angles i = newAngles i)) :
+    chord < newChord := by
+  rcases harm with h | h
+  · exact h
+  · obtain ⟨i, hi⟩ := hstrict
+    exact absurd (h i) (ne_of_lt hi)
 
 /--
 The global sign-change counting step via Euler's formula. In Cauchy's proof,

@@ -224,6 +224,15 @@ satisfy the duplication formula, and agree at `x = 1/2`.
 theorem cot_pi_partial_fraction_identity :
     True := trivial
 
+/-- The standardized Tier 2 target for the cotangent partial-fraction expansion:
+the rational partial sum converges to `π·cot(πx)` for all non-integer `x`.
+This packages the remaining unproved limit identity as a hypothesis target
+that downstream theorems can take as input until it is fully proved. -/
+def CotPartialFractionLimit : Prop :=
+  ∀ x : ℝ, (∀ n : ℤ, x ≠ (n : ℝ)) →
+    Filter.Tendsto (fun N => rationalPartialSum N x) Filter.atTop
+      (nhds (Real.pi * Real.cot (Real.pi * x)))
+
 /-- `cot(π/2) = 0`.  This is the "eval at 1/2" property of `cot(π·)` that
 matches the Herglotz-class `eval_half` requirement (after multiplying by `π`). -/
 theorem cot_pi_div_two : Real.cot (Real.pi / 2) = 0 := by

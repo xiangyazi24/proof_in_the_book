@@ -71,6 +71,28 @@ theorem kneserVertex_nonempty_of_le {n k : ℕ} (h : k ≤ n) :
   rw [← Fintype.card_pos_iff, kneserVertex_card]
   exact Nat.choose_pos h
 
+/-- For `k = 1`, the Kneser graph is the complete graph: any two distinct
+singleton vertices are adjacent.  (KG(n, 1) ≅ K_n.) -/
+theorem kneserGraph_one_adj_of_ne (n : ℕ) (a b : KneserVertex n 1) (h_ne : a ≠ b) :
+    (kneserGraph n 1).Adj a b := by
+  refine ⟨h_ne, ?_⟩
+  rw [Finset.disjoint_left]
+  intro x hxa hxb
+  -- Both a.1 and b.1 are singletons (card = 1), so x ∈ a.1 ∧ x ∈ b.1 forces a.1 = b.1.
+  have ha_card : (a.1 : Finset (Fin n)).card = 1 := a.2
+  have hb_card : (b.1 : Finset (Fin n)).card = 1 := b.2
+  have ha_eq : (a.1 : Finset (Fin n)) = {x} := by
+    rcases Finset.card_eq_one.mp ha_card with ⟨y, hy⟩
+    rw [hy] at hxa
+    rw [Finset.mem_singleton] at hxa
+    rw [hy, hxa]
+  have hb_eq : (b.1 : Finset (Fin n)) = {x} := by
+    rcases Finset.card_eq_one.mp hb_card with ⟨y, hy⟩
+    rw [hy] at hxb
+    rw [Finset.mem_singleton] at hxb
+    rw [hy, hxb]
+  exact h_ne (Subtype.ext (ha_eq.trans hb_eq.symm))
+
 /-- When `2k ≤ n`, the Kneser graph has at least one edge — there exist two
 disjoint k-subsets. -/
 theorem kneserGraph_exists_adj_of_two_mul_le {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n) :

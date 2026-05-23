@@ -74,6 +74,16 @@ theorem strictSignChangesAroundTriangle_even (a b c : StrictEdgeSign) :
     Even (StrictSignChangesAroundTriangle a b c) := by
   cases a <;> cases b <;> cases c <;> decide
 
+/-- `StrictSignChangesAroundTriangle` is invariant under cyclic permutation. -/
+theorem strictSignChangesAroundTriangle_cycle (a b c : StrictEdgeSign) :
+    StrictSignChangesAroundTriangle a b c = StrictSignChangesAroundTriangle b c a := by
+  cases a <;> cases b <;> cases c <;> decide
+
+/-- `SignChangesAroundTriangle` is invariant under cyclic permutation. -/
+theorem signChangesAroundTriangle_cycle (a b c : EdgeSign) :
+    SignChangesAroundTriangle a b c = SignChangesAroundTriangle b c a := by
+  cases a <;> cases b <;> cases c <;> decide
+
 /--
 Cauchy's arm lemma (abstract finite version): if a convex polygon's angles
 are opened (increased), the chord between the first and last vertex increases.

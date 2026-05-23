@@ -136,6 +136,20 @@ theorem ordinaryLine_iff_card_pointsOnLine_eq_two {Point Line : Type*}
   ⟨card_pointsOnLine_eq_two_of_ordinaryLine points onLine line,
    ordinaryLine_of_two_points_on_line points onLine line⟩
 
+/-- `pointsOnLine` is a subset of the configuration points. -/
+theorem pointsOnLine_subset {Point Line : Type*} [DecidableEq Point]
+    (points : Finset Point) (onLine : Point → Line → Prop) [DecidableRel onLine]
+    (line : Line) :
+    pointsOnLine points onLine line ⊆ points :=
+  Finset.filter_subset _ _
+
+/-- `pointsOnLine` is bounded above by `points.card`. -/
+theorem pointsOnLine_card_le {Point Line : Type*} [DecidableEq Point]
+    (points : Finset Point) (onLine : Point → Line → Prop) [DecidableRel onLine]
+    (line : Line) :
+    (pointsOnLine points onLine line).card ≤ points.card :=
+  Finset.card_le_card (pointsOnLine_subset points onLine line)
+
 /--
 The key contradiction step in Gallai's proof: if a line contains ≥ 3 points
 and is part of a minimal-distance off-line pair, then a strictly closer

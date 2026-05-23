@@ -65,6 +65,14 @@ theorem trichromaticTriangle_swap_outer {a b c : MonskyColor} :
     TrichromaticTriangle a b c ↔ TrichromaticTriangle c b a := by
   cases a <;> cases b <;> cases c <;> decide
 
+/-- In a trichromatic triangle, the set of vertex colors equals all of MonskyColor. -/
+theorem trichromaticTriangle_iff_red_green_blue_present {a b c : MonskyColor} :
+    TrichromaticTriangle a b c ↔
+      ((a = red ∨ b = red ∨ c = red) ∧
+       (a = green ∨ b = green ∨ c = green) ∧
+       (a = blue ∨ b = blue ∨ c = blue)) := by
+  cases a <;> cases b <;> cases c <;> decide
+
 /--
 Local Sperner parity atom: a triangle is trichromatic exactly when it has an
 odd number of red-green edges.

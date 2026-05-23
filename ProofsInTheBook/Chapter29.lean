@@ -154,6 +154,21 @@ theorem labels_comp_riffleSort_monotone (a n : ℕ) (labels : RiffleLabels a n) 
     Monotone (labels ∘ riffleSort a n labels) :=
   Tuple.monotone_sort labels
 
+/-- The constant labeling has zero piles size for non-zero piles. -/
+theorem pileSizeVector_constantLabeling {n : ℕ} (a : ℕ) [NeZero a] (pile : Fin a)
+    (h_pile : pile ≠ ⟨0, NeZero.pos a⟩) :
+    pileSizeVector a n (constantLabeling a) pile = 0 := by
+  unfold pileSizeVector
+  rw [pileOfLabel_constantLabeling_zero, if_neg h_pile]
+  rfl
+
+/-- The constant labeling sends all `n` cards to pile 0. -/
+theorem pileSizeVector_constantLabeling_zero {n : ℕ} (a : ℕ) [NeZero a] :
+    pileSizeVector a n (constantLabeling a) ⟨0, NeZero.pos a⟩ = n := by
+  unfold pileSizeVector
+  rw [pileOfLabel_constantLabeling_zero, if_pos rfl]
+  exact Finset.card_univ.trans (Fintype.card_fin n)
+
 /--
 The stable riffle order induced by a label assignment: card `i` comes before
 card `j` in the shuffled deck iff `labels i < labels j`, or `labels i = labels j`

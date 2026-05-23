@@ -76,6 +76,19 @@ theorem riffleLabels_card (a n : ℕ) :
     Fintype.card (RiffleLabels a n) = a ^ n := by
   simp [RiffleLabels]
 
+/-- Each pile in a riffle labeling contains at most all `n` cards. -/
+theorem pileOfLabel_card_le (a n : ℕ) (labels : RiffleLabels a n) (pile : Fin a) :
+    (pileOfLabel a n labels pile).card ≤ n := by
+  calc (pileOfLabel a n labels pile).card
+      ≤ (Finset.univ : Finset (Fin n)).card :=
+        Finset.card_le_card (Finset.filter_subset _ _)
+    _ = n := Finset.card_univ.trans (Fintype.card_fin n)
+
+/-- The pile-size vector is pointwise bounded by `n`. -/
+theorem pileSizeVector_le (a n : ℕ) (labels : RiffleLabels a n) (pile : Fin a) :
+    pileSizeVector a n labels pile ≤ n :=
+  pileOfLabel_card_le a n labels pile
+
 /--
 The stable riffle order induced by a label assignment: card `i` comes before
 card `j` in the shuffled deck iff `labels i < labels j`, or `labels i = labels j`

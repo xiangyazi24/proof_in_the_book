@@ -267,6 +267,26 @@ theorem pi_cot_pi_int_eq_zero (n : ℤ) :
     Real.pi * Real.cot (Real.pi * (n : ℝ)) = 0 := by
   rw [show Real.pi * (n : ℝ) = (n : ℝ) * Real.pi from by ring, cot_int_mul_pi, mul_zero]
 
+/-- `cot` is zero at all integer multiples of `π/2` whose multiple is odd
+(i.e., at `π/2, 3π/2, -π/2, ...`).  This is the union of the cot-zero set
+(odd multiples of `π/2`) together with the degenerate sin-zero set
+(integer multiples of `π`); together they make cot vanish on the
+*half-integer* multiples of `π`. -/
+theorem cot_pi_mul_half_int (n : ℤ) :
+    Real.cot (Real.pi * ((n : ℝ) / 2)) = 0 := by
+  rcases Int.even_or_odd n with ⟨k, hk⟩ | ⟨k, hk⟩
+  · -- n = 2k: π · (n/2) = π · k, sin = 0, cot = 0 by convention
+    have : Real.pi * ((n : ℝ) / 2) = (k : ℝ) * Real.pi := by
+      rw [hk]; push_cast; ring
+    rw [this, cot_int_mul_pi]
+  · -- n = 2k+1: π · n/2 = kπ + π/2. cos(kπ + π/2) = 0, so cot = 0/sin = 0.
+    have hsplit : Real.pi * ((n : ℝ) / 2) = (k : ℝ) * Real.pi + Real.pi / 2 := by
+      rw [hk]; push_cast; ring
+    rw [hsplit, Real.cot_eq_cos_div_sin, Real.cos_add_pi_div_two]
+    -- cos(kπ + π/2) = -sin(kπ) = 0
+    rw [Real.sin_int_mul_pi]
+    simp
+
 /-- The cotangent half-angle/duplication identity:
 `cot α + cot(α + π/2) = 2 cot(2α)`.
 The proof handles all real `α` thanks to Lean's `0/0 = 0` convention at the

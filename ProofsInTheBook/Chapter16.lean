@@ -58,6 +58,29 @@ theorem disjoint_colorClass_of_ne {α : Type*} {d : ℕ} [DecidableEq (Fin (d + 
   have h₂ := (mem_colorClass_iff points color c₂ x).mp hx₂
   exact hne (h₁.2.symm.trans h₂.2)
 
+/-- The union of all color classes is the original point set. -/
+theorem colorClass_biUnion_eq_points {α : Type*} {d : ℕ} [DecidableEq (Fin (d + 1))]
+    [DecidableEq α] (points : Finset α) (color : α → Fin (d + 1)) :
+    (Finset.univ.biUnion (fun c : Fin (d + 1) => colorClass points color c)) = points := by
+  ext x
+  simp only [Finset.mem_biUnion, Finset.mem_univ, true_and, mem_colorClass_iff]
+  constructor
+  · rintro ⟨_, hx, _⟩; exact hx
+  · intro hx; exact ⟨color x, hx, rfl⟩
+
+/-- The color classes partition the point set; cardinalities sum to `|points|`. -/
+theorem colorClass_card_sum {α : Type*} {d : ℕ} [DecidableEq (Fin (d + 1))]
+    [DecidableEq α] (points : Finset α) (color : α → Fin (d + 1)) :
+    (∑ c : Fin (d + 1), (colorClass points color c).card) = points.card := by
+  classical
+  have h_disj :
+      ((Finset.univ : Finset (Fin (d + 1))) : Set (Fin (d + 1))).PairwiseDisjoint
+        (fun c => colorClass points color c) :=
+    fun c₁ _ c₂ _ hne => disjoint_colorClass_of_ne hne
+  have hcard := Finset.card_biUnion h_disj
+  rw [colorClass_biUnion_eq_points] at hcard
+  simpa using hcard.symm
+
 /--
 The basic verification step for a Borsuk partition: every color class has
 the advertised smaller pairwise diameter bound.

@@ -108,6 +108,14 @@ theorem kneserGraph_zero_no_adj (n : ℕ) (a b : KneserVertex n 0) :
   have hb : (b.1 : Finset (Fin n)) = ∅ := Finset.card_eq_zero.mp b.2
   exact Subtype.ext (ha.trans hb.symm)
 
+/-- KG(n, 0) is the empty graph (zero edges). -/
+theorem kneserGraph_zero_eq_bot (n : ℕ) :
+    kneserGraph n 0 = (⊥ : SimpleGraph (KneserVertex n 0)) := by
+  ext a b
+  simp only [SimpleGraph.bot_adj]
+  refine ⟨fun h => kneserGraph_zero_no_adj n a b h, fun h => ?_⟩
+  exact (h.elim : (kneserGraph n 0).Adj a b)
+
 /-- KG(n, 1) is the complete graph on n vertices, as a SimpleGraph equality. -/
 theorem kneserGraph_one_eq_completeGraph (n : ℕ) :
     kneserGraph n 1 = SimpleGraph.completeGraph (KneserVertex n 1) := by

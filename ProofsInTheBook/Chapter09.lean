@@ -933,6 +933,44 @@ theorem regularTetrahedronEdge_adjacentFaceDihedralAngle_of_ne
     regularTetrahedronDihedralAngle i.1 j.1 = Real.arccos (1 / 3) := by
   exact regularTetrahedronDihedralAngle_of_ne (fun h => hij (Subtype.ext h))
 
+noncomputable def regularTetrahedronEdgeAdjacentFaceEquiv (e : RegularTetrahedronEdge) :
+    RegularTetrahedronEdgeAdjacentFaceVertex e ≃ Fin 2 :=
+  Fintype.equivFinOfCardEq (regularTetrahedronEdgeAdjacentFaceVertex_card e)
+
+noncomputable def regularTetrahedronEdgeAdjacentFaceVertex0
+    (e : RegularTetrahedronEdge) : Fin 4 :=
+  ((regularTetrahedronEdgeAdjacentFaceEquiv e).symm 0).1
+
+noncomputable def regularTetrahedronEdgeAdjacentFaceVertex1
+    (e : RegularTetrahedronEdge) : Fin 4 :=
+  ((regularTetrahedronEdgeAdjacentFaceEquiv e).symm 1).1
+
+theorem regularTetrahedronEdgeAdjacentFaceVertex0_ne_vertex1
+    (e : RegularTetrahedronEdge) :
+    regularTetrahedronEdgeAdjacentFaceVertex0 e ≠
+      regularTetrahedronEdgeAdjacentFaceVertex1 e := by
+  intro h
+  let f := regularTetrahedronEdgeAdjacentFaceEquiv e
+  have hsub : f.symm 0 = f.symm 1 := Subtype.ext h
+  have hfin : (0 : Fin 2) = 1 := by
+    calc
+      (0 : Fin 2) = f (f.symm 0) := by simp
+      _ = f (f.symm 1) := by rw [hsub]
+      _ = 1 := by simp
+  exact (by decide : (0 : Fin 2) ≠ 1) hfin
+
+noncomputable def regularTetrahedronEdgeDihedralAngle
+    (e : RegularTetrahedronEdge) : ℝ :=
+  regularTetrahedronDihedralAngle
+    (regularTetrahedronEdgeAdjacentFaceVertex0 e)
+    (regularTetrahedronEdgeAdjacentFaceVertex1 e)
+
+theorem regularTetrahedronEdgeDihedralAngle_eq_arccos_one_third
+    (e : RegularTetrahedronEdge) :
+    regularTetrahedronEdgeDihedralAngle e = Real.arccos (1 / 3) := by
+  exact regularTetrahedronDihedralAngle_of_ne
+    (regularTetrahedronEdgeAdjacentFaceVertex0_ne_vertex1 e)
+
 /--
 The regular tetrahedron has nonzero Dehn invariant because its dihedral
 angle `arccos(1/3)` is irrational over `π`. This is the book's key
@@ -1158,6 +1196,33 @@ theorem regularTetrahedron_dehnInvariantQ_edges_ne_zero :
     angleClassQ_arccos_one_third_ne_zero
 
 /--
+The concrete tetrahedron Dehn sum using the edge-specific adjacent-face
+dihedral angle function.
+-/
+theorem regularTetrahedron_dehnInvariantQ_geometric_edges_eq :
+    dehnInvariantQ (Finset.univ : Finset RegularTetrahedronEdge)
+        regularTetrahedronEdgeLength
+        (fun e => angleClassQ (regularTetrahedronEdgeDihedralAngle e)) =
+      dehnEdgeQ (6 * Real.sqrt 8) (angleClassQ (Real.arccos (1 / 3))) := by
+  simpa [dehnInvariantQ, regularTetrahedronEdgeLength_eq_sqrt8,
+    regularTetrahedronEdgeDihedralAngle_eq_arccos_one_third,
+    regularTetrahedronEdge_univ_card] using
+    (dehnInvariantQ_const_length_angle
+      (edges := (Finset.univ : Finset RegularTetrahedronEdge))
+      (length := Real.sqrt 8)
+      (angle := angleClassQ (Real.arccos (1 / 3))))
+
+theorem regularTetrahedron_dehnInvariantQ_geometric_edges_ne_zero :
+    dehnInvariantQ (Finset.univ : Finset RegularTetrahedronEdge)
+        regularTetrahedronEdgeLength
+        (fun e => angleClassQ (regularTetrahedronEdgeDihedralAngle e)) ≠ 0 := by
+  rw [regularTetrahedron_dehnInvariantQ_geometric_edges_eq]
+  exact dehnEdgeQ_ne_zero_of_ne_zero
+    (mul_ne_zero (by norm_num : (6 : ℝ) ≠ 0)
+      (ne_of_gt (Real.sqrt_pos_of_pos (by norm_num : (0 : ℝ) < 8))))
+    angleClassQ_arccos_one_third_ne_zero
+
+/--
 The abstract rational Dehn sums for a right-angled cube and a regular
 tetrahedron are different.  This still does not assert geometric scissors
 congruence, because the polyhedron/dissection layer is not available.
@@ -1200,6 +1265,22 @@ theorem cube_not_regularTetrahedron_concrete_geometry_dehnQ :
   exact impossible_scissors_congruence_of_dehn_ne
     cube_dehnInvariantQ_edges_eq_zero
     regularTetrahedron_dehnInvariantQ_edges_ne_zero
+
+/--
+Concrete cube edges cannot have the same Dehn invariant as concrete
+tetrahedron edges when the tetrahedron uses its edge-specific adjacent-face
+dihedral angle function.
+-/
+theorem cube_not_regularTetrahedron_concrete_edgeGeometry_dehnQ :
+    dehnInvariantQ (Finset.univ : Finset CubeEdge)
+        cubeEdgeLength
+        (fun e => angleClassQ (cubeEdgeDihedralAngle e)) ≠
+      dehnInvariantQ (Finset.univ : Finset RegularTetrahedronEdge)
+        regularTetrahedronEdgeLength
+        (fun e => angleClassQ (regularTetrahedronEdgeDihedralAngle e)) := by
+  exact impossible_scissors_congruence_of_dehn_ne
+    cube_dehnInvariantQ_edges_eq_zero
+    regularTetrahedron_dehnInvariantQ_geometric_edges_ne_zero
 
 /--
 Hilbert's third problem: a regular tetrahedron cannot be cut into finitely

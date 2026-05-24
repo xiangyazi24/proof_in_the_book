@@ -79,6 +79,23 @@ theorem orientedLevel_pi_div_two (p : Point2) :
     orientedLevel (Real.pi / 2) p = -p.1 := by
   simp [orientedLevel, Real.sin_pi_div_two, Real.cos_pi_div_two]
 
+/-- `orientedLevel` is linear in the point: shifting `p` by a vector shifts the
+projection by the corresponding linear combination. -/
+theorem orientedLevel_add (θ : ℝ) (p q : Point2) :
+    orientedLevel θ (p.1 + q.1, p.2 + q.2) = orientedLevel θ p + orientedLevel θ q := by
+  simp [orientedLevel]; ring
+
+/-- `orientedLevel` of the origin is zero. -/
+@[simp]
+theorem orientedLevel_origin (θ : ℝ) :
+    orientedLevel θ ((0 : ℝ), (0 : ℝ)) = 0 := by
+  simp [orientedLevel]
+
+/-- `orientedLevel` of a scaled point scales linearly. -/
+theorem orientedLevel_smul (θ c : ℝ) (p : Point2) :
+    orientedLevel θ (c * p.1, c * p.2) = c * orientedLevel θ p := by
+  simp [orientedLevel]; ring
+
 theorem orientedLevel_sub_eq (θ : ℝ) (p q : Point2) :
     orientedLevel θ p - orientedLevel θ q =
       -(p.1 - q.1) * Real.sin θ + (p.2 - q.2) * Real.cos θ := by

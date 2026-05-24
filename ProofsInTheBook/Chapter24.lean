@@ -129,6 +129,36 @@ theorem rationalPartialSum_odd (N : ℕ) (x : ℝ) :
         one_div, one_div, one_div, one_div, inv_neg, inv_neg]
     ring
 
+/-- For `N = 0`, the rational partial sum is just `1/x`. -/
+@[simp]
+theorem rationalPartialSum_zero (x : ℝ) :
+    rationalPartialSum 0 x = 1 / x := by
+  unfold rationalPartialSum
+  simp
+
+/-- Recurrence: `rationalPartialSum (N+1)` adds the `N+1`-st symmetric pair. -/
+theorem rationalPartialSum_succ (N : ℕ) (x : ℝ) :
+    rationalPartialSum (N + 1) x =
+      rationalPartialSum N x +
+        (1 / (x + ((N + 1 : ℕ) : ℝ)) + 1 / (x - ((N + 1 : ℕ) : ℝ))) := by
+  unfold rationalPartialSum
+  rw [Finset.sum_range_succ]
+  ring
+
+/-- The rational partial sum at `x = 0` is undefined in the usual sense (since
+`1/0 = 0` by Lean convention, the algebraic answer is `0 + ∑ (1/n + 1/(-n))`
+which collapses to `0`).  This is the boundary case of `rationalPartialSum_odd`
+at the fixed point. -/
+theorem rationalPartialSum_zero_at_zero (N : ℕ) :
+    rationalPartialSum N 0 = 0 := by
+  unfold rationalPartialSum
+  simp only [zero_add, zero_sub, one_div, inv_zero]
+  apply Finset.sum_eq_zero
+  intro n _
+  have hn : ((n + 1 : ℕ) : ℝ) ≠ 0 := by exact_mod_cast Nat.succ_ne_zero n
+  rw [show (-((n + 1 : ℕ) : ℝ))⁻¹ = -((n + 1 : ℕ) : ℝ)⁻¹ from by rw [inv_neg]]
+  ring
+
 /--
 Helper: if h achieves max M at x₀ and h(x₀) = (1/2)(h(x₀/2) + h((x₀+1)/2)) with
 both ≤ M, then h(x₀/2) = M.

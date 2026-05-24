@@ -308,4 +308,69 @@ theorem sylvester_gallai_abstract_card_le {Point Line : Type*}
   obtain ⟨line, hline, h⟩ := sylvester_gallai_abstract points lines onLine dist hne gallai
   exact ⟨line, hline, by rcases h with h | h <;> omega⟩
 
+/-! ## Concrete Euclidean Sylvester–Gallai (Kelly's proof — step 1)
+
+The abstract development above reduces Sylvester–Gallai to the `gallai`
+extremal step, supplied as a hypothesis.  To discharge that hypothesis we
+work in the concrete plane `EuclideanSpace ℝ (Fin 2)` and follow L. M. Kelly's
+metric proof: among all (point, spanned-line) pairs with the point off the
+line, a pair of *minimum perpendicular distance* must determine an ordinary
+line.
+
+This section builds the metric foundation: the perpendicular distance to the
+line through two points, its basic properties, and existence of a minimizing
+pair over a finite non-collinear set. -/
+
+section EuclideanSylvesterGallai
+
+open Metric
+
+/-- A point in the Euclidean plane. -/
+abbrev EPoint := EuclideanSpace ℝ (Fin 2)
+
+/-- Perpendicular distance from `P` to the line through `a` and `b`
+(`= 0` when `a = b`, since the "line" degenerates to a point/`infDist` to it). -/
+noncomputable def perpDist (P a b : EPoint) : ℝ :=
+  Metric.infDist P (affineSpan ℝ {a, b} : Set EPoint)
+
+/-- Perpendicular distance is nonnegative. -/
+theorem perpDist_nonneg (P a b : EPoint) : 0 ≤ perpDist P a b :=
+  Metric.infDist_nonneg
+
+/-- A point on the line has zero perpendicular distance to it. -/
+theorem perpDist_eq_zero_of_mem {P a b : EPoint}
+    (h : P ∈ affineSpan ℝ {a, b}) : perpDist P a b = 0 :=
+  Metric.infDist_zero_of_mem h
+
+/-- The perpendicular distance to a line is bounded by the distance to any
+point on that line — in particular to each spanning point. -/
+theorem perpDist_le_dist_left (P a b : EPoint) : perpDist P a b ≤ dist P a :=
+  Metric.infDist_le_dist_of_mem (left_mem_affineSpan_pair ℝ a b)
+
+theorem perpDist_le_dist_right (P a b : EPoint) : perpDist P a b ≤ dist P b :=
+  Metric.infDist_le_dist_of_mem (right_mem_affineSpan_pair ℝ a b)
+
+/-- The line through two points is a closed set (finite-dimensional affine
+subspace), so a point with zero perpendicular distance actually lies on it. -/
+theorem mem_of_perpDist_eq_zero {P a b : EPoint}
+    (h : perpDist P a b = 0) : P ∈ affineSpan ℝ {a, b} := by
+  have hclosed : IsClosed (affineSpan ℝ {a, b} : Set EPoint) :=
+    (affineSpan ℝ {a, b}).closed_of_finiteDimensional
+  have hne : (affineSpan ℝ {a, b} : Set EPoint).Nonempty :=
+    ⟨a, left_mem_affineSpan_pair ℝ a b⟩
+  rw [← SetLike.mem_coe, hclosed.mem_iff_infDist_zero hne]
+  exact h
+
+/-- Perpendicular distance is zero **iff** the point lies on the line. -/
+theorem perpDist_eq_zero_iff {P a b : EPoint} :
+    perpDist P a b = 0 ↔ P ∈ affineSpan ℝ {a, b} :=
+  ⟨mem_of_perpDist_eq_zero, perpDist_eq_zero_of_mem⟩
+
+/-- A point off the line has strictly positive perpendicular distance. -/
+theorem perpDist_pos {P a b : EPoint}
+    (h : P ∉ affineSpan ℝ {a, b}) : 0 < perpDist P a b :=
+  lt_of_le_of_ne (perpDist_nonneg P a b) fun hz => h (mem_of_perpDist_eq_zero hz.symm)
+
+end EuclideanSylvesterGallai
+
 end ProofsInTheBook.Chapter10

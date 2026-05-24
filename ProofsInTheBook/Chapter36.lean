@@ -1,5 +1,31 @@
 import Mathlib
 
+/-!
+# Chapter 36: Art galleries
+
+This file proves the combinatorial core of the art gallery theorem: any
+abstract polygon triangulation has a 3-coloring, and the smallest color
+class gives at most `⌊n / 3⌋` guards meeting every triangle.
+
+Geometry gap audit (2026-05-24): Mathlib has `Geometry.Polygon.Basic`, which
+currently provides a vertex-indexed `Polygon`, edge sets, boundary, and
+conversion between 3-polygons and affine triangles.  It does not yet provide
+the infrastructure needed to state and prove the full geometric art gallery
+theorem:
+
+* a definition of a simple polygon as a planar polygonal Jordan curve,
+* the polygon interior and the visibility relation from a guard point,
+* diagonals lying inside the polygon,
+* an ear theorem or equivalent induction step, and
+* existence of a triangulation of every simple polygon, together with a proof
+  that guards hitting all triangles cover the polygon.
+
+Consequently `chapter36_artgallery_combinatorial` is the closed theorem in
+this file.  Extending it to "every simple polygon with `n` vertices is guarded
+by `⌊n / 3⌋` vertices" should wait for that geometry layer rather than adding
+an unproved triangulation postulate or a placeholder structure here.
+-/
+
 namespace ProofsInTheBook.Chapter36
 
 inductive GuardColor where
@@ -27,7 +53,7 @@ theorem other_color_neq_right (c1 c2 : GuardColor) : other_color c1 c2 ≠ c2 :=
 
 /-- When `c1 ≠ c2`, `other_color c1 c2` is the unique third color: it differs
 from both. -/
-theorem other_color_third {c1 c2 : GuardColor} (h : c1 ≠ c2) :
+theorem other_color_third {c1 c2 : GuardColor} (_h : c1 ≠ c2) :
     other_color c1 c2 ≠ c1 ∧ other_color c1 c2 ≠ c2 :=
   ⟨other_color_neq_left c1 c2, other_color_neq_right c1 c2⟩
 
@@ -35,7 +61,7 @@ theorem other_color_third {c1 c2 : GuardColor} (h : c1 ≠ c2) :
 on off-diagonal inputs).  -/
 theorem other_color_comm_of_ne {c1 c2 : GuardColor} (h : c1 ≠ c2) :
     other_color c1 c2 = other_color c2 c1 := by
-  cases c1 <;> cases c2 <;> first | rfl | (exfalso; exact h rfl)
+  cases c1 <;> cases c2 <;> simp [other_color] at h ⊢
 
 /-- The `GuardColor` Fintype has exactly three elements. -/
 @[simp]

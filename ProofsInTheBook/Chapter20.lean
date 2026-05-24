@@ -221,6 +221,59 @@ theorem valuationColor_one_one {K Γ : Type*} [Field K] [LinearOrderedCommGroupW
     valuationColor v (1, 1) = green := by
   simp [valuationColor, colorOfValues]
 
+/-- Twice the oriented area of a triangle with coordinates in a ring. -/
+def doubleArea {K : Type*} [Ring K] (a b c : K × K) : K :=
+  (b.1 - a.1) * (c.2 - a.2) - (c.1 - a.1) * (b.2 - a.2)
+
+/--
+A red-green-blue triangle has double area with valuation at least `1` in
+Mathlib's multiplicative convention.  This is the valuation side of Monsky's
+area contradiction; an odd equal subdivision will later give double area
+`2 / n`, whose 2-adic valuation is `< 1`.
+-/
+theorem valuation_doubleArea_red_green_blue
+    {K Γ : Type*} [Field K] [LinearOrderedCommGroupWithZero Γ]
+    (v : Valuation K Γ) {r g b : K × K}
+    (hr : valuationColor v r = red)
+    (hg : valuationColor v g = green)
+    (hb : valuationColor v b = blue) :
+    1 ≤ v (doubleArea r g b) := by
+  have hr_lt : v r.1 < 1 ∧ v r.2 < 1 := colorOfValues_eq_red_iff.mp hr
+  have hg_le : 1 ≤ v g.1 ∧ v g.2 ≤ v g.1 := colorOfValues_green_le hg
+  have hb_lt : v b.1 < v b.2 ∧ 1 ≤ v b.2 := colorOfValues_blue_lt_and_one_le hb
+  have hrgx : v (g.1 - r.1) = v g.1 := by
+    exact v.map_sub_eq_of_lt_left (lt_of_lt_of_le hr_lt.1 hg_le.1)
+  have hrby : v (b.2 - r.2) = v b.2 := by
+    exact v.map_sub_eq_of_lt_left (lt_of_lt_of_le hr_lt.2 hb_lt.2)
+  have hrgy_le : v (g.2 - r.2) ≤ v g.1 := by
+    exact v.map_sub_le hg_le.2 ((le_of_lt hr_lt.2).trans hg_le.1)
+  have hrbx_lt : v (b.1 - r.1) < v b.2 := by
+    exact lt_of_le_of_lt (v.map_sub b.1 r.1)
+      (max_lt hb_lt.1 (lt_of_lt_of_le hr_lt.1 hb_lt.2))
+  let t₁ : K := (g.1 - r.1) * (b.2 - r.2)
+  let t₂ : K := (b.1 - r.1) * (g.2 - r.2)
+  have ht₁ : v t₁ = v g.1 * v b.2 := by
+    simp [t₁, hrgx, hrby]
+  have ht₂_lt : v t₂ < v g.1 * v b.2 := by
+    have hle :
+        v (b.1 - r.1) * v (g.2 - r.2) ≤ v (b.1 - r.1) * v g.1 :=
+      mul_le_mul' le_rfl hrgy_le
+    have hlt : v (b.1 - r.1) * v g.1 < v b.2 * v g.1 := by
+      exact (strictMono_mul_right_of_pos (lt_of_lt_of_le zero_lt_one hg_le.1)) hrbx_lt
+    have hmul : v (b.1 - r.1) * v (g.2 - r.2) < v b.2 * v g.1 :=
+      lt_of_le_of_lt hle hlt
+    simpa [t₂, mul_comm, mul_left_comm, mul_assoc] using hmul
+  have hdet : v (doubleArea r g b) = v g.1 * v b.2 := by
+    change v (t₁ - t₂) = v g.1 * v b.2
+    rw [v.map_sub_eq_of_lt_left]
+    · exact ht₁
+    · rw [ht₁]
+      exact ht₂_lt
+  rw [hdet]
+  calc
+    (1 : Γ) = 1 * 1 := by rw [mul_one]
+    _ ≤ v g.1 * v b.2 := mul_le_mul' hg_le.1 hb_lt.2
+
 /-- A chosen valuation subring of `ℝ` extending the 2-adic valuation on `ℚ`. -/
 noncomputable def realTwoAdicSubring : ValuationSubring ℝ :=
   Classical.choose exists_real_twoAdic_extension

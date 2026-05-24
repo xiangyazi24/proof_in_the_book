@@ -473,6 +473,32 @@ theorem mem_finsetSymmDiffSet_iff {α : Type*} [Fintype α] [DecidableEq α]
     a ∈ finsetSymmDiffSet A B ↔ (a ∈ A ∧ a ∉ B) ∨ (a ∈ B ∧ a ∉ A) := by
   simp [finsetSymmDiffSet]
 
+theorem finsetSymmDiffSet_eq_sdiff_union_sdiff
+    {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) :
+    finsetSymmDiffSet A B = (A \ B) ∪ (B \ A) := by
+  ext a
+  simp [finsetSymmDiffSet]
+
+theorem finsetSymmDiffCard_eq_card_sdiff_add_card_sdiff
+    {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) :
+    finsetSymmDiffCard A B = (A \ B).card + (B \ A).card := by
+  rw [finsetSymmDiffCard, finsetSymmDiffSet_eq_sdiff_union_sdiff]
+  rw [Finset.card_union_of_disjoint]
+  rw [Finset.disjoint_left]
+  intro a ha hb
+  simp at ha hb
+  exact ha.2 hb.1
+
+theorem finsetSymmDiffCard_eq_two_mul_sub_inter_of_card_eq
+    {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) {r : ℕ}
+    (hA : A.card = r) (hB : B.card = r) :
+    finsetSymmDiffCard A B = 2 * (r - (A ∩ B).card) := by
+  rw [finsetSymmDiffCard_eq_card_sdiff_add_card_sdiff]
+  have hAB := Finset.card_sdiff_add_card_inter (s := B) (t := A)
+  have hBA := Finset.card_sdiff_add_card_inter (s := A) (t := B)
+  rw [Finset.inter_comm B A] at hAB
+  omega
+
 /-- The directed cut induced by a finite subset of the vertex set. -/
 def directedCutSet {α : Type*} [Fintype α] [DecidableEq α]
     (A : Finset α) : Finset (α × α) :=
@@ -510,6 +536,28 @@ theorem directedCutSet_symmDiffCard {α : Type*} [Fintype α] [DecidableEq α]
   rw [Finset.card_union_of_disjoint hdisj, Finset.card_product, Finset.card_product,
     Finset.card_compl]
   rw [finsetSymmDiffCard]
+  ring
+
+theorem directedCutSet_symmDiffCard_of_card_eq
+    {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) {r : ℕ}
+    (hA : A.card = r) (hB : B.card = r) :
+    finsetSymmDiffCard (directedCutSet A) (directedCutSet B) =
+      2 * (2 * (r - (A ∩ B).card)) *
+        (Fintype.card α - 2 * (r - (A ∩ B).card)) := by
+  rw [directedCutSet_symmDiffCard,
+    finsetSymmDiffCard_eq_two_mul_sub_inter_of_card_eq A B hA hB]
+
+theorem directedCutSet_symmDiffCard_of_kahnKalai_intersection
+    {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) {k : ℕ}
+    (hground : Fintype.card α = 4 * k)
+    (hA : A.card = 2 * k) (hB : B.card = 2 * k)
+    (hinter : (A ∩ B).card = k) :
+    finsetSymmDiffCard (directedCutSet A) (directedCutSet B) = 8 * k * k := by
+  rw [directedCutSet_symmDiffCard_of_card_eq A B hA hB, hground, hinter]
+  have hsub : 2 * k - k = k := by omega
+  rw [hsub]
+  have hsub' : 4 * k - 2 * k = 2 * k := by omega
+  rw [hsub']
   ring
 
 /-- The `0/1` incidence vector of a finite set, viewed as a Euclidean point. -/
@@ -580,6 +628,16 @@ theorem directedCutSet_realIncidencePoint_dist_sq
       ((2 * finsetSymmDiffCard A B *
           (Fintype.card α - finsetSymmDiffCard A B) : ℕ) : ℝ) := by
   rw [realIncidencePoint_dist_sq, directedCutSet_symmDiffCard]
+
+theorem directedCutSet_realIncidencePoint_dist_sq_of_kahnKalai_intersection
+    {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) {k : ℕ}
+    (hground : Fintype.card α = 4 * k)
+    (hA : A.card = 2 * k) (hB : B.card = 2 * k)
+    (hinter : (A ∩ B).card = k) :
+    dist (realIncidencePoint (directedCutSet A)) (realIncidencePoint (directedCutSet B)) ^ 2 =
+      ((8 * k * k : ℕ) : ℝ) := by
+  rw [realIncidencePoint_dist_sq,
+    directedCutSet_symmDiffCard_of_kahnKalai_intersection A B hground hA hB hinter]
 
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
 diameter can be covered by d+1 subsets of itself, each of strictly smaller

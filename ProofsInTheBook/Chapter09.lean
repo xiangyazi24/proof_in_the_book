@@ -952,6 +952,20 @@ theorem cube_not_regularTetrahedron_abstract_dehnQ {cubeEdgeLength tetraEdgeLeng
     (regularTetrahedron_six_edge_dehnQ_ne_zero htetraEdgeLength)
 
 /--
+The right-angled 12-edge cube Dehn sum differs from the concrete regular
+tetrahedron edge Dehn sum.
+-/
+theorem cube_not_regularTetrahedron_concrete_dehnQ {cubeEdgeLength : ℝ} :
+    dehnInvariantQ (Finset.univ : Finset (Fin 12)) (fun _ => cubeEdgeLength)
+        (fun _ => angleClassQ (Real.pi / 2)) ≠
+      dehnInvariantQ (Finset.univ : Finset RegularTetrahedronEdge)
+        regularTetrahedronEdgeLength
+        (fun _ => angleClassQ (Real.arccos (1 / 3))) := by
+  exact impossible_scissors_congruence_of_dehn_ne
+    (dehnInvariantQ_cube_eq_zero (Finset.univ : Finset (Fin 12)) (fun _ => cubeEdgeLength))
+    regularTetrahedron_dehnInvariantQ_edges_ne_zero
+
+/--
 Hilbert's third problem: a regular tetrahedron cannot be cut into finitely
 many polyhedral pieces and reassembled into a cube. The book's proof:
 1. The cube has Dehn invariant 0 (dihedral angles are π/2, which is 0 mod π)

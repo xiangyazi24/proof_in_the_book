@@ -31,18 +31,19 @@ semantic TODO items may be advanced in logged, build-checked increments.
 
 ## Semantic TODO
 
-- [ ] Chapter03: restore the general Sylvester theorem statement
-  `∀ n k, 2 * k ≤ n → 0 < k → ∃ p, k < p ∧ p.Prime ∧ p ∣ n.choose k`
-  and the almost-never-perfect-powers theorem.  The current file proves the
-  central binomial case, a reusable factorial-divisibility lemma for binomial
-  coefficients, the corresponding interval-prime binomial divisor lemma, and
-  a `descFactorial` bridge reducing the general binomial divisor conclusion
-  to proving that `n(n-1)...(n-k+1)` is not `(k+1)`-smooth.  It also now
-  proves that each factor `n - i` of the descending product inherits
-  `(k+1)`-smoothness from the whole product, and therefore every prime
-  divisor of such a factor is at most `k`; conversely, a large prime factor
-  in any descending factor immediately witnesses non-smoothness of the whole
-  descending product.
+- [~] Chapter03: **general Sylvester is UNCONDITIONAL.**
+  `sylvester_general (n k) (hn : 2*k ≤ n) (hk : 0 < k) :`
+  `∃ p, k < p ∧ p.Prime ∧ p ∣ n.choose k` is proved outright (via
+  `exists_large_prime_factor_choose_of_two_mul_le`), as is the central
+  case `chapter03_sylvester`.  The remaining gap is only the Erdős
+  "almost never a perfect power" theorem (`chapter03_erdos`), still
+  conditional on the l=2 contradiction (`h_l2_contra`) and l≥3 case
+  (`h_ge3`).  **2026-05-24:** the `hprod_l2` escape parameter was REMOVED
+  from both `chapter03_erdos` and `chapter03` — the divisibility
+  `∏ lPowerFreePart 2 (n-j) ∣ k!` is now derived internally from the
+  perfect-power equation via the already-proven
+  `prod_lPowerFreeParts_dvd_factorial_l2`.  Escape surface reduced from
+  3 hypotheses to 2.
 
   **Tier 2 progress (2026-05-23):** `chapter03_erdos` now has its first of
   three hypotheses fully discharged.  `prod_lPowerFreeParts_dvd_factorial_l2`
@@ -158,11 +159,22 @@ semantic TODO items may be advanced in logged, build-checked increments.
   impossible by parity), `MonskyCertificate.boundaryRGCount_pos`,
   `MonskyCertificate.totalRG_pos`.  The 2-adic ℝ extension via Hahn
   series / transcendence basis remains the major Tier 2 gap.
-- [ ] Chapter24: extend cotangent symmetries to the full Herglotz functional
-  equation / partial-fraction argument.  The current file now proves the
-  cotangent symmetries, abstracts the `HerglotzClass` structure with
-  `eval_half` and `cancel` lemmas, proves the duplication formula for
-  periodic functions, and defines the finite rational partial-sum function.
+- [x] Chapter24: the cotangent partial-fraction expansion is now
+  UNCONDITIONAL.  `cot_partial_fraction_limit_holds : CotPartialFractionLimit`
+  is proved (2026-05-24) by transferring Mathlib's complex Mittag-Leffler
+  expansion `Complex.cot_series_rep'` to `ℝ` via `Complex.hasSum_ofReal`:
+  `(↑x:ℂ) ∈ ℂ_ℤ` from `x ∉ ℤ`, `HasSum cotTerm (π·cot(πx)-1/x)` from
+  `summable_cotTerm`, descend to ℝ (each `cotTerm ↑x n = ↑(real term)`,
+  value via `Complex.ofReal_cot`), then `HasSum.tendsto_sum_nat` + prepend
+  the `1/x` head gives the `rationalPartialSum` limit.
+  `cot_pi_partial_fraction_identity` no longer takes the
+  `CotPartialFractionLimit` hypothesis — `π·cot(πx) = 1/x + Σ(1/(x+n)+1/(x-n))`
+  is an unconditional end-to-end theorem.  The `HerglotzClass`-based
+  `chapter24` uniqueness principle remains as a genuine abstract method
+  (its hypotheses are the Herglotz-class conditions themselves, not an
+  escape).
+  Earlier Tier 2 progress (cotangent symmetries, HerglotzClass, duplication,
+  continuity) retained below.
 
   **Tier 2 progress (2026-05-23):** The `π·cot(π·)` side is now complete
   as a HerglotzClass + duplication + continuity package:

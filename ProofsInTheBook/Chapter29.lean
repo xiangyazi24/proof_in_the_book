@@ -455,15 +455,27 @@ theorem count_eq_of_same_rifflePattern (a n : ℕ) {σ τ : Equiv.Perm (Fin n)}
   rw [count_determined_by_piles, count_determined_by_piles]
   exact rifflePatternCount_eq_of_same_pattern a n hpattern
 
+/-- The riffleSort fiber cardinal depends only on the adjacent descent interval
+pattern of the target permutation. -/
+theorem count_eq_of_same_riffleDescentIntervalPattern (a n : ℕ)
+    {σ τ : Equiv.Perm (Fin n)}
+    (hpattern :
+      ∀ i j : Fin n,
+        riffleDescentIntervalPattern n σ i j ↔ riffleDescentIntervalPattern n τ i j) :
+    (Finset.univ.filter (fun labels : RiffleLabels a n => riffleSort a n labels = σ)).card =
+      (Finset.univ.filter (fun labels : RiffleLabels a n => riffleSort a n labels = τ)).card := by
+  rw [count_determined_by_descents, count_determined_by_descents]
+  exact rifflePatternCount_eq_of_same_pattern a n hpattern
+
 /--
 Chapter 29 (Gilbert-Shannon-Reeds shuffle): the number of `(a,n)` riffle
 labelings that produce a target permutation under stable riffle sorting is
-determined by the target's riffle descent/inversion pattern.
+determined by the target's adjacent descent interval pattern.
 -/
 theorem chapter29 (a n : ℕ) :
     ∀ σ : Equiv.Perm (Fin n),
       (Finset.univ.filter (fun labels : RiffleLabels a n => riffleSort a n labels = σ)).card =
-        rifflePatternCount a n (rifflePattern n σ) :=
-  count_determined_by_piles a n
+        rifflePatternCount a n (riffleDescentIntervalPattern n σ) :=
+  count_determined_by_descents a n
 
 end ProofsInTheBook.Chapter29

@@ -20,16 +20,19 @@ trichromatic triangle.  It also packages Mathlib's local-subring/Zorn
 infrastructure into `exists_valuation_extension`, which gives an extension of
 any valuation on a field to any field extension; in particular
 `exists_real_twoAdic_extension` extends `Rat.padicValuation 2` from `ℚ` to `ℝ`.
+Using one chosen extension, the file defines Monsky's coloring on `ℝ²`, proves
+the unit-square corner colors, and proves the valuation contradiction for a
+trichromatic triangle of rational double area `2 / n` with `n` odd.
 
 Gap to the full book theorem: the missing work is the analytic/algebraic
 input that constructs the certificate from an equal-area triangulation of the
-unit square.  With the valuation-extension existence now available, the
-remaining work is to choose one such extension, define the induced Monsky
-coloring on all points of `ℝ²`, prove the color constraints on square corners
-and triangle vertices, connect a geometric finite triangulation model to the
-abstract Sperner parity count, and prove the area-valuation contradiction for
-an odd equal-area subdivision.  Mathlib has valuation and geometry components,
-but not this assembled polygonal Sperner/Monsky triangulation package.
+unit square.  With the valuation-extension and area-contradiction pieces now
+available, the remaining gap is geometric/combinatorial infrastructure:
+a finite real triangulation model for the square, boundary-edge refinement and
+double-counting lemmas producing `MonskyCertificate`, and an equal-area
+hypothesis expressed as oriented double area `± 2 / n`.  Mathlib has valuation
+and geometry components, but not this assembled polygonal Sperner/Monsky
+triangulation package.
 -/
 
 namespace ProofsInTheBook.Chapter20
@@ -346,6 +349,26 @@ theorem not_real_doubleArea_eq_two_div_odd_of_red_green_blue {n : ℕ} (hn : Odd
   rw [harea] at hge
   exact not_lt_of_ge hge (realTwoAdicValuation_rat_two_div_odd_lt_one hn)
 
+/-- Negating the odd-denominator rational double area does not change the 2-adic bound. -/
+theorem realTwoAdicValuation_neg_rat_two_div_odd_lt_one {n : ℕ} (hn : Odd n) :
+    realTwoAdicValuation (-(((2 : ℚ) / n : ℚ) : ℝ)) < 1 := by
+  simpa using realTwoAdicValuation_rat_two_div_odd_lt_one hn
+
+/-- The negative-orientation variant of the Monsky area contradiction. -/
+theorem not_real_doubleArea_eq_neg_two_div_odd_of_red_green_blue {n : ℕ} (hn : Odd n)
+    {r g b : ℝ × ℝ}
+    (hr : realTwoAdicColor r = red)
+    (hg : realTwoAdicColor g = green)
+    (hb : realTwoAdicColor b = blue)
+    (harea : doubleArea r g b = -(((2 : ℚ) / n : ℚ) : ℝ)) : False := by
+  have hge : 1 ≤ realTwoAdicValuation (doubleArea r g b) := by
+    exact valuation_doubleArea_red_green_blue realTwoAdicValuation
+      (by simpa [realTwoAdicColor] using hr)
+      (by simpa [realTwoAdicColor] using hg)
+      (by simpa [realTwoAdicColor] using hb)
+  rw [harea] at hge
+  exact not_lt_of_ge hge (realTwoAdicValuation_neg_rat_two_div_odd_lt_one hn)
+
 @[simp]
 theorem realTwoAdicColor_origin : realTwoAdicColor (0, 0) = red := by
   simp [realTwoAdicColor, valuationColor, colorOfValues, realTwoAdicValuation]
@@ -404,6 +427,52 @@ theorem trichromatic_of_eq_red_green_blue {a b c : MonskyColor}
   subst b
   subst c
   simp [TrichromaticTriangle]
+
+/--
+Any trichromatic triangle with odd rational double area contradicts the chosen
+real 2-adic Monsky coloring.  The case split only reorders the three vertices
+so that the area estimate sees them in red-green-blue order.
+-/
+theorem not_real_doubleArea_eq_two_div_odd_of_trichromatic {n : ℕ} (hn : Odd n)
+    {a b c : ℝ × ℝ}
+    (htri : TrichromaticTriangle (realTwoAdicColor a) (realTwoAdicColor b)
+      (realTwoAdicColor c))
+    (harea : doubleArea a b c = (((2 : ℚ) / n : ℚ) : ℝ)) : False := by
+  generalize hca : realTwoAdicColor a = ca at htri
+  generalize hcb : realTwoAdicColor b = cb at htri
+  generalize hcc : realTwoAdicColor c = cc at htri
+  cases ca <;> cases cb <;> cases cc <;> simp [TrichromaticTriangle] at htri
+  · exact not_real_doubleArea_eq_two_div_odd_of_red_green_blue hn hca hcb hcc harea
+  · have hperm : doubleArea a c b = -doubleArea a b c := by
+      unfold doubleArea
+      ring
+    have harea' : doubleArea a c b = -(((2 : ℚ) / n : ℚ) : ℝ) := by
+      rw [hperm, harea]
+    exact not_real_doubleArea_eq_neg_two_div_odd_of_red_green_blue hn hca hcc hcb harea'
+  · have hperm : doubleArea b a c = -doubleArea a b c := by
+      unfold doubleArea
+      ring
+    have harea' : doubleArea b a c = -(((2 : ℚ) / n : ℚ) : ℝ) := by
+      rw [hperm, harea]
+    exact not_real_doubleArea_eq_neg_two_div_odd_of_red_green_blue hn hcb hca hcc harea'
+  · have hperm : doubleArea c a b = doubleArea a b c := by
+      unfold doubleArea
+      ring
+    have harea' : doubleArea c a b = (((2 : ℚ) / n : ℚ) : ℝ) := by
+      rw [hperm, harea]
+    exact not_real_doubleArea_eq_two_div_odd_of_red_green_blue hn hcc hca hcb harea'
+  · have hperm : doubleArea b c a = doubleArea a b c := by
+      unfold doubleArea
+      ring
+    have harea' : doubleArea b c a = (((2 : ℚ) / n : ℚ) : ℝ) := by
+      rw [hperm, harea]
+    exact not_real_doubleArea_eq_two_div_odd_of_red_green_blue hn hcb hcc hca harea'
+  · have hperm : doubleArea c b a = -doubleArea a b c := by
+      unfold doubleArea
+      ring
+    have harea' : doubleArea c b a = -(((2 : ℚ) / n : ℚ) : ℝ) := by
+      rw [hperm, harea]
+    exact not_real_doubleArea_eq_neg_two_div_odd_of_red_green_blue hn hcc hcb hca harea'
 
 theorem not_trichromatic_of_first_two_same {a b c : MonskyColor}
     (hab : a = b) : ¬ TrichromaticTriangle a b c := by
@@ -568,8 +637,7 @@ theorem exists_trichromatic_of_odd_boundary
 
 /-- Certificate for Monsky's theorem: a 2-adic-style coloring of triangle
 vertices together with the double-counting witness that boundary red-green
-edge count is odd. This is the part that requires 2-adic extension to ℝ
-(via transcendence basis / Hahn series, not in Mathlib). -/
+edge count is odd. -/
 structure MonskyCertificate (n : ℕ) where
   /-- The triangle colorings induced by a (hypothetical) equal-area
       odd-triangulation of the unit square. -/
@@ -589,21 +657,14 @@ structure MonskyCertificate (n : ℕ) where
       square's specific 2-adic coloring at corners). -/
   hodd : Odd boundaryRGCount
 
-/- Tier 2 work (deferred): given a hypothetical equal-area triangulation of
-the unit square into an ODD number of triangles, construct a MonskyCertificate
-by:
-1. Using Hahn series / transcendence basis to extend the 2-adic valuation
-   v₂ : ℚ → ℤ to v₂' : ℝ → ℤ.
-2. Color each point (x, y) ∈ ℝ² by:
-   - red if v₂'(x) > 0 ∧ v₂'(y) > 0
-   - green if v₂'(x) ≤ 0 ∧ v₂'(x) ≤ v₂'(y)
-   - blue if v₂'(y) < 0 ∧ v₂'(y) < v₂'(x)
-3. Verify the unit square corners (0,0), (1,0), (0,1), (1,1) get 3 distinct
-   colors with odd boundary RG count.
-4. The "total RG = boundary RG mod 2" identity follows from double-counting
-   per Sperner.
-The 2-adic extension to ℝ is non-trivial in Lean — likely needs Mathlib's
-HahnSeries / WellOrderedExtension machinery. -/
+/-
+Remaining geometric interface: given a hypothetical equal-area triangulation
+of the unit square into an odd number of real triangles, one still needs to
+extract the finite list of triangle vertices, show their `realTwoAdicColor`
+values satisfy the boundary red-green parity assumptions packaged by
+`MonskyCertificate`, and express the equal-area hypothesis as oriented double
+area `± 2 / n` for each listed triangle.
+-/
 
 /-- Chapter 20 (Monsky's theorem, Tier 1 conditional):
 Given a Monsky 2-adic coloring certificate (which packages the 2-adic
@@ -618,6 +679,29 @@ theorem chapter20 {n : ℕ} (cert : MonskyCertificate n) :
         (cert.triangleColors i).2.1 (cert.triangleColors i).2.2 :=
   exists_trichromatic_of_odd_boundary n cert.triangleColors
     cert.boundaryRGCount cert.totalRG cert.htotal cert.hparity cert.hodd
+
+/--
+Once a `MonskyCertificate` is realized by actual real triangles whose colors
+come from the chosen Monsky coloring and whose oriented double areas are all
+`2 / n`, odd `n` is impossible.  The only unformalized book input left before
+this theorem is producing such a realization from a geometric triangulation of
+the square.
+-/
+theorem no_odd_equalArea_realization_of_monskyCertificate {n : ℕ} (hn : Odd n)
+    (triangles : Fin n → (ℝ × ℝ) × (ℝ × ℝ) × (ℝ × ℝ))
+    (cert : MonskyCertificate n)
+    (hcolors : ∀ i : Fin n, cert.triangleColors i =
+      (realTwoAdicColor (triangles i).1,
+       realTwoAdicColor (triangles i).2.1,
+       realTwoAdicColor (triangles i).2.2))
+    (harea : ∀ i : Fin n,
+      doubleArea (triangles i).1 (triangles i).2.1 (triangles i).2.2 =
+        (((2 : ℚ) / n : ℚ) : ℝ)) : False := by
+  obtain ⟨i, hi⟩ := chapter20 cert
+  have htri : TrichromaticTriangle (realTwoAdicColor (triangles i).1)
+      (realTwoAdicColor (triangles i).2.1) (realTwoAdicColor (triangles i).2.2) := by
+    simpa [hcolors i] using hi
+  exact not_real_doubleArea_eq_two_div_odd_of_trichromatic hn htri (harea i)
 
 /-- The empty triangulation cannot carry a Monsky certificate: with 0 triangles,
 the local RG sum is 0 (even), but the certificate demands an odd boundary RG

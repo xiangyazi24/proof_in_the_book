@@ -199,4 +199,27 @@ holds vacuously there). -/
 theorem KahnKalaiCertificate.isEmpty_zero : IsEmpty (KahnKalaiCertificate 0) :=
   borsuk_no_certificate_of_conjecture borsukConjecture_zero
 
+/-- A Kahn-Kalai certificate's set contains at least one point.  This is a weaker
+form of `nonempty`, packaged for direct membership-style use. -/
+theorem KahnKalaiCertificate.exists_mem {d : ℕ} (cert : KahnKalaiCertificate d) :
+    ∃ x, x ∈ cert.S :=
+  cert.nonempty
+
+/-- Borsuk's conjecture in dimension `d` is closed under the contrapositive: it
+fails iff a Kahn-Kalai certificate exists. -/
+theorem not_borsukConjecture_iff_exists_certificate (d : ℕ) :
+    ¬ BorsukConjecture d ↔ Nonempty (KahnKalaiCertificate d) := by
+  constructor
+  · intro hfail
+    -- ¬ BorsukConjecture d unfolds to a ∃-style negated statement; classical extraction.
+    classical
+    by_contra hno
+    rw [not_nonempty_iff] at hno
+    apply hfail
+    intro S hbd hpos
+    by_contra hno_part
+    exact hno.elim ⟨S, hbd, hpos, hno_part⟩
+  · rintro ⟨cert⟩ hyp
+    exact chapter16 cert hyp
+
 end ProofsInTheBook.Chapter16

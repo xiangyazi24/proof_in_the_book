@@ -335,6 +335,31 @@ theorem count_determined_by_piles (a n : ℕ) (σ : Equiv.Perm (Fin n)) :
       exact Fintype.card_subtype fun seq : RiffleLabels a n =>
         patternCompatible a n (rifflePattern n σ) seq
 
+/-- The pattern count depends only on the pattern predicate, extensionally. -/
+theorem rifflePatternCount_eq_of_same_pattern (a n : ℕ)
+    {pattern pattern' : Fin n → Fin n → Prop}
+    (hpattern : ∀ i j : Fin n, pattern i j ↔ pattern' i j) :
+    rifflePatternCount a n pattern = rifflePatternCount a n pattern' := by
+  classical
+  rw [rifflePatternCount, rifflePatternCount]
+  congr 1
+  ext seq
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+  constructor
+  · intro hseq
+    exact ⟨hseq.1, fun i j hij => hseq.2 i j ((hpattern i j).mpr hij)⟩
+  · intro hseq
+    exact ⟨hseq.1, fun i j hij => hseq.2 i j ((hpattern i j).mp hij)⟩
+
+/-- Hence the riffleSort fiber cardinal depends only on the target
+permutation's riffle pattern. -/
+theorem count_eq_of_same_rifflePattern (a n : ℕ) {σ τ : Equiv.Perm (Fin n)}
+    (hpattern : ∀ i j : Fin n, rifflePattern n σ i j ↔ rifflePattern n τ i j) :
+    (Finset.univ.filter (fun labels : RiffleLabels a n => riffleSort a n labels = σ)).card =
+      (Finset.univ.filter (fun labels : RiffleLabels a n => riffleSort a n labels = τ)).card := by
+  rw [count_determined_by_piles, count_determined_by_piles]
+  exact rifflePatternCount_eq_of_same_pattern a n hpattern
+
 /-- Certificate for the Gilbert-Shannon-Reeds (GSR) shuffle.
 The combinatorial heart of the GSR shuffle is that the number of riffle labelings
 that map to a given permutation depends only on the pile sizes (or equivalently,

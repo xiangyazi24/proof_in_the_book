@@ -62,6 +62,15 @@ closable by lemma-adding):**
   slopes); the `n-1 ≤ |directions|` bound needs the rotating-calipers sweep
   certificate (≈8000 LOC of scaffolding present; sweep construction remains).
 
+**Whole-repo axiom audit (point 10), all 40 chapters verified 2026-05-24:**
+`#print axioms chapterNN` on every main theorem reports either
+`[propext, Classical.choice, Quot.sound]` or "does not depend on any axioms"
+(Ch09, Ch13 — pure projections from their hypotheses).  **No chapter has a
+custom axiom or sorry dependency.**  The category-B/C chapters are clean
+*modulo their explicit certificate hypotheses* (honestly disclosed below),
+which is the maximal audit standard achievable for them without the
+multi-week infrastructure builds listed in B.
+
 **C. Conditional — self-contained combinatorics (no external infra; closable
 with sustained effort, candidates for genuine closure):**
 - Ch03 Erdős perfect-power: `h_l2_contra` (l=2) + `h_ge3` (l≥3).  Injectivity

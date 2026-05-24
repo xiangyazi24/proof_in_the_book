@@ -793,13 +793,28 @@ structure MonskyCertificate (n : ℕ) where
       square's specific 2-adic coloring at corners). -/
   hodd : Odd boundaryRGCount
 
+/--
+Construct a `MonskyCertificate` from finite triangle-edge parity.  The input
+`hodd` is now the concrete combinatorial boundary statement: the red-green
+unordered edges with odd triangle-edge multiplicity are odd in number.
+-/
+noncomputable def edgeParityMonskyCertificate {α : Type*} [Fintype α] [DecidableEq α]
+    {n : ℕ} (triangles : Fin n → α × α × α) (color : α → MonskyColor)
+    (hodd : Odd (oddEdgeRedGreenCount triangles color)) : MonskyCertificate n where
+  triangleColors := fun i => triangleColorsOfVertices color (triangles i)
+  boundaryRGCount := oddEdgeRedGreenCount triangles color
+  totalRG := ∑ i : Fin n, triangleLocalRGCount (triangleColorsOfVertices color (triangles i))
+  htotal := by
+    simp [triangleLocalRGCount]
+  hparity := sum_triangleLocalRGCount_mod_two_eq_oddEdgeRedGreenCount triangles color
+  hodd := hodd
+
 /-
 Remaining geometric interface: given a hypothetical equal-area triangulation
 of the unit square into an odd number of real triangles, one still needs to
 extract the finite list of triangle vertices, show their `realTwoAdicColor`
-values satisfy the boundary red-green parity assumptions packaged by
-`MonskyCertificate`, and express the equal-area hypothesis as oriented double
-area `± 2 / n` for each listed triangle.
+values make `oddEdgeRedGreenCount` odd, and express the equal-area hypothesis
+as oriented double area `± 2 / n` for each listed triangle.
 -/
 
 /-- Chapter 20 (Monsky's theorem, Tier 1 conditional):
@@ -815,6 +830,19 @@ theorem chapter20 {n : ℕ} (cert : MonskyCertificate n) :
         (cert.triangleColors i).2.1 (cert.triangleColors i).2.2 :=
   exists_trichromatic_of_odd_boundary n cert.triangleColors
     cert.boundaryRGCount cert.totalRG cert.htotal cert.hparity cert.hodd
+
+/--
+Sperner conclusion from a finite edge-parity boundary count, without manually
+supplying the `MonskyCertificate` parity fields.
+-/
+theorem chapter20_from_edge_parity {α : Type*} [Fintype α] [DecidableEq α]
+    {n : ℕ} (triangles : Fin n → α × α × α) (color : α → MonskyColor)
+    (hodd : Odd (oddEdgeRedGreenCount triangles color)) :
+    ∃ i : Fin n,
+      TrichromaticTriangle (triangleColorsOfVertices color (triangles i)).1
+        (triangleColorsOfVertices color (triangles i)).2.1
+        (triangleColorsOfVertices color (triangles i)).2.2 := by
+  simpa using chapter20 (edgeParityMonskyCertificate triangles color hodd)
 
 /--
 Once a `MonskyCertificate` is realized by actual real triangles whose colors
@@ -838,6 +866,29 @@ theorem no_odd_equalArea_realization_of_monskyCertificate {n : ℕ} (hn : Odd n)
       (realTwoAdicColor (triangles i).2.1) (realTwoAdicColor (triangles i).2.2) := by
     simpa [hcolors i] using hi
   exact not_real_doubleArea_eq_two_div_odd_of_trichromatic hn htri (harea i)
+
+/--
+Finite-vertex version of the current Monsky contradiction.  This is the target
+shape for the remaining geometric triangulation extraction: vertices are a
+finite type, triangles name three vertices, the boundary parity is computed
+from odd edge multiplicities, and the real point map supplies the areas.
+-/
+theorem no_odd_equalArea_realization_of_edgeParity
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ} (hn : Odd n)
+    (vertices : α → ℝ × ℝ) (triangles : Fin n → α × α × α)
+    (hboundary : Odd (oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices)))
+    (harea : ∀ i : Fin n,
+      doubleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+          (vertices (triangles i).2.2) =
+        (((2 : ℚ) / n : ℚ) : ℝ)) : False := by
+  let cert : MonskyCertificate n :=
+    edgeParityMonskyCertificate triangles (realTwoAdicColor ∘ vertices) hboundary
+  exact no_odd_equalArea_realization_of_monskyCertificate hn
+    (fun i => (vertices (triangles i).1, vertices (triangles i).2.1,
+      vertices (triangles i).2.2))
+    cert
+    (by intro i; rfl)
+    harea
 
 /-- The empty triangulation cannot carry a Monsky certificate: with 0 triangles,
 the local RG sum is 0 (even), but the certificate demands an odd boundary RG

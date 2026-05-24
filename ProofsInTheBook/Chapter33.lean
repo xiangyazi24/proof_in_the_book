@@ -14,22 +14,17 @@ The book's proof uses Hall's marriage theorem applied row by row:
 at each step, the remaining entries in each row form a system of
 distinct representatives.
 
-Point-17 status: the formalized result below is the Hall row-completion
-engine, not yet the full Evans/Smetaniuk completion theorem.  A direct
-iteration of `latin_square_completion_step_from_partial` is not valid:
-after one whole row is added, the current partial square has more than
-`n - 1` filled cells, and the witness/count hypotheses used in the Hall
-double-counting proof no longer describe the enlarged state.
-
-To turn this engine into the full theorem, the missing infrastructure is a
-stateful row-extension lemma.  Its state must contain the originally filled
-cells outside the completed rows, the already completed Latin rectangle, and
-the row currently being extended.  The lemma must allow fixed entries in that
-row, prove Hall for only the still-empty columns, and preserve the invariant
-that the number of original filled cells in unfinished rows is at most the
-number of unfinished rows minus one.  Once that strengthened lemma is in
-place, the remaining induction chooses an empty unfinished row when the bound
-is slack and a row containing an original entry when the bound is tight.
+Point-17 status: this file now contains two genuine Hall engines: the
+row-completion step for a sparse partial square and the standard extension of
+a Latin rectangle by one row.  It is still not the full Evans/Smetaniuk
+completion theorem.  The remaining missing infrastructure is Smetaniuk's
+stateful induction: conjugating a sparse partial square so the active entries
+lie below the diagonal, applying the order-`n - 1` induction hypothesis, and
+performing the final column-switching process.  A direct iteration of
+`latin_square_completion_step_from_partial` is not valid after one whole row
+is added, because the current partial square then has more than `n - 1`
+filled cells and the double-counting hypotheses below no longer describe the
+enlarged state.
 -/
 
 namespace ProofsInTheBook.Chapter33
@@ -47,6 +42,201 @@ theorem hall_system_of_distinct_representatives {ι α : Type*} [DecidableEq α]
     (hHall : ∀ rows : Finset ι, rows.card ≤ (rows.biUnion available).card) :
     ∃ choice : ι → α, Function.Injective choice ∧ ∀ row, choice row ∈ available row :=
   (Finset.all_card_le_biUnion_card_iff_exists_injective available).mp hHall
+
+/--
+A regular finite family satisfies Hall's condition.
+
+If every set in the family has size `d`, and each element belongs to at most
+`d` sets, then every subfamily has union at least as large as its index set.
+This is the double-counting form used for Latin rectangle extension.
+-/
+lemma hall_condition_of_regular_family {ι α : Type*} [Fintype ι] [DecidableEq ι]
+    [DecidableEq α] (A : ι → Finset α) (d : ℕ)
+    (hcard : ∀ i, (A i).card = d)
+    (hfiber : ∀ a, ((Finset.univ : Finset ι).filter fun i => a ∈ A i).card ≤ d)
+    (hd : 0 < d) :
+    ∀ S : Finset ι, S.card ≤ (S.biUnion A).card := by
+  intro S
+  let T := S.biUnion A
+  let I : Finset (ι × α) := (S ×ˢ T).filter fun p => p.2 ∈ A p.1
+  have hI_le : I.card ≤ T.card * d := by
+    have hmap : (I : Set (ι × α)).MapsTo Prod.snd T := by
+      intro p hp
+      have hp' : p ∈ I := hp
+      have hmem : p ∈ S ×ˢ T ∧ p.2 ∈ A p.1 := by
+        simpa [I] using (Finset.mem_filter.mp hp')
+      exact (Finset.mem_product.mp hmem.1).2
+    rw [Finset.card_eq_sum_card_fiberwise hmap]
+    calc
+      (∑ b ∈ T, #{p ∈ I | Prod.snd p = b}) ≤ ∑ b ∈ T, d := by
+        apply Finset.sum_le_sum
+        intro b _hb
+        have hle_to_global : #{p ∈ I | Prod.snd p = b} ≤
+            ((Finset.univ : Finset ι).filter fun i => b ∈ A i).card := by
+          refine Finset.card_le_card_of_injOn Prod.fst ?_ ?_
+          · intro p hp
+            have hpI : p ∈ I := (Finset.mem_filter.mp hp).1
+            have hpb : Prod.snd p = b := (Finset.mem_filter.mp hp).2
+            have hmem : p ∈ S ×ˢ T ∧ p.2 ∈ A p.1 := by
+              simpa [I] using (Finset.mem_filter.mp hpI)
+            have hbA : b ∈ A p.1 := by
+              simpa [Prod.snd, hpb.symm] using hmem.2
+            simp [hbA]
+          · intro p hp q hq hpq
+            have hpb : Prod.snd p = b := (Finset.mem_filter.mp hp).2
+            have hqb : Prod.snd q = b := (Finset.mem_filter.mp hq).2
+            exact Prod.ext hpq (by simp [hpb, hqb])
+        exact le_trans hle_to_global (hfiber b)
+      _ = T.card * d := by simp [Nat.mul_comm]
+  have hI_eq : I.card = S.card * d := by
+    have hmap : (I : Set (ι × α)).MapsTo Prod.fst S := by
+      intro p hp
+      have hp' : p ∈ I := hp
+      have hmem : p ∈ S ×ˢ T ∧ p.2 ∈ A p.1 := by
+        simpa [I] using (Finset.mem_filter.mp hp')
+      exact (Finset.mem_product.mp hmem.1).1
+    rw [Finset.card_eq_sum_card_fiberwise hmap]
+    calc
+      (∑ i ∈ S, #{p ∈ I | Prod.fst p = i}) = ∑ i ∈ S, d := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        have hfib_eq : #{p ∈ I | Prod.fst p = i} = (A i).card := by
+          have hle1 : #{p ∈ I | Prod.fst p = i} ≤ (A i).card := by
+            refine Finset.card_le_card_of_injOn Prod.snd ?_ ?_
+            · intro p hp
+              have hpI : p ∈ I := (Finset.mem_filter.mp hp).1
+              have hmem : p ∈ S ×ˢ T ∧ p.2 ∈ A p.1 := by
+                simpa [I] using (Finset.mem_filter.mp hpI)
+              have hpi : Prod.fst p = i := (Finset.mem_filter.mp hp).2
+              simpa [Prod.fst, hpi] using hmem.2
+            · intro p hp q hq hpq
+              have hpi : Prod.fst p = i := (Finset.mem_filter.mp hp).2
+              have hqi : Prod.fst q = i := (Finset.mem_filter.mp hq).2
+              exact Prod.ext (by simp [hpi, hqi]) hpq
+          have hle2 : (A i).card ≤ #{p ∈ I | Prod.fst p = i} := by
+            refine Finset.card_le_card_of_injOn (fun a => (i, a)) ?_ ?_
+            · intro a ha
+              have haT : a ∈ T := Finset.mem_biUnion.mpr ⟨i, hi, ha⟩
+              have hpI : (i, a) ∈ I := by
+                exact Finset.mem_filter.mpr ⟨Finset.mem_product.mpr ⟨hi, haT⟩, ha⟩
+              exact Finset.mem_filter.mpr ⟨hpI, rfl⟩
+            · intro a _ b _ hab
+              exact Prod.mk.inj hab |>.2
+          exact le_antisymm hle1 hle2
+        simpa [hcard i] using hfib_eq
+      _ = S.card * d := by simp [Nat.mul_comm]
+  have hmul : S.card * d ≤ T.card * d := by simpa [hI_eq] using hI_le
+  exact Nat.le_of_mul_le_mul_right hmul hd
+
+/-!
+### Latin rectangles
+
+The first Hall application in the book says that every `r × n` Latin
+rectangle with `r < n` can be extended by one more row.
+-/
+
+/-- Symbols missing from column `j` of a Latin rectangle. -/
+def rectangleAvailable {r n : ℕ} (R : Fin r → Fin n → Fin n) (j : Fin n) :
+    Finset (Fin n) :=
+  Finset.univ.filter fun a => ∀ i : Fin r, R i j ≠ a
+
+lemma rectangleAvailable_card {r n : ℕ} {R : Fin r → Fin n → Fin n}
+    (hcol : ∀ j : Fin n, Function.Injective fun i : Fin r => R i j) (j : Fin n) :
+    (rectangleAvailable R j).card = n - r := by
+  classical
+  let used : Finset (Fin n) := (Finset.univ : Finset (Fin r)).image fun i => R i j
+  have hused_card : used.card = r := by
+    dsimp [used]
+    rw [Finset.card_image_of_injective]
+    · simp
+    · exact hcol j
+  have hAvail : rectangleAvailable R j = (Finset.univ : Finset (Fin n)) \ used := by
+    ext a
+    simp [rectangleAvailable, used]
+  rw [hAvail]
+  have hsub : used ⊆ (Finset.univ : Finset (Fin n)) := by
+    intro a _ha
+    simp
+  rw [Finset.card_sdiff_of_subset hsub, Finset.card_univ, Fintype.card_fin, hused_card]
+
+/-- The column in which row `i` contains symbol `a`. -/
+noncomputable def symbolColumn {r n : ℕ} {R : Fin r → Fin n → Fin n}
+    (hrow : ∀ i : Fin r, Function.Injective (R i)) (a : Fin n) (i : Fin r) : Fin n :=
+  Classical.choose ((hrow i).surjective_of_finite (Equiv.refl (Fin n)) a)
+
+lemma symbolColumn_spec {r n : ℕ} {R : Fin r → Fin n → Fin n}
+    (hrow : ∀ i : Fin r, Function.Injective (R i)) (a : Fin n) (i : Fin r) :
+    R i (symbolColumn hrow a i) = a :=
+  Classical.choose_spec ((hrow i).surjective_of_finite (Equiv.refl (Fin n)) a)
+
+lemma symbolColumn_injective {r n : ℕ} {R : Fin r → Fin n → Fin n}
+    (hrow : ∀ i : Fin r, Function.Injective (R i))
+    (hcol : ∀ j : Fin n, Function.Injective fun i : Fin r => R i j) (a : Fin n) :
+    Function.Injective (symbolColumn hrow a) := by
+  intro i k hik
+  have hi : R i (symbolColumn hrow a i) = a := symbolColumn_spec hrow a i
+  have hk : R k (symbolColumn hrow a k) = a := symbolColumn_spec hrow a k
+  have hsame : R i (symbolColumn hrow a i) = R k (symbolColumn hrow a i) := by
+    rw [hi]
+    rw [hik]
+    exact hk.symm
+  exact hcol (symbolColumn hrow a i) hsame
+
+lemma rectangleAvailable_fiber_card {r n : ℕ} {R : Fin r → Fin n → Fin n}
+    (hrow : ∀ i : Fin r, Function.Injective (R i))
+    (hcol : ∀ j : Fin n, Function.Injective fun i : Fin r => R i j) (a : Fin n) :
+    ((Finset.univ : Finset (Fin n)).filter fun j => a ∈ rectangleAvailable R j).card =
+      n - r := by
+  classical
+  let usedCols : Finset (Fin n) :=
+    (Finset.univ : Finset (Fin r)).image (symbolColumn hrow a)
+  have hused_card : usedCols.card = r := by
+    dsimp [usedCols]
+    rw [Finset.card_image_of_injective]
+    · simp
+    · exact symbolColumn_injective hrow hcol a
+  have hfilter :
+      ((Finset.univ : Finset (Fin n)).filter fun j => a ∈ rectangleAvailable R j) =
+        (Finset.univ : Finset (Fin n)) \ usedCols := by
+    ext j
+    simp [rectangleAvailable, usedCols]
+    constructor
+    · intro h i hji
+      have hspec := symbolColumn_spec hrow a i
+      exact h i (by rw [← hji]; exact hspec)
+    · intro h i hij
+      have hspec := symbolColumn_spec hrow a i
+      have hji : j = symbolColumn hrow a i := hrow i (by rw [hij, hspec])
+      exact h i hji.symm
+  rw [hfilter]
+  have hsub : usedCols ⊆ (Finset.univ : Finset (Fin n)) := by
+    intro j _hj
+    simp
+  rw [Finset.card_sdiff_of_subset hsub, Finset.card_univ, Fintype.card_fin, hused_card]
+
+/--
+Book Lemma 1: an `r × n` Latin rectangle with `r < n` can be extended by one
+row.  The returned row is a permutation of the symbols and avoids every symbol
+already present in its column.
+-/
+theorem latin_rectangle_extend_one {r n : ℕ} (R : Fin r → Fin n → Fin n)
+    (hrow : ∀ i : Fin r, Function.Injective (R i))
+    (hcol : ∀ j : Fin n, Function.Injective fun i : Fin r => R i j)
+    (hrn : r < n) :
+    ∃ row : Fin n → Fin n, Function.Injective row ∧ ∀ i j, row j ≠ R i j := by
+  classical
+  have hd : 0 < n - r := Nat.sub_pos_of_lt hrn
+  have hHall : ∀ S : Finset (Fin n), S.card ≤ (S.biUnion (rectangleAvailable R)).card :=
+    hall_condition_of_regular_family (A := rectangleAvailable R) (d := n - r)
+      (fun j => rectangleAvailable_card hcol j)
+      (fun a => le_of_eq (rectangleAvailable_fiber_card hrow hcol a)) hd
+  obtain ⟨row, hrow_inj, hrow_mem⟩ :=
+    hall_system_of_distinct_representatives (rectangleAvailable R) hHall
+  refine ⟨row, hrow_inj, ?_⟩
+  intro i j
+  have h := hrow_mem j
+  simp [rectangleAvailable] at h
+  exact fun hEq => h i hEq.symm
 
 /-!
 ### Proving Hall's condition from the partial Latin square structure

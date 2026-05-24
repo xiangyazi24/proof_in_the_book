@@ -357,6 +357,61 @@ theorem card_pos_of_nonzero {n : ℕ} {X : SignedSubset n} (hX : X.Nonzero) :
   · simp [card, Finset.card_pos.2 hpos]
   · simp [card, Finset.card_pos.2 hneg]
 
+/-- The unsigned support of a sign vector. -/
+def support {n : ℕ} (X : SignedSubset n) : Finset (Fin n) :=
+  X.pos ∪ X.neg
+
+theorem support_antipode {n : ℕ} (X : SignedSubset n) :
+    X.antipode.support = X.support := by
+  ext i
+  simp [support, antipode, or_comm]
+
+theorem support_nonempty_iff_nonzero {n : ℕ} (X : SignedSubset n) :
+    X.support.Nonempty ↔ X.Nonzero := by
+  simp [support, Nonzero]
+
+/-- The largest coordinate in the support of a nonzero sign vector. -/
+noncomputable def maxSupport {n : ℕ} (X : SignedSubset n) (hX : X.Nonzero) : Fin n :=
+  X.support.max' ((support_nonempty_iff_nonzero X).mpr hX)
+
+theorem maxSupport_mem_support {n : ℕ} (X : SignedSubset n) (hX : X.Nonzero) :
+    X.maxSupport hX ∈ X.support := by
+  exact Finset.max'_mem _ _
+
+theorem maxSupport_antipode {n : ℕ} (X : SignedSubset n) (hX : X.Nonzero) :
+    X.antipode.maxSupport ((antipode_nonzero X).mpr hX) = X.maxSupport hX := by
+  apply le_antisymm
+  · apply Finset.max'_le
+    intro y hy
+    have hy' : y ∈ X.support := by
+      simpa [support_antipode] using hy
+    exact Finset.le_max' _ y hy'
+  · apply Finset.max'_le
+    intro y hy
+    have hy' : y ∈ X.antipode.support := by
+      simpa [support_antipode] using hy
+    exact Finset.le_max' _ y hy'
+
+/-- The sign of the largest supported coordinate, used in Matoušek's small-support labels. -/
+noncomputable def maxSupportPositive {n : ℕ} (X : SignedSubset n) (hX : X.Nonzero) : Bool :=
+  decide (X.maxSupport hX ∈ X.pos)
+
+theorem maxSupportPositive_antipode {n : ℕ} (X : SignedSubset n) (hX : X.Nonzero) :
+    X.antipode.maxSupportPositive ((antipode_nonzero X).mpr hX) =
+      !(X.maxSupportPositive hX) := by
+  unfold maxSupportPositive
+  rw [maxSupport_antipode]
+  change decide (X.maxSupport hX ∈ X.neg) = !decide (X.maxSupport hX ∈ X.pos)
+  by_cases hpos : X.maxSupport hX ∈ X.pos
+  · have hnotneg : X.maxSupport hX ∉ X.neg := by
+      intro hneg
+      exact (Finset.disjoint_left.mp X.disjoint) hpos hneg
+    simp [hpos, hnotneg]
+  · have hneg : X.maxSupport hX ∈ X.neg := by
+      have hmem := X.maxSupport_mem_support hX
+      exact (Finset.mem_union.mp hmem).resolve_left hpos
+    simp [hpos, hneg]
+
 /-- The face order on the cross-polytope boundary, by support inclusion. -/
 def Le {n : ℕ} (X Y : SignedSubset n) : Prop :=
   X.pos ⊆ Y.pos ∧ X.neg ⊆ Y.neg

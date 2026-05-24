@@ -1102,6 +1102,11 @@ extension construction + the double-counting parity result + the odd-boundary
 witness), there exists a trichromatic triangle — corresponding to the
 contradiction that closes the proof (such a triangle has area with 2-adic
 valuation incompatible with 1/(odd integer)).
+
+TODO (frontier — construct `MonskyCertificate` from an actual equal-area
+odd-triangulation of the unit square (geometric triangulation model giving
+boundary RG-chain = 4 edges + oriented double-area `±2/n`); needs triangulation
+infra not in Mathlib.)
 -/
 theorem chapter20 {n : ℕ} (cert : MonskyCertificate n) :
     ∃ i : Fin n,

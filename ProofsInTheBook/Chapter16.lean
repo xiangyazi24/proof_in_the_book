@@ -456,6 +456,76 @@ theorem exists_monochromatic_pair_intersection_notMem
     exists_pair_intersection_notMem_of_card_bound_lt restrictedSets L hself_fiber hc
   exact ⟨i.1, j.1, fun h => hij (Subtype.ext h), i.2.trans j.2.symm, hnot⟩
 
+/--
+The Hamming distance between two finite subsets of a finite ground type,
+counted as the number of coordinates where their membership indicators differ.
+-/
+def finsetSymmDiffCard {α : Type*} [Fintype α] [DecidableEq α]
+    (A B : Finset α) : ℕ :=
+  (Finset.univ.filter fun a => (a ∈ A ∧ a ∉ B) ∨ (a ∈ B ∧ a ∉ A)).card
+
+/-- The `0/1` incidence vector of a finite set, viewed as a Euclidean point. -/
+noncomputable def realIncidencePoint {α : Type*} [DecidableEq α]
+    (A : Finset α) : EuclideanSpace ℝ α :=
+  WithLp.toLp 2 fun a => if a ∈ A then (1 : ℝ) else 0
+
+@[simp]
+theorem realIncidencePoint_apply {α : Type*} [DecidableEq α]
+    (A : Finset α) (a : α) :
+    realIncidencePoint A a = if a ∈ A then (1 : ℝ) else 0 :=
+  rfl
+
+theorem sum_sq_indicator_sub_eq_finsetSymmDiffCard
+    {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) :
+    (∑ a : α, ((if a ∈ A then (1 : ℝ) else 0) -
+        (if a ∈ B then (1 : ℝ) else 0)) ^ 2) =
+      (finsetSymmDiffCard A B : ℝ) := by
+  rw [finsetSymmDiffCard]
+  rw [← Finset.sum_boole (R := ℝ) (s := Finset.univ)
+    (p := fun a => (a ∈ A ∧ a ∉ B) ∨ (a ∈ B ∧ a ∉ A))]
+  apply Finset.sum_congr rfl
+  intro a _
+  by_cases hA : a ∈ A <;> by_cases hB : a ∈ B <;> simp [hA, hB]
+
+/--
+The squared Euclidean distance between incidence vectors is the Hamming
+distance of the underlying sets.
+-/
+theorem realIncidencePoint_dist_sq {α : Type*} [Fintype α] [DecidableEq α]
+    (A B : Finset α) :
+    dist (realIncidencePoint A) (realIncidencePoint B) ^ 2 =
+      (finsetSymmDiffCard A B : ℝ) := by
+  rw [dist_eq_norm, ← real_inner_self_eq_norm_sq]
+  rw [PiLp.inner_apply]
+  trans ∑ a : α, ((if a ∈ A then (1 : ℝ) else 0) -
+      (if a ∈ B then (1 : ℝ) else 0)) ^ 2
+  · apply Finset.sum_congr rfl
+    intro a _
+    simp [pow_two]
+  · exact sum_sq_indicator_sub_eq_finsetSymmDiffCard A B
+
+theorem realIncidencePoint_dist_eq_sqrt {α : Type*} [Fintype α] [DecidableEq α]
+    (A B : Finset α) :
+    dist (realIncidencePoint A) (realIncidencePoint B) =
+      Real.sqrt (finsetSymmDiffCard A B : ℝ) := by
+  have hsq :
+      dist (realIncidencePoint A) (realIncidencePoint B) ^ 2 =
+        (Real.sqrt (finsetSymmDiffCard A B : ℝ)) ^ 2 := by
+    rw [realIncidencePoint_dist_sq, Real.sq_sqrt]
+    exact Nat.cast_nonneg _
+  have habs :
+      |dist (realIncidencePoint A) (realIncidencePoint B)| =
+        |Real.sqrt (finsetSymmDiffCard A B : ℝ)| :=
+    (sq_eq_sq_iff_abs_eq_abs _ _).mp hsq
+  rwa [abs_of_nonneg dist_nonneg, abs_of_nonneg (Real.sqrt_nonneg _)] at habs
+
+theorem realIncidencePoint_dist_eq_of_symmDiffCard_eq
+    {α : Type*} [Fintype α] [DecidableEq α] {A B C D : Finset α}
+    (h : finsetSymmDiffCard A B = finsetSymmDiffCard C D) :
+    dist (realIncidencePoint A) (realIncidencePoint B) =
+      dist (realIncidencePoint C) (realIncidencePoint D) := by
+  rw [realIncidencePoint_dist_eq_sqrt, realIncidencePoint_dist_eq_sqrt, h]
+
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
 diameter can be covered by d+1 subsets of itself, each of strictly smaller
 diameter.  The subset condition is essential: in a noncompact proper space

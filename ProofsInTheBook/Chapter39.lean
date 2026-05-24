@@ -117,7 +117,7 @@ theorem kneserGraph_no_vertices_of_lt {n k : ℕ} (h : n < k) :
   exact Nat.choose_eq_zero_of_lt h
 
 /-- The Kneser graph has no edges when `2k > n` (no two disjoint k-subsets fit). -/
-theorem kneserGraph_no_adj_of_lt {n k : ℕ} (hk : 1 ≤ k) (h : n < 2 * k)
+theorem kneserGraph_no_adj_of_lt {n k : ℕ} (_hk : 1 ≤ k) (h : n < 2 * k)
     (a b : KneserVertex n k) :
     ¬ (kneserGraph n k).Adj a b := by
   intro ⟨_, hdisj⟩
@@ -215,7 +215,7 @@ theorem kneserGraph_exists_adj_of_two_mul_le {n k : ℕ} (hk : 1 ≤ k) (hn : 2 
   have hA_card : A.card = k := by
     simp [A, Finset.card_attachFin, Nat.Ico_eq_range']
   have hB_card : B.card = k := by
-    simp [A, B, Finset.card_attachFin, Nat.Ico_eq_range', two_mul]
+    simp [B, Finset.card_attachFin, Nat.Ico_eq_range', two_mul]
   refine ⟨⟨A, hA_card⟩, ⟨B, hB_card⟩, ?_, ?_⟩
   · intro h_eq
     have h_eq_set : A = B := by
@@ -223,7 +223,7 @@ theorem kneserGraph_exists_adj_of_two_mul_le {n k : ℕ} (hk : 1 ≤ k) (hn : 2 
       simpa using this
     -- 0 ∈ A but 0 ∉ B (since the smallest element of B is k ≥ 1).
     have h0_A : (⟨0, by omega⟩ : Fin n) ∈ A := by
-      simp [A, Finset.mem_attachFin, Finset.mem_Ico]; omega
+      simp [A, Finset.mem_attachFin]; omega
     have h0_B : (⟨0, by omega⟩ : Fin n) ∉ B := by
       simp [B, Finset.mem_attachFin, Finset.mem_Ico]
     rw [h_eq_set] at h0_A
@@ -354,6 +354,20 @@ theorem kneser_chromatic_lower_bound (n k : ℕ) (hk : 1 ≤ k) (hn : 2 * k ≤ 
       exact ⟨⟨A, hAcard⟩, ⟨B, hBcard⟩, hne, hdisj⟩
     exact absurd (hfin1 (C a) (C b)) (hC a b hadj)
   · exact hhard heq
+
+/-- The hard lower bound is elementary for `k = 1`: `KG(n,1)` is complete,
+so a proper coloring must inject `n` singleton vertices into the color set. -/
+theorem kneser_chromatic_lower_bound_one (n : ℕ) (hn : 2 ≤ n) :
+    ¬ ∃ C : KneserVertex n 1 → Fin (n - 2 * 1 + 1),
+      ∀ a b, (kneserGraph n 1).Adj a b → C a ≠ C b := by
+  rintro ⟨C, hC⟩
+  have hC_inj : Function.Injective C := by
+    intro a b hCab
+    by_contra hne
+    exact hC a b (kneserGraph_one_adj_of_ne n a b hne) hCab
+  have hcard := Fintype.card_le_of_injective C hC_inj
+  rw [kneserVertex_card, Nat.choose_one_right, Fintype.card_fin] at hcard
+  omega
 
 /-- Certificate that Kneser graph KG(n,k) is not (n - 2k + 1)-colorable.
 This is the hard direction of Lovász's theorem, traditionally proved via

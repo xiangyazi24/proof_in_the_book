@@ -710,6 +710,75 @@ theorem squareBoundaryRGCount_odd_of_side_color_lists
   rw [hright0, htop0, hleft0]
   simpa using hbot
 
+theorem realTwoAdicColor_bottom_list_redGreen (xs : List ℝ) :
+    ∀ c ∈ red :: ((xs.map fun x => realTwoAdicColor (x, 0)) ++ [green]),
+      colorIsRedGreen c := by
+  intro c hc
+  simp only [List.mem_cons, List.mem_append, List.mem_map] at hc
+  rcases hc with rfl | ⟨x, _hx, rfl⟩ | hlast
+  · exact Or.inl rfl
+  · exact realTwoAdicColor_bottom_red_or_green x
+  · rcases hlast with rfl | hnil
+    · exact Or.inr rfl
+    · cases hnil
+
+theorem realTwoAdicColor_right_list_greenBlue (ys : List ℝ) :
+    ∀ c ∈ green :: ((ys.map fun y => realTwoAdicColor (1, y)) ++ [green]),
+      colorIsGreenBlue c := by
+  intro c hc
+  simp only [List.mem_cons, List.mem_append, List.mem_map] at hc
+  rcases hc with rfl | ⟨y, _hy, rfl⟩ | hlast
+  · exact Or.inl rfl
+  · exact realTwoAdicColor_right_green_or_blue y
+  · rcases hlast with rfl | hnil
+    · exact Or.inl rfl
+    · cases hnil
+
+theorem realTwoAdicColor_top_list_greenBlue (xs : List ℝ) :
+    ∀ c ∈ green :: ((xs.map fun x => realTwoAdicColor (x, 1)) ++ [blue]),
+      colorIsGreenBlue c := by
+  intro c hc
+  simp only [List.mem_cons, List.mem_append, List.mem_map] at hc
+  rcases hc with rfl | ⟨x, _hx, rfl⟩ | hlast
+  · exact Or.inl rfl
+  · exact realTwoAdicColor_top_green_or_blue x
+  · rcases hlast with rfl | hnil
+    · exact Or.inr rfl
+    · cases hnil
+
+theorem realTwoAdicColor_left_list_redBlue (ys : List ℝ) :
+    ∀ c ∈ blue :: ((ys.map fun y => realTwoAdicColor (0, y)) ++ [red]),
+      colorIsRedBlue c := by
+  intro c hc
+  simp only [List.mem_cons, List.mem_append, List.mem_map] at hc
+  rcases hc with rfl | ⟨y, _hy, rfl⟩ | hlast
+  · exact Or.inr rfl
+  · exact realTwoAdicColor_left_red_or_blue y
+  · rcases hlast with rfl | hnil
+    · exact Or.inl rfl
+    · cases hnil
+
+/-- Boundary oddness for any finite subdivision of the four sides of the unit square. -/
+theorem realTwoAdic_squareBoundaryRGCount_odd_of_side_subdivisions
+    (bottom right top left : List ℝ) :
+    Odd (listRGTransitionCount
+        (red :: ((bottom.map fun x => realTwoAdicColor (x, 0)) ++ [green])) +
+      listRGTransitionCount
+        (green :: ((right.map fun y => realTwoAdicColor (1, y)) ++ [green])) +
+      listRGTransitionCount
+        (green :: ((top.map fun x => realTwoAdicColor (x, 1)) ++ [blue])) +
+      listRGTransitionCount
+        (blue :: ((left.map fun y => realTwoAdicColor (0, y)) ++ [red]))) := by
+  exact squareBoundaryRGCount_odd_of_side_color_lists
+    (bottom.map fun x => realTwoAdicColor (x, 0))
+    (right.map fun y => realTwoAdicColor (1, y))
+    (top.map fun x => realTwoAdicColor (x, 1))
+    (left.map fun y => realTwoAdicColor (0, y))
+    (realTwoAdicColor_bottom_list_redGreen bottom)
+    (realTwoAdicColor_right_list_greenBlue right)
+    (realTwoAdicColor_top_list_greenBlue top)
+    (realTwoAdicColor_left_list_redBlue left)
+
 /-- `TrichromaticTriangle` is invariant under cyclic permutation of vertices. -/
 theorem trichromaticTriangle_cycle {a b c : MonskyColor} :
     TrichromaticTriangle a b c ↔ TrichromaticTriangle b c a := by

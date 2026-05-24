@@ -398,6 +398,25 @@ instance (S : Finset EPoint) : Finite (OffLineTriple S) := by
   obtain ⟨hP, ha, hb⟩ := h
   subst hP; subst ha; subst hb; rfl
 
+/-- The line through two points, as a nonempty affine subspace instance. -/
+instance instNonemptyLinePair (a b : EPoint) :
+    Nonempty (affineSpan ℝ {a, b} : AffineSubspace ℝ EPoint) :=
+  ⟨a, left_mem_affineSpan_pair ℝ a b⟩
+
+/-- Foot of the perpendicular from `P` to the line through `a` and `b`. -/
+noncomputable def foot (P a b : EPoint) : EPoint :=
+  EuclideanGeometry.orthogonalProjection (affineSpan ℝ {a, b}) P
+
+/-- The foot of the perpendicular lies on the line. -/
+theorem foot_mem (P a b : EPoint) : foot P a b ∈ affineSpan ℝ {a, b} :=
+  EuclideanGeometry.orthogonalProjection_mem P
+
+/-- The perpendicular distance equals the distance to the foot of the
+perpendicular (`orthogonalProjection` realises the infimum). -/
+theorem perpDist_eq_dist_foot (P a b : EPoint) :
+    perpDist P a b = dist P (foot P a b) :=
+  (EuclideanGeometry.dist_orthogonalProjection_eq_infDist (affineSpan ℝ {a, b}) P).symm
+
 /-- **Kelly step 2: a minimum-perpendicular-distance off-line pair exists.**
 Over a finite point set with at least one off-line incidence, the perpendicular
 distances of all off-line incidences attain a minimum — the well-ordering

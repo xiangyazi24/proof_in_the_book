@@ -134,6 +134,33 @@ theorem same_color_dist_lt_of_mem_colorClass {α : Type*} [PseudoMetricSpace α]
   rw [mem_colorClass_iff] at hx hy
   exact h x hx.1 y hy.1 (hx.2.trans hy.2.symm)
 
+/--
+Linear-algebra core used by Frankl-Wilson style arguments: a family of vectors
+is linearly independent if there are linear functionals whose evaluation matrix
+is diagonal with nonzero diagonal.
+-/
+theorem linearIndependent_of_linear_functionals_diagonal
+    {K : Type*} [Field K] {ι M : Type*} [Fintype ι]
+    [AddCommGroup M] [Module K M] (v : ι → M) (φ : ι → M →ₗ[K] K)
+    (hdiag : ∀ i, φ i (v i) ≠ 0)
+    (hoff : ∀ i j, i ≠ j → φ i (v j) = 0) :
+    LinearIndependent K v := by
+  classical
+  rw [Fintype.linearIndependent_iff]
+  intro g hsum i
+  have happly : φ i (∑ j, g j • v j) = φ i 0 := congrArg (fun x => φ i x) hsum
+  simp only [map_sum, map_smul, map_zero] at happly
+  have hsingle : (∑ j, g j • φ i (v j)) = g i • φ i (v i) := by
+    rw [Finset.sum_eq_single i]
+    · intro j _ hji
+      rw [hoff i j hji.symm]
+      simp
+    · intro hi
+      exact (hi (Finset.mem_univ i)).elim
+  rw [hsingle] at happly
+  have hmul : g i * φ i (v i) = 0 := by simpa [smul_eq_mul] using happly
+  exact (mul_eq_zero.mp hmul).resolve_right (hdiag i)
+
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
 diameter can be covered by d+1 subsets of itself, each of strictly smaller
 diameter.  The subset condition is essential: in a noncompact proper space

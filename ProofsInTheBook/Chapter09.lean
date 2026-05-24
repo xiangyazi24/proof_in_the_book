@@ -522,6 +522,39 @@ theorem regularTetrahedronSimplex_equilateral :
   rw [regularTetrahedronVertex_dist_sq_of_ne hij, Real.sq_sqrt]
   norm_num
 
+/-- Edges of the concrete regular tetrahedron, represented once as ordered pairs `i < j`. -/
+abbrev RegularTetrahedronEdge :=
+  {p : Fin 4 × Fin 4 // p.1 < p.2}
+
+theorem regularTetrahedronEdge_card : Fintype.card RegularTetrahedronEdge = 6 := by
+  native_decide
+
+theorem regularTetrahedronEdge_univ_card :
+    (Finset.univ : Finset RegularTetrahedronEdge).card = 6 := by
+  native_decide
+
+noncomputable def regularTetrahedronEdgeLength (e : RegularTetrahedronEdge) : ℝ :=
+  dist (regularTetrahedronVertex e.1.1) (regularTetrahedronVertex e.1.2)
+
+theorem regularTetrahedronEdgeLength_eq_sqrt8 (e : RegularTetrahedronEdge) :
+    regularTetrahedronEdgeLength e = Real.sqrt 8 := by
+  rw [regularTetrahedronEdgeLength]
+  rw [← sq_eq_sq₀ dist_nonneg (Real.sqrt_nonneg 8)]
+  rw [regularTetrahedronVertex_dist_sq_of_ne e.2.ne, Real.sq_sqrt]
+  norm_num
+
+theorem regularTetrahedron_dehnInvariantQ_edges_eq :
+    dehnInvariantQ (Finset.univ : Finset RegularTetrahedronEdge)
+        regularTetrahedronEdgeLength
+        (fun _ => angleClassQ (Real.arccos (1 / 3))) =
+      dehnEdgeQ (6 * Real.sqrt 8) (angleClassQ (Real.arccos (1 / 3))) := by
+  simpa [dehnInvariantQ, regularTetrahedronEdgeLength_eq_sqrt8,
+    regularTetrahedronEdge_univ_card] using
+    (dehnInvariantQ_const_length_angle
+      (edges := (Finset.univ : Finset RegularTetrahedronEdge))
+      (length := Real.sqrt 8)
+      (angle := angleClassQ (Real.arccos (1 / 3))))
+
 /--
 The face opposite vertex `i` has normal parallel to `regularTetrahedronVertex i`.
 Since all these normals have squared length `3`, this quotient is the cosine
@@ -744,6 +777,20 @@ theorem regularTetrahedron_six_edge_dehnQ_ne_zero {edgeLength : ℝ}
   rw [dehnInvariantQ_six_equal_edges]
   exact dehnEdgeQ_ne_zero_of_ne_zero
     (mul_ne_zero (by norm_num : (6 : ℝ) ≠ 0) hedgeLength)
+    angleClassQ_arccos_one_third_ne_zero
+
+/--
+The regular tetrahedron's concrete six-edge Dehn invariant is nonzero in
+`ℝ ⊗[ℚ] (ℝ / πℚ)`.
+-/
+theorem regularTetrahedron_dehnInvariantQ_edges_ne_zero :
+    dehnInvariantQ (Finset.univ : Finset RegularTetrahedronEdge)
+        regularTetrahedronEdgeLength
+        (fun _ => angleClassQ (Real.arccos (1 / 3))) ≠ 0 := by
+  rw [regularTetrahedron_dehnInvariantQ_edges_eq]
+  exact dehnEdgeQ_ne_zero_of_ne_zero
+    (mul_ne_zero (by norm_num : (6 : ℝ) ≠ 0)
+      (ne_of_gt (Real.sqrt_pos_of_pos (by norm_num : (0 : ℝ) < 8))))
     angleClassQ_arccos_one_third_ne_zero
 
 /--

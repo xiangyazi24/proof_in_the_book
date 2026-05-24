@@ -764,6 +764,13 @@ theorem exists_monochromatic_pair_directedCutSet_dist_sq_eq
     directedCutSet_realIncidencePoint_dist_sq_of_kahnKalai_intersection
       (sets i) (sets j) hground (hcard i) (hcard j) hinter⟩
 
+theorem dist_eq_of_dist_sq_eq_diam_sq {X : Type*} [PseudoMetricSpace X]
+    {S : Set X} {x y : X} (h : dist x y ^ 2 = Metric.diam S ^ 2) :
+    dist x y = Metric.diam S := by
+  have habs : |dist x y| = |Metric.diam S| :=
+    (sq_eq_sq_iff_abs_eq_abs _ _).mp h
+  rwa [abs_of_nonneg dist_nonneg, abs_of_nonneg Metric.diam_nonneg] at habs
+
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
 diameter can be covered by d+1 subsets of itself, each of strictly smaller
 diameter.  The subset condition is essential: in a noncompact proper space
@@ -829,6 +836,23 @@ def KahnKalaiCertificate.ofFiniteDiameterObstruction {d : ℕ}
     Metric.dist_le_diam_of_mem hpart_bounded hxpart hypart
   rw [hdiam] at hle
   exact not_lt_of_ge hle (hsmall (color x))
+
+/--
+Squared-distance version of `ofFiniteDiameterObstruction`.  This is convenient
+for incidence-vector constructions, where the natural formulas compute
+distance squared as a Hamming count.
+-/
+def KahnKalaiCertificate.ofFiniteSquaredDiameterObstruction {d : ℕ}
+    (points : Finset (EuclideanSpace ℝ (Fin d)))
+    (hpos : 0 < Metric.diam (points : Set (EuclideanSpace ℝ (Fin d))))
+    (hobstruction : ∀ color : EuclideanSpace ℝ (Fin d) → Fin (d + 1),
+      ∃ x ∈ points, ∃ y ∈ points,
+        color x = color y ∧
+          dist x y ^ 2 = Metric.diam (points : Set (EuclideanSpace ℝ (Fin d))) ^ 2) :
+    KahnKalaiCertificate d :=
+  KahnKalaiCertificate.ofFiniteDiameterObstruction points hpos fun color => by
+    obtain ⟨x, hx, y, hy, hsame, hsq⟩ := hobstruction color
+    exact ⟨x, hx, y, hy, hsame, dist_eq_of_dist_sq_eq_diam_sq hsq⟩
 
 /--
 Bridge from the Frankl-Wilson coloring obstruction to a Borsuk counterexample

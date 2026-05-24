@@ -3919,6 +3919,114 @@ theorem lPowerFreePart_idem {m : ℕ} (hm : m ≠ 0) :
   (lPowerFreePart_eq_self_iff_squarefree
     (lPowerFreePart_squarefree m hm).ne_zero).mpr (lPowerFreePart_squarefree m hm)
 
+private lemma four_mul_sq_sub_add_two_gt_sq {k : ℕ} (hk : 4 ≤ k) :
+    k * k < 4 * (k * k - k + 2) := by
+  have h_no_trunc : k ≤ k * k := Nat.le_mul_of_pos_left k (by omega)
+  zify [h_no_trunc]
+  have hk_z : (4 : ℤ) ≤ k := by exact_mod_cast hk
+  nlinarith only [sq_nonneg ((k : ℤ) - 2), hk_z]
+
+private lemma two_mul_le_succ_sq_sub_sq (b : ℕ) :
+    2 * b ≤ (b + 1) ^ 2 - b ^ 2 := by
+  have hsq : (b + 1) ^ 2 - b ^ 2 = 2 * b + 1 := by
+    ring_nf
+    rw [Nat.add_sub_cancel]
+  rw [hsq]
+  omega
+
+private lemma four_mul_l2_component_le_sq {a b : ℕ} (ha : 0 < a) :
+    4 * (a * b ^ 2) ≤ (2 * a * b) * (2 * a * b) := by
+  calc
+    4 * (a * b ^ 2) ≤ a * (4 * (a * b ^ 2)) :=
+      Nat.le_mul_of_pos_left _ ha
+    _ = (2 * a * b) * (2 * a * b) := by ring
+
+private lemma lPowerFreePart_l2_ne_of_lt
+    {n k m i j : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n)
+    (h_eq : n.choose k = m ^ 2) (hi : i ∈ Finset.range k) (hj : j ∈ Finset.range k)
+    (hij : i < j) :
+    lPowerFreePart 2 (n - i) ≠ lPowerFreePart 2 (n - j) := by
+  intro hsame
+  have hn_gt : k * k < n := erdos_step1_n_gt_k_sq hk hn (by norm_num) h_eq
+  have hi_lt : i < k := Finset.mem_range.mp hi
+  have hj_lt : j < k := Finset.mem_range.mp hj
+  have hk_le_n : k ≤ n := by omega
+  have hi_le_n : i ≤ n := (le_of_lt hi_lt).trans hk_le_n
+  have hj_le_n : j ≤ n := (le_of_lt hj_lt).trans hk_le_n
+  have hni_ne : n - i ≠ 0 := by
+    exact Nat.ne_of_gt (Nat.sub_pos_of_lt (hi_lt.trans_le hk_le_n))
+  have hnj_ne : n - j ≠ 0 := by
+    exact Nat.ne_of_gt (Nat.sub_pos_of_lt (hj_lt.trans_le hk_le_n))
+  have hnj_lt_hni : n - j < n - i := by omega
+  have hdiff_nat : j - i = (n - i) - (n - j) := by omega
+  have hdiff_lt_k : j - i < k := (Nat.sub_le j i).trans_lt hj_lt
+  have hnj_lower : k * k - k + 2 ≤ n - j := by
+    apply Nat.le_sub_of_add_le
+    have hk_le_kk : k ≤ k * k := Nat.le_mul_of_pos_left k (by omega)
+    have hleft : k * k - k + 2 + j ≤ k * k + 1 := by
+      zify [hk_le_kk]
+      omega
+    exact hleft.trans (Nat.succ_le_of_lt hn_gt)
+  set a : ℕ := lPowerFreePart 2 (n - j) with ha_def
+  set bi : ℕ := lPowerRoot 2 (n - i) with hbi_def
+  set bj : ℕ := lPowerRoot 2 (n - j) with hbj_def
+  have ha_pos : 0 < a := by
+    rw [ha_def]
+    exact lPowerFreePart_pos hnj_ne
+  have hbj_pos : 0 < bj := by
+    rw [hbj_def]
+    exact lPowerRoot_pos hnj_ne
+  have hdeci : n - i = a * bi ^ 2 := by
+    have h := self_eq_lPowerFreePart_mul_lPowerRoot_pow 2 (n - i) hni_ne
+    rw [hsame] at h
+    simpa [a, bi, ha_def, hbi_def] using h
+  have hdecj : n - j = a * bj ^ 2 := by
+    have h := self_eq_lPowerFreePart_mul_lPowerRoot_pow 2 (n - j) hnj_ne
+    simpa [a, bj, ha_def, hbj_def] using h
+  have hlt_ab : a * bj ^ 2 < a * bi ^ 2 := by
+    rw [← hdecj, ← hdeci]
+    exact hnj_lt_hni
+  have hbj_lt_bi : bj < bi := by
+    have hsq : bj * bj < bi * bi := by
+      have hsq' : bj ^ 2 < bi ^ 2 := Nat.lt_of_mul_lt_mul_left hlt_ab
+      simpa [pow_two] using hsq'
+    exact Nat.mul_self_lt_mul_self_iff.mp hsq
+  have hbj_succ_sq_le : (bj + 1) ^ 2 ≤ bi ^ 2 := by
+    exact Nat.pow_le_pow_left (Nat.succ_le_of_lt hbj_lt_bi) 2
+  have hdiff_eq : j - i = a * (bi ^ 2 - bj ^ 2) := by
+    calc
+      j - i = (n - i) - (n - j) := hdiff_nat
+      _ = a * bi ^ 2 - a * bj ^ 2 := by rw [hdeci, hdecj]
+      _ = a * (bi ^ 2 - bj ^ 2) := by rw [Nat.mul_sub_left_distrib]
+  have hL_le_diff : 2 * a * bj ≤ j - i := by
+    rw [hdiff_eq]
+    calc
+      2 * a * bj = a * (2 * bj) := by ring
+      _ ≤ a * ((bj + 1) ^ 2 - bj ^ 2) :=
+        Nat.mul_le_mul_left a (two_mul_le_succ_sq_sub_sq bj)
+      _ ≤ a * (bi ^ 2 - bj ^ 2) :=
+        Nat.mul_le_mul_left a (Nat.sub_le_sub_right hbj_succ_sq_le _)
+  have hk_sq_lt_four_nj : k * k < 4 * (n - j) := by
+    exact (four_mul_sq_sub_add_two_gt_sq hk).trans_le
+      (Nat.mul_le_mul_left 4 hnj_lower)
+  have hL_sq_ge : 4 * (n - j) ≤ (2 * a * bj) * (2 * a * bj) := by
+    rw [hdecj]
+    exact four_mul_l2_component_le_sq ha_pos
+  have hk_lt_L : k < 2 * a * bj := by
+    exact Nat.mul_self_lt_mul_self_iff.mp (hk_sq_lt_four_nj.trans_le hL_sq_ge)
+  exact (not_lt_of_ge hL_le_diff) (hdiff_lt_k.trans hk_lt_L)
+
+/-- Step 3a for the square case: the 2-power-free parts in the descending
+factorial are pairwise distinct. -/
+theorem lPowerFreePart_injective_l2
+    {n k m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (h_eq : n.choose k = m ^ 2) :
+    Set.InjOn (fun j => lPowerFreePart 2 (n - j)) (Finset.range k) := by
+  intro i hi j hj hsame
+  by_contra hne
+  rcases lt_or_gt_of_ne hne with hij | hji
+  · exact lPowerFreePart_l2_ne_of_lt hk hn h_eq hi hj hij hsame
+  · exact lPowerFreePart_l2_ne_of_lt hk hn h_eq hj hi hji hsame.symm
+
 /-! ### Interval count + Legendre / `padicValNat_factorial` helpers (Tier 2 building blocks for Ch03) -/
 
 /-- Count of `j ∈ range k` with `p ∣ (n - j)`, given `k ≤ n`, is at most `k / p + 1`.

@@ -33,22 +33,27 @@ theorem chapter08_basel : HasSum (fun n : ℕ => 1 / (n : ℝ) ^ 2) (π ^ 2 / 6)
   hasSum_zeta_two
 
 /--
-The Euler product formula for sine: sin(πx)/(πx) = ∏_{n=1}^∞ (1 - x²/n²).
-This is the starting point of the book's first proof of the Basel problem.
-Expanding the product and comparing the x² coefficient gives ∑ 1/n² = π²/6.
+The Euler product formula for sine, in the form `Real.tendsto_euler_sin_prod`:
+the partial products `π·x·∏_{j<n} (1 - x²/(j+1)²)` converge to `sin(πx)`.
+This is the starting point of the book's first proof of the Basel problem:
+expanding the limit and comparing the `x²` coefficient gives `∑ 1/n² = π²/6`.
 -/
-theorem euler_sine_product_coefficient :
-    True := trivial
+theorem euler_sine_product_coefficient (x : ℝ) :
+    Filter.Tendsto
+        (fun n : ℕ => π * x * ∏ j ∈ Finset.range n, ((1 : ℝ) - x ^ 2 / ((j : ℝ) + 1) ^ 2))
+        Filter.atTop (nhds (sin (π * x))) :=
+  Real.tendsto_euler_sin_prod x
 
 /--
-Parseval's identity applied to f(x) = x on [-π, π]:
-  ∑_{n=-∞}^∞ |cₙ|² = (1/2π) ∫_{-π}^{π} x² dx = π²/3.
-The Fourier coefficients satisfy cₙ = (-1)^n/n for n ≠ 0, so
-  ∑_{n≠0} 1/n² = π²/3, hence ∑_{n=1}^∞ 1/n² = π²/6.
-This is the book's second proof.
+The integral that anchors the book's Parseval proof: `∫_{-π}^{π} x² dx = 2π³/3`.
+Combined with Parseval's identity `∑_{n=-∞}^∞ |cₙ|² = (1/2π) ∫ |f|²` for `f(x)=x`
+and Fourier coefficients `cₙ = (-1)^n / (n·i)` for `n ≠ 0`, this yields
+`∑_{n≠0} 1/n² = π²/3`, hence `∑_{n=1}^∞ 1/n² = π²/6`.
 -/
 theorem parseval_proof_step :
-    True := trivial
+    ∫ x in (-π)..π, x ^ 2 = 2 * π ^ 3 / 3 := by
+  rw [integral_pow]
+  ring
 
 theorem chapter08 : HasSum (fun n : ℕ => 1 / (n : ℝ) ^ 2) (π ^ 2 / 6) :=
   chapter08_basel

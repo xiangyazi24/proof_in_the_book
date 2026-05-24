@@ -5,13 +5,18 @@ import Mathlib
 
 From "Proofs from THE BOOK":
 
-**The slope problem (Ungar's theorem)**: Given n points in the plane,
-not all on a line, the number of distinct slopes determined by
-connecting pairs of points is at least n - 1.
+**The slope problem (Ungar's theorem)**: Given `n` points in the plane,
+not all on a line, the number of distinct projective directions determined by
+connecting pairs of points is at least `2 * ⌊n / 2⌋`.
 
 The book's proof uses an elegant inductive argument combined with
 a "rotating calipers" technique: consider the convex hull and analyze
 how slopes change as we rotate a direction vector.
+
+The Lean statement uses projective `Direction`s, so the vertical parallel class
+is counted.  The fixed-axis finite slope set `slopesDeterminedBy` intentionally
+omits vertical directions and is therefore only a corollary with a possible
+loss of one.
 
 This is closely related to the Sylvester-Gallai theorem (Chapter 10).
 -/
@@ -1397,6 +1402,29 @@ theorem directions_lower_bound_of_even_direction_bound_all (points : Finset Poin
   by_cases hthree : points.card = 3
   · exact directions_lower_bound_three points hthree hncoll
   · exact directions_lower_bound_of_even_direction_bound points (by omega) hncoll heven_bound
+
+theorem directions_floor_lower_bound_of_even_direction_bound_all (points : Finset Point2)
+    (hcard : 3 ≤ points.card) (hncoll : NoncollinearSet points)
+    (heven_bound : ∀ S : Finset Point2, Even S.card → NoncollinearSet S →
+      S.card ≤ (directionsDeterminedBy S).card) :
+    2 * (points.card / 2) ≤ (directionsDeterminedBy points).card := by
+  classical
+  by_cases hEven : Even points.card
+  · rcases hEven with ⟨m, hm⟩
+    have hfloor : 2 * (points.card / 2) = points.card := by
+      rw [hm]
+      have hdiv : (m + m) / 2 = m := by
+        rw [← two_mul m]
+        exact Nat.mul_div_right m (by norm_num : 0 < 2)
+      rw [hdiv]
+      omega
+    rw [hfloor]
+    exact heven_bound points ⟨m, hm⟩ hncoll
+  · have hprev :=
+      directions_lower_bound_of_even_direction_bound_all points hcard hncoll heven_bound
+    have hodd : points.card % 2 = 1 := Nat.not_even_iff.mp hEven
+    rw [Nat.two_mul_odd_div_two hodd]
+    exact hprev
 
 /--
 The numerical core of Ungar's even-cardinality proof.  The crossing moves have
@@ -6002,6 +6030,13 @@ abbrev EvenInjectiveBlockLevelConcreteEndGapSequencePremise : Prop :=
                 A.CyclicEndGap
                   (A.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk)
 
+structure UngarLevelSweepCore (S : Finset Point2) (k : ℕ) where
+  labeling : PointLabeling S k
+  sequence : ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy S).card
+  stepDir : Fin (directionsDeterminedBy S).card → Direction
+  blocks_level : sequence.BlocksHaveCommonLevel labeling stepDir
+  stepDir_injective : Function.Injective stepDir
+
 structure UngarLevelSweepCertificate (S : Finset Point2) (k : ℕ) (hk : 0 < k) where
   labeling : PointLabeling S k
   sequence : ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy S).card
@@ -6049,6 +6084,32 @@ theorem even_direction_bound {S : Finset Point2} {k : ℕ} {hk : 0 < k}
     (C.noFullCrossing hncoll) C.cyclic_end_gap
 
 end UngarLevelSweepCertificate
+
+namespace UngarLevelSweepCore
+
+theorem stepDirectionsEnumerate {S : Finset Point2} {k : ℕ}
+    (C : UngarLevelSweepCore S k) :
+    ConcreteGeneralizedAllowableSequence.StepDirectionsEnumerate S C.stepDir :=
+  C.sequence.stepDirectionsEnumerate_of_blocksHaveCommonLevel_of_injective
+    C.labeling C.stepDir C.blocks_level C.stepDir_injective
+
+theorem noDirectFullMove {S : Finset Point2} {k : ℕ}
+    (C : UngarLevelSweepCore S k) (hk : 0 < k) (hncoll : NoncollinearSet S) :
+    C.sequence.NoDirectFullMove :=
+  C.sequence.noDirectFullMove_of_directFullMoveForcesCommonLevel
+    C.labeling C.stepDir hncoll
+    (C.sequence.directFullMoveForcesCommonLevel_of_blocksHaveCommonLevel
+      hk C.labeling C.stepDir C.blocks_level)
+
+theorem noFullCrossing {S : Finset Point2} {k : ℕ}
+    (C : UngarLevelSweepCore S k) (hk : 0 < k) (hncoll : NoncollinearSet S) :
+    ∀ j : Fin (directionsDeterminedBy S).card,
+      C.sequence.toCountedGeneralizedAllowableSequence.IsCrossing j →
+        C.sequence.toCountedGeneralizedAllowableSequence.moveOrder j < k :=
+  C.sequence.moveOrder_lt_middle_of_noDirectFullMove hk
+    (C.noDirectFullMove hk hncoll)
+
+end UngarLevelSweepCore
 
 abbrev EvenUngarLevelSweepCertificatePremise : Prop :=
   ∀ S : Finset Point2, ∀ k : ℕ, ∀ hk : 0 < k, S.card = 2 * k →
@@ -6198,6 +6259,22 @@ theorem ungar_directions_lower_bound_from_level_sweep_certificate
     points hn hncoll
     (evenInjectiveBlockLevelConcreteEndGapSequencePremise_of_certificate hcert)
 
+theorem ungar_directions_floor_lower_bound_from_level_sweep_certificate
+    (points : Finset Point2)
+    (hn : 3 ≤ points.card) (hncoll : NoncollinearSet points)
+    (hcert : EvenUngarLevelSweepCertificatePremise) :
+    2 * (points.card / 2) ≤ (directionsDeterminedBy points).card :=
+  directions_floor_lower_bound_of_even_direction_bound_all points hn hncoll
+    (fun S hEven hS => by
+      rcases hEven with ⟨k, hk_even⟩
+      have hcardS : S.card = 2 * k := by omega
+      have hkpos : 0 < k := by
+        rcases hS with ⟨p, hp, _q, _hq, _r, _hr, _hnon⟩
+        have hSpos : 0 < S.card := Finset.card_pos.mpr ⟨p, hp⟩
+        omega
+      rcases hcert S k hkpos hcardS hS with ⟨C⟩
+      exact C.even_direction_bound hcardS hS)
+
 /--
 Counting interface for Ungar's slope theorem: an injective family of witnessed
 slopes gives the corresponding lower bound on the number of slopes.
@@ -6227,20 +6304,22 @@ theorem card_le_directions_of_injective_witness {ι : Type*} [Fintype ι]
 
 /--
 Ungar's rotating-calipers theorem, stated for projective directions. This is
-the coordinate-correct target: vertical lines count as one direction.
+the coordinate-correct target: vertical lines count as one direction, so the
+book's lower bound is `2 * ⌊n / 2⌋`.
 -/
 theorem ungar_directions_lower_bound (points : Finset Point2)
     (hn : 3 ≤ points.card)
     (hncoll : NoncollinearSet points)
     (hcert : EvenUngarLevelSweepCertificatePremise) :
-    points.card - 1 ≤ (directionsDeterminedBy points).card :=
-  ungar_directions_lower_bound_from_level_sweep_certificate points hn hncoll hcert
+    2 * (points.card / 2) ≤ (directionsDeterminedBy points).card :=
+  ungar_directions_floor_lower_bound_from_level_sweep_certificate points hn hncoll hcert
 
-theorem chapter11 {ι : Type*} [Fintype ι] (points : Finset Point2) (witness : ι → ℝ)
-    (hwitness : ∀ i, witness i ∈ slopesDeterminedBy points)
-    (hinj : Function.Injective witness) :
-    Fintype.card ι ≤ (slopesDeterminedBy points).card :=
-  card_le_slopes_of_injective_witness points witness hwitness hinj
+theorem chapter11 (points : Finset Point2)
+    (hn : 3 ≤ points.card)
+    (hncoll : NoncollinearSet points)
+    (hcert : EvenUngarLevelSweepCertificatePremise) :
+    2 * (points.card / 2) ≤ (directionsDeterminedBy points).card :=
+  ungar_directions_lower_bound points hn hncoll hcert
 
 /-! ## Sweep certificate construction
 
@@ -7321,10 +7400,25 @@ theorem directionsDeterminedBy_card_ge_two_of_noncollinear {points : Finset Poin
   have h2 := direction_mem_directionsDeterminedBy hp hr hpr
   exact Finset.one_lt_card.mpr ⟨_, h1, _, h2, hdir_ne⟩
 
+noncomputable def ungarLevelSweepCore {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hncoll : NoncollinearSet points) :
+    UngarLevelSweepCore points k where
+  labeling := sweepLabeling hcard (directionsDeterminedBy_nonempty_of_noncollinear hncoll)
+  sequence := sweepConcreteGAS hcard
+    (directionsDeterminedBy_nonempty_of_noncollinear hncoll)
+    (directionsDeterminedBy_card_ge_two_of_noncollinear hncoll) hncoll
+  stepDir := sweepStepDir points
+  blocks_level := sweepConcreteGAS_blocksHaveCommonLevel hcard
+    (directionsDeterminedBy_nonempty_of_noncollinear hncoll)
+    (directionsDeterminedBy_card_ge_two_of_noncollinear hncoll) hncoll
+  stepDir_injective := sweepStepDir_injective points
+
 /-!
 ### Certificate assembly status
 
-All six fields of `UngarLevelSweepCertificate` are proved except `CyclicEndGap`:
+The rotating-level sweep now constructs `ungarLevelSweepCore`, which is all of
+`UngarLevelSweepCertificate` except `CyclicEndGap`:
 
 - `labeling` = `sweepLabeling`
 - `sequence` = `sweepConcreteGAS`
@@ -8076,35 +8170,35 @@ private theorem nontrivial_blocks_at_eventAt {points : Finset Point2} {k : ℕ}
 -- Starting angle θ₀ is between sortedAngleAt(s-1) and sortedAngleAt(s)
 -- (or equivalently, in the "gap" before event s)
 
--- TODO: Build sweepConcreteGAS_at using parameterized versions of all
--- the existing lemmas. Then construct CyclicEndGapWitness.
+/-!
+### Remaining blocker for the shifted cyclic sweep
 
-set_option maxHeartbeats 100000000 in
-noncomputable def sweepConcreteGAS_at {points : Finset Point2} {k : ℕ}
-    (hcard : points.card = 2 * k)
-    (hne : (directionsDeterminedBy points).Nonempty)
-    (hr : 2 ≤ (directionsDeterminedBy points).card)
-    (hncoll : NoncollinearSet points)
-    (θ₀ : ℝ) (s : Fin (directionsDeterminedBy points).card)
-    (hlow : ∀ d ∈ directionsDeterminedBy points, d.angle - Real.pi < θ₀)
-    (hhigh : ∀ d ∈ directionsDeterminedBy points, θ₀ < d.angle)
-    (hgap : ∀ t : Fin (directionsDeterminedBy points).card,
-      t.val < s.val → sortedAngleAt points t < θ₀) :
-    ConcreteGeneralizedAllowableSequence k (directionsDeterminedBy points).card := by
-  let _L := sweepLabelingAt hcard θ₀
-  let _A := sweepGAS_at hcard hne θ₀ s hlow hhigh hncoll
-  simpa [sweepGAS_at] using
-    (sweepConcreteGAS (points := points) (k := k) hcard hne hr hncoll)
+The ordinary sweep is wired into `ungarLevelSweepCore`; the missing field of
+`UngarLevelSweepCertificate` is exactly `cyclic_end_gap`.
 
+The intended proof of `cyclic_end_gap` is to start a second sweep in the gap
+between the last and first crossing directions, turning the cyclic end gap into
+an interior consecutive-crossing gap.  The current `_at` scaffold does not yet
+support this, because `sweepLabelingAt_inj` and `sweepGAS_at` assume
 
-/- Note: evenUngarLevelSweepCertificatePremise theorem (constructing
-   UngarLevelSweepCertificate from rotating calipers sweep) was removed.
-   The chapter result `chapter11` is stated in conditional form taking
-   EvenUngarLevelSweepCertificatePremise as a hypothesis (Tier 1).
-   Tier 2 work (the actual CyclicEndGapWitness construction via crossing
-   permutation under shifted-sweep rotation) is deferred — multiple
-   attempts hit the 300+ LOC threshold and Lean's context window limits
-   on the geometric proof. See sweepConcreteGAS_at + helper _at lemmas
-   for the substantial scaffolding already proved. -/
+```
+∀ d ∈ directionsDeterminedBy points, θ₀ < d.angle
+```
+
+For a shifted start after the first `s > 0` sorted directions, those earlier
+directions satisfy `d.angle < θ₀`; the correct start-angle condition must be
+modulo `π`, e.g.
+
+```
+d.angle - Real.pi < θ₀ ∧ θ₀ < d.angle + Real.pi ∧ θ₀ ≠ d.angle
+```
+
+together with the sorted cyclic order supplied by `shiftedSortedAngleAt`.
+Until the start-injectivity/no-tie lemmas are generalized to this modulo-`π`
+condition and `sweepConcreteGAS_at` is assembled from the `_at` reversal-step
+lemmas, `EvenUngarLevelSweepCertificatePremise` remains an honest front-line
+premise.  The public `chapter11` statement is nevertheless the genuine Ungar
+lower bound, not the old injective-witness pigeonhole statement.
+-/
 
 end ProofsInTheBook.Chapter11

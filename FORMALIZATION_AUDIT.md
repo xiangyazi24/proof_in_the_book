@@ -79,9 +79,16 @@ with sustained effort, candidates for genuine closure):**
 - Ch29 GSR: `count_determined_by_piles` (multinomial count of riffle labels).
 - Ch30 LGV: `BadInvolutionCertificate` (tail-swap involution on intersecting
   path families).
-- Ch10 Sylvester–Gallai: `chapter10` (card = 2 → ordinary) is unconditional;
-  the full theorem needs the `gallai` extremal closer-pair geometric step.
-  **Kelly's metric proof — steps 1–2 done (2026-05-24):**
+- [x] **Ch10 Sylvester–Gallai: FULLY CLOSED (2026-05-24).**
+  `euclidean_sylvester_gallai (S : Finset EPoint) (T : OffLineTriple S) :`
+  `∃ a b, a∈S ∧ b∈S ∧ a≠b ∧ (S.filter (·∈ line[a,b])).card = 2` — a finite
+  planar point set with an off-line incidence (= not all collinear) has an
+  ordinary line.  Unconditional; no certificate hypothesis.  Kelly's
+  minimum-distance proof assembled from steps 1–3d below.  Moves Ch10 from
+  category C to fully closed; first from-scratch Euclidean Sylvester–Gallai
+  in the repo.  (The earlier abstract `chapter10` for `card = 2 → ordinary`
+  also remains.)
+  **Kelly's metric proof — all steps done (2026-05-24):**
   - Step 1 (commit fac587d): concrete `EPoint = EuclideanSpace ℝ (Fin 2)`
     foundation — `perpDist` (infDist to `affineSpan ℝ {a,b}`),
     `perpDist_nonneg/_eq_zero_of_mem/_le_dist_*`, `mem_of_perpDist_eq_zero`
@@ -112,13 +119,12 @@ with sustained effort, candidates for genuine closure):**
     `perpDist_lt_perpDist_of_wbtw`: if `P` off line `QR`, `Q` between
     `foot P Q R` and `R`, then `perpDist Q P R < perpDist P Q R`.  This is the
     inequality that contradicts minimality.
-  - **Remaining (step 3d assembly only):** the combinatorial finish —
-    pigeonhole (a line with ≥3 configuration points has two on the same
-    closed side of the foot, giving `Wbtw (foot …) Q R`), construct the
-    off-line incidence `(Q, P₀, R)`, and derive the contradiction with
-    `exists_min_perpDist_offLine`'s minimal pair (`perpDist P₀ Q R =
-    perpDist P₀ a₀ b₀` since `line[Q,R] = line[a₀,b₀]`).  No more hard
-    geometry — pure betweenness + finite pigeonhole.
+  - Step 3d (commits: pigeonhole, plumbing, main theorem): DONE.
+    `exists_smul_vadd_foot` + `exists_wbtw_foot_of_three_mem` (sign
+    pigeonhole → same-side `Wbtw`); `collinear_coe_affineSpan_pair`,
+    `affineSpan_pair_eq_of_mem`, `perpDist_congr`, `foot_congr` (line
+    plumbing; `foot_congr` via `orthogonalProjection_congr`); then
+    `euclidean_sylvester_gallai` assembles the minimality contradiction.
 
 ## Work Order
 

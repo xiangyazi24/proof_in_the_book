@@ -414,6 +414,21 @@ theorem boundary_add_internalDehnContributionQ {InternalEdge Incident : Type*}
       dehnEdgeQ (length e) (angleClassQ (angle e i))) = boundary := by
   rw [internalDehnContributionQ_eq_zero internalEdges incident length angle q hangle, add_zero]
 
+/--
+Algebraic skeleton for rigid reassembly invariance: a bijection of edge sets
+that preserves lengths and angle classes preserves the rational Dehn invariant.
+-/
+theorem dehnInvariantQ_univ_eq_of_edge_equiv {Edge₁ Edge₂ Angle : Type*}
+    [Fintype Edge₁] [Fintype Edge₂] [AddCommGroup Angle] [Module ℚ Angle]
+    (e : Edge₁ ≃ Edge₂) (length₁ : Edge₁ → ℝ) (length₂ : Edge₂ → ℝ)
+    (angle₁ : Edge₁ → Angle) (angle₂ : Edge₂ → Angle)
+    (hlength : ∀ x, length₁ x = length₂ (e x))
+    (hangle : ∀ x, angle₁ x = angle₂ (e x)) :
+    dehnInvariantQ (Finset.univ : Finset Edge₁) length₁ angle₁ =
+      dehnInvariantQ (Finset.univ : Finset Edge₂) length₂ angle₂ := by
+  unfold dehnInvariantQ
+  exact Fintype.sum_equiv e _ _ (fun x => by simp [hlength x, hangle x])
+
 /-- If every edge angle vanishes in the angle target, the Dehn invariant is zero.
 This is the cube case: all dihedral angles are `π/2`, which is a rational
 multiple of `π` and therefore zero in `AngleModPiQ`. -/

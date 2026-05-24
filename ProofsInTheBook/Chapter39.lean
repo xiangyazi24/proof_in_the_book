@@ -369,6 +369,15 @@ theorem kneser_chromatic_lower_bound_one (n : ℕ) (hn : 2 ≤ n) :
   rw [kneserVertex_card, Nat.choose_one_right, Fintype.card_fin] at hcard
   omega
 
+/-- The lower bound is also unconditional on the boundary `n = 2k`: the
+target color type has one element, while the graph has an edge. -/
+theorem kneser_chromatic_lower_bound_two_mul (k : ℕ) (hk : 1 ≤ k) :
+    ¬ ∃ C : KneserVertex (2 * k) k → Fin (2 * k - 2 * k + 1),
+      ∀ a b, (kneserGraph (2 * k) k).Adj a b → C a ≠ C b := by
+  exact kneser_chromatic_lower_bound (2 * k) k hk (by omega) (by
+    intro hne
+    exact (hne rfl).elim)
+
 /-- Unconditional Chapter 39 for singleton vertices: `KG(n,1)` is the complete
 graph on `n` vertices, so it has the expected lower and upper coloring bounds. -/
 theorem chapter39_one (n : ℕ) (hn : 2 ≤ n) :
@@ -379,6 +388,16 @@ theorem chapter39_one (n : ℕ) (hn : 2 ≤ n) :
   refine ⟨?_, ?_⟩
   · exact kneser_chromatic_upper_bound n 1 (by omega) (by omega)
   · exact kneser_chromatic_lower_bound_one n hn
+
+/-- Unconditional Chapter 39 on the boundary `n = 2k`. -/
+theorem chapter39_two_mul (k : ℕ) (hk : 1 ≤ k) :
+    (∃ C : KneserVertex (2 * k) k → Fin (2 * k - 2 * k + 2),
+        ∀ a b, (kneserGraph (2 * k) k).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex (2 * k) k → Fin (2 * k - 2 * k + 1),
+        ∀ a b, (kneserGraph (2 * k) k).Adj a b → C a ≠ C b) := by
+  refine ⟨?_, ?_⟩
+  · exact kneser_chromatic_upper_bound (2 * k) k hk (by omega)
+  · exact kneser_chromatic_lower_bound_two_mul k hk
 
 /-- Certificate that Kneser graph KG(n,k) is not (n - 2k + 1)-colorable.
 This is the hard direction of Lovász's theorem, traditionally proved via

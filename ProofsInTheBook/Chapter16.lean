@@ -855,6 +855,47 @@ def KahnKalaiCertificate.ofFiniteSquaredDiameterObstruction {d : ℕ}
     exact ⟨x, hx, y, hy, hsame, dist_eq_of_dist_sq_eq_diam_sq hsq⟩
 
 /--
+Prime Frankl-Wilson plus a squared-distance geometric realization gives a
+Kahn-Kalai certificate.  This is the main reusable interface for the remaining
+Kahn-Kalai construction: instantiate `pointOf` by the cut-incidence vectors and
+prove their squared diameter.
+-/
+noncomputable def KahnKalaiCertificate.ofPrimeFranklWilsonSquaredConfiguration {d p : ℕ}
+    [Fact p.Prime] {α ι : Type*} [Fintype α] [DecidableEq α] [Fintype ι]
+    (sets : ι → Finset α) (pointOf : ι → EuclideanSpace ℝ (Fin d))
+    (hcard : ∀ i, (sets i).card = 2 * p)
+    (hinj : Function.Injective sets)
+    (hnonzero : ∀ i j, i ≠ j → (sets i ∩ sets j).card ≠ 0)
+    (hlarge : (d + 1) *
+        Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card} <
+          Fintype.card ι)
+    (hpos : 0 < Metric.diam
+      ((Finset.univ.image pointOf : Finset (EuclideanSpace ℝ (Fin d))) :
+        Set (EuclideanSpace ℝ (Fin d))))
+    (hdistSq : ∀ i j, i ≠ j → (sets i ∩ sets j).card = p →
+      dist (pointOf i) (pointOf j) ^ 2 = Metric.diam
+        ((Finset.univ.image pointOf : Finset (EuclideanSpace ℝ (Fin d))) :
+          Set (EuclideanSpace ℝ (Fin d))) ^ 2) :
+    KahnKalaiCertificate d := by
+  classical
+  let points : Finset (EuclideanSpace ℝ (Fin d)) := Finset.univ.image pointOf
+  refine KahnKalaiCertificate.ofFiniteSquaredDiameterObstruction points ?_ ?_
+  · simpa [points] using hpos
+  · intro color
+    have hlarge' :
+        Fintype.card (Fin (d + 1)) *
+            Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card} <
+          Fintype.card ι := by
+      simpa [Fintype.card_fin] using hlarge
+    obtain ⟨i, j, hij, hsame, hinter⟩ :=
+      exists_monochromatic_pair_prime_intersection_eq (sets := sets)
+        (color := fun i => color (pointOf i)) hcard hinj hnonzero hlarge'
+    refine ⟨pointOf i, ?_, pointOf j, ?_, hsame, ?_⟩
+    · simp [points]
+    · simp [points]
+    · simpa [points] using hdistSq i j hij hinter
+
+/--
 Bridge from the Frankl-Wilson coloring obstruction to a Borsuk counterexample
 certificate.  A concrete Kahn-Kalai construction can use this once it supplies
 the Euclidean point map and proves that the forbidden intersection pairs are

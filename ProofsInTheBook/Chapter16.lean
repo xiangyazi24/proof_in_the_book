@@ -8,21 +8,26 @@ From "Proofs from THE BOOK":
 **Borsuk's conjecture**: Can every bounded set in ℝ^d be partitioned
 into d+1 parts, each of smaller diameter? Borsuk conjectured yes (1933).
 
-The book discusses the conjecture and its eventual disproof (for d ≥ 298)
-by Kahn and Kalai (1993) using combinatorial arguments.
+The book discusses the conjecture and its Kahn-Kalai (1993) disproof in
+dimension `1325`.  The later `d ≥ 298` bound is due to Hinrichs-Richter
+(2003) and uses a different construction.
 
 Formalization status: this file defines finite color-class bookkeeping, states
 the corrected `BorsukConjecture d` for covers of a bounded set by subsets of
 itself in `EuclideanSpace ℝ (Fin d)`, packages a counterexample as
 `KahnKalaiCertificate d`, and formalizes enough of the
 Frankl-Wilson/Kahn-Kalai pipeline to prove the unconditional `chapter16`
-statement from the pointed `p = 17` family.  The local construction gives
-counterexamples for `4624 ≤ d ≤ 6848`.
+statement from the pointed `p = 17` family.  The local construction currently
+gives counterexamples for `4624 ≤ d ≤ 6848`.
 
-Gap to the full book theorem: the advertised `d ≥ 298` bound still needs the
-sharper Kahn-Kalai dimension reduction/numerics.  Mathlib has Euclidean metric
-spaces and finite-set tools, but not this Frankl-Wilson/Kahn-Kalai pipeline as
-an available theorem.
+Gap to the full book theorem: the Kahn-Kalai `d = 1325` bound still needs the
+sharper fixed-layer Frankl-Wilson bound and the codimension-one cut-vector
+realization.  Mathlib has Euclidean metric spaces and finite-set tools, but not
+this Frankl-Wilson/Kahn-Kalai pipeline as an available theorem.
+
+TODO (future): formalize the Hinrichs-Richter (2003) construction to reach
+`d ≥ 298`; needs a separate 2-distance-set / strongly-regular-graph
+construction not in the book's proof.
 
 Mathlib search status (2026-05-24): no Frankl-Wilson theorem, modular
 intersection theorem, Ray-Chaudhuri-Wilson theorem, or oddtown/eventown theorem
@@ -410,6 +415,209 @@ theorem franklWilson_modular_intersection_bound
     fintype_card_le_finrank_of_linear_functionals_diagonal v φ hdiag hoff
   exact hcard_le_finrank.trans (finrank_lowDegreeBooleanSubmodule_le K α L.card)
 
+/-- The fixed-card slice of the Boolean cube. -/
+abbrev FixedCardSubsets (α : Type*) [Fintype α] [DecidableEq α] (q : ℕ) :=
+  {X : Finset α // X.card = q}
+
+/-- A Boolean monomial restricted to the fixed-card slice. -/
+def sliceSubsetMonomial (K : Type*) [Zero K] [One K] {α : Type*} [Fintype α]
+    [DecidableEq α] {q : ℕ} (I : Finset α) : FixedCardSubsets α q → K :=
+  fun X => subsetMonomial K I X.1
+
+/--
+On the fixed-card slice, monomials of degree at most `r` are spanned by
+monomials of exact degree `r`, provided the relevant binomial coefficients are
+nonzero in the field.
+-/
+def exactDegreeSliceSubmodule (K : Type*) [Field K] (α : Type*) [Fintype α]
+    [DecidableEq α] (q r : ℕ) : Submodule K (FixedCardSubsets α q → K) :=
+  Submodule.span K
+    (Set.range (fun I : {I : Finset α // I.card = r} =>
+      sliceSubsetMonomial K (q := q) I.1))
+
+theorem exactDegreeSliceSubmodule_finrank_le
+    (K α : Type*) [Field K] [Fintype α] [DecidableEq α] (q r : ℕ) :
+    Module.finrank K (exactDegreeSliceSubmodule K α q r) ≤
+      Fintype.card {I : Finset α // I.card = r} :=
+  finrank_range_le_card (R := K) (M := FixedCardSubsets α q → K)
+    (b := fun I : {I : Finset α // I.card = r} =>
+      sliceSubsetMonomial K (q := q) I.1)
+
+theorem sum_exact_slice_monomials_of_subset {K α : Type*} [Field K] [Fintype α]
+    [DecidableEq α] {q r : ℕ} (I : Finset α) (hIr : I.card ≤ r) :
+    (∑ J ∈ (Finset.univ : Finset α).powersetCard r with I ⊆ J,
+        sliceSubsetMonomial K (q := q) J) =
+      ((q - I.card).choose (r - I.card) : K) • sliceSubsetMonomial K (q := q) I := by
+  ext X
+  simp only [Finset.sum_apply]
+  dsimp [sliceSubsetMonomial, subsetMonomial]
+  by_cases hIX : I ⊆ X.1
+  · have hleft_filter :
+        ((Finset.univ : Finset α).powersetCard r).filter (fun J => I ⊆ J ∧ J ⊆ X.1) =
+          (X.1.powersetCard r).filter (fun J => I ⊆ J) := by
+      ext J
+      simp [Finset.mem_powersetCard]
+      aesop
+    have hcard :
+        (((Finset.univ : Finset α).powersetCard r).filter
+            (fun J => I ⊆ J ∧ J ⊆ X.1)).card =
+          (q - I.card).choose (r - I.card) := by
+      rw [hleft_filter, Finset.card_filter_powersetCard_subset I X.1 r hIX hIr, X.2]
+    rw [if_pos hIX]
+    rw [← hcard]
+    rw [← Finset.sum_boole (R := K) (s := (Finset.univ : Finset α).powersetCard r)
+      (p := fun J => I ⊆ J ∧ J ⊆ X.1)]
+    rw [Finset.sum_filter]
+    rw [mul_one]
+    apply Finset.sum_congr rfl
+    intro J _hJ
+    by_cases hIJ : I ⊆ J <;> by_cases hJX : J ⊆ X.1 <;> simp [hIJ, hJX]
+  · have hzero :
+        (∑ J ∈ (Finset.univ : Finset α).powersetCard r with I ⊆ J,
+            if J ⊆ X.1 then (1 : K) else 0) = 0 := by
+      apply Finset.sum_eq_zero
+      intro J hJ
+      rw [Finset.mem_filter] at hJ
+      have hJXfalse : ¬ J ⊆ X.1 := by
+        intro hJX
+        exact hIX (hJ.2.trans hJX)
+      simp [hJXfalse]
+    rw [if_neg hIX]
+    simpa using hzero
+
+theorem sliceSubsetMonomial_mem_exact_of_card_le {K α : Type*} [Field K] [Fintype α]
+    [DecidableEq α] {q r : ℕ} {I : Finset α} (hIr : I.card ≤ r)
+    (hcoeff : ((q - I.card).choose (r - I.card) : K) ≠ 0) :
+    sliceSubsetMonomial K (q := q) I ∈ exactDegreeSliceSubmodule K α q r := by
+  let target := exactDegreeSliceSubmodule K α q r
+  have hsum_mem :
+      (∑ J ∈ (Finset.univ : Finset α).powersetCard r with I ⊆ J,
+          sliceSubsetMonomial K (q := q) J) ∈ target := by
+    apply Submodule.sum_mem
+    intro J hJ
+    rw [Finset.mem_filter] at hJ
+    have hJcard : J.card = r := (Finset.mem_powersetCard.mp hJ.1).2
+    exact Submodule.subset_span ⟨⟨J, hJcard⟩, rfl⟩
+  have hscaled : ((q - I.card).choose (r - I.card) : K) •
+      sliceSubsetMonomial K (q := q) I ∈ target := by
+    simpa [target] using (by
+      rw [← sum_exact_slice_monomials_of_subset (K := K) (q := q) I hIr]
+      exact hsum_mem)
+  exact (target.smul_mem_iff hcoeff).mp hscaled
+
+theorem lowDegree_restrict_mem_exact {K α : Type*} [Field K] [Fintype α]
+    [DecidableEq α] {q r : ℕ} {f : Finset α → K}
+    (hcoeff : ∀ I : Finset α, I.card ≤ r →
+      ((q - I.card).choose (r - I.card) : K) ≠ 0)
+    (hf : f ∈ lowDegreeBooleanSubmodule K α r) :
+    (fun X : FixedCardSubsets α q => f X.1) ∈ exactDegreeSliceSubmodule K α q r := by
+  let target := exactDegreeSliceSubmodule K α q r
+  change (fun X : FixedCardSubsets α q => f X.1) ∈ target
+  refine Submodule.span_induction (s := Set.range
+      (fun I : {I : Finset α // I.card ≤ r} => subsetMonomial K I.1)) ?_ ?_ ?_ ?_ hf
+  · rintro _ ⟨I, rfl⟩
+    change sliceSubsetMonomial K (q := q) I.1 ∈ target
+    exact sliceSubsetMonomial_mem_exact_of_card_le (K := K) (α := α) (q := q) I.2
+      (hcoeff I.1 I.2)
+  · exact target.zero_mem
+  · intro x y _ _ hx hy
+    simpa using target.add_mem hx hy
+  · intro a x _ hx
+    simpa using target.smul_mem a hx
+
+/-- Evaluation at a point of the fixed-card slice. -/
+def fixedEvalLinear (K : Type*) [Semiring K] {α : Type*} [Fintype α] [DecidableEq α]
+    {q : ℕ} (X : FixedCardSubsets α q) : (FixedCardSubsets α q → K) →ₗ[K] K where
+  toFun f := f X
+  map_add' := by intros; rfl
+  map_smul' := by intros; rfl
+
+/--
+Frankl-Wilson bound sharpened on a fixed-card slice: the low-degree space can
+be replaced by exact-degree monomials.
+-/
+theorem franklWilson_fixed_card_modular_intersection_bound
+    {K α ι : Type*} [Field K] [Fintype α] [DecidableEq α] [DecidableEq K] [Fintype ι]
+    {q : ℕ} (sets : ι → Finset α) (L : Finset K)
+    (hcard : ∀ i, (sets i).card = q)
+    (hcoeff : ∀ I : Finset α, I.card ≤ L.card →
+      ((q - I.card).choose (L.card - I.card) : K) ≠ 0)
+    (hself : ∀ i, ((sets i).card : K) ∉ L)
+    (hinter : ∀ i j, i ≠ j → (((sets i ∩ sets j).card : K) ∈ L)) :
+    Fintype.card ι ≤ Fintype.card {I : Finset α // I.card = L.card} := by
+  let target := exactDegreeSliceSubmodule K α q L.card
+  let v : ι → target := fun i =>
+    ⟨fun X : FixedCardSubsets α q => franklWilsonFunction K (sets i) L X.1,
+      lowDegree_restrict_mem_exact (K := K) (α := α) (q := q) (r := L.card)
+        hcoeff (franklWilsonFunction_mem_lowDegree (K := K) (α := α) (sets i) L)⟩
+  let φ : ι → target →ₗ[K] K := fun i =>
+    (fixedEvalLinear K ⟨sets i, hcard i⟩).comp target.subtype
+  have hdiag : ∀ i, φ i (v i) ≠ 0 := by
+    intro i
+    dsimp [φ, v, fixedEvalLinear]
+    rw [franklWilsonFunction, Finset.inter_self]
+    change (∏ x ∈ L, (((sets i).card : K) - x)) ≠ 0
+    rw [Finset.prod_ne_zero_iff]
+    intro c hc
+    rw [sub_ne_zero]
+    intro h
+    exact hself i (by simpa [h] using hc)
+  have hoff : ∀ i j, i ≠ j → φ i (v j) = 0 := by
+    intro i j hij
+    dsimp [φ, v, fixedEvalLinear]
+    rw [franklWilsonFunction]
+    exact Finset.prod_eq_zero (hinter j i hij.symm) (by simp)
+  have hcard_le_finrank : Fintype.card ι ≤ Module.finrank K target :=
+    fintype_card_le_finrank_of_linear_functionals_diagonal v φ hdiag hoff
+  exact hcard_le_finrank.trans (exactDegreeSliceSubmodule_finrank_le K α q L.card)
+
+/-- Count fixed-card subsets of a finite type. -/
+theorem exactSubsets_card_eq_choose {α : Type*} [Fintype α] [DecidableEq α] (r : ℕ) :
+    Fintype.card {I : Finset α // I.card = r} = (Fintype.card α).choose r := by
+  rw [Fintype.card_subtype]
+  have hset : ({I : Finset α | I.card = r} : Finset (Finset α)) =
+      (Finset.univ : Finset α).powersetCard r := by
+    ext I
+    simp [Finset.mem_powersetCard]
+  rw [hset, Finset.card_powersetCard, Finset.card_univ]
+
+/--
+Coloring form of the fixed-card Frankl-Wilson bound.
+-/
+theorem exists_monochromatic_pair_fixed_card_intersection_notMem
+    {K α ι κ : Type*} [Field K] [Fintype α] [DecidableEq α] [DecidableEq K]
+    [Fintype ι] [Fintype κ] [DecidableEq κ]
+    {q : ℕ} (sets : ι → Finset α) (L : Finset K) (color : ι → κ)
+    (hcard : ∀ i, (sets i).card = q)
+    (hcoeff : ∀ I : Finset α, I.card ≤ L.card →
+      ((q - I.card).choose (L.card - I.card) : K) ≠ 0)
+    (hself : ∀ i, ((sets i).card : K) ∉ L)
+    (hlarge :
+      Fintype.card κ * Fintype.card {I : Finset α // I.card = L.card} < Fintype.card ι) :
+    ∃ i j, i ≠ j ∧ color i = color j ∧ (((sets i ∩ sets j).card : K) ∉ L) := by
+  obtain ⟨c, hc⟩ := Fintype.exists_lt_card_fiber_of_mul_lt_card color hlarge
+  rw [← Fintype.card_subtype (fun i : ι => color i = c)] at hc
+  let fiber := {i : ι // color i = c}
+  let restrictedSets : fiber → Finset α := fun i => sets i.1
+  have hcard_fiber : ∀ i : fiber, (restrictedSets i).card = q := by
+    intro i
+    exact hcard i.1
+  have hself_fiber : ∀ i : fiber, ((restrictedSets i).card : K) ∉ L := by
+    intro i
+    exact hself i.1
+  by_contra hno
+  push Not at hno
+  have hinter_fiber :
+      ∀ i j : fiber, i ≠ j → (((restrictedSets i ∩ restrictedSets j).card : K) ∈ L) := by
+    intro i j hij
+    simpa [restrictedSets] using
+      hno i.1 j.1 (fun h => hij (Subtype.ext h)) (i.2.trans j.2.symm)
+  have hle :=
+    franklWilson_fixed_card_modular_intersection_bound restrictedSets L hcard_fiber hcoeff
+      hself_fiber hinter_fiber
+  exact (not_lt_of_ge hle) hc
+
+
 /--
 Contrapositive form of `franklWilson_modular_intersection_bound`: a family
 larger than the low-degree bound must contain a distinct pair whose
@@ -592,6 +800,141 @@ theorem directedCutSet_symmDiffCard {α : Type*} [Fintype α] [DecidableEq α]
   rw [Finset.card_union_of_disjoint hdisj, Finset.card_product, Finset.card_product,
     Finset.card_compl]
   rw [finsetSymmDiffCard]
+  ring
+
+/-- The number of ordered crossing pairs for a cut. -/
+theorem directedCutSet_card {α : Type*} [Fintype α] [DecidableEq α] (A : Finset α) :
+    (directedCutSet A).card = 2 * A.card * (Fintype.card α - A.card) := by
+  rw [directedCutSet]
+  have hset :
+      (Finset.univ.filter fun e : α × α =>
+          (e.1 ∈ A ∧ e.2 ∉ A) ∨ (e.1 ∉ A ∧ e.2 ∈ A)) =
+        (A ×ˢ Aᶜ) ∪ (Aᶜ ×ˢ A) := by
+    ext e
+    simp
+  rw [hset]
+  have hdisj : Disjoint (A ×ˢ Aᶜ) (Aᶜ ×ˢ A) := by
+    rw [Finset.disjoint_product]
+    exact Or.inl disjoint_compl_right
+  rw [Finset.card_union_of_disjoint hdisj, Finset.card_product, Finset.card_product,
+    Finset.card_compl]
+  ring
+
+/-- The type of unordered non-loop edges on a vertex type. -/
+abbrev UndirectedEdge (α : Type*) := {e : Sym2 α // ¬ e.IsDiag}
+
+/-- The complete bipartite cut graph determined by `A`. -/
+def cutGraph {α : Type*} [DecidableEq α] (A : Finset α) : SimpleGraph α :=
+  SimpleGraph.fromRel fun x y => x ∈ A ∧ y ∉ A
+
+/-- The unordered cut as a finite set of non-loop edges. -/
+noncomputable def undirectedCutSet {α : Type*} [Fintype α] [DecidableEq α]
+    (A : Finset α) : Finset (UndirectedEdge α) := by
+  classical
+  exact Finset.univ.filter fun e => e.1 ∈ (cutGraph A).edgeSet
+
+theorem mem_undirectedCutSet_iff {α : Type*} [Fintype α] [DecidableEq α]
+    {A : Finset α} {e : UndirectedEdge α} :
+    e ∈ undirectedCutSet A ↔ e.1 ∈ (cutGraph A).edgeSet := by
+  classical
+  simp [undirectedCutSet]
+
+noncomputable def cutEdgeSubtypeEquiv {α : Type*} [DecidableEq α] (G : SimpleGraph α) :
+    {e : UndirectedEdge α // e.1 ∈ G.edgeSet} ≃ G.edgeSet where
+  toFun e := ⟨e.1.1, e.2⟩
+  invFun e := ⟨⟨e.1, SimpleGraph.not_isDiag_of_mem_edgeSet G e.2⟩, e.2⟩
+  left_inv := by
+    rintro ⟨⟨e, _hdiag⟩, _hedge⟩
+    rfl
+  right_inv := by
+    rintro ⟨e, _hedge⟩
+    rfl
+
+/-- The unordered cut has `|A| * |Aᶜ|` edges. -/
+theorem undirectedCutSet_card {α : Type*} [Fintype α] [DecidableEq α] (A : Finset α) :
+    (undirectedCutSet A).card = A.card * (Fintype.card α - A.card) := by
+  classical
+  let G := cutGraph A
+  letI : Fintype G.edgeSet := G.fintypeEdgeSet
+  have htwo := SimpleGraph.two_mul_card_edgeFinset G
+  rw [SimpleGraph.edgeFinset_card] at htwo
+  have hdir : ({x : α × α | G.Adj x.1 x.2} : Finset (α × α)).card =
+      (directedCutSet A).card := by
+    apply congrArg Finset.card
+    rw [directedCutSet]
+    ext e
+    simp [G, cutGraph]
+    constructor
+    · intro h
+      rcases h.2 with hxy | hyx
+      · exact Or.inl hxy
+      · exact Or.inr ⟨hyx.2, hyx.1⟩
+    · intro h
+      refine ⟨?_, ?_⟩
+      · intro heq
+        rcases h with hxy | hyx
+        · exact hxy.2 (by simpa [heq] using hxy.1)
+        · exact hyx.1 (by simpa [heq] using hyx.2)
+      · rcases h with hxy | hyx
+        · exact Or.inl hxy
+        · exact Or.inr ⟨hyx.2, hyx.1⟩
+  rw [hdir, directedCutSet_card] at htwo
+  have hGcard : Fintype.card G.edgeSet = A.card * (Fintype.card α - A.card) := by
+    have htwo' : 2 * Fintype.card G.edgeSet =
+        2 * (A.card * (Fintype.card α - A.card)) := by
+      simpa [mul_assoc] using htwo
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) htwo'
+  have hsubCard :
+      Fintype.card {e : UndirectedEdge α // e.1 ∈ G.edgeSet} = (undirectedCutSet A).card := by
+    exact Fintype.card_ofFinset (undirectedCutSet A) (by
+      intro e
+      change e ∈ undirectedCutSet A ↔ e.1 ∈ G.edgeSet
+      simp [undirectedCutSet, G])
+  rw [← hsubCard]
+  rw [Fintype.card_congr (cutEdgeSubtypeEquiv G)]
+  exact hGcard
+
+theorem undirectedCutSet_symmDiffSet_eq {α : Type*} [Fintype α] [DecidableEq α]
+    (A B : Finset α) :
+    finsetSymmDiffSet (undirectedCutSet A) (undirectedCutSet B) =
+      undirectedCutSet (finsetSymmDiffSet A B) := by
+  classical
+  ext e
+  rw [mem_finsetSymmDiffSet_iff]
+  simp only [mem_undirectedCutSet_iff]
+  obtain ⟨z, _hz⟩ := e
+  obtain ⟨⟨x, y⟩, hxy⟩ := Quot.exists_rep z
+  subst z
+  simp [cutGraph, finsetSymmDiffSet]
+  tauto
+
+theorem undirectedCutSet_symmDiffCard {α : Type*} [Fintype α] [DecidableEq α]
+    (A B : Finset α) :
+    finsetSymmDiffCard (undirectedCutSet A) (undirectedCutSet B) =
+      finsetSymmDiffCard A B * (Fintype.card α - finsetSymmDiffCard A B) := by
+  rw [finsetSymmDiffCard, undirectedCutSet_symmDiffSet_eq, undirectedCutSet_card,
+    finsetSymmDiffCard]
+
+theorem undirectedCutSet_symmDiffCard_of_card_eq
+    {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) {r : ℕ}
+    (hA : A.card = r) (hB : B.card = r) :
+    finsetSymmDiffCard (undirectedCutSet A) (undirectedCutSet B) =
+      (2 * (r - (A ∩ B).card)) *
+        (Fintype.card α - 2 * (r - (A ∩ B).card)) := by
+  rw [undirectedCutSet_symmDiffCard,
+    finsetSymmDiffCard_eq_two_mul_sub_inter_of_card_eq A B hA hB]
+
+theorem undirectedCutSet_symmDiffCard_of_kahnKalai_intersection
+    {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) {k : ℕ}
+    (hground : Fintype.card α = 4 * k)
+    (hA : A.card = 2 * k) (hB : B.card = 2 * k)
+    (hinter : (A ∩ B).card = k) :
+    finsetSymmDiffCard (undirectedCutSet A) (undirectedCutSet B) = 4 * k * k := by
+  rw [undirectedCutSet_symmDiffCard_of_card_eq A B hA hB, hground, hinter]
+  have hsub : 2 * k - k = k := by omega
+  rw [hsub]
+  have hsub' : 4 * k - 2 * k = 2 * k := by omega
+  rw [hsub']
   ring
 
 theorem directedCutSet_symmDiffCard_of_card_eq

@@ -376,6 +376,83 @@ def neg {m : ℕ} (L : SignedLabel m) : SignedLabel m where
 
 end SignedLabel
 
+/-- `k`-subsets contained in a fixed finite support. -/
+abbrev KneserVertexIn (n k : ℕ) (support : Finset (Fin n)) : Type :=
+  {A : KneserVertex n k // (A.1 : Finset (Fin n)) ⊆ support}
+
+instance (n k : ℕ) (support : Finset (Fin n)) :
+    Fintype (KneserVertexIn n k support) := by
+  dsimp [KneserVertexIn, KneserVertex]
+  infer_instance
+
+instance (n k : ℕ) (support : Finset (Fin n)) :
+    DecidableEq (KneserVertexIn n k support) := by
+  dsimp [KneserVertexIn, KneserVertex]
+  infer_instance
+
+theorem KneserVertexIn.nonempty_of_le_card {n k : ℕ} {support : Finset (Fin n)}
+    (hcard : k ≤ support.card) :
+    Nonempty (KneserVertexIn n k support) := by
+  obtain ⟨A, hAsub, hAcard⟩ := Finset.exists_subset_card_eq hcard
+  exact ⟨⟨⟨A, hAcard⟩, hAsub⟩⟩
+
+/-- The set of colors used on `k`-subsets contained in a support. -/
+noncomputable def colorsInSupport {n k q : ℕ} (C : KneserVertex n k → Fin q)
+    (support : Finset (Fin n)) : Finset (Fin q) :=
+  Finset.univ.image fun A : KneserVertexIn n k support => C A.1
+
+theorem colorsInSupport_nonempty {n k q : ℕ} (C : KneserVertex n k → Fin q)
+    {support : Finset (Fin n)} (hcard : k ≤ support.card) :
+    (colorsInSupport C support).Nonempty := by
+  classical
+  obtain ⟨A⟩ := KneserVertexIn.nonempty_of_le_card (n := n) (k := k) hcard
+  exact ⟨C A.1, by simp [colorsInSupport]⟩
+
+/-- The minimum color appearing on a `k`-subset contained in `support`. -/
+noncomputable def minColorInSupport {n k q : ℕ} (C : KneserVertex n k → Fin q)
+    (support : Finset (Fin n)) (hcard : k ≤ support.card) : Fin q :=
+  (colorsInSupport C support).min' (colorsInSupport_nonempty C hcard)
+
+theorem exists_kneserVertexIn_color_eq_minColorInSupport {n k q : ℕ}
+    (C : KneserVertex n k → Fin q) {support : Finset (Fin n)}
+    (hcard : k ≤ support.card) :
+    ∃ A : KneserVertexIn n k support, C A.1 = minColorInSupport C support hcard := by
+  classical
+  have hmem :
+      minColorInSupport C support hcard ∈ colorsInSupport C support :=
+    Finset.min'_mem _ _
+  rcases Finset.mem_image.mp hmem with ⟨A, _hA, hAeq⟩
+  exact ⟨A, hAeq⟩
+
+/--
+Key finite step in Matoušek's Tucker reduction: if two disjoint supports both
+contain a `k`-subset, then a proper Kneser coloring gives different minimum
+colors on the two supports.
+-/
+theorem minColorInSupport_ne_of_disjoint {n k q : ℕ} (hk : 1 ≤ k)
+    (C : KneserVertex n k → Fin q)
+    (hC : ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b)
+    {left right : Finset (Fin n)}
+    (hdisj : Disjoint left right)
+    (hleft : k ≤ left.card) (hright : k ≤ right.card) :
+    minColorInSupport C left hleft ≠ minColorInSupport C right hright := by
+  classical
+  obtain ⟨A, hAcolor⟩ := exists_kneserVertexIn_color_eq_minColorInSupport C hleft
+  obtain ⟨B, hBcolor⟩ := exists_kneserVertexIn_color_eq_minColorInSupport C hright
+  have hABdisj : Disjoint (A.1.1 : Finset (Fin n)) (B.1.1 : Finset (Fin n)) :=
+    Disjoint.mono A.2 B.2 hdisj
+  have hABne : A.1 ≠ B.1 := by
+    intro h
+    have hself : Disjoint (A.1.1 : Finset (Fin n)) (A.1.1 : Finset (Fin n)) := by
+      simpa [h] using hABdisj
+    have hempty : (A.1.1 : Finset (Fin n)) = ∅ := by
+      exact (Finset.disjoint_self_iff_empty _).mp hself
+    have hzero : (A.1.1 : Finset (Fin n)).card = 0 := by simp [hempty]
+    have hAcard : (A.1.1 : Finset (Fin n)).card = k := A.1.2
+    omega
+  intro hmin
+  exact hC A.1 B.1 ⟨hABne, hABdisj⟩ (hAcolor.trans (hmin.trans hBcolor.symm))
+
 /--
 Tucker's lemma in the octahedral/sign-vector form needed for the
 Matoušek proof of Lovász's theorem.  Every antipodal labeling of nonzero sign

@@ -262,6 +262,35 @@ theorem chapter10 {Point Line : Type*} [DecidableEq Point]
     OrdinaryLine points onLine line :=
   ordinaryLine_of_two_points_on_line points onLine line hcard
 
+/-- Direct existential constructor for `OrdinaryLine`: two configuration points
+on a line, plus a "no third point" guarantee, suffice. -/
+theorem ordinaryLine_of_two_distinct_points {Point Line : Type*} [DecidableEq Point]
+    (points : Finset Point) (onLine : Point → Line → Prop) [DecidableRel onLine]
+    (line : Line) {p q : Point}
+    (hp : p ∈ points) (hq : q ∈ points) (hpq : p ≠ q)
+    (hpL : onLine p line) (hqL : onLine q line)
+    (hno_third : ∀ r ∈ points, onLine r line → r = p ∨ r = q) :
+    OrdinaryLine points onLine line :=
+  ⟨p, q, hp, hq, hpq, hpL, hqL, hno_third⟩
+
+/-- An `OrdinaryLine` always has its on-line point set equal to the two-point
+set of its witnesses. -/
+theorem pointsOnLine_eq_pair_of_ordinaryLine {Point Line : Type*}
+    [DecidableEq Point] (points : Finset Point)
+    (onLine : Point → Line → Prop) [DecidableRel onLine] (line : Line)
+    (h : OrdinaryLine points onLine line) :
+    ∃ p q : Point, p ∈ points ∧ q ∈ points ∧ p ≠ q ∧
+      pointsOnLine points onLine line = {p, q} := by
+  obtain ⟨p, q, hp, hq, hpq, hpL, hqL, hall⟩ := h
+  refine ⟨p, q, hp, hq, hpq, ?_⟩
+  ext r
+  simp only [pointsOnLine, Finset.mem_filter, Finset.mem_insert, Finset.mem_singleton]
+  constructor
+  · rintro ⟨hr, hrl⟩; exact hall r hr hrl
+  · rintro (rfl | rfl)
+    · exact ⟨hp, hpL⟩
+    · exact ⟨hq, hqL⟩
+
 /-- Stronger packaging of `sylvester_gallai_abstract`: there exists a line
 with at most 2 configuration points (combining the `card = 2 ∨ card ≤ 1`
 conclusion into a single bound). -/

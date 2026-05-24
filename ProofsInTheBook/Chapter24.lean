@@ -272,16 +272,69 @@ def CotPartialFractionLimit : Prop :=
     Filter.Tendsto (fun N => rationalPartialSum N x) Filter.atTop
       (nhds (Real.pi * Real.cot (Real.pi * x)))
 
-/-- The cotangent partial-fraction identity, restated as a conditional theorem
-that takes the `CotPartialFractionLimit` hypothesis as input.  This replaces
-the earlier `True := trivial` placeholder with a meaningful conditional
-statement: given the limit identity (which is the Tier 2 gap), the partial
-sum converges to `π·cot(πx)` at every non-integer point.  -/
-theorem cot_pi_partial_fraction_identity (h : CotPartialFractionLimit)
+/-- **`CotPartialFractionLimit` holds unconditionally.**
+
+Proof: transfer Mathlib's complex Mittag-Leffler expansion
+`Complex.cot_series_rep'` down to `ℝ` via `Complex.hasSum_ofReal`, then read
+off the partial-sum limit.  This discharges the former Tier 2 hypothesis. -/
+theorem cot_partial_fraction_limit_holds : CotPartialFractionLimit := by
+  intro x hx
+  -- The complexification of `x` lies in the integer complement `ℂ_ℤ`.
+  have hz : (x : ℂ) ∈ Complex.integerComplement := by
+    rw [Complex.mem_integerComplement_iff]
+    rintro ⟨n, hn⟩
+    exact hx n (by exact_mod_cast hn.symm)
+  -- Mathlib's complex cotangent series, as a `HasSum`.
+  have hsum := summable_cotTerm hz
+  have hval : (∑' n : ℕ, cotTerm (x : ℂ) n)
+      = (Real.pi : ℂ) * Complex.cot (Real.pi * x) - 1 / (x : ℂ) := by
+    have := cot_series_rep' hz
+    simpa [cotTerm] using this.symm
+  have hHasC : HasSum (fun n : ℕ => cotTerm (x : ℂ) n)
+      ((Real.pi : ℂ) * Complex.cot (Real.pi * x) - 1 / (x : ℂ)) := by
+    rw [← hval]; exact hsum.hasSum
+  -- The complex series is the complexification of the real partial-fraction series.
+  have hHasC' : HasSum
+      (fun n : ℕ => (((1 / (x + ((n + 1 : ℕ) : ℝ)) + 1 / (x - ((n + 1 : ℕ) : ℝ))) : ℝ) : ℂ))
+      (((Real.pi * Real.cot (Real.pi * x) - 1 / x : ℝ)) : ℂ) := by
+    have efun : (fun n : ℕ =>
+        (((1 / (x + ((n + 1 : ℕ) : ℝ)) + 1 / (x - ((n + 1 : ℕ) : ℝ))) : ℝ) : ℂ))
+        = fun n : ℕ => cotTerm (x : ℂ) n := by
+      funext n
+      simp only [cotTerm]
+      push_cast
+      ring
+    have eval : (((Real.pi * Real.cot (Real.pi * x) - 1 / x : ℝ)) : ℂ)
+        = (Real.pi : ℂ) * Complex.cot (Real.pi * x) - 1 / (x : ℂ) := by
+      push_cast
+      ring
+    rw [efun, eval]; exact hHasC
+  -- Descend to `ℝ`.
+  have hHasR : HasSum
+      (fun n : ℕ => 1 / (x + ((n + 1 : ℕ) : ℝ)) + 1 / (x - ((n + 1 : ℕ) : ℝ)))
+      (Real.pi * Real.cot (Real.pi * x) - 1 / x) :=
+    Complex.hasSum_ofReal.mp hHasC'
+  -- Partial sums converge; prepend the `1/x` head term.
+  have htend := hHasR.tendsto_sum_nat
+  have : Filter.Tendsto (fun N => rationalPartialSum N x) Filter.atTop
+      (nhds (1 / x + (Real.pi * Real.cot (Real.pi * x) - 1 / x))) := by
+    have hconst : Filter.Tendsto (fun _ : ℕ => (1 / x : ℝ)) Filter.atTop (nhds (1 / x)) :=
+      tendsto_const_nhds
+    have h2 := hconst.add htend
+    refine h2.congr (fun N => ?_)
+    rw [rationalPartialSum]
+  simpa using this
+
+/-- **The cotangent partial-fraction identity (unconditional).**
+For every non-integer `x`, the rational partial sum
+`1/x + ∑_{n<N} (1/(x+n) + 1/(x-n))` converges to `π·cot(πx)`.
+Now proved outright via `cot_partial_fraction_limit_holds`; the former
+`CotPartialFractionLimit` hypothesis has been discharged. -/
+theorem cot_pi_partial_fraction_identity
     (x : ℝ) (hx : ∀ n : ℤ, x ≠ (n : ℝ)) :
     Filter.Tendsto (fun N => rationalPartialSum N x) Filter.atTop
       (nhds (Real.pi * Real.cot (Real.pi * x))) :=
-  h x hx
+  cot_partial_fraction_limit_holds x hx
 
 /-- `cot(π/2) = 0`.  This is the "eval at 1/2" property of `cot(π·)` that
 matches the Herglotz-class `eval_half` requirement (after multiplying by `π`). -/

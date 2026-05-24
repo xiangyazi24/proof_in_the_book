@@ -425,6 +425,94 @@ def latticeLGVCertificate {n : ℕ} {V R : Type*} [DecidableEq V] [CommRing R]
   signedWeight := LGVFamily.signedWeight weight
   sign_reverse := LGVFamily.signedWeight_badTailSwap weight
 
+/--
+A finite path-count system for the determinant side of LGV.  `Path i j` is
+the finite type of paths from source `i` to sink `j`, and `familyEquiv`
+identifies the determinant expansion data `(σ, one path for each column i from
+σ i to i)` with the concrete `LGVFamily` type used by the tail-swap
+certificate.
+-/
+structure PathCountSystem (n : ℕ) (V R : Type*) [DecidableEq V] [CommRing R] where
+  vertexWeight : V → R
+  Path : Fin n → Fin n → Type*
+  pathFintype : ∀ i j : Fin n, Fintype (Path i j)
+  pathWeight : ∀ {i j : Fin n}, Path i j → R
+  familyEquiv :
+    (Σ σ : Equiv.Perm (Fin n), ∀ i : Fin n, Path (σ i) i) ≃ LGVFamily n V
+  weight_eq :
+    ∀ X : (Σ σ : Equiv.Perm (Fin n), ∀ i : Fin n, Path (σ i) i),
+      LGVFamily.signedWeight vertexWeight (familyEquiv X) =
+        Equiv.Perm.sign X.1 • ∏ i : Fin n, pathWeight (X.2 i)
+
+namespace PathCountSystem
+
+variable {n : ℕ} {V R : Type*} [DecidableEq V] [CommRing R]
+
+/-- The weighted path-count matrix entry. -/
+def pathCount (S : PathCountSystem n V R) (i j : Fin n) : R :=
+  letI := S.pathFintype i j
+  ∑ p : S.Path i j, S.pathWeight p
+
+/-- The LGV path-count matrix. -/
+def matrix (S : PathCountSystem n V R) : Matrix (Fin n) (Fin n) R :=
+  fun i j => S.pathCount i j
+
+/--
+The determinant of the path-count matrix expands as the signed sum over all
+concrete LGV families.
+-/
+theorem det_matrix_eq_total (S : PathCountSystem n V R) [Fintype (LGVFamily n V)] :
+    S.matrix.det = ∑ F : LGVFamily n V, LGVFamily.signedWeight S.vertexWeight F := by
+  classical
+  letI : ∀ i j : Fin n, Fintype (S.Path i j) := S.pathFintype
+  have h_expand :
+      S.matrix.det =
+        ∑ X : (Σ σ : Equiv.Perm (Fin n), ∀ i : Fin n, S.Path (σ i) i),
+          Equiv.Perm.sign X.1 • ∏ i : Fin n, S.pathWeight (X.2 i) := by
+    calc
+      S.matrix.det =
+          ∑ σ : Equiv.Perm (Fin n), Equiv.Perm.sign σ • ∏ i, S.matrix (σ i) i := by
+            exact Matrix.det_apply S.matrix
+      _ =
+          ∑ σ : Equiv.Perm (Fin n),
+            Equiv.Perm.sign σ •
+              (∑ choice : (∀ i : Fin n, S.Path (σ i) i),
+                ∏ i : Fin n, S.pathWeight (choice i)) := by
+            apply Finset.sum_congr rfl
+            intro σ _
+            simp [matrix, pathCount, Fintype.prod_sum]
+      _ =
+          ∑ σ : Equiv.Perm (Fin n),
+            ∑ choice : (∀ i : Fin n, S.Path (σ i) i),
+              Equiv.Perm.sign σ • ∏ i : Fin n, S.pathWeight (choice i) := by
+            simp [Finset.smul_sum]
+      _ =
+          ∑ X : (Σ σ : Equiv.Perm (Fin n), ∀ i : Fin n, S.Path (σ i) i),
+            Equiv.Perm.sign X.1 • ∏ i : Fin n, S.pathWeight (X.2 i) := by
+            exact
+              (Fintype.sum_sigma'
+                (fun σ (choice : ∀ i : Fin n, S.Path (σ i) i) =>
+                  Equiv.Perm.sign σ • ∏ i : Fin n, S.pathWeight (choice i))).symm
+  calc
+    S.matrix.det =
+        ∑ X : (Σ σ : Equiv.Perm (Fin n), ∀ i : Fin n, S.Path (σ i) i),
+          Equiv.Perm.sign X.1 • ∏ i : Fin n, S.pathWeight (X.2 i) := h_expand
+    _ =
+        ∑ X : (Σ σ : Equiv.Perm (Fin n), ∀ i : Fin n, S.Path (σ i) i),
+          LGVFamily.signedWeight S.vertexWeight (S.familyEquiv X) := by
+          apply Finset.sum_congr rfl
+          intro X _
+          exact (S.weight_eq X).symm
+    _ = ∑ F : LGVFamily n V, LGVFamily.signedWeight S.vertexWeight F := by
+          simpa using
+            (Fintype.sum_equiv S.familyEquiv
+              (fun X : (Σ σ : Equiv.Perm (Fin n), ∀ i : Fin n, S.Path (σ i) i) =>
+                LGVFamily.signedWeight S.vertexWeight (S.familyEquiv X))
+              (fun F : LGVFamily n V => LGVFamily.signedWeight S.vertexWeight F)
+              (by intro X; rfl))
+
+end PathCountSystem
+
 /-- LGV determinant identity (certificate form):
 The determinant of a matrix M equals the signed sum over non-intersecting path families.
 (This abstracts the geometric core: M(i, j) is the number of paths from source i to sink j.
@@ -458,7 +546,7 @@ concrete path families is supplied as `h_det_expand`; the cancellation of
 marked intersecting families is constructed internally by tail-swap, with no
 `BadInvolutionCertificate` parameter.
 -/
-theorem chapter30 {n : ℕ} {V R : Type*} [DecidableEq V]
+theorem chapter30_of_det_expand {n : ℕ} {V R : Type*} [DecidableEq V]
     [Fintype (LGVFamily n V)] [DecidableEq (LGVFamily n V)]
     [CommRing R] [IsAddTorsionFree R]
     (weight : V → R) (M : Matrix (Fin n) (Fin n) R)
@@ -469,5 +557,21 @@ theorem chapter30 {n : ℕ} {V R : Type*} [DecidableEq V]
         LGVFamily.signedWeight weight F := by
   rw [h_det_expand]
   exact (latticeLGVCertificate weight).total_sum_eq_good_sum
+
+/--
+Lindström-Gessel-Viennot cancellation for a finite path-count system.  The
+matrix is defined from the path counts, and the determinant expansion is proved
+from `Matrix.det_apply`; the only remaining sum is over the non-intersecting
+families.
+-/
+theorem chapter30 {n : ℕ} {V R : Type*} [DecidableEq V]
+    [Fintype (LGVFamily n V)] [DecidableEq (LGVFamily n V)]
+    [CommRing R] [IsAddTorsionFree R]
+    (S : PathCountSystem n V R) :
+    S.matrix.det =
+      ∑ F ∈ Finset.univ.filter (fun F : LGVFamily n V => ¬ LGVFamily.isBad F),
+        LGVFamily.signedWeight S.vertexWeight F := by
+  rw [S.det_matrix_eq_total]
+  exact (latticeLGVCertificate S.vertexWeight).total_sum_eq_good_sum
 
 end ProofsInTheBook.Chapter30

@@ -11,13 +11,15 @@ The book's proof uses Euler's formula (E ≤ 3V-6 for planar graphs)
 to find a vertex of degree ≤ 5, then applies induction with a
 Kempe chain argument to handle the degree-5 case.
 
-Mathlib does not currently provide the plane-embedding/Jordan-curve
-infrastructure needed to instantiate the last Kempe separation step for
-planar graphs.  The theorem named `chapter35` below is therefore the
-honest induction theorem for any vertex-deletion-closed graph class whose
-nonempty members have a local Kempe extension vertex.  For the planar
-class, Euler's degree bound and the planar Kempe-chain separation lemma
-are exactly the missing front needed to supply those hypotheses.
+Mathlib does not currently provide a planar graph predicate or the
+plane-embedding/Jordan-curve infrastructure needed to instantiate the last
+Kempe separation step for planar graphs.  The theorem named `chapter35`
+below is therefore the honest certified form: a finite graph equipped with
+a recursive deletion certificate whose local steps are exactly the
+degree-≤4 or Kempe-swap extensions in the book is 5-colorable.  For the
+planar class, the missing front is to prove that every finite planar graph
+has such a certificate from Euler's degree bound and the planar
+Kempe-chain separation lemma.
 -/
 
 namespace ProofsInTheBook.Chapter35
@@ -130,6 +132,42 @@ section FiveColorInduction
 
 universe u
 
+/-- `G.Colorable 5` is exactly the existence of a proper coloring by `Fin 5`. -/
+theorem colorable_five_iff_exists_proper_coloring {V : Type u} (G : SimpleGraph V) :
+    G.Colorable 5 ↔
+      ∃ color : V → Fin 5, ∀ u v : V, G.Adj u v → color u ≠ color v := by
+  constructor
+  · rintro ⟨C⟩
+    exact ⟨C, fun u v huv => C.valid huv⟩
+  · rintro ⟨color, hproper⟩
+    exact ⟨SimpleGraph.Coloring.mk color (by intro u v huv; exact hproper u v huv)⟩
+
+/-- The complete graph on six vertices is not 5-colorable. -/
+theorem completeGraph_fin_six_not_colorable_five :
+    ¬ (⊤ : SimpleGraph (Fin 6)).Colorable 5 := by
+  intro h
+  have hle : Nat.card (Fin 6) ≤ 5 := by
+    exact h.card_le_of_pairwise_adj (fun i : Fin 6 => i) (by
+      intro i j hij
+      simp [SimpleGraph.top_adj, hij])
+  norm_num at hle
+
+/--
+The usual planar Euler consequence "every subgraph has a vertex of degree at
+most five" is not by itself a five-color theorem: the complete graph on six
+vertices also has that degeneracy bound, but is not 5-colorable.
+-/
+theorem completeGraph_fin_six_induced_subgraph_has_degree_le_five
+    (S : Set (Fin 6)) [Fintype S] [Nonempty S] :
+    ∃ v : S, (⊤ : SimpleGraph S).degree v ≤ 5 := by
+  classical
+  rcases ‹Nonempty S› with ⟨v⟩
+  refine ⟨v, ?_⟩
+  have hcard : Fintype.card S ≤ 6 := by
+    simpa using Fintype.card_subtype_le (fun x : Fin 6 => x ∈ S)
+  simp [SimpleGraph.complete_graph_degree]
+  omega
+
 /--
 If a color is absent from all neighbors of `v` in a coloring of `G - v`,
 then that coloring extends to a coloring of `G` by giving `v` that color.
@@ -239,61 +277,63 @@ theorem coloring_extend_after_kempe_swap {V : Type u} [Fintype V] [DecidableEq V
     _ = C x := hx'
 
 /--
-The five-color induction principle.
+A recursive certificate for the local extension steps used in the five-color
+proof.  This is deliberately not a planar graph definition: it records exactly
+the graph-theoretic data that the planar Euler/Kempe argument must supply.
+-/
+inductive FiveColorReducible :
+    {V : Type u} → [Fintype V] → [DecidableEq V] → SimpleGraph V → Prop
+  | empty {V : Type u} [Fintype V] [DecidableEq V] [IsEmpty V] (G : SimpleGraph V) :
+      FiveColorReducible G
+  | step {V : Type u} [Fintype V] [DecidableEq V] (G : SimpleGraph V) (v : V)
+      (hdel : FiveColorReducible (G.induce ({x | x ≠ v} : Set V)))
+      (hstep : ∀ C : (G.induce ({x | x ≠ v} : Set V)).Coloring (Fin 5),
+        (∃ neighbors : Finset V,
+          (∀ w : V, w ∈ neighbors ↔ G.Adj v w) ∧ neighbors.card ≤ 4) ∨
+        ∃ c1 c2 c : Fin 5, c1 ≠ c2 ∧
+          ∃ S : Finset ({x | x ≠ v} : Set V),
+            (∀ u w,
+              (G.induce ({x | x ≠ v} : Set V)).Adj u w → u ∈ S →
+                (C u = c1 ∨ C u = c2) →
+                (C w = c1 ∨ C w = c2) → w ∈ S) ∧
+            (∀ x : ({x | x ≠ v} : Set V), G.Adj v x →
+              (if x ∈ S then swapColor c1 c2 (C x) else C x) ≠ c)) :
+      FiveColorReducible G
+
+theorem FiveColorReducible.step_of_degree_le_four {V : Type u} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) (v : V) [Fintype (G.neighborSet v)] (hdeg : G.degree v ≤ 4)
+    (hdel : FiveColorReducible (G.induce ({x | x ≠ v} : Set V))) :
+    FiveColorReducible G := by
+  classical
+  refine FiveColorReducible.step G v hdel ?_
+  intro _C
+  left
+  refine ⟨G.neighborFinset v, ?_, ?_⟩
+  · intro w
+    exact G.mem_neighborFinset v w
+  · simpa [SimpleGraph.card_neighborFinset_eq_degree] using hdeg
+
+/--
+The certified five-color theorem.
 
 Intended theorem in the book: every finite planar simple graph is 5-colorable.
-This theorem proves that conclusion for any graph class `P` once the two
-planar facts not supplied by Mathlib are available:
-
-* `hdelete`: deleting a vertex keeps the graph in the class;
-* `hstep`: every nonempty graph in the class has a vertex whose every
-  5-coloring of the deleted graph comes with either a degree-≤4 neighbor
-  certificate or an abstract Kempe-swap certificate freeing a color.
-
-For planar graphs, `hstep` is the Euler degree-≤5 step plus the Kempe-chain
-separation argument.  The degree-≤4 case is proved above, and the abstract
-Kempe recoloring step is `coloring_extend_after_kempe_swap`; the missing
-piece is the planar topological separation lemma that supplies the finite
-Kempe component and the freed color in the degree-5 case.
+This theorem proves the faithful certified version supported by this file:
+every finite graph with a recursive five-color Kempe-reduction certificate is
+5-colorable.  Instantiating the certificate for planar graphs is exactly the
+unformalized planar Euler/Kempe front; the weaker "every subgraph has a vertex
+of degree at most 5" condition is not sufficient for five colors, as the
+complete graph on six vertices shows.
 -/
 theorem chapter35 {V : Type u} [Fintype V] [DecidableEq V] (G : SimpleGraph V)
-    (P : ∀ {W : Type u}, [Fintype W] → [DecidableEq W] → SimpleGraph W → Prop)
-    (hdelete : ∀ {W : Type u} [Fintype W] [DecidableEq W] (H : SimpleGraph W) (v : W),
-      P H → P (H.induce ({x | x ≠ v} : Set W)))
-    (hstep : ∀ {W : Type u} [Fintype W] [DecidableEq W] (H : SimpleGraph W),
-      P H → Nonempty W →
-        ∃ v : W, ∀ C : (H.induce ({x | x ≠ v} : Set W)).Coloring (Fin 5),
-          (∃ neighbors : Finset W,
-            (∀ w : W, w ∈ neighbors ↔ H.Adj v w) ∧ neighbors.card ≤ 4) ∨
-          ∃ c1 c2 c : Fin 5, c1 ≠ c2 ∧
-            ∃ S : Finset ({x | x ≠ v} : Set W),
-              (∀ u w,
-                (H.induce ({x | x ≠ v} : Set W)).Adj u w → u ∈ S →
-                  (C u = c1 ∨ C u = c2) →
-                  (C w = c1 ∨ C w = c2) → w ∈ S) ∧
-              (∀ x : ({x | x ≠ v} : Set W), H.Adj v x →
-                (if x ∈ S then swapColor c1 c2 (C x) else C x) ≠ c))
-    (hG : P G) :
+    (hG : FiveColorReducible G) :
     G.Colorable 5 := by
   classical
-  let motive : ℕ → Prop := fun n =>
-    ∀ {W : Type u} [Fintype W] [DecidableEq W] (H : SimpleGraph W),
-      Fintype.card W = n → P H → H.Colorable 5
-  have hall : ∀ n, motive n := by
-    intro n
-    refine Nat.strong_induction_on (p := motive) n ?_
-    intro n ih W _ _ H hcard hPH
-    by_cases hnonempty : Nonempty W
-    · rcases hstep H hPH hnonempty with ⟨v, hvext⟩
-      let S : Set W := {x | x ≠ v}
-      have hcard_lt : Fintype.card S < n := by
-        rw [← hcard]
-        exact Fintype.card_subtype_lt (p := fun x : W => x ≠ v) (x := v) (by simp)
-      have hPdel : P (H.induce S) := hdelete H v hPH
-      have hdel : (H.induce S).Colorable 5 :=
-        ih (Fintype.card S) hcard_lt (H.induce S) rfl hPdel
-      rcases hdel with ⟨C⟩
-      rcases hvext C with hlow | hkempe
+  induction hG with
+  | empty H =>
+      exact SimpleGraph.Colorable.of_isEmpty (G := H) 5
+  | step H v _hdel hstep ih =>
+      rcases ih with ⟨C⟩
+      rcases hstep C with hlow | hkempe
       · rcases hlow with ⟨neighbors, hneighbors, hneighbors_card⟩
         rcases coloring_extend_of_neighbor_finset_le_four H v neighbors hneighbors
           hneighbors_card C with ⟨C', _hC'⟩
@@ -302,9 +342,6 @@ theorem chapter35 {V : Type u} [Fintype V] [DecidableEq V] (G : SimpleGraph V)
         rcases coloring_extend_after_kempe_swap H v C c1 c2 c hc12 K hclosed hfree with
           ⟨C', _T, _hC'⟩
         exact ⟨C'⟩
-    · haveI : IsEmpty W := ⟨fun w => hnonempty ⟨w⟩⟩
-      exact SimpleGraph.Colorable.of_isEmpty (G := H) 5
-  exact hall (Fintype.card V) G rfl hG
 
 end FiveColorInduction
 

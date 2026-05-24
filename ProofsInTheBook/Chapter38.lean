@@ -5,29 +5,136 @@ import Mathlib
 
 From "Proofs from THE BOOK":
 
-**Shannon's theorem**: The capacity of a binary symmetric channel
-with error probability p is C = 1 - H(p), where H is the binary entropy.
+**Intended chapter content.** The chapter discusses error-correcting codes,
+including the Singleton bound, the Hamming sphere-packing bound, the
+Gilbert-Varshamov greedy existence bound, and the analytic Shannon capacity
+formula `C = 1 - H(p)` for the binary symmetric channel.
 
-The book discusses error-correcting codes, the Hamming bound,
-the Singleton bound, and the Gilbert-Varshamov bound.
+This file formalizes the finite combinatorial bounds.  The Shannon capacity
+statement is not claimed here: it requires entropy and asymptotic channel
+capacity analysis, and is recorded as an honest point-17 gap/frontier rather
+than as a weakened Lean theorem.
 -/
 
 namespace ProofsInTheBook.Chapter38
 
-/-!
-### Unique decoding from Hamming distance
+open Finset
 
-Before the asymptotic capacity statement, coding theory uses the elementary
-fact that Hamming balls of radius `t` around codewords are disjoint whenever
-the minimum distance is greater than `2t`.
+/-!
+### Words, Hamming balls, and volume
+
+For a `q`-ary alphabet we use `Fin q`.  The Hamming ball volume is formalized
+as the cardinality of a ball; the usual closed form
+`∑ i ≤ r, (n.choose i) * (q - 1)^i` is not needed for the three finite bounds.
 -/
+
+abbrev QaryWord (q n : ℕ) : Type :=
+  Fin n → Fin q
 
 abbrev BinaryWord (n : ℕ) : Type :=
   Fin n → Bool
 
-theorem unique_decode_of_two_mul_radius_lt_distance {n t d : ℕ} {code : Finset (BinaryWord n)}
+def hammingBall (q n radius : ℕ) (center : QaryWord q n) : Finset (QaryWord q n) :=
+  Finset.univ.filter fun word => hammingDist center word ≤ radius
+
+def zeroQaryWord {q n : ℕ} (hq : 0 < q) : QaryWord q n :=
+  fun _ => ⟨0, hq⟩
+
+def qaryHammingBallVolume (q n radius : ℕ) : ℕ :=
+  if hq : 0 < q then (hammingBall q n radius (zeroQaryWord (q := q) (n := n) hq)).card
+  else 0
+
+def coordinateSwap {q n : ℕ} (x y : QaryWord q n) (word : QaryWord q n) : QaryWord q n :=
+  fun i => Equiv.swap (x i) (y i) (word i)
+
+@[simp]
+lemma coordinateSwap_left {q n : ℕ} (x y : QaryWord q n) :
+    coordinateSwap x y x = y := by
+  funext i
+  simp [coordinateSwap]
+
+@[simp]
+lemma coordinateSwap_right {q n : ℕ} (x y : QaryWord q n) :
+    coordinateSwap x y y = x := by
+  funext i
+  simp [coordinateSwap]
+
+@[simp]
+lemma coordinateSwap_involutive {q n : ℕ} (x y word : QaryWord q n) :
+    coordinateSwap x y (coordinateSwap x y word) = word := by
+  funext i
+  simp [coordinateSwap]
+
+lemma hammingDist_coordinateSwap {q n : ℕ} (x y a b : QaryWord q n) :
+    hammingDist (coordinateSwap x y a) (coordinateSwap x y b) = hammingDist a b := by
+  classical
+  simpa [coordinateSwap] using
+    (hammingDist_comp
+      (fun i : Fin n => (Equiv.swap (x i) (y i) : Fin q → Fin q))
+      (x := a) (y := b)
+      (fun i => (Equiv.swap (x i) (y i)).injective))
+
+def hammingBallEquiv {q n radius : ℕ} (x y : QaryWord q n) :
+    {word : QaryWord q n // word ∈ hammingBall q n radius x} ≃
+      {word : QaryWord q n // word ∈ hammingBall q n radius y} where
+  toFun word :=
+    ⟨coordinateSwap x y word.1, by
+      have hword : hammingDist x word.1 ≤ radius := by
+        have hmem := word.2
+        change word.1 ∈
+          (Finset.univ.filter fun word : QaryWord q n => hammingDist x word ≤ radius) at hmem
+        exact (mem_filter.mp hmem).2
+      have hdist :
+          hammingDist y (coordinateSwap x y word.1) = hammingDist x word.1 := by
+        simpa using hammingDist_coordinateSwap x y x word.1
+      simpa [hammingBall, hdist] using hword⟩
+  invFun word :=
+    ⟨coordinateSwap x y word.1, by
+      have hword : hammingDist y word.1 ≤ radius := by
+        have hmem := word.2
+        change word.1 ∈
+          (Finset.univ.filter fun word : QaryWord q n => hammingDist y word ≤ radius) at hmem
+        exact (mem_filter.mp hmem).2
+      have hdist :
+          hammingDist x (coordinateSwap x y word.1) = hammingDist y word.1 := by
+        simpa using hammingDist_coordinateSwap x y y word.1
+      simpa [hammingBall, hdist] using hword⟩
+  left_inv word := by
+    ext i
+    simp
+  right_inv word := by
+    ext i
+    simp
+
+lemma hammingBall_card_eq {q n radius : ℕ} (x y : QaryWord q n) :
+    (hammingBall q n radius x).card = (hammingBall q n radius y).card := by
+  classical
+  calc
+    (hammingBall q n radius x).card =
+        Fintype.card {word : QaryWord q n // word ∈ hammingBall q n radius x} :=
+      (Fintype.card_coe _).symm
+    _ = Fintype.card {word : QaryWord q n // word ∈ hammingBall q n radius y} :=
+      Fintype.card_congr (hammingBallEquiv x y)
+    _ = (hammingBall q n radius y).card :=
+      Fintype.card_coe _
+
+lemma hammingBall_card_eq_qaryHammingBallVolume {q n radius : ℕ} (hq : 0 < q)
+    (center : QaryWord q n) :
+    (hammingBall q n radius center).card = qaryHammingBallVolume q n radius := by
+  rw [qaryHammingBallVolume, dif_pos hq]
+  exact hammingBall_card_eq center (zeroQaryWord (q := q) (n := n) hq)
+
+/-!
+### Unique decoding
+
+Hamming balls of radius `t` around distinct codewords are disjoint when the
+minimum distance is greater than `2t`.
+-/
+
+theorem unique_decode_of_two_mul_radius_lt_distance {q n t d : ℕ}
+    {code : Finset (QaryWord q n)}
     (hmin : ∀ c₁ ∈ code, ∀ c₂ ∈ code, c₁ ≠ c₂ → d ≤ hammingDist c₁ c₂)
-    (hd : 2 * t < d) {received c₁ c₂ : BinaryWord n}
+    (hd : 2 * t < d) {received c₁ c₂ : QaryWord q n}
     (hc₁ : c₁ ∈ code) (hc₂ : c₂ ∈ code)
     (hr₁ : hammingDist c₁ received ≤ t) (hr₂ : hammingDist c₂ received ≤ t) :
     c₁ = c₂ := by
@@ -41,12 +148,232 @@ theorem unique_decode_of_two_mul_radius_lt_distance {n t d : ℕ} {code : Finset
     nlinarith
   omega
 
-theorem chapter38 {n t d : ℕ} {code : Finset (BinaryWord n)}
+/-!
+### Singleton bound
+
+If a `q`-ary length-`n` code has minimum distance at least `d`, then puncturing
+to the first `n + 1 - d` coordinates is injective on the code.  Hence
+`|C| ≤ q^(n + 1 - d)`, the natural-number rendering of `q^{n-d+1}`.
+-/
+
+lemma hammingDist_le_of_eq_on_prefix {q n d : ℕ} (hd : 0 < d)
+    {x y : QaryWord q n}
+    (heq : ∀ i : Fin n, (i : ℕ) < n + 1 - d → x i = y i) :
+    hammingDist x y ≤ d - 1 := by
+  classical
+  unfold hammingDist
+  let m := n + 1 - d
+  have hsupp_subset :
+      (Finset.univ.filter fun i : Fin n => x i ≠ y i) ⊆
+        (Finset.univ.filter fun i : Fin n => ¬ (i : ℕ) < m) := by
+    intro i hi
+    simp only [mem_filter, mem_univ, true_and] at hi ⊢
+    exact fun hlt => hi (heq i (by simpa [m] using hlt))
+  have hdist_le :
+      (Finset.univ.filter fun i : Fin n => x i ≠ y i).card ≤
+        (Finset.univ.filter fun i : Fin n => ¬ (i : ℕ) < m).card :=
+    Finset.card_le_card hsupp_subset
+  have hmle : m ≤ n := by
+    omega
+  have hfront :
+      (Finset.univ.filter fun i : Fin n => (i : ℕ) < m).card = m := by
+    calc
+      (Finset.univ.filter fun i : Fin n => (i : ℕ) < m).card = min n m := by
+        simpa [m] using (Fin.card_filter_val_lt (n := n) (m := m))
+      _ = m := min_eq_right hmle
+  have hsplit :=
+    Finset.card_filter_add_card_filter_not
+      (s := (Finset.univ : Finset (Fin n))) (p := fun i : Fin n => (i : ℕ) < m)
+  have hback :
+      (Finset.univ.filter fun i : Fin n => ¬ (i : ℕ) < m).card ≤ d - 1 := by
+    have htotal :
+        m + (Finset.univ.filter fun i : Fin n => ¬ (i : ℕ) < m).card = n := by
+      simpa [hfront] using hsplit
+    omega
+  exact hdist_le.trans hback
+
+theorem singleton_bound {q n d : ℕ} {code : Finset (QaryWord q n)}
+    (hd : 0 < d)
+    (hmin : ∀ c₁ ∈ code, ∀ c₂ ∈ code, c₁ ≠ c₂ → d ≤ hammingDist c₁ c₂) :
+    code.card ≤ q ^ (n + 1 - d) := by
+  classical
+  let m := n + 1 - d
+  have hmle : m ≤ n := by
+    omega
+  let proj := fun (w : QaryWord q n) (i : Fin m) => w (Fin.castLE hmle i)
+  have hinj : Set.InjOn proj (code : Set (QaryWord q n)) := by
+    intro x hx y hy hxy
+    by_contra hne
+    have hdist_lower : d ≤ hammingDist x y := hmin x hx y hy hne
+    have hdist_upper : hammingDist x y ≤ d - 1 := by
+      apply hammingDist_le_of_eq_on_prefix (q := q) (n := n) (d := d) hd
+      intro i hi
+      have hi' : (i : ℕ) < m := by
+        simpa [m] using hi
+      let j := (⟨(i : ℕ), hi'⟩ : Fin m)
+      have hj : Fin.castLE hmle j = i := by
+        ext
+        simp [j]
+      have hprefix := congr_fun hxy j
+      simpa [proj, hj] using hprefix
+    omega
+  calc
+    code.card = (code.image proj).card :=
+      (Finset.card_image_of_injOn hinj).symm
+    _ ≤ Fintype.card (QaryWord q m) :=
+      Finset.card_le_univ _
+    _ = q ^ (n + 1 - d) := by
+      simp [QaryWord, m]
+
+/-!
+### Hamming sphere-packing bound
+
+For minimum distance at least `d` and `2t < d`, radius-`t` Hamming balls about
+codewords are pairwise disjoint, so their total volume is at most the ambient
+space size `q^n`.
+-/
+
+theorem hamming_sphere_packing_bound {q n t d : ℕ} (hq : 0 < q)
+    {code : Finset (QaryWord q n)}
     (hmin : ∀ c₁ ∈ code, ∀ c₂ ∈ code, c₁ ≠ c₂ → d ≤ hammingDist c₁ c₂)
-    (hd : 2 * t < d) {received c₁ c₂ : BinaryWord n}
-    (hc₁ : c₁ ∈ code) (hc₂ : c₂ ∈ code)
-    (hr₁ : hammingDist c₁ received ≤ t) (hr₂ : hammingDist c₂ received ≤ t) :
-    c₁ = c₂ :=
-  unique_decode_of_two_mul_radius_lt_distance hmin hd hc₁ hc₂ hr₁ hr₂
+    (hd : 2 * t < d) :
+    code.card * qaryHammingBallVolume q n t ≤ q ^ n := by
+  classical
+  let ball : QaryWord q n → Finset (QaryWord q n) := fun c => hammingBall q n t c
+  have hpair : (code : Set (QaryWord q n)).PairwiseDisjoint ball := by
+    rw [Finset.pairwiseDisjoint_iff]
+    intro c₁ hc₁ c₂ hc₂ hinter
+    rcases hinter with ⟨received, hreceived⟩
+    have hr₁ : hammingDist c₁ received ≤ t := by
+      simpa [ball, hammingBall] using (Finset.mem_inter.mp hreceived).1
+    have hr₂ : hammingDist c₂ received ≤ t := by
+      simpa [ball, hammingBall] using (Finset.mem_inter.mp hreceived).2
+    exact unique_decode_of_two_mul_radius_lt_distance hmin hd hc₁ hc₂ hr₁ hr₂
+  have hcard_union :
+      (code.biUnion ball).card = code.card * qaryHammingBallVolume q n t := by
+    calc
+      (code.biUnion ball).card = ∑ c ∈ code, (ball c).card :=
+        Finset.card_biUnion hpair
+      _ = code.card * qaryHammingBallVolume q n t :=
+        Finset.sum_const_nat (s := code) (m := qaryHammingBallVolume q n t)
+          (f := fun c => (ball c).card)
+          (by
+            intro c _hc
+            exact hammingBall_card_eq_qaryHammingBallVolume hq c)
+  have hunion_le : (code.biUnion ball).card ≤ q ^ n := by
+    calc
+      (code.biUnion ball).card ≤ Fintype.card (QaryWord q n) :=
+        Finset.card_le_univ _
+      _ = q ^ n := by
+        simp [QaryWord]
+  rwa [← hcard_union]
+
+/-!
+### Gilbert-Varshamov greedy existence bound
+
+A maximum-cardinality code with minimum distance at least `d` must cover the
+whole ambient space by balls of radius `d - 1`; otherwise one more word could
+be inserted.  Counting that cover gives the finite Gilbert-Varshamov bound.
+-/
+
+theorem gilbert_varshamov_existence {q n d : ℕ} (hq : 0 < q) :
+    ∃ code : Finset (QaryWord q n),
+      (∀ c₁ ∈ code, ∀ c₂ ∈ code, c₁ ≠ c₂ → d ≤ hammingDist c₁ c₂) ∧
+        q ^ n ≤ code.card * qaryHammingBallVolume q n (d - 1) := by
+  classical
+  let validCodes : Finset (Finset (QaryWord q n)) :=
+    Finset.univ.filter fun code =>
+      ∀ c₁ ∈ code, ∀ c₂ ∈ code, c₁ ≠ c₂ → d ≤ hammingDist c₁ c₂
+  have hvalidCodes_nonempty : validCodes.Nonempty := by
+    refine ⟨∅, ?_⟩
+    simp [validCodes]
+  obtain ⟨code, hcode_mem, hmax⟩ :=
+    Finset.exists_max_image validCodes (fun code : Finset (QaryWord q n) => code.card)
+      hvalidCodes_nonempty
+  have hcode :
+      ∀ c₁ ∈ code, ∀ c₂ ∈ code, c₁ ≠ c₂ → d ≤ hammingDist c₁ c₂ := by
+    simpa [validCodes] using hcode_mem
+  let ball : QaryWord q n → Finset (QaryWord q n) :=
+    fun c => hammingBall q n (d - 1) c
+  have hcover : (Finset.univ : Finset (QaryWord q n)) ⊆ code.biUnion ball := by
+    intro w _hw
+    by_contra hnot_covered
+    have hfar : ∀ c ∈ code, ¬ hammingDist c w ≤ d - 1 := by
+      intro c hc hle
+      exact hnot_covered (Finset.mem_biUnion.mpr ⟨c, hc, by simpa [ball, hammingBall] using hle⟩)
+    have hw_not_mem : w ∉ code := by
+      intro hw_mem
+      exact hfar w hw_mem (by simp)
+    have hinsert_valid :
+        ∀ c₁ ∈ insert w code, ∀ c₂ ∈ insert w code, c₁ ≠ c₂ →
+          d ≤ hammingDist c₁ c₂ := by
+      intro c₁ hc₁ c₂ hc₂ hne
+      rw [mem_insert] at hc₁ hc₂
+      rcases hc₁ with hc₁eq | hc₁
+      · subst c₁
+        rcases hc₂ with hc₂eq | hc₂
+        · subst c₂
+          exact (hne rfl).elim
+        · have hfar₂ := hfar c₂ hc₂
+          have hdist : d ≤ hammingDist c₂ w := by
+            omega
+          simpa [hammingDist_comm] using hdist
+      · rcases hc₂ with hc₂eq | hc₂
+        · subst c₂
+          have hfar₁ := hfar c₁ hc₁
+          omega
+        · exact hcode c₁ hc₁ c₂ hc₂ hne
+    have hinsert_mem : insert w code ∈ validCodes := by
+      change insert w code ∈
+        (Finset.univ.filter fun code : Finset (QaryWord q n) =>
+          ∀ c₁ ∈ code, ∀ c₂ ∈ code, c₁ ≠ c₂ → d ≤ hammingDist c₁ c₂)
+      exact mem_filter.mpr ⟨mem_univ _, hinsert_valid⟩
+    have hle := hmax (insert w code) hinsert_mem
+    have hlt : code.card < (insert w code).card := by
+      rw [Finset.card_insert_of_notMem hw_not_mem]
+      omega
+    omega
+  have hsum_eq :
+      ∑ c ∈ code, (ball c).card = code.card * qaryHammingBallVolume q n (d - 1) :=
+    Finset.sum_const_nat (s := code) (m := qaryHammingBallVolume q n (d - 1))
+      (f := fun c => (ball c).card)
+      (by
+        intro c _hc
+        exact hammingBall_card_eq_qaryHammingBallVolume hq c)
+  refine ⟨code, hcode, ?_⟩
+  calc
+    q ^ n = (Finset.univ : Finset (QaryWord q n)).card := by
+      simp [QaryWord]
+    _ ≤ (code.biUnion ball).card :=
+      Finset.card_le_card hcover
+    _ ≤ ∑ c ∈ code, (ball c).card :=
+      Finset.card_biUnion_le
+    _ = code.card * qaryHammingBallVolume q n (d - 1) :=
+      hsum_eq
+
+/-!
+### Chapter theorem
+
+The finite, combinatorial Chapter 38 content proved here consists of:
+
+* Singleton: `|C| ≤ q^(n+1-d)`.
+* Hamming sphere-packing: `|C| * Vol(t) ≤ q^n` when `2t < d`.
+* Gilbert-Varshamov existence: some distance-`d` code satisfies
+  `q^n ≤ |C| * Vol(d-1)`.
+
+The Shannon capacity formula remains the documented analytic frontier above.
+-/
+
+theorem chapter38 {q n t d : ℕ} (hq : 0 < q) {code : Finset (QaryWord q n)}
+    (hmin : ∀ c₁ ∈ code, ∀ c₂ ∈ code, c₁ ≠ c₂ → d ≤ hammingDist c₁ c₂)
+    (hd_pos : 0 < d) (ht : 2 * t < d) :
+    code.card ≤ q ^ (n + 1 - d) ∧
+      code.card * qaryHammingBallVolume q n t ≤ q ^ n ∧
+        ∃ gvCode : Finset (QaryWord q n),
+          (∀ c₁ ∈ gvCode, ∀ c₂ ∈ gvCode, c₁ ≠ c₂ → d ≤ hammingDist c₁ c₂) ∧
+            q ^ n ≤ gvCode.card * qaryHammingBallVolume q n (d - 1) := by
+  exact ⟨singleton_bound hd_pos hmin,
+    hamming_sphere_packing_bound hq hmin ht,
+    gilbert_varshamov_existence hq⟩
 
 end ProofsInTheBook.Chapter38

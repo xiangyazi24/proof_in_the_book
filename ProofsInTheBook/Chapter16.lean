@@ -833,6 +833,20 @@ theorem diam_pos_of_diam_sq_eq_pos {X : Type*} [PseudoMetricSpace X]
     exact (ne_of_gt hr) hr0
   exact lt_of_le_of_ne' Metric.diam_nonneg hne
 
+theorem finite_diam_eq_of_forall_dist_le_of_exists_dist_eq
+    {X : Type*} [PseudoMetricSpace X] (points : Finset X) {R : ℝ}
+    (hR : 0 ≤ R)
+    (hle : ∀ x ∈ points, ∀ y ∈ points, dist x y ≤ R)
+    (hexists : ∃ x ∈ points, ∃ y ∈ points, dist x y = R) :
+    Metric.diam (points : Set X) = R := by
+  have hupper : Metric.diam (points : Set X) ≤ R :=
+    Metric.diam_le_of_forall_dist_le hR (by simpa using hle)
+  obtain ⟨x, hx, y, hy, hdist⟩ := hexists
+  have hlower : R ≤ Metric.diam (points : Set X) := by
+    rw [← hdist]
+    exact Metric.dist_le_diam_of_mem (Finset.finite_toSet points).isBounded hx hy
+  exact le_antisymm hupper hlower
+
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
 diameter can be covered by d+1 subsets of itself, each of strictly smaller
 diameter.  The subset condition is essential: in a noncompact proper space

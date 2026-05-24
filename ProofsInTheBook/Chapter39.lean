@@ -934,6 +934,63 @@ theorem minColorInSignedSubset_pos_ne_neg {n k q : ℕ} (hk : 1 ≤ k)
     minColorInSupport C X.pos hpos ≠ minColorInSupport C X.neg hneg :=
   minColorInSupport_ne_of_disjoint hk C hC X.disjoint hpos hneg
 
+/-- Matoušek's sign-vector label produced by a hypothetical too-small coloring. -/
+noncomputable def matousekTuckerLabel {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (C : KneserVertex n k → Fin (n - 2 * k + 1)) :
+    NonzeroSignedSubset n → SignedLabel (n - 1) :=
+  fun X =>
+    if hsmall : X.1.card ≤ 2 * k - 2 then
+      matousekSmallSupportLabel hk hn X.1 X.2 hsmall
+    else
+      matousekLargeSupportLabel hk hn C X.1 (by omega)
+
+theorem matousekTuckerLabel_antipode {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (C : KneserVertex n k → Fin (n - 2 * k + 1))
+    (hC : ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b)
+    (X : NonzeroSignedSubset n) :
+    matousekTuckerLabel hk hn C X.antipode = (matousekTuckerLabel hk hn C X).neg := by
+  unfold matousekTuckerLabel
+  by_cases hsmall : X.1.card ≤ 2 * k - 2
+  · have hsmall_ant : X.antipode.1.card ≤ 2 * k - 2 := by
+      simpa [NonzeroSignedSubset.antipode, SignedSubset.card_antipode] using hsmall
+    rw [dif_pos hsmall, dif_pos hsmall_ant]
+    simpa [NonzeroSignedSubset.antipode,
+      matousekSmallSupportLabel_congr_proof hk hn X.1.antipode] using
+      matousekSmallSupportLabel_antipode hk hn X.1 X.2 hsmall
+  · have hlarge : 2 * k - 1 ≤ X.1.card := by omega
+    have hsmall_ant : ¬ X.antipode.1.card ≤ 2 * k - 2 := by
+      simpa [NonzeroSignedSubset.antipode, SignedSubset.card_antipode] using hsmall
+    rw [dif_neg hsmall, dif_neg hsmall_ant]
+    simpa [NonzeroSignedSubset.antipode,
+      matousekLargeSupportLabel_congr_proof hk hn C X.1,
+      matousekLargeSupportLabel_congr_proof hk hn C X.1.antipode] using
+      matousekLargeSupportLabel_antipode hk hn C hC X.1 hlarge
+
+theorem matousekTuckerLabel_no_complementary {n k : ℕ} (hk : 1 ≤ k)
+    (hn : 2 * k ≤ n)
+    (C : KneserVertex n k → Fin (n - 2 * k + 1))
+    (hC : ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b)
+    (X Y : NonzeroSignedSubset n) :
+    SignedSubset.Le X.1 Y.1 →
+      matousekTuckerLabel hk hn C X ≠ (matousekTuckerLabel hk hn C Y).neg := by
+  intro hXY
+  unfold matousekTuckerLabel
+  by_cases hXsmall : X.1.card ≤ 2 * k - 2
+  · by_cases hYsmall : Y.1.card ≤ 2 * k - 2
+    · simpa [hXsmall, hYsmall] using
+        matousekSmallSupportLabel_ne_neg_of_le hk hn X.2 Y.2 hXsmall hYsmall hXY
+    · have hYlarge : 2 * k - 1 ≤ Y.1.card := by omega
+      simpa [hXsmall, hYsmall, matousekLargeSupportLabel_congr_proof hk hn C Y.1] using
+        matousekSmallSupportLabel_ne_neg_large hk hn C X.2 hXsmall hYlarge
+  · have hXlarge : 2 * k - 1 ≤ X.1.card := by omega
+    by_cases hYsmall : Y.1.card ≤ 2 * k - 2
+    · simpa [hXsmall, hYsmall, matousekLargeSupportLabel_congr_proof hk hn C X.1] using
+        matousekLargeSupportLabel_ne_neg_small hk hn C hXlarge Y.2 hYsmall
+    · have hYlarge : 2 * k - 1 ≤ Y.1.card := by omega
+      simpa [hXsmall, hYsmall, matousekLargeSupportLabel_congr_proof hk hn C X.1,
+        matousekLargeSupportLabel_congr_proof hk hn C Y.1] using
+        matousekLargeSupportLabel_ne_neg_of_le hk hn C hC hXlarge hYlarge hXY
+
 /--
 Tucker's lemma in the octahedral/sign-vector form needed for the
 Matoušek proof of Lovász's theorem.  Every antipodal labeling of nonzero sign

@@ -11,6 +11,22 @@ The book presents Bárány's short proof using the Borsuk-Ulam theorem:
 if KG(n,k) were (n-2k+1)-colorable, one could construct a continuous
 map S^{n-2k+1} → ℝ^{n-2k} with no antipodal pair mapping to the same
 point, contradicting Borsuk-Ulam.
+
+Formalization status: this file closes the graph-combinatorial layer.  It
+defines the Kneser graph, proves basic cardinality and edge facts, proves the
+explicit `n - 2*k + 2` coloring upper bound, handles the `n = 2*k` lower-bound
+edge case, and states `chapter39` from a `KneserChromaticCertificate` carrying
+the hard non-colorability direction.
+
+Gap to the full book theorem: the missing upstream theorem is Borsuk-Ulam in
+the form needed by Bárány's proof, plus the bridge from a hypothetical
+`(n - 2*k + 1)`-coloring to the forbidden antipodal map.  A complete proof
+needs spheres and antipodal maps with the required continuity facts, a
+formal Borsuk-Ulam theorem, the finite point configuration on the sphere used
+by Bárány, and the construction showing that a too-small Kneser coloring
+separates antipodal data.  Mathlib has topology, Euclidean spaces, and
+simple graphs, but not this Borsuk-Ulam-to-Kneser pipeline as an available
+component.
 -/
 
 namespace ProofsInTheBook.Chapter39

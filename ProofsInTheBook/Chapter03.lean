@@ -4027,6 +4027,73 @@ theorem lPowerFreePart_injective_l2
   · exact lPowerFreePart_l2_ne_of_lt hk hn h_eq hi hj hij hsame
   · exact lPowerFreePart_l2_ne_of_lt hk hn h_eq hj hi hji hsame.symm
 
+private lemma strictMono_fin_nat_succ_le {k : ℕ} {f : Fin k → ℕ}
+    (hf : StrictMono f) (hpos : ∀ i, 0 < f i) :
+    ∀ i, i.1 + 1 ≤ f i := by
+  induction k with
+  | zero =>
+      intro i
+      exact Fin.elim0 i
+  | succ k ih =>
+      intro i
+      refine Fin.cases ?hzero ?hsucc i
+      · exact hpos 0
+      · intro i
+        have hf_prefix : StrictMono (fun t : Fin k => f (Fin.castSucc t)) := by
+          intro a b hab
+          exact hf (by simpa using hab)
+        have hpos_prefix : ∀ t : Fin k, 0 < f (Fin.castSucc t) :=
+          fun t => hpos (Fin.castSucc t)
+        have hprev : i.1 + 1 ≤ f (Fin.castSucc i) :=
+          ih hf_prefix hpos_prefix i
+        have hstep : f (Fin.castSucc i) < f i.succ :=
+          hf (Fin.castSucc_lt_succ (i := i))
+        have hval : (i.succ : Fin (k + 1)).1 = i.1 + 1 := rfl
+        omega
+
+private lemma prod_fin_succ_eq_factorial (k : ℕ) :
+    (∏ i : Fin k, ((i : ℕ) + 1)) = k.factorial := by
+  calc
+    (∏ i : Fin k, ((i : ℕ) + 1)) = ∏ i ∈ Finset.range k, (i + 1) := by
+      simpa using (Fin.prod_univ_eq_prod_range (fun i : ℕ => i + 1) k)
+    _ = k.factorial := Finset.prod_range_add_one_eq_factorial k
+
+private lemma prod_orderEmbOfFin_eq {s : Finset ℕ} {k : ℕ} (hcard : s.card = k) :
+    (∏ i : Fin k, s.orderEmbOfFin hcard i) = ∏ x ∈ s, x := by
+  calc
+    (∏ i : Fin k, s.orderEmbOfFin hcard i) =
+        ∏ x ∈ Finset.map (s.orderEmbOfFin hcard).toEmbedding Finset.univ, x := by
+      simpa using (Finset.prod_map (s := Finset.univ)
+        (e := (s.orderEmbOfFin hcard).toEmbedding) (f := fun x : ℕ => x)).symm
+    _ = ∏ x ∈ s, x := by
+      rw [Finset.map_orderEmbOfFin_univ s hcard]
+
+private lemma factorial_lt_prod_of_card_eq_pos_not_mem_four
+    {s : Finset ℕ} {k : ℕ} (hk : 4 ≤ k) (hcard : s.card = k)
+    (hpos : ∀ x ∈ s, 0 < x) (h4 : 4 ∉ s) :
+    k.factorial < ∏ x ∈ s, x := by
+  classical
+  let f := s.orderEmbOfFin hcard
+  have hf_pos : ∀ i : Fin k, 0 < f i :=
+    fun i => hpos (f i) (Finset.orderEmbOfFin_mem s hcard i)
+  have hpoint : ∀ i : Fin k, (i : ℕ) + 1 ≤ f i :=
+    strictMono_fin_nat_succ_le (f := fun i : Fin k => f i) f.strictMono hf_pos
+  let i4 : Fin k := ⟨3, by omega⟩
+  have hi4_mem : f i4 ∈ s := Finset.orderEmbOfFin_mem s hcard i4
+  have hi4_ne : f i4 ≠ 4 := fun h => h4 (h ▸ hi4_mem)
+  have hi4_strict : ((i4 : ℕ) + 1) < f i4 := by
+    have hfour_le : 4 ≤ f i4 := by
+      simpa [i4] using hpoint i4
+    simpa [i4] using lt_of_le_of_ne hfour_le hi4_ne.symm
+  have hprod_lt : (∏ i : Fin k, ((i : ℕ) + 1)) < ∏ i : Fin k, f i := by
+    exact Finset.prod_lt_prod (fun i _ => by omega) (fun i _ => hpoint i)
+      ⟨i4, Finset.mem_univ i4, hi4_strict⟩
+  calc
+    k.factorial = (∏ i : Fin k, ((i : ℕ) + 1)) :=
+      (prod_fin_succ_eq_factorial k).symm
+    _ < ∏ i : Fin k, f i := hprod_lt
+    _ = ∏ x ∈ s, x := prod_orderEmbOfFin_eq hcard
+
 /-! ### Interval count + Legendre / `padicValNat_factorial` helpers (Tier 2 building blocks for Ch03) -/
 
 /-- Count of `j ∈ range k` with `p ∣ (n - j)`, given `k ≤ n`, is at most `k / p + 1`.
@@ -4272,6 +4339,51 @@ theorem prod_lPowerFreeParts_dvd_factorial_l2
   · -- Non-prime p: both factorizations 0.
     rw [Nat.factorization_eq_zero_of_not_prime _ hp_prime,
         Nat.factorization_eq_zero_of_not_prime _ hp_prime]
+
+/-- The l=2 Erdős contradiction is now unconditional: the distinct positive
+2-power-free parts have product dividing `k!`, hence `4` must occur among them,
+contradicting squarefreeness. -/
+theorem chapter03_erdos_l2
+    {n k m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) :
+    n.choose k ≠ m ^ 2 := by
+  classical
+  intro h_eq
+  let a : ℕ → ℕ := fun j => lPowerFreePart 2 (n - j)
+  let S : Finset ℕ := (Finset.range k).image a
+  have hinj : Set.InjOn a (Finset.range k) := by
+    simpa [a] using lPowerFreePart_injective_l2 hk hn h_eq
+  have hcard : S.card = k := by
+    dsimp [S]
+    rw [Finset.card_image_of_injOn hinj, Finset.card_range]
+  have hpos : ∀ x ∈ S, 0 < x := by
+    intro x hx
+    rcases Finset.mem_image.mp hx with ⟨j, hj, rfl⟩
+    have hj_lt : j < k := Finset.mem_range.mp hj
+    have hnj_ne : n - j ≠ 0 := by
+      have hk_le_n : k ≤ n := by omega
+      exact Nat.ne_of_gt (Nat.sub_pos_of_lt (hj_lt.trans_le hk_le_n))
+    exact lPowerFreePart_pos hnj_ne
+  have hprod_S :
+      (∏ x ∈ S, x) = ∏ j ∈ Finset.range k, a j := by
+    dsimp [S]
+    rw [Finset.prod_image hinj]
+  have hprod_dvd : (∏ x ∈ S, x) ∣ k ! := by
+    rw [hprod_S]
+    simpa [a] using prod_lPowerFreeParts_dvd_factorial_l2 hk hn h_eq
+  have hprod_pos : 0 < ∏ x ∈ S, x := Finset.prod_pos hpos
+  have hfour_mem : 4 ∈ S := by
+    by_contra hfour_not
+    have hlt : k.factorial < ∏ x ∈ S, x :=
+      factorial_lt_prod_of_card_eq_pos_not_mem_four hk hcard hpos hfour_not
+    have hle : ∏ x ∈ S, x ≤ k ! :=
+      Nat.le_of_dvd (Nat.factorial_pos k) hprod_dvd
+    exact (not_lt_of_ge hle) hlt
+  rcases Finset.mem_image.mp hfour_mem with ⟨j, hj, hj_eq⟩
+  have hj_lt : j < k := Finset.mem_range.mp hj
+  have hnj_ne : n - j ≠ 0 := by
+    have hk_le_n : k ≤ n := by omega
+    exact Nat.ne_of_gt (Nat.sub_pos_of_lt (hj_lt.trans_le hk_le_n))
+  exact lPowerFreePart_two_ne_four (n - j) hnj_ne hj_eq
 
 /-! ### Main theorem assembly -/
 

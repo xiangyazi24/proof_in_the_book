@@ -498,6 +498,44 @@ theorem DehnGeometricAdditivitySkeletonQ.piece_sum_eq_boundaryDehn
         cert.boundaryLength cert.boundaryFragmentLength cert.boundaryAngle
         cert.boundary_length_sum
 
+theorem boundaryDehn_eq_of_same_pieceDehnSum_geometricAdditivitySkeletonQ
+    {BoundaryEdge₁ BoundaryFragment₁ InternalEdge₁ Incident₁
+      BoundaryEdge₂ BoundaryFragment₂ InternalEdge₂ Incident₂ : Type*}
+    (left :
+      DehnGeometricAdditivitySkeletonQ
+        BoundaryEdge₁ BoundaryFragment₁ InternalEdge₁ Incident₁)
+    (right :
+      DehnGeometricAdditivitySkeletonQ
+        BoundaryEdge₂ BoundaryFragment₂ InternalEdge₂ Incident₂)
+    (hsum : left.pieceDehnSum = right.pieceDehnSum) :
+    dehnInvariantQ left.boundaryEdges left.boundaryLength
+        (fun e => angleClassQ (left.boundaryAngle e)) =
+      dehnInvariantQ right.boundaryEdges right.boundaryLength
+        (fun e => angleClassQ (right.boundaryAngle e)) := by
+  rw [← left.piece_sum_eq_boundaryDehn, ← right.piece_sum_eq_boundaryDehn]
+  exact hsum
+
+theorem no_same_pieceDehnSum_geometricAdditivitySkeletonQ_of_dehn_ne
+    {BoundaryEdge₁ BoundaryFragment₁ InternalEdge₁ Incident₁
+      BoundaryEdge₂ BoundaryFragment₂ InternalEdge₂ Incident₂ : Type*}
+    (left :
+      DehnGeometricAdditivitySkeletonQ
+        BoundaryEdge₁ BoundaryFragment₁ InternalEdge₁ Incident₁)
+    (right :
+      DehnGeometricAdditivitySkeletonQ
+        BoundaryEdge₂ BoundaryFragment₂ InternalEdge₂ Incident₂)
+    (hleft :
+      dehnInvariantQ left.boundaryEdges left.boundaryLength
+          (fun e => angleClassQ (left.boundaryAngle e)) = 0)
+    (hright :
+      dehnInvariantQ right.boundaryEdges right.boundaryLength
+          (fun e => angleClassQ (right.boundaryAngle e)) ≠ 0) :
+    left.pieceDehnSum ≠ right.pieceDehnSum := by
+  intro hsum
+  have hboundary :=
+    boundaryDehn_eq_of_same_pieceDehnSum_geometricAdditivitySkeletonQ left right hsum
+  exact hright (hboundary.symm.trans hleft)
+
 /--
 Algebraic interface for the geometric additivity step.  A future polyhedron
 formalization should construct this from an actual finite dissection by

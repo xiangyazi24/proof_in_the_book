@@ -515,6 +515,45 @@ theorem finsetSymmDiffCard_image_equiv
   rw [finsetSymmDiffCard, finsetSymmDiffSet_image_equiv]
   exact Finset.card_image_of_injective _ e.injective
 
+theorem finsetSymmDiffSet_image_embedding
+    {α β : Type*} [Fintype α] [Fintype β] [DecidableEq α] [DecidableEq β]
+    (e : α ↪ β) (A B : Finset α) :
+    finsetSymmDiffSet (A.image e) (B.image e) = (finsetSymmDiffSet A B).image e := by
+  ext b
+  constructor
+  · intro hb
+    simp only [finsetSymmDiffSet, Finset.mem_filter, Finset.mem_univ, true_and,
+      Finset.mem_image] at hb ⊢
+    rcases hb with hb | hb
+    · obtain ⟨a, haA, rfl⟩ := hb.1
+      have haB : a ∉ B := by
+        intro haB
+        exact hb.2 ⟨a, haB, rfl⟩
+      exact ⟨a, Or.inl ⟨haA, haB⟩, rfl⟩
+    · obtain ⟨a, haB, rfl⟩ := hb.1
+      have haA : a ∉ A := by
+        intro haA
+        exact hb.2 ⟨a, haA, rfl⟩
+      exact ⟨a, Or.inr ⟨haB, haA⟩, rfl⟩
+  · intro hb
+    simp only [finsetSymmDiffSet, Finset.mem_filter, Finset.mem_univ, true_and,
+      Finset.mem_image] at hb ⊢
+    obtain ⟨a, ha, rfl⟩ := hb
+    rcases ha with ha | ha
+    · exact Or.inl ⟨⟨a, ha.1, rfl⟩, by
+        rintro ⟨a', haB, heq⟩
+        exact ha.2 ((e.injective heq.symm) ▸ haB)⟩
+    · exact Or.inr ⟨⟨a, ha.1, rfl⟩, by
+        rintro ⟨a', haA, heq⟩
+        exact ha.2 ((e.injective heq.symm) ▸ haA)⟩
+
+theorem finsetSymmDiffCard_image_embedding
+    {α β : Type*} [Fintype α] [Fintype β] [DecidableEq α] [DecidableEq β]
+    (e : α ↪ β) (A B : Finset α) :
+    finsetSymmDiffCard (A.image e) (B.image e) = finsetSymmDiffCard A B := by
+  rw [finsetSymmDiffCard, finsetSymmDiffSet_image_embedding]
+  exact Finset.card_image_of_injective _ e.injective
+
 /-- The directed cut induced by a finite subset of the vertex set. -/
 def directedCutSet {α : Type*} [Fintype α] [DecidableEq α]
     (A : Finset α) : Finset (α × α) :=

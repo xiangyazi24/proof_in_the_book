@@ -5207,47 +5207,20 @@ theorem chapter03_erdos_ge3
 
 /-! ### Main theorem assembly -/
 
-/-- C(n,k) is never a perfect power for k ≥ 4, n ≥ 2k, l ≥ 2.
-Tier 1 conditional: requires `hprod_l2` that the product of the
-2-power-free parts divides k! (l=2 padicValNat proof, ~80 LOC),
-`h_l2_contra` that this divisibility together with injectivity
-implies the l=2 Erdős contradiction (~60 LOC), and `h_ge3` for l≥3
-(Tier 2).
-
-Step 1 (n > k²): erdos_step1_n_gt_k_sq ✓
-Step 3a (a_j distinct for l=2): lPowerFreePart_injective_l2 ✓
-Step 3b (∏ a_j ∣ k!): hypothesis `hprod_l2`
-Step 4 (l=2 final contradiction): hypothesis `h_l2_contra`
-Step 4b (l≥3): hypothesis `h_ge3`
-
-TODO (Tier 2):
-1. Construct `prod_lPowerFreeParts_dvd_factorial_l2` via padicValNat_factorial +
-   Finsupp.le_def + card_filter_dvd_le sub-lemma. ~80 LOC future work.
-   See HANDOFF/oracle/ANSWER_03_05.md for Mathlib API and proof scaffold.
-2. Prove `h_l2_contra` elimination: show that distinct 2-power-free a_j with
-   product dividing k! forces a combinatorial contradiction (∏ a_j = k!,
-   hence {a_j}={1,…,k}, but 4 can't be a 2-power-free part). ~60 LOC
-   orderEmbOfFin + exchange argument + lPowerFreePart padicValNat bound.
-3. Extend injectivity lemma to l≥3 and assemble full l≥3 contradiction.
-   ~120 LOC future work. -/
-theorem chapter03_erdos {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l)
-    (h_ge3 : l ≥ 3 → n.choose k ≠ m ^ l) :
+/-- C(n,k) is never a perfect power for k ≥ 4, n ≥ 2k, l ≥ 2. -/
+theorem chapter03_erdos {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l) :
     n.choose k ≠ m ^ l := by
   intro h_eq
   by_cases hl2 : l = 2
   · subst hl2
     exact chapter03_erdos_l2 hk hn h_eq
-  · exact h_ge3 (by omega) h_eq
+  · exact chapter03_erdos_ge3 hk hn (by omega : 3 ≤ l) h_eq
 
-/-- Chapter 3's target theorem (Tier 1 conditional):
-Binomial coefficients are (almost) never powers — the Erdős 1951 result.
-Takes hypotheses for the padicValNat divisibility proof (l=2), the
-combinatorial contradiction from that divisibility (l=2), and the
-l≥3 case, all deferred to Tier 2. -/
-theorem chapter03 {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l)
-    (h_ge3 : l ≥ 3 → n.choose k ≠ m ^ l) :
+/-- Chapter 3's target theorem:
+Binomial coefficients are (almost) never powers — the Erdős 1951 result. -/
+theorem chapter03 {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l) :
     n.choose k ≠ m ^ l :=
-  chapter03_erdos hk hn hl h_ge3
+  chapter03_erdos hk hn hl
 end Tier1
 
 end ProofsInTheBook.Chapter03

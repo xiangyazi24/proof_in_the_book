@@ -301,6 +301,40 @@ theorem riffleSort_eq_iff_patternCompatible (a n : ℕ) (labels : RiffleLabels a
         exact (lt_irrefl _ hstrict').elim
     exact ((Tuple.eq_sort_iff (f := labels) (σ := σ)).mpr htuple).symm
 
+/-- The number of sorted label sequences compatible with a fixed riffle
+pattern.  This is the Bayer-Diaconis count written as a fiber over the
+descent/inversion pattern, rather than as a closed binomial expression. -/
+noncomputable def rifflePatternCount (a n : ℕ) (pattern : Fin n → Fin n → Prop) : ℕ := by
+  classical
+  exact (Finset.univ.filter fun seq : RiffleLabels a n =>
+    patternCompatible a n pattern seq).card
+
+/-- The number of riffle labelings producing `σ` is determined by the riffle
+pattern of `σ`. -/
+theorem count_determined_by_piles (a n : ℕ) (σ : Equiv.Perm (Fin n)) :
+    (Finset.univ.filter (fun labels : RiffleLabels a n => riffleSort a n labels = σ)).card =
+      rifflePatternCount a n (rifflePattern n σ) := by
+  classical
+  let e :
+      {labels : RiffleLabels a n // riffleSort a n labels = σ} ≃
+        {seq : RiffleLabels a n // patternCompatible a n (rifflePattern n σ) seq} :=
+    (labelsEquivSortedSeq a n σ).subtypeEquiv fun labels => by
+      change riffleSort a n labels = σ ↔
+        patternCompatible a n (rifflePattern n σ) (labels ∘ σ)
+      exact riffleSort_eq_iff_patternCompatible a n labels σ
+  calc
+    (Finset.univ.filter (fun labels : RiffleLabels a n => riffleSort a n labels = σ)).card =
+        Fintype.card {labels : RiffleLabels a n // riffleSort a n labels = σ} := by
+      exact (Fintype.card_subtype fun labels : RiffleLabels a n =>
+        riffleSort a n labels = σ).symm
+    _ = Fintype.card
+        {seq : RiffleLabels a n // patternCompatible a n (rifflePattern n σ) seq} :=
+      Fintype.card_congr e
+    _ = rifflePatternCount a n (rifflePattern n σ) := by
+      rw [rifflePatternCount]
+      exact Fintype.card_subtype fun seq : RiffleLabels a n =>
+        patternCompatible a n (rifflePattern n σ) seq
+
 /-- Certificate for the Gilbert-Shannon-Reeds (GSR) shuffle.
 The combinatorial heart of the GSR shuffle is that the number of riffle labelings
 that map to a given permutation depends only on the pile sizes (or equivalently,

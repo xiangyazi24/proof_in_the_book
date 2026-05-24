@@ -679,6 +679,37 @@ theorem card_inter_eq_prime_of_zmod_eq_zero_of_half_card_no_degenerate
   have hle : (A ∩ B).card ≤ 2 * p := by omega
   exact nat_eq_of_zmod_eq_zero_of_le_two_mul_of_ne_zero_of_ne_two_mul hcast hle hn0 hn2
 
+theorem eq_of_inter_card_eq_left_card_of_card_eq {α : Type*} [DecidableEq α]
+    {A B : Finset α} (hinter : (A ∩ B).card = A.card) (hcard : A.card = B.card) :
+    A = B := by
+  have hInterA : A ∩ B = A := by
+    exact Finset.eq_of_subset_of_card_le Finset.inter_subset_left (by omega)
+  have hsub : A ⊆ B := by
+    intro a ha
+    have : a ∈ A ∩ B := by simpa [hInterA]
+    exact (Finset.mem_inter.mp this).2
+  exact Finset.eq_of_subset_of_card_le hsub (by omega)
+
+theorem inter_card_ne_of_ne_of_card_eq {α : Type*} [DecidableEq α]
+    {A B : Finset α} {r : ℕ} (hA : A.card = r) (hB : B.card = r) (hne : A ≠ B) :
+    (A ∩ B).card ≠ r := by
+  intro hInter
+  exact hne (eq_of_inter_card_eq_left_card_of_card_eq (by omega) (by omega))
+
+/--
+Convenient exact-intersection form for an injective half-size family: after
+modular Frankl-Wilson finds a zero residue, nonempty intersection and distinct
+sets force the actual intersection size to be `p`.
+-/
+theorem card_inter_eq_prime_of_zmod_eq_zero_of_half_cards_of_nonzero_of_ne
+    {p : ℕ} [Fact p.Prime] {α : Type*} [Fintype α] [DecidableEq α]
+    (A B : Finset α) (hA : A.card = 2 * p) (hB : B.card = 2 * p)
+    (hcast : (((A ∩ B).card : ZMod p) = 0))
+    (hn0 : (A ∩ B).card ≠ 0) (hne : A ≠ B) :
+    (A ∩ B).card = p := by
+  refine card_inter_eq_prime_of_zmod_eq_zero_of_half_card_no_degenerate A B hA hcast hn0 ?_
+  exact inter_card_ne_of_ne_of_card_eq hA hB hne
+
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
 diameter can be covered by d+1 subsets of itself, each of strictly smaller
 diameter.  The subset condition is essential: in a noncompact proper space

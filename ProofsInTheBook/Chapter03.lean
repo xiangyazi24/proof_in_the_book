@@ -749,8 +749,8 @@ theorem primeCounting_gap_of_120_le {k : ℕ} (hk : 120 ≤ k) :
     (a := 30) (k := 30) (n := n) (by norm_num) (by norm_num : 30 ≤ 30)
   have hbound : Nat.primeCounting k ≤ Nat.primeCounting 30 + Nat.totient 30 * (n / 30 + 1) := by
     simpa [hk_eq] using hbound0
-  have hcalc : Nat.primeCounting 30 = 10 := by native_decide
-  have htot : Nat.totient 30 = 8 := by native_decide
+  have hcalc : Nat.primeCounting 30 = 10 := by decide
+  have htot : Nat.totient 30 = 8 := by decide
   have hnle : n / 30 ≤ n / 4 :=
     Nat.div_le_div_left (by norm_num : 4 ≤ 30) (by norm_num : 0 < 4)
   have hbound2 : Nat.primeCounting k ≤ 10 + 8 * (n / 30 + 1) := by
@@ -768,9 +768,28 @@ theorem exists_large_prime_factor_choose_sq_le_of_120_le
   exists_large_prime_factor_choose_of_sq_le_and_primeCounting_gap
     (by omega) hkn hsq (primeCounting_gap_of_120_le hk120)
 
+theorem primeCounting_gap_of_19_le {k : ℕ} (hk19 : 19 ≤ k) :
+    2 * Nat.primeCounting k < k := by
+  let n := k - 6
+  have hk_eq : k = 6 + n := by omega
+  have hbound0 := Nat.primeCounting_add_le
+    (a := 6) (k := 6) (n := n) (by norm_num) (by norm_num : 6 ≤ 6)
+  have hbound : Nat.primeCounting k ≤ Nat.primeCounting 6 + Nat.totient 6 * (n / 6 + 1) := by
+    simpa [hk_eq] using hbound0
+  have hcalc : Nat.primeCounting 6 = 3 := by decide
+  have htot : Nat.totient 6 = 2 := by decide
+  have hbound2 : Nat.primeCounting k ≤ 3 + 2 * (n / 6 + 1) := by
+    simpa [hcalc, htot] using hbound
+  have h6 : 6 * (n / 6) ≤ n := Nat.mul_div_le n 6
+  omega
+
 theorem primeCounting_gap_9_120_cert :
     ∀ k : Fin 120, 9 ≤ k.val → 2 * Nat.primeCounting k.val < k.val := by
-  native_decide
+  intro k hk9
+  by_cases hk19 : 19 ≤ k.val
+  · exact primeCounting_gap_of_19_le hk19
+  · have hklt19 : k.val < 19 := by omega
+    interval_cases k.val <;> decide
 
 theorem primeCounting_gap_of_9_le_lt_120 {k : ℕ} (hk9 : 9 ≤ k) (hk120 : k < 120) :
     2 * Nat.primeCounting k < k :=
@@ -784,7 +803,73 @@ theorem primeCounting_gap_of_9_le {k : ℕ} (hk9 : 9 ≤ k) :
 
 theorem three_mul_primeCounting_le_30_150_cert :
     ∀ k : Fin 150, 33 ≤ k.val → 3 * Nat.primeCounting k.val ≤ k.val := by
-  native_decide
+  intro k hk33
+  rcases le_or_gt k.val 36 with hk36 | hk37
+  · have hpi : Nat.primeCounting k.val ≤ 11 := by
+      have hmono := Nat.monotone_primeCounting hk36
+      have h36 : Nat.primeCounting 36 = 11 := by decide
+      exact hmono.trans_eq h36
+    omega
+  rcases le_or_gt k.val 40 with hk40 | hk41
+  · have hpi : Nat.primeCounting k.val ≤ 12 := by
+      have hmono := Nat.monotone_primeCounting hk40
+      have h40 : Nat.primeCounting 40 = 12 := by decide
+      exact hmono.trans_eq h40
+    omega
+  rcases le_or_gt k.val 42 with hk42 | hk43
+  · have hpi : Nat.primeCounting k.val ≤ 13 := by
+      have hmono := Nat.monotone_primeCounting hk42
+      have h42 : Nat.primeCounting 42 = 13 := by decide
+      exact hmono.trans_eq h42
+    omega
+  rcases le_or_gt k.val 46 with hk46 | hk47
+  · have hpi : Nat.primeCounting k.val ≤ 14 := by
+      have hmono := Nat.monotone_primeCounting hk46
+      have h46 : Nat.primeCounting 46 = 14 := by decide
+      exact hmono.trans_eq h46
+    omega
+  rcases le_or_gt k.val 52 with hk52 | hk53
+  · have hpi : Nat.primeCounting k.val ≤ 15 := by
+      have hmono := Nat.monotone_primeCounting hk52
+      have h52 : Nat.primeCounting 52 = 15 := by decide
+      exact hmono.trans_eq h52
+    omega
+  rcases le_or_gt k.val 60 with hk60 | hk61
+  · have hpi : Nat.primeCounting k.val ≤ 17 := by
+      have hmono := Nat.monotone_primeCounting hk60
+      have h60 : Nat.primeCounting 60 = 17 := by decide
+      exact hmono.trans_eq h60
+    omega
+  rcases le_or_gt k.val 72 with hk72 | hk73
+  · have hpi : Nat.primeCounting k.val ≤ 20 := by
+      have hmono := Nat.monotone_primeCounting hk72
+      have h72 : Nat.primeCounting 72 = 20 := by decide
+      exact hmono.trans_eq h72
+    omega
+  rcases le_or_gt k.val 96 with hk96 | hk97
+  · have hpi : Nat.primeCounting k.val ≤ 24 := by
+      have hmono := Nat.monotone_primeCounting hk96
+      have h96 : Nat.primeCounting 96 = 24 := by
+        set_option maxRecDepth 10000 in
+        decide
+      exact hmono.trans_eq h96
+    omega
+  rcases le_or_gt k.val 136 with hk136 | hk137
+  · have hpi : Nat.primeCounting k.val ≤ 32 := by
+      have hmono := Nat.monotone_primeCounting hk136
+      have h136 : Nat.primeCounting 136 = 32 := by
+        set_option maxRecDepth 10000 in
+        decide
+      exact hmono.trans_eq h136
+    omega
+  · have hpi : Nat.primeCounting k.val ≤ 35 := by
+      have hmono := Nat.monotone_primeCounting k.isLt.le
+      have h149 : Nat.primeCounting 149 = 35 := by
+        set_option maxRecDepth 10000 in
+        decide
+      set_option maxRecDepth 10000 in
+      exact hmono.trans_eq h149
+    omega
 
 theorem three_mul_primeCounting_le_of_33_le {k : ℕ} (hk33 : 33 ≤ k) :
     3 * Nat.primeCounting k ≤ k := by
@@ -796,8 +881,8 @@ theorem three_mul_primeCounting_le_of_33_le {k : ℕ} (hk33 : 33 ≤ k) :
       (a := 30) (k := 30) (n := m) (by norm_num) (by norm_num : 30 ≤ 30)
     have hbound : Nat.primeCounting k ≤ Nat.primeCounting 30 + Nat.totient 30 * (m / 30 + 1) := by
       simpa [hk_eq] using hbound0
-    have hcalc : Nat.primeCounting 30 = 10 := by native_decide
-    have htot : Nat.totient 30 = 8 := by native_decide
+    have hcalc : Nat.primeCounting 30 = 10 := by decide
+    have htot : Nat.totient 30 = 8 := by decide
     have hbound2 : Nat.primeCounting k ≤ 10 + 8 * (m / 30 + 1) := by
       simpa [hcalc, htot] using hbound
     have hm120 : 120 ≤ m := by omega
@@ -2097,7 +2182,8 @@ theorem exists_large_prime_factor_choose_below_sq_small_cert :
     ∀ k : Fin 9, ∀ n : Fin 81,
       0 < k.val → 2 * k.val ≤ n.val → n.val < k.val * k.val →
         ∃ p : Fin 81, k.val < p.val ∧ p.val.Prime ∧ p.val ∣ n.val.choose k.val := by
-  native_decide
+  set_option maxRecDepth 10000 in
+  decide
 
 theorem exists_large_prime_factor_choose_below_sq_of_lt_9
     {n k : ℕ} (hkpos : 0 < k) (hk9 : k < 9) (hn2k : 2 * k ≤ n) (hnsq : n < k * k) :
@@ -2111,34 +2197,35 @@ theorem exists_large_prime_factor_choose_small_cert :
     ∀ k : Fin 9, ∀ n : Fin 94,
       0 < k.val → 2 * k.val ≤ n.val →
         ∃ p : Fin 94, k.val < p.val ∧ p.val.Prime ∧ p.val ∣ n.val.choose k.val := by
-  native_decide
+  set_option maxRecDepth 10000 in
+  decide
 
 theorem pow_gap_small_k_tail {n k : ℕ} (hkpos : 0 < k) (hk9 : k < 9) (hn94 : 94 ≤ n) :
     k ^ k < n ^ (k - Nat.primeCounting k) := by
   interval_cases k
   · exact lt_of_lt_of_le
-      (by native_decide : 1 ^ 1 < 94 ^ (1 - Nat.primeCounting 1))
+      (by decide : 1 ^ 1 < 94 ^ (1 - Nat.primeCounting 1))
       (Nat.pow_le_pow_left hn94 (1 - Nat.primeCounting 1))
   · exact lt_of_lt_of_le
-      (by native_decide : 2 ^ 2 < 94 ^ (2 - Nat.primeCounting 2))
+      (by decide : 2 ^ 2 < 94 ^ (2 - Nat.primeCounting 2))
       (Nat.pow_le_pow_left hn94 (2 - Nat.primeCounting 2))
   · exact lt_of_lt_of_le
-      (by native_decide : 3 ^ 3 < 94 ^ (3 - Nat.primeCounting 3))
+      (by decide : 3 ^ 3 < 94 ^ (3 - Nat.primeCounting 3))
       (Nat.pow_le_pow_left hn94 (3 - Nat.primeCounting 3))
   · exact lt_of_lt_of_le
-      (by native_decide : 4 ^ 4 < 94 ^ (4 - Nat.primeCounting 4))
+      (by decide : 4 ^ 4 < 94 ^ (4 - Nat.primeCounting 4))
       (Nat.pow_le_pow_left hn94 (4 - Nat.primeCounting 4))
   · exact lt_of_lt_of_le
-      (by native_decide : 5 ^ 5 < 94 ^ (5 - Nat.primeCounting 5))
+      (by decide : 5 ^ 5 < 94 ^ (5 - Nat.primeCounting 5))
       (Nat.pow_le_pow_left hn94 (5 - Nat.primeCounting 5))
   · exact lt_of_lt_of_le
-      (by native_decide : 6 ^ 6 < 94 ^ (6 - Nat.primeCounting 6))
+      (by decide : 6 ^ 6 < 94 ^ (6 - Nat.primeCounting 6))
       (Nat.pow_le_pow_left hn94 (6 - Nat.primeCounting 6))
   · exact lt_of_lt_of_le
-      (by native_decide : 7 ^ 7 < 94 ^ (7 - Nat.primeCounting 7))
+      (by decide : 7 ^ 7 < 94 ^ (7 - Nat.primeCounting 7))
       (Nat.pow_le_pow_left hn94 (7 - Nat.primeCounting 7))
   · exact lt_of_lt_of_le
-      (by native_decide : 8 ^ 8 < 94 ^ (8 - Nat.primeCounting 8))
+      (by decide : 8 ^ 8 < 94 ^ (8 - Nat.primeCounting 8))
       (Nat.pow_le_pow_left hn94 (8 - Nat.primeCounting 8))
 
 theorem exists_large_prime_factor_choose_of_lt_9
@@ -2149,14 +2236,15 @@ theorem exists_large_prime_factor_choose_of_lt_9
       hkpos hn2k with ⟨p, hkp, hp, hpdvd⟩
     exact ⟨p.val, hkp, hp, hpdvd⟩
   · exact exists_large_prime_factor_choose_of_pow_gap (n := n) (k := k)
-      hkpos (by omega) (by interval_cases k <;> native_decide)
+      hkpos (by omega) (by interval_cases k <;> decide)
       (pow_gap_small_k_tail hkpos hk9 (by omega))
 
 theorem exists_large_prime_factor_choose_sqrt_lt_9_cert :
     ∀ k : Fin 41, ∀ n : Fin 81,
       9 ≤ k.val → 2 * k.val ≤ n.val → n.val < k.val * k.val →
         ∃ p : Fin 81, k.val < p.val ∧ p.val.Prime ∧ p.val ∣ n.val.choose k.val := by
-  native_decide
+  set_option maxRecDepth 10000 in
+  decide
 
 theorem exists_large_prime_factor_choose_below_sq_of_sqrt_lt_9
     {n k : ℕ} (hk9 : 9 ≤ k) (hn2k : 2 * k ≤ n)
@@ -2306,17 +2394,20 @@ theorem hasPrimeFactorAbove_choose_of_interval_prime {n k p : ℕ} (hkn : k ≤ 
 theorem exists_large_prime_factor_choose_125_12 :
     HasPrimeFactorAbove 12 ((125).choose 12) := by
   refine ⟨13, by norm_num, by norm_num, ?_⟩
-  native_decide
+  set_option maxRecDepth 10000 in
+  decide
 
 theorem exists_large_prime_factor_choose_126_12 :
     HasPrimeFactorAbove 12 ((126).choose 12) := by
   refine ⟨13, by norm_num, by norm_num, ?_⟩
-  native_decide
+  set_option maxRecDepth 10000 in
+  decide
 
 theorem exists_large_prime_factor_choose_126_13 :
     HasPrimeFactorAbove 13 ((126).choose 13) := by
   refine ⟨17, by norm_num, by norm_num, ?_⟩
-  native_decide
+  set_option maxRecDepth 10000 in
+  decide
 
 def nextPrimeAfter1089 : ℕ → ℕ
   | 0 => 2
@@ -3410,15 +3501,263 @@ def nextPrimeAfter1089 : ℕ → ℕ
   | 1088 => 1091
   | _ => 1091
 
+def PrimeGapCoverWith (gap limit prev : ℕ) : List ℕ → Prop
+  | [] => False
+  | p :: ps => p.Prime ∧ p ≤ prev + gap ∧ (limit ≤ p ∨ PrimeGapCoverWith gap limit p ps)
+
+theorem exists_prime_within_of_primeGapCoverWith {gap limit prev m : ℕ} {ps : List ℕ}
+    (hcover : PrimeGapCoverWith gap limit prev ps) (hprev : prev ≤ m) (hm : m < limit) :
+    ∃ p, m < p ∧ p ≤ m + gap ∧ p.Prime := by
+  induction ps generalizing prev with
+  | nil => cases hcover
+  | cons p ps ih =>
+      dsimp [PrimeGapCoverWith] at hcover
+      rcases hcover with ⟨hpprime, hp_le, htail⟩
+      by_cases hmp : m < p
+      · exact ⟨p, hmp, by omega, hpprime⟩
+      · have hp_m : p ≤ m := by omega
+        rcases htail with hlimitp | hcover_tail
+        · omega
+        · exact ih hcover_tail hp_m
+
+def primeGap20Cover : List ℕ :=
+  [19, 37, 53, 73, 89, 109, 127, 139, 157, 173, 193, 211, 229, 241, 257, 277, 293, 313, 331, 349, 367, 383, 401, 421, 439, 457, 467, 487, 503, 523, 541, 557, 577, 593, 613, 631, 647, 661, 677, 691, 709, 727, 743, 761, 773, 787, 797, 811, 829, 839, 859, 877, 887, 907, 919, 937, 953, 971, 991, 1009, 1021, 1039, 1051, 1069, 1087, 1103]
+
+theorem primeGap20Cover_cert : PrimeGapCoverWith 20 1089 0 primeGap20Cover := by
+  set_option maxRecDepth 10000 in
+  norm_num [PrimeGapCoverWith, primeGap20Cover]
+
+theorem exists_prime_within_20_of_lt_1089 {m : ℕ} (hm : m < 1089) :
+    ∃ p, m < p ∧ p ≤ m + 20 ∧ p.Prime :=
+  exists_prime_within_of_primeGapCoverWith primeGap20Cover_cert (by omega) hm
+
+def primeGapSmall9Cover : List ℕ :=
+  [17, 23, 31, 37, 43, 47, 53, 61, 67, 73]
+theorem primeGapSmall9Cover_cert : PrimeGapCoverWith 9 72 9 primeGapSmall9Cover := by
+  set_option maxRecDepth 10000 in
+  norm_num [PrimeGapCoverWith, primeGapSmall9Cover]
+
+def primeGapSmall10Cover : List ℕ :=
+  [19, 29, 37, 47, 53, 61, 71, 79, 89, 97]
+theorem primeGapSmall10Cover_cert : PrimeGapCoverWith 10 90 10 primeGapSmall10Cover := by
+  set_option maxRecDepth 10000 in
+  norm_num [PrimeGapCoverWith, primeGapSmall10Cover]
+
+def primeGapSmall11Cover : List ℕ :=
+  [19, 29, 37, 47, 53, 61, 71, 79, 89, 97, 107, 113]
+theorem primeGapSmall11Cover_cert : PrimeGapCoverWith 11 110 11 primeGapSmall11Cover := by
+  set_option maxRecDepth 10000 in
+  norm_num [PrimeGapCoverWith, primeGapSmall11Cover]
+
+def primeGapSmall12_lowCover : List ℕ :=
+  [23, 31, 43, 53, 61, 73, 83, 89, 101, 113]
+theorem primeGapSmall12_lowCover_cert : PrimeGapCoverWith 12 113 12 primeGapSmall12_lowCover := by
+  set_option maxRecDepth 10000 in
+  norm_num [PrimeGapCoverWith, primeGapSmall12_lowCover]
+
+def primeGapSmall12_highCover : List ℕ :=
+  [127, 139]
+theorem primeGapSmall12_highCover_cert : PrimeGapCoverWith 12 132 115 primeGapSmall12_highCover := by
+  set_option maxRecDepth 10000 in
+  norm_num [PrimeGapCoverWith, primeGapSmall12_highCover]
+
+def primeGapSmall13_lowCover : List ℕ :=
+  [23, 31, 43, 53, 61, 73, 83, 89, 101, 113]
+theorem primeGapSmall13_lowCover_cert : PrimeGapCoverWith 13 113 13 primeGapSmall13_lowCover := by
+  set_option maxRecDepth 10000 in
+  norm_num [PrimeGapCoverWith, primeGapSmall13_lowCover]
+
+def primeGapSmall13_highCover : List ℕ :=
+  [127, 139, 151, 163]
+theorem primeGapSmall13_highCover_cert : PrimeGapCoverWith 13 156 114 primeGapSmall13_highCover := by
+  set_option maxRecDepth 10000 in
+  norm_num [PrimeGapCoverWith, primeGapSmall13_highCover]
+
+def primeGapSmall14Cover : List ℕ :=
+  [23, 37, 47, 61, 73, 83, 97, 109, 113, 127, 139, 151, 163, 173, 181, 193]
+theorem primeGapSmall14Cover_cert : PrimeGapCoverWith 14 182 14 primeGapSmall14Cover := by
+  set_option maxRecDepth 10000 in
+  norm_num [PrimeGapCoverWith, primeGapSmall14Cover]
+
+def primeGapSmall15Cover : List ℕ :=
+  [29, 43, 53, 67, 79, 89, 103, 113, 127, 139, 151, 163, 173, 181, 193, 199, 211]
+theorem primeGapSmall15Cover_cert : PrimeGapCoverWith 15 210 15 primeGapSmall15Cover := by
+  set_option maxRecDepth 10000 in
+  norm_num [PrimeGapCoverWith, primeGapSmall15Cover]
+
+def primeGapSmall16Cover : List ℕ :=
+  [31, 47, 61, 73, 89, 103, 113, 127, 139, 151, 167, 181, 197, 211, 227, 241]
+theorem primeGapSmall16Cover_cert : PrimeGapCoverWith 16 240 16 primeGapSmall16Cover := by
+  set_option maxRecDepth 10000 in
+  norm_num [PrimeGapCoverWith, primeGapSmall16Cover]
+
+def primeGapSmall17Cover : List ℕ :=
+  [31, 47, 61, 73, 89, 103, 113, 127, 139, 151, 167, 181, 197, 211, 227, 241, 257, 271, 283]
+theorem primeGapSmall17Cover_cert : PrimeGapCoverWith 17 272 17 primeGapSmall17Cover := by
+  set_option maxRecDepth 10000 in
+  norm_num [PrimeGapCoverWith, primeGapSmall17Cover]
+
+def primeGapSmall18Cover : List ℕ :=
+  [31, 47, 61, 79, 97, 113, 131, 149, 167, 181, 199, 211, 229, 241, 257, 271, 283, 293, 311]
+theorem primeGapSmall18Cover_cert : PrimeGapCoverWith 18 306 18 primeGapSmall18Cover := by
+  set_option maxRecDepth 10000 in
+  norm_num [PrimeGapCoverWith, primeGapSmall18Cover]
+
+def primeGapSmall19Cover : List ℕ :=
+  [37, 53, 71, 89, 107, 113, 131, 149, 167, 181, 199, 211, 229, 241, 257, 271, 283, 293, 311, 317, 331, 349]
+theorem primeGapSmall19Cover_cert : PrimeGapCoverWith 19 342 19 primeGapSmall19Cover := by
+  set_option maxRecDepth 10000 in
+  norm_num [PrimeGapCoverWith, primeGapSmall19Cover]
+
+def primeGapSmall34Cover : List ℕ :=
+  [67, 101, 131, 163, 197, 229, 263, 293, 317, 349, 383, 409, 443, 467, 499, 523, 557, 587, 619, 653, 683, 709, 743, 773, 797, 829, 863, 887, 919, 953, 983, 1013, 1039, 1069, 1103, 1129]
+theorem primeGapSmall34Cover_cert : PrimeGapCoverWith 34 1122 34 primeGapSmall34Cover := by
+  set_option maxRecDepth 10000 in
+  norm_num [PrimeGapCoverWith, primeGapSmall34Cover]
+
+def primeGapSmall35Cover : List ℕ :=
+  [67, 101, 131, 163, 197, 229, 263, 293, 317, 349, 383, 409, 443, 467, 499, 523, 557, 587, 619, 653, 683, 709, 743, 773, 797, 829, 863, 887, 919, 953, 983, 1013, 1039, 1069, 1103, 1129, 1163, 1193]
+theorem primeGapSmall35Cover_cert : PrimeGapCoverWith 35 1190 35 primeGapSmall35Cover := by
+  set_option maxRecDepth 10000 in
+  norm_num [PrimeGapCoverWith, primeGapSmall35Cover]
+
+theorem exists_interval_prime_or_exception_of_9_le_lt_20
+    {n k : ℕ} (hk9 : 9 ≤ k) (hk20 : k < 20) (hn2k : 2 * k ≤ n)
+    (hnsq : n < k * k) :
+    (∃ p, k < p ∧ n - k < p ∧ p ≤ n ∧ p.Prime)
+      ∨ (n = 125 ∧ k = 12)
+      ∨ (n = 126 ∧ k = 12)
+      ∨ (n = 126 ∧ k = 13) := by
+  interval_cases k
+  ·
+    have hmlo : 9 ≤ n - 9 := by omega
+    have hmlimit : n - 9 < 72 := by omega
+    obtain ⟨p, hmp, hp_le, hpprime⟩ := exists_prime_within_of_primeGapCoverWith
+      primeGapSmall9Cover_cert hmlo hmlimit
+    left
+    exact ⟨p, by omega, hmp, by omega, hpprime⟩
+  ·
+    have hmlo : 10 ≤ n - 10 := by omega
+    have hmlimit : n - 10 < 90 := by omega
+    obtain ⟨p, hmp, hp_le, hpprime⟩ := exists_prime_within_of_primeGapCoverWith
+      primeGapSmall10Cover_cert hmlo hmlimit
+    left
+    exact ⟨p, by omega, hmp, by omega, hpprime⟩
+  ·
+    have hmlo : 11 ≤ n - 11 := by omega
+    have hmlimit : n - 11 < 110 := by omega
+    obtain ⟨p, hmp, hp_le, hpprime⟩ := exists_prime_within_of_primeGapCoverWith
+      primeGapSmall11Cover_cert hmlo hmlimit
+    left
+    exact ⟨p, by omega, hmp, by omega, hpprime⟩
+  ·
+    have hmlo : 12 ≤ n - 12 := by omega
+    by_cases hm113 : n - 12 = 113
+    · exact Or.inr (Or.inl ⟨by omega, rfl⟩)
+    by_cases hm114 : n - 12 = 114
+    · exact Or.inr (Or.inr (Or.inl ⟨by omega, rfl⟩))
+    by_cases hlow : n - 12 < 113
+    · obtain ⟨p, hmp, hp_le, hpprime⟩ := exists_prime_within_of_primeGapCoverWith
+        primeGapSmall12_lowCover_cert hmlo hlow
+      left
+      exact ⟨p, by omega, hmp, by omega, hpprime⟩
+    · have hmhigh : 115 ≤ n - 12 := by omega
+      have hmlimit : n - 12 < 132 := by omega
+      obtain ⟨p, hmp, hp_le, hpprime⟩ := exists_prime_within_of_primeGapCoverWith
+        primeGapSmall12_highCover_cert hmhigh hmlimit
+      left
+      exact ⟨p, by omega, hmp, by omega, hpprime⟩
+  ·
+    have hmlo : 13 ≤ n - 13 := by omega
+    by_cases hm113 : n - 13 = 113
+    · exact Or.inr (Or.inr (Or.inr ⟨by omega, rfl⟩))
+    by_cases hlow : n - 13 < 113
+    · obtain ⟨p, hmp, hp_le, hpprime⟩ := exists_prime_within_of_primeGapCoverWith
+        primeGapSmall13_lowCover_cert hmlo hlow
+      left
+      exact ⟨p, by omega, hmp, by omega, hpprime⟩
+    · have hmhigh : 114 ≤ n - 13 := by omega
+      have hmlimit : n - 13 < 156 := by omega
+      obtain ⟨p, hmp, hp_le, hpprime⟩ := exists_prime_within_of_primeGapCoverWith
+        primeGapSmall13_highCover_cert hmhigh hmlimit
+      left
+      exact ⟨p, by omega, hmp, by omega, hpprime⟩
+  ·
+    have hmlo : 14 ≤ n - 14 := by omega
+    have hmlimit : n - 14 < 182 := by omega
+    obtain ⟨p, hmp, hp_le, hpprime⟩ := exists_prime_within_of_primeGapCoverWith
+      primeGapSmall14Cover_cert hmlo hmlimit
+    left
+    exact ⟨p, by omega, hmp, by omega, hpprime⟩
+  ·
+    have hmlo : 15 ≤ n - 15 := by omega
+    have hmlimit : n - 15 < 210 := by omega
+    obtain ⟨p, hmp, hp_le, hpprime⟩ := exists_prime_within_of_primeGapCoverWith
+      primeGapSmall15Cover_cert hmlo hmlimit
+    left
+    exact ⟨p, by omega, hmp, by omega, hpprime⟩
+  ·
+    have hmlo : 16 ≤ n - 16 := by omega
+    have hmlimit : n - 16 < 240 := by omega
+    obtain ⟨p, hmp, hp_le, hpprime⟩ := exists_prime_within_of_primeGapCoverWith
+      primeGapSmall16Cover_cert hmlo hmlimit
+    left
+    exact ⟨p, by omega, hmp, by omega, hpprime⟩
+  ·
+    have hmlo : 17 ≤ n - 17 := by omega
+    have hmlimit : n - 17 < 272 := by omega
+    obtain ⟨p, hmp, hp_le, hpprime⟩ := exists_prime_within_of_primeGapCoverWith
+      primeGapSmall17Cover_cert hmlo hmlimit
+    left
+    exact ⟨p, by omega, hmp, by omega, hpprime⟩
+  ·
+    have hmlo : 18 ≤ n - 18 := by omega
+    have hmlimit : n - 18 < 306 := by omega
+    obtain ⟨p, hmp, hp_le, hpprime⟩ := exists_prime_within_of_primeGapCoverWith
+      primeGapSmall18Cover_cert hmlo hmlimit
+    left
+    exact ⟨p, by omega, hmp, by omega, hpprime⟩
+  ·
+    have hmlo : 19 ≤ n - 19 := by omega
+    have hmlimit : n - 19 < 342 := by omega
+    obtain ⟨p, hmp, hp_le, hpprime⟩ := exists_prime_within_of_primeGapCoverWith
+      primeGapSmall19Cover_cert hmlo hmlimit
+    left
+    exact ⟨p, by omega, hmp, by omega, hpprime⟩
+
+theorem exists_interval_prime_of_34_le_lt_36
+    {n k : ℕ} (hk34 : 34 ≤ k) (hk36 : k < 36) (hn2k : 2 * k ≤ n)
+    (hnsq : n < k * k) :
+    ∃ p, k < p ∧ n - k < p ∧ p ≤ n ∧ p.Prime := by
+  interval_cases k
+  ·
+    have hmlo : 34 ≤ n - 34 := by omega
+    have hmlimit : n - 34 < 1122 := by omega
+    obtain ⟨p, hmp, hp_le, hpprime⟩ := exists_prime_within_of_primeGapCoverWith
+      primeGapSmall34Cover_cert hmlo hmlimit
+    exact ⟨p, by omega, hmp, by omega, hpprime⟩
+  ·
+    have hmlo : 35 ≤ n - 35 := by omega
+    have hmlimit : n - 35 < 1190 := by omega
+    obtain ⟨p, hmp, hp_le, hpprime⟩ := exists_prime_within_of_primeGapCoverWith
+      primeGapSmall35Cover_cert hmlo hmlimit
+    exact ⟨p, by omega, hmp, by omega, hpprime⟩
+
 theorem nextPrimeAfter1089_below_sq_sqrt_lt_33_cert :
     ∀ k : Fin 545, ∀ n : Fin 1089,
       9 ≤ k.val → 2 * k.val ≤ n.val → n.val < k.val * k.val →
-        (let p := nextPrimeAfter1089 (n.val - k.val);
-          k.val < p ∧ n.val - k.val < p ∧ p ≤ n.val ∧ p.Prime)
+        (∃ p, k.val < p ∧ n.val - k.val < p ∧ p ≤ n.val ∧ p.Prime)
         ∨ (n.val = 125 ∧ k.val = 12)
         ∨ (n.val = 126 ∧ k.val = 12)
         ∨ (n.val = 126 ∧ k.val = 13) := by
-  native_decide
+  intro k n hk9 hn2k hnsq
+  by_cases hk20 : 20 ≤ k.val
+  · have hm_lt : n.val - k.val < 1089 := by omega
+    obtain ⟨p, hmp, hp_le, hpprime⟩ := exists_prime_within_20_of_lt_1089 hm_lt
+    left
+    exact ⟨p, by omega, hmp, by omega, hpprime⟩
+  · have hklt20 : k.val < 20 := by omega
+    exact exists_interval_prime_or_exception_of_9_le_lt_20 hk9 hklt20 hn2k hnsq
 
 theorem exists_large_prime_factor_choose_below_sq_of_sqrt_lt_33
     {n k : ℕ} (hk9 : 9 ≤ k) (hn2k : 2 * k ≤ n)
@@ -3430,10 +3769,8 @@ theorem exists_large_prime_factor_choose_below_sq_of_sqrt_lt_33
   have hk545 : k < 545 := by nlinarith
   rcases nextPrimeAfter1089_below_sq_sqrt_lt_33_cert
       ⟨k, hk545⟩ ⟨n, hn1089⟩ hk9 hn2k hnsq with
-    (hprime | ⟨hn, hk⟩ | ⟨hn, hk⟩ | ⟨hn, hk⟩)
-  · dsimp only at hprime
-    exact hasPrimeFactorAbove_choose_of_interval_prime (by omega : k ≤ n) hprime.2.2.2
-      hprime.1 hprime.2.1 hprime.2.2.1
+    (⟨p, hkp, hnkp, hpn, hp⟩ | ⟨hn, hk⟩ | ⟨hn, hk⟩ | ⟨hn, hk⟩)
+  · exact hasPrimeFactorAbove_choose_of_interval_prime (by omega : k ≤ n) hp hkp hnkp hpn
   · have hn' : n = 125 := by simpa using hn
     have hk' : k = 12 := by simpa using hk
     subst n
@@ -3454,19 +3791,99 @@ def nextPrimeWithin : ℕ → ℕ → ℕ
   | 0, m => m
   | fuel + 1, m => if Nat.Prime (m + 1) then m + 1 else nextPrimeWithin fuel (m + 1)
 
+theorem nextPrimeWithin_spec {fuel m p : ℕ} (hp : p.Prime) (hmp : m < p)
+    (hpfuel : p ≤ m + fuel) :
+    let q := nextPrimeWithin fuel m
+    m < q ∧ q ≤ p ∧ q.Prime := by
+  induction fuel generalizing m with
+  | zero => omega
+  | succ fuel ih =>
+      dsimp [nextPrimeWithin]
+      by_cases hp1 : Nat.Prime (m + 1)
+      · simp [hp1]
+        omega
+      · simp [hp1]
+        have hm1p : m + 1 < p := by
+          have hm1le : m + 1 ≤ p := by omega
+          exact lt_of_le_of_ne hm1le (by
+            intro hEq
+            apply hp1
+            simpa [hEq] using hp)
+        have hpfuel' : p ≤ (m + 1) + fuel := by omega
+        rcases ih hm1p hpfuel' with ⟨hq_gt, hq_le, hq_prime⟩
+        exact ⟨by omega, hq_le, hq_prime⟩
+
+def primeGap36Cover : List ℕ :=
+  [31, 67, 103, 139, 173, 199, 233, 269, 293, 317, 353, 389, 421, 457, 491, 523, 557, 593, 619, 653, 683, 719, 751, 787, 823, 859, 887, 919, 953, 983, 1019, 1051, 1087, 1123, 1153, 1187, 1223, 1259, 1291, 1327, 1361, 1381, 1409, 1439, 1471, 1499, 1531, 1567, 1601, 1637, 1669, 1699, 1733, 1759, 1789, 1823, 1847, 1879, 1913, 1949, 1979, 2011, 2039, 2069, 2099, 2131, 2161, 2179, 2213, 2243, 2273, 2309, 2341, 2377, 2411, 2447, 2477, 2503, 2539, 2557, 2593, 2621, 2657, 2693, 2729, 2753, 2789, 2819, 2851, 2887, 2917, 2953, 2971, 3001, 3037, 3067, 3089, 3121, 3137, 3169, 3203, 3229, 3259, 3271, 3307, 3343, 3373, 3407, 3433, 3469, 3499, 3533, 3559, 3593, 3623, 3659, 3691, 3727, 3761, 3797, 3833, 3863, 3889, 3923, 3947, 3967, 4003, 4027, 4057, 4093, 4129, 4159, 4177, 4211, 4243, 4273, 4297, 4327, 4363, 4397, 4423, 4457, 4493, 4523, 4549, 4583, 4603, 4639, 4673, 4703, 4733, 4759, 4793, 4817, 4831, 4861, 4889, 4919, 4951, 4987, 5023, 5059, 5087, 5119, 5153, 5189, 5209, 5237, 5273, 5309, 5333, 5351, 5387, 5419, 5449, 5483, 5519, 5531, 5563, 5591, 5623, 5659, 5693, 5717, 5749, 5783, 5813, 5849, 5881, 5903, 5939, 5953, 5987, 6011, 6047, 6079, 6113, 6143, 6173, 6203, 6229, 6263, 6299, 6329, 6361, 6397, 6427, 6451, 6481, 6491, 6521, 6553, 6581, 6607, 6637, 6673, 6709, 6737, 6763, 6793, 6829, 6863, 6899, 6917, 6949, 6983, 7019, 7043, 7079, 7109, 7129, 7159, 7193, 7229, 7253, 7283, 7309, 7333, 7369, 7393, 7417, 7451, 7487, 7523, 7559, 7591, 7621, 7649, 7681, 7717, 7753, 7789, 7823, 7853, 7883, 7919, 7951, 7963, 7993, 8017, 8053, 8089, 8123, 8147, 8179, 8209, 8243, 8273, 8297, 8329, 8363, 8389, 8423, 8447, 8467, 8501, 8537, 8573, 8609, 8641, 8677, 8713, 8747, 8783, 8819, 8849, 8867, 8893, 8929, 8963, 8999, 9029, 9059, 9091, 9127, 9161, 9187, 9221, 9257, 9293, 9323, 9349, 9377, 9413, 9439, 9473, 9497, 9533, 9551, 9587, 9623, 9649, 9679, 9697, 9733, 9769, 9803, 9839, 9871, 9907, 9941, 9973, 10009, 10039, 10069, 10103, 10139, 10169, 10193, 10223, 10259, 10289, 10321, 10357, 10391, 10427, 10463, 10499, 10531, 10567, 10601, 10631, 10667, 10691, 10723, 10753, 10789, 10799, 10831, 10867, 10903, 10939, 10973, 11003, 11027, 11059, 11093, 11119, 11149, 11177, 11213, 11243, 11279, 11311, 11329, 11353, 11383, 11411, 11447, 11483, 11519, 11551, 11587, 11621, 11657, 11689, 11719, 11743, 11779, 11813, 11839, 11867, 11903, 11939, 11971, 12007, 12043, 12073, 12109, 12143, 12163, 12197, 12227, 12263, 12289, 12323, 12347, 12379, 12413, 12437, 12473, 12503, 12539, 12569, 12601, 12637, 12671, 12703, 12739, 12763, 12799, 12829, 12853, 12889, 12923, 12959, 12983, 13009, 13043, 13063, 13099, 13127, 13163, 13187, 13219, 13249, 13267, 13297, 13331, 13367, 13399, 13421, 13457, 13487, 13523, 13553, 13577, 13613, 13649, 13681, 13711, 13729, 13763, 13799, 13831, 13859, 13883, 13913, 13933, 13967, 13999, 14033, 14057, 14087, 14107, 14143, 14177, 14207, 14243, 14251, 14281, 14303, 14327, 14347, 14369, 14401]
+
+def PrimeGapCover (limit prev : ℕ) : List ℕ → Prop
+  | [] => False
+  | p :: ps => p.Prime ∧ p ≤ prev + 36 ∧ (limit < p ∨ PrimeGapCover limit p ps)
+
+theorem exists_prime_within_of_primeGapCover {limit prev m : ℕ} {ps : List ℕ}
+    (hcover : PrimeGapCover limit prev ps) (hprev : prev ≤ m) (hm : m < limit) :
+    ∃ p, m < p ∧ p ≤ m + 36 ∧ p.Prime := by
+  induction ps generalizing prev with
+  | nil => cases hcover
+  | cons p ps ih =>
+      dsimp [PrimeGapCover] at hcover
+      rcases hcover with ⟨hpprime, hp_le, htail⟩
+      by_cases hmp : m < p
+      · exact ⟨p, hmp, by omega, hpprime⟩
+      · have hp_m : p ≤ m := by omega
+        rcases htail with hlimitp | hcover_tail
+        · omega
+        · exact ih hcover_tail hp_m
+
+theorem primeGap36Cover_cert : PrimeGapCover 14400 0 primeGap36Cover := by
+  set_option maxRecDepth 10000 in
+  norm_num [PrimeGapCover, primeGap36Cover]
+
+theorem exists_prime_within_36_of_lt_14400 {m : ℕ} (hm : m < 14400) :
+    ∃ p, m < p ∧ p ≤ m + 36 ∧ p.Prime :=
+  exists_prime_within_of_primeGapCover primeGap36Cover_cert (by omega) hm
+
 theorem interval_prime_below_sq_k_lt_120_sqrt33_cert :
     ∀ k : Fin 120, ∀ n : Fin 14400,
       9 ≤ k.val → 33 ≤ sqrt n.val → 2 * k.val ≤ n.val → n.val < k.val * k.val →
-        let p := nextPrimeWithin 120 (n.val - k.val)
+        let p := nextPrimeWithin 36 (n.val - k.val)
         k.val < p ∧ n.val - k.val < p ∧ p ≤ n.val ∧ Nat.Prime p := by
-  native_decide
+  intro k n _hk9 hsqrt hn2k hnsq
+  have hm_lt : n.val - k.val < 14400 := by omega
+  obtain ⟨r, hmr, hr_le, hrprime⟩ := exists_prime_within_36_of_lt_14400 hm_lt
+  have hnext := nextPrimeWithin_spec (fuel := 36) (m := n.val - k.val) (p := r)
+    hrprime hmr hr_le
+  dsimp only at hnext ⊢
+  rcases hnext with ⟨hnext_gt, hnext_le, hnext_prime⟩
+  have hkle : k.val ≤ n.val - k.val := by omega
+  have hkp : k.val < nextPrimeWithin 36 (n.val - k.val) := lt_of_le_of_lt hkle hnext_gt
+  have hpn : nextPrimeWithin 36 (n.val - k.val) ≤ n.val := by
+    by_cases hk36 : 36 ≤ k.val
+    · have hp_le : nextPrimeWithin 36 (n.val - k.val) ≤ (n.val - k.val) + 36 := by
+        exact hnext_le.trans hr_le
+      omega
+    · have hklt36 : k.val < 36 := by omega
+      have hn1089 : 1089 ≤ n.val := by
+        simpa using (Nat.le_sqrt.mp hsqrt)
+      have hk34 : 34 ≤ k.val := by
+        by_contra hk34not
+        have hkle33 : k.val ≤ 33 := by omega
+        have hsq_le : k.val * k.val ≤ 33 * 33 := Nat.mul_le_mul hkle33 hkle33
+        omega
+      obtain ⟨s, _hks, hms, hsn, hsprime⟩ :=
+        exists_interval_prime_of_34_le_lt_36 hk34 hklt36 hn2k hnsq
+      have hs_fuel : s ≤ (n.val - k.val) + 36 := by omega
+      have hs_next := nextPrimeWithin_spec (fuel := 36) (m := n.val - k.val) (p := s)
+        hsprime hms hs_fuel
+      exact hs_next.2.1.trans hsn
+  exact ⟨hkp, hnext_gt, hpn, hnext_prime⟩
 
 theorem exists_large_prime_factor_choose_below_sq_of_k_lt_120
     {n k : ℕ} (hk9 : 9 ≤ k) (hk120 : k < 120) (hn2k : 2 * k ≤ n)
     (hnsq : n < k * k) (hsqrt33 : 33 ≤ sqrt n) :
     HasPrimeFactorAbove k (n.choose k) := by
   have hn14400 : n < 120 * 120 := by nlinarith
-  let p := nextPrimeWithin 120 (n - k)
+  let p := nextPrimeWithin 36 (n - k)
   have hcert :=
     interval_prime_below_sq_k_lt_120_sqrt33_cert
       ⟨k, hk120⟩ ⟨n, by simpa using hn14400⟩ hk9 hsqrt33 hn2k hnsq

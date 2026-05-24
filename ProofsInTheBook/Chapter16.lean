@@ -926,6 +926,25 @@ theorem exists_monochromatic_pair_directedCutSet_dist_sq_eq
     directedCutSet_realIncidencePoint_dist_sq_of_kahnKalai_intersection
       (sets i) (sets j) hground (hcard i) (hcard j) hinter⟩
 
+theorem exists_prime_intersection_of_large
+    {d p : ℕ} [Fact p.Prime] {α ι : Type*} [Fintype α] [DecidableEq α] [Fintype ι]
+    (sets : ι → Finset α)
+    (hcard : ∀ i, (sets i).card = 2 * p)
+    (hinj : Function.Injective sets)
+    (hnonzero : ∀ i j, i ≠ j → (sets i ∩ sets j).card ≠ 0)
+    (hlarge : (d + 1) *
+        Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card} <
+          Fintype.card ι) :
+    ∃ i j, (sets i ∩ sets j).card = p := by
+  let B := Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card}
+  have hlarge1 : Fintype.card Unit * B < Fintype.card ι := by
+    have hle : B ≤ (d + 1) * B := Nat.le_mul_of_pos_left B (Nat.succ_pos d)
+    exact lt_of_le_of_lt (by simpa [B] using hle) (by simpa [B] using hlarge)
+  obtain ⟨i, j, _hij, _hsame, hinter⟩ :=
+    exists_monochromatic_pair_prime_intersection_eq (sets := sets)
+      (color := fun _ => ()) hcard hinj hnonzero hlarge1
+  exact ⟨i, j, hinter⟩
+
 theorem dist_eq_of_dist_sq_eq_diam_sq {X : Type*} [PseudoMetricSpace X]
     {S : Set X} {x y : X} (h : dist x y ^ 2 = Metric.diam S ^ 2) :
     dist x y = Metric.diam S := by
@@ -1141,6 +1160,24 @@ noncomputable def KahnKalaiCertificate.ofPrimeDirectedCutFamilyOfCriticalPair {d
   refine KahnKalaiCertificate.ofPrimeDirectedCutFamilyOfDiameterSq coord sets hground hcard hinj
     hnonzero hlarge ?_
   exact primeDirectedCutFamily_diam_sq_eq coord sets hground hcard hexists
+
+/--
+Directed-cut certificate where Frankl-Wilson supplies both the monochromatic
+critical pair and the pair witnessing the diameter.
+-/
+noncomputable def KahnKalaiCertificate.ofPrimeDirectedCutFamilyOfLarge {d p : ℕ}
+    [Fact p.Prime] {α ι : Type*} [Fintype α] [DecidableEq α] [Fintype ι]
+    (coord : (α × α) ≃ Fin d) (sets : ι → Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hcard : ∀ i, (sets i).card = 2 * p)
+    (hinj : Function.Injective sets)
+    (hnonzero : ∀ i j, i ≠ j → (sets i ∩ sets j).card ≠ 0)
+    (hlarge : (d + 1) *
+        Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card} <
+          Fintype.card ι) :
+    KahnKalaiCertificate d :=
+  KahnKalaiCertificate.ofPrimeDirectedCutFamilyOfCriticalPair coord sets hground hcard hinj
+    hnonzero hlarge (exists_prime_intersection_of_large (d := d) sets hcard hinj hnonzero hlarge)
 
 /--
 Bridge from the Frankl-Wilson coloring obstruction to a Borsuk counterexample

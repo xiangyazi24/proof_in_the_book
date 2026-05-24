@@ -179,6 +179,30 @@ theorem dehnInvariant_biUnion_of_pairwiseDisjoint {Piece Edge Angle : Type*}
       ∑ p ∈ pieces, dehnInvariant (edges p) length angle := by
   simp [dehnInvariant, Finset.sum_biUnion hdisj]
 
+/-- If every edge angle vanishes in the angle target, the Dehn invariant is zero.
+This is the cube case: all dihedral angles are `π/2`, which is a rational
+multiple of `π` and therefore zero in `AngleModPiQ`. -/
+theorem dehnInvariant_eq_zero_of_angles_zero {Edge Angle : Type*}
+    [AddCommGroup Angle] [Module ℤ Angle]
+    (edges : Finset Edge) (length : Edge → ℝ) (angle : Edge → Angle)
+    (hangle : ∀ e ∈ edges, angle e = 0) :
+    dehnInvariant edges length angle = 0 := by
+  unfold dehnInvariant
+  apply Finset.sum_eq_zero
+  intro e he
+  unfold dehnEdge
+  rw [hangle e he, TensorProduct.tmul_zero]
+
+/-- The cube's Dehn invariant in `DehnPiTarget` is zero: every cube dihedral
+angle equals `π/2`, which is a rational multiple of `π` and therefore vanishes
+under `angleClassQ`. -/
+theorem dehnInvariant_cube_eq_zero {Edge : Type*} (edges : Finset Edge)
+    (length : Edge → ℝ) :
+    dehnInvariant edges length (fun _ => angleClassQ (Real.pi / 2)) = 0 := by
+  apply dehnInvariant_eq_zero_of_angles_zero
+  intro _ _
+  exact angleClassQ_pi_div_two
+
 /-- Additivity of an abstract Dehn invariant over finitely many pieces. -/
 theorem dehnInvariant_additive_over_dissection {Piece A : Type*} [AddCommMonoid A]
     (pieces : Finset Piece) (dehn : Piece → A) :

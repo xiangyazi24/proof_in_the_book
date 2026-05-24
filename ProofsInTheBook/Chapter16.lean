@@ -522,6 +522,43 @@ def KahnKalaiCertificate.ofFiniteDiameterObstruction {d : ℕ}
   rw [hdiam] at hle
   exact not_lt_of_ge hle (hsmall (color x))
 
+/--
+Bridge from the Frankl-Wilson coloring obstruction to a Borsuk counterexample
+certificate.  A concrete Kahn-Kalai construction can use this once it supplies
+the Euclidean point map and proves that the forbidden intersection pairs are
+exactly full-diameter pairs.
+-/
+noncomputable def KahnKalaiCertificate.ofFranklWilsonPointConfiguration {d : ℕ}
+    {K α ι : Type*} [Field K] [Fintype α] [DecidableEq α] [DecidableEq K] [Fintype ι]
+    (sets : ι → Finset α) (L : Finset K)
+    (pointOf : ι → EuclideanSpace ℝ (Fin d))
+    (hself : ∀ i, ((sets i).card : K) ∉ L)
+    (hlarge : (d + 1) * Fintype.card {I : Finset α // I.card ≤ L.card} < Fintype.card ι)
+    (hpos : 0 < Metric.diam
+      ((Finset.univ.image pointOf : Finset (EuclideanSpace ℝ (Fin d))) :
+        Set (EuclideanSpace ℝ (Fin d))))
+    (hdist : ∀ i j, i ≠ j → (((sets i ∩ sets j).card : K) ∉ L) →
+      dist (pointOf i) (pointOf j) = Metric.diam
+        ((Finset.univ.image pointOf : Finset (EuclideanSpace ℝ (Fin d))) :
+          Set (EuclideanSpace ℝ (Fin d)))) :
+    KahnKalaiCertificate d := by
+  classical
+  let points : Finset (EuclideanSpace ℝ (Fin d)) := Finset.univ.image pointOf
+  refine KahnKalaiCertificate.ofFiniteDiameterObstruction points ?_ ?_
+  · simpa [points] using hpos
+  · intro color
+    have hlarge' :
+        Fintype.card (Fin (d + 1)) *
+            Fintype.card {I : Finset α // I.card ≤ L.card} < Fintype.card ι := by
+      simpa [Fintype.card_fin] using hlarge
+    obtain ⟨i, j, hij, hsame, hbad⟩ :=
+      exists_monochromatic_pair_intersection_notMem (sets := sets) (L := L)
+        (color := fun i => color (pointOf i)) hself hlarge'
+    refine ⟨pointOf i, ?_, pointOf j, ?_, hsame, ?_⟩
+    · simp [points]
+    · simp [points]
+    · simpa [points] using hdist i j hij hbad
+
 /-- The finite diameter obstruction immediately gives failure of Borsuk's conjecture. -/
 theorem not_borsukConjecture_of_finite_diameter_obstruction {d : ℕ}
     (points : Finset (EuclideanSpace ℝ (Fin d)))

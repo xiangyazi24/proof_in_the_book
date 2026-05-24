@@ -3703,6 +3703,30 @@ lemma erdos_step1_n_gt_k_sq {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (h
       _ ≤ k ^ l := Nat.pow_le_pow_right (by omega) hl
   omega
 
+/-- Strong form of Step 1: under the perfect-power assumption, `n > k^l`. -/
+lemma erdos_step1_n_gt_k_pow {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n)
+    (hl : 2 ≤ l) (h_eq : n.choose k = m ^ l) : k ^ l < n := by
+  have hk_pos : 0 < k := by omega
+  have hk_le_n : k ≤ n := by omega
+  obtain ⟨p, hkp, hp, hp_choose⟩ := sylvester_general n k hn hk_pos
+  have hp_m : p ∣ m := hp.dvd_of_dvd_pow (h_eq ▸ hp_choose)
+  have hp_l_dvd_choose : p ^ l ∣ n.choose k := by
+    rw [h_eq]
+    exact pow_dvd_pow_of_dvd hp_m l
+  have hp_l_dvd_desc : p ^ l ∣ n.descFactorial k := by
+    rw [Nat.descFactorial_eq_factorial_mul_choose n k]
+    apply hp_l_dvd_choose.trans
+    rw [mul_comm]
+    exact dvd_mul_right _ _
+  have hl_pos : 0 < l := by omega
+  obtain ⟨i, hi, h_i_pow⟩ :=
+    pow_l_dvd_one_factor_of_descFactorial hp hkp hl_pos hk_le_n hp_l_dvd_desc
+  have h_n_minus_i_pos : 0 < n - i := Nat.sub_pos_of_lt (by omega)
+  have h_ge : p ^ l ≤ n - i := Nat.le_of_dvd h_n_minus_i_pos h_i_pow
+  have h_k_l_lt_p_l : k ^ l < p ^ l :=
+    Nat.pow_lt_pow_left hkp (by omega : l ≠ 0)
+  omega
+
 /-! ### Step 2: l-th-power-free decomposition -/
 
 /-- The l-th-power-free core of m: for each prime p, retain p^(v_p(m) % l). -/
@@ -4300,6 +4324,48 @@ private lemma factorial_lt_prod_of_card_eq_pos_not_mem_four
       (prod_fin_succ_eq_factorial k).symm
     _ < ∏ i : Fin k, f i := hprod_lt
     _ = ∏ x ∈ s, x := prod_orderEmbOfFin_eq hcard
+
+private lemma factorial_lt_prod_of_card_eq_pos_not_mem
+    {s : Finset ℕ} {k t : ℕ} (ht_pos : 1 ≤ t) (htk : t ≤ k)
+    (hcard : s.card = k) (hpos : ∀ x ∈ s, 0 < x) (ht_not : t ∉ s) :
+    k.factorial < ∏ x ∈ s, x := by
+  classical
+  let f := s.orderEmbOfFin hcard
+  have hf_pos : ∀ i : Fin k, 0 < f i :=
+    fun i => hpos (f i) (Finset.orderEmbOfFin_mem s hcard i)
+  have hpoint : ∀ i : Fin k, (i : ℕ) + 1 ≤ f i :=
+    strictMono_fin_nat_succ_le (f := fun i : Fin k => f i) f.strictMono hf_pos
+  let it : Fin k := ⟨t - 1, by omega⟩
+  have hit_mem : f it ∈ s := Finset.orderEmbOfFin_mem s hcard it
+  have hit_ne : f it ≠ t := fun h => ht_not (h ▸ hit_mem)
+  have hit_strict : ((it : ℕ) + 1) < f it := by
+    have ht_le : t ≤ f it := by
+      have hpoint_it := hpoint it
+      simpa [it, Nat.sub_add_cancel ht_pos] using hpoint_it
+    have hit_val : (it : ℕ) + 1 = t := by
+      simp [it, Nat.sub_add_cancel ht_pos]
+    rw [hit_val]
+    exact lt_of_le_of_ne ht_le hit_ne.symm
+  have hprod_lt : (∏ i : Fin k, ((i : ℕ) + 1)) < ∏ i : Fin k, f i := by
+    exact Finset.prod_lt_prod (fun i _ => by omega) (fun i _ => hpoint i)
+      ⟨it, Finset.mem_univ it, hit_strict⟩
+  calc
+    k.factorial = (∏ i : Fin k, ((i : ℕ) + 1)) :=
+      (prod_fin_succ_eq_factorial k).symm
+    _ < ∏ i : Fin k, f i := hprod_lt
+    _ = ∏ x ∈ s, x := prod_orderEmbOfFin_eq hcard
+
+private lemma mem_of_card_eq_pos_prod_dvd_factorial
+    {s : Finset ℕ} {k t : ℕ} (ht_pos : 1 ≤ t) (htk : t ≤ k)
+    (hcard : s.card = k) (hpos : ∀ x ∈ s, 0 < x)
+    (hprod_dvd : (∏ x ∈ s, x) ∣ k !) :
+    t ∈ s := by
+  by_contra ht_not
+  have hlt : k.factorial < ∏ x ∈ s, x :=
+    factorial_lt_prod_of_card_eq_pos_not_mem ht_pos htk hcard hpos ht_not
+  have hle : ∏ x ∈ s, x ≤ k ! :=
+    Nat.le_of_dvd (Nat.factorial_pos k) hprod_dvd
+  exact (not_lt_of_ge hle) hlt
 
 /-! ### Interval count + Legendre / `padicValNat_factorial` helpers (Tier 2 building blocks for Ch03) -/
 

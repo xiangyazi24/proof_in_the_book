@@ -31,7 +31,10 @@ theorem chapter18_am_gm_sq (a b : ℝ) (_ha : 0 ≤ a) (_hb : 0 ≤ b) :
     a * b ≤ ((a + b) / 2) ^ 2 := by
   nlinarith [sq_nonneg (a - b)]
 
-theorem chapter18 (a b : ℝ) : 2 * a * b ≤ a ^ 2 + b ^ 2 :=
-  chapter18_sq_abs_le a b
+theorem chapter18 (a b : ℝ) (ha : 0 ≤ a) (hb : 0 ≤ b) :
+    Real.sqrt (a * b) ≤ (a + b) / 2 := by
+  have hsq : a * b ≤ ((a + b) / 2) ^ 2 :=
+    chapter18_am_gm_sq a b ha hb
+  exact (Real.sqrt_le_left (by nlinarith [ha, hb])).mpr hsq
 
 end ProofsInTheBook.Chapter18

@@ -371,6 +371,48 @@ theorem perpDist_pos {P a b : EPoint}
     (h : P ∉ affineSpan ℝ {a, b}) : 0 < perpDist P a b :=
   lt_of_le_of_ne (perpDist_nonneg P a b) fun hz => h (mem_of_perpDist_eq_zero hz.symm)
 
+/-- An "off-line incidence" of a finite point set `S`: two distinct points
+`a, b ∈ S` and a third point `P ∈ S` not on the line they span.  This is the
+constructive content of `S` being non-collinear, and the genuine hypothesis of
+Sylvester–Gallai. -/
+structure OffLineTriple (S : Finset EPoint) where
+  P : EPoint
+  a : EPoint
+  b : EPoint
+  hP : P ∈ S
+  ha : a ∈ S
+  hb : b ∈ S
+  hab : a ≠ b
+  hoff : P ∉ affineSpan ℝ {a, b}
+
+/-- The incidences of `S` form a finite type: the map to `(P, a, b)` is
+injective (the remaining fields are propositions) and lands in the finite set
+`S ×ˢ S ×ˢ S`. -/
+instance (S : Finset EPoint) : Finite (OffLineTriple S) := by
+  apply Finite.of_injective
+    (β := {x : EPoint × EPoint × EPoint // x ∈ S ×ˢ S ×ˢ S})
+    (fun t => ⟨(t.P, t.a, t.b),
+      Finset.mem_product.mpr ⟨t.hP, Finset.mem_product.mpr ⟨t.ha, t.hb⟩⟩⟩)
+  rintro ⟨P₁, a₁, b₁, _, _, _, _, _⟩ ⟨P₂, a₂, b₂, _, _, _, _, _⟩ h
+  simp only [Subtype.mk.injEq, Prod.mk.injEq] at h
+  obtain ⟨hP, ha, hb⟩ := h
+  subst hP; subst ha; subst hb; rfl
+
+/-- **Kelly step 2: a minimum-perpendicular-distance off-line pair exists.**
+Over a finite point set with at least one off-line incidence, the perpendicular
+distances of all off-line incidences attain a minimum — the well-ordering
+(extremal) ingredient of Kelly's proof of Sylvester–Gallai.  Proved by
+minimizing over `Finset.univ` of the finite incidence type (no `Finset.filter`
+over the undecidable affine-membership predicate). -/
+theorem exists_min_perpDist_offLine (S : Finset EPoint) (T : OffLineTriple S) :
+    ∃ t : OffLineTriple S, ∀ t' : OffLineTriple S,
+      perpDist t.P t.a t.b ≤ perpDist t'.P t'.a t'.b := by
+  classical
+  haveI : Fintype (OffLineTriple S) := Fintype.ofFinite _
+  obtain ⟨t, _, hmin⟩ := Finset.univ.exists_min_image
+    (fun t : OffLineTriple S => perpDist t.P t.a t.b) ⟨T, Finset.mem_univ T⟩
+  exact ⟨t, fun t' => hmin t' (Finset.mem_univ t')⟩
+
 end EuclideanSylvesterGallai
 
 end ProofsInTheBook.Chapter10

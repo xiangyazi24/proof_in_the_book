@@ -29,11 +29,18 @@ double area `± 2 / n` with `n` odd.
 
 Gap to the full book theorem: the remaining work is geometric triangulation
 infrastructure.  One needs a finite real triangulation model for the unit
-square, extraction of its finite vertex type and triangle list, a theorem that
-the odd-multiplicity triangle edges are exactly the four boundary side chains,
-and an equal-area theorem expressing every listed triangle as oriented double
-area `± 2 / n`.  Mathlib has valuation and geometry components, but not this
-assembled polygonal Sperner/Monsky triangulation package.
+square and an extraction theorem producing:
+1. a finite vertex type `α`, a point map `vertices : α → ℝ × ℝ`, and triangles
+   `triangles : Fin n → α × α × α`;
+2. four side subdivision lists `bottom right top left : List ℝ`;
+3. the boundary-incidence equality
+   `oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices) =
+    realTwoAdicSquareBoundaryRGChainCount bottom right top left`;
+4. the oriented equal-area fact
+   `∀ i, doubleArea ... = (2 / n : ℚ) ∨ doubleArea ... = -(2 / n : ℚ)`.
+Mathlib has `Analysis.Convex.SimplicialComplex` and `Geometry.Polygon.Basic`,
+but not this assembled theorem extracting boundary chains and oriented areas
+from a triangulation of the unit square.
 -/
 
 namespace ProofsInTheBook.Chapter20
@@ -1115,10 +1122,15 @@ witness), there exists a trichromatic triangle — corresponding to the
 contradiction that closes the proof (such a triangle has area with 2-adic
 valuation incompatible with 1/(odd integer)).
 
-TODO (frontier — construct `MonskyCertificate` from an actual equal-area
-odd-triangulation of the unit square (geometric triangulation model giving
-boundary RG-chain = 4 edges + oriented double-area `±2/n`); needs triangulation
-infra not in Mathlib.)
+TODO (frontier): construct `MonskyCertificate` from an actual equal-area
+odd-triangulation of the unit square.  The exact missing extraction lemma must
+produce finite data `α`, `vertices`, `triangles`, `bottom right top left` and
+prove both
+`oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices) =
+  realTwoAdicSquareBoundaryRGChainCount bottom right top left`
+and the oriented double-area alternative `±2/n` for each triangle.  This needs
+square triangulation/boundary-chain infrastructure not currently assembled in
+Mathlib.
 -/
 theorem chapter20 {n : ℕ} (cert : MonskyCertificate n) :
     ∃ i : Fin n,

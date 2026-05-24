@@ -499,6 +499,26 @@ theorem finsetSymmDiffCard_eq_two_mul_sub_inter_of_card_eq
   rw [Finset.inter_comm B A] at hAB
   omega
 
+theorem finsetSymmDiffSet_image_equiv
+    {α β : Type*} [Fintype α] [Fintype β] [DecidableEq α] [DecidableEq β]
+    (e : α ≃ β) (A B : Finset α) :
+    finsetSymmDiffSet (A.image e) (B.image e) = (finsetSymmDiffSet A B).image e := by
+  ext b
+  constructor
+  · intro hb
+    obtain ⟨a, rfl⟩ := e.surjective b
+    simpa [finsetSymmDiffSet] using hb
+  · intro hb
+    obtain ⟨a, ha, rfl⟩ := Finset.mem_image.mp hb
+    simpa [finsetSymmDiffSet] using ha
+
+theorem finsetSymmDiffCard_image_equiv
+    {α β : Type*} [Fintype α] [Fintype β] [DecidableEq α] [DecidableEq β]
+    (e : α ≃ β) (A B : Finset α) :
+    finsetSymmDiffCard (A.image e) (B.image e) = finsetSymmDiffCard A B := by
+  rw [finsetSymmDiffCard, finsetSymmDiffSet_image_equiv]
+  exact Finset.card_image_of_injective _ e.injective
+
 /-- The directed cut induced by a finite subset of the vertex set. -/
 def directedCutSet {α : Type*} [Fintype α] [DecidableEq α]
     (A : Finset α) : Finset (α × α) :=
@@ -621,6 +641,39 @@ theorem realIncidencePoint_dist_eq_of_symmDiffCard_eq
     dist (realIncidencePoint A) (realIncidencePoint B) =
       dist (realIncidencePoint C) (realIncidencePoint D) := by
   rw [realIncidencePoint_dist_eq_sqrt, realIncidencePoint_dist_eq_sqrt, h]
+
+/-- Reindex an incidence vector along an equivalence to a `Fin d` coordinate type. -/
+noncomputable def finReindexedIncidencePoint
+    {β : Type*} [Fintype β] [DecidableEq β] {d : ℕ}
+    (e : β ≃ Fin d) (A : Finset β) : EuclideanSpace ℝ (Fin d) :=
+  realIncidencePoint (A.image e)
+
+theorem finReindexedIncidencePoint_dist_sq
+    {β : Type*} [Fintype β] [DecidableEq β] {d : ℕ}
+    (e : β ≃ Fin d) (A B : Finset β) :
+    dist (finReindexedIncidencePoint e A) (finReindexedIncidencePoint e B) ^ 2 =
+      (finsetSymmDiffCard A B : ℝ) := by
+  change dist (realIncidencePoint (A.image e)) (realIncidencePoint (B.image e)) ^ 2 =
+    (finsetSymmDiffCard A B : ℝ)
+  rw [realIncidencePoint_dist_sq, finsetSymmDiffCard_image_equiv]
+
+noncomputable def finReindexedDirectedCutPoint
+    {α : Type*} [Fintype α] [DecidableEq α] {d : ℕ}
+    (e : (α × α) ≃ Fin d) (A : Finset α) : EuclideanSpace ℝ (Fin d) :=
+  finReindexedIncidencePoint e (directedCutSet A)
+
+theorem finReindexedDirectedCutPoint_dist_sq_of_kahnKalai_intersection
+    {α : Type*} [Fintype α] [DecidableEq α] {d k : ℕ}
+    (e : (α × α) ≃ Fin d) (A B : Finset α)
+    (hground : Fintype.card α = 4 * k)
+    (hA : A.card = 2 * k) (hB : B.card = 2 * k)
+    (hinter : (A ∩ B).card = k) :
+    dist (finReindexedDirectedCutPoint e A) (finReindexedDirectedCutPoint e B) ^ 2 =
+      ((8 * k * k : ℕ) : ℝ) := by
+  change dist (finReindexedIncidencePoint e (directedCutSet A))
+      (finReindexedIncidencePoint e (directedCutSet B)) ^ 2 = ((8 * k * k : ℕ) : ℝ)
+  rw [finReindexedIncidencePoint_dist_sq,
+    directedCutSet_symmDiffCard_of_kahnKalai_intersection A B hground hA hB hinter]
 
 theorem directedCutSet_realIncidencePoint_dist_sq
     {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) :

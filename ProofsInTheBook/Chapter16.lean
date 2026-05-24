@@ -949,6 +949,36 @@ noncomputable def KahnKalaiCertificate.ofPrimeFranklWilsonSquaredConfiguration {
     · simpa [points] using hdistSq i j hij hinter
 
 /--
+Certificate interface for the directed-cut version of the Kahn-Kalai
+configuration.  The remaining geometric input is exactly the squared diameter
+calculation for the finite cut-incidence point set.
+-/
+noncomputable def KahnKalaiCertificate.ofPrimeDirectedCutFamily {d p : ℕ}
+    [Fact p.Prime] {α ι : Type*} [Fintype α] [DecidableEq α] [Fintype ι]
+    (coord : (α × α) ≃ Fin d) (sets : ι → Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hcard : ∀ i, (sets i).card = 2 * p)
+    (hinj : Function.Injective sets)
+    (hnonzero : ∀ i j, i ≠ j → (sets i ∩ sets j).card ≠ 0)
+    (hlarge : (d + 1) *
+        Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card} <
+          Fintype.card ι)
+    (hpos : 0 < Metric.diam
+      ((Finset.univ.image (fun i => finReindexedDirectedCutPoint coord (sets i)) :
+          Finset (EuclideanSpace ℝ (Fin d))) : Set (EuclideanSpace ℝ (Fin d))))
+    (hdiamSq : Metric.diam
+      ((Finset.univ.image (fun i => finReindexedDirectedCutPoint coord (sets i)) :
+          Finset (EuclideanSpace ℝ (Fin d))) : Set (EuclideanSpace ℝ (Fin d))) ^ 2 =
+        ((8 * p * p : ℕ) : ℝ)) :
+    KahnKalaiCertificate d := by
+  refine KahnKalaiCertificate.ofPrimeFranklWilsonSquaredConfiguration (sets := sets)
+    (pointOf := fun i => finReindexedDirectedCutPoint coord (sets i))
+    hcard hinj hnonzero hlarge hpos ?_
+  intro i j _hij hinter
+  rw [finReindexedDirectedCutPoint_dist_sq_of_kahnKalai_intersection coord (sets i) (sets j)
+    hground (hcard i) (hcard j) hinter, ← hdiamSq]
+
+/--
 Bridge from the Frankl-Wilson coloring obstruction to a Borsuk counterexample
 certificate.  A concrete Kahn-Kalai construction can use this once it supplies
 the Euclidean point map and proves that the forbidden intersection pairs are

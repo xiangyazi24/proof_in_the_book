@@ -370,6 +370,49 @@ theorem franklWilsonFunction_mem_lowDegree {K α : Type*} [Field K] [Fintype α]
         (A := A) (c := c) (f := franklWilsonFunction K A L) hL
       simpa [Finset.card_insert_of_notMem hc] using hmem
 
+/-- Evaluation at a Boolean input as a linear functional on the Boolean function space. -/
+def booleanEvalLinear (K : Type*) [Semiring K] {α : Type*} (X : Finset α) :
+    (Finset α → K) →ₗ[K] K where
+  toFun f := f X
+  map_add' := by intros; rfl
+  map_smul' := by intros; rfl
+
+/--
+Frankl-Wilson modular intersection bound over an arbitrary field.  If every
+set has self-intersection outside `L`, while every distinct pair has
+intersection in `L`, then the family size is at most the number of Boolean
+monomials of degree at most `|L|`.
+-/
+theorem franklWilson_modular_intersection_bound
+    {K α ι : Type*} [Field K] [Fintype α] [DecidableEq α] [DecidableEq K] [Fintype ι]
+    (sets : ι → Finset α) (L : Finset K)
+    (hself : ∀ i, ((sets i).card : K) ∉ L)
+    (hinter : ∀ i j, i ≠ j → (((sets i ∩ sets j).card : K) ∈ L)) :
+    Fintype.card ι ≤ Fintype.card {I : Finset α // I.card ≤ L.card} := by
+  let target := lowDegreeBooleanSubmodule K α L.card
+  let v : ι → target := fun i =>
+    ⟨franklWilsonFunction K (sets i) L, franklWilsonFunction_mem_lowDegree (K := K)
+      (α := α) (sets i) L⟩
+  let φ : ι → target →ₗ[K] K := fun i => (booleanEvalLinear K (sets i)).comp target.subtype
+  have hdiag : ∀ i, φ i (v i) ≠ 0 := by
+    intro i
+    dsimp [φ, v, booleanEvalLinear]
+    rw [franklWilsonFunction, Finset.inter_self]
+    change (∏ x ∈ L, (((sets i).card : K) - x)) ≠ 0
+    rw [Finset.prod_ne_zero_iff]
+    intro c hc
+    rw [sub_ne_zero]
+    intro h
+    exact hself i (by simpa [h] using hc)
+  have hoff : ∀ i j, i ≠ j → φ i (v j) = 0 := by
+    intro i j hij
+    dsimp [φ, v, booleanEvalLinear]
+    rw [franklWilsonFunction]
+    exact Finset.prod_eq_zero (hinter j i hij.symm) (by simp)
+  have hcard_le_finrank : Fintype.card ι ≤ Module.finrank K target :=
+    fintype_card_le_finrank_of_linear_functionals_diagonal v φ hdiag hoff
+  exact hcard_le_finrank.trans (finrank_lowDegreeBooleanSubmodule_le K α L.card)
+
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
 diameter can be covered by d+1 subsets of itself, each of strictly smaller
 diameter.  The subset condition is essential: in a noncompact proper space

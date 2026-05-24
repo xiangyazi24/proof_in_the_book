@@ -865,6 +865,68 @@ theorem primeDirectedCutFamily_diam_sq_eq
   rw [primeDirectedCutFamily_diam_eq_sqrt coord sets hground hcard hexists,
     Real.sq_sqrt (Nat.cast_nonneg _)]
 
+theorem finEmbeddedDirectedCutPoint_dist_le_kahnKalai
+    {α : Type*} [Fintype α] [DecidableEq α] {d p : ℕ}
+    (coord : (α × α) ↪ Fin d) (A B : Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hA : A.card = 2 * p) (hB : B.card = 2 * p) :
+    dist (finEmbeddedDirectedCutPoint coord A) (finEmbeddedDirectedCutPoint coord B) ≤
+      Real.sqrt ((8 * p * p : ℕ) : ℝ) :=
+  dist_le_sqrt_of_dist_sq_le (Nat.cast_nonneg _)
+    (finEmbeddedDirectedCutPoint_dist_sq_le_kahnKalai coord A B hground hA hB)
+
+theorem finEmbeddedDirectedCutPoint_dist_eq_sqrt_of_kahnKalai_intersection
+    {α : Type*} [Fintype α] [DecidableEq α] {d p : ℕ}
+    (coord : (α × α) ↪ Fin d) (A B : Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hA : A.card = 2 * p) (hB : B.card = 2 * p)
+    (hinter : (A ∩ B).card = p) :
+    dist (finEmbeddedDirectedCutPoint coord A) (finEmbeddedDirectedCutPoint coord B) =
+      Real.sqrt ((8 * p * p : ℕ) : ℝ) :=
+  dist_eq_sqrt_of_dist_sq_eq (Nat.cast_nonneg _)
+    (finEmbeddedDirectedCutPoint_dist_sq_of_kahnKalai_intersection coord A B hground hA hB
+      hinter)
+
+theorem primeDirectedCutFamilyEmbedding_diam_eq_sqrt
+    {α ι : Type*} [Fintype α] [DecidableEq α] [Fintype ι] {d p : ℕ}
+    (coord : (α × α) ↪ Fin d) (sets : ι → Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hcard : ∀ i, (sets i).card = 2 * p)
+    (hexists : ∃ i j, (sets i ∩ sets j).card = p) :
+    Metric.diam
+      ((Finset.univ.image (fun i => finEmbeddedDirectedCutPoint coord (sets i)) :
+          Finset (EuclideanSpace ℝ (Fin d))) : Set (EuclideanSpace ℝ (Fin d))) =
+      Real.sqrt ((8 * p * p : ℕ) : ℝ) := by
+  let points : Finset (EuclideanSpace ℝ (Fin d)) :=
+    Finset.univ.image fun i => finEmbeddedDirectedCutPoint coord (sets i)
+  refine finite_diam_eq_of_forall_dist_le_of_exists_dist_eq points (Real.sqrt_nonneg _) ?_ ?_
+  · intro x hx y hy
+    rcases Finset.mem_image.mp hx with ⟨i, _hi, rfl⟩
+    rcases Finset.mem_image.mp hy with ⟨j, _hj, rfl⟩
+    exact finEmbeddedDirectedCutPoint_dist_le_kahnKalai coord (sets i) (sets j) hground
+      (hcard i) (hcard j)
+  · obtain ⟨i, j, hij⟩ := hexists
+    refine ⟨finEmbeddedDirectedCutPoint coord (sets i), ?_,
+      finEmbeddedDirectedCutPoint coord (sets j), ?_, ?_⟩
+    · simp [points]
+    · simp [points]
+    · exact finEmbeddedDirectedCutPoint_dist_eq_sqrt_of_kahnKalai_intersection coord
+        (sets i) (sets j) hground (hcard i) (hcard j) hij
+
+theorem primeDirectedCutFamilyEmbedding_diam_sq_eq
+    {α ι : Type*} [Fintype α] [DecidableEq α] [Fintype ι] {d p : ℕ}
+    (coord : (α × α) ↪ Fin d) (sets : ι → Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hcard : ∀ i, (sets i).card = 2 * p)
+    (hexists : ∃ i j, (sets i ∩ sets j).card = p) :
+    Metric.diam
+      ((Finset.univ.image (fun i => finEmbeddedDirectedCutPoint coord (sets i)) :
+          Finset (EuclideanSpace ℝ (Fin d))) : Set (EuclideanSpace ℝ (Fin d))) ^ 2 =
+        ((8 * p * p : ℕ) : ℝ) := by
+  rw [primeDirectedCutFamilyEmbedding_diam_eq_sqrt coord sets hground hcard hexists,
+    Real.sq_sqrt]
+  exact Nat.cast_nonneg _
+
 theorem directedCutSet_realIncidencePoint_dist_sq
     {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) :
     dist (realIncidencePoint (directedCutSet A)) (realIncidencePoint (directedCutSet B)) ^ 2 =

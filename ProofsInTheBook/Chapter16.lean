@@ -432,6 +432,30 @@ theorem exists_pair_intersection_notMem_of_card_bound_lt
   have hle := franklWilson_modular_intersection_bound sets L hself hinter
   exact (not_lt_of_ge hle) hlarge
 
+/--
+Coloring form of Frankl-Wilson.  If a set family is larger than
+`(# colors) * (low-degree bound)`, then every coloring contains a monochromatic
+pair whose intersection cardinality avoids the allowed residue set.
+-/
+theorem exists_monochromatic_pair_intersection_notMem
+    {K α ι κ : Type*} [Field K] [Fintype α] [DecidableEq α] [DecidableEq K]
+    [Fintype ι] [Fintype κ] [DecidableEq κ]
+    (sets : ι → Finset α) (L : Finset K) (color : ι → κ)
+    (hself : ∀ i, ((sets i).card : K) ∉ L)
+    (hlarge :
+      Fintype.card κ * Fintype.card {I : Finset α // I.card ≤ L.card} < Fintype.card ι) :
+    ∃ i j, i ≠ j ∧ color i = color j ∧ (((sets i ∩ sets j).card : K) ∉ L) := by
+  obtain ⟨c, hc⟩ := Fintype.exists_lt_card_fiber_of_mul_lt_card color hlarge
+  rw [← Fintype.card_subtype (fun i : ι => color i = c)] at hc
+  let fiber := {i : ι // color i = c}
+  let restrictedSets : fiber → Finset α := fun i => sets i.1
+  have hself_fiber : ∀ i : fiber, ((restrictedSets i).card : K) ∉ L := by
+    intro i
+    exact hself i.1
+  obtain ⟨i, j, hij, hnot⟩ :=
+    exists_pair_intersection_notMem_of_card_bound_lt restrictedSets L hself_fiber hc
+  exact ⟨i.1, j.1, fun h => hij (Subtype.ext h), i.2.trans j.2.symm, hnot⟩
+
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
 diameter can be covered by d+1 subsets of itself, each of strictly smaller
 diameter.  The subset condition is essential: in a noncompact proper space

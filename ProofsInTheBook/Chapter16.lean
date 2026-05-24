@@ -824,6 +824,15 @@ theorem dist_eq_of_dist_sq_eq_diam_sq {X : Type*} [PseudoMetricSpace X]
     (sq_eq_sq_iff_abs_eq_abs _ _).mp h
   rwa [abs_of_nonneg dist_nonneg, abs_of_nonneg Metric.diam_nonneg] at habs
 
+theorem diam_pos_of_diam_sq_eq_pos {X : Type*} [PseudoMetricSpace X]
+    {S : Set X} {r : ℝ} (h : Metric.diam S ^ 2 = r) (hr : 0 < r) :
+    0 < Metric.diam S := by
+  have hne : Metric.diam S ≠ 0 := by
+    intro hzero
+    have hr0 : r = 0 := by simpa [hzero] using h.symm
+    exact (ne_of_gt hr) hr0
+  exact lt_of_le_of_ne' Metric.diam_nonneg hne
+
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
 diameter can be covered by d+1 subsets of itself, each of strictly smaller
 diameter.  The subset condition is essential: in a noncompact proper space
@@ -977,6 +986,32 @@ noncomputable def KahnKalaiCertificate.ofPrimeDirectedCutFamily {d p : ℕ}
   intro i j _hij hinter
   rw [finReindexedDirectedCutPoint_dist_sq_of_kahnKalai_intersection coord (sets i) (sets j)
     hground (hcard i) (hcard j) hinter, ← hdiamSq]
+
+/--
+Same as `ofPrimeDirectedCutFamily`, with positivity of the diameter derived
+from the squared-diameter calculation.
+-/
+noncomputable def KahnKalaiCertificate.ofPrimeDirectedCutFamilyOfDiameterSq {d p : ℕ}
+    [Fact p.Prime] {α ι : Type*} [Fintype α] [DecidableEq α] [Fintype ι]
+    (coord : (α × α) ≃ Fin d) (sets : ι → Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hcard : ∀ i, (sets i).card = 2 * p)
+    (hinj : Function.Injective sets)
+    (hnonzero : ∀ i j, i ≠ j → (sets i ∩ sets j).card ≠ 0)
+    (hlarge : (d + 1) *
+        Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card} <
+          Fintype.card ι)
+    (hdiamSq : Metric.diam
+      ((Finset.univ.image (fun i => finReindexedDirectedCutPoint coord (sets i)) :
+          Finset (EuclideanSpace ℝ (Fin d))) : Set (EuclideanSpace ℝ (Fin d))) ^ 2 =
+        ((8 * p * p : ℕ) : ℝ)) :
+    KahnKalaiCertificate d := by
+  have hsq_pos : (0 : ℝ) < ((8 * p * p : ℕ) : ℝ) := by
+    have hp : 0 < p := (Fact.out : Nat.Prime p).pos
+    positivity
+  refine KahnKalaiCertificate.ofPrimeDirectedCutFamily coord sets hground hcard hinj hnonzero
+    hlarge ?_ hdiamSq
+  exact diam_pos_of_diam_sq_eq_pos hdiamSq hsq_pos
 
 /--
 Bridge from the Frankl-Wilson coloring obstruction to a Borsuk counterexample

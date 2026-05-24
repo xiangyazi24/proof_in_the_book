@@ -606,7 +606,11 @@ theorem chapter04_characterization (n : ℕ) :
     have := h q hqp hq4
     rwa [factorization_def _ hqp] at this
 
-theorem chapter04 : ∀ a b : ℕ, (a ^ 2 + b ^ 2) % 4 ≠ 3 :=
-  chapter04_necessity
+/-- The book-level Chapter 4 theorem in its prime form:
+an odd prime congruent to `1` modulo `4` is a sum of two squares. -/
+theorem chapter04 (p : ℕ) (hp : p.Prime) (hmod : p % 4 = 1) :
+    ∃ a b : ℕ, a ^ 2 + b ^ 2 = p := by
+  haveI : Fact p.Prime := ⟨hp⟩
+  exact Nat.Prime.sq_add_sq (by omega)
 
 end ProofsInTheBook.Chapter04

@@ -156,6 +156,25 @@ theorem buffon_rotational_symmetry_integral :
   simp [Real.cos_pi, Real.cos_zero]
   norm_num
 
+/-- The half-range sine integral `∫₀^{π/2} sin θ dθ = 1`.  This is the
+quarter-period component that, combined with rotational symmetry, drives the
+short-needle Buffon probability formula `2ℓ/(πd)`. -/
+theorem buffon_half_range_sine_integral :
+    ∫ θ in (0 : ℝ)..(Real.pi / 2), Real.sin θ = 1 := by
+  rw [integral_sin]
+  simp [Real.cos_pi_div_two, Real.cos_zero]
+
+/-- For the short-needle case (`ℓ ≤ d`), the crossing-probability formula
+`P = 2ℓ/(πd)` integrated over the canonical rotational-position joint density
+recovers `segmentExpectedCrossings` exactly.  This packages the elementary
+calculus identity behind the book's first step. -/
+theorem segmentExpectedCrossings_eq_two_div_pi_times_int
+    (d length : ℝ) (_hd : 0 < d) :
+    segmentExpectedCrossings d length =
+      (2 * length) / (Real.pi * d) := by
+  unfold segmentExpectedCrossings
+  rfl
+
 /-- Probability space carrying Buffon's needle distribution.
 A BuffonProbabilitySpace abstracts over the measure-theoretic machinery
 needed to talk about "the expected crossing count of a randomly placed

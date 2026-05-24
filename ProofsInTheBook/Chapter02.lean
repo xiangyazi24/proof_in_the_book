@@ -157,15 +157,20 @@ theorem chapter02_bertrand (n : ℕ) (hn : n ≠ 0) :
     exact fun h2 => ⟨2, prime_two, h2,
       Nat.mul_le_mul_left 2 (Nat.pos_of_ne_zero hn)⟩
 
+/-- Chapter 2 (Bertrand's postulate): for every `n ≥ 1`, some prime lies in `(n, 2n]`. -/
+theorem chapter02 (n : ℕ) (hn : n ≠ 0) :
+    ∃ p, Prime p ∧ n < p ∧ p ≤ 2 * n :=
+  chapter02_bertrand n hn
+
 /--
 Infinitely many primes via Bertrand's postulate:
 given any q, there is a prime p > q in (q, 2(q+1)].
 -/
-theorem chapter02 : Infinite {p : ℕ // p.Prime} := by
+theorem chapter02_infinite_primes : Infinite {p : ℕ // p.Prime} := by
   refine (Set.infinite_coe_iff (s := {p : ℕ | p.Prime})).2 ?_
   apply Set.infinite_of_forall_exists_gt
   intro q
-  obtain ⟨p, hp, hgt, _⟩ := chapter02_bertrand (q + 1) (succ_ne_zero q)
+  obtain ⟨p, hp, hgt, _⟩ := chapter02 (q + 1) (succ_ne_zero q)
   exact ⟨p, hp, by omega⟩
 
 end ProofsInTheBook.Chapter02

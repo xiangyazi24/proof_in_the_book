@@ -4367,6 +4367,163 @@ private lemma mem_of_card_eq_pos_prod_dvd_factorial
     Nat.le_of_dvd (Nat.factorial_pos k) hprod_dvd
   exact (not_lt_of_ge hle) hlt
 
+private lemma int_natAbs_sub_lt_of_lt {s t k : ℕ} (hs : s < k) (ht : t < k) :
+    ((t : ℤ) - (s : ℤ)).natAbs < k := by
+  by_cases hst : s ≤ t
+  · have hcast : (t : ℤ) - (s : ℤ) = (t - s : ℕ) := by
+      exact (Int.ofNat_sub hst).symm
+    rw [hcast]
+    simp
+    omega
+  · have hts : t ≤ s := by omega
+    have hcast : (t : ℤ) - (s : ℤ) = -((s - t : ℕ) : ℤ) := by
+      have h := Int.ofNat_sub hts
+      omega
+    rw [hcast]
+    simp
+    omega
+
+private lemma int_natAbs_n_sub_le (n s : ℕ) (hs : s ≤ n) :
+    ((n : ℤ) - (s : ℤ)).natAbs ≤ n := by
+  have hcast : (n : ℤ) - (s : ℤ) = (n - s : ℕ) := by
+    exact (Int.ofNat_sub hs).symm
+  rw [hcast]
+  simp
+
+private lemma geom_diff_natAbs_lt_two_mul
+    {n k r s t : ℕ} (hn_pos : 0 < n) (hr : r < k) (hs : s < k) (ht : t < k)
+    (hsn : s ≤ n) (htn : t ≤ n) :
+    (((n : ℤ) - (s : ℤ)) ^ 2 - (((n : ℤ) - (r : ℤ)) * ((n : ℤ) - (t : ℤ)))).natAbs
+      < 2 * k * n := by
+  let E : ℤ := ((n : ℤ) - (s : ℤ)) ^ 2 -
+    (((n : ℤ) - (r : ℤ)) * ((n : ℤ) - (t : ℤ)))
+  have hE : E = ((n : ℤ) - (s : ℤ)) * ((t : ℤ) - (s : ℤ)) +
+        ((n : ℤ) - (t : ℤ)) * ((r : ℤ) - (s : ℤ)) := by
+    dsimp [E]
+    ring
+  have hNs := int_natAbs_n_sub_le n s hsn
+  have hNt := int_natAbs_n_sub_le n t htn
+  have hts := int_natAbs_sub_lt_of_lt hs ht
+  have hrs := int_natAbs_sub_lt_of_lt hs hr
+  have hterm1_lt : (((n : ℤ) - (s : ℤ)) * ((t : ℤ) - (s : ℤ))).natAbs < n * k := by
+    rw [Int.natAbs_mul]
+    exact Nat.mul_lt_mul_of_le_of_lt hNs hts hn_pos
+  have hterm2_lt : (((n : ℤ) - (t : ℤ)) * ((r : ℤ) - (s : ℤ))).natAbs < n * k := by
+    rw [Int.natAbs_mul]
+    exact Nat.mul_lt_mul_of_le_of_lt hNt hrs hn_pos
+  calc
+    E.natAbs ≤ (((n : ℤ) - (s : ℤ)) * ((t : ℤ) - (s : ℤ))).natAbs +
+        (((n : ℤ) - (t : ℤ)) * ((r : ℤ) - (s : ℤ))).natAbs := by
+      rw [hE]
+      exact Int.natAbs_add_le _ _
+    _ < n * k + n * k := by omega
+    _ = 2 * k * n := by ring
+
+private lemma int_geom_mean_eq_forces_indices_eq
+    {N K R S T : ℤ} (hN : K * K < N)
+    (hR0 : 0 ≤ R) (hS0 : 0 ≤ S) (hT0 : 0 ≤ T)
+    (hRk : R < K) (hSk : S < K) (hTk : T < K)
+    (heq : (N - S)^2 = (N - R) * (N - T)) : R = T ∧ S = T := by
+  have hRT_lt : R * T < K * K := by
+    exact mul_lt_mul_of_nonneg hRk hTk hR0 hT0
+  have hSsq_lt : S * S < K * K := by
+    exact mul_lt_mul_of_nonneg hSk hSk hS0 hS0
+  have hexp : (R + T - 2 * S) * N + (S^2 - R*T) = 0 := by nlinarith
+  by_cases hCzero : R + T - 2 * S = 0
+  · have hconst : S^2 - R*T = 0 := by nlinarith
+    have hsq : (R - T)^2 = 0 := by nlinarith
+    have hRT : R = T := by
+      have hsub : R - T = 0 := (sq_eq_zero_iff.mp hsq)
+      omega
+    have hST : S = T := by omega
+    exact ⟨hRT, hST⟩
+  · rcases lt_or_gt_of_ne hCzero with hCneg | hCpos
+    · have hleft_gt : K * K < (-(R + T - 2 * S)) * N := by
+        nlinarith
+      have hleft_eq : (-(R + T - 2 * S)) * N = S^2 - R*T := by nlinarith
+      have hright_le : S^2 - R*T ≤ S*S := by nlinarith
+      nlinarith
+    · have hleft_gt : K * K < (R + T - 2 * S) * N := by
+        nlinarith
+      have hleft_eq : (R + T - 2 * S) * N = R*T - S^2 := by nlinarith
+      have hright_le : R*T - S^2 ≤ R*T := by nlinarith [sq_nonneg S]
+      nlinarith
+
+private lemma geom_mean_eq_forces_indices_eq
+    {n k r s t : ℕ} (hkn : k * k < n) (hr : r < k) (hs : s < k) (ht : t < k)
+    (heq : (n - s)^2 = (n - r) * (n - t)) : r = t ∧ s = t := by
+  have hk_le_n : k ≤ n := by
+    have hk_pos : 0 < k := by
+      by_contra hk0
+      omega
+    have hk_le_kk : k ≤ k * k := Nat.le_mul_of_pos_left k hk_pos
+    omega
+  have hrn : r ≤ n := (le_of_lt hr).trans hk_le_n
+  have hsn : s ≤ n := (le_of_lt hs).trans hk_le_n
+  have htn : t ≤ n := (le_of_lt ht).trans hk_le_n
+  have heqz :
+      ((n : ℤ) - (s : ℤ))^2 = ((n : ℤ) - (r : ℤ)) * ((n : ℤ) - (t : ℤ)) := by
+    zify [hsn, hrn, htn] at heq
+    exact heq
+  have hres := int_geom_mean_eq_forces_indices_eq
+    (N := (n : ℤ)) (K := (k : ℤ)) (R := (r : ℤ)) (S := (s : ℤ)) (T := (t : ℤ))
+    (by exact_mod_cast hkn)
+    (by exact_mod_cast Nat.zero_le r) (by exact_mod_cast Nat.zero_le s)
+    (by exact_mod_cast Nat.zero_le t)
+    (by exact_mod_cast hr) (by exact_mod_cast hs) (by exact_mod_cast ht) heqz
+  constructor
+  · exact_mod_cast hres.1
+  · exact_mod_cast hres.2
+
+private lemma natAbs_of_nat_sub_of_le {a b : ℕ} (hab : a ≤ b) :
+    (((a : ℤ) - (b : ℤ)).natAbs = b - a) := by
+  have hcast : (a : ℤ) - (b : ℤ) = -((b - a : ℕ) : ℤ) := by
+    have h := Int.ofNat_sub hab
+    omega
+  rw [hcast]
+  simp
+
+private lemma natAbs_of_nat_sub_of_ge {a b : ℕ} (hab : b ≤ a) :
+    (((a : ℤ) - (b : ℤ)).natAbs = a - b) := by
+  have hcast : (a : ℤ) - (b : ℤ) = ((a - b : ℕ) : ℤ) := by
+    exact (Int.ofNat_sub hab).symm
+  rw [hcast]
+  simp
+
+private lemma pow_diff_min_lower {A B l : ℕ} (hneq : A ≠ B) (hl : 1 ≤ l) :
+    l * (min A B) ^ (l - 1) ≤
+      if A ≤ B then B ^ l - A ^ l else A ^ l - B ^ l := by
+  by_cases hAB : A ≤ B
+  · have hlt : A < B := lt_of_le_of_ne hAB hneq
+    have hsucc : A + 1 ≤ B := Nat.succ_le_of_lt hlt
+    have hpow_le : (A + 1) ^ l ≤ B ^ l := Nat.pow_le_pow_left hsucc l
+    calc
+      l * (min A B) ^ (l - 1) = l * A ^ (l - 1) := by rw [min_eq_left hAB]
+      _ ≤ (A + 1) ^ l - A ^ l := l_mul_pow_pred_le_succ_pow_sub_pow A l hl
+      _ ≤ B ^ l - A ^ l := Nat.sub_le_sub_right hpow_le _
+      _ = (if A ≤ B then B ^ l - A ^ l else A ^ l - B ^ l) := by simp [hAB]
+  · have hBA : B ≤ A := by omega
+    have hlt : B < A := lt_of_le_of_ne hBA (Ne.symm hneq)
+    have hsucc : B + 1 ≤ A := Nat.succ_le_of_lt hlt
+    have hpow_le : (B + 1) ^ l ≤ A ^ l := Nat.pow_le_pow_left hsucc l
+    calc
+      l * (min A B) ^ (l - 1) = l * B ^ (l - 1) := by rw [min_eq_right hBA]
+      _ ≤ (B + 1) ^ l - B ^ l := l_mul_pow_pred_le_succ_pow_sub_pow B l hl
+      _ ≤ A ^ l - B ^ l := Nat.sub_le_sub_right hpow_le _
+      _ = (if A ≤ B then B ^ l - A ^ l else A ^ l - B ^ l) := by simp [hAB]
+
+private lemma two_mul_sq_lt_three_mul_sub_sq {n k : ℕ} (hk : 4 ≤ k)
+    (hkn : k ^ 3 < n) : 2 * n * n < 3 * (n - k + 1) * (n - k + 1) := by
+  have h16k : 16 * k < n := by
+    have h16_le : 16 * k ≤ k ^ 3 := by
+      have h16_le_kk : 16 ≤ k * k := by nlinarith [hk]
+      calc
+        16 * k ≤ (k * k) * k := Nat.mul_le_mul_right k h16_le_kk
+        _ = k ^ 3 := by ring
+    exact lt_of_le_of_lt h16_le hkn
+  zify [show k ≤ n by nlinarith [hk, h16k]]
+  nlinarith [sq_nonneg ((n : ℤ) - 16 * (k : ℤ)), sq_nonneg ((k : ℤ) - 1)]
+
 /-! ### Interval count + Legendre / `padicValNat_factorial` helpers (Tier 2 building blocks for Ch03) -/
 
 /-- Count of `j ∈ range k` with `p ∣ (n - j)`, given `k ≤ n`, is at most `k / p + 1`.
@@ -4814,6 +4971,239 @@ theorem chapter03_erdos_l2
     have hk_le_n : k ≤ n := by omega
     exact Nat.ne_of_gt (Nat.sub_pos_of_lt (hj_lt.trans_le hk_le_n))
   exact lPowerFreePart_two_ne_four (n - j) hnj_ne hj_eq
+
+/-- The l≥3 Erdős contradiction: the product/divisibility argument forces
+`1, 2, 4` to occur as l-power-free parts, and the three corresponding factors
+violate the classical three-point estimate. -/
+theorem chapter03_erdos_ge3
+    {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 3 ≤ l) :
+    n.choose k ≠ m ^ l := by
+  classical
+  intro h_eq
+  have hl2 : 2 ≤ l := by omega
+  have hl_pos : 0 < l := by omega
+  have hk_le_n : k ≤ n := by omega
+  have hn_pos : 0 < n := by omega
+  have hn_gt_sq : k * k < n := erdos_step1_n_gt_k_sq hk hn hl2 h_eq
+  have hn_gt_pow : k ^ l < n := erdos_step1_n_gt_k_pow hk hn hl2 h_eq
+  have hn_gt_cube : k ^ 3 < n := by
+    exact (Nat.pow_le_pow_right (by omega : 0 < k) hl).trans_lt hn_gt_pow
+  let a : ℕ → ℕ := fun j => lPowerFreePart l (n - j)
+  let S : Finset ℕ := (Finset.range k).image a
+  have hinj : Set.InjOn a (Finset.range k) := by
+    simpa [a] using lPowerFreePart_injective_l hk hn hl2 h_eq
+  have hcard : S.card = k := by
+    dsimp [S]
+    rw [Finset.card_image_of_injOn hinj, Finset.card_range]
+  have hpos : ∀ x ∈ S, 0 < x := by
+    intro x hx
+    rcases Finset.mem_image.mp hx with ⟨j, hj, rfl⟩
+    have hj_lt : j < k := Finset.mem_range.mp hj
+    have hnj_ne : n - j ≠ 0 := by
+      exact Nat.ne_of_gt (Nat.sub_pos_of_lt (hj_lt.trans_le hk_le_n))
+    exact lPowerFreePart_pos_of_ne_zero hnj_ne
+  have hprod_S :
+      (∏ x ∈ S, x) = ∏ j ∈ Finset.range k, a j := by
+    dsimp [S]
+    rw [Finset.prod_image hinj]
+  have hprod_dvd : (∏ x ∈ S, x) ∣ k ! := by
+    rw [hprod_S]
+    simpa [a] using prod_lPowerFreeParts_dvd_factorial hk hn hl2 h_eq
+  have h1_mem : 1 ∈ S :=
+    mem_of_card_eq_pos_prod_dvd_factorial (k := k) (t := 1)
+      (by norm_num) (by omega) hcard hpos hprod_dvd
+  have h2_mem : 2 ∈ S :=
+    mem_of_card_eq_pos_prod_dvd_factorial (k := k) (t := 2)
+      (by norm_num) (by omega) hcard hpos hprod_dvd
+  have h4_mem : 4 ∈ S :=
+    mem_of_card_eq_pos_prod_dvd_factorial (k := k) (t := 4)
+      (by norm_num) hk hcard hpos hprod_dvd
+  rcases Finset.mem_image.mp h1_mem with ⟨i1, hi1, h1eq⟩
+  rcases Finset.mem_image.mp h2_mem with ⟨i2, hi2, h2eq⟩
+  rcases Finset.mem_image.mp h4_mem with ⟨i4, hi4, h4eq⟩
+  have hi1_lt : i1 < k := Finset.mem_range.mp hi1
+  have hi2_lt : i2 < k := Finset.mem_range.mp hi2
+  have hi4_lt : i4 < k := Finset.mem_range.mp hi4
+  have hi1_le_n : i1 ≤ n := (le_of_lt hi1_lt).trans hk_le_n
+  have hi2_le_n : i2 ≤ n := (le_of_lt hi2_lt).trans hk_le_n
+  have hi4_le_n : i4 ≤ n := (le_of_lt hi4_lt).trans hk_le_n
+  have hni1_ne : n - i1 ≠ 0 :=
+    Nat.ne_of_gt (Nat.sub_pos_of_lt (hi1_lt.trans_le hk_le_n))
+  have hni2_ne : n - i2 ≠ 0 :=
+    Nat.ne_of_gt (Nat.sub_pos_of_lt (hi2_lt.trans_le hk_le_n))
+  have hni4_ne : n - i4 ≠ 0 :=
+    Nat.ne_of_gt (Nat.sub_pos_of_lt (hi4_lt.trans_le hk_le_n))
+  have hfree1 : lPowerFreePart l (n - i1) = 1 := by simpa [a] using h1eq
+  have hfree2 : lPowerFreePart l (n - i2) = 2 := by simpa [a] using h2eq
+  have hfree4 : lPowerFreePart l (n - i4) = 4 := by simpa [a] using h4eq
+  set x : ℕ := lPowerRoot l (n - i1) with hx_def
+  set y : ℕ := lPowerRoot l (n - i2) with hy_def
+  set z : ℕ := lPowerRoot l (n - i4) with hz_def
+  have hx_pos : 0 < x := by
+    rw [hx_def]
+    exact lPowerRoot_pos_of_ne_zero hl_pos hni1_ne
+  have hy_pos : 0 < y := by
+    rw [hy_def]
+    exact lPowerRoot_pos_of_ne_zero hl_pos hni2_ne
+  have hz_pos : 0 < z := by
+    rw [hz_def]
+    exact lPowerRoot_pos_of_ne_zero hl_pos hni4_ne
+  have hdec1 : n - i1 = x ^ l := by
+    have h := self_eq_lPowerFreePart_mul_lPowerRoot_pow l (n - i1) hni1_ne
+    rw [hfree1] at h
+    simpa [x, hx_def] using h
+  have hdec2 : n - i2 = 2 * y ^ l := by
+    have h := self_eq_lPowerFreePart_mul_lPowerRoot_pow l (n - i2) hni2_ne
+    rw [hfree2] at h
+    simpa [y, hy_def] using h
+  have hdec4 : n - i4 = 4 * z ^ l := by
+    have h := self_eq_lPowerFreePart_mul_lPowerRoot_pow l (n - i4) hni4_ne
+    rw [hfree4] at h
+    simpa [z, hz_def] using h
+  have hi1_ne_i4 : i1 ≠ i4 := by
+    intro hidx
+    have : (1 : ℕ) = 4 := by
+      rw [← hfree1, hidx, hfree4]
+    norm_num at this
+  let A : ℕ := y ^ 2
+  let B : ℕ := x * z
+  let T : ℕ := min A B
+  have hA_pos : 0 < A := by
+    dsimp [A]
+    positivity
+  have hB_pos : 0 < B := by
+    dsimp [B]
+    exact mul_pos hx_pos hz_pos
+  have hT_pos : 0 < T := by
+    dsimp [T]
+    exact lt_min hA_pos hB_pos
+  have hsquare_eq : (n - i2) ^ 2 = 4 * A ^ l := by
+    rw [hdec2]
+    dsimp [A]
+    rw [mul_pow]
+    norm_num
+    rw [← pow_mul, ← pow_mul]
+    ring_nf
+  have hprod_eq : (n - i1) * (n - i4) = 4 * B ^ l := by
+    rw [hdec1, hdec4]
+    dsimp [B]
+    rw [mul_pow]
+    ring
+  have hA_ne_B : A ≠ B := by
+    intro hABeq
+    have hpows_eq : A ^ l = B ^ l := by rw [hABeq]
+    have hsqprod : (n - i2) ^ 2 = (n - i1) * (n - i4) := by
+      rw [hsquare_eq, hprod_eq, hpows_eq]
+    rcases geom_mean_eq_forces_indices_eq hn_gt_sq hi1_lt hi2_lt hi4_lt hsqprod with ⟨hi14, _hi24⟩
+    exact hi1_ne_i4 hi14
+  let Dn : ℕ :=
+    (((n : ℤ) - (i2 : ℤ)) ^ 2 -
+      (((n : ℤ) - (i1 : ℤ)) * ((n : ℤ) - (i4 : ℤ)))).natAbs
+  have hupper : Dn < 2 * k * n := by
+    dsimp [Dn]
+    exact geom_diff_natAbs_lt_two_mul hn_pos hi1_lt hi2_lt hi4_lt hi2_le_n hi4_le_n
+  have hsub1 : (n : ℤ) - (i1 : ℤ) = ((n - i1 : ℕ) : ℤ) := (Int.ofNat_sub hi1_le_n).symm
+  have hsub2 : (n : ℤ) - (i2 : ℤ) = ((n - i2 : ℕ) : ℤ) := (Int.ofNat_sub hi2_le_n).symm
+  have hsub4 : (n : ℤ) - (i4 : ℤ) = ((n - i4 : ℕ) : ℤ) := (Int.ofNat_sub hi4_le_n).symm
+  let Dpow : ℕ := if A ≤ B then B ^ l - A ^ l else A ^ l - B ^ l
+  have hDn_eq : Dn = 4 * Dpow := by
+    dsimp [Dn]
+    rw [hsub1, hsub2, hsub4]
+    rw [← Nat.cast_pow, ← Nat.cast_mul]
+    rw [hsquare_eq, hprod_eq]
+    by_cases hAB : A ≤ B
+    · have hpow_le : A ^ l ≤ B ^ l := Nat.pow_le_pow_left hAB l
+      have hle4 : 4 * A ^ l ≤ 4 * B ^ l := Nat.mul_le_mul_left 4 hpow_le
+      rw [natAbs_of_nat_sub_of_le hle4]
+      dsimp [Dpow]
+      rw [if_pos hAB, Nat.mul_sub_left_distrib]
+    · have hBA : B ≤ A := by omega
+      have hpow_le : B ^ l ≤ A ^ l := Nat.pow_le_pow_left hBA l
+      have hle4 : 4 * B ^ l ≤ 4 * A ^ l := Nat.mul_le_mul_left 4 hpow_le
+      rw [natAbs_of_nat_sub_of_ge hle4]
+      dsimp [Dpow]
+      rw [if_neg hAB, Nat.mul_sub_left_distrib]
+  have hlower_pow : l * T ^ (l - 1) ≤ Dpow := by
+    dsimp [T, Dpow]
+    exact pow_diff_min_lower hA_ne_B (by omega : 1 ≤ l)
+  have hdiff_lt : 4 * (l * T ^ (l - 1)) < 2 * k * n := by
+    rw [hDn_eq] at hupper
+    exact (Nat.mul_le_mul_left 4 hlower_pow).trans_lt hupper
+  have hlow1 : n - k + 1 ≤ n - i1 := by omega
+  have hlow2 : n - k + 1 ≤ n - i2 := by omega
+  have hlow4 : n - k + 1 ≤ n - i4 := by omega
+  have hlow_sq_le_A : (n - k + 1) ^ 2 ≤ 4 * A ^ l := by
+    rw [← hsquare_eq]
+    exact Nat.pow_le_pow_left hlow2 2
+  have hlow_sq_le_B : (n - k + 1) ^ 2 ≤ 4 * B ^ l := by
+    rw [← hprod_eq]
+    have hmul := Nat.mul_le_mul hlow1 hlow4
+    simpa [pow_two] using hmul
+  have hlow_sq_le_T : (n - k + 1) ^ 2 ≤ 4 * T ^ l := by
+    dsimp [T]
+    by_cases hAB : A ≤ B
+    · rw [min_eq_left hAB]
+      exact hlow_sq_le_A
+    · have hBA : B ≤ A := by omega
+      rw [min_eq_right hBA]
+      exact hlow_sq_le_B
+  have hbig_low : 2 * n * n < l * ((n - k + 1) ^ 2) := by
+    have hthree := two_mul_sq_lt_three_mul_sub_sq hk hn_gt_cube
+    have hthree_le : 3 * ((n - k + 1) ^ 2) ≤ l * ((n - k + 1) ^ 2) :=
+      Nat.mul_le_mul_right _ hl
+    have hthree' : 2 * n * n < 3 * ((n - k + 1) ^ 2) := by
+      simpa [pow_two, mul_assoc] using hthree
+    exact hthree'.trans_le hthree_le
+  have hbig_T : 2 * n * n < 4 * l * T ^ l := by
+    have h := hbig_low.trans_le (Nat.mul_le_mul_left l hlow_sq_le_T)
+    calc
+      2 * n * n < l * (4 * T ^ l) := h
+      _ = 4 * l * T ^ l := by ring
+  have hdiff_mul : 4 * l * T ^ l < 2 * k * n * T := by
+    calc
+      4 * l * T ^ l = (4 * (l * T ^ (l - 1))) * T := by
+        have hpow : T ^ (l - 1) * T = T ^ l := pow_sub_one_mul hl_pos.ne' T
+        rw [← hpow]
+        ring
+      _ < (2 * k * n) * T := Nat.mul_lt_mul_of_pos_right hdiff_lt hT_pos
+      _ = 2 * k * n * T := by ring
+  have hn_lt_kT : n < k * T := by
+    have hchain : 2 * n * n < 2 * k * n * T := hbig_T.trans hdiff_mul
+    have hmul : (2 * n) * n < (2 * n) * (k * T) := by
+      simpa [mul_assoc, mul_left_comm, mul_comm] using hchain
+    exact (Nat.mul_lt_mul_left (by omega : 0 < 2 * n)).mp hmul
+  have hx_l_le_n : x ^ l ≤ n := by omega
+  have hy_l_le_n : y ^ l ≤ n := by omega
+  have hz_l_le_n : z ^ l ≤ n := by omega
+  have hA_l_le : A ^ l ≤ n * n := by
+    dsimp [A]
+    rw [← pow_mul, mul_comm 2 l, pow_mul]
+    simpa [pow_two] using Nat.mul_le_mul hy_l_le_n hy_l_le_n
+  have hB_l_le : B ^ l ≤ n * n := by
+    dsimp [B]
+    rw [mul_pow]
+    exact Nat.mul_le_mul hx_l_le_n hz_l_le_n
+  have hT_l_le : T ^ l ≤ n * n := by
+    dsimp [T]
+    by_cases hAB : A ≤ B
+    · rw [min_eq_left hAB]
+      exact hA_l_le
+    · have hBA : B ≤ A := by omega
+      rw [min_eq_right hBA]
+      exact hB_l_le
+  have hT3_le_nsq : T ^ 3 ≤ n * n := by
+    exact (Nat.pow_le_pow_right hT_pos hl).trans hT_l_le
+  have hcube_lt : n ^ 3 < (k * T) ^ 3 :=
+    Nat.pow_lt_pow_left hn_lt_kT (by norm_num : (3 : ℕ) ≠ 0)
+  rw [mul_pow] at hcube_lt
+  have hcube_le : k ^ 3 * T ^ 3 ≤ k ^ 3 * (n * n) :=
+    Nat.mul_le_mul_left (k ^ 3) hT3_le_nsq
+  have hn3_lt : n ^ 3 < k ^ 3 * (n * n) := hcube_lt.trans_le hcube_le
+  have hn_lt_k3 : n < k ^ 3 := by
+    have hmul : n * (n * n) < k ^ 3 * (n * n) := by
+      simpa [pow_succ, pow_two, mul_assoc, mul_left_comm, mul_comm] using hn3_lt
+    exact Nat.lt_of_mul_lt_mul_right hmul
+  omega
 
 /-! ### Main theorem assembly -/
 

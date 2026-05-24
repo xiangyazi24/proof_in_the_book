@@ -336,6 +336,40 @@ theorem booleanIntersectionFactor_mem_lowDegree_succ {K α : Type*} [Field K] [F
   · intro a x _ hx
     simpa using target.smul_mem a hx
 
+/--
+The Frankl-Wilson product attached to a set `A` and a finite set of forbidden
+field values.  On a Boolean input `X`, this is
+`∏ c ∈ L, (|A ∩ X| - c)`.
+-/
+def franklWilsonFunction (K : Type*) [Field K] {α : Type*} [DecidableEq α]
+    (A : Finset α) (L : Finset K) : Finset α → K :=
+  fun X => ∏ c ∈ L, (((A ∩ X).card : K) - c)
+
+theorem franklWilsonFunction_insert {K α : Type*} [Field K] [DecidableEq K]
+    [DecidableEq α] {c : K} {L : Finset K} (hc : c ∉ L) (A : Finset α) :
+    franklWilsonFunction K A (insert c L) =
+      booleanIntersectionFactor K A c (franklWilsonFunction K A L) := by
+  ext X
+  simp [franklWilsonFunction, booleanIntersectionFactor, hc, mul_comm]
+
+/--
+The Frankl-Wilson product has Boolean degree at most the number of forbidden
+values.  This is the low-degree half of the modular intersection theorem.
+-/
+theorem franklWilsonFunction_mem_lowDegree {K α : Type*} [Field K] [Fintype α]
+    [DecidableEq K] [DecidableEq α] (A : Finset α) (L : Finset K) :
+    franklWilsonFunction K A L ∈ lowDegreeBooleanSubmodule K α L.card := by
+  induction L using Finset.induction_on with
+  | empty =>
+      simpa [franklWilsonFunction, subsetMonomial] using
+        (subsetMonomial_mem_lowDegree (K := K) (α := α) (I := (∅ : Finset α)) (r := 0)
+          (by simp))
+  | insert c L hc hL =>
+      rw [franklWilsonFunction_insert (K := K) (α := α) hc A]
+      have hmem := booleanIntersectionFactor_mem_lowDegree_succ (K := K) (α := α)
+        (A := A) (c := c) (f := franklWilsonFunction K A L) hL
+      simpa [Finset.card_insert_of_notMem hc] using hmem
+
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
 diameter can be covered by d+1 subsets of itself, each of strictly smaller
 diameter.  The subset condition is essential: in a noncompact proper space

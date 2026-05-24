@@ -1356,6 +1356,23 @@ noncomputable def KahnKalaiCertificate.ofPrimePointedHalfFamilyOfSumLarge {d p :
   exact hlarge
 
 /--
+Concrete `Fin (4p)` instance of the pointed Kahn-Kalai bridge.  The only
+remaining input is a pure binomial inequality.
+-/
+noncomputable def KahnKalaiCertificate.ofPrimePointedFinFamilyOfSumLarge {p : ℕ}
+    [Fact p.Prime]
+    (hlarge : (((4 * p) * (4 * p)) + 1) *
+        (∑ k ∈ Finset.range p, (4 * p).choose k) <
+          (4 * p - 1).choose (2 * p - 1)) :
+    KahnKalaiCertificate ((4 * p) * (4 * p)) := by
+  let base : Fin (4 * p) := ⟨0, by
+    have hp : 0 < p := (Fact.out : Nat.Prime p).pos
+    omega⟩
+  refine KahnKalaiCertificate.ofPrimePointedHalfFamilyOfSumLarge (p := p) base
+    (coord := finProdFinEquiv) ?_ hlarge
+  simp [Fintype.card_fin]
+
+/--
 Bridge from the Frankl-Wilson coloring obstruction to a Borsuk counterexample
 certificate.  A concrete Kahn-Kalai construction can use this once it supplies
 the Euclidean point map and proves that the forbidden intersection pairs are

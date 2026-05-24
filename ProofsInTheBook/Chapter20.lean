@@ -558,6 +558,127 @@ theorem not_redGreenEdge_self (a : MonskyColor) : ¬ RedGreenEdge a a := by
 theorem redGreenEdge_cases {a b : MonskyColor} (h : RedGreenEdge a b) :
     (a = red ∧ b = green) ∨ (a = green ∧ b = red) := h
 
+/-- Predicate for colors lying on the red-green side of the Monsky boundary argument. -/
+def colorIsRedGreen (c : MonskyColor) : Prop := c = red ∨ c = green
+
+/-- Predicate for colors lying on the green-blue sides of the Monsky boundary argument. -/
+def colorIsGreenBlue (c : MonskyColor) : Prop := c = green ∨ c = blue
+
+/-- Predicate for colors lying on the red-blue side of the Monsky boundary argument. -/
+def colorIsRedBlue (c : MonskyColor) : Prop := c = red ∨ c = blue
+
+/-- Encode red/green colors in `ZMod 2`; blue is unused when the red-green invariant applies. -/
+def colorRGParityBit : MonskyColor → ZMod 2
+  | red => 0
+  | green => 1
+  | blue => 0
+
+/-- Red-green transition count along a finite color chain. -/
+def listRGTransitionCount : List MonskyColor → ℕ
+  | [] => 0
+  | [_] => 0
+  | a :: b :: rest => (if RedGreenEdge a b then 1 else 0) + listRGTransitionCount (b :: rest)
+
+theorem redGreenEdge_indicator_zmod_eq_bit_add {a b : MonskyColor}
+    (ha : colorIsRedGreen a) (hb : colorIsRedGreen b) :
+    ((if RedGreenEdge a b then 1 else 0 : ℕ) : ZMod 2) =
+      colorRGParityBit a + colorRGParityBit b := by
+  rcases ha with rfl | rfl <;> rcases hb with rfl | rfl <;> decide
+
+theorem listRGTransitionCount_cons_append_zmod {a b : MonskyColor} (middle : List MonskyColor)
+    (hcolors : ∀ c ∈ a :: middle ++ [b], colorIsRedGreen c) :
+    (listRGTransitionCount (a :: middle ++ [b]) : ZMod 2) =
+      colorRGParityBit a + colorRGParityBit b := by
+  induction middle generalizing a with
+  | nil =>
+      have ha : colorIsRedGreen a := hcolors a (by simp)
+      have hb : colorIsRedGreen b := hcolors b (by simp)
+      simp [listRGTransitionCount, redGreenEdge_indicator_zmod_eq_bit_add ha hb]
+  | cons x xs ih =>
+      have ha : colorIsRedGreen a := hcolors a (by simp)
+      have hx : colorIsRedGreen x := hcolors x (by simp)
+      have htail : ∀ c ∈ x :: xs ++ [b], colorIsRedGreen c := by
+        intro c hc
+        exact hcolors c (List.mem_cons.mpr (Or.inr hc))
+      have hfirst := redGreenEdge_indicator_zmod_eq_bit_add ha hx
+      have htailcount := ih (a := x) htail
+      simp only [List.cons_append] at htailcount
+      simp only [List.cons_append, listRGTransitionCount]
+      rw [Nat.cast_add, hfirst, htailcount]
+      rcases hx with rfl | rfl <;> cases a <;> cases b <;> decide
+
+theorem listRGTransitionCount_odd_of_red_to_green (middle : List MonskyColor)
+    (hcolors : ∀ c ∈ red :: middle ++ [green], colorIsRedGreen c) :
+    Odd (listRGTransitionCount (red :: middle ++ [green])) := by
+  have h := listRGTransitionCount_cons_append_zmod (a := red) (b := green) middle hcolors
+  simp [colorRGParityBit] at h
+  exact ZMod.natCast_eq_one_iff_odd.mp h
+
+theorem not_redGreenEdge_of_greenBlue {a b : MonskyColor}
+    (ha : colorIsGreenBlue a) (hb : colorIsGreenBlue b) : ¬ RedGreenEdge a b := by
+  rcases ha with rfl | rfl <;> rcases hb with rfl | rfl <;> decide
+
+theorem not_redGreenEdge_of_redBlue {a b : MonskyColor}
+    (ha : colorIsRedBlue a) (hb : colorIsRedBlue b) : ¬ RedGreenEdge a b := by
+  rcases ha with rfl | rfl <;> rcases hb with rfl | rfl <;> decide
+
+theorem listRGTransitionCount_eq_zero_of_greenBlue :
+    ∀ l : List MonskyColor, (∀ c ∈ l, colorIsGreenBlue c) → listRGTransitionCount l = 0 := by
+  intro l
+  induction l with
+  | nil => simp [listRGTransitionCount]
+  | cons a tail ih =>
+      intro h
+      cases tail with
+      | nil => simp [listRGTransitionCount]
+      | cons b rest =>
+          have ha : colorIsGreenBlue a := h a (by simp)
+          have hb : colorIsGreenBlue b := h b (by simp)
+          have htail : ∀ c ∈ b :: rest, colorIsGreenBlue c := by
+            intro c hc
+            exact h c (List.mem_cons.mpr (Or.inr hc))
+          have hn : ¬ RedGreenEdge a b := not_redGreenEdge_of_greenBlue ha hb
+          simp [listRGTransitionCount, hn, ih htail]
+
+theorem listRGTransitionCount_eq_zero_of_redBlue :
+    ∀ l : List MonskyColor, (∀ c ∈ l, colorIsRedBlue c) → listRGTransitionCount l = 0 := by
+  intro l
+  induction l with
+  | nil => simp [listRGTransitionCount]
+  | cons a tail ih =>
+      intro h
+      cases tail with
+      | nil => simp [listRGTransitionCount]
+      | cons b rest =>
+          have ha : colorIsRedBlue a := h a (by simp)
+          have hb : colorIsRedBlue b := h b (by simp)
+          have htail : ∀ c ∈ b :: rest, colorIsRedBlue c := by
+            intro c hc
+            exact h c (List.mem_cons.mpr (Or.inr hc))
+          have hn : ¬ RedGreenEdge a b := not_redGreenEdge_of_redBlue ha hb
+          simp [listRGTransitionCount, hn, ih htail]
+
+/--
+Boundary-color parity for a square contour already split into four side chains.
+This is the finite-color statement behind Monsky's boundary oddness.
+-/
+theorem squareBoundaryRGCount_odd_of_side_color_lists
+    (bottom right top left : List MonskyColor)
+    (hbottom : ∀ c ∈ red :: bottom ++ [green], colorIsRedGreen c)
+    (hright : ∀ c ∈ green :: right ++ [green], colorIsGreenBlue c)
+    (htop : ∀ c ∈ green :: top ++ [blue], colorIsGreenBlue c)
+    (hleft : ∀ c ∈ blue :: left ++ [red], colorIsRedBlue c) :
+    Odd (listRGTransitionCount (red :: bottom ++ [green]) +
+      listRGTransitionCount (green :: right ++ [green]) +
+      listRGTransitionCount (green :: top ++ [blue]) +
+      listRGTransitionCount (blue :: left ++ [red])) := by
+  have hbot := listRGTransitionCount_odd_of_red_to_green bottom hbottom
+  have hright0 := listRGTransitionCount_eq_zero_of_greenBlue (green :: right ++ [green]) hright
+  have htop0 := listRGTransitionCount_eq_zero_of_greenBlue (green :: top ++ [blue]) htop
+  have hleft0 := listRGTransitionCount_eq_zero_of_redBlue (blue :: left ++ [red]) hleft
+  rw [hright0, htop0, hleft0]
+  simpa using hbot
+
 /-- `TrichromaticTriangle` is invariant under cyclic permutation of vertices. -/
 theorem trichromaticTriangle_cycle {a b c : MonskyColor} :
     TrichromaticTriangle a b c ↔ TrichromaticTriangle b c a := by

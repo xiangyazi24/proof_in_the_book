@@ -41,6 +41,29 @@ theorem kneserGraph_adj_iff {n k : ℕ} (a b : KneserVertex n k) :
       a ≠ b ∧ Disjoint (a : Finset (Fin n)) (b : Finset (Fin n)) :=
   Iff.rfl
 
+/-- Symmetry of Kneser adjacency, exposed as a named theorem
+(`SimpleGraph.Adj.symm` already provides this generically). -/
+theorem kneserGraph_adj_symm {n k : ℕ} {a b : KneserVertex n k}
+    (h : (kneserGraph n k).Adj a b) : (kneserGraph n k).Adj b a :=
+  (kneserGraph n k).symm h
+
+/-- Kneser adjacency is irreflexive: no vertex is adjacent to itself. -/
+@[simp]
+theorem kneserGraph_not_adj_self {n k : ℕ} (a : KneserVertex n k) :
+    ¬ (kneserGraph n k).Adj a a := by
+  intro h
+  exact h.1 rfl
+
+/-- An adjacency in `kneserGraph n k` forces the underlying subsets to be
+disjoint (the constructive form of the second conjunct). -/
+theorem disjoint_of_kneserGraph_adj {n k : ℕ} {a b : KneserVertex n k}
+    (h : (kneserGraph n k).Adj a b) :
+    Disjoint (a : Finset (Fin n)) (b : Finset (Fin n)) := h.2
+
+/-- An adjacency in `kneserGraph n k` forces the two vertices to be distinct. -/
+theorem ne_of_kneserGraph_adj {n k : ℕ} {a b : KneserVertex n k}
+    (h : (kneserGraph n k).Adj a b) : a ≠ b := h.1
+
 /--
 Any coloring of a Kneser graph assigns different colors to disjoint
 `k`-subsets.

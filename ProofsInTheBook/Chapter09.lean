@@ -330,6 +330,17 @@ theorem dehnInvariantQ_six_equal_edges {Angle : Type*}
   rw [dehnInvariantQ_const_length_angle]
   norm_num
 
+theorem dehnInvariantQ_eq_zero_of_angles_zero {Edge Angle : Type*}
+    [AddCommGroup Angle] [Module ℚ Angle]
+    (edges : Finset Edge) (length : Edge → ℝ) (angle : Edge → Angle)
+    (hangle : ∀ e ∈ edges, angle e = 0) :
+    dehnInvariantQ edges length angle = 0 := by
+  unfold dehnInvariantQ
+  apply Finset.sum_eq_zero
+  intro e he
+  unfold dehnEdgeQ
+  rw [hangle e he, TensorProduct.tmul_zero]
+
 /-- If every edge angle vanishes in the angle target, the Dehn invariant is zero.
 This is the cube case: all dihedral angles are `π/2`, which is a rational
 multiple of `π` and therefore zero in `AngleModPiQ`. -/
@@ -351,6 +362,14 @@ theorem dehnInvariant_cube_eq_zero {Edge : Type*} (edges : Finset Edge)
     (length : Edge → ℝ) :
     dehnInvariant edges length (fun _ => angleClassQ (Real.pi / 2)) = 0 := by
   apply dehnInvariant_eq_zero_of_angles_zero
+  intro _ _
+  exact angleClassQ_pi_div_two
+
+/-- Rational-target cube Dehn invariant: all edge angles are right angles. -/
+theorem dehnInvariantQ_cube_eq_zero {Edge : Type*} (edges : Finset Edge)
+    (length : Edge → ℝ) :
+    dehnInvariantQ edges length (fun _ => angleClassQ (Real.pi / 2)) = 0 := by
+  apply dehnInvariantQ_eq_zero_of_angles_zero
   intro _ _
   exact angleClassQ_pi_div_two
 
@@ -401,10 +420,20 @@ theorem impossible_scissors_congruence_of_dehn_ne {A : Type*} [AddCommMonoid A]
   intro h
   exact htetra (h.symm.trans hcube)
 
-/-! ### Concrete regular tetrahedron coordinate model -/
+/-! ### Concrete cube and regular tetrahedron coordinate models -/
 
 abbrev Euclidean3 :=
   EuclideanSpace ℝ (Fin 3)
+
+/-- Outward face normals of the cube centered at the origin. -/
+noncomputable def cubeFaceNormal : Fin 6 → Euclidean3 :=
+  ![!₂[(1 : ℝ), 0, 0], !₂[-1, 0, 0], !₂[0, 1, 0], !₂[0, -1, 0],
+    !₂[0, 0, 1], !₂[0, 0, -1]]
+
+/-- The coordinate axis perpendicular to each cube face. -/
+def cubeFaceAxis : Fin 6 → Fin 3 :=
+  ![⟨0, by decide⟩, ⟨0, by decide⟩, ⟨1, by decide⟩, ⟨1, by decide⟩,
+    ⟨2, by decide⟩, ⟨2, by decide⟩]
 
 /--
 The standard regular tetrahedron centered at the origin.  Its vertices are the
@@ -418,6 +447,24 @@ def dot3 (u v : Euclidean3) : ℝ :=
   u ⟨0, by decide⟩ * v ⟨0, by decide⟩ +
   u ⟨1, by decide⟩ * v ⟨1, by decide⟩ +
   u ⟨2, by decide⟩ * v ⟨2, by decide⟩
+
+noncomputable def cubeFaceNormalCosine (i j : Fin 6) : ℝ :=
+  dot3 (cubeFaceNormal i) (cubeFaceNormal j)
+
+theorem cubeFaceNormal_dot_self (i : Fin 6) :
+    dot3 (cubeFaceNormal i) (cubeFaceNormal i) = 1 := by
+  fin_cases i <;> simp [dot3, cubeFaceNormal]
+
+theorem cubeFaceNormalCosine_of_axis_ne {i j : Fin 6}
+    (haxis : cubeFaceAxis i ≠ cubeFaceAxis j) :
+    cubeFaceNormalCosine i j = 0 := by
+  fin_cases i <;> fin_cases j <;>
+    simp [cubeFaceNormalCosine, cubeFaceAxis, dot3, cubeFaceNormal] at haxis ⊢
+
+theorem cube_rightAngle_has_faceNormal_cosine {i j : Fin 6}
+    (haxis : cubeFaceAxis i ≠ cubeFaceAxis j) :
+    Real.cos (Real.pi / 2) = cubeFaceNormalCosine i j := by
+  rw [Real.cos_pi_div_two, cubeFaceNormalCosine_of_axis_ne haxis]
 
 /-- Coordinate squared distance in `EuclideanSpace ℝ (Fin 3)`, written explicitly for computation. -/
 def coordinateDistSq3 (u v : Euclidean3) : ℝ :=
@@ -673,6 +720,21 @@ theorem regularTetrahedron_six_edge_dehnQ_ne_zero {edgeLength : ℝ}
   exact dehnEdgeQ_ne_zero_of_ne_zero
     (mul_ne_zero (by norm_num : (6 : ℝ) ≠ 0) hedgeLength)
     angleClassQ_arccos_one_third_ne_zero
+
+/--
+The abstract rational Dehn sums for a right-angled cube and a regular
+tetrahedron are different.  This still does not assert geometric scissors
+congruence, because the polyhedron/dissection layer is not available.
+-/
+theorem cube_not_regularTetrahedron_abstract_dehnQ {cubeEdgeLength tetraEdgeLength : ℝ}
+    (htetraEdgeLength : tetraEdgeLength ≠ 0) :
+    dehnInvariantQ (Finset.univ : Finset (Fin 12)) (fun _ => cubeEdgeLength)
+        (fun _ => angleClassQ (Real.pi / 2)) ≠
+      dehnInvariantQ (Finset.univ : Finset (Fin 6)) (fun _ => tetraEdgeLength)
+        (fun _ => angleClassQ (Real.arccos (1 / 3))) := by
+  exact impossible_scissors_congruence_of_dehn_ne
+    (dehnInvariantQ_cube_eq_zero (Finset.univ : Finset (Fin 12)) (fun _ => cubeEdgeLength))
+    (regularTetrahedron_six_edge_dehnQ_ne_zero htetraEdgeLength)
 
 /--
 Hilbert's third problem: a regular tetrahedron cannot be cut into finitely

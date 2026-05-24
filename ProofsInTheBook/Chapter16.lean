@@ -1254,6 +1254,33 @@ theorem zmod_nonzero_card (p : ℕ) [Fact p.Prime] :
   rw [Finset.card_erase_of_mem (Finset.mem_univ (0 : ZMod p)), Finset.card_univ,
     ZMod.card p]
 
+/-- Count all subsets of a finite type whose cardinality is at most `r`. -/
+theorem smallSubsets_card_eq_sum_choose {α : Type*} [Fintype α] [DecidableEq α] (r : ℕ) :
+    Fintype.card {I : Finset α // I.card ≤ r} =
+      ∑ k ∈ Finset.range (r + 1), (Fintype.card α).choose k := by
+  rw [Fintype.card_subtype]
+  have hset :
+      ({I | I.card ≤ r} : Finset (Finset α)) =
+        (Finset.range (r + 1)).biUnion fun k =>
+          (Finset.univ : Finset α).powersetCard k := by
+    ext I
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_biUnion,
+      Finset.mem_range, Finset.mem_powersetCard]
+    constructor
+    · intro hI
+      exact ⟨I.card, Nat.lt_succ_of_le hI, fun x _ => Finset.mem_univ x, rfl⟩
+    · rintro ⟨k, hk, _hsub, hcard⟩
+      rw [hcard]
+      exact Nat.le_of_lt_succ hk
+  rw [hset]
+  have hdisj :
+      ((Finset.range (r + 1) : Finset ℕ) : Set ℕ).PairwiseDisjoint
+        (fun k => (Finset.univ : Finset α).powersetCard k) := by
+    intro i _hi j _hj hij
+    exact (Finset.univ : Finset α).pairwise_disjoint_powersetCard hij
+  rw [Finset.card_biUnion hdisj]
+  simp [Finset.card_powersetCard]
+
 /--
 Directed-cut certificate specialized to the pointed half-size family.  The
 remaining Kahn-Kalai arithmetic is the lower bound on this family size against
@@ -1310,6 +1337,23 @@ noncomputable def KahnKalaiCertificate.ofPrimePointedHalfFamilyOfNumericLarge {d
     KahnKalaiCertificate d := by
   refine KahnKalaiCertificate.ofPrimePointedHalfFamilyOfChooseLarge base coord hground ?_
   simpa [zmod_nonzero_card p] using hlarge
+
+/--
+Sum-of-binomial version of the pointed Kahn-Kalai certificate.  This is the
+finite arithmetic shape left after the Frankl-Wilson linear-algebra argument.
+-/
+noncomputable def KahnKalaiCertificate.ofPrimePointedHalfFamilyOfSumLarge {d p : ℕ}
+    [Fact p.Prime] {α : Type*} [Fintype α] [DecidableEq α]
+    (base : α) (coord : (α × α) ≃ Fin d)
+    (hground : Fintype.card α = 4 * p)
+    (hlarge : (d + 1) * (∑ k ∈ Finset.range p, (4 * p).choose k) <
+          (4 * p - 1).choose (2 * p - 1)) :
+    KahnKalaiCertificate d := by
+  refine KahnKalaiCertificate.ofPrimePointedHalfFamilyOfNumericLarge base coord hground ?_
+  rw [smallSubsets_card_eq_sum_choose (α := α) (r := p - 1), hground]
+  have hp1 : 1 ≤ p := (Fact.out : Nat.Prime p).one_lt.le
+  rw [Nat.sub_add_cancel hp1]
+  exact hlarge
 
 /--
 Bridge from the Frankl-Wilson coloring obstruction to a Borsuk counterexample

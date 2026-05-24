@@ -556,6 +556,14 @@ theorem exists_kneserVertexIn_color_eq_minColorInSupport {n k q : ℕ}
   rcases Finset.mem_image.mp hmem with ⟨A, _hA, hAeq⟩
   exact ⟨A, hAeq⟩
 
+@[simp]
+theorem minColorInSupport_congr_card {n k q : ℕ}
+    (C : KneserVertex n k → Fin q) (support : Finset (Fin n))
+    (h₁ h₂ : k ≤ support.card) :
+    minColorInSupport C support h₁ = minColorInSupport C support h₂ := by
+  unfold minColorInSupport
+  congr
+
 /--
 Key finite step in Matoušek's Tucker reduction: if two disjoint supports both
 contain a `k`-subset, then a proper Kneser coloring gives different minimum
@@ -667,6 +675,14 @@ theorem signedSubset_large_support_has_k_side {n k : ℕ} {X : SignedSubset n}
   push Not at h
   simp [SignedSubset.card] at hlarge
   omega
+
+theorem decide_lt_swap_eq_not {α : Type*} [LinearOrder α] [DecidableRel ((· < ·) : α → α → Prop)]
+    {a b : α} (hne : a ≠ b) : decide (b < a) = !decide (a < b) := by
+  by_cases hab : a < b
+  · have hba : ¬ b < a := not_lt_of_ge hab.le
+    simp [hab, hba]
+  · have hba : b < a := lt_of_le_of_ne (le_of_not_gt hab) hne.symm
+    simp [hab, hba]
 
 /--
 Large-support side choice in Matoušek's construction: use the side whose

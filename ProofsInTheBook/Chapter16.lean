@@ -26,6 +26,13 @@ configuration, the exact diameter and smaller-diameter color-class estimates,
 and the dimension bookkeeping giving a counterexample in the advertised high
 dimensions.  Mathlib has Euclidean metric spaces and finite-set tools, but not
 this Frankl-Wilson/Kahn-Kalai pipeline as an available theorem.
+
+Mathlib search status (2026-05-24): no Frankl-Wilson theorem, modular
+intersection theorem, Ray-Chaudhuri-Wilson theorem, or oddtown/eventown theorem
+was present under those names or nearby combinatorial names.  The local
+additions below therefore stop at the reusable diagonal-functional linear
+independence core, its mod-2 oddtown specialization, and the finite geometric
+obstruction bridge to `KahnKalaiCertificate`.
 -/
 
 namespace ProofsInTheBook.Chapter16

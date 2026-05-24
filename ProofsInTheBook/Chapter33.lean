@@ -13,6 +13,23 @@ at most n-1 entries can be completed to a full Latin square.
 The book's proof uses Hall's marriage theorem applied row by row:
 at each step, the remaining entries in each row form a system of
 distinct representatives.
+
+Point-17 status: the formalized result below is the Hall row-completion
+engine, not yet the full Evans/Smetaniuk completion theorem.  A direct
+iteration of `latin_square_completion_step_from_partial` is not valid:
+after one whole row is added, the current partial square has more than
+`n - 1` filled cells, and the witness/count hypotheses used in the Hall
+double-counting proof no longer describe the enlarged state.
+
+To turn this engine into the full theorem, the missing infrastructure is a
+stateful row-extension lemma.  Its state must contain the originally filled
+cells outside the completed rows, the already completed Latin rectangle, and
+the row currently being extended.  The lemma must allow fixed entries in that
+row, prove Hall for only the still-empty columns, and preserve the invariant
+that the number of original filled cells in unfinished rows is at most the
+number of unfinished rows minus one.  Once that strengthened lemma is in
+place, the remaining induction chooses an empty unfinished row when the bound
+is slack and a row containing an original entry when the bound is tight.
 -/
 
 namespace ProofsInTheBook.Chapter33
@@ -213,9 +230,10 @@ theorem latin_square_completion_step_from_partial {n : ℕ}
 /--
 Canonical Chapter 33 entry point.
 
-The full book theorem iterates this row-by-row Hall step to complete a partial
-Latin square.  The closed theorem in this file is the genuine completion step
-from the partial-square hypotheses, with Hall's condition proved internally.
+This is currently the genuine Hall row-completion step from the partial-square
+hypotheses, with Hall's condition proved internally.  It is intentionally kept
+as a step theorem until the stateful fixed-entry row-extension lemma described
+in the module note is formalized.
 -/
 theorem chapter33 {n : ℕ}
     (P : Fin n → Fin n → Option (Fin n))

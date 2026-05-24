@@ -294,4 +294,28 @@ theorem MonskyCertificate.totalRG_pos {n : ℕ} (cert : MonskyCertificate n) :
   rw [h1] at hpar
   omega
 
+/-- The Monsky certificate's `totalRG` count is itself odd, since it matches the
+parity of the (odd) boundary RG count.  Combined with the Sperner parity
+identity, this is the stronger form behind `totalRG_pos`. -/
+theorem MonskyCertificate.totalRG_odd {n : ℕ} (cert : MonskyCertificate n) :
+    Odd cert.totalRG := by
+  rcases cert.hodd with ⟨k, hk⟩
+  have hpar := cert.hparity
+  rw [hk] at hpar
+  have h1 : (2 * k + 1) % 2 = 1 := by omega
+  rw [h1] at hpar
+  exact Nat.odd_iff.mpr hpar
+
+/-- Any Monsky certificate has at least one trichromatic triangle — packaging
+of `chapter20` plus the cardinality lower bound.  This is the "≥ 1 trichromatic
+triangle exists" form used by the contradiction step in Monsky's argument. -/
+theorem MonskyCertificate.one_le_trichromatic_card {n : ℕ} (cert : MonskyCertificate n) :
+    1 ≤ (Finset.univ.filter fun i : Fin n =>
+        TrichromaticTriangle (cert.triangleColors i).1
+          (cert.triangleColors i).2.1 (cert.triangleColors i).2.2).card := by
+  obtain ⟨i, hi⟩ := chapter20 cert
+  exact Finset.card_pos.mpr ⟨i, by
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    exact hi⟩
+
 end ProofsInTheBook.Chapter20

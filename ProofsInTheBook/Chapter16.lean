@@ -696,6 +696,81 @@ theorem finReindexedDirectedCutPoint_dist_sq_le_kahnKalai
     directedCutSet_symmDiffCard_of_card_eq A B hA hB, hground]
   exact kahnKalai_quadratic_bound_real (Nat.sub_le _ _)
 
+theorem dist_le_sqrt_of_dist_sq_le {X : Type*} [PseudoMetricSpace X]
+    {x y : X} {R : ℝ} (hR : 0 ≤ R) (h : dist x y ^ 2 ≤ R) :
+    dist x y ≤ Real.sqrt R :=
+  (Real.le_sqrt dist_nonneg hR).2 h
+
+theorem dist_eq_sqrt_of_dist_sq_eq {X : Type*} [PseudoMetricSpace X]
+    {x y : X} {R : ℝ} (hR : 0 ≤ R) (h : dist x y ^ 2 = R) :
+    dist x y = Real.sqrt R := by
+  apply le_antisymm
+  · exact dist_le_sqrt_of_dist_sq_le hR h.le
+  · have hsq : Real.sqrt R ^ 2 ≤ dist x y ^ 2 := by rw [Real.sq_sqrt hR, h]
+    exact (sq_le_sq₀ (Real.sqrt_nonneg _) dist_nonneg).mp hsq
+
+theorem finite_diam_eq_of_forall_dist_le_of_exists_dist_eq
+    {X : Type*} [PseudoMetricSpace X] (points : Finset X) {R : ℝ}
+    (hR : 0 ≤ R)
+    (hle : ∀ x ∈ points, ∀ y ∈ points, dist x y ≤ R)
+    (hexists : ∃ x ∈ points, ∃ y ∈ points, dist x y = R) :
+    Metric.diam (points : Set X) = R := by
+  have hupper : Metric.diam (points : Set X) ≤ R :=
+    Metric.diam_le_of_forall_dist_le hR (by simpa using hle)
+  obtain ⟨x, hx, y, hy, hdist⟩ := hexists
+  have hlower : R ≤ Metric.diam (points : Set X) := by
+    rw [← hdist]
+    exact Metric.dist_le_diam_of_mem (Finset.finite_toSet points).isBounded hx hy
+  exact le_antisymm hupper hlower
+
+theorem finReindexedDirectedCutPoint_dist_le_kahnKalai
+    {α : Type*} [Fintype α] [DecidableEq α] {d p : ℕ}
+    (coord : (α × α) ≃ Fin d) (A B : Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hA : A.card = 2 * p) (hB : B.card = 2 * p) :
+    dist (finReindexedDirectedCutPoint coord A) (finReindexedDirectedCutPoint coord B) ≤
+      Real.sqrt ((8 * p * p : ℕ) : ℝ) :=
+  dist_le_sqrt_of_dist_sq_le (Nat.cast_nonneg _)
+    (finReindexedDirectedCutPoint_dist_sq_le_kahnKalai coord A B hground hA hB)
+
+theorem finReindexedDirectedCutPoint_dist_eq_sqrt_of_kahnKalai_intersection
+    {α : Type*} [Fintype α] [DecidableEq α] {d p : ℕ}
+    (coord : (α × α) ≃ Fin d) (A B : Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hA : A.card = 2 * p) (hB : B.card = 2 * p)
+    (hinter : (A ∩ B).card = p) :
+    dist (finReindexedDirectedCutPoint coord A) (finReindexedDirectedCutPoint coord B) =
+      Real.sqrt ((8 * p * p : ℕ) : ℝ) :=
+  dist_eq_sqrt_of_dist_sq_eq (Nat.cast_nonneg _)
+    (finReindexedDirectedCutPoint_dist_sq_of_kahnKalai_intersection coord A B hground hA hB
+      hinter)
+
+theorem primeDirectedCutFamily_diam_eq_sqrt
+    {α ι : Type*} [Fintype α] [DecidableEq α] [Fintype ι] {d p : ℕ}
+    (coord : (α × α) ≃ Fin d) (sets : ι → Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hcard : ∀ i, (sets i).card = 2 * p)
+    (hexists : ∃ i j, (sets i ∩ sets j).card = p) :
+    Metric.diam
+      ((Finset.univ.image (fun i => finReindexedDirectedCutPoint coord (sets i)) :
+          Finset (EuclideanSpace ℝ (Fin d))) : Set (EuclideanSpace ℝ (Fin d))) =
+      Real.sqrt ((8 * p * p : ℕ) : ℝ) := by
+  let points : Finset (EuclideanSpace ℝ (Fin d)) :=
+    Finset.univ.image fun i => finReindexedDirectedCutPoint coord (sets i)
+  refine finite_diam_eq_of_forall_dist_le_of_exists_dist_eq points (Real.sqrt_nonneg _) ?_ ?_
+  · intro x hx y hy
+    rcases Finset.mem_image.mp hx with ⟨i, _hi, rfl⟩
+    rcases Finset.mem_image.mp hy with ⟨j, _hj, rfl⟩
+    exact finReindexedDirectedCutPoint_dist_le_kahnKalai coord (sets i) (sets j) hground
+      (hcard i) (hcard j)
+  · obtain ⟨i, j, hij⟩ := hexists
+    refine ⟨finReindexedDirectedCutPoint coord (sets i), ?_,
+      finReindexedDirectedCutPoint coord (sets j), ?_, ?_⟩
+    · simp [points]
+    · simp [points]
+    · exact finReindexedDirectedCutPoint_dist_eq_sqrt_of_kahnKalai_intersection coord
+        (sets i) (sets j) hground (hcard i) (hcard j) hij
+
 theorem directedCutSet_realIncidencePoint_dist_sq
     {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) :
     dist (realIncidencePoint (directedCutSet A)) (realIncidencePoint (directedCutSet B)) ^ 2 =
@@ -853,20 +928,6 @@ theorem diam_pos_of_diam_sq_eq_pos {X : Type*} [PseudoMetricSpace X]
     have hr0 : r = 0 := by simpa [hzero] using h.symm
     exact (ne_of_gt hr) hr0
   exact lt_of_le_of_ne' Metric.diam_nonneg hne
-
-theorem finite_diam_eq_of_forall_dist_le_of_exists_dist_eq
-    {X : Type*} [PseudoMetricSpace X] (points : Finset X) {R : ℝ}
-    (hR : 0 ≤ R)
-    (hle : ∀ x ∈ points, ∀ y ∈ points, dist x y ≤ R)
-    (hexists : ∃ x ∈ points, ∃ y ∈ points, dist x y = R) :
-    Metric.diam (points : Set X) = R := by
-  have hupper : Metric.diam (points : Set X) ≤ R :=
-    Metric.diam_le_of_forall_dist_le hR (by simpa using hle)
-  obtain ⟨x, hx, y, hy, hdist⟩ := hexists
-  have hlower : R ≤ Metric.diam (points : Set X) := by
-    rw [← hdist]
-    exact Metric.dist_le_diam_of_mem (Finset.finite_toSet points).isBounded hx hy
-  exact le_antisymm hupper hlower
 
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
 diameter can be covered by d+1 subsets of itself, each of strictly smaller

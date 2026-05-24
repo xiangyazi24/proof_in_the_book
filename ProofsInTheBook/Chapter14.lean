@@ -8,6 +8,9 @@ From *Proofs from THE BOOK*, Chapter 14:
 * Bagemihl's conjecture predicts `f(d) = 2^d`.
 * Perles's theorem, which is the upper-bound theorem actually proved in the
   chapter, states `f(d) < 2^(d+1)` for pairwise touching `d`-simplices.
+  This is the statement printed as Theorem 2 in the local Springer PDF; the
+  sharper `≤ 2^d` is the conjectural sharp value discussed just before the
+  lower-bound construction, not the Perles bound proved by the book.
 
 The old formalization only proved a pigeonhole statement from an already
 injective map into `Fin d → Bool`.  That is not the Chapter 14 argument.  This
@@ -21,6 +24,20 @@ certified Perles matrix from a raw family of touching simplices; see
 * prove a touching pair has opposite signs in some shared facet hyperplane, and
   construct a point outside all simplices and facet hyperplanes to obtain the
   missing completed sign vector.
+
+Why this file does not claim `Fintype.card ι ≤ 2^d`: the current B/C-matrix
+data only proves that the completed rows form a proper subset of the `2^s` sign
+vectors.  That gives
+`2^(s-d-1) * r < 2^s`, hence `r < 2^(d+1)`.  Removing the remaining factor of
+two would require an additional half-cube invariant, for example that completed
+rows contain at most one vector from each antipodal pair, or equivalently that
+one sign coordinate/parity is determined by the rest.  Such an invariant is not
+part of `PerlesFacetSeparationData`, and it is not implied by the current
+abstract matrix fields: already for `d = 1`, three distinct full rows in a
+four-element sign cube can satisfy the pairwise-opposite and missing-vector
+conditions.  The gap to `≤ 2^d`, if one wants to pursue the conjectural sharp
+bound rather than the book's Perles theorem, is exactly this extra geometric
+half-cube argument.
 -/
 
 noncomputable section

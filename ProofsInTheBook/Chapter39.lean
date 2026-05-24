@@ -633,6 +633,25 @@ theorem matousekSmallSupportLabel_antipode {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * 
     simp [matousekSmallSupportIndex, SignedSubset.card_antipode]
   exact SignedLabel.ext hpositive hindex
 
+theorem matousekSmallSupportIndex_congr_proof {n k : ℕ} (hk : 1 ≤ k)
+    (hn : 2 * k ≤ n) (X : SignedSubset n)
+    (hX₁ hX₂ : X.Nonzero)
+    (hsmall₁ hsmall₂ : X.card ≤ 2 * k - 2) :
+    matousekSmallSupportIndex hk hn X hX₁ hsmall₁ =
+      matousekSmallSupportIndex hk hn X hX₂ hsmall₂ := by
+  apply Fin.ext
+  simp [matousekSmallSupportIndex]
+
+theorem matousekSmallSupportLabel_congr_proof {n k : ℕ} (hk : 1 ≤ k)
+    (hn : 2 * k ≤ n) (X : SignedSubset n)
+    (hX₁ hX₂ : X.Nonzero)
+    (hsmall₁ hsmall₂ : X.card ≤ 2 * k - 2) :
+    matousekSmallSupportLabel hk hn X hX₁ hsmall₁ =
+      matousekSmallSupportLabel hk hn X hX₂ hsmall₂ := by
+  apply SignedLabel.ext
+  · exact SignedSubset.maxSupportPositive_congr_proof X hX₁ hX₂
+  · exact matousekSmallSupportIndex_congr_proof hk hn X hX₁ hX₂ hsmall₁ hsmall₂
+
 theorem matousekSmallSupportLabel_ne_neg_of_le {n k : ℕ} (hk : 1 ≤ k)
     (hn : 2 * k ≤ n) {X Y : SignedSubset n}
     (hX : X.Nonzero) (hY : Y.Nonzero)
@@ -698,6 +717,14 @@ noncomputable def matousekLargeSupportPositive {n k q : ℕ}
     else true
   else false
 
+@[simp]
+theorem matousekLargeSupportPositive_congr_proof {n k q : ℕ}
+    (C : KneserVertex n k → Fin q) (X : SignedSubset n)
+    (hlarge₁ hlarge₂ : 2 * k - 1 ≤ X.card) :
+    matousekLargeSupportPositive C X hlarge₁ =
+      matousekLargeSupportPositive C X hlarge₂ := by
+  rfl
+
 theorem matousekLargeSupportPositive_card {n k q : ℕ}
     (C : KneserVertex n k → Fin q) (X : SignedSubset n)
     (hlarge : 2 * k - 1 ≤ X.card) :
@@ -742,6 +769,13 @@ noncomputable def matousekLargeSupportColor {n k q : ℕ}
   minColorInSupport C (X.side (matousekLargeSupportPositive C X hlarge))
     (matousekLargeSupportPositive_card C X hlarge)
 
+theorem matousekLargeSupportColor_congr_proof {n k q : ℕ}
+    (C : KneserVertex n k → Fin q) (X : SignedSubset n)
+    (hlarge₁ hlarge₂ : 2 * k - 1 ≤ X.card) :
+    matousekLargeSupportColor C X hlarge₁ =
+      matousekLargeSupportColor C X hlarge₂ := by
+  simp [matousekLargeSupportColor]
+
 theorem matousekLargeSupportColor_antipode {n k q : ℕ} (hk : 1 ≤ k)
     (C : KneserVertex n k → Fin q)
     (hC : ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b)
@@ -758,6 +792,18 @@ noncomputable def matousekLargeSupportLabel {n k : ℕ} (hk : 1 ≤ k) (hn : 2 *
     (hlarge : 2 * k - 1 ≤ X.card) : SignedLabel (n - 1) where
   positive := matousekLargeSupportPositive C X hlarge
   index := matousekLargeSupportIndex hk hn (matousekLargeSupportColor C X hlarge)
+
+theorem matousekLargeSupportLabel_congr_proof {n k : ℕ} (hk : 1 ≤ k)
+    (hn : 2 * k ≤ n)
+    (C : KneserVertex n k → Fin (n - 2 * k + 1)) (X : SignedSubset n)
+    (hlarge₁ hlarge₂ : 2 * k - 1 ≤ X.card) :
+    matousekLargeSupportLabel hk hn C X hlarge₁ =
+      matousekLargeSupportLabel hk hn C X hlarge₂ := by
+  apply SignedLabel.ext
+  · exact matousekLargeSupportPositive_congr_proof C X hlarge₁ hlarge₂
+  · apply Fin.ext
+    simp [matousekLargeSupportLabel, matousekLargeSupportIndex,
+      matousekLargeSupportColor_congr_proof C X hlarge₁ hlarge₂]
 
 theorem matousekLargeSupportLabel_antipode {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
     (C : KneserVertex n k → Fin (n - 2 * k + 1))

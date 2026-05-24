@@ -1372,6 +1372,19 @@ noncomputable def KahnKalaiCertificate.ofPrimePointedFinFamilyOfSumLarge {p : �
     (coord := finProdFinEquiv) ?_ hlarge
   simp [Fintype.card_fin]
 
+/-- The concrete binomial inequality needed for the `p = 17` pointed construction. -/
+theorem kahnKalai_numeric_17 :
+    (((4 * 17) * (4 * 17)) + 1) *
+        (∑ k ∈ Finset.range 17, (4 * 17).choose k) <
+          (4 * 17 - 1).choose (2 * 17 - 1) := by
+  native_decide
+
+/-- A fully constructed Kahn-Kalai certificate in dimension `4624`. -/
+noncomputable def kahnKalaiCertificate_4624 : KahnKalaiCertificate 4624 := by
+  haveI : Fact (Nat.Prime 17) := ⟨by norm_num⟩
+  simpa using KahnKalaiCertificate.ofPrimePointedFinFamilyOfSumLarge (p := 17)
+    kahnKalai_numeric_17
+
 /--
 Bridge from the Frankl-Wilson coloring obstruction to a Borsuk counterexample
 certificate.  A concrete Kahn-Kalai construction can use this once it supplies
@@ -1434,6 +1447,10 @@ via Frankl-Wilson combinatorics on hypergraph color codes to produce a
 theorem chapter16 {d : ℕ} (cert : KahnKalaiCertificate d) :
     ¬ BorsukConjecture d := fun h =>
   cert.no_partition (h cert.S cert.bounded cert.pos_diam)
+
+/-- Unconditional Borsuk counterexample obtained from the local Kahn-Kalai pipeline. -/
+theorem not_borsukConjecture_4624 : ¬ BorsukConjecture 4624 :=
+  chapter16 kahnKalaiCertificate_4624
 
 /-- Borsuk's conjecture in dimension `d` is equivalent to the non-existence
 of a Kahn-Kalai certificate.  This packages `chapter16` as a biconditional. -/

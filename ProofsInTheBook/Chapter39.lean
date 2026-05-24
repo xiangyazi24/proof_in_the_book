@@ -1241,4 +1241,17 @@ theorem chapter39 {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
   · exact kneser_chromatic_upper_bound n k hk hn
   · exact kneser_chromatic_lower_bound_from_tucker_matousek n k hk hn htucker
 
+/--
+The same Chapter 39 conclusion from the finer Ky Fan alternating-chain
+frontier.  Proving `KyFanAlternatingChainStatement n (n-1)` is the remaining
+finite parity argument.
+-/
+theorem chapter39_of_kyFan {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (hfan : KyFanAlternatingChainStatement n (n - 1)) :
+    (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
+  chapter39 hk hn (tuckerLemmaStatement_of_kyFan (by omega) hfan)
+
 end ProofsInTheBook.Chapter39

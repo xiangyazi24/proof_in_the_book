@@ -1003,6 +1003,71 @@ def TuckerLemmaStatement (n : ℕ) : Prop :=
       ∃ X Y : NonzeroSignedSubset n,
         SignedSubset.Le X.1 Y.1 ∧ label X = (label Y).neg
 
+theorem tuckerLemmaStatement_one : TuckerLemmaStatement 1 := by
+  intro label _
+  let z : Fin 1 := ⟨0, by omega⟩
+  let X : NonzeroSignedSubset 1 :=
+    ⟨{ pos := {z}, neg := ∅, disjoint := by simp },
+      by simp [SignedSubset.Nonzero]⟩
+  exact Fin.elim0 (label X).index
+
+theorem tuckerLemmaStatement_two : TuckerLemmaStatement 2 := by
+  classical
+  intro label hantipodal
+  by_contra hnone
+  have hno :
+      ∀ X Y : NonzeroSignedSubset 2,
+        SignedSubset.Le X.1 Y.1 → label X ≠ (label Y).neg := by
+    intro X Y hXY hcomp
+    exact hnone ⟨X, Y, hXY, hcomp⟩
+  have hsame :
+      ∀ {X Y : NonzeroSignedSubset 2},
+        SignedSubset.Le X.1 Y.1 → (label X).positive = (label Y).positive := by
+    intro X Y hXY
+    by_contra hne
+    have hbool : (label X).positive = !((label Y).positive) := by
+      cases hx : (label X).positive <;> cases hy : (label Y).positive <;>
+        simp [hx, hy] at hne ⊢
+    have hindex : (label X).index = ((label Y).neg).index := by
+      simp [SignedLabel.neg]
+      exact Subsingleton.elim _ _
+    exact hno X Y hXY (SignedLabel.ext hbool hindex)
+  let z : Fin 2 := ⟨0, by omega⟩
+  let o : Fin 2 := ⟨1, by omega⟩
+  let P0 : NonzeroSignedSubset 2 :=
+    ⟨{ pos := {z}, neg := ∅, disjoint := by simp },
+      by simp [SignedSubset.Nonzero]⟩
+  let P1 : NonzeroSignedSubset 2 :=
+    ⟨{ pos := {o}, neg := ∅, disjoint := by simp },
+      by simp [SignedSubset.Nonzero]⟩
+  let N1 : NonzeroSignedSubset 2 := P1.antipode
+  let PP : NonzeroSignedSubset 2 :=
+    ⟨{ pos := {z, o}, neg := ∅, disjoint := by simp },
+      by simp [SignedSubset.Nonzero]⟩
+  let PN : NonzeroSignedSubset 2 :=
+    ⟨{ pos := {z}, neg := {o}, disjoint := by
+        simp [z, o] },
+      by simp [SignedSubset.Nonzero]⟩
+  have hP0PP : (label P0).positive = (label PP).positive :=
+    hsame (X := P0) (Y := PP) (by simp [SignedSubset.Le, P0, PP])
+  have hP1PP : (label P1).positive = (label PP).positive :=
+    hsame (X := P1) (Y := PP) (by simp [SignedSubset.Le, P1, PP])
+  have hP0PN : (label P0).positive = (label PN).positive :=
+    hsame (X := P0) (Y := PN) (by simp [SignedSubset.Le, P0, PN])
+  have hN1PN : (label N1).positive = (label PN).positive :=
+    hsame (X := N1) (Y := PN) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, N1, P1, PN])
+  have hP0P1 : (label P0).positive = (label P1).positive :=
+    hP0PP.trans hP1PP.symm
+  have hP0N1 : (label P0).positive = (label N1).positive :=
+    hP0PN.trans hN1PN.symm
+  have hN1neg : (label N1).positive = !((label P1).positive) := by
+    have := congrArg SignedLabel.positive (hantipodal P1)
+    simpa [N1, SignedLabel.neg] using this
+  have hself : (label P1).positive = !((label P1).positive) := by
+    exact hP0P1.symm.trans (hP0N1.trans hN1neg)
+  cases (label P1).positive <;> simp at hself
+
 /--
 Matoušek's bridge from a too-small Kneser coloring to a Tucker counterexample:
 given a proper `(n - 2*k + 1)`-coloring, construct an antipodal sign-vector

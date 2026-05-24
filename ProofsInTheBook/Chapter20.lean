@@ -538,6 +538,99 @@ theorem redGreenEdges_zmod_two_eq_trichromatic (a b c : MonskyColor) :
     (if TrichromaticTriangle a b c then 1 else 0 : ZMod 2) := by
   cases a <;> cases b <;> cases c <;> decide
 
+/-- Colors attached to the three vertices of one combinatorial triangle. -/
+def triangleColorsOfVertices {α : Type*} (color : α → MonskyColor) (t : α × α × α) :
+    MonskyColor × MonskyColor × MonskyColor :=
+  (color t.1, color t.2.1, color t.2.2)
+
+/-- The three unoriented edges of a triangle, in cyclic order. -/
+def triangleEdge {α : Type*} (t : α × α × α) : Fin 3 → Sym2 α :=
+  ![s(t.1, t.2.1), s(t.2.1, t.2.2), s(t.2.2, t.1)]
+
+/-- Red-green predicate on an unordered edge. -/
+def edgeRedGreen {α : Type*} (color : α → MonskyColor) : Sym2 α → Prop :=
+  Sym2.lift ⟨fun a b => RedGreenEdge (color a) (color b),
+    fun _ _ => propext redGreenEdge_symm⟩
+
+@[simp]
+theorem edgeRedGreen_mk {α : Type*} (color : α → MonskyColor) (a b : α) :
+    edgeRedGreen color s(a, b) ↔ RedGreenEdge (color a) (color b) := by
+  rfl
+
+/-- Numeric indicator for red-green unordered edges. -/
+noncomputable def edgeRGIndicator {α : Type*} (color : α → MonskyColor)
+    (e : Sym2 α) : ℕ := by
+  classical
+  exact if edgeRedGreen color e then 1 else 0
+
+@[simp]
+theorem edgeRGIndicator_mk {α : Type*} (color : α → MonskyColor) (a b : α) :
+    edgeRGIndicator color s(a, b) =
+      if RedGreenEdge (color a) (color b) then 1 else 0 := by
+  classical
+  by_cases h : RedGreenEdge (color a) (color b) <;> simp [edgeRGIndicator, h]
+
+theorem edgeRGIndicator_eq_zero_or_one {α : Type*} (color : α → MonskyColor)
+    (e : Sym2 α) :
+    edgeRGIndicator color e = 0 ∨ edgeRGIndicator color e = 1 := by
+  classical
+  unfold edgeRGIndicator
+  by_cases h : edgeRedGreen color e <;> simp [h]
+
+/-- The local red-green edge count of one colored triangle. -/
+def triangleLocalRGCount (c : MonskyColor × MonskyColor × MonskyColor) : ℕ :=
+  (if RedGreenEdge c.1 c.2.1 then 1 else 0) +
+  (if RedGreenEdge c.2.1 c.2.2 then 1 else 0) +
+  (if RedGreenEdge c.2.2 c.1 then 1 else 0)
+
+theorem triangleLocalRGCount_ofVertices_eq_sum_edges {α : Type*}
+    (color : α → MonskyColor) (t : α × α × α) :
+    triangleLocalRGCount (triangleColorsOfVertices color t) =
+      ∑ e : Fin 3, edgeRGIndicator color (triangleEdge t e) := by
+  classical
+  rcases t with ⟨a, b, c⟩
+  rw [Fin.sum_univ_three]
+  by_cases hab : RedGreenEdge (color a) (color b) <;>
+  by_cases hbc : RedGreenEdge (color b) (color c) <;>
+  by_cases hca : RedGreenEdge (color c) (color a) <;>
+  simp [triangleLocalRGCount, triangleColorsOfVertices, triangleEdge, hab, hbc, hca]
+
+theorem sum_triangleLocalRGCount_eq_sum_edgeIndicators
+    {α : Type*} {n : ℕ} (triangles : Fin n → α × α × α) (color : α → MonskyColor) :
+    (∑ i : Fin n, triangleLocalRGCount (triangleColorsOfVertices color (triangles i))) =
+      ∑ p : Fin n × Fin 3, edgeRGIndicator color (triangleEdge (triangles p.1) p.2) := by
+  classical
+  simp_rw [triangleLocalRGCount_ofVertices_eq_sum_edges]
+  rw [Fintype.sum_prod_type]
+
+/-- Multiplicity of an unordered edge in the list of all triangle edges. -/
+noncomputable def edgeMultiplicity {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (triangles : Fin n → α × α × α) (e : Sym2 α) : ℕ := by
+  classical
+  exact (Finset.univ.filter fun p : Fin n × Fin 3 =>
+    triangleEdge (triangles p.1) p.2 = e).card
+
+/--
+The boundary count supplied by a finite edge pairing: count red-green edges
+whose total triangle-edge multiplicity is odd.  For an honest triangulated
+disk these are exactly the boundary red-green edges.
+-/
+noncomputable def oddEdgeRedGreenCount {α : Type*} [Fintype α] [DecidableEq α]
+    {n : ℕ} (triangles : Fin n → α × α × α) (color : α → MonskyColor) : ℕ :=
+  (Finset.univ.filter fun e : Sym2 α =>
+    edgeRGIndicator color e = 1 ∧ Odd (edgeMultiplicity triangles e)).card
+
+theorem sum_triangle_edge_indicators_eq_sum_multiplicity
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (triangles : Fin n → α × α × α) (color : α → MonskyColor) :
+    (∑ p : Fin n × Fin 3, edgeRGIndicator color (triangleEdge (triangles p.1) p.2)) =
+      ∑ e : Sym2 α, edgeMultiplicity triangles e * edgeRGIndicator color e := by
+  classical
+  rw [← Finset.sum_fiberwise' (s := Finset.univ)
+    (g := fun p : Fin n × Fin 3 => triangleEdge (triangles p.1) p.2)
+    (f := edgeRGIndicator color)]
+  simp [edgeMultiplicity, Finset.sum_const, mul_comm]
+
 /--
 Abstract Sperner parity lemma: in a finite triangulation where each edge
 belongs to at most two triangles, the number of trichromatic triangles has
@@ -557,6 +650,49 @@ private theorem sum_nat_mod_two_eq_sum_mod_two
     conv_lhs => rw [Nat.add_mod (f a) _ 2, ih]
     conv_rhs => rw [Nat.add_mod (f a % 2) _ 2]
     simp
+
+theorem edgeMultiplicity_mul_indicator_mod_two {α : Type*} [Fintype α] [DecidableEq α]
+    {n : ℕ} (triangles : Fin n → α × α × α) (color : α → MonskyColor) (e : Sym2 α) :
+    (edgeMultiplicity triangles e * edgeRGIndicator color e) % 2 =
+      if edgeRGIndicator color e = 1 ∧ Odd (edgeMultiplicity triangles e) then 1 else 0 := by
+  rcases edgeRGIndicator_eq_zero_or_one color e with hzero | hone
+  · simp [hzero]
+  · by_cases hodd : Odd (edgeMultiplicity triangles e)
+    · simp [hone, hodd, Nat.odd_iff.mp hodd]
+    · have heven : Even (edgeMultiplicity triangles e) := Nat.not_odd_iff_even.mp hodd
+      have hmod : edgeMultiplicity triangles e % 2 = 0 := Nat.even_iff.mp heven
+      simp [hone, hodd, hmod]
+
+theorem sum_multiplicity_indicator_mod_two_eq_oddEdgeRedGreenCount
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (triangles : Fin n → α × α × α) (color : α → MonskyColor) :
+    (∑ e : Sym2 α, edgeMultiplicity triangles e * edgeRGIndicator color e) % 2 =
+      oddEdgeRedGreenCount triangles color % 2 := by
+  classical
+  calc
+    (∑ e : Sym2 α, edgeMultiplicity triangles e * edgeRGIndicator color e) % 2
+        = (∑ e : Sym2 α,
+            (edgeMultiplicity triangles e * edgeRGIndicator color e) % 2) % 2 := by
+          simpa using sum_nat_mod_two_eq_sum_mod_two (Finset.univ : Finset (Sym2 α))
+            (fun e => edgeMultiplicity triangles e * edgeRGIndicator color e)
+    _ = (∑ e : Sym2 α,
+          if edgeRGIndicator color e = 1 ∧ Odd (edgeMultiplicity triangles e) then 1 else 0) %
+        2 := by
+          congr 1
+          exact Finset.sum_congr rfl fun e _ =>
+            edgeMultiplicity_mul_indicator_mod_two triangles color e
+    _ = oddEdgeRedGreenCount triangles color % 2 := by
+          rw [oddEdgeRedGreenCount, Finset.card_eq_sum_ones]
+          rw [Finset.sum_filter]
+
+theorem sum_triangleLocalRGCount_mod_two_eq_oddEdgeRedGreenCount
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (triangles : Fin n → α × α × α) (color : α → MonskyColor) :
+    (∑ i : Fin n, triangleLocalRGCount (triangleColorsOfVertices color (triangles i))) % 2 =
+      oddEdgeRedGreenCount triangles color % 2 := by
+  rw [sum_triangleLocalRGCount_eq_sum_edgeIndicators]
+  rw [sum_triangle_edge_indicators_eq_sum_multiplicity]
+  exact sum_multiplicity_indicator_mod_two_eq_oddEdgeRedGreenCount triangles color
 
 theorem sperner_parity_abstract
     (n : ℕ) (triangleColors : Fin n → MonskyColor × MonskyColor × MonskyColor)

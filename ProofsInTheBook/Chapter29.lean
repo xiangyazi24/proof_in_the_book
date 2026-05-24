@@ -154,6 +154,18 @@ theorem labels_comp_riffleSort_monotone (a n : ℕ) (labels : RiffleLabels a n) 
     Monotone (labels ∘ riffleSort a n labels) :=
   Tuple.monotone_sort labels
 
+/-- `constantLabeling` is a monotone (in fact constant) function `Fin n → Fin a`. -/
+theorem constantLabeling_monotone {n : ℕ} (a : ℕ) [NeZero a] :
+    Monotone (constantLabeling (n := n) a) := fun _ _ _ => le_refl _
+
+/-- `riffleSort` applied to the constant labeling is the identity permutation.
+The constant labeling assigns the same pile to every card, so the stable sort
+preserves the original index order — sorting a constant sequence is a no-op. -/
+theorem riffleSort_constantLabeling {n : ℕ} (a : ℕ) [NeZero a] :
+    riffleSort a n (constantLabeling a) = Equiv.refl (Fin n) := by
+  unfold riffleSort
+  exact (Tuple.sort_eq_refl_iff_monotone).mpr (constantLabeling_monotone a)
+
 /-- The constant labeling has zero piles size for non-zero piles. -/
 theorem pileSizeVector_constantLabeling {n : ℕ} (a : ℕ) [NeZero a] (pile : Fin a)
     (h_pile : pile ≠ ⟨0, NeZero.pos a⟩) :

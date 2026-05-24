@@ -326,6 +326,26 @@ theorem realTwoAdicValuation_rat_two_div_odd_lt_one {n : ℕ} (hn : Odd n) :
 noncomputable def realTwoAdicColor (p : ℝ × ℝ) : MonskyColor :=
   valuationColor realTwoAdicValuation p
 
+/--
+A red-green-blue triangle cannot have rational double area `2 / n` when `n`
+is odd.  This is the valuation contradiction at the end of Monsky's proof,
+separated from the still-missing geometric construction of the finite
+triangulation certificate.
+-/
+theorem not_real_doubleArea_eq_two_div_odd_of_red_green_blue {n : ℕ} (hn : Odd n)
+    {r g b : ℝ × ℝ}
+    (hr : realTwoAdicColor r = red)
+    (hg : realTwoAdicColor g = green)
+    (hb : realTwoAdicColor b = blue)
+    (harea : doubleArea r g b = (((2 : ℚ) / n : ℚ) : ℝ)) : False := by
+  have hge : 1 ≤ realTwoAdicValuation (doubleArea r g b) := by
+    exact valuation_doubleArea_red_green_blue realTwoAdicValuation
+      (by simpa [realTwoAdicColor] using hr)
+      (by simpa [realTwoAdicColor] using hg)
+      (by simpa [realTwoAdicColor] using hb)
+  rw [harea] at hge
+  exact not_lt_of_ge hge (realTwoAdicValuation_rat_two_div_odd_lt_one hn)
+
 @[simp]
 theorem realTwoAdicColor_origin : realTwoAdicColor (0, 0) = red := by
   simp [realTwoAdicColor, valuationColor, colorOfValues, realTwoAdicValuation]

@@ -143,7 +143,7 @@ theorem pileOfLabel_constantLabeling_zero {n : ℕ} (a : ℕ) [NeZero a]
 
 /-- The canonical permutation from a riffle labeling: sort cards by their pile
 labels using Mathlib's `Tuple.sort` (which breaks ties by the original index).
-This is the candidate `permFromLabels` for a future `GSRShuffleCertificate`. -/
+This is the concrete `permFromLabels` used in the GSR count. -/
 noncomputable def riffleSort (a n : ℕ) (labels : RiffleLabels a n) :
     Equiv.Perm (Fin n) :=
   Tuple.sort labels

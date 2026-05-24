@@ -343,6 +343,20 @@ theorem antipode_nonzero {n : ℕ} (X : SignedSubset n) :
     X.antipode.Nonzero ↔ X.Nonzero := by
   simp [Nonzero, antipode, or_comm]
 
+/-- Total support size of a sign vector. -/
+def card {n : ℕ} (X : SignedSubset n) : ℕ :=
+  X.pos.card + X.neg.card
+
+theorem card_antipode {n : ℕ} (X : SignedSubset n) :
+    X.antipode.card = X.card := by
+  simp [card, antipode, Nat.add_comm]
+
+theorem card_pos_of_nonzero {n : ℕ} {X : SignedSubset n} (hX : X.Nonzero) :
+    0 < X.card := by
+  rcases hX with hpos | hneg
+  · simp [card, Finset.card_pos.2 hpos]
+  · simp [card, Finset.card_pos.2 hneg]
+
 /-- The face order on the cross-polytope boundary, by support inclusion. -/
 def Le {n : ℕ} (X Y : SignedSubset n) : Prop :=
   X.pos ⊆ Y.pos ∧ X.neg ⊆ Y.neg
@@ -452,6 +466,48 @@ theorem minColorInSupport_ne_of_disjoint {n k q : ℕ} (hk : 1 ≤ k)
     omega
   intro hmin
   exact hC A.1 B.1 ⟨hABne, hABdisj⟩ (hAcolor.trans (hmin.trans hBcolor.symm))
+
+/--
+Small-support part of Matoušek's labeling: a nonzero sign vector with total
+support at most `2k - 2` receives label index `|X| - 1`.
+-/
+def matousekSmallSupportIndex {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (X : SignedSubset n) (hX : X.Nonzero) (hsmall : X.card ≤ 2 * k - 2) :
+    Fin (n - 1) :=
+  ⟨X.card - 1, by
+    have hpos : 0 < X.card := SignedSubset.card_pos_of_nonzero hX
+    omega⟩
+
+/--
+Large-support color labels occupy the range `2k - 2, …, n - 2`, obtained by
+adding the color value to the offset `2k - 2`.
+-/
+def matousekLargeSupportIndex {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (color : Fin (n - 2 * k + 1)) : Fin (n - 1) :=
+  ⟨2 * k - 2 + color.val, by
+    have hcolor := color.isLt
+    omega⟩
+
+/-- If a sign vector has support at least `2k - 1`, then one side has a `k`-subset. -/
+theorem signedSubset_large_support_has_k_side {n k : ℕ} {X : SignedSubset n}
+    (hlarge : 2 * k - 1 ≤ X.card) :
+    k ≤ X.pos.card ∨ k ≤ X.neg.card := by
+  by_contra h
+  push Not at h
+  simp [SignedSubset.card] at hlarge
+  omega
+
+/--
+In a proper Kneser coloring, if both signs of a signed support contain
+`k`-subsets, the minimum colors on the two sides are different.
+-/
+theorem minColorInSignedSubset_pos_ne_neg {n k q : ℕ} (hk : 1 ≤ k)
+    (C : KneserVertex n k → Fin q)
+    (hC : ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b)
+    (X : SignedSubset n)
+    (hpos : k ≤ X.pos.card) (hneg : k ≤ X.neg.card) :
+    minColorInSupport C X.pos hpos ≠ minColorInSupport C X.neg hneg :=
+  minColorInSupport_ne_of_disjoint hk C hC X.disjoint hpos hneg
 
 /--
 Tucker's lemma in the octahedral/sign-vector form needed for the

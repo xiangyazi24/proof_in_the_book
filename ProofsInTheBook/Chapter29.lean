@@ -5,11 +5,20 @@ import Mathlib
 
 From "Proofs from THE BOOK":
 
-**Perfect shuffles**: 2·log₂(n) perfect riffle shuffles suffice to
-bring a deck of n cards close to random (variation distance < 1/2).
+**Gilbert-Shannon-Reeds riffle shuffles**: the distribution of an `a`-shuffle
+on permutations is obtained by uniformly assigning each of the `n` cards one
+of `a` labels, then stably sorting by labels.
 
-The book analyses the Gilbert-Shannon-Reeds model and the
-"seven shuffles suffice" theorem for a standard 52-card deck.
+The book then uses this distribution to analyze total-variation mixing:
+about `(3 / 2) * log_2 n` riffle shuffles suffice, and seven shuffles are
+enough for a 52-card deck.  This file proves the finite GSR distribution
+formula.  The unformalized endpoint is the total-variation statement
+`(1 / 2) * sum_sigma |P_{2^k,n}(sigma) - 1 / n!|`, where `P_{a,n}` is the
+GSR distribution proved below; the book's cutoff theorem says this drops at
+about `k = (3 / 2) * log_2 n`, with the standard 52-card numerical conclusion
+at `k = 7`.  That analytic estimate remains an honest frontier: it requires
+the Bayer-Diaconis closed formula and real asymptotic/numerical estimates not
+developed here.
 -/
 
 namespace ProofsInTheBook.Chapter29
@@ -467,15 +476,57 @@ theorem count_eq_of_same_riffleDescentIntervalPattern (a n : ℕ)
   rw [count_determined_by_descents, count_determined_by_descents]
   exact rifflePatternCount_eq_of_same_pattern a n hpattern
 
+/-- The uniform GSR probability of obtaining `σ` from an `(a,n)` label shuffle. -/
+noncomputable def gsrShuffleProbability (a n : ℕ) (σ : Equiv.Perm (Fin n)) : ℚ≥0 :=
+  (Finset.univ.filter (fun labels : RiffleLabels a n => riffleSort a n labels = σ)).dens
+
 /--
-Chapter 29 (Gilbert-Shannon-Reeds shuffle): the number of `(a,n)` riffle
-labelings that produce a target permutation under stable riffle sorting is
-determined by the target's adjacent descent interval pattern.
+The fiber-count form: the number of `(a,n)` riffle labelings that produce a
+target permutation under stable riffle sorting is determined by the target's
+adjacent descent interval pattern.
 -/
-theorem chapter29 (a n : ℕ) :
+theorem chapter29_fiber_count (a n : ℕ) :
     ∀ σ : Equiv.Perm (Fin n),
       (Finset.univ.filter (fun labels : RiffleLabels a n => riffleSort a n labels = σ)).card =
         rifflePatternCount a n (riffleDescentIntervalPattern n σ) :=
   count_determined_by_descents a n
+
+/--
+GSR distribution formula: under the uniform choice of one of the `a^n` label
+assignments, the probability of a permutation is its riffle-pattern fiber count
+divided by `a^n`.
+-/
+theorem gsrShuffleProbability_eq_rifflePatternCount (a n : ℕ) [NeZero a]
+    (σ : Equiv.Perm (Fin n)) :
+    gsrShuffleProbability a n σ =
+      (rifflePatternCount a n (riffleDescentIntervalPattern n σ) : ℚ≥0) /
+        ((a ^ n : ℕ) : ℚ≥0) := by
+  simp [gsrShuffleProbability, Finset.dens, count_determined_by_descents,
+    RiffleLabels]
+
+/-- The GSR shuffle probabilities over all permutations have total mass one. -/
+theorem gsrShuffleProbability_sum (a n : ℕ) [NeZero a] :
+    (∑ σ : Equiv.Perm (Fin n), gsrShuffleProbability a n σ) = 1 := by
+  classical
+  have h := Finset.dens_eq_sum_dens_fiberwise
+    (s := (Finset.univ : Finset (Equiv.Perm (Fin n))))
+    (t := (Finset.univ : Finset (RiffleLabels a n)))
+    (f := fun labels : RiffleLabels a n => riffleSort a n labels)
+    (by intro labels _; exact Finset.mem_univ _)
+  simpa [gsrShuffleProbability] using h.symm
+
+/--
+Chapter 29 (Gilbert-Shannon-Reeds shuffle distribution): for every positive
+`a`, the GSR probabilities form a probability distribution on permutations,
+and the probability of `σ` is `rifflePatternCount / a^n`.
+-/
+theorem chapter29 (a n : ℕ) [NeZero a] :
+    (∀ σ : Equiv.Perm (Fin n),
+      gsrShuffleProbability a n σ =
+        (rifflePatternCount a n (riffleDescentIntervalPattern n σ) : ℚ≥0) /
+          ((a ^ n : ℕ) : ℚ≥0)) ∧
+      (∑ σ : Equiv.Perm (Fin n), gsrShuffleProbability a n σ) = 1 :=
+  ⟨gsrShuffleProbability_eq_rifflePatternCount a n,
+    gsrShuffleProbability_sum a n⟩
 
 end ProofsInTheBook.Chapter29

@@ -4094,6 +4094,146 @@ theorem lPowerFreePart_injective_l2
   · exact lPowerFreePart_l2_ne_of_lt hk hn h_eq hi hj hij hsame
   · exact lPowerFreePart_l2_ne_of_lt hk hn h_eq hj hi hji hsame.symm
 
+private lemma l_mul_pow_pred_le_succ_pow_sub_pow (b l : ℕ) (hl : 1 ≤ l) :
+    l * b ^ (l - 1) ≤ (b + 1) ^ l - b ^ l := by
+  have hpow_le_nat : b ^ l ≤ (b + 1) ^ l := Nat.pow_le_pow_left (Nat.le_succ b) l
+  have hgeom :
+      ((b + 1 : ℤ) ^ l - (b : ℤ) ^ l) =
+        ∑ i ∈ Finset.range l, (b + 1 : ℤ) ^ i * (b : ℤ) ^ (l - 1 - i) := by
+    have h := (Commute.all (b + 1 : ℤ) (b : ℤ)).mul_geom_sum₂ l
+    simpa using h.symm
+  have hterm_ge : ∀ i ∈ Finset.range l,
+      (b : ℤ) ^ (l - 1) ≤ (b + 1 : ℤ) ^ i * (b : ℤ) ^ (l - 1 - i) := by
+    intro i hi
+    have hi_lt : i < l := Finset.mem_range.mp hi
+    calc
+      (b : ℤ) ^ (l - 1) = (b : ℤ) ^ i * (b : ℤ) ^ (l - 1 - i) := by
+        rw [← pow_add]
+        congr 1
+        omega
+      _ ≤ (b + 1 : ℤ) ^ i * (b : ℤ) ^ (l - 1 - i) := by
+        gcongr
+        · exact_mod_cast Nat.le_succ b
+  have hsum_ge : (l : ℤ) * (b : ℤ) ^ (l - 1) ≤
+        ∑ i ∈ Finset.range l, (b + 1 : ℤ) ^ i * (b : ℤ) ^ (l - 1 - i) := by
+    calc
+      (l : ℤ) * (b : ℤ) ^ (l - 1)
+          = ∑ _i ∈ Finset.range l, (b : ℤ) ^ (l - 1) := by
+            simp [Finset.sum_const]
+      _ ≤ ∑ i ∈ Finset.range l, (b + 1 : ℤ) ^ i * (b : ℤ) ^ (l - 1 - i) := by
+            exact Finset.sum_le_sum hterm_ge
+  rw [← hgeom] at hsum_ge
+  have hdiff_ge_z :
+      ((l * b ^ (l - 1) : ℕ) : ℤ) ≤ (((b + 1) ^ l - b ^ l : ℕ) : ℤ) := by
+    rw [Nat.cast_mul, Nat.cast_pow]
+    rw [Int.ofNat_sub hpow_le_nat]
+    exact hsum_ge
+  exact_mod_cast hdiff_ge_z
+
+private lemma four_mul_l_component_le_sq {a b l : ℕ} (ha : 0 < a) (hb : 0 < b)
+    (hl : 2 ≤ l) :
+    4 * (a * b ^ l) ≤ (l * a * b ^ (l - 1)) * (l * a * b ^ (l - 1)) := by
+  have h4_le_l2 : 4 ≤ l * l := by nlinarith
+  have hpow_le : b ^ l ≤ b ^ (2 * l - 2) := by
+    exact Nat.pow_le_pow_right hb (by omega)
+  have hbase_le : a * b ^ l ≤ a * a * b ^ (2 * l - 2) := by
+    calc
+      a * b ^ l ≤ a * b ^ (2 * l - 2) := Nat.mul_le_mul_left a hpow_le
+      _ ≤ a * (a * b ^ (2 * l - 2)) :=
+        Nat.mul_le_mul_left a (Nat.le_mul_of_pos_left _ ha)
+      _ = a * a * b ^ (2 * l - 2) := by ring
+  calc
+    4 * (a * b ^ l) ≤ (l * l) * (a * b ^ l) := Nat.mul_le_mul_right _ h4_le_l2
+    _ ≤ (l * l) * (a * a * b ^ (2 * l - 2)) := Nat.mul_le_mul_left _ hbase_le
+    _ = (l * a * b ^ (l - 1)) * (l * a * b ^ (l - 1)) := by
+      have hexp : (l - 1) + (l - 1) = 2 * l - 2 := by omega
+      rw [← hexp, pow_add]
+      ring
+
+private lemma lPowerFreePart_l_ne_of_lt
+    {n k l m i j : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l)
+    (h_eq : n.choose k = m ^ l) (hi : i ∈ Finset.range k) (hj : j ∈ Finset.range k)
+    (hij : i < j) :
+    lPowerFreePart l (n - i) ≠ lPowerFreePart l (n - j) := by
+  intro hsame
+  have hn_gt : k * k < n := erdos_step1_n_gt_k_sq hk hn hl h_eq
+  have hi_lt : i < k := Finset.mem_range.mp hi
+  have hj_lt : j < k := Finset.mem_range.mp hj
+  have hk_le_n : k ≤ n := by omega
+  have hni_ne : n - i ≠ 0 := by
+    exact Nat.ne_of_gt (Nat.sub_pos_of_lt (hi_lt.trans_le hk_le_n))
+  have hnj_ne : n - j ≠ 0 := by
+    exact Nat.ne_of_gt (Nat.sub_pos_of_lt (hj_lt.trans_le hk_le_n))
+  have hnj_lt_hni : n - j < n - i := by omega
+  have hdiff_nat : j - i = (n - i) - (n - j) := by omega
+  have hdiff_lt_k : j - i < k := (Nat.sub_le j i).trans_lt hj_lt
+  have hnj_lower : k * k - k + 2 ≤ n - j := by
+    apply Nat.le_sub_of_add_le
+    have hk_le_kk : k ≤ k * k := Nat.le_mul_of_pos_left k (by omega)
+    have hleft : k * k - k + 2 + j ≤ k * k + 1 := by
+      zify [hk_le_kk]
+      omega
+    exact hleft.trans (Nat.succ_le_of_lt hn_gt)
+  set a : ℕ := lPowerFreePart l (n - j) with ha_def
+  set bi : ℕ := lPowerRoot l (n - i) with hbi_def
+  set bj : ℕ := lPowerRoot l (n - j) with hbj_def
+  have hl_pos : 0 < l := by omega
+  have ha_pos : 0 < a := by
+    rw [ha_def]
+    exact lPowerFreePart_pos_of_ne_zero hnj_ne
+  have hbj_pos : 0 < bj := by
+    rw [hbj_def]
+    exact lPowerRoot_pos_of_ne_zero hl_pos hnj_ne
+  have hdeci : n - i = a * bi ^ l := by
+    have h := self_eq_lPowerFreePart_mul_lPowerRoot_pow l (n - i) hni_ne
+    rw [hsame] at h
+    simpa [a, bi, ha_def, hbi_def] using h
+  have hdecj : n - j = a * bj ^ l := by
+    have h := self_eq_lPowerFreePart_mul_lPowerRoot_pow l (n - j) hnj_ne
+    simpa [a, bj, ha_def, hbj_def] using h
+  have hlt_ab : a * bj ^ l < a * bi ^ l := by
+    rw [← hdecj, ← hdeci]
+    exact hnj_lt_hni
+  have hbj_lt_bi : bj < bi := by
+    have hpow : bj ^ l < bi ^ l := Nat.lt_of_mul_lt_mul_left hlt_ab
+    exact (Nat.pow_lt_pow_iff_left (by omega : l ≠ 0)).mp hpow
+  have hbj_succ_pow_le : (bj + 1) ^ l ≤ bi ^ l := by
+    exact Nat.pow_le_pow_left (Nat.succ_le_of_lt hbj_lt_bi) l
+  have hdiff_eq : j - i = a * (bi ^ l - bj ^ l) := by
+    calc
+      j - i = (n - i) - (n - j) := hdiff_nat
+      _ = a * bi ^ l - a * bj ^ l := by rw [hdeci, hdecj]
+      _ = a * (bi ^ l - bj ^ l) := by rw [Nat.mul_sub_left_distrib]
+  have hL_le_diff : l * a * bj ^ (l - 1) ≤ j - i := by
+    rw [hdiff_eq]
+    calc
+      l * a * bj ^ (l - 1) = a * (l * bj ^ (l - 1)) := by ring
+      _ ≤ a * ((bj + 1) ^ l - bj ^ l) :=
+        Nat.mul_le_mul_left a (l_mul_pow_pred_le_succ_pow_sub_pow bj l (by omega))
+      _ ≤ a * (bi ^ l - bj ^ l) :=
+        Nat.mul_le_mul_left a (Nat.sub_le_sub_right hbj_succ_pow_le _)
+  have hk_sq_lt_four_nj : k * k < 4 * (n - j) := by
+    exact (four_mul_sq_sub_add_two_gt_sq hk).trans_le
+      (Nat.mul_le_mul_left 4 hnj_lower)
+  have hL_sq_ge : 4 * (n - j) ≤ (l * a * bj ^ (l - 1)) * (l * a * bj ^ (l - 1)) := by
+    rw [hdecj]
+    exact four_mul_l_component_le_sq ha_pos hbj_pos hl
+  have hk_lt_L : k < l * a * bj ^ (l - 1) := by
+    exact Nat.mul_self_lt_mul_self_iff.mp (hk_sq_lt_four_nj.trans_le hL_sq_ge)
+  exact (not_lt_of_ge hL_le_diff) (hdiff_lt_k.trans hk_lt_L)
+
+/-- Step 3a for all exponents `l ≥ 2`: the l-power-free parts in the
+descending factorial are pairwise distinct. -/
+theorem lPowerFreePart_injective_l
+    {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l)
+    (h_eq : n.choose k = m ^ l) :
+    Set.InjOn (fun j => lPowerFreePart l (n - j)) (Finset.range k) := by
+  intro i hi j hj hsame
+  by_contra hne
+  rcases lt_or_gt_of_ne hne with hij | hji
+  · exact lPowerFreePart_l_ne_of_lt hk hn hl h_eq hi hj hij hsame
+  · exact lPowerFreePart_l_ne_of_lt hk hn hl h_eq hj hi hji hsame.symm
+
 private lemma strictMono_fin_nat_succ_le {k : ℕ} {f : Fin k → ℕ}
     (hf : StrictMono f) (hpos : ∀ i, 0 < f i) :
     ∀ i, i.1 + 1 ≤ f i := by

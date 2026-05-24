@@ -216,6 +216,25 @@ instance decidableRedGreenEdge (a b : MonskyColor) : Decidable (RedGreenEdge a b
   unfold RedGreenEdge
   infer_instance
 
+/--
+The red-green boundary count for the four unit-square corners, traversed
+counterclockwise.  This is the corner-level oddness that the full geometric
+boundary triangulation must refine.
+-/
+noncomputable def unitSquareCornerBoundaryRGCount : ℕ :=
+  (if RedGreenEdge (realTwoAdicColor (0, 0)) (realTwoAdicColor (1, 0)) then 1 else 0) +
+  (if RedGreenEdge (realTwoAdicColor (1, 0)) (realTwoAdicColor (1, 1)) then 1 else 0) +
+  (if RedGreenEdge (realTwoAdicColor (1, 1)) (realTwoAdicColor (0, 1)) then 1 else 0) +
+  (if RedGreenEdge (realTwoAdicColor (0, 1)) (realTwoAdicColor (0, 0)) then 1 else 0)
+
+theorem unitSquareCornerBoundaryRGCount_eq_one :
+    unitSquareCornerBoundaryRGCount = 1 := by
+  simp [unitSquareCornerBoundaryRGCount, RedGreenEdge]
+
+theorem unitSquareCornerBoundaryRGCount_odd : Odd unitSquareCornerBoundaryRGCount := by
+  rw [unitSquareCornerBoundaryRGCount_eq_one]
+  exact odd_one
+
 instance decidableTrichromaticTriangle (a b c : MonskyColor) :
     Decidable (TrichromaticTriangle a b c) := by
   unfold TrichromaticTriangle

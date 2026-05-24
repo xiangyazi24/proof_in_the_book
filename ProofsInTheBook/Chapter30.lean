@@ -212,6 +212,35 @@ theorem lgv_lemma_of_certificate {n : ℕ} {R : Type*} [Fintype (Equiv.Perm (Fin
         cert.signedWeight σ :=
   cert.total_sum_eq_good_sum
 
+/--
+A concrete combinatorial path family on a generic vertex type.
+-/
+structure LatticePathFamily (n : ℕ) (V : Type*) [DecidableEq V] where
+  perm : Equiv.Perm (Fin n)
+  paths : Fin n → List V
+
+/--
+A path family is bad if two distinct paths share a vertex.
+-/
+def LatticePathFamily.bad {n V} [DecidableEq V] (F : LatticePathFamily n V) : Prop :=
+  ∃ i j : Fin n, i ≠ j ∧ ((F.paths i).toFinset ∩ (F.paths j).toFinset).Nonempty
+
+/-- The "bad" predicate is symmetric in the offending pair of indices: a witness
+`(i, j)` with `i ≠ j` and a shared vertex can be swapped to `(j, i)`. -/
+theorem LatticePathFamily.bad_symm {n V} [DecidableEq V]
+    {F : LatticePathFamily n V}
+    (h : F.bad) : F.bad := by
+  obtain ⟨i, j, hij, hshared⟩ := h
+  refine ⟨j, i, hij.symm, ?_⟩
+  rwa [Finset.inter_comm] at hshared
+
+/-- The trivial 0-family is never bad: vacuously, there are no two distinct
+indices to witness a shared vertex. -/
+theorem LatticePathFamily.not_bad_of_zero {V} [DecidableEq V]
+    (F : LatticePathFamily 0 V) : ¬ F.bad := by
+  rintro ⟨i, _, _, _⟩
+  exact i.elim0
+
 /-- LGV determinant identity (conditional form):
 The determinant of a matrix M equals the signed sum over non-intersecting path families.
 (This abstracts the geometric core: M(i, j) is the number of paths from source i to sink j.

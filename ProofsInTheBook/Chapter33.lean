@@ -210,4 +210,20 @@ theorem latin_square_completion_step_from_partial {n : ℕ}
   obtain ⟨choice, hinj, hmem⟩ := this
   exact ⟨choice, hinj, fun j => by simpa using hmem j⟩
 
+/--
+Canonical Chapter 33 entry point.
+
+The full book theorem iterates this row-by-row Hall step to complete a partial
+Latin square.  The closed theorem in this file is the genuine completion step
+from the partial-square hypotheses, with Hall's condition proved internally.
+-/
+theorem chapter33 {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n))
+    (usedInCol : Fin n → Finset (Fin n))
+    (_hused : ∀ j, (usedInCol j).card < n)
+    (hused_witness : ∀ j a, a ∈ usedInCol j → ∃ i, P i j = some a)
+    (hfilled_le : (filledCells P).card ≤ n - 1) :
+    ∃ row : Fin n → Fin n, Function.Injective row ∧ ∀ j, row j ∉ usedInCol j :=
+  latin_square_completion_step_from_partial P usedInCol _hused hused_witness hfilled_le
+
 end ProofsInTheBook.Chapter33

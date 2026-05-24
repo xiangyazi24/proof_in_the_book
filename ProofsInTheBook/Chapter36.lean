@@ -350,4 +350,12 @@ theorem chapter36_artgallery_combinatorial {n : ℕ} {S : Finset (AbsTriangle n)
       · intro tri htri
         exact h_hit blue tri (hc tri htri)
 
+/-- Canonical Chapter 36 entry point: the closed combinatorial art-gallery theorem. -/
+theorem chapter36 {n : ℕ} {S : Finset (AbsTriangle n)}
+    (h : TriangulatedPolygon n S) :
+    ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
+      ∀ T ∈ S, ∃ v ∈ guards,
+        v ∈ ({T.a, T.b, T.c} : Finset (Fin n)) :=
+  chapter36_artgallery_combinatorial h
+
 end ProofsInTheBook.Chapter36

@@ -11,6 +11,23 @@ of triangles of equal area.
 The book's proof uses a 2-adic valuation argument: define a coloring
 of the plane using the 2-adic valuation of coordinates, then apply
 Sperner's lemma to show the triangulation must have an even count.
+
+Formalization status: this file closes the finite coloring and parity layer.
+It defines Monsky's three colors, red-green boundary edges, trichromatic
+triangles, proves the local parity identity, proves an abstract Sperner
+parity theorem, and derives `chapter20`: a `MonskyCertificate n` yields a
+trichromatic triangle.
+
+Gap to the full book theorem: the missing work is the analytic/algebraic
+input that constructs the certificate from an equal-area triangulation of the
+unit square.  A complete proof needs an extension of the 2-adic valuation from
+`ℚ` to `ℝ`, the induced coloring of all points of `ℝ²`, proofs of the color
+constraints on square corners and triangle vertices, a geometric finite
+triangulation model whose internal red-green edges cancel mod `2`, and the
+area-valuation argument showing a trichromatic equal-area triangle is
+incompatible with subdivision into an odd number of equal areas.  Mathlib has
+some valuation and measure/geometry components, but not this valuation
+extension plus polygonal Sperner-triangulation package.
 -/
 
 namespace ProofsInTheBook.Chapter20

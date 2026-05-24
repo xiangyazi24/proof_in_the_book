@@ -570,6 +570,39 @@ theorem perpDist_lt_perpDist_of_wbtw {P Q R : EPoint}
   have hpos : 0 < perpDist P Q R := perpDist_pos hP
   nlinarith [harea, hlt, hPR, hpos, mul_lt_mul_of_pos_left hlt hpos]
 
+/-- A point on the line is a scalar multiple of the direction `b -ᵥ a`, offset
+from the foot of the perpendicular. -/
+theorem exists_smul_vadd_foot {P a b X : EPoint} (hX : X ∈ affineSpan ℝ {a, b}) :
+    ∃ r : ℝ, r • (b -ᵥ a) +ᵥ foot P a b = X := by
+  have hmem : X -ᵥ foot P a b ∈ vectorSpan ℝ ({a, b} : Set EPoint) := by
+    rw [← direction_affineSpan]
+    exact AffineSubspace.vsub_mem_direction hX (foot_mem P a b)
+  obtain ⟨r, hr⟩ := mem_vectorSpan_pair_rev.mp hmem
+  exact ⟨r, by rw [hr, vsub_vadd]⟩
+
+/-- **Pigeonhole (Kelly step 3d).** Among any three points on the line, two lie
+on the same closed ray from the foot of the perpendicular — i.e. one is weakly
+between the foot and the other. -/
+theorem exists_wbtw_foot_of_three_mem {P a b x y z : EPoint}
+    (hx : x ∈ affineSpan ℝ {a, b}) (hy : y ∈ affineSpan ℝ {a, b})
+    (hz : z ∈ affineSpan ℝ {a, b}) :
+    (Wbtw ℝ (foot P a b) x y ∨ Wbtw ℝ (foot P a b) y x) ∨
+      (Wbtw ℝ (foot P a b) y z ∨ Wbtw ℝ (foot P a b) z y) ∨
+      (Wbtw ℝ (foot P a b) x z ∨ Wbtw ℝ (foot P a b) z x) := by
+  obtain ⟨rx, hrx⟩ := exists_smul_vadd_foot (P := P) hx
+  obtain ⟨ry, hry⟩ := exists_smul_vadd_foot (P := P) hy
+  obtain ⟨rz, hrz⟩ := exists_smul_vadd_foot (P := P) hz
+  rcases le_total 0 rx with hx0 | hx0 <;> rcases le_total 0 ry with hy0 | hy0 <;>
+    rcases le_total 0 rz with hz0 | hz0
+  · exact Or.inl (hrx ▸ hry ▸ wbtw_or_wbtw_smul_vadd_of_nonneg _ _ hx0 hy0)
+  · exact Or.inl (hrx ▸ hry ▸ wbtw_or_wbtw_smul_vadd_of_nonneg _ _ hx0 hy0)
+  · exact Or.inr (Or.inr (hrx ▸ hrz ▸ wbtw_or_wbtw_smul_vadd_of_nonneg _ _ hx0 hz0))
+  · exact Or.inr (Or.inl (hry ▸ hrz ▸ wbtw_or_wbtw_smul_vadd_of_nonpos _ _ hy0 hz0))
+  · exact Or.inr (Or.inl (hry ▸ hrz ▸ wbtw_or_wbtw_smul_vadd_of_nonneg _ _ hy0 hz0))
+  · exact Or.inr (Or.inr (hrx ▸ hrz ▸ wbtw_or_wbtw_smul_vadd_of_nonpos _ _ hx0 hz0))
+  · exact Or.inl (hrx ▸ hry ▸ wbtw_or_wbtw_smul_vadd_of_nonpos _ _ hx0 hy0)
+  · exact Or.inl (hrx ▸ hry ▸ wbtw_or_wbtw_smul_vadd_of_nonpos _ _ hx0 hy0)
+
 /-- **Kelly step 2: a minimum-perpendicular-distance off-line pair exists.**
 Over a finite point set with at least one off-line incidence, the perpendicular
 distances of all off-line incidences attain a minimum — the well-ordering

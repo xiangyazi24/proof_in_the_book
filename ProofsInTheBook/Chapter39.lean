@@ -713,6 +713,28 @@ theorem matousekLargeSupportPositive_card {n k q : ℕ}
     have hneg : k ≤ X.neg.card := hside.resolve_left hpos
     simp [hpos, hneg]
 
+theorem matousekLargeSupportPositive_antipode {n k q : ℕ} (hk : 1 ≤ k)
+    (C : KneserVertex n k → Fin q)
+    (hC : ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b)
+    (X : SignedSubset n) (hlarge : 2 * k - 1 ≤ X.card) :
+    matousekLargeSupportPositive C X.antipode
+        (by simpa [SignedSubset.card_antipode] using hlarge) =
+      !(matousekLargeSupportPositive C X hlarge) := by
+  by_cases hpos : k ≤ X.pos.card
+  · by_cases hneg : k ≤ X.neg.card
+    · have hne :
+          minColorInSupport C X.pos hpos ≠ minColorInSupport C X.neg hneg :=
+        minColorInSupport_ne_of_disjoint hk C hC X.disjoint hpos hneg
+      have hswap :
+          decide (minColorInSupport C X.neg hneg < minColorInSupport C X.pos hpos) =
+            !decide (minColorInSupport C X.pos hpos < minColorInSupport C X.neg hneg) :=
+        decide_lt_swap_eq_not hne
+      simpa [matousekLargeSupportPositive, SignedSubset.antipode, hpos, hneg] using hswap
+    · simp [matousekLargeSupportPositive, SignedSubset.antipode, hpos, hneg]
+  · have hside := signedSubset_large_support_has_k_side (X := X) hlarge
+    have hneg : k ≤ X.neg.card := hside.resolve_left hpos
+    simp [matousekLargeSupportPositive, SignedSubset.antipode, hpos, hneg]
+
 /-- The minimum color on the selected large-support side. -/
 noncomputable def matousekLargeSupportColor {n k q : ℕ}
     (C : KneserVertex n k → Fin q) (X : SignedSubset n)
@@ -720,12 +742,50 @@ noncomputable def matousekLargeSupportColor {n k q : ℕ}
   minColorInSupport C (X.side (matousekLargeSupportPositive C X hlarge))
     (matousekLargeSupportPositive_card C X hlarge)
 
+theorem matousekLargeSupportColor_antipode {n k q : ℕ} (hk : 1 ≤ k)
+    (C : KneserVertex n k → Fin q)
+    (hC : ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b)
+    (X : SignedSubset n) (hlarge : 2 * k - 1 ≤ X.card) :
+    matousekLargeSupportColor C X.antipode
+        (by simpa [SignedSubset.card_antipode] using hlarge) =
+      matousekLargeSupportColor C X hlarge := by
+  have hpositive := matousekLargeSupportPositive_antipode hk C hC X hlarge
+  simp [matousekLargeSupportColor, hpositive, SignedSubset.side_antipode_not]
+
 /-- Full large-support signed label in Matoušek's construction. -/
 noncomputable def matousekLargeSupportLabel {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
     (C : KneserVertex n k → Fin (n - 2 * k + 1)) (X : SignedSubset n)
     (hlarge : 2 * k - 1 ≤ X.card) : SignedLabel (n - 1) where
   positive := matousekLargeSupportPositive C X hlarge
   index := matousekLargeSupportIndex hk hn (matousekLargeSupportColor C X hlarge)
+
+theorem matousekLargeSupportLabel_antipode {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (C : KneserVertex n k → Fin (n - 2 * k + 1))
+    (hC : ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b)
+    (X : SignedSubset n) (hlarge : 2 * k - 1 ≤ X.card) :
+    matousekLargeSupportLabel hk hn C X.antipode
+        (by simpa [SignedSubset.card_antipode] using hlarge) =
+      (matousekLargeSupportLabel hk hn C X hlarge).neg := by
+  change SignedLabel.mk
+      (matousekLargeSupportPositive C X.antipode
+        (by simpa [SignedSubset.card_antipode] using hlarge))
+      (matousekLargeSupportIndex hk hn
+        (matousekLargeSupportColor C X.antipode
+          (by simpa [SignedSubset.card_antipode] using hlarge))) =
+    SignedLabel.mk (!(matousekLargeSupportPositive C X hlarge))
+      (matousekLargeSupportIndex hk hn (matousekLargeSupportColor C X hlarge))
+  have hpositive :
+      matousekLargeSupportPositive C X.antipode
+          (by simpa [SignedSubset.card_antipode] using hlarge) =
+        !(matousekLargeSupportPositive C X hlarge) :=
+    matousekLargeSupportPositive_antipode hk C hC X hlarge
+  have hindex :
+      matousekLargeSupportIndex hk hn
+          (matousekLargeSupportColor C X.antipode
+            (by simpa [SignedSubset.card_antipode] using hlarge)) =
+        matousekLargeSupportIndex hk hn (matousekLargeSupportColor C X hlarge) := by
+    rw [matousekLargeSupportColor_antipode hk C hC X hlarge]
+  exact SignedLabel.ext hpositive hindex
 
 theorem matousekLargeSupportLabel_ne_neg_of_le {n k : ℕ} (hk : 1 ≤ k)
     (hn : 2 * k ≤ n)

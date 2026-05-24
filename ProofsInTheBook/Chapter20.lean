@@ -112,6 +112,98 @@ open MonskyColor
 @[simp]
 theorem MonskyColor.card : Fintype.card MonskyColor = 3 := rfl
 
+/--
+Monsky's coloring in multiplicative valuation language.  Additive conditions
+`v(x) > 0` and `v(x) ≤ v(y)` become `V(x) < 1` and `V(y) ≤ V(x)` for the
+multiplicative valuation used by Mathlib's `Valuation`.
+-/
+def colorOfValues {Γ : Type*} [LinearOrderedCommGroupWithZero Γ] (vx vy : Γ) :
+    MonskyColor :=
+  if vx < 1 ∧ vy < 1 then red
+  else if 1 ≤ vx ∧ vy ≤ vx then green
+  else blue
+
+@[simp]
+theorem colorOfValues_zero_zero {Γ : Type*} [LinearOrderedCommGroupWithZero Γ] :
+    colorOfValues (0 : Γ) (0 : Γ) = red := by
+  simp [colorOfValues]
+
+@[simp]
+theorem colorOfValues_one_zero {Γ : Type*} [LinearOrderedCommGroupWithZero Γ] :
+    colorOfValues (1 : Γ) (0 : Γ) = green := by
+  simp [colorOfValues]
+
+@[simp]
+theorem colorOfValues_zero_one {Γ : Type*} [LinearOrderedCommGroupWithZero Γ] :
+    colorOfValues (0 : Γ) (1 : Γ) = blue := by
+  simp [colorOfValues]
+
+@[simp]
+theorem colorOfValues_one_one {Γ : Type*} [LinearOrderedCommGroupWithZero Γ] :
+    colorOfValues (1 : Γ) (1 : Γ) = green := by
+  simp [colorOfValues]
+
+/-- The Monsky coloring of a point from any multiplicative valuation. -/
+def valuationColor {K Γ : Type*} [Field K] [LinearOrderedCommGroupWithZero Γ]
+    (v : Valuation K Γ) (p : K × K) : MonskyColor :=
+  colorOfValues (v p.1) (v p.2)
+
+@[simp]
+theorem valuationColor_origin {K Γ : Type*} [Field K] [LinearOrderedCommGroupWithZero Γ]
+    (v : Valuation K Γ) :
+    valuationColor v (0, 0) = red := by
+  simp [valuationColor, colorOfValues]
+
+@[simp]
+theorem valuationColor_one_zero {K Γ : Type*} [Field K] [LinearOrderedCommGroupWithZero Γ]
+    (v : Valuation K Γ) :
+    valuationColor v (1, 0) = green := by
+  simp [valuationColor, colorOfValues]
+
+@[simp]
+theorem valuationColor_zero_one {K Γ : Type*} [Field K] [LinearOrderedCommGroupWithZero Γ]
+    (v : Valuation K Γ) :
+    valuationColor v (0, 1) = blue := by
+  simp [valuationColor, colorOfValues]
+
+@[simp]
+theorem valuationColor_one_one {K Γ : Type*} [Field K] [LinearOrderedCommGroupWithZero Γ]
+    (v : Valuation K Γ) :
+    valuationColor v (1, 1) = green := by
+  simp [valuationColor, colorOfValues]
+
+/-- A chosen valuation subring of `ℝ` extending the 2-adic valuation on `ℚ`. -/
+noncomputable def realTwoAdicSubring : ValuationSubring ℝ :=
+  Classical.choose exists_real_twoAdic_extension
+
+/-- The corresponding chosen real-valued-field valuation for Monsky coloring. -/
+noncomputable def realTwoAdicValuation : Valuation ℝ realTwoAdicSubring.ValueGroup :=
+  realTwoAdicSubring.valuation
+
+theorem realTwoAdic_hasExtension :
+    (Rat.padicValuation 2).HasExtension realTwoAdicValuation :=
+  Classical.choose_spec exists_real_twoAdic_extension
+
+/-- The chosen Monsky 2-adic coloring on the real plane. -/
+noncomputable def realTwoAdicColor (p : ℝ × ℝ) : MonskyColor :=
+  valuationColor realTwoAdicValuation p
+
+@[simp]
+theorem realTwoAdicColor_origin : realTwoAdicColor (0, 0) = red := by
+  simp [realTwoAdicColor, valuationColor, colorOfValues, realTwoAdicValuation]
+
+@[simp]
+theorem realTwoAdicColor_one_zero : realTwoAdicColor (1, 0) = green := by
+  simp [realTwoAdicColor, valuationColor, colorOfValues, realTwoAdicValuation]
+
+@[simp]
+theorem realTwoAdicColor_zero_one : realTwoAdicColor (0, 1) = blue := by
+  simp [realTwoAdicColor, valuationColor, colorOfValues, realTwoAdicValuation]
+
+@[simp]
+theorem realTwoAdicColor_one_one : realTwoAdicColor (1, 1) = green := by
+  simp [realTwoAdicColor, valuationColor, colorOfValues, realTwoAdicValuation]
+
 /-- A triangle is trichromatic when its three vertex colors are pairwise different. -/
 def TrichromaticTriangle (a b c : MonskyColor) : Prop :=
   a ≠ b ∧ b ≠ c ∧ c ≠ a

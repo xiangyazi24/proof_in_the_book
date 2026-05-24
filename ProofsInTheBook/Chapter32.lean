@@ -8,12 +8,14 @@ From "Proofs from THE BOOK":
 The book compares analytic proofs (generating functions, algebraic
 manipulations) with bijective proofs for combinatorial identities.
 
-Key examples:
+Formalized identities in this file:
 - **Vandermonde's identity**: C(m+n, k) = ∑ᵢ C(m,i)·C(n,k-i)
 - **Hockey-stick identity** (Zhu Shijie): ∑ᵢ₌ₖⁿ C(i,k) = C(n+1, k+1)
-- **Binomial theorem**: (1+x)ⁿ = ∑ₖ C(n,k) xᵏ
+- **Binomial-coefficient sum**: ∑ₖ C(n,k) = 2ⁿ
 
-Each identity admits both an algebraic proof and a bijective proof.
+Each identity admits both an algebraic proof and a bijective proof. The public
+`chapter32` theorem below bundles these identities, rather than treating
+Vandermonde as the sole endpoint of the chapter.
 -/
 
 namespace ProofsInTheBook.Chapter32
@@ -70,8 +72,11 @@ theorem chapter32_binomial_sum (n : ℕ) :
     have h := (add_pow 1 1 n).symm
     simpa [one_add_one_eq_two] using h
 
-theorem chapter32 (m n k : ℕ) :
-    (m + n).choose k = ∑ ij ∈ antidiagonal k, m.choose ij.1 * n.choose ij.2 :=
-  chapter32_vandermonde m n k
+theorem chapter32 :
+    (∀ m n k : ℕ,
+        (m + n).choose k = ∑ ij ∈ antidiagonal k, m.choose ij.1 * n.choose ij.2) ∧
+      (∀ n k : ℕ, ∑ i ∈ Icc k n, i.choose k = (n + 1).choose (k + 1)) ∧
+      (∀ n : ℕ, ∑ k ∈ range (n + 1), n.choose k = 2 ^ n) :=
+  ⟨chapter32_vandermonde, chapter32_hockey_stick, chapter32_binomial_sum⟩
 
 end ProofsInTheBook.Chapter32

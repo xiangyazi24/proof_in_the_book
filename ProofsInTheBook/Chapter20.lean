@@ -286,6 +286,42 @@ theorem realTwoAdic_hasExtension :
     (Rat.padicValuation 2).HasExtension realTwoAdicValuation :=
   Classical.choose_spec exists_real_twoAdic_extension
 
+/-- Odd natural numbers have 2-adic valuation `1` in multiplicative notation. -/
+theorem rat_twoAdicValuation_natCast_of_odd {n : ℕ} (hn : Odd n) :
+    Rat.padicValuation 2 (n : ℚ) = 1 := by
+  have hnotdvd_nat : ¬ 2 ∣ n := by
+    intro h
+    exact (Nat.not_even_iff_odd.mpr hn) ((even_iff_two_dvd).2 h)
+  have hnotdvd_int : ¬ (2 : ℤ) ∣ (n : ℤ) := by
+    exact_mod_cast hnotdvd_nat
+  change Rat.padicValuation 2 (((n : ℤ) : ℚ)) = 1
+  rw [Rat.padicValuation_cast]
+  exact (Int.padicValuation_eq_one_iff (p := 2) (x := (n : ℤ))).2 hnotdvd_int
+
+/-- If `n` is odd, the rational double area `2 / n` has 2-adic valuation `< 1`. -/
+theorem rat_twoAdicValuation_two_div_odd_lt_one {n : ℕ} (hn : Odd n) :
+    Rat.padicValuation 2 ((2 : ℚ) / n) < 1 := by
+  rw [map_div₀]
+  have h2 : Rat.padicValuation 2 ((2 : ℚ)) = WithZero.exp (-1 : ℤ) := by
+    simpa using Rat.padicValuation_self 2
+  rw [h2, rat_twoAdicValuation_natCast_of_odd hn, div_one]
+  rw [← WithZero.exp_zero, WithZero.exp_lt_exp]
+  norm_num
+
+/--
+The same `< 1` estimate after transporting `2 / n` into the chosen real
+2-adic valuation extension.
+-/
+theorem realTwoAdicValuation_rat_two_div_odd_lt_one {n : ℕ} (hn : Odd n) :
+    realTwoAdicValuation (((2 : ℚ) / n : ℚ) : ℝ) < 1 := by
+  letI : (Rat.padicValuation 2).HasExtension realTwoAdicValuation := realTwoAdic_hasExtension
+  have hrat :
+      Rat.padicValuation 2 (((2 : ℚ) / n : ℚ)) < Rat.padicValuation 2 (1 : ℚ) := by
+    simpa using rat_twoAdicValuation_two_div_odd_lt_one hn
+  have h := (Valuation.HasExtension.val_map_lt_iff
+    (vR := Rat.padicValuation 2) (vA := realTwoAdicValuation) (((2 : ℚ) / n : ℚ)) 1).2 hrat
+  simpa using h
+
 /-- The chosen Monsky 2-adic coloring on the real plane. -/
 noncomputable def realTwoAdicColor (p : ℝ × ℝ) : MonskyColor :=
   valuationColor realTwoAdicValuation p

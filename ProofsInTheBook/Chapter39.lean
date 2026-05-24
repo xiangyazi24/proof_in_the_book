@@ -15,8 +15,8 @@ point, contradicting Borsuk-Ulam.
 Formalization status: this file closes the graph-combinatorial layer.  It
 defines the Kneser graph, proves basic cardinality and edge facts, proves the
 explicit `n - 2*k + 2` coloring upper bound, handles the `n = 2*k` lower-bound
-edge case, and states `chapter39` from a `KneserChromaticCertificate` carrying
-the hard non-colorability direction.
+edge case, and formalizes Matoušek's finite reduction from a too-small Kneser
+coloring to a Tucker-labeling counterexample.
 
 Gap to the full book theorem: the missing upstream theorem can be supplied by
 either the analytic Borsuk-Ulam route or the discrete Matoušek/Tucker route.
@@ -25,12 +25,10 @@ simplicial-complex infrastructure, but no Borsuk-Ulam theorem, Tucker lemma,
 Ky Fan lemma, octahedral sphere labeling theorem, or ready-made bridge from
 too-small Kneser colorings to a forbidden antipodal/complementary labeling.
 
-The definitions `TuckerLemmaStatement` and
-`KneserColoringProducesTuckerCounterexample` below isolate the discrete route:
-Tucker's lemma for nonzero sign vectors in `{−1,0,1}^n`, plus Matoušek's
-construction of a Tucker counterexample from a hypothetical
-`(n - 2*k + 1)`-coloring of `KG(n,k)`.  Proving those two statements is the
-honest frontier; the file does not package them as `False`.
+The remaining upstream gap is exactly `TuckerLemmaStatement`: Tucker's lemma
+for nonzero sign vectors in `{−1,0,1}^n`.  The Matoušek construction of a
+Tucker counterexample from a hypothetical `(n - 2*k + 1)`-coloring of
+`KG(n,k)` is proved below.
 -/
 
 namespace ProofsInTheBook.Chapter39
@@ -1009,11 +1007,6 @@ def TuckerLemmaStatement (n : ℕ) : Prop :=
 Matoušek's bridge from a too-small Kneser coloring to a Tucker counterexample:
 given a proper `(n - 2*k + 1)`-coloring, construct an antipodal sign-vector
 labeling with no complementary comparable pair.
-
-This construction is finite and combinatorial, but still nontrivial: it must
-choose canonical `k`-subsets from large positive/negative supports and verify
-the no-complementary-edge property.  It is the other missing component of the
-Tucker route.
 -/
 def KneserColoringProducesTuckerCounterexample (n k : ℕ) : Prop :=
   ∀ C : KneserVertex n k → Fin (n - 2 * k + 1),
@@ -1022,6 +1015,16 @@ def KneserColoringProducesTuckerCounterexample (n k : ℕ) : Prop :=
         (∀ X, label X.antipode = (label X).neg) ∧
           ∀ X Y : NonzeroSignedSubset n,
             SignedSubset.Le X.1 Y.1 → label X ≠ (label Y).neg
+
+theorem kneserColoringProducesTuckerCounterexample_of_matousek (n k : ℕ)
+    (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
+    KneserColoringProducesTuckerCounterexample n k := by
+  intro C hC
+  refine ⟨matousekTuckerLabel hk hn C, ?_, ?_⟩
+  · intro X
+    exact matousekTuckerLabel_antipode hk hn C hC X
+  · intro X Y hXY
+    exact matousekTuckerLabel_no_complementary hk hn C hC X Y hXY
 
 /--
 If Tucker's lemma and Matoušek's coloring-to-labeling bridge are available,
@@ -1037,46 +1040,13 @@ theorem kneser_chromatic_lower_bound_from_tucker (n k : ℕ)
   obtain ⟨X, Y, hXY, hcomp⟩ := htucker label hantipodal
   exact hno_complementary X Y hXY hcomp
 
-/--
-Kneser graph chromatic number lower bound: `KG(n,k)` is NOT
-`(n - 2k + 1)`-colorable. This is the hard direction, proved by Lovász
-using the Borsuk-Ulam theorem, or discretely from Tucker's lemma via
-Matoušek's labeling construction.
--/
-theorem kneser_chromatic_lower_bound (n k : ℕ) (hk : 1 ≤ k) (hn : 2 * k ≤ n)
-    (hhard : n ≠ 2 * k → ¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
-      ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :
+theorem kneser_chromatic_lower_bound_from_tucker_matousek (n k : ℕ)
+    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (htucker : TuckerLemmaStatement n) :
     ¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
-      ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b := by
-  by_cases heq : n = 2 * k
-  · subst heq
-    intro ⟨C, hC⟩
-    have hfin1 : ∀ (a b : Fin (2 * k - 2 * k + 1)), a = b := by intro a b; ext; omega
-    have ⟨a, b, hadj⟩ : ∃ a b : KneserVertex (2 * k) k, (kneserGraph (2 * k) k).Adj a b := by
-      classical
-      let A : Finset (Fin (2 * k)) := (Finset.univ.filter fun i => i.val < k)
-      let B : Finset (Fin (2 * k)) := (Finset.univ.filter fun i => k ≤ i.val)
-      have hAcard : A.card = k := by
-        have : A = (Finset.univ : Finset (Fin (2 * k))).filter (fun i => i.val < k) := rfl
-        rw [this]
-        convert_to (Finset.Iio (⟨k, by omega⟩ : Fin (2*k))).card = k
-        · congr 1; ext i; simp [Finset.mem_Iio, Fin.lt_def]
-        · simp [Fin.card_Iio]
-      have hBcard : B.card = k := by
-        have hAB : A.card + B.card = 2 * k := by
-          have := Finset.card_filter_add_card_filter_not
-            (s := (Finset.univ : Finset (Fin (2*k)))) (p := fun i : Fin (2*k) => i.val < k)
-          simp at this; omega
-        omega
-      have hdisj : Disjoint A B := by
-        rw [Finset.disjoint_filter]; intro i _ h1 h2; omega
-      have hne : (⟨A, hAcard⟩ : KneserVertex (2*k) k) ≠ ⟨B, hBcard⟩ := by
-        intro h; simp at h
-        have : (⟨0, by omega⟩ : Fin (2*k)) ∈ A := by simp [A]; omega
-        rw [h] at this; simp [B] at this; omega
-      exact ⟨⟨A, hAcard⟩, ⟨B, hBcard⟩, hne, hdisj⟩
-    exact absurd (hfin1 (C a) (C b)) (hC a b hadj)
-  · exact hhard heq
+      ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b :=
+  kneser_chromatic_lower_bound_from_tucker n k htucker
+    (kneserColoringProducesTuckerCounterexample_of_matousek n k hk hn)
 
 /-- The hard lower bound is elementary for `k = 1`: `KG(n,1)` is complete,
 so a proper coloring must inject `n` singleton vertices into the color set. -/
@@ -1097,9 +1067,13 @@ target color type has one element, while the graph has an edge. -/
 theorem kneser_chromatic_lower_bound_two_mul (k : ℕ) (hk : 1 ≤ k) :
     ¬ ∃ C : KneserVertex (2 * k) k → Fin (2 * k - 2 * k + 1),
       ∀ a b, (kneserGraph (2 * k) k).Adj a b → C a ≠ C b := by
-  exact kneser_chromatic_lower_bound (2 * k) k hk (by omega) (by
-    intro hne
-    exact (hne rfl).elim)
+  rintro ⟨C, hC⟩
+  obtain ⟨a, b, hadj⟩ :=
+    kneserGraph_exists_adj_of_two_mul_le (n := 2 * k) (k := k) hk (by omega)
+  have hfin1 : C a = C b := by
+    ext
+    omega
+  exact hC a b hadj hfin1
 
 /-- Unconditional Chapter 39 for singleton vertices: `KG(n,1)` is the complete
 graph on `n` vertices, so it has the expected lower and upper coloring bounds. -/
@@ -1123,49 +1097,21 @@ theorem chapter39_two_mul (k : ℕ) (hk : 1 ≤ k) :
   · exact kneser_chromatic_lower_bound_two_mul k hk
 
 /--
-Certificate that Kneser graph KG(n,k) is not `(n - 2k + 1)`-colorable.
-This is the hard direction of Lovász's theorem.  It may be supplied by
-Borsuk-Ulam or by the Tucker/Matoušek route formalized above.
--/
-structure KneserChromaticCertificate (n k : ℕ) where
-  /-- The non-colorability witness for the n ≠ 2*k case. -/
-  hhard : n ≠ 2 * k → ¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
-    ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b
+Chapter 39 (Lovász's theorem on Kneser graph chromatic number, conditional on
+the discrete Tucker lemma): the upper bound is explicit, and the lower bound
+is derived from Tucker's lemma via the formalized Matoušek labeling above.
 
-namespace KneserChromaticCertificate
-
-/--
-Build the hard lower-bound certificate from Tucker's lemma plus Matoušek's
-finite coloring-to-labeling bridge.  This keeps the missing theorem precise:
-there is no assumed `False`, only the named discrete lemma and bridge.
--/
-def of_tucker (n k : ℕ)
-    (htucker : TuckerLemmaStatement n)
-    (hbridge : n ≠ 2 * k → KneserColoringProducesTuckerCounterexample n k) :
-    KneserChromaticCertificate n k where
-  hhard := fun hne =>
-    kneser_chromatic_lower_bound_from_tucker n k htucker (hbridge hne)
-
-end KneserChromaticCertificate
-
-/--
-Chapter 39 (Lovász's theorem on Kneser graph chromatic number, Tier 1
-conditional): given the hard direction (no (n-2k+1)-coloring exists when
-n ≠ 2k), and combined with the upper bound (n-2k+2 colorable) already proved,
-χ(KG(n,k)) = n - 2k + 2.
-
-TODO (Tier 2): construct `hhard` via Borsuk-Ulam or via
-`KneserChromaticCertificate.of_tucker`.  The Tucker route requires proving
-`TuckerLemmaStatement` and `KneserColoringProducesTuckerCounterexample`.
+Remaining gap to an unconditional theorem in Mathlib: prove
+`TuckerLemmaStatement`.
 -/
 theorem chapter39 {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
-    (cert : KneserChromaticCertificate n k) :
+    (htucker : TuckerLemmaStatement n) :
     (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
     (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) := by
   refine ⟨?_, ?_⟩
   · exact kneser_chromatic_upper_bound n k hk hn
-  · exact kneser_chromatic_lower_bound n k hk hn cert.hhard
+  · exact kneser_chromatic_lower_bound_from_tucker_matousek n k hk hn htucker
 
 end ProofsInTheBook.Chapter39

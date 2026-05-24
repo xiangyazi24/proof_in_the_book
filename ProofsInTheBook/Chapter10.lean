@@ -417,6 +417,45 @@ theorem perpDist_eq_dist_foot (P a b : EPoint) :
     perpDist P a b = dist P (foot P a b) :=
   (EuclideanGeometry.dist_orthogonalProjection_eq_infDist (affineSpan ℝ {a, b}) P).symm
 
+/-- Pythagorean identity for the foot: `PR² = RF² + PF²` when `R` lies on the
+line and `F` is the foot of the perpendicular from `P`. -/
+theorem dist_sq_eq_foot {P a b R : EPoint} (hR : R ∈ affineSpan ℝ {a, b}) :
+    dist R P * dist R P
+      = dist R (foot P a b) * dist R (foot P a b)
+        + dist P (foot P a b) * dist P (foot P a b) :=
+  EuclideanGeometry.dist_sq_eq_dist_orthogonalProjection_sq_add_dist_orthogonalProjection_sq
+    (s := affineSpan ℝ {a, b}) P hR
+
+/-- **Kelly step 3b: the closer point is strictly nearer on the cross-line.**
+If `R` is on the line and `Q` lies between the foot `F` and `R`, while `P` is
+off the line, then `dist Q R < dist P R`.  (Pythagoras: `PR² = RF² + PF²` with
+`PF > 0`, and `QR ≤ FR` since `Q` is between `F` and `R`.) -/
+theorem dist_lt_dist_of_wbtw_foot {P a b Q R : EPoint}
+    (hP : P ∉ affineSpan ℝ {a, b}) (hR : R ∈ affineSpan ℝ {a, b})
+    (hQ : Wbtw ℝ (foot P a b) Q R) : dist Q R < dist P R := by
+  have hPF : 0 < dist P (foot P a b) := by
+    rw [← perpDist_eq_dist_foot]; exact perpDist_pos hP
+  -- `QR ≤ FR` from betweenness
+  have hQR : dist Q R ≤ dist (foot P a b) R := by
+    have hadd := hQ.dist_add_dist
+    have hfq : 0 ≤ dist (foot P a b) Q := dist_nonneg
+    -- dist F Q + dist Q R = dist F R
+    rw [dist_comm Q R] at hadd ⊢
+    nlinarith [hadd, hfq]
+  -- Pythagoras, normalised to `dist P R` and `dist (foot) R`: PR² = FR² + PF²
+  have hpyth : dist P R * dist P R
+      = dist (foot P a b) R * dist (foot P a b) R
+        + dist P (foot P a b) * dist P (foot P a b) := by
+    have h := dist_sq_eq_foot (P := P) (a := a) (b := b) hR
+    rwa [dist_comm R P, dist_comm R (foot P a b)] at h
+  have hQRnn : 0 ≤ dist Q R := dist_nonneg
+  have hFRnn : 0 ≤ dist (foot P a b) R := dist_nonneg
+  -- squared inequality, then square-root monotonicity
+  have hsq : dist Q R ^ 2 < dist P R ^ 2 := by
+    rw [sq, sq]
+    nlinarith [hpyth, mul_le_mul hQR hQR hQRnn hFRnn, mul_pos hPF hPF]
+  exact lt_of_pow_lt_pow_left₀ 2 dist_nonneg hsq
+
 /-- **Kelly step 2: a minimum-perpendicular-distance off-line pair exists.**
 Over a finite point set with at least one off-line incidence, the perpendicular
 distances of all off-line incidences attain a minimum — the well-ordering

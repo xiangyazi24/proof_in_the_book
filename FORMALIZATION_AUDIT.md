@@ -92,11 +92,19 @@ with sustained effort, candidates for genuine closure):**
     by giving `OffLineTriple S` a `Finite` instance (injects into `S×ˢS×ˢS`)
     and minimizing over `Finset.univ` — everything abstract, no concrete
     Finset reduction.
-  - **Remaining (step 3, the crux):** foot of perpendicular
-    `F = orthogonalProjection line[a,b] P`; pigeonhole two on-line points to
-    the same side of `F`; then the similar-triangles inequality
-    `dist(Q, line[P,R]) < perpDist P a b` contradicts minimality, proving the
-    minimal pair's line is ordinary.  ~200–400 LOC of Euclidean geometry.
+  - Step 3a (commit 076ce77): foot of perpendicular
+    `foot P a b := orthogonalProjection (affineSpan ℝ {a,b}) P`, `foot_mem`,
+    and `perpDist_eq_dist_foot` (`perpDist = dist P (foot)`).  Instances for
+    `Nonempty (affineSpan ℝ {a,b})` provided.
+  - **Remaining (step 3b–d, the crux):** pigeonhole two on-line points
+    `Q, R` to the same ray from `F` (`Q` between `F` and `R`); then the
+    similar-triangles / Pythagorean inequality
+    `perpDist Q P R ≤ dist Q (foot Q P R) < perpDist P a b` (using
+    `dist_sq_eq_dist_orthogonalProjection_sq_add_…`) contradicts minimality;
+    `(Q,P,R)` is a valid off-line incidence since `Q ∉ line[P,R]` (else
+    `line[P,R] = line[a,b] ∋ P`, contra).  ~200–400 LOC; warrants a dedicated
+    session with multi-model brainstorm per the playbook's hard-geometry
+    guidance.
 
 ## Work Order
 

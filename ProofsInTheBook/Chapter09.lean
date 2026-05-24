@@ -737,6 +737,17 @@ theorem regularTetrahedron_arccos_one_third_has_dihedral_cosine {i j : Fin 4}
   rw [Real.cos_arccos, regularTetrahedron_dihedralCosine_of_ne hij] <;> norm_num
 
 /--
+The dihedral angle determined by the two outward face normals opposite
+vertices `i` and `j`.
+-/
+noncomputable def regularTetrahedronDihedralAngle (i j : Fin 4) : ℝ :=
+  Real.arccos (-regularTetrahedronFaceNormalCosine i j)
+
+theorem regularTetrahedronDihedralAngle_of_ne {i j : Fin 4} (hij : i ≠ j) :
+    regularTetrahedronDihedralAngle i j = Real.arccos (1 / 3) := by
+  rw [regularTetrahedronDihedralAngle, regularTetrahedron_dihedralCosine_of_ne hij]
+
+/--
 The regular tetrahedron has nonzero Dehn invariant because its dihedral
 angle `arccos(1/3)` is irrational over `π`. This is the book's key
 number-theoretic computation.
@@ -882,6 +893,11 @@ theorem angleClassQ_arccos_one_third_ne_zero :
   obtain ⟨q, hq⟩ := h
   rw [Rat.smul_def] at hq
   exact arccos_one_third_irrational_over_pi q hq.symm
+
+theorem angleClassQ_regularTetrahedronDihedralAngle_ne_zero {i j : Fin 4} (hij : i ≠ j) :
+    angleClassQ (regularTetrahedronDihedralAngle i j) ≠ 0 := by
+  rw [regularTetrahedronDihedralAngle_of_ne hij]
+  exact angleClassQ_arccos_one_third_ne_zero
 
 /--
 Pure tensors over a field are nonzero when both factors are nonzero.  This is

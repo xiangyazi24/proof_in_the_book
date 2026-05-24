@@ -113,6 +113,21 @@ theorem chapter15_from_antipodal_card_bound {d : ℕ}
     (noObtuseAngles_iff_not_exists_obtuse points).2 hnone
   exact (not_lt_of_ge (antipodal_card_bound points hno.hasAntipodalStrips)) hcard
 
+/--
+Canonical Chapter 15 theorem.
+
+Status ③ in the playbook: this has the genuine Danzer-Grünbaum conclusion, but
+is conditional on the honest remaining frontier, the antipodal cardinality bound
+for the supporting-strip condition.
+-/
+theorem chapter15 {d : ℕ}
+    (danzer_grunbaum_antipodal_card_bound :
+      ∀ points : Finset (Point d), HasAntipodalStrips points → points.card ≤ 2 ^ d)
+    (points : Finset (Point d)) (hcard : 2 ^ d < points.card) :
+    ∃ x ∈ points, ∃ y ∈ points, ∃ z ∈ points,
+      x ≠ y ∧ x ≠ z ∧ y ≠ z ∧ ObtuseTriple x y z :=
+  chapter15_from_antipodal_card_bound danzer_grunbaum_antipodal_card_bound points hcard
+
 end
 
 end ProofsInTheBook.Chapter15

@@ -47,9 +47,28 @@ This is a deep geometric result requiring substantial infrastructure
 beyond current Mathlib coverage.
 -/
 
+/-!
+### Current Mathlib geometry coverage
+
+The local Mathlib checkout has the raw Euclidean tools needed for coordinate
+calculations in `EuclideanSpace ℝ (Fin 3)`: finite-dimensional inner product
+spaces, `Affine.Simplex`, equilateral simplex lemmas, convex hulls/convex sets,
+orthogonal projection, signed distance to affine subspaces, and unoriented
+angles.  It does not currently expose a bundled three-dimensional polyhedron
+API with faces, edges, incidence, dihedral angles, geometric Dehn invariant, or
+finite scissors dissections/reassemblies.  The coordinate lemmas below are
+therefore deliberately local: they verify the regular tetrahedron model and the
+`1 / 3` dihedral cosine calculation, but they are not yet connected to a
+global polyhedron/dissection type.
+-/
+
 /-- Algebraic target for a Dehn invariant with an abstract angle quotient. -/
 abbrev DehnTarget (Angle : Type*) [AddCommGroup Angle] [Module ℤ Angle] :=
   TensorProduct ℤ ℝ Angle
+
+/-- Rational-vector-space target for the classical Dehn invariant. -/
+abbrev DehnQTarget (Angle : Type*) [AddCommGroup Angle] [Module ℚ Angle] :=
+  TensorProduct ℚ ℝ Angle
 
 /-- Integer multiples of `π`, used as a first algebraic angle quotient. -/
 noncomputable def piZSubmodule : Submodule ℤ ℝ :=
@@ -87,6 +106,10 @@ noncomputable def piQSubmodule : Submodule ℚ ℝ :=
 abbrev AngleModPiQ : Type :=
   ℝ ⧸ piQSubmodule
 
+/-- Concrete rational target `ℝ ⊗[ℚ] (ℝ / πℚ)`. -/
+abbrev DehnPiQTarget :=
+  DehnQTarget AngleModPiQ
+
 /-- The `ℝ ⧸ πℚ` projection. -/
 noncomputable def angleClassQ (x : ℝ) : AngleModPiQ :=
   Submodule.Quotient.mk x
@@ -109,7 +132,7 @@ theorem angleClassQ_pi_div_two : angleClassQ (Real.pi / 2) = 0 := by
   rw [h, angleClassQ_rat_mul_pi]
 
 /-- Any divisor `π / n` with `0 < n` vanishes in the πℚ quotient. -/
-theorem angleClassQ_pi_div (n : ℕ) (hn : 0 < n) : angleClassQ (Real.pi / n) = 0 := by
+theorem angleClassQ_pi_div (n : ℕ) (_hn : 0 < n) : angleClassQ (Real.pi / n) = 0 := by
   have h : Real.pi / n = ((1/n : ℚ) : ℝ) * Real.pi := by
     push_cast
     rw [div_mul_eq_mul_div, one_mul]
@@ -135,6 +158,24 @@ theorem angleClassQ_zero : angleClassQ 0 = 0 := rfl
 @[simp]
 theorem angleClassQ_neg (x : ℝ) : angleClassQ (-x) = -(angleClassQ x) := rfl
 
+/-- `angleClassQ` commutes with finite sums. -/
+theorem angleClassQ_sum {I : Type*} (s : Finset I) (angle : I → ℝ) :
+    angleClassQ (∑ i ∈ s, angle i) = ∑ i ∈ s, angleClassQ (angle i) := by
+  classical
+  induction s using Finset.induction_on with
+  | empty => simp
+  | insert a s ha ih => simp [Finset.sum_insert, ha, ih]
+
+/--
+If the raw angles around an internal dissection edge add to a rational multiple
+of `π`, their classes vanish in `ℝ / πℚ`.
+-/
+theorem angleClassQ_sum_eq_zero_of_sum_rat_mul_pi {I : Type*}
+    (s : Finset I) (angle : I → ℝ) {q : ℚ}
+    (h : (∑ i ∈ s, angle i) = (q : ℝ) * Real.pi) :
+    (∑ i ∈ s, angleClassQ (angle i)) = 0 := by
+  rw [← angleClassQ_sum, h, angleClassQ_rat_mul_pi]
+
 /-- `angleClassQ x = 0` iff `x` is a rational multiple of `π`. -/
 theorem angleClassQ_eq_zero_iff (x : ℝ) :
     angleClassQ x = 0 ↔ ∃ q : ℚ, x = (q : ℝ) * Real.pi := by
@@ -159,11 +200,63 @@ def dehnEdge {Angle : Type*} [AddCommGroup Angle] [Module ℤ Angle]
     (length : ℝ) (angle : Angle) : DehnTarget Angle :=
   TensorProduct.tmul ℤ length angle
 
+/-- One edge contribution in the classical rational tensor target. -/
+noncomputable def dehnEdgeQ {Angle : Type*} [AddCommGroup Angle] [Module ℚ Angle]
+    (length : ℝ) (angle : Angle) : DehnQTarget Angle :=
+  TensorProduct.tmul ℚ length angle
+
+@[simp]
+theorem dehnEdge_zero_length {Angle : Type*} [AddCommGroup Angle] [Module ℤ Angle]
+    (angle : Angle) : dehnEdge 0 angle = 0 := by
+  simp [dehnEdge]
+
+@[simp]
+theorem dehnEdge_zero_angle {Angle : Type*} [AddCommGroup Angle] [Module ℤ Angle]
+    (length : ℝ) : dehnEdge length (0 : Angle) = 0 := by
+  simp [dehnEdge]
+
+theorem dehnEdge_add_length {Angle : Type*} [AddCommGroup Angle] [Module ℤ Angle]
+    (length₁ length₂ : ℝ) (angle : Angle) :
+    dehnEdge (length₁ + length₂) angle =
+      dehnEdge length₁ angle + dehnEdge length₂ angle := by
+  simp [dehnEdge, TensorProduct.add_tmul]
+
+theorem dehnEdge_add_angle {Angle : Type*} [AddCommGroup Angle] [Module ℤ Angle]
+    (length : ℝ) (angle₁ angle₂ : Angle) :
+    dehnEdge length (angle₁ + angle₂) =
+      dehnEdge length angle₁ + dehnEdge length angle₂ := by
+  simp [dehnEdge, TensorProduct.tmul_add]
+
+/-- Splitting one geometric edge into finitely many angle pieces is additive. -/
+theorem dehnEdge_angle_sum {I Angle : Type*} [AddCommGroup Angle] [Module ℤ Angle]
+    (s : Finset I) (length : ℝ) (angle : I → Angle) :
+    dehnEdge length (∑ i ∈ s, angle i) =
+      ∑ i ∈ s, dehnEdge length (angle i) := by
+  simp [dehnEdge, TensorProduct.tmul_sum]
+
+/--
+The algebraic cancellation used for an internal edge of a dissection: if the
+incident angles add to a rational multiple of `π`, the total edge contribution
+is zero in the angle quotient.
+-/
+theorem dehnEdge_angleClassQ_sum_eq_zero_of_sum_rat_mul_pi {I : Type*}
+    (s : Finset I) (length : ℝ) (angle : I → ℝ) {q : ℚ}
+    (h : (∑ i ∈ s, angle i) = (q : ℝ) * Real.pi) :
+    (∑ i ∈ s, dehnEdge length (angleClassQ (angle i))) = 0 := by
+  rw [← dehnEdge_angle_sum, angleClassQ_sum_eq_zero_of_sum_rat_mul_pi s angle h]
+  simp
+
 /-- Finite edge-sum model for the Dehn invariant. -/
 def dehnInvariant {Edge Angle : Type*} [AddCommGroup Angle] [Module ℤ Angle]
     (edges : Finset Edge) (length : Edge → ℝ) (angle : Edge → Angle) :
     DehnTarget Angle :=
   ∑ e ∈ edges, dehnEdge (length e) (angle e)
+
+/-- Finite edge-sum model in the rational tensor target. -/
+noncomputable def dehnInvariantQ {Edge Angle : Type*} [AddCommGroup Angle] [Module ℚ Angle]
+    (edges : Finset Edge) (length : Edge → ℝ) (angle : Edge → Angle) :
+    DehnQTarget Angle :=
+  ∑ e ∈ edges, dehnEdgeQ (length e) (angle e)
 
 @[simp]
 theorem dehnInvariant_empty {Edge Angle : Type*} [AddCommGroup Angle] [Module ℤ Angle]
@@ -193,6 +286,49 @@ theorem dehnInvariant_biUnion_of_pairwiseDisjoint {Piece Edge Angle : Type*}
     dehnInvariant (pieces.biUnion edges) length angle =
       ∑ p ∈ pieces, dehnInvariant (edges p) length angle := by
   simp [dehnInvariant, Finset.sum_biUnion hdisj]
+
+/-- If every edge has the same angle, the invariant is one tensor with total length. -/
+theorem dehnInvariant_const_angle {Edge Angle : Type*}
+    [AddCommGroup Angle] [Module ℤ Angle]
+    (edges : Finset Edge) (length : Edge → ℝ) (angle : Angle) :
+    dehnInvariant edges length (fun _ => angle) =
+      dehnEdge (∑ e ∈ edges, length e) angle := by
+  simp [dehnInvariant, dehnEdge, TensorProduct.sum_tmul]
+
+/-- If every edge has the same length and angle, only the edge count remains. -/
+theorem dehnInvariant_const_length_angle {Edge Angle : Type*}
+    [AddCommGroup Angle] [Module ℤ Angle]
+    (edges : Finset Edge) (length : ℝ) (angle : Angle) :
+    dehnInvariant edges (fun _ => length) (fun _ => angle) =
+      dehnEdge ((edges.card : ℝ) * length) angle := by
+  rw [dehnInvariant_const_angle]
+  congr 1
+  simp [nsmul_eq_mul]
+
+/-- Rational-target version of `dehnInvariant_const_angle`. -/
+theorem dehnInvariantQ_const_angle {Edge Angle : Type*}
+    [AddCommGroup Angle] [Module ℚ Angle]
+    (edges : Finset Edge) (length : Edge → ℝ) (angle : Angle) :
+    dehnInvariantQ edges length (fun _ => angle) =
+      dehnEdgeQ (∑ e ∈ edges, length e) angle := by
+  simp [dehnInvariantQ, dehnEdgeQ, TensorProduct.sum_tmul]
+
+/-- Rational-target version of `dehnInvariant_const_length_angle`. -/
+theorem dehnInvariantQ_const_length_angle {Edge Angle : Type*}
+    [AddCommGroup Angle] [Module ℚ Angle]
+    (edges : Finset Edge) (length : ℝ) (angle : Angle) :
+    dehnInvariantQ edges (fun _ => length) (fun _ => angle) =
+      dehnEdgeQ ((edges.card : ℝ) * length) angle := by
+  rw [dehnInvariantQ_const_angle]
+  congr 1
+  simp [nsmul_eq_mul]
+
+theorem dehnInvariantQ_six_equal_edges {Angle : Type*}
+    [AddCommGroup Angle] [Module ℚ Angle] (length : ℝ) (angle : Angle) :
+    dehnInvariantQ (Finset.univ : Finset (Fin 6)) (fun _ => length) (fun _ => angle) =
+      dehnEdgeQ (6 * length) angle := by
+  rw [dehnInvariantQ_const_length_angle]
+  norm_num
 
 /-- If every edge angle vanishes in the angle target, the Dehn invariant is zero.
 This is the cube case: all dihedral angles are `π/2`, which is a rational
@@ -264,6 +400,81 @@ theorem impossible_scissors_congruence_of_dehn_ne {A : Type*} [AddCommMonoid A]
     {cube tetra : A} (hcube : cube = 0) (htetra : tetra ≠ 0) : cube ≠ tetra := by
   intro h
   exact htetra (h.symm.trans hcube)
+
+/-! ### Concrete regular tetrahedron coordinate model -/
+
+abbrev Euclidean3 :=
+  EuclideanSpace ℝ (Fin 3)
+
+/--
+The standard regular tetrahedron centered at the origin.  Its vertices are the
+four sign vectors with an even number of negative signs.
+-/
+noncomputable def regularTetrahedronVertex : Fin 4 → Euclidean3 :=
+  ![!₂[(1 : ℝ), 1, 1], !₂[(1 : ℝ), -1, -1], !₂[-1, 1, -1], !₂[-1, -1, 1]]
+
+/-- Coordinate dot product in `EuclideanSpace ℝ (Fin 3)`, written explicitly for computation. -/
+def dot3 (u v : Euclidean3) : ℝ :=
+  u ⟨0, by decide⟩ * v ⟨0, by decide⟩ +
+  u ⟨1, by decide⟩ * v ⟨1, by decide⟩ +
+  u ⟨2, by decide⟩ * v ⟨2, by decide⟩
+
+/-- Coordinate squared distance in `EuclideanSpace ℝ (Fin 3)`, written explicitly for computation. -/
+def coordinateDistSq3 (u v : Euclidean3) : ℝ :=
+  (u ⟨0, by decide⟩ - v ⟨0, by decide⟩) ^ 2 +
+  (u ⟨1, by decide⟩ - v ⟨1, by decide⟩) ^ 2 +
+  (u ⟨2, by decide⟩ - v ⟨2, by decide⟩) ^ 2
+
+theorem euclidean3_dist_sq_eq_coordinateDistSq3 (u v : Euclidean3) :
+    dist u v ^ 2 = coordinateDistSq3 u v := by
+  rw [EuclideanSpace.dist_sq_eq]
+  simp [coordinateDistSq3, Fin.sum_univ_three, dist_eq_norm]
+
+theorem regularTetrahedronVertex_dot_self (i : Fin 4) :
+    dot3 (regularTetrahedronVertex i) (regularTetrahedronVertex i) = 3 := by
+  fin_cases i <;> simp [dot3, regularTetrahedronVertex] <;> norm_num
+
+theorem regularTetrahedronVertex_dot_of_ne {i j : Fin 4} (hij : i ≠ j) :
+    dot3 (regularTetrahedronVertex i) (regularTetrahedronVertex j) = -1 := by
+  fin_cases i <;> fin_cases j <;>
+    simp [dot3, regularTetrahedronVertex] at hij ⊢
+
+theorem regularTetrahedronVertex_coordinateDistSq_of_ne {i j : Fin 4} (hij : i ≠ j) :
+    coordinateDistSq3 (regularTetrahedronVertex i) (regularTetrahedronVertex j) = 8 := by
+  fin_cases i <;> fin_cases j <;>
+    simp [coordinateDistSq3, regularTetrahedronVertex] at hij ⊢ <;> norm_num
+
+/-- All six edges in the coordinate tetrahedron have squared length `8`. -/
+theorem regularTetrahedronVertex_dist_sq_of_ne {i j : Fin 4} (hij : i ≠ j) :
+    dist (regularTetrahedronVertex i) (regularTetrahedronVertex j) ^ 2 = 8 := by
+  rw [euclidean3_dist_sq_eq_coordinateDistSq3]
+  exact regularTetrahedronVertex_coordinateDistSq_of_ne hij
+
+/--
+The face opposite vertex `i` has normal parallel to `regularTetrahedronVertex i`.
+Since all these normals have squared length `3`, this quotient is the cosine
+between the two face normals.
+-/
+noncomputable def regularTetrahedronFaceNormalCosine (i j : Fin 4) : ℝ :=
+  dot3 (regularTetrahedronVertex i) (regularTetrahedronVertex j) / 3
+
+theorem regularTetrahedronFaceNormalCosine_of_ne {i j : Fin 4} (hij : i ≠ j) :
+    regularTetrahedronFaceNormalCosine i j = -1 / 3 := by
+  rw [regularTetrahedronFaceNormalCosine, regularTetrahedronVertex_dot_of_ne hij]
+
+/--
+For adjacent faces of the regular tetrahedron, the cosine of the interior
+dihedral angle is the negative of the cosine between outward normals.
+-/
+theorem regularTetrahedron_dihedralCosine_of_ne {i j : Fin 4} (hij : i ≠ j) :
+    -regularTetrahedronFaceNormalCosine i j = 1 / 3 := by
+  rw [regularTetrahedronFaceNormalCosine_of_ne hij]
+  norm_num
+
+theorem regularTetrahedron_arccos_one_third_has_dihedral_cosine {i j : Fin 4}
+    (hij : i ≠ j) :
+    Real.cos (Real.arccos (1 / 3)) = -regularTetrahedronFaceNormalCosine i j := by
+  rw [Real.cos_arccos, regularTetrahedron_dihedralCosine_of_ne hij] <;> norm_num
 
 /--
 The regular tetrahedron has nonzero Dehn invariant because its dihedral
@@ -337,7 +548,7 @@ theorem arccos_one_third_irrational_over_pi (q : ℚ) :
   have h_int : (q.den : ℝ) * Real.arccos (1/3) = (q.num : ℝ) * Real.pi := by
     have hq_eq : (q : ℝ) = (q.num : ℝ) / (q.den : ℝ) := by rw [Rat.cast_def]
     rw [h, hq_eq]
-    field_simp <;> ring
+    field_simp
   have h_cos_lhs :
       Real.cos ((q.den : ℝ) * Real.arccos (1/3)) =
         (T ℝ (q.den : ℤ)).eval (1/3) := by
@@ -353,7 +564,7 @@ theorem arccos_one_third_irrational_over_pi (q : ℚ) :
                   Real.cos ((q.num : ℝ) * Real.pi) := by rw [h_int]
   
   have h_sin : Real.sin ((q.num : ℝ) * Real.pi) = 0 := by
-    have : (q.num : ℝ) * Real.pi = (q.num : ℤ) * Real.pi := by push_cast; rfl
+    have : (q.num : ℝ) * Real.pi = (q.num : ℤ) * Real.pi := by rfl
     rw [this, Real.sin_int_mul_pi]
   have h_cos_sq : Real.cos ((q.num : ℝ) * Real.pi) ^ 2 = 1 := by
     have := Real.cos_sq_add_sin_sq ((q.num : ℝ) * Real.pi)
@@ -411,6 +622,57 @@ theorem angleClassQ_arccos_one_third_ne_zero :
   obtain ⟨q, hq⟩ := h
   rw [Rat.smul_def] at hq
   exact arccos_one_third_irrational_over_pi q hq.symm
+
+/--
+Pure tensors over a field are nonzero when both factors are nonzero.  This is
+the algebraic fact needed to turn the tetrahedron's nonzero angle class into a
+nonzero rational Dehn invariant.
+-/
+theorem tensor_tmul_ne_zero_of_ne_zero {K M N : Type*} [Field K]
+    [AddCommGroup M] [Module K M] [AddCommGroup N] [Module K N]
+    {m : M} {n : N} (hm : m ≠ 0) (hn : n ≠ 0) :
+    (m ⊗ₜ[K] n : TensorProduct K M N) ≠ 0 := by
+  classical
+  let s : Set N := {n}
+  have hs : LinearIndepOn K id s := by
+    rw [linearIndepOn_singleton_iff]
+    exact hn
+  let b : Module.Basis (hs.extend (Set.subset_univ s)) K N := Module.Basis.extend hs
+  have hn_mem : n ∈ hs.extend (Set.subset_univ s) :=
+    hs.subset_extend (Set.subset_univ s) (by simp [s])
+  let i : hs.extend (Set.subset_univ s) := ⟨n, hn_mem⟩
+  have hb_i : b i = n := by
+    change (Module.Basis.extend hs) i = (i : N)
+    exact Module.Basis.extend_apply_self hs i
+  intro hzero
+  have hcoeff : (TensorProduct.equivFinsuppOfBasisRight b) (m ⊗ₜ[K] n) i = 0 := by
+    rw [hzero]
+    simp
+  rw [TensorProduct.equivFinsuppOfBasisRight_apply_tmul_apply] at hcoeff
+  have hrepr : b.repr n i = 1 := by
+    rw [← hb_i, Module.Basis.repr_self]
+    simp
+  rw [hrepr, one_smul] at hcoeff
+  exact hm hcoeff
+
+theorem dehnEdgeQ_ne_zero_of_ne_zero {Angle : Type*}
+    [AddCommGroup Angle] [Module ℚ Angle] {length : ℝ} {angle : Angle}
+    (hlength : length ≠ 0) (hangle : angle ≠ 0) :
+    dehnEdgeQ length angle ≠ 0 := by
+  exact tensor_tmul_ne_zero_of_ne_zero hlength hangle
+
+/--
+In the rational tensor target, the six equal edges of a regular tetrahedron
+give a nonzero Dehn sum as soon as the common edge length is nonzero.
+-/
+theorem regularTetrahedron_six_edge_dehnQ_ne_zero {edgeLength : ℝ}
+    (hedgeLength : edgeLength ≠ 0) :
+    dehnInvariantQ (Finset.univ : Finset (Fin 6)) (fun _ => edgeLength)
+        (fun _ => angleClassQ (Real.arccos (1 / 3))) ≠ 0 := by
+  rw [dehnInvariantQ_six_equal_edges]
+  exact dehnEdgeQ_ne_zero_of_ne_zero
+    (mul_ne_zero (by norm_num : (6 : ℝ) ≠ 0) hedgeLength)
+    angleClassQ_arccos_one_third_ne_zero
 
 /--
 Hilbert's third problem: a regular tetrahedron cannot be cut into finitely

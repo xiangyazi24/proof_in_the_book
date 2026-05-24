@@ -16,21 +16,91 @@ Formalization status: this file closes the finite coloring and parity layer.
 It defines Monsky's three colors, red-green boundary edges, trichromatic
 triangles, proves the local parity identity, proves an abstract Sperner
 parity theorem, and derives `chapter20`: a `MonskyCertificate n` yields a
-trichromatic triangle.
+trichromatic triangle.  It also packages Mathlib's local-subring/Zorn
+infrastructure into `exists_valuation_extension`, which gives an extension of
+any valuation on a field to any field extension; in particular
+`exists_real_twoAdic_extension` extends `Rat.padicValuation 2` from `ℚ` to `ℝ`.
 
 Gap to the full book theorem: the missing work is the analytic/algebraic
 input that constructs the certificate from an equal-area triangulation of the
-unit square.  A complete proof needs an extension of the 2-adic valuation from
-`ℚ` to `ℝ`, the induced coloring of all points of `ℝ²`, proofs of the color
-constraints on square corners and triangle vertices, a geometric finite
-triangulation model whose internal red-green edges cancel mod `2`, and the
-area-valuation argument showing a trichromatic equal-area triangle is
-incompatible with subdivision into an odd number of equal areas.  Mathlib has
-some valuation and measure/geometry components, but not this valuation
-extension plus polygonal Sperner-triangulation package.
+unit square.  With the valuation-extension existence now available, the
+remaining work is to choose one such extension, define the induced Monsky
+coloring on all points of `ℝ²`, prove the color constraints on square corners
+and triangle vertices, connect a geometric finite triangulation model to the
+abstract Sperner parity count, and prove the area-valuation contradiction for
+an odd equal-area subdivision.  Mathlib has valuation and geometry components,
+but not this assembled polygonal Sperner/Monsky triangulation package.
 -/
 
 namespace ProofsInTheBook.Chapter20
+
+open IsLocalRing
+
+/--
+Mathlib does not currently expose a one-line theorem named "extend a valuation
+to an arbitrary field extension".  The needed existence statement follows from
+`IsLocalRing.exists_factor_valuationRing`: apply it to the valuation subring of
+the base field, then use localness to prove the new valuation subring lies
+exactly over the old one.
+-/
+theorem exists_valuationSubring_extension
+    {K L Γ : Type*} [Field K] [Field L] [Algebra K L]
+    [LinearOrderedCommGroupWithZero Γ] (v : Valuation K Γ) :
+    ∃ W : ValuationSubring L,
+      ∀ x : K, algebraMap K L x ∈ W ↔ x ∈ v.valuationSubring := by
+  classical
+  let O : ValuationSubring K := v.valuationSubring
+  let f : O →+* L := (algebraMap K L).comp O.subtype
+  obtain ⟨W, hWmem, _hWlocal⟩ := IsLocalRing.exists_factor_valuationRing (K := L) f
+  refine ⟨W, ?_⟩
+  intro x
+  constructor
+  · intro hxW
+    by_contra hxO
+    have hx0 : x ≠ 0 := by
+      intro hx0
+      exact hxO (by simp [hx0])
+    have hxinvO : x⁻¹ ∈ O := by
+      rcases O.mem_or_inv_mem x with hx | hx
+      · exact (hxO hx).elim
+      · exact hx
+    let a : O := ⟨x⁻¹, hxinvO⟩
+    let g : O →+* W := f.codRestrict W.toSubring hWmem
+    have hmax : a ∈ maximalIdeal O := by
+      rw [← ValuationSubring.coe_mem_nonunits_iff]
+      exact (ValuationSubring.inv_mem_nonunits_iff (A := O)).2 (Or.inr hxO)
+    have hgmax : g a ∈ maximalIdeal W := by
+      exact map_nonunit g a hmax
+    have hgunit : IsUnit (g a) := by
+      refine IsUnit.of_mul_eq_one (M := W) (a := g a) ⟨algebraMap K L x, hxW⟩ ?_
+      ext
+      simp [g, f, a, hx0]
+    exact hgmax hgunit
+  · intro hxO
+    simpa [f, O] using hWmem ⟨x, hxO⟩
+
+/--
+Every valuation on a field extends, up to Mathlib's valuation equivalence, to
+any field extension.  The extended valuation takes values in the natural value
+group attached to the chosen valuation subring of the extension field.
+-/
+theorem exists_valuation_extension
+    {K L Γ : Type*} [Field K] [Field L] [Algebra K L]
+    [LinearOrderedCommGroupWithZero Γ] (v : Valuation K Γ) :
+    ∃ W : ValuationSubring L, v.HasExtension W.valuation := by
+  classical
+  obtain ⟨W, hW⟩ := exists_valuationSubring_extension (K := K) (L := L) v
+  refine ⟨W, ?_⟩
+  refine ⟨?_⟩
+  rw [Valuation.isEquiv_iff_val_le_one]
+  intro x
+  change v x ≤ 1 ↔ W.valuation (algebraMap K L x) ≤ 1
+  rw [ValuationSubring.valuation_le_one_iff, hW, Valuation.mem_valuationSubring_iff]
+
+/-- The 2-adic valuation on `ℚ` has a valuation-subring extension to `ℝ`. -/
+theorem exists_real_twoAdic_extension :
+    ∃ W : ValuationSubring ℝ, (Rat.padicValuation 2).HasExtension W.valuation :=
+  exists_valuation_extension (K := ℚ) (L := ℝ) (Rat.padicValuation 2)
 
 /-- The three colors used in Monsky's 2-adic coloring argument. -/
 inductive MonskyColor where

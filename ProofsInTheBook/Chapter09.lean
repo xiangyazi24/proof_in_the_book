@@ -415,6 +415,61 @@ theorem boundary_add_internalDehnContributionQ {InternalEdge Incident : Type*}
   rw [internalDehnContributionQ_eq_zero internalEdges incident length angle q hangle, add_zero]
 
 /--
+Algebraic interface for the geometric additivity step.  A future polyhedron
+formalization should construct this from an actual finite dissection by
+separating boundary edges from internal edges and proving the internal
+angle-sum equations.
+-/
+structure DehnAdditivitySkeletonQ (Piece InternalEdge Incident : Type*) where
+  pieces : Finset Piece
+  pieceDehn : Piece → DehnPiQTarget
+  boundaryDehn : DehnPiQTarget
+  internalEdges : Finset InternalEdge
+  incident : InternalEdge → Finset Incident
+  internalLength : InternalEdge → ℝ
+  internalAngle : InternalEdge → Incident → ℝ
+  internalAngleMultiple : InternalEdge → ℚ
+  piece_sum_eq_boundary_add_internal :
+    (∑ p ∈ pieces, pieceDehn p) =
+      boundaryDehn + ∑ e ∈ internalEdges, ∑ i ∈ incident e,
+        dehnEdgeQ (internalLength e) (angleClassQ (internalAngle e i))
+  internal_angle_sum : ∀ e ∈ internalEdges,
+    (∑ i ∈ incident e, internalAngle e i) =
+      (internalAngleMultiple e : ℝ) * Real.pi
+
+theorem DehnAdditivitySkeletonQ.piece_sum_eq_boundary
+    {Piece InternalEdge Incident : Type*}
+    (cert : DehnAdditivitySkeletonQ Piece InternalEdge Incident) :
+    (∑ p ∈ cert.pieces, cert.pieceDehn p) = cert.boundaryDehn := by
+  calc
+    (∑ p ∈ cert.pieces, cert.pieceDehn p) =
+        cert.boundaryDehn + ∑ e ∈ cert.internalEdges, ∑ i ∈ cert.incident e,
+          dehnEdgeQ (cert.internalLength e) (angleClassQ (cert.internalAngle e i)) :=
+      cert.piece_sum_eq_boundary_add_internal
+    _ = cert.boundaryDehn :=
+      boundary_add_internalDehnContributionQ cert.boundaryDehn cert.internalEdges cert.incident
+        cert.internalLength cert.internalAngle cert.internalAngleMultiple cert.internal_angle_sum
+
+/--
+If two boundary polyhedra decompose into the same finite pieces, and both
+geometric additivity skeletons have been supplied, then their boundary Dehn
+invariants agree.
+-/
+theorem boundaryDehn_eq_of_same_piece_additivitySkeletonQ
+    {Piece Internal₁ Incident₁ Internal₂ Incident₂ : Type*}
+    (left : DehnAdditivitySkeletonQ Piece Internal₁ Incident₁)
+    (right : DehnAdditivitySkeletonQ Piece Internal₂ Incident₂)
+    (hpieces : left.pieces = right.pieces)
+    (hpiece : ∀ p ∈ left.pieces, left.pieceDehn p = right.pieceDehn p) :
+    left.boundaryDehn = right.boundaryDehn := by
+  calc
+    left.boundaryDehn = ∑ p ∈ left.pieces, left.pieceDehn p :=
+      left.piece_sum_eq_boundary.symm
+    _ = ∑ p ∈ left.pieces, right.pieceDehn p := Finset.sum_congr rfl hpiece
+    _ = ∑ p ∈ right.pieces, right.pieceDehn p := by rw [hpieces]
+    _ = right.boundaryDehn := right.piece_sum_eq_boundary
+
+/--
 Algebraic skeleton for rigid reassembly invariance: a bijection of edge sets
 that preserves lengths and angle classes preserves the rational Dehn invariant.
 -/

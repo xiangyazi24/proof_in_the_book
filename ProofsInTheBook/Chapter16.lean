@@ -460,9 +460,57 @@ theorem exists_monochromatic_pair_intersection_notMem
 The Hamming distance between two finite subsets of a finite ground type,
 counted as the number of coordinates where their membership indicators differ.
 -/
+def finsetSymmDiffSet {α : Type*} [Fintype α] [DecidableEq α]
+    (A B : Finset α) : Finset α :=
+  Finset.univ.filter fun a => (a ∈ A ∧ a ∉ B) ∨ (a ∈ B ∧ a ∉ A)
+
 def finsetSymmDiffCard {α : Type*} [Fintype α] [DecidableEq α]
     (A B : Finset α) : ℕ :=
-  (Finset.univ.filter fun a => (a ∈ A ∧ a ∉ B) ∨ (a ∈ B ∧ a ∉ A)).card
+  (finsetSymmDiffSet A B).card
+
+theorem mem_finsetSymmDiffSet_iff {α : Type*} [Fintype α] [DecidableEq α]
+    {A B : Finset α} {a : α} :
+    a ∈ finsetSymmDiffSet A B ↔ (a ∈ A ∧ a ∉ B) ∨ (a ∈ B ∧ a ∉ A) := by
+  simp [finsetSymmDiffSet]
+
+/-- The directed cut induced by a finite subset of the vertex set. -/
+def directedCutSet {α : Type*} [Fintype α] [DecidableEq α]
+    (A : Finset α) : Finset (α × α) :=
+  Finset.univ.filter fun e => (e.1 ∈ A ∧ e.2 ∉ A) ∨ (e.1 ∉ A ∧ e.2 ∈ A)
+
+theorem mem_directedCutSet_iff {α : Type*} [Fintype α] [DecidableEq α]
+    {A : Finset α} {e : α × α} :
+    e ∈ directedCutSet A ↔ (e.1 ∈ A ∧ e.2 ∉ A) ∨ (e.1 ∉ A ∧ e.2 ∈ A) := by
+  simp [directedCutSet]
+
+theorem directedCutSet_symmDiffSet_eq {α : Type*} [Fintype α] [DecidableEq α]
+    (A B : Finset α) :
+    finsetSymmDiffSet (directedCutSet A) (directedCutSet B) =
+      (finsetSymmDiffSet A B ×ˢ (finsetSymmDiffSet A B)ᶜ) ∪
+        ((finsetSymmDiffSet A B)ᶜ ×ˢ finsetSymmDiffSet A B) := by
+  ext e
+  rcases e with ⟨x, y⟩
+  by_cases hxA : x ∈ A <;> by_cases hxB : x ∈ B <;>
+    by_cases hyA : y ∈ A <;> by_cases hyB : y ∈ B <;>
+    simp [finsetSymmDiffSet, directedCutSet, hxA, hxB, hyA, hyB]
+
+/--
+For directed cut incidence vectors, the number of changed coordinates is
+`2r(|V|-r)`, where `r` is the vertex Hamming distance between the two sides.
+-/
+theorem directedCutSet_symmDiffCard {α : Type*} [Fintype α] [DecidableEq α]
+    (A B : Finset α) :
+    finsetSymmDiffCard (directedCutSet A) (directedCutSet B) =
+      2 * finsetSymmDiffCard A B * (Fintype.card α - finsetSymmDiffCard A B) := by
+  rw [finsetSymmDiffCard, directedCutSet_symmDiffSet_eq]
+  have hdisj : Disjoint (finsetSymmDiffSet A B ×ˢ (finsetSymmDiffSet A B)ᶜ)
+      ((finsetSymmDiffSet A B)ᶜ ×ˢ finsetSymmDiffSet A B) := by
+    rw [Finset.disjoint_product]
+    exact Or.inl disjoint_compl_right
+  rw [Finset.card_union_of_disjoint hdisj, Finset.card_product, Finset.card_product,
+    Finset.card_compl]
+  rw [finsetSymmDiffCard]
+  ring
 
 /-- The `0/1` incidence vector of a finite set, viewed as a Euclidean point. -/
 noncomputable def realIncidencePoint {α : Type*} [DecidableEq α]
@@ -480,7 +528,7 @@ theorem sum_sq_indicator_sub_eq_finsetSymmDiffCard
     (∑ a : α, ((if a ∈ A then (1 : ℝ) else 0) -
         (if a ∈ B then (1 : ℝ) else 0)) ^ 2) =
       (finsetSymmDiffCard A B : ℝ) := by
-  rw [finsetSymmDiffCard]
+  rw [finsetSymmDiffCard, finsetSymmDiffSet]
   rw [← Finset.sum_boole (R := ℝ) (s := Finset.univ)
     (p := fun a => (a ∈ A ∧ a ∉ B) ∨ (a ∈ B ∧ a ∉ A))]
   apply Finset.sum_congr rfl
@@ -525,6 +573,13 @@ theorem realIncidencePoint_dist_eq_of_symmDiffCard_eq
     dist (realIncidencePoint A) (realIncidencePoint B) =
       dist (realIncidencePoint C) (realIncidencePoint D) := by
   rw [realIncidencePoint_dist_eq_sqrt, realIncidencePoint_dist_eq_sqrt, h]
+
+theorem directedCutSet_realIncidencePoint_dist_sq
+    {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) :
+    dist (realIncidencePoint (directedCutSet A)) (realIncidencePoint (directedCutSet B)) ^ 2 =
+      ((2 * finsetSymmDiffCard A B *
+          (Fintype.card α - finsetSymmDiffCard A B) : ℕ) : ℝ) := by
+  rw [realIncidencePoint_dist_sq, directedCutSet_symmDiffCard]
 
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
 diameter can be covered by d+1 subsets of itself, each of strictly smaller

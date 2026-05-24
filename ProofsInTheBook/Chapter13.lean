@@ -163,4 +163,33 @@ theorem chapter13 {E : ℕ} {edgeSigns : Fin E → EdgeSign}
     (cert : CauchyRigidityCertificate edgeSigns) :
     False := cert.contradiction
 
+/-- The empty edge family `Fin 0 → EdgeSign` cannot carry a Cauchy rigidity
+certificate, because the certificate demands at least one nontrivial sign — but
+`Fin 0` has no edges. -/
+theorem CauchyRigidityCertificate.isEmpty_zero (edgeSigns : Fin 0 → EdgeSign) :
+    IsEmpty (CauchyRigidityCertificate edgeSigns) := by
+  constructor
+  intro cert
+  obtain ⟨e, _⟩ := cert.nontrivial
+  exact e.elim0
+
+/-- An all-zero edge-sign assignment carries no Cauchy rigidity certificate:
+the certificate demands a nontrivial sign, but `edgeSigns ≡ zero` makes every
+edge trivial. -/
+theorem CauchyRigidityCertificate.isEmpty_of_allZero {E : ℕ}
+    {edgeSigns : Fin E → EdgeSign} (hall : ∀ e, edgeSigns e = EdgeSign.zero) :
+    IsEmpty (CauchyRigidityCertificate edgeSigns) := by
+  constructor
+  intro cert
+  obtain ⟨e, hne⟩ := cert.nontrivial
+  exact hne (hall e)
+
+/-- Contrapositive packaging of `chapter13`: if a certificate exists, then by
+`chapter13` we have a contradiction — so the absence of any rigidity-violation
+certificate is forced.  Useful as the "rigidity holds" form. -/
+theorem chapter13_rigidity {E : ℕ} (edgeSigns : Fin E → EdgeSign) :
+    (∃ _ : CauchyRigidityCertificate edgeSigns, True) → False := by
+  rintro ⟨cert, _⟩
+  exact cert.contradiction
+
 end ProofsInTheBook.Chapter13

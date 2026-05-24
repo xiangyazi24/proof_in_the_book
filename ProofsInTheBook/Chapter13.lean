@@ -18,6 +18,21 @@ The proof proceeds by:
    increases or decreases.
 2. Use Euler's formula to count sign changes around faces.
 3. Apply the arm lemma to derive a contradiction if any signs are non-zero.
+
+Formalization status: this file closes the finite sign bookkeeping layer.
+It defines edge signs, strict sign changes around triangular faces, proves the
+basic parity facts, packages the abstract consequence of Cauchy's arm lemma,
+and states `chapter13` / `chapter13_rigidity` in terms of a
+`CauchyRigidityCertificate` that already contains the geometric contradiction.
+
+Gap to the full book theorem: the missing work is genuine three-dimensional
+Euclidean polyhedron infrastructure.  A complete proof needs a formal convex
+polyhedron type with face and edge incidence, corresponding congruent faces,
+dihedral angles and their comparison signs, Euler characteristic for the
+boundary complex in the needed form, and a proved Cauchy arm lemma for convex
+planar polygonal chains tied to the face geometry.  Mathlib has convex and
+Euclidean geometry foundations, but not this integrated convex-polyhedron
+rigidity layer.
 -/
 
 namespace ProofsInTheBook.Chapter13

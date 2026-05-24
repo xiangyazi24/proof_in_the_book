@@ -349,6 +349,41 @@ theorem riffleSort_eq_iff_patternCompatible (a n : ℕ) (labels : RiffleLabels a
         exact (lt_irrefl _ hstrict').elim
     exact ((Tuple.eq_sort_iff (f := labels) (σ := σ)).mpr htuple).symm
 
+/-- For monotone label sequences, requiring strict increases across all
+inversion pairs is equivalent to requiring them across intervals containing an
+adjacent descent. -/
+theorem patternCompatible_rifflePattern_iff_descentIntervalPattern (a n : ℕ)
+    (σ : Equiv.Perm (Fin n)) (seq : RiffleLabels a n) :
+    patternCompatible a n (rifflePattern n σ) seq ↔
+      patternCompatible a n (riffleDescentIntervalPattern n σ) seq := by
+  constructor
+  · intro hcompat
+    refine ⟨hcompat.1, ?_⟩
+    intro i j hpattern
+    rcases hpattern with ⟨_hij, k, hik, hkj, hk, hdesc⟩
+    let lo : Fin n := ⟨k, Nat.lt_of_succ_lt hk⟩
+    let hi : Fin n := ⟨k + 1, hk⟩
+    have hlohi : lo < hi := by
+      change k < k + 1
+      exact Nat.lt_succ_self k
+    have hleft : seq i ≤ seq lo := by
+      apply hcompat.1
+      change (i : ℕ) ≤ k
+      exact hik
+    have hright : seq hi ≤ seq j := by
+      apply hcompat.1
+      change k + 1 ≤ (j : ℕ)
+      exact hkj
+    have hstrict : seq lo < seq hi := hcompat.2 lo hi ⟨hlohi, hdesc⟩
+    exact lt_of_le_of_lt hleft (lt_of_lt_of_le hstrict hright)
+  · intro hcompat
+    refine ⟨hcompat.1, ?_⟩
+    intro i j hpattern
+    rcases hpattern with ⟨hij, hdrop⟩
+    rcases exists_adjacentDescent_of_rifflePattern n σ ⟨hij, hdrop⟩ with
+      ⟨k, hik, hkj, hk, hdesc⟩
+    exact hcompat.2 i j ⟨hij, k, hik, hkj, hk, hdesc⟩
+
 /-- The number of sorted label sequences compatible with a fixed riffle
 pattern.  This is the Bayer-Diaconis count written as a fiber over the
 descent/inversion pattern, rather than as a closed binomial expression. -/
@@ -382,6 +417,18 @@ theorem count_determined_by_piles (a n : ℕ) (σ : Equiv.Perm (Fin n)) :
       rw [rifflePatternCount]
       exact Fintype.card_subtype fun seq : RiffleLabels a n =>
         patternCompatible a n (rifflePattern n σ) seq
+
+/-- The same fiber count expressed using only the adjacent descent interval
+pattern of the target permutation. -/
+theorem count_determined_by_descents (a n : ℕ) (σ : Equiv.Perm (Fin n)) :
+    (Finset.univ.filter (fun labels : RiffleLabels a n => riffleSort a n labels = σ)).card =
+      rifflePatternCount a n (riffleDescentIntervalPattern n σ) := by
+  rw [count_determined_by_piles]
+  rw [rifflePatternCount, rifflePatternCount]
+  congr 1
+  ext seq
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+  exact patternCompatible_rifflePattern_iff_descentIntervalPattern a n σ seq
 
 /-- The pattern count depends only on the pattern predicate, extensionally. -/
 theorem rifflePatternCount_eq_of_same_pattern (a n : ℕ)

@@ -1605,6 +1605,89 @@ noncomputable def KahnKalaiCertificate.ofPrimePointedFinFamilyOfSumLarge {p : �
     (coord := finProdFinEquiv) ?_ hlarge
   simp [Fintype.card_fin]
 
+/-- Embedding-coordinate version of `ofPrimePointedHalfFamilyOfLarge`. -/
+noncomputable def KahnKalaiCertificate.ofPrimePointedHalfFamilyEmbeddingOfLarge {d p : ℕ}
+    [Fact p.Prime] {α : Type*} [Fintype α] [DecidableEq α]
+    (base : α) (coord : (α × α) ↪ Fin d)
+    (hground : Fintype.card α = 4 * p)
+    (hlarge : (d + 1) *
+        Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card} <
+          Fintype.card (pointedHalfSubsets α p base)) :
+    KahnKalaiCertificate d := by
+  let sets : pointedHalfSubsets α p base → Finset α := fun A => A.1
+  have hcard : ∀ A, (sets A).card = 2 * p := fun A => A.2.1
+  have hinj : Function.Injective sets := by
+    intro A B h
+    exact Subtype.ext h
+  have hnonzero : ∀ A B, A ≠ B → (sets A ∩ sets B).card ≠ 0 := by
+    intro A B _hne hzero
+    have hbase : base ∈ sets A ∩ sets B := by
+      simp [sets, A.2.2, B.2.2]
+    have hpos : 0 < (sets A ∩ sets B).card := Finset.card_pos.mpr ⟨base, hbase⟩
+    omega
+  exact KahnKalaiCertificate.ofPrimeDirectedCutFamilyEmbeddingOfLarge coord sets hground hcard
+    hinj hnonzero hlarge
+
+/-- Binomial-count embedding-coordinate pointed certificate. -/
+noncomputable def KahnKalaiCertificate.ofPrimePointedHalfFamilyEmbeddingOfChooseLarge
+    {d p : ℕ} [Fact p.Prime] {α : Type*} [Fintype α] [DecidableEq α]
+    (base : α) (coord : (α × α) ↪ Fin d)
+    (hground : Fintype.card α = 4 * p)
+    (hlarge : (d + 1) *
+        Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card} <
+          (4 * p - 1).choose (2 * p - 1)) :
+    KahnKalaiCertificate d := by
+  refine KahnKalaiCertificate.ofPrimePointedHalfFamilyEmbeddingOfLarge base coord hground ?_
+  rw [pointedHalfSubsets_card_of_ground base (Fact.out : Nat.Prime p).pos hground]
+  exact hlarge
+
+/-- Numeric low-degree-bound embedding-coordinate pointed certificate. -/
+noncomputable def KahnKalaiCertificate.ofPrimePointedHalfFamilyEmbeddingOfNumericLarge
+    {d p : ℕ} [Fact p.Prime] {α : Type*} [Fintype α] [DecidableEq α]
+    (base : α) (coord : (α × α) ↪ Fin d)
+    (hground : Fintype.card α = 4 * p)
+    (hlarge : (d + 1) * Fintype.card {I : Finset α // I.card ≤ p - 1} <
+          (4 * p - 1).choose (2 * p - 1)) :
+    KahnKalaiCertificate d := by
+  refine KahnKalaiCertificate.ofPrimePointedHalfFamilyEmbeddingOfChooseLarge base coord hground ?_
+  simpa [zmod_nonzero_card p] using hlarge
+
+/--
+Sum-of-binomial embedding-coordinate pointed certificate.  This is the useful
+high-dimensional interface: the `d + 1` color count is explicit.
+-/
+noncomputable def KahnKalaiCertificate.ofPrimePointedHalfFamilyEmbeddingOfSumLarge
+    {d p : ℕ} [Fact p.Prime] {α : Type*} [Fintype α] [DecidableEq α]
+    (base : α) (coord : (α × α) ↪ Fin d)
+    (hground : Fintype.card α = 4 * p)
+    (hlarge : (d + 1) * (∑ k ∈ Finset.range p, (4 * p).choose k) <
+          (4 * p - 1).choose (2 * p - 1)) :
+    KahnKalaiCertificate d := by
+  refine KahnKalaiCertificate.ofPrimePointedHalfFamilyEmbeddingOfNumericLarge base coord hground ?_
+  rw [smallSubsets_card_eq_sum_choose (α := α) (r := p - 1), hground]
+  have hp1 : 1 ≤ p := (Fact.out : Nat.Prime p).one_lt.le
+  rw [Nat.sub_add_cancel hp1]
+  exact hlarge
+
+/--
+Concrete finite-coordinate embedding version.  It constructs the coordinate
+embedding from `(4p)^2 ≤ d`; the remaining hypothesis is pure arithmetic.
+-/
+noncomputable def KahnKalaiCertificate.ofPrimePointedFinFamilyEmbeddingOfSumLarge
+    {d p : ℕ} [Fact p.Prime]
+    (hdim : (4 * p) * (4 * p) ≤ d)
+    (hlarge : (d + 1) * (∑ k ∈ Finset.range p, (4 * p).choose k) <
+          (4 * p - 1).choose (2 * p - 1)) :
+    KahnKalaiCertificate d := by
+  let base : Fin (4 * p) := ⟨0, by
+    have hp : 0 < p := (Fact.out : Nat.Prime p).pos
+    omega⟩
+  let coord : (Fin (4 * p) × Fin (4 * p)) ↪ Fin d :=
+    finProdFinEquiv.toEmbedding.trans (Fin.castLEEmb hdim)
+  refine KahnKalaiCertificate.ofPrimePointedHalfFamilyEmbeddingOfSumLarge (p := p) base coord
+    ?_ hlarge
+  simp [Fintype.card_fin]
+
 /-- The concrete binomial inequality needed for the `p = 17` pointed construction. -/
 theorem kahnKalai_numeric_17 :
     (((4 * 17) * (4 * 17)) + 1) *

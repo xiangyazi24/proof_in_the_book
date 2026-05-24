@@ -675,6 +675,27 @@ theorem finReindexedDirectedCutPoint_dist_sq_of_kahnKalai_intersection
   rw [finReindexedIncidencePoint_dist_sq,
     directedCutSet_symmDiffCard_of_kahnKalai_intersection A B hground hA hB hinter]
 
+theorem kahnKalai_quadratic_bound_real {p x : ℕ} (hx : x ≤ 2 * p) :
+    ((2 * (2 * x) * (4 * p - 2 * x) : ℕ) : ℝ) ≤ ((8 * p * p : ℕ) : ℝ) := by
+  have hx2 : 2 * x ≤ 4 * p := by nlinarith
+  rw [Nat.cast_mul, Nat.cast_mul, Nat.cast_mul, Nat.cast_mul, Nat.cast_sub hx2]
+  norm_num
+  have hs : 0 ≤ ((x : ℝ) - p) ^ 2 := sq_nonneg _
+  nlinarith
+
+theorem finReindexedDirectedCutPoint_dist_sq_le_kahnKalai
+    {α : Type*} [Fintype α] [DecidableEq α] {d p : ℕ}
+    (coord : (α × α) ≃ Fin d) (A B : Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hA : A.card = 2 * p) (hB : B.card = 2 * p) :
+    dist (finReindexedDirectedCutPoint coord A) (finReindexedDirectedCutPoint coord B) ^ 2 ≤
+      ((8 * p * p : ℕ) : ℝ) := by
+  change dist (finReindexedIncidencePoint coord (directedCutSet A))
+      (finReindexedIncidencePoint coord (directedCutSet B)) ^ 2 ≤ ((8 * p * p : ℕ) : ℝ)
+  rw [finReindexedIncidencePoint_dist_sq,
+    directedCutSet_symmDiffCard_of_card_eq A B hA hB, hground]
+  exact kahnKalai_quadratic_bound_real (Nat.sub_le _ _)
+
 theorem directedCutSet_realIncidencePoint_dist_sq
     {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) :
     dist (realIncidencePoint (directedCutSet A)) (realIncidencePoint (directedCutSet B)) ^ 2 =

@@ -19,20 +19,22 @@ The proof proceeds by:
 2. Use Euler's formula to count sign changes around faces.
 3. Apply the arm lemma to derive a contradiction if any signs are non-zero.
 
-Formalization status: this file closes the finite sign bookkeeping layer.
-It defines edge signs, strict sign changes around triangular faces, proves the
-basic parity facts, packages the abstract consequence of Cauchy's arm lemma,
-and states `chapter13` / `chapter13_rigidity` in terms of a
-`CauchyRigidityCertificate` that already contains the geometric contradiction.
+Formalization status: this file closes the finite sign bookkeeping layer and
+the final counting contradiction.  It defines edge signs, strict sign changes
+around triangular faces, proves the basic parity facts, packages the abstract
+consequence of Cauchy's arm lemma, and states `chapter13` / `chapter13_rigidity`
+from two meaningful missing geometric/combinatorial facts: every surviving
+vertex has at least four sign changes, while the Euler counting step gives a
+global sign-change total strictly below `4V`.
 
 Gap to the full book theorem: the missing work is genuine three-dimensional
 Euclidean polyhedron infrastructure.  A complete proof needs a formal convex
 polyhedron type with face and edge incidence, corresponding congruent faces,
-dihedral angles and their comparison signs, Euler characteristic for the
-boundary complex in the needed form, and a proved Cauchy arm lemma for convex
-planar polygonal chains tied to the face geometry.  Mathlib has convex and
-Euclidean geometry foundations, but not this integrated convex-polyhedron
-rigidity layer.
+dihedral angles and their comparison signs, the reduced sign-change graph and
+Euler characteristic edge-counting bound for it, and a proved Cauchy arm lemma
+for convex planar polygonal chains tied to the vertex links.  Mathlib has
+convex and Euclidean geometry foundations, but not this integrated
+convex-polyhedron rigidity layer.
 -/
 
 namespace ProofsInTheBook.Chapter13
@@ -155,15 +157,48 @@ theorem cauchy_rigidity_of_all_zero {n : ℕ}
     (hall : ∀ i, signs i = zero) :
     ∀ i, signs i = zero := hall
 
-/-- Certificate for Cauchy's rigidity theorem: the arm lemma + Euler
-sign-change parity together give a contradiction with any nontrivial
-edge-sign assignment. -/
-structure CauchyRigidityCertificate {E : ℕ} (edgeSigns : Fin E → EdgeSign) where
+/--
+From the local arm-lemma bound, the total number of vertex sign changes is at
+least `4V`.
+-/
+theorem four_mul_vertices_le_total_signChanges {V : ℕ}
+    (vertexSignChanges : Fin V → ℕ)
+    (hlocal : ∀ v, 4 ≤ vertexSignChanges v) :
+    4 * V ≤ ∑ v : Fin V, vertexSignChanges v := by
+  have hsum : (∑ _v : Fin V, (4 : ℕ)) ≤ ∑ v : Fin V, vertexSignChanges v :=
+    Finset.sum_le_sum (fun v _ => hlocal v)
+  simpa [Fintype.card_fin, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using hsum
+
+/--
+The real finite counting contradiction in Cauchy's proof: the arm lemma gives
+at least four sign changes at every surviving vertex, but Euler's counting
+bound puts the global total below `4V`.
+-/
+theorem cauchy_counting_contradiction {V : ℕ}
+    (vertexSignChanges : Fin V → ℕ)
+    (hlocal : ∀ v, 4 ≤ vertexSignChanges v)
+    (hglobal : (∑ v : Fin V, vertexSignChanges v) < 4 * V) :
+    False :=
+  not_lt_of_ge (four_mul_vertices_le_total_signChanges vertexSignChanges hlocal) hglobal
+
+/--
+Certificate for Cauchy's rigidity theorem after removing the circular
+`False` field.  The fields are the mathematically meaningful facts supplied
+by the missing geometry:
+* a nontrivial edge-sign assignment survives;
+* the arm lemma forces at least four sign changes around every surviving
+  vertex;
+* the Euler/sign-graph counting step gives a strict global upper bound.
+-/
+structure CauchyRigidityCertificate {V E : ℕ} (edgeSigns : Fin E → EdgeSign) where
   /-- A nontrivial perturbation exists (at least one edge has a nonzero sign). -/
   nontrivial : ∃ e, edgeSigns e ≠ EdgeSign.zero
-  /-- The geometric arm lemma and topological Euler parity force a contradiction
-      with the existence of a nontrivial sign perturbation. -/
-  contradiction : False
+  /-- Number of sign changes around each vertex of the reduced sign graph. -/
+  vertexSignChanges : Fin V → ℕ
+  /-- Cauchy's arm lemma: every surviving vertex has at least four sign changes. -/
+  arm_lemma_four_sign_changes : ∀ v, 4 ≤ vertexSignChanges v
+  /-- Euler/sign-graph counting: the total sign-change count is strictly below `4V`. -/
+  euler_sign_change_bound : (∑ v : Fin V, vertexSignChanges v) < 4 * V
 
 /--
 Chapter 13 (Cauchy's rigidity theorem, Tier 1 conditional):
@@ -174,15 +209,17 @@ TODO (Tier 2): Construct CauchyRigidityCertificate from convex polyhedron
 geometry. Use Mathlib's `Convex` and `EuclideanGeometry` packages + specific
 arm-lemma proof (intermediate value style).
 -/
-theorem chapter13 {E : ℕ} {edgeSigns : Fin E → EdgeSign}
-    (cert : CauchyRigidityCertificate edgeSigns) :
-    False := cert.contradiction
+theorem chapter13 {V E : ℕ} {edgeSigns : Fin E → EdgeSign}
+    (cert : CauchyRigidityCertificate (V := V) edgeSigns) :
+    False :=
+  cauchy_counting_contradiction cert.vertexSignChanges
+    cert.arm_lemma_four_sign_changes cert.euler_sign_change_bound
 
 /-- The empty edge family `Fin 0 → EdgeSign` cannot carry a Cauchy rigidity
 certificate, because the certificate demands at least one nontrivial sign — but
 `Fin 0` has no edges. -/
-theorem CauchyRigidityCertificate.isEmpty_zero (edgeSigns : Fin 0 → EdgeSign) :
-    IsEmpty (CauchyRigidityCertificate edgeSigns) := by
+theorem CauchyRigidityCertificate.isEmpty_zero {V : ℕ} (edgeSigns : Fin 0 → EdgeSign) :
+    IsEmpty (CauchyRigidityCertificate (V := V) edgeSigns) := by
   constructor
   intro cert
   obtain ⟨e, _⟩ := cert.nontrivial
@@ -191,20 +228,27 @@ theorem CauchyRigidityCertificate.isEmpty_zero (edgeSigns : Fin 0 → EdgeSign) 
 /-- An all-zero edge-sign assignment carries no Cauchy rigidity certificate:
 the certificate demands a nontrivial sign, but `edgeSigns ≡ zero` makes every
 edge trivial. -/
-theorem CauchyRigidityCertificate.isEmpty_of_allZero {E : ℕ}
+theorem CauchyRigidityCertificate.isEmpty_of_allZero {V E : ℕ}
     {edgeSigns : Fin E → EdgeSign} (hall : ∀ e, edgeSigns e = EdgeSign.zero) :
-    IsEmpty (CauchyRigidityCertificate edgeSigns) := by
+    IsEmpty (CauchyRigidityCertificate (V := V) edgeSigns) := by
   constructor
   intro cert
   obtain ⟨e, hne⟩ := cert.nontrivial
   exact hne (hall e)
 
-/-- Contrapositive packaging of `chapter13`: if a certificate exists, then by
-`chapter13` we have a contradiction — so the absence of any rigidity-violation
-certificate is forced.  Useful as the "rigidity holds" form. -/
-theorem chapter13_rigidity {E : ℕ} (edgeSigns : Fin E → EdgeSign) :
-    (∃ _ : CauchyRigidityCertificate edgeSigns, True) → False := by
+/-- Any such certificate is impossible by the proved counting contradiction. -/
+theorem CauchyRigidityCertificate.isEmpty {V E : ℕ} (edgeSigns : Fin E → EdgeSign) :
+    IsEmpty (CauchyRigidityCertificate (V := V) edgeSigns) := by
+  constructor
+  intro cert
+  exact chapter13 cert
+
+/-- Contrapositive packaging of `chapter13`: the absence of any rigidity-
+violation certificate follows from the arm-lemma lower bound and Euler upper
+bound carried by the certificate. -/
+theorem chapter13_rigidity {V E : ℕ} (edgeSigns : Fin E → EdgeSign) :
+    (∃ _ : CauchyRigidityCertificate (V := V) edgeSigns, True) → False := by
   rintro ⟨cert, _⟩
-  exact cert.contradiction
+  exact chapter13 cert
 
 end ProofsInTheBook.Chapter13

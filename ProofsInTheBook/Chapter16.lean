@@ -1189,6 +1189,60 @@ abbrev pointedHalfSubsets (α : Type*) [Fintype α] [DecidableEq α] (p : ℕ) (
   {A : Finset α // A.card = 2 * p ∧ base ∈ A}
 
 /--
+Erase the distinguished base point from a pointed half-size set.  This is the
+basic counting bijection for the pointed Kahn-Kalai family.
+-/
+noncomputable def pointedHalfSubsetsEraseEquiv {α : Type*} [Fintype α] [DecidableEq α]
+    {p : ℕ} (base : α) (hp : 0 < p) :
+    pointedHalfSubsets α p base ≃
+      {B : Finset α // B ∈ (Finset.univ.erase base).powersetCard (2 * p - 1)} where
+  toFun A := by
+    refine ⟨A.1.erase base, ?_⟩
+    rw [Finset.mem_powersetCard]
+    constructor
+    · intro x hx
+      rw [Finset.mem_erase] at hx ⊢
+      exact ⟨hx.1, Finset.mem_univ x⟩
+    · rw [Finset.card_erase_of_mem A.2.2, A.2.1]
+  invFun B := by
+    refine ⟨insert base B.1, ?_⟩
+    have hB := Finset.mem_powersetCard.mp B.2
+    have hnot : base ∉ B.1 := by
+      intro hb
+      have hbErase : base ∈ Finset.univ.erase base := hB.1 hb
+      exact (Finset.mem_erase.mp hbErase).1 rfl
+    constructor
+    · rw [Finset.card_insert_of_notMem hnot, hB.2]
+      omega
+    · simp
+  left_inv A := by
+    exact Subtype.ext (Finset.insert_erase A.2.2)
+  right_inv B := by
+    apply Subtype.ext
+    have hB := Finset.mem_powersetCard.mp B.2
+    have hnot : base ∉ B.1 := by
+      intro hb
+      have hbErase : base ∈ Finset.univ.erase base := hB.1 hb
+      exact (Finset.mem_erase.mp hbErase).1 rfl
+    exact Finset.erase_insert hnot
+
+/-- The pointed half-size family has binomial size. -/
+theorem pointedHalfSubsets_card {α : Type*} [Fintype α] [DecidableEq α]
+    {p : ℕ} (base : α) (hp : 0 < p) :
+    Fintype.card (pointedHalfSubsets α p base) =
+      (Fintype.card α - 1).choose (2 * p - 1) := by
+  rw [Fintype.card_congr (pointedHalfSubsetsEraseEquiv (α := α) base hp)]
+  rw [Fintype.card_subtype]
+  have hset :
+      ({x | x ∈ (Finset.univ.erase base).powersetCard (2 * p - 1)} :
+        Finset (Finset α)) =
+        (Finset.univ.erase base).powersetCard (2 * p - 1) := by
+    ext B
+    simp
+  rw [hset, Finset.card_powersetCard, Finset.card_erase_of_mem (Finset.mem_univ base),
+    Finset.card_univ]
+
+/--
 Directed-cut certificate specialized to the pointed half-size family.  The
 remaining Kahn-Kalai arithmetic is the lower bound on this family size against
 the Frankl-Wilson low-degree bound.

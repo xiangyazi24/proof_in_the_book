@@ -639,6 +639,46 @@ theorem directedCutSet_realIncidencePoint_dist_sq_of_kahnKalai_intersection
   rw [realIncidencePoint_dist_sq,
     directedCutSet_symmDiffCard_of_kahnKalai_intersection A B hground hA hB hinter]
 
+theorem nat_eq_of_dvd_of_le_two_mul_of_ne_zero_of_ne_two_mul {p n : ℕ}
+    (hp : 0 < p) (hdvd : p ∣ n) (hle : n ≤ 2 * p)
+    (hn0 : n ≠ 0) (hn2 : n ≠ 2 * p) :
+    n = p := by
+  rcases hdvd with ⟨q, rfl⟩
+  have hle' : p * q ≤ p * 2 := by
+    simpa [mul_comm, mul_left_comm, mul_assoc] using hle
+  have hqle : q ≤ 2 := Nat.le_of_mul_le_mul_left hle' hp
+  interval_cases q
+  · exact (hn0 (by simp)).elim
+  · simp
+  · exact (hn2 (by ring)).elim
+
+/--
+For a prime modulus, a natural number in `[0,2p]` that is zero in `ZMod p`
+is exactly `p` once the two degenerate endpoints are excluded.
+-/
+theorem nat_eq_of_zmod_eq_zero_of_le_two_mul_of_ne_zero_of_ne_two_mul {p n : ℕ}
+    [Fact p.Prime] (hcast : (n : ZMod p) = 0) (hle : n ≤ 2 * p)
+    (hn0 : n ≠ 0) (hn2 : n ≠ 2 * p) :
+    n = p := by
+  have hdvd : p ∣ n := (ZMod.natCast_eq_zero_iff n p).mp hcast
+  exact nat_eq_of_dvd_of_le_two_mul_of_ne_zero_of_ne_two_mul
+    (Fact.out : Nat.Prime p).pos hdvd hle hn0 hn2
+
+/--
+Modular Frankl-Wilson gives intersection size `0` in `ZMod p`; for two
+`2p`-subsets, excluding the empty and identical-intersection degeneracies
+turns this into the exact Kahn-Kalai intersection size `p`.
+-/
+theorem card_inter_eq_prime_of_zmod_eq_zero_of_half_card_no_degenerate
+    {p : ℕ} [Fact p.Prime] {α : Type*} [Fintype α] [DecidableEq α]
+    (A B : Finset α) (hA : A.card = 2 * p)
+    (hcast : (((A ∩ B).card : ZMod p) = 0))
+    (hn0 : (A ∩ B).card ≠ 0) (hn2 : (A ∩ B).card ≠ 2 * p) :
+    (A ∩ B).card = p := by
+  have hleA : (A ∩ B).card ≤ A.card := Finset.card_le_card Finset.inter_subset_left
+  have hle : (A ∩ B).card ≤ 2 * p := by omega
+  exact nat_eq_of_zmod_eq_zero_of_le_two_mul_of_ne_zero_of_ne_two_mul hcast hle hn0 hn2
+
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
 diameter can be covered by d+1 subsets of itself, each of strictly smaller
 diameter.  The subset condition is essential: in a noncompact proper space

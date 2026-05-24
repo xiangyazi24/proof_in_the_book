@@ -17,17 +17,15 @@ the corrected `BorsukConjecture d` for covers of a bounded set by subsets of
 itself in `EuclideanSpace ℝ (Fin d)`, packages a counterexample as
 `KahnKalaiCertificate d`, and formalizes enough of the
 Frankl-Wilson/Kahn-Kalai pipeline to prove the unconditional `chapter16`
-statement from the pointed `p = 17` family.  The local construction currently
-gives counterexamples for `4624 ≤ d ≤ 6848`.
+statement.  The local construction currently proves an explicit counterexample
+in the book's Kahn-Kalai dimension `d = 1325`, using the fixed-layer `p = 13`
+Frankl-Wilson bound, the unordered cut-vector realization, and its
+codimension-one zero-sum hyperplane reduction.  The earlier pointed `p = 17`
+construction remains available as scaffolding and gives `4624 ≤ d ≤ 6848`.
+Mathlib has Euclidean metric spaces and finite-set tools, but not this
+Frankl-Wilson/Kahn-Kalai pipeline as an available theorem.
 
-Gap to the full book theorem: the Kahn-Kalai `d = 1325` bound still needs the
-sharper fixed-layer Frankl-Wilson bound and the codimension-one cut-vector
-realization.  Mathlib has Euclidean metric spaces and finite-set tools, but not
-this Frankl-Wilson/Kahn-Kalai pipeline as an available theorem.
-
-TODO (future): formalize the Hinrichs-Richter (2003) construction to reach
-`d ≥ 298`; needs a separate 2-distance-set / strongly-regular-graph
-construction not in the book's proof.
+TODO (future): formalize the Hinrichs-Richter (2003) construction to reach d ≥ 298; needs a separate 2-distance-set / strongly-regular-graph construction not in the book's proof.
 
 Mathlib search status (2026-05-24): no Frankl-Wilson theorem, modular
 intersection theorem, Ray-Chaudhuri-Wilson theorem, or oddtown/eventown theorem
@@ -1148,6 +1146,99 @@ theorem finite_diam_eq_of_forall_dist_le_of_exists_dist_eq
     exact Metric.dist_le_diam_of_mem (Finset.finite_toSet points).isBounded hx hy
   exact le_antisymm hupper hlower
 
+noncomputable def finReindexedUndirectedCutPoint
+    {α : Type*} [Fintype α] [DecidableEq α] {d : ℕ}
+    (e : UndirectedEdge α ≃ Fin d) (A : Finset α) : EuclideanSpace ℝ (Fin d) :=
+  finReindexedIncidencePoint e (undirectedCutSet A)
+
+theorem finReindexedUndirectedCutPoint_dist_sq_of_kahnKalai_intersection
+    {α : Type*} [Fintype α] [DecidableEq α] {d k : ℕ}
+    (e : UndirectedEdge α ≃ Fin d) (A B : Finset α)
+    (hground : Fintype.card α = 4 * k)
+    (hA : A.card = 2 * k) (hB : B.card = 2 * k)
+    (hinter : (A ∩ B).card = k) :
+    dist (finReindexedUndirectedCutPoint e A) (finReindexedUndirectedCutPoint e B) ^ 2 =
+      ((4 * k * k : ℕ) : ℝ) := by
+  change dist (finReindexedIncidencePoint e (undirectedCutSet A))
+      (finReindexedIncidencePoint e (undirectedCutSet B)) ^ 2 = ((4 * k * k : ℕ) : ℝ)
+  rw [finReindexedIncidencePoint_dist_sq,
+    undirectedCutSet_symmDiffCard_of_kahnKalai_intersection A B hground hA hB hinter]
+
+theorem kahnKalai_undirected_quadratic_bound_real {p x : ℕ} (hx : x ≤ 2 * p) :
+    ((2 * x * (4 * p - 2 * x) : ℕ) : ℝ) ≤ ((4 * p * p : ℕ) : ℝ) := by
+  have hx2 : 2 * x ≤ 4 * p := by nlinarith
+  rw [Nat.cast_mul, Nat.cast_mul, Nat.cast_mul, Nat.cast_mul, Nat.cast_sub hx2]
+  norm_num
+  have hs : 0 ≤ ((x : ℝ) - p) ^ 2 := sq_nonneg _
+  nlinarith
+
+theorem finReindexedUndirectedCutPoint_dist_sq_le_kahnKalai
+    {α : Type*} [Fintype α] [DecidableEq α] {d p : ℕ}
+    (coord : UndirectedEdge α ≃ Fin d) (A B : Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hA : A.card = 2 * p) (hB : B.card = 2 * p) :
+    dist (finReindexedUndirectedCutPoint coord A) (finReindexedUndirectedCutPoint coord B) ^ 2 ≤
+      ((4 * p * p : ℕ) : ℝ) := by
+  change dist (finReindexedIncidencePoint coord (undirectedCutSet A))
+      (finReindexedIncidencePoint coord (undirectedCutSet B)) ^ 2 ≤ ((4 * p * p : ℕ) : ℝ)
+  rw [finReindexedIncidencePoint_dist_sq,
+    undirectedCutSet_symmDiffCard_of_card_eq A B hA hB, hground]
+  exact kahnKalai_undirected_quadratic_bound_real (Nat.sub_le _ _)
+
+theorem finReindexedUndirectedCutPoint_dist_le_kahnKalai
+    {α : Type*} [Fintype α] [DecidableEq α] {d p : ℕ}
+    (coord : UndirectedEdge α ≃ Fin d) (A B : Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hA : A.card = 2 * p) (hB : B.card = 2 * p) :
+    dist (finReindexedUndirectedCutPoint coord A) (finReindexedUndirectedCutPoint coord B) ≤
+      Real.sqrt ((4 * p * p : ℕ) : ℝ) :=
+  dist_le_sqrt_of_dist_sq_le (Nat.cast_nonneg _)
+    (finReindexedUndirectedCutPoint_dist_sq_le_kahnKalai coord A B hground hA hB)
+
+theorem finReindexedUndirectedCutPoint_dist_eq_sqrt_of_kahnKalai_intersection
+    {α : Type*} [Fintype α] [DecidableEq α] {d p : ℕ}
+    (coord : UndirectedEdge α ≃ Fin d) (A B : Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hA : A.card = 2 * p) (hB : B.card = 2 * p)
+    (hinter : (A ∩ B).card = p) :
+    dist (finReindexedUndirectedCutPoint coord A) (finReindexedUndirectedCutPoint coord B) =
+      Real.sqrt ((4 * p * p : ℕ) : ℝ) :=
+  dist_eq_sqrt_of_dist_sq_eq (Nat.cast_nonneg _)
+    (finReindexedUndirectedCutPoint_dist_sq_of_kahnKalai_intersection coord A B hground hA hB
+      hinter)
+
+theorem primeUndirectedCutFamily_diam_sq_eq
+    {α ι : Type*} [Fintype α] [DecidableEq α] [Fintype ι] {d p : ℕ}
+    (coord : UndirectedEdge α ≃ Fin d) (sets : ι → Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hcard : ∀ i, (sets i).card = 2 * p)
+    (hexists : ∃ i j, (sets i ∩ sets j).card = p) :
+    Metric.diam
+      ((Finset.univ.image (fun i => finReindexedUndirectedCutPoint coord (sets i)) :
+          Finset (EuclideanSpace ℝ (Fin d))) : Set (EuclideanSpace ℝ (Fin d))) ^ 2 =
+        ((4 * p * p : ℕ) : ℝ) := by
+  have hdiam_eq : Metric.diam
+      ((Finset.univ.image (fun i => finReindexedUndirectedCutPoint coord (sets i)) :
+          Finset (EuclideanSpace ℝ (Fin d))) : Set (EuclideanSpace ℝ (Fin d))) =
+      Real.sqrt ((4 * p * p : ℕ) : ℝ) := by
+    let points : Finset (EuclideanSpace ℝ (Fin d)) :=
+      Finset.univ.image fun i => finReindexedUndirectedCutPoint coord (sets i)
+    refine finite_diam_eq_of_forall_dist_le_of_exists_dist_eq points (Real.sqrt_nonneg _) ?_ ?_
+    · intro x hx y hy
+      rcases Finset.mem_image.mp hx with ⟨i, _hi, rfl⟩
+      rcases Finset.mem_image.mp hy with ⟨j, _hj, rfl⟩
+      exact finReindexedUndirectedCutPoint_dist_le_kahnKalai coord (sets i) (sets j) hground
+        (hcard i) (hcard j)
+    · obtain ⟨i, j, hij⟩ := hexists
+      refine ⟨finReindexedUndirectedCutPoint coord (sets i), ?_,
+        finReindexedUndirectedCutPoint coord (sets j), ?_, ?_⟩
+      · simp [points]
+      · simp [points]
+      · exact finReindexedUndirectedCutPoint_dist_eq_sqrt_of_kahnKalai_intersection coord
+          (sets i) (sets j) hground (hcard i) (hcard j) hij
+  rw [hdiam_eq, Real.sq_sqrt]
+  exact Nat.cast_nonneg _
+
 theorem finReindexedDirectedCutPoint_dist_le_kahnKalai
     {α : Type*} [Fintype α] [DecidableEq α] {d p : ℕ}
     (coord : (α × α) ≃ Fin d) (A B : Finset α)
@@ -2032,6 +2123,375 @@ noncomputable def KahnKalaiCertificate.ofPrimePointedFinFamilyEmbeddingOfSumLarg
     ?_ hlarge
   simp [Fintype.card_fin]
 
+/-- The fixed-layer type used by the `p = 13` Kahn-Kalai construction. -/
+abbrev Fin51Subsets25 := FixedCardSubsets (Fin 51) 25
+
+theorem zmod13_fixed25_coeff_nonzero (I : Finset (Fin 51)) (hI : I.card ≤ 12) :
+    ((25 - I.card).choose (12 - I.card) : ZMod 13) ≠ 0 := by
+  haveI : Fact (Nat.Prime 13) := ⟨by norm_num⟩
+  interval_cases h : I.card <;> decide
+
+theorem zmod13_nat_25_eq_neg_one : ((25 : ZMod 13) = -1) := by
+  trans (12 : ZMod 13)
+  · change ((25 : ℕ) : ZMod 13) = ((12 : ℕ) : ZMod 13)
+    rw [ZMod.natCast_eq_natCast_iff]
+    norm_num [Nat.ModEq]
+  · symm
+    decide
+
+theorem nat_eq_12_of_zmod13_eq_neg_one_of_le_25_of_ne_25 {n : ℕ}
+    (hcast : ((n : ZMod 13) = -1)) (hle : n ≤ 25) (hne25 : n ≠ 25) :
+    n = 12 := by
+  interval_cases h : n <;> try omega
+  all_goals
+    exfalso
+    revert hcast
+    decide +revert
+
+/--
+Fixed-layer Frankl-Wilson, specialized to the Kahn-Kalai `p = 13` numbers.
+Any coloring of the 25-subsets of a 51-set with sufficiently few colors has a
+monochromatic pair with intersection exactly `12`.
+-/
+theorem exists_monochromatic_pair_fin51_25_intersection_12
+    {κ : Type*} [Fintype κ] [DecidableEq κ]
+    (color : Fin51Subsets25 → κ)
+    (hlarge : Fintype.card κ * Nat.choose 51 12 < Nat.choose 51 25) :
+    ∃ A B : Fin51Subsets25, A ≠ B ∧ color A = color B ∧ (A.1 ∩ B.1).card = 12 := by
+  haveI : Fact (Nat.Prime 13) := ⟨by norm_num⟩
+  let L : Finset (ZMod 13) := Finset.univ.erase (-1 : ZMod 13)
+  have hLcard : L.card = 12 := by
+    simp [L, ZMod.card]
+  have hcard : ∀ A : Fin51Subsets25, A.1.card = 25 := fun A => A.2
+  have hself : ∀ A : Fin51Subsets25, ((A.1.card : ZMod 13) ∉ L) := by
+    intro A
+    rw [A.2]
+    simpa [L] using zmod13_nat_25_eq_neg_one
+  have hlarge' :
+      Fintype.card κ * Fintype.card {I : Finset (Fin 51) // I.card = L.card} <
+        Fintype.card Fin51Subsets25 := by
+    rw [exactSubsets_card_eq_choose, hLcard]
+    change Fintype.card κ * Nat.choose (Fintype.card (Fin 51)) 12 <
+      Fintype.card (FixedCardSubsets (Fin 51) 25)
+    rw [Fintype.card_fin]
+    rw [show Fintype.card (FixedCardSubsets (Fin 51) 25) = Nat.choose 51 25 by
+      rw [exactSubsets_card_eq_choose, Fintype.card_fin]]
+    exact hlarge
+  obtain ⟨A, B, hne, hsame, hnot⟩ :=
+    exists_monochromatic_pair_fixed_card_intersection_notMem
+      (K := ZMod 13) (α := Fin 51) (ι := Fin51Subsets25) (κ := κ)
+      (q := 25) (sets := fun A => A.1) (L := L) color hcard
+      (by
+        intro I hI
+        rw [hLcard]
+        exact zmod13_fixed25_coeff_nonzero I hI)
+      hself hlarge'
+  have hcast : (((A.1 ∩ B.1).card : ZMod 13) = -1) := by
+    have hne_minus : (((A.1 ∩ B.1).card : ZMod 13) ≠ -1) → False := by
+      intro hne'
+      exact hnot (by simp [L, hne'])
+    exact Classical.byContradiction hne_minus
+  have hle : (A.1 ∩ B.1).card ≤ 25 := by
+    have := Finset.card_le_card (Finset.inter_subset_left (s₁ := A.1) (s₂ := B.1))
+    omega
+  have hne25 : (A.1 ∩ B.1).card ≠ 25 := by
+    intro h25
+    have hAeqB : A.1 = B.1 := by
+      exact eq_of_inter_card_eq_left_card_of_card_eq (by simpa [A.2] using h25)
+        (by rw [A.2, B.2])
+    exact hne (Subtype.ext hAeqB)
+  exact ⟨A, B, hne, hsame,
+    nat_eq_12_of_zmod13_eq_neg_one_of_le_25_of_ne_25 hcast hle hne25⟩
+
+noncomputable def fin52SetOfErased (A : Fin51Subsets25) : Finset (Fin 52) :=
+  insert 0 (A.1.image (Fin.succEmb 51))
+
+theorem fin52SetOfErased_card (A : Fin51Subsets25) :
+    (fin52SetOfErased A).card = 26 := by
+  rw [fin52SetOfErased, Finset.card_insert_of_notMem]
+  · rw [Finset.card_image_of_injective _ (Fin.succEmb 51).injective, A.2]
+  · intro h
+    rcases Finset.mem_image.mp h with ⟨a, _ha, h0⟩
+    exact Fin.succ_ne_zero a h0
+
+theorem fin52SetOfErased_inter (A B : Fin51Subsets25) :
+    fin52SetOfErased A ∩ fin52SetOfErased B =
+      insert 0 ((A.1 ∩ B.1).image (Fin.succEmb 51)) := by
+  ext x
+  by_cases hx0 : x = 0
+  · subst x
+    simp [fin52SetOfErased]
+  · simp [fin52SetOfErased, hx0, Finset.mem_image]
+    constructor
+    · rintro ⟨⟨a, ha, rfl⟩, b, hb, hs⟩
+      have hab : a = b := (Fin.succEmb 51).injective hs.symm
+      subst b
+      exact ⟨a, ⟨ha, hb⟩, rfl⟩
+    · rintro ⟨a, ⟨ha, hb⟩, rfl⟩
+      exact ⟨⟨a, ha, rfl⟩, ⟨a, hb, rfl⟩⟩
+
+theorem fin52SetOfErased_inter_card (A B : Fin51Subsets25) :
+    (fin52SetOfErased A ∩ fin52SetOfErased B).card = (A.1 ∩ B.1).card + 1 := by
+  rw [fin52SetOfErased_inter]
+  rw [Finset.card_insert_of_notMem]
+  · rw [Finset.card_image_of_injective _ (Fin.succEmb 51).injective]
+  · intro h
+    rcases Finset.mem_image.mp h with ⟨a, _ha, h0⟩
+    exact Fin.succ_ne_zero a h0
+
+theorem fin52SetOfErased_inter_card_of_erased_eq_12 {A B : Fin51Subsets25}
+    (h : (A.1 ∩ B.1).card = 12) :
+    (fin52SetOfErased A ∩ fin52SetOfErased B).card = 13 := by
+  rw [fin52SetOfErased_inter_card, h]
+
+theorem undirectedEdge_fin52_card : Fintype.card (UndirectedEdge (Fin 52)) = 1326 := by
+  rw [Sym2.card_subtype_not_diag, Fintype.card_fin]
+  norm_num [Nat.choose_succ_succ]
+
+theorem fixed25_numeric_large_1326 :
+    (1326 + 1) * Nat.choose 51 12 < Nat.choose 51 25 := by
+  norm_num [Nat.choose_succ_succ]
+
+theorem fixed25_numeric_large_1325 :
+    (1325 + 1) * Nat.choose 51 12 < Nat.choose 51 25 := by
+  norm_num [Nat.choose_succ_succ]
+
+/--
+Kahn-Kalai-style certificate using the fixed-layer `p = 13` Frankl-Wilson
+count and the unordered complete-graph cut realization on 52 vertices.  This
+gives 1326 Euclidean coordinates, one above the book's final hyperplane
+dimension reduction to 1325.
+-/
+noncomputable def kahnKalaiCertificate_1326 : KahnKalaiCertificate 1326 := by
+  classical
+  let coord : UndirectedEdge (Fin 52) ≃ Fin 1326 :=
+    Fintype.equivFinOfCardEq undirectedEdge_fin52_card
+  let sets : Fin51Subsets25 → Finset (Fin 52) := fin52SetOfErased
+  let pointOf : Fin51Subsets25 → EuclideanSpace ℝ (Fin 1326) :=
+    fun A => finReindexedUndirectedCutPoint coord (sets A)
+  have hground : Fintype.card (Fin 52) = 4 * 13 := by norm_num
+  have hcard : ∀ A : Fin51Subsets25, (sets A).card = 2 * 13 := by
+    intro A
+    exact fin52SetOfErased_card A
+  have hlarge_colors :
+      Fintype.card (Fin (1326 + 1)) * Nat.choose 51 12 < Nat.choose 51 25 := by
+    simpa [Fintype.card_fin] using fixed25_numeric_large_1326
+  have hlarge_unit : Fintype.card Unit * Nat.choose 51 12 < Nat.choose 51 25 := by
+    have hle : Nat.choose 51 12 ≤ (1326 + 1) * Nat.choose 51 12 := by
+      exact Nat.le_mul_of_pos_left _ (by norm_num : 0 < 1326 + 1)
+    simpa using lt_of_le_of_lt hle fixed25_numeric_large_1326
+  have hexists : ∃ A B : Fin51Subsets25, (sets A ∩ sets B).card = 13 := by
+    obtain ⟨A0, B0, _hne0, _hsame0, hinter0_erased⟩ :=
+      exists_monochromatic_pair_fin51_25_intersection_12 (κ := Unit) (fun _ => ())
+        hlarge_unit
+    exact ⟨A0, B0, fin52SetOfErased_inter_card_of_erased_eq_12 hinter0_erased⟩
+  have hdiamSq : Metric.diam
+      ((Finset.univ.image pointOf : Finset (EuclideanSpace ℝ (Fin 1326))) :
+        Set (EuclideanSpace ℝ (Fin 1326))) ^ 2 = ((4 * 13 * 13 : ℕ) : ℝ) := by
+    simpa [pointOf, sets] using
+      primeUndirectedCutFamily_diam_sq_eq coord sets hground hcard hexists
+  have hpos : 0 < Metric.diam
+      ((Finset.univ.image pointOf : Finset (EuclideanSpace ℝ (Fin 1326))) :
+        Set (EuclideanSpace ℝ (Fin 1326))) := by
+    have hsq_pos : (0 : ℝ) < ((4 * 13 * 13 : ℕ) : ℝ) := by norm_num
+    exact diam_pos_of_diam_sq_eq_pos hdiamSq hsq_pos
+  refine KahnKalaiCertificate.ofFiniteSquaredDiameterObstruction
+    (Finset.univ.image pointOf) hpos ?_
+  intro color
+  obtain ⟨A, B, _hne, hsame, hinter_erased⟩ :=
+    exists_monochromatic_pair_fin51_25_intersection_12
+      (κ := Fin (1326 + 1)) (fun A => color (pointOf A)) hlarge_colors
+  refine ⟨pointOf A, ?_, pointOf B, ?_, hsame, ?_⟩
+  · simp [pointOf]
+  · simp [pointOf]
+  · have hinter : (sets A ∩ sets B).card = 13 :=
+      fin52SetOfErased_inter_card_of_erased_eq_12 hinter_erased
+    rw [finReindexedUndirectedCutPoint_dist_sq_of_kahnKalai_intersection coord
+      (sets A) (sets B) hground (hcard A) (hcard B) hinter, hdiamSq]
+
+noncomputable def sumCoordinatesLinear (β : Type*) [Fintype β] :
+    EuclideanSpace ℝ β →ₗ[ℝ] ℝ where
+  toFun v := ∑ b, v b
+  map_add' v w := by simp [Finset.sum_add_distrib]
+  map_smul' c v := by simp [Finset.mul_sum]
+
+noncomputable abbrev zeroSumEuclideanSubmodule (β : Type*) [Fintype β] :
+    Submodule ℝ (EuclideanSpace ℝ β) :=
+  LinearMap.ker (sumCoordinatesLinear β)
+
+theorem sumCoordinatesLinear_ne_zero {β : Type*} [Fintype β] [Nonempty β] :
+    sumCoordinatesLinear β ≠ 0 := by
+  intro hzero
+  let v : EuclideanSpace ℝ β := WithLp.toLp 2 fun _ => (1 : ℝ)
+  have hv := congrArg (fun f : EuclideanSpace ℝ β →ₗ[ℝ] ℝ => f v) hzero
+  simp [sumCoordinatesLinear, v] at hv
+
+theorem sumCoordinatesLinear_realIncidencePoint {β : Type*} [Fintype β] [DecidableEq β]
+    (A : Finset β) :
+    sumCoordinatesLinear β (realIncidencePoint A) = (A.card : ℝ) := by
+  rw [Finset.card_eq_sum_ones]
+  simp [sumCoordinatesLinear, realIncidencePoint]
+
+theorem sumCoordinatesLinear_sub_realIncidencePoint {β : Type*} [Fintype β]
+    [DecidableEq β] (A B : Finset β) :
+    sumCoordinatesLinear β (realIncidencePoint A - realIncidencePoint B) =
+      (A.card : ℝ) - (B.card : ℝ) := by
+  rw [map_sub, sumCoordinatesLinear_realIncidencePoint, sumCoordinatesLinear_realIncidencePoint]
+
+noncomputable def centeredIncidencePoint {β : Type*} [Fintype β] [DecidableEq β]
+    (A0 A : Finset β) (hcard : A.card = A0.card) : zeroSumEuclideanSubmodule β := by
+  refine ⟨realIncidencePoint A - realIncidencePoint A0, ?_⟩
+  rw [LinearMap.mem_ker, sumCoordinatesLinear_sub_realIncidencePoint]
+  norm_num [hcard]
+
+theorem centeredIncidencePoint_dist_sq {β : Type*} [Fintype β] [DecidableEq β]
+    (A0 A B : Finset β) (hA : A.card = A0.card) (hB : B.card = A0.card) :
+    dist (centeredIncidencePoint A0 A hA) (centeredIncidencePoint A0 B hB) ^ 2 =
+      (finsetSymmDiffCard A B : ℝ) := by
+  rw [dist_eq_norm]
+  change ‖(realIncidencePoint A - realIncidencePoint A0) -
+      (realIncidencePoint B - realIncidencePoint A0)‖ ^ 2 = (finsetSymmDiffCard A B : ℝ)
+  rw [sub_sub_sub_cancel_right]
+  rw [← dist_eq_norm, realIncidencePoint_dist_sq]
+
+theorem undirectedEdge_fin52_nonempty : Nonempty (UndirectedEdge (Fin 52)) := by
+  refine ⟨⟨s((0 : Fin 52), (1 : Fin 52)), ?_⟩⟩
+  rw [Sym2.mk_isDiag_iff]
+  norm_num
+
+theorem zeroSumUndirected52_finrank :
+    Module.finrank ℝ (zeroSumEuclideanSubmodule (UndirectedEdge (Fin 52))) = 1325 := by
+  haveI : Nonempty (UndirectedEdge (Fin 52)) := undirectedEdge_fin52_nonempty
+  have hker := Module.Dual.finrank_ker_add_one_of_ne_zero
+    (f := sumCoordinatesLinear (UndirectedEdge (Fin 52)))
+    (sumCoordinatesLinear_ne_zero (β := UndirectedEdge (Fin 52)))
+  change Module.finrank ℝ (zeroSumEuclideanSubmodule (UndirectedEdge (Fin 52))) + 1 =
+      Module.finrank ℝ (EuclideanSpace ℝ (UndirectedEdge (Fin 52))) at hker
+  rw [finrank_euclideanSpace, undirectedEdge_fin52_card] at hker
+  omega
+
+noncomputable def zeroSumUndirected52Basis :
+    OrthonormalBasis (Fin 1325) ℝ (zeroSumEuclideanSubmodule (UndirectedEdge (Fin 52))) :=
+  (stdOrthonormalBasis ℝ (zeroSumEuclideanSubmodule (UndirectedEdge (Fin 52)))).reindex
+    (finCongr zeroSumUndirected52_finrank)
+
+noncomputable def fin51Subsets25Base : Fin51Subsets25 := by
+  classical
+  refine Classical.choice ?_
+  rw [← Fintype.card_pos_iff]
+  rw [exactSubsets_card_eq_choose, Fintype.card_fin]
+  norm_num [Nat.choose_succ_succ]
+
+/--
+The codimension-one Kahn-Kalai cut realization.  Incidence vectors of the
+unordered cuts all have the same coordinate sum, so translating by one fixed cut
+puts them in the zero-sum subspace of `ℝ^1326`, whose finrank is `1325`.
+-/
+noncomputable def centeredUndirectedCutPoint1325 (A : Fin51Subsets25) :
+    EuclideanSpace ℝ (Fin 1325) :=
+  zeroSumUndirected52Basis.repr
+    (centeredIncidencePoint (undirectedCutSet (fin52SetOfErased fin51Subsets25Base))
+      (undirectedCutSet (fin52SetOfErased A)) (by
+        rw [undirectedCutSet_card, undirectedCutSet_card, fin52SetOfErased_card A,
+          fin52SetOfErased_card fin51Subsets25Base]))
+
+theorem centeredUndirectedCutPoint1325_dist_sq (A B : Fin51Subsets25) :
+    dist (centeredUndirectedCutPoint1325 A) (centeredUndirectedCutPoint1325 B) ^ 2 =
+      (finsetSymmDiffCard (undirectedCutSet (fin52SetOfErased A))
+        (undirectedCutSet (fin52SetOfErased B)) : ℝ) := by
+  unfold centeredUndirectedCutPoint1325
+  rw [Isometry.dist_eq zeroSumUndirected52Basis.repr.isometry]
+  exact centeredIncidencePoint_dist_sq _ _ _ _ _
+
+theorem centeredUndirectedCutPoint1325_dist_sq_of_intersection
+    {A B : Fin51Subsets25} (hinter : (fin52SetOfErased A ∩ fin52SetOfErased B).card = 13) :
+    dist (centeredUndirectedCutPoint1325 A) (centeredUndirectedCutPoint1325 B) ^ 2 =
+      ((4 * 13 * 13 : ℕ) : ℝ) := by
+  rw [centeredUndirectedCutPoint1325_dist_sq]
+  rw [undirectedCutSet_symmDiffCard_of_kahnKalai_intersection (fin52SetOfErased A)
+    (fin52SetOfErased B) (by norm_num : Fintype.card (Fin 52) = 4 * 13)
+    (fin52SetOfErased_card A) (fin52SetOfErased_card B) hinter]
+
+theorem centeredUndirectedCutPoint1325_dist_sq_le (A B : Fin51Subsets25) :
+    dist (centeredUndirectedCutPoint1325 A) (centeredUndirectedCutPoint1325 B) ^ 2 ≤
+      ((4 * 13 * 13 : ℕ) : ℝ) := by
+  rw [centeredUndirectedCutPoint1325_dist_sq]
+  rw [undirectedCutSet_symmDiffCard_of_card_eq (fin52SetOfErased A) (fin52SetOfErased B)
+    (fin52SetOfErased_card A) (fin52SetOfErased_card B),
+    show Fintype.card (Fin 52) = 4 * 13 by norm_num]
+  exact kahnKalai_undirected_quadratic_bound_real (p := 13) (Nat.sub_le _ _)
+
+theorem centeredUndirectedCutPoint1325_dist_le (A B : Fin51Subsets25) :
+    dist (centeredUndirectedCutPoint1325 A) (centeredUndirectedCutPoint1325 B) ≤
+      Real.sqrt ((4 * 13 * 13 : ℕ) : ℝ) :=
+  dist_le_sqrt_of_dist_sq_le (Nat.cast_nonneg _)
+    (centeredUndirectedCutPoint1325_dist_sq_le A B)
+
+theorem centeredUndirectedCutFamily1325_diam_sq_eq
+    (hexists : ∃ A B : Fin51Subsets25, (fin52SetOfErased A ∩ fin52SetOfErased B).card = 13) :
+    Metric.diam
+      ((Finset.univ.image centeredUndirectedCutPoint1325 :
+          Finset (EuclideanSpace ℝ (Fin 1325))) : Set (EuclideanSpace ℝ (Fin 1325))) ^ 2 =
+        ((4 * 13 * 13 : ℕ) : ℝ) := by
+  have hdiam_eq : Metric.diam
+      ((Finset.univ.image centeredUndirectedCutPoint1325 :
+          Finset (EuclideanSpace ℝ (Fin 1325))) : Set (EuclideanSpace ℝ (Fin 1325))) =
+      Real.sqrt ((4 * 13 * 13 : ℕ) : ℝ) := by
+    let points : Finset (EuclideanSpace ℝ (Fin 1325)) :=
+      Finset.univ.image centeredUndirectedCutPoint1325
+    refine finite_diam_eq_of_forall_dist_le_of_exists_dist_eq points (Real.sqrt_nonneg _) ?_ ?_
+    · intro x hx y hy
+      rcases Finset.mem_image.mp hx with ⟨A, _hA, rfl⟩
+      rcases Finset.mem_image.mp hy with ⟨B, _hB, rfl⟩
+      exact centeredUndirectedCutPoint1325_dist_le A B
+    · obtain ⟨A, B, hinter⟩ := hexists
+      refine ⟨centeredUndirectedCutPoint1325 A, ?_, centeredUndirectedCutPoint1325 B, ?_, ?_⟩
+      · simp [points]
+      · simp [points]
+      · exact dist_eq_sqrt_of_dist_sq_eq (Nat.cast_nonneg _)
+          (centeredUndirectedCutPoint1325_dist_sq_of_intersection hinter)
+  rw [hdiam_eq, Real.sq_sqrt]
+  exact Nat.cast_nonneg _
+
+/-- A fully constructed Kahn-Kalai certificate in the book's dimension `1325`. -/
+noncomputable def kahnKalaiCertificate_1325 : KahnKalaiCertificate 1325 := by
+  classical
+  let pointOf : Fin51Subsets25 → EuclideanSpace ℝ (Fin 1325) :=
+    centeredUndirectedCutPoint1325
+  have hlarge_colors :
+      Fintype.card (Fin (1325 + 1)) * Nat.choose 51 12 < Nat.choose 51 25 := by
+    simpa [Fintype.card_fin] using fixed25_numeric_large_1325
+  have hlarge_unit : Fintype.card Unit * Nat.choose 51 12 < Nat.choose 51 25 := by
+    have hle : Nat.choose 51 12 ≤ (1325 + 1) * Nat.choose 51 12 := by
+      exact Nat.le_mul_of_pos_left _ (by norm_num : 0 < 1325 + 1)
+    simpa using lt_of_le_of_lt hle fixed25_numeric_large_1325
+  have hexists : ∃ A B : Fin51Subsets25, (fin52SetOfErased A ∩ fin52SetOfErased B).card = 13 := by
+    obtain ⟨A0, B0, _hne0, _hsame0, hinter0_erased⟩ :=
+      exists_monochromatic_pair_fin51_25_intersection_12 (κ := Unit) (fun _ => ())
+        hlarge_unit
+    exact ⟨A0, B0, fin52SetOfErased_inter_card_of_erased_eq_12 hinter0_erased⟩
+  have hdiamSq : Metric.diam
+      ((Finset.univ.image pointOf : Finset (EuclideanSpace ℝ (Fin 1325))) :
+        Set (EuclideanSpace ℝ (Fin 1325))) ^ 2 = ((4 * 13 * 13 : ℕ) : ℝ) := by
+    simpa [pointOf] using centeredUndirectedCutFamily1325_diam_sq_eq hexists
+  have hpos : 0 < Metric.diam
+      ((Finset.univ.image pointOf : Finset (EuclideanSpace ℝ (Fin 1325))) :
+        Set (EuclideanSpace ℝ (Fin 1325))) := by
+    have hsq_pos : (0 : ℝ) < ((4 * 13 * 13 : ℕ) : ℝ) := by norm_num
+    exact diam_pos_of_diam_sq_eq_pos hdiamSq hsq_pos
+  refine KahnKalaiCertificate.ofFiniteSquaredDiameterObstruction
+    (Finset.univ.image pointOf) hpos ?_
+  intro color
+  obtain ⟨A, B, _hne, hsame, hinter_erased⟩ :=
+    exists_monochromatic_pair_fin51_25_intersection_12
+      (κ := Fin (1325 + 1)) (fun A => color (pointOf A)) hlarge_colors
+  refine ⟨pointOf A, ?_, pointOf B, ?_, hsame, ?_⟩
+  · simp [pointOf]
+  · simp [pointOf]
+  · have hinter : (fin52SetOfErased A ∩ fin52SetOfErased B).card = 13 :=
+      fin52SetOfErased_inter_card_of_erased_eq_12 hinter_erased
+    rw [centeredUndirectedCutPoint1325_dist_sq_of_intersection hinter, hdiamSq]
+
 /-- The concrete binomial inequality needed for the `p = 17` pointed construction. -/
 theorem kahnKalai_numeric_17 :
     (((4 * 17) * (4 * 17)) + 1) *
@@ -2123,6 +2583,14 @@ theorem not_borsukConjecture_of_certificate {d : ℕ} (cert : KahnKalaiCertifica
   cert.no_partition (h cert.S cert.bounded cert.pos_diam)
 
 /-- Unconditional Borsuk counterexample obtained from the local Kahn-Kalai pipeline. -/
+theorem not_borsukConjecture_1325 : ¬ BorsukConjecture 1325 :=
+  not_borsukConjecture_of_certificate kahnKalaiCertificate_1325
+
+/-- Unconditional Borsuk counterexample before the final hyperplane reduction. -/
+theorem not_borsukConjecture_1326 : ¬ BorsukConjecture 1326 :=
+  not_borsukConjecture_of_certificate kahnKalaiCertificate_1326
+
+/-- Unconditional Borsuk counterexample obtained from the earlier `p = 17` pipeline. -/
 theorem not_borsukConjecture_4624 : ¬ BorsukConjecture 4624 :=
   not_borsukConjecture_of_certificate kahnKalaiCertificate_4624
 
@@ -2135,10 +2603,10 @@ theorem not_borsukConjecture_of_dim_between_4624_6848 {d : ℕ}
 /--
 Chapter 16: Borsuk's conjecture is false in some finite dimension.
 
-The local formalization gives the explicit witness `d = 4624`.
+The local formalization gives the book's Kahn-Kalai witness `d = 1325`.
 -/
 theorem chapter16 : ∃ d : ℕ, ¬ BorsukConjecture d :=
-  ⟨4624, not_borsukConjecture_4624⟩
+  ⟨1325, not_borsukConjecture_1325⟩
 
 /-- Borsuk's conjecture in dimension `d` unfolded as its finite-dimensional statement. -/
 theorem borsukConjecture_iff_no_certificate (d : ℕ) :

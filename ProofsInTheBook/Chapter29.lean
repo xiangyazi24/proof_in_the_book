@@ -245,6 +245,16 @@ across every such pair. -/
 def rifflePattern (n : ℕ) (σ : Equiv.Perm (Fin n)) (i j : Fin n) : Prop :=
   i < j ∧ σ j < σ i
 
+/-- The interval form of the adjacent descent pattern.  It records that the
+open interval between two shuffled positions contains an adjacent descent of
+`σ`.  This is determined by the usual descent set of `σ`. -/
+def riffleDescentIntervalPattern (n : ℕ) (σ : Equiv.Perm (Fin n)) (i j : Fin n) :
+    Prop :=
+  i < j ∧
+    ∃ k : ℕ, (i : ℕ) ≤ k ∧ k + 1 ≤ (j : ℕ) ∧
+      ∃ hk : k + 1 < n,
+        σ ⟨k + 1, hk⟩ < σ ⟨k, Nat.lt_of_succ_lt hk⟩
+
 /-- A sorted label sequence compatible with a target riffle pattern. -/
 def patternCompatible (a n : ℕ) (pattern : Fin n → Fin n → Prop)
     (seq : RiffleLabels a n) : Prop :=
@@ -270,6 +280,23 @@ private theorem exists_adjacent_drop_nat {α : Type*} [LinearOrder α] (f : ℕ 
         have hi_eq : i = j := le_antisymm hij_le hji
         subst i
         exact ⟨j, le_rfl, le_rfl, hdrop⟩
+
+/-- Every inversion pair contains an adjacent descent between its endpoints. -/
+theorem exists_adjacentDescent_of_rifflePattern (n : ℕ) (σ : Equiv.Perm (Fin n))
+    {i j : Fin n} (hpattern : rifflePattern n σ i j) :
+    ∃ k : ℕ, (i : ℕ) ≤ k ∧ k + 1 ≤ (j : ℕ) ∧
+      ∃ hk : k + 1 < n,
+        σ ⟨k + 1, hk⟩ < σ ⟨k, Nat.lt_of_succ_lt hk⟩ := by
+  rcases hpattern with ⟨hij, hdrop⟩
+  let f : ℕ → Fin n := fun t => if ht : t < n then σ ⟨t, ht⟩ else σ i
+  have hdropNat : f j < f i := by
+    simp [f, i.isLt, j.isLt, hdrop]
+  rcases exists_adjacent_drop_nat f (show (i : ℕ) < (j : ℕ) from hij) hdropNat with
+    ⟨k, hik, hkj, hkdrop⟩
+  have hk : k + 1 < n := hkj.trans_lt j.isLt
+  refine ⟨k, hik, hkj, hk, ?_⟩
+  have hk0 : k < n := Nat.lt_of_succ_lt hk
+  simpa [f, hk, hk0] using hkdrop
 
 /-- Precompose labels by a target permutation.  This changes from original-card
 coordinates to shuffled-position coordinates. -/

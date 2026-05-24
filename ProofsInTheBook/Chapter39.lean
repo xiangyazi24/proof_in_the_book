@@ -378,6 +378,11 @@ theorem maxSupport_mem_support {n : ℕ} (X : SignedSubset n) (hX : X.Nonzero) :
     X.maxSupport hX ∈ X.support := by
   exact Finset.max'_mem _ _
 
+theorem maxSupport_congr_proof {n : ℕ} (X : SignedSubset n)
+    (h₁ h₂ : X.Nonzero) : X.maxSupport h₁ = X.maxSupport h₂ := by
+  unfold maxSupport
+  congr
+
 theorem maxSupport_antipode {n : ℕ} (X : SignedSubset n) (hX : X.Nonzero) :
     X.antipode.maxSupport ((antipode_nonzero X).mpr hX) = X.maxSupport hX := by
   apply le_antisymm
@@ -395,6 +400,11 @@ theorem maxSupport_antipode {n : ℕ} (X : SignedSubset n) (hX : X.Nonzero) :
 /-- The sign of the largest supported coordinate, used in Matoušek's small-support labels. -/
 noncomputable def maxSupportPositive {n : ℕ} (X : SignedSubset n) (hX : X.Nonzero) : Bool :=
   decide (X.maxSupport hX ∈ X.pos)
+
+theorem maxSupportPositive_congr_proof {n : ℕ} (X : SignedSubset n)
+    (h₁ h₂ : X.Nonzero) : X.maxSupportPositive h₁ = X.maxSupportPositive h₂ := by
+  unfold maxSupportPositive
+  rw [maxSupport_congr_proof X h₁ h₂]
 
 theorem maxSupportPositive_antipode {n : ℕ} (X : SignedSubset n) (hX : X.Nonzero) :
     X.antipode.maxSupportPositive ((antipode_nonzero X).mpr hX) =
@@ -415,6 +425,25 @@ theorem maxSupportPositive_antipode {n : ℕ} (X : SignedSubset n) (hX : X.Nonze
 /-- The face order on the cross-polytope boundary, by support inclusion. -/
 def Le {n : ℕ} (X Y : SignedSubset n) : Prop :=
   X.pos ⊆ Y.pos ∧ X.neg ⊆ Y.neg
+
+theorem eq_of_le_card_eq {n : ℕ} {X Y : SignedSubset n}
+    (hXY : Le X Y) (hcard : X.card = Y.card) : X = Y := by
+  have hpos_le : X.pos.card ≤ Y.pos.card := Finset.card_le_card hXY.1
+  have hneg_le : X.neg.card ≤ Y.neg.card := Finset.card_le_card hXY.2
+  have hsum : X.pos.card + X.neg.card = Y.pos.card + Y.neg.card := by
+    simpa [card] using hcard
+  have hpos_ge : Y.pos.card ≤ X.pos.card := by omega
+  have hneg_ge : Y.neg.card ≤ X.neg.card := by omega
+  have hpos_eq : X.pos = Y.pos := Finset.eq_of_subset_of_card_le hXY.1 hpos_ge
+  have hneg_eq : X.neg = Y.neg := Finset.eq_of_subset_of_card_le hXY.2 hneg_ge
+  cases X with
+  | mk xpos xneg xdisj =>
+      cases Y with
+      | mk ypos yneg ydisj =>
+          dsimp at hpos_eq hneg_eq
+          subst ypos
+          subst yneg
+          simp
 
 end SignedSubset
 
@@ -442,6 +471,15 @@ namespace SignedLabel
 def neg {m : ℕ} (L : SignedLabel m) : SignedLabel m where
   positive := !L.positive
   index := L.index
+
+theorem ext {m : ℕ} {L M : SignedLabel m}
+    (hpositive : L.positive = M.positive) (hindex : L.index = M.index) : L = M := by
+  cases L
+  cases M
+  simp at hpositive hindex
+  subst hpositive
+  subst hindex
+  rfl
 
 end SignedLabel
 
@@ -532,6 +570,35 @@ def matousekSmallSupportIndex {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
   ⟨X.card - 1, by
     have hpos : 0 < X.card := SignedSubset.card_pos_of_nonzero hX
     omega⟩
+
+/-- Full small-support signed label in Matoušek's construction. -/
+noncomputable def matousekSmallSupportLabel {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (X : SignedSubset n) (hX : X.Nonzero) (hsmall : X.card ≤ 2 * k - 2) :
+    SignedLabel (n - 1) where
+  positive := X.maxSupportPositive hX
+  index := matousekSmallSupportIndex hk hn X hX hsmall
+
+theorem matousekSmallSupportLabel_antipode {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (X : SignedSubset n) (hX : X.Nonzero) (hsmall : X.card ≤ 2 * k - 2) :
+    matousekSmallSupportLabel hk hn X.antipode ((SignedSubset.antipode_nonzero X).mpr hX)
+        (by simpa [SignedSubset.card_antipode] using hsmall) =
+      (matousekSmallSupportLabel hk hn X hX hsmall).neg := by
+  change SignedLabel.mk
+      (X.antipode.maxSupportPositive ((SignedSubset.antipode_nonzero X).mpr hX))
+      (matousekSmallSupportIndex hk hn X.antipode ((SignedSubset.antipode_nonzero X).mpr hX)
+        (by simpa [SignedSubset.card_antipode] using hsmall)) =
+    SignedLabel.mk (!(X.maxSupportPositive hX)) (matousekSmallSupportIndex hk hn X hX hsmall)
+  have hpositive :
+      X.antipode.maxSupportPositive ((SignedSubset.antipode_nonzero X).mpr hX) =
+        !(X.maxSupportPositive hX) :=
+    SignedSubset.maxSupportPositive_antipode X hX
+  have hindex :
+      matousekSmallSupportIndex hk hn X.antipode ((SignedSubset.antipode_nonzero X).mpr hX)
+          (by simpa [SignedSubset.card_antipode] using hsmall) =
+        matousekSmallSupportIndex hk hn X hX hsmall := by
+    apply Fin.ext
+    simp [matousekSmallSupportIndex, SignedSubset.card_antipode]
+  exact SignedLabel.ext hpositive hindex
 
 /--
 Large-support color labels occupy the range `2k - 2, …, n - 2`, obtained by

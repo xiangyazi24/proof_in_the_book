@@ -241,6 +241,13 @@ theorem dehnEdgeQ_angle_sum {I Angle : Type*} [AddCommGroup Angle] [Module ℚ A
       ∑ i ∈ s, dehnEdgeQ length (angle i) := by
   simp [dehnEdgeQ, TensorProduct.tmul_sum]
 
+/-- Rational-target additivity over subdivisions of one edge length. -/
+theorem dehnEdgeQ_length_sum {I Angle : Type*} [AddCommGroup Angle] [Module ℚ Angle]
+    (s : Finset I) (length : I → ℝ) (angle : Angle) :
+    dehnEdgeQ (∑ i ∈ s, length i) angle =
+      ∑ i ∈ s, dehnEdgeQ (length i) angle := by
+  simp [dehnEdgeQ, TensorProduct.sum_tmul]
+
 /--
 The algebraic cancellation used for an internal edge of a dissection: if the
 incident angles add to a rational multiple of `π`, the total edge contribution
@@ -382,6 +389,27 @@ theorem dehnInvariantQ_eq_zero_of_angles_zero {Edge Angle : Type*}
   rw [hangle e he, TensorProduct.tmul_zero]
 
 /--
+Boundary edge subdivision algebra: if each boundary edge has been cut into
+fragments whose lengths add back to the original boundary length, then the
+fragment Dehn contributions regroup to the boundary Dehn invariant.
+-/
+theorem boundaryDehnContributionQ_eq_dehnInvariantQ {BoundaryEdge Fragment : Type*}
+    (boundaryEdges : Finset BoundaryEdge) (fragments : BoundaryEdge → Finset Fragment)
+    (boundaryLength : BoundaryEdge → ℝ)
+    (fragmentLength : BoundaryEdge → Fragment → ℝ)
+    (boundaryAngle : BoundaryEdge → ℝ)
+    (hlength : ∀ e ∈ boundaryEdges,
+      (∑ f ∈ fragments e, fragmentLength e f) = boundaryLength e) :
+    (∑ e ∈ boundaryEdges, ∑ f ∈ fragments e,
+      dehnEdgeQ (fragmentLength e f) (angleClassQ (boundaryAngle e))) =
+      dehnInvariantQ boundaryEdges boundaryLength (fun e => angleClassQ (boundaryAngle e)) := by
+  rw [dehnInvariantQ]
+  apply Finset.sum_congr rfl
+  intro e he
+  rw [← dehnEdgeQ_length_sum (fragments e) (fragmentLength e)
+    (angleClassQ (boundaryAngle e)), hlength e he]
+
+/--
 Algebraic skeleton for the geometric additivity proof: after grouping all
 piece-edge contributions by an internal geometric edge, the whole internal
 part vanishes if each grouped angle sum is a rational multiple of `π`.
@@ -413,6 +441,62 @@ theorem boundary_add_internalDehnContributionQ {InternalEdge Incident : Type*}
     boundary + (∑ e ∈ internalEdges, ∑ i ∈ incident e,
       dehnEdgeQ (length e) (angleClassQ (angle e i))) = boundary := by
   rw [internalDehnContributionQ_eq_zero internalEdges incident length angle q hangle, add_zero]
+
+/--
+A more explicit algebraic interface for geometric Dehn additivity.  It models
+two operations that an actual polyhedral dissection proof must justify:
+boundary edges may be subdivided by the cut, and internal edge contributions
+are grouped by the geometric edge they lie on.
+-/
+structure DehnGeometricAdditivitySkeletonQ
+    (BoundaryEdge BoundaryFragment InternalEdge Incident : Type*) where
+  pieceDehnSum : DehnPiQTarget
+  boundaryEdges : Finset BoundaryEdge
+  boundaryFragments : BoundaryEdge → Finset BoundaryFragment
+  boundaryLength : BoundaryEdge → ℝ
+  boundaryFragmentLength : BoundaryEdge → BoundaryFragment → ℝ
+  boundaryAngle : BoundaryEdge → ℝ
+  internalEdges : Finset InternalEdge
+  incident : InternalEdge → Finset Incident
+  internalLength : InternalEdge → ℝ
+  internalAngle : InternalEdge → Incident → ℝ
+  internalAngleMultiple : InternalEdge → ℚ
+  piece_sum_eq_boundary_fragments_add_internal :
+    pieceDehnSum =
+      (∑ e ∈ boundaryEdges, ∑ f ∈ boundaryFragments e,
+        dehnEdgeQ (boundaryFragmentLength e f) (angleClassQ (boundaryAngle e))) +
+      ∑ e ∈ internalEdges, ∑ i ∈ incident e,
+        dehnEdgeQ (internalLength e) (angleClassQ (internalAngle e i))
+  boundary_length_sum : ∀ e ∈ boundaryEdges,
+    (∑ f ∈ boundaryFragments e, boundaryFragmentLength e f) = boundaryLength e
+  internal_angle_sum : ∀ e ∈ internalEdges,
+    (∑ i ∈ incident e, internalAngle e i) =
+      (internalAngleMultiple e : ℝ) * Real.pi
+
+theorem DehnGeometricAdditivitySkeletonQ.piece_sum_eq_boundaryDehn
+    {BoundaryEdge BoundaryFragment InternalEdge Incident : Type*}
+    (cert :
+      DehnGeometricAdditivitySkeletonQ BoundaryEdge BoundaryFragment InternalEdge Incident) :
+    cert.pieceDehnSum =
+      dehnInvariantQ cert.boundaryEdges cert.boundaryLength
+        (fun e => angleClassQ (cert.boundaryAngle e)) := by
+  calc
+    cert.pieceDehnSum =
+        (∑ e ∈ cert.boundaryEdges, ∑ f ∈ cert.boundaryFragments e,
+          dehnEdgeQ (cert.boundaryFragmentLength e f) (angleClassQ (cert.boundaryAngle e))) +
+        ∑ e ∈ cert.internalEdges, ∑ i ∈ cert.incident e,
+          dehnEdgeQ (cert.internalLength e) (angleClassQ (cert.internalAngle e i)) :=
+      cert.piece_sum_eq_boundary_fragments_add_internal
+    _ = (∑ e ∈ cert.boundaryEdges, ∑ f ∈ cert.boundaryFragments e,
+          dehnEdgeQ (cert.boundaryFragmentLength e f) (angleClassQ (cert.boundaryAngle e))) := by
+      rw [internalDehnContributionQ_eq_zero cert.internalEdges cert.incident
+        cert.internalLength cert.internalAngle cert.internalAngleMultiple cert.internal_angle_sum,
+        add_zero]
+    _ = dehnInvariantQ cert.boundaryEdges cert.boundaryLength
+        (fun e => angleClassQ (cert.boundaryAngle e)) :=
+      boundaryDehnContributionQ_eq_dehnInvariantQ cert.boundaryEdges cert.boundaryFragments
+        cert.boundaryLength cert.boundaryFragmentLength cert.boundaryAngle
+        cert.boundary_length_sum
 
 /--
 Algebraic interface for the geometric additivity step.  A future polyhedron

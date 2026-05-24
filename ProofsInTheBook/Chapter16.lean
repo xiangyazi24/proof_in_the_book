@@ -731,6 +731,52 @@ theorem finReindexedDirectedCutPoint_dist_sq_le_kahnKalai
     directedCutSet_symmDiffCard_of_card_eq A B hA hB, hground]
   exact kahnKalai_quadratic_bound_real (Nat.sub_le _ _)
 
+/-- Reindex an incidence vector along an embedding into a `Fin d` coordinate type. -/
+noncomputable def finEmbeddedIncidencePoint
+    {β : Type*} [Fintype β] [DecidableEq β] {d : ℕ}
+    (e : β ↪ Fin d) (A : Finset β) : EuclideanSpace ℝ (Fin d) :=
+  realIncidencePoint (A.image e)
+
+theorem finEmbeddedIncidencePoint_dist_sq
+    {β : Type*} [Fintype β] [DecidableEq β] {d : ℕ}
+    (e : β ↪ Fin d) (A B : Finset β) :
+    dist (finEmbeddedIncidencePoint e A) (finEmbeddedIncidencePoint e B) ^ 2 =
+      (finsetSymmDiffCard A B : ℝ) := by
+  change dist (realIncidencePoint (A.image e)) (realIncidencePoint (B.image e)) ^ 2 =
+    (finsetSymmDiffCard A B : ℝ)
+  rw [realIncidencePoint_dist_sq, finsetSymmDiffCard_image_embedding]
+
+noncomputable def finEmbeddedDirectedCutPoint
+    {α : Type*} [Fintype α] [DecidableEq α] {d : ℕ}
+    (e : (α × α) ↪ Fin d) (A : Finset α) : EuclideanSpace ℝ (Fin d) :=
+  finEmbeddedIncidencePoint e (directedCutSet A)
+
+theorem finEmbeddedDirectedCutPoint_dist_sq_of_kahnKalai_intersection
+    {α : Type*} [Fintype α] [DecidableEq α] {d k : ℕ}
+    (e : (α × α) ↪ Fin d) (A B : Finset α)
+    (hground : Fintype.card α = 4 * k)
+    (hA : A.card = 2 * k) (hB : B.card = 2 * k)
+    (hinter : (A ∩ B).card = k) :
+    dist (finEmbeddedDirectedCutPoint e A) (finEmbeddedDirectedCutPoint e B) ^ 2 =
+      ((8 * k * k : ℕ) : ℝ) := by
+  change dist (finEmbeddedIncidencePoint e (directedCutSet A))
+      (finEmbeddedIncidencePoint e (directedCutSet B)) ^ 2 = ((8 * k * k : ℕ) : ℝ)
+  rw [finEmbeddedIncidencePoint_dist_sq,
+    directedCutSet_symmDiffCard_of_kahnKalai_intersection A B hground hA hB hinter]
+
+theorem finEmbeddedDirectedCutPoint_dist_sq_le_kahnKalai
+    {α : Type*} [Fintype α] [DecidableEq α] {d p : ℕ}
+    (coord : (α × α) ↪ Fin d) (A B : Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hA : A.card = 2 * p) (hB : B.card = 2 * p) :
+    dist (finEmbeddedDirectedCutPoint coord A) (finEmbeddedDirectedCutPoint coord B) ^ 2 ≤
+      ((8 * p * p : ℕ) : ℝ) := by
+  change dist (finEmbeddedIncidencePoint coord (directedCutSet A))
+      (finEmbeddedIncidencePoint coord (directedCutSet B)) ^ 2 ≤ ((8 * p * p : ℕ) : ℝ)
+  rw [finEmbeddedIncidencePoint_dist_sq,
+    directedCutSet_symmDiffCard_of_card_eq A B hA hB, hground]
+  exact kahnKalai_quadratic_bound_real (Nat.sub_le _ _)
+
 theorem dist_le_sqrt_of_dist_sq_le {X : Type*} [PseudoMetricSpace X]
     {x y : X} {R : ℝ} (hR : 0 ≤ R) (h : dist x y ^ 2 ≤ R) :
     dist x y ≤ Real.sqrt R :=

@@ -494,6 +494,67 @@ theorem inner_vsub_pair_sq (P Y Z : EPoint) :
   rw [mul_pow, mul_pow, sq_abs]
   ring
 
+open scoped RealInnerProductSpace in
+/-- **Gram / Lagrange identity for the perpendicular distance.**
+`perpDist² · base² = ‖edge‖²·base² − ⟪edge, base⟫²` — i.e. doubled triangle
+area squared, with apex `P` over base `YZ` (edge `P-ᵥY`). -/
+theorem perpDist_sq_mul_dist_sq (P Y Z : EPoint) :
+    perpDist P Y Z ^ 2 * dist Y Z ^ 2
+      = dist P Y ^ 2 * dist Y Z ^ 2 - ⟪P -ᵥ Y, Z -ᵥ Y⟫ ^ 2 := by
+  have hpyth := dist_sq_eq_foot (P := P) (a := Y) (b := Z) (left_mem_affineSpan_pair ℝ Y Z)
+  have hkey := inner_vsub_pair_sq P Y Z
+  have hfoot := perpDist_eq_dist_foot P Y Z
+  rw [dist_comm Y P] at hpyth
+  rw [hfoot]
+  linear_combination hkey - dist Y Z ^ 2 * hpyth
+
+open scoped RealInnerProductSpace in
+/-- **Apex-invariance of the Gram quantity.**
+The doubled-area-squared is independent of which vertex is the apex:
+swapping apex `P`↔`Q` (bases `QR`↔`PR`) preserves the value.  Pure
+inner-product algebra. -/
+theorem gram_apex_symm (P Q R : EPoint) :
+    dist P Q ^ 2 * dist Q R ^ 2 - ⟪P -ᵥ Q, R -ᵥ Q⟫ ^ 2
+      = dist Q P ^ 2 * dist P R ^ 2 - ⟪Q -ᵥ P, R -ᵥ P⟫ ^ 2 := by
+  have e1 : dist P Q ^ 2 = ⟪P -ᵥ Q, P -ᵥ Q⟫ := by
+    rw [dist_eq_norm_vsub EPoint P Q, real_inner_self_eq_norm_sq]
+  have e2 : dist Q R ^ 2 = ⟪R -ᵥ Q, R -ᵥ Q⟫ := by
+    rw [dist_eq_norm_vsub' EPoint Q R, real_inner_self_eq_norm_sq]
+  have e3 : dist Q P ^ 2 = ⟪P -ᵥ Q, P -ᵥ Q⟫ := by
+    rw [dist_eq_norm_vsub' EPoint Q P, real_inner_self_eq_norm_sq]
+  have e4 : dist P R ^ 2 = ⟪R -ᵥ P, R -ᵥ P⟫ := by
+    rw [dist_eq_norm_vsub' EPoint P R, real_inner_self_eq_norm_sq]
+  -- express the two cross-edge vectors via `a = P -ᵥ Q`, `b = R -ᵥ Q`
+  have hQP : Q -ᵥ P = -(P -ᵥ Q) := (neg_vsub_eq_vsub_rev P Q).symm
+  have hRP : R -ᵥ P = (R -ᵥ Q) - (P -ᵥ Q) := by
+    rw [← vsub_sub_vsub_cancel_right R P Q]
+  rw [e1, e2, e3, e4, hQP, hRP]
+  simp only [inner_sub_left, inner_sub_right, inner_neg_left, inner_neg_right]
+  rw [real_inner_comm (R -ᵥ Q) (P -ᵥ Q)]
+  ring
+
+open scoped RealInnerProductSpace in
+/-- **Area identity (Kelly step 3c).**
+`perpDist Q P R · dist P R = perpDist P Q R · dist Q R` — doubled triangle
+area is base-independent.  Combines the Gram identity (both apexes) with
+apex-invariance, then takes square roots. -/
+theorem perpDist_mul_dist_eq (P Q R : EPoint) :
+    perpDist Q P R * dist P R = perpDist P Q R * dist Q R := by
+  have hsq : (perpDist Q P R * dist P R) ^ 2 = (perpDist P Q R * dist Q R) ^ 2 := by
+    rw [mul_pow, mul_pow]
+    rw [perpDist_sq_mul_dist_sq Q P R, perpDist_sq_mul_dist_sq P Q R]
+    -- both equal the Gram quantity at the respective apex; apex-invariance links them
+    have := gram_apex_symm P Q R
+    nlinarith [this]
+  have h1 : 0 ≤ perpDist Q P R * dist P R :=
+    mul_nonneg (perpDist_nonneg _ _ _) dist_nonneg
+  have h2 : 0 ≤ perpDist P Q R * dist Q R :=
+    mul_nonneg (perpDist_nonneg _ _ _) dist_nonneg
+  calc perpDist Q P R * dist P R
+      = Real.sqrt ((perpDist Q P R * dist P R) ^ 2) := (Real.sqrt_sq h1).symm
+    _ = Real.sqrt ((perpDist P Q R * dist Q R) ^ 2) := by rw [hsq]
+    _ = perpDist P Q R * dist Q R := Real.sqrt_sq h2
+
 /-- **Kelly step 2: a minimum-perpendicular-distance off-line pair exists.**
 Over a finite point set with at least one off-line incidence, the perpendicular
 distances of all off-line incidences attain a minimum — the well-ordering

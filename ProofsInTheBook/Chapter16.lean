@@ -1242,6 +1242,12 @@ theorem pointedHalfSubsets_card {α : Type*} [Fintype α] [DecidableEq α]
   rw [hset, Finset.card_powersetCard, Finset.card_erase_of_mem (Finset.mem_univ base),
     Finset.card_univ]
 
+/-- Pointed half-size family count after substituting a `4p`-element ground set. -/
+theorem pointedHalfSubsets_card_of_ground {α : Type*} [Fintype α] [DecidableEq α]
+    {p : ℕ} (base : α) (hp : 0 < p) (hground : Fintype.card α = 4 * p) :
+    Fintype.card (pointedHalfSubsets α p base) = (4 * p - 1).choose (2 * p - 1) := by
+  rw [pointedHalfSubsets_card base hp, hground]
+
 /--
 Directed-cut certificate specialized to the pointed half-size family.  The
 remaining Kahn-Kalai arithmetic is the lower bound on this family size against
@@ -1268,6 +1274,22 @@ noncomputable def KahnKalaiCertificate.ofPrimePointedHalfFamilyOfLarge {d p : �
     omega
   exact KahnKalaiCertificate.ofPrimeDirectedCutFamilyOfLarge coord sets hground hcard hinj
     hnonzero hlarge
+
+/--
+Binomial-count version of `ofPrimePointedHalfFamilyOfLarge` after substituting
+the `4p` ground-set size.
+-/
+noncomputable def KahnKalaiCertificate.ofPrimePointedHalfFamilyOfChooseLarge {d p : ℕ}
+    [Fact p.Prime] {α : Type*} [Fintype α] [DecidableEq α]
+    (base : α) (coord : (α × α) ≃ Fin d)
+    (hground : Fintype.card α = 4 * p)
+    (hlarge : (d + 1) *
+        Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card} <
+          (4 * p - 1).choose (2 * p - 1)) :
+    KahnKalaiCertificate d := by
+  refine KahnKalaiCertificate.ofPrimePointedHalfFamilyOfLarge base coord hground ?_
+  rw [pointedHalfSubsets_card_of_ground base (Fact.out : Nat.Prime p).pos hground]
+  exact hlarge
 
 /--
 Bridge from the Frankl-Wilson coloring obstruction to a Borsuk counterexample

@@ -239,6 +239,68 @@ theorem riffleOrder_of_label_lt (a n : ℕ) (labels : RiffleLabels a n)
     riffleOrder a n labels i j :=
   Or.inl hlt
 
+/-- The inversion pattern of a target riffle permutation, written in shuffled
+position coordinates.  A compatible sorted label sequence must strictly increase
+across every such pair. -/
+def rifflePattern (n : ℕ) (σ : Equiv.Perm (Fin n)) (i j : Fin n) : Prop :=
+  i < j ∧ σ j < σ i
+
+/-- A sorted label sequence compatible with a target riffle pattern. -/
+def patternCompatible (a n : ℕ) (pattern : Fin n → Fin n → Prop)
+    (seq : RiffleLabels a n) : Prop :=
+  Monotone seq ∧ ∀ i j : Fin n, pattern i j → seq i < seq j
+
+/-- Precompose labels by a target permutation.  This changes from original-card
+coordinates to shuffled-position coordinates. -/
+def labelsEquivSortedSeq (a n : ℕ) (σ : Equiv.Perm (Fin n)) :
+    RiffleLabels a n ≃ RiffleLabels a n where
+  toFun labels := labels ∘ σ
+  invFun seq := seq ∘ σ.symm
+  left_inv labels := by
+    funext card
+    simp [Function.comp_apply]
+  right_inv seq := by
+    funext card
+    simp [Function.comp_apply]
+
+/-- A labeling sorts to `σ` iff the labels, read in the order prescribed by
+`σ`, form a monotone sequence with strict increases across the inversion
+pattern of `σ`. -/
+theorem riffleSort_eq_iff_patternCompatible (a n : ℕ) (labels : RiffleLabels a n)
+    (σ : Equiv.Perm (Fin n)) :
+    riffleSort a n labels = σ ↔
+      patternCompatible a n (rifflePattern n σ) (labels ∘ σ) := by
+  constructor
+  · intro hsort
+    have htuple :
+        Monotone (labels ∘ σ) ∧
+          ∀ i j, i < j → labels (σ i) = labels (σ j) → σ i < σ j := by
+      exact (Tuple.eq_sort_iff (f := labels) (σ := σ)).mp hsort.symm
+    refine ⟨htuple.1, ?_⟩
+    intro i j hpattern
+    rcases hpattern with ⟨hij, hinv⟩
+    have hle : (labels ∘ σ) i ≤ (labels ∘ σ) j := htuple.1 hij.le
+    exact lt_of_le_of_ne hle fun heq => by
+      have hσlt : σ i < σ j := htuple.2 i j hij heq
+      exact (lt_asymm hσlt hinv).elim
+  · intro hcompat
+    have htuple :
+        Monotone (labels ∘ σ) ∧
+          ∀ i j, i < j → labels (σ i) = labels (σ j) → σ i < σ j := by
+      refine ⟨hcompat.1, ?_⟩
+      intro i j hij heq
+      have hσne : σ i ≠ σ j := by
+        intro hσeq
+        exact hij.ne (σ.injective hσeq)
+      rcases lt_or_gt_of_ne hσne with hσlt | hσgt
+      · exact hσlt
+      · have hstrict : (labels ∘ σ) i < (labels ∘ σ) j :=
+          hcompat.2 i j ⟨hij, hσgt⟩
+        have hstrict' : labels (σ i) < labels (σ j) := hstrict
+        rw [heq] at hstrict'
+        exact (lt_irrefl _ hstrict').elim
+    exact ((Tuple.eq_sort_iff (f := labels) (σ := σ)).mpr htuple).symm
+
 /-- Certificate for the Gilbert-Shannon-Reeds (GSR) shuffle.
 The combinatorial heart of the GSR shuffle is that the number of riffle labelings
 that map to a given permutation depends only on the pile sizes (or equivalently,

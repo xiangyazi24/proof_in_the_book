@@ -555,6 +555,21 @@ theorem perpDist_mul_dist_eq (P Q R : EPoint) :
     _ = Real.sqrt ((perpDist P Q R * dist Q R) ^ 2) := by rw [hsq]
     _ = perpDist P Q R * dist Q R := Real.sqrt_sq h2
 
+/-- **Kelly's strict decrease (step 3d core).**
+If `P` is off line `QR`, `Q ≠ R`, and `Q` lies between the foot of the
+perpendicular from `P` and `R`, then the perpendicular distance from `Q` to
+line `PR` is strictly smaller than that from `P` to line `QR`.  This is the
+inequality that contradicts minimality in Kelly's proof. -/
+theorem perpDist_lt_perpDist_of_wbtw {P Q R : EPoint}
+    (hP : P ∉ affineSpan ℝ {Q, R}) (hw : Wbtw ℝ (foot P Q R) Q R) :
+    perpDist Q P R < perpDist P Q R := by
+  have hlt := dist_lt_dist_of_wbtw_foot hP (right_mem_affineSpan_pair ℝ Q R) hw
+  have harea := perpDist_mul_dist_eq P Q R
+  have hPR : 0 < dist P R :=
+    dist_pos.mpr (fun h => hP (h ▸ right_mem_affineSpan_pair ℝ Q R))
+  have hpos : 0 < perpDist P Q R := perpDist_pos hP
+  nlinarith [harea, hlt, hPR, hpos, mul_lt_mul_of_pos_left hlt hpos]
+
 /-- **Kelly step 2: a minimum-perpendicular-distance off-line pair exists.**
 Over a finite point set with at least one off-line incidence, the perpendicular
 distances of all off-line incidences attain a minimum — the well-ordering

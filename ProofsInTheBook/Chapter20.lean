@@ -21,18 +21,19 @@ infrastructure into `exists_valuation_extension`, which gives an extension of
 any valuation on a field to any field extension; in particular
 `exists_real_twoAdic_extension` extends `Rat.padicValuation 2` from `ℚ` to `ℝ`.
 Using one chosen extension, the file defines Monsky's coloring on `ℝ²`, proves
-the unit-square corner colors, and proves the valuation contradiction for a
-trichromatic triangle of rational double area `2 / n` with `n` odd.
+the unit-square side color constraints, proves the odd red-green boundary
+count for any finite subdivision of the square boundary, constructs
+`MonskyCertificate` from finite unordered-edge parity, and proves the
+valuation contradiction for a trichromatic triangle of oriented rational
+double area `± 2 / n` with `n` odd.
 
-Gap to the full book theorem: the missing work is the analytic/algebraic
-input that constructs the certificate from an equal-area triangulation of the
-unit square.  With the valuation-extension and area-contradiction pieces now
-available, the remaining gap is geometric/combinatorial infrastructure:
-a finite real triangulation model for the square, boundary-edge refinement and
-double-counting lemmas producing `MonskyCertificate`, and an equal-area
-hypothesis expressed as oriented double area `± 2 / n`.  Mathlib has valuation
-and geometry components, but not this assembled polygonal Sperner/Monsky
-triangulation package.
+Gap to the full book theorem: the remaining work is geometric triangulation
+infrastructure.  One needs a finite real triangulation model for the unit
+square, extraction of its finite vertex type and triangle list, a theorem that
+the odd-multiplicity triangle edges are exactly the four boundary side chains,
+and an equal-area theorem expressing every listed triangle as oriented double
+area `± 2 / n`.  Mathlib has valuation and geometry components, but not this
+assembled polygonal Sperner/Monsky triangulation package.
 -/
 
 namespace ProofsInTheBook.Chapter20

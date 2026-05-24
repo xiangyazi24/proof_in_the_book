@@ -146,6 +146,43 @@ theorem colorOfValues_one_one {Γ : Type*} [LinearOrderedCommGroupWithZero Γ] :
     colorOfValues (1 : Γ) (1 : Γ) = green := by
   simp [colorOfValues]
 
+theorem colorOfValues_zero_right_red_or_green {Γ : Type*} [LinearOrderedCommGroupWithZero Γ]
+    (vx : Γ) : colorOfValues vx 0 = red ∨ colorOfValues vx 0 = green := by
+  unfold colorOfValues
+  by_cases hx : vx < 1
+  · simp [hx]
+  · have hxge : 1 ≤ vx := le_of_not_gt hx
+    right
+    simp [hx, hxge]
+
+theorem colorOfValues_one_left_green_or_blue {Γ : Type*} [LinearOrderedCommGroupWithZero Γ]
+    (vy : Γ) : colorOfValues 1 vy = green ∨ colorOfValues 1 vy = blue := by
+  unfold colorOfValues
+  by_cases hy : vy ≤ 1
+  · left
+    simp [hy]
+  · right
+    simp [hy]
+
+theorem colorOfValues_one_right_green_or_blue {Γ : Type*} [LinearOrderedCommGroupWithZero Γ]
+    (vx : Γ) : colorOfValues vx 1 = green ∨ colorOfValues vx 1 = blue := by
+  unfold colorOfValues
+  by_cases hx : 1 ≤ vx
+  · left
+    simp [hx]
+  · right
+    have hxlt : vx < 1 := lt_of_not_ge hx
+    simp [hx, hxlt]
+
+theorem colorOfValues_zero_left_red_or_blue {Γ : Type*} [LinearOrderedCommGroupWithZero Γ]
+    (vy : Γ) : colorOfValues 0 vy = red ∨ colorOfValues 0 vy = blue := by
+  unfold colorOfValues
+  by_cases hy : vy < 1
+  · left
+    simp [hy]
+  · right
+    simp [hy]
+
 theorem colorOfValues_eq_red_iff {Γ : Type*} [LinearOrderedCommGroupWithZero Γ]
     {vx vy : Γ} :
     colorOfValues vx vy = red ↔ vx < 1 ∧ vy < 1 := by
@@ -384,6 +421,26 @@ theorem realTwoAdicColor_zero_one : realTwoAdicColor (0, 1) = blue := by
 @[simp]
 theorem realTwoAdicColor_one_one : realTwoAdicColor (1, 1) = green := by
   simp [realTwoAdicColor, valuationColor, colorOfValues, realTwoAdicValuation]
+
+theorem realTwoAdicColor_bottom_red_or_green (x : ℝ) :
+    realTwoAdicColor (x, 0) = red ∨ realTwoAdicColor (x, 0) = green := by
+  simpa [realTwoAdicColor, valuationColor] using
+    colorOfValues_zero_right_red_or_green (realTwoAdicValuation x)
+
+theorem realTwoAdicColor_right_green_or_blue (y : ℝ) :
+    realTwoAdicColor (1, y) = green ∨ realTwoAdicColor (1, y) = blue := by
+  simpa [realTwoAdicColor, valuationColor] using
+    colorOfValues_one_left_green_or_blue (realTwoAdicValuation y)
+
+theorem realTwoAdicColor_top_green_or_blue (x : ℝ) :
+    realTwoAdicColor (x, 1) = green ∨ realTwoAdicColor (x, 1) = blue := by
+  simpa [realTwoAdicColor, valuationColor] using
+    colorOfValues_one_right_green_or_blue (realTwoAdicValuation x)
+
+theorem realTwoAdicColor_left_red_or_blue (y : ℝ) :
+    realTwoAdicColor (0, y) = red ∨ realTwoAdicColor (0, y) = blue := by
+  simpa [realTwoAdicColor, valuationColor] using
+    colorOfValues_zero_left_red_or_blue (realTwoAdicValuation y)
 
 /-- A triangle is trichromatic when its three vertex colors are pairwise different. -/
 def TrichromaticTriangle (a b c : MonskyColor) : Prop :=

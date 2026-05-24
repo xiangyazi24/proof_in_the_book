@@ -1701,6 +1701,27 @@ noncomputable def kahnKalaiCertificate_4624 : KahnKalaiCertificate 4624 := by
   simpa using KahnKalaiCertificate.ofPrimePointedFinFamilyOfSumLarge (p := 17)
     kahnKalai_numeric_17
 
+/-- The `p = 17` pointed construction remains large enough through dimension `6848`. -/
+theorem kahnKalai_numeric_17_6848 :
+    (6848 + 1) * (∑ k ∈ Finset.range 17, (4 * 17).choose k) <
+      (4 * 17 - 1).choose (2 * 17 - 1) := by
+  native_decide
+
+theorem kahnKalai_numeric_17_of_le {d : ℕ} (hd : d ≤ 6848) :
+    (d + 1) * (∑ k ∈ Finset.range 17, (4 * 17).choose k) <
+      (4 * 17 - 1).choose (2 * 17 - 1) := by
+  exact lt_of_le_of_lt (Nat.mul_le_mul_right _ (Nat.succ_le_succ hd))
+    kahnKalai_numeric_17_6848
+
+/-- Kahn-Kalai certificates in the full range covered by the `p = 17` inequality. -/
+noncomputable def kahnKalaiCertificate_of_dim_between_4624_6848 {d : ℕ}
+    (hlo : 4624 ≤ d) (hhi : d ≤ 6848) : KahnKalaiCertificate d := by
+  haveI : Fact (Nat.Prime 17) := ⟨by norm_num⟩
+  refine KahnKalaiCertificate.ofPrimePointedFinFamilyEmbeddingOfSumLarge (p := 17) ?_ ?_
+  · norm_num
+    exact hlo
+  · exact kahnKalai_numeric_17_of_le hhi
+
 /--
 Bridge from the Frankl-Wilson coloring obstruction to a Borsuk counterexample
 certificate.  A concrete Kahn-Kalai construction can use this once it supplies
@@ -1767,6 +1788,11 @@ theorem chapter16 {d : ℕ} (cert : KahnKalaiCertificate d) :
 /-- Unconditional Borsuk counterexample obtained from the local Kahn-Kalai pipeline. -/
 theorem not_borsukConjecture_4624 : ¬ BorsukConjecture 4624 :=
   chapter16 kahnKalaiCertificate_4624
+
+/-- Unconditional Borsuk counterexamples in the range covered by `p = 17`. -/
+theorem not_borsukConjecture_of_dim_between_4624_6848 {d : ℕ}
+    (hlo : 4624 ≤ d) (hhi : d ≤ 6848) : ¬ BorsukConjecture d :=
+  chapter16 (kahnKalaiCertificate_of_dim_between_4624_6848 hlo hhi)
 
 /-- Borsuk's conjecture in dimension `d` is equivalent to the non-existence
 of a Kahn-Kalai certificate.  This packages `chapter16` as a biconditional. -/

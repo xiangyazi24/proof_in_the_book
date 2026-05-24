@@ -485,6 +485,11 @@ theorem trichromatic_of_eq_red_green_blue {a b c : MonskyColor}
   subst c
   simp [TrichromaticTriangle]
 
+/-- `TrichromaticTriangle` is invariant under swapping the last two vertices. -/
+theorem trichromaticTriangle_swap_right {a b c : MonskyColor} :
+    TrichromaticTriangle a b c ↔ TrichromaticTriangle a c b := by
+  cases a <;> cases b <;> cases c <;> decide
+
 /--
 Any trichromatic triangle with odd rational double area contradicts the chosen
 real 2-adic Monsky coloring.  The case split only reorders the three vertices
@@ -530,6 +535,32 @@ theorem not_real_doubleArea_eq_two_div_odd_of_trichromatic {n : ℕ} (hn : Odd n
     have harea' : doubleArea c b a = -(((2 : ℚ) / n : ℚ) : ℝ) := by
       rw [hperm, harea]
     exact not_real_doubleArea_eq_neg_two_div_odd_of_red_green_blue hn hcc hcb hca harea'
+
+/-- The negative-orientation form of `not_real_doubleArea_eq_two_div_odd_of_trichromatic`. -/
+theorem not_real_doubleArea_eq_neg_two_div_odd_of_trichromatic {n : ℕ} (hn : Odd n)
+    {a b c : ℝ × ℝ}
+    (htri : TrichromaticTriangle (realTwoAdicColor a) (realTwoAdicColor b)
+      (realTwoAdicColor c))
+    (harea : doubleArea a b c = -(((2 : ℚ) / n : ℚ) : ℝ)) : False := by
+  have hperm : doubleArea a c b = -doubleArea a b c := by
+    unfold doubleArea
+    ring
+  have harea' : doubleArea a c b = (((2 : ℚ) / n : ℚ) : ℝ) := by
+    rw [hperm, harea]
+    simp
+  exact not_real_doubleArea_eq_two_div_odd_of_trichromatic hn
+    (trichromaticTriangle_swap_right.mp htri) harea'
+
+/-- Orientation-free odd equal-area contradiction for a trichromatic triangle. -/
+theorem not_real_doubleArea_eq_abs_two_div_odd_of_trichromatic {n : ℕ} (hn : Odd n)
+    {a b c : ℝ × ℝ}
+    (htri : TrichromaticTriangle (realTwoAdicColor a) (realTwoAdicColor b)
+      (realTwoAdicColor c))
+    (harea : doubleArea a b c = (((2 : ℚ) / n : ℚ) : ℝ) ∨
+      doubleArea a b c = -(((2 : ℚ) / n : ℚ) : ℝ)) : False := by
+  rcases harea with harea | harea
+  · exact not_real_doubleArea_eq_two_div_odd_of_trichromatic hn htri harea
+  · exact not_real_doubleArea_eq_neg_two_div_odd_of_trichromatic hn htri harea
 
 theorem not_trichromatic_of_first_two_same {a b c : MonskyColor}
     (hab : a = b) : ¬ TrichromaticTriangle a b c := by
@@ -1046,6 +1077,29 @@ theorem no_odd_equalArea_realization_of_monskyCertificate {n : ℕ} (hn : Odd n)
   exact not_real_doubleArea_eq_two_div_odd_of_trichromatic hn htri (harea i)
 
 /--
+Orientation-free version of
+`no_odd_equalArea_realization_of_monskyCertificate`, allowing each listed
+triangle to have double area `2 / n` or `-2 / n`.
+-/
+theorem no_odd_equalArea_realization_of_monskyCertificate_abs {n : ℕ} (hn : Odd n)
+    (triangles : Fin n → (ℝ × ℝ) × (ℝ × ℝ) × (ℝ × ℝ))
+    (cert : MonskyCertificate n)
+    (hcolors : ∀ i : Fin n, cert.triangleColors i =
+      (realTwoAdicColor (triangles i).1,
+       realTwoAdicColor (triangles i).2.1,
+       realTwoAdicColor (triangles i).2.2))
+    (harea : ∀ i : Fin n,
+      doubleArea (triangles i).1 (triangles i).2.1 (triangles i).2.2 =
+        (((2 : ℚ) / n : ℚ) : ℝ) ∨
+      doubleArea (triangles i).1 (triangles i).2.1 (triangles i).2.2 =
+        -(((2 : ℚ) / n : ℚ) : ℝ)) : False := by
+  obtain ⟨i, hi⟩ := chapter20 cert
+  have htri : TrichromaticTriangle (realTwoAdicColor (triangles i).1)
+      (realTwoAdicColor (triangles i).2.1) (realTwoAdicColor (triangles i).2.2) := by
+    simpa [hcolors i] using hi
+  exact not_real_doubleArea_eq_abs_two_div_odd_of_trichromatic hn htri (harea i)
+
+/--
 Finite-vertex version of the current Monsky contradiction.  This is the target
 shape for the remaining geometric triangulation extraction: vertices are a
 finite type, triangles name three vertices, the boundary parity is computed
@@ -1062,6 +1116,30 @@ theorem no_odd_equalArea_realization_of_edgeParity
   let cert : MonskyCertificate n :=
     edgeParityMonskyCertificate triangles (realTwoAdicColor ∘ vertices) hboundary
   exact no_odd_equalArea_realization_of_monskyCertificate hn
+    (fun i => (vertices (triangles i).1, vertices (triangles i).2.1,
+      vertices (triangles i).2.2))
+    cert
+    (by intro i; rfl)
+    harea
+
+/--
+Orientation-free finite-vertex version of the current Monsky contradiction.
+This is the form closest to an unoriented geometric triangulation.
+-/
+theorem no_odd_equalArea_realization_of_edgeParity_abs
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ} (hn : Odd n)
+    (vertices : α → ℝ × ℝ) (triangles : Fin n → α × α × α)
+    (hboundary : Odd (oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices)))
+    (harea : ∀ i : Fin n,
+      doubleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+          (vertices (triangles i).2.2) =
+        (((2 : ℚ) / n : ℚ) : ℝ) ∨
+      doubleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+          (vertices (triangles i).2.2) =
+        -(((2 : ℚ) / n : ℚ) : ℝ)) : False := by
+  let cert : MonskyCertificate n :=
+    edgeParityMonskyCertificate triangles (realTwoAdicColor ∘ vertices) hboundary
+  exact no_odd_equalArea_realization_of_monskyCertificate_abs hn
     (fun i => (vertices (triangles i).1, vertices (triangles i).2.1,
       vertices (triangles i).2.2))
     cert

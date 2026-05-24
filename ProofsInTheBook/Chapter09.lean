@@ -1283,6 +1283,49 @@ theorem cube_not_regularTetrahedron_concrete_edgeGeometry_dehnQ :
     regularTetrahedron_dehnInvariantQ_geometric_edges_ne_zero
 
 /--
+Concrete obstruction exported through the geometric additivity skeleton: once
+an actual dissection formalization supplies these skeletons with the concrete
+cube and tetrahedron boundary data, their piece Dehn sums cannot agree.
+-/
+theorem no_same_pieceDehnSum_concrete_cube_regularTetrahedron_geometricAdditivitySkeletonQ
+    {CubeBoundaryFragment CubeInternalEdge CubeIncident
+      TetraBoundaryFragment TetraInternalEdge TetraIncident : Type*}
+    (cubeCert :
+      DehnGeometricAdditivitySkeletonQ
+        CubeEdge CubeBoundaryFragment CubeInternalEdge CubeIncident)
+    (tetraCert :
+      DehnGeometricAdditivitySkeletonQ
+        RegularTetrahedronEdge TetraBoundaryFragment TetraInternalEdge TetraIncident)
+    (hcubeEdges : cubeCert.boundaryEdges = Finset.univ)
+    (hcubeAngle : ∀ e, cubeCert.boundaryAngle e = cubeEdgeDihedralAngle e)
+    (htetraEdges : tetraCert.boundaryEdges = Finset.univ)
+    (htetraLength : ∀ e, tetraCert.boundaryLength e = regularTetrahedronEdgeLength e)
+    (htetraAngle : ∀ e,
+      tetraCert.boundaryAngle e = regularTetrahedronEdgeDihedralAngle e) :
+    cubeCert.pieceDehnSum ≠ tetraCert.pieceDehnSum := by
+  refine no_same_pieceDehnSum_geometricAdditivitySkeletonQ_of_dehn_ne
+    cubeCert tetraCert ?_ ?_
+  · rw [hcubeEdges]
+    apply dehnInvariantQ_eq_zero_of_angles_zero
+    intro e _he
+    rw [hcubeAngle e, cubeEdgeDihedralAngle]
+    exact angleClassQ_pi_div_two
+  · have htetra :
+        dehnInvariantQ tetraCert.boundaryEdges tetraCert.boundaryLength
+            (fun e => angleClassQ (tetraCert.boundaryAngle e)) =
+          dehnInvariantQ (Finset.univ : Finset RegularTetrahedronEdge)
+            regularTetrahedronEdgeLength
+            (fun e => angleClassQ (regularTetrahedronEdgeDihedralAngle e)) := by
+      rw [htetraEdges]
+      unfold dehnInvariantQ
+      apply Finset.sum_congr rfl
+      intro e _he
+      simp [htetraLength e, htetraAngle e]
+    intro hzero
+    exact regularTetrahedron_dehnInvariantQ_geometric_edges_ne_zero
+      (htetra.symm.trans hzero)
+
+/--
 Hilbert's third problem: a regular tetrahedron cannot be cut into finitely
 many polyhedral pieces and reassembled into a cube. The book's proof:
 1. The cube has Dehn invariant 0 (dihedral angles are π/2, which is 0 mod π)

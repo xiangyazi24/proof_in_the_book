@@ -18,15 +18,19 @@ explicit `n - 2*k + 2` coloring upper bound, handles the `n = 2*k` lower-bound
 edge case, and states `chapter39` from a `KneserChromaticCertificate` carrying
 the hard non-colorability direction.
 
-Gap to the full book theorem: the missing upstream theorem is Borsuk-Ulam in
-the form needed by Bárány's proof, plus the bridge from a hypothetical
-`(n - 2*k + 1)`-coloring to the forbidden antipodal map.  A complete proof
-needs spheres and antipodal maps with the required continuity facts, a
-formal Borsuk-Ulam theorem, the finite point configuration on the sphere used
-by Bárány, and the construction showing that a too-small Kneser coloring
-separates antipodal data.  Mathlib has topology, Euclidean spaces, and
-simple graphs, but not this Borsuk-Ulam-to-Kneser pipeline as an available
-component.
+Gap to the full book theorem: the missing upstream theorem can be supplied by
+either the analytic Borsuk-Ulam route or the discrete Matoušek/Tucker route.
+The local Mathlib checkout has general topological and abstract/geometric
+simplicial-complex infrastructure, but no Borsuk-Ulam theorem, Tucker lemma,
+Ky Fan lemma, octahedral sphere labeling theorem, or ready-made bridge from
+too-small Kneser colorings to a forbidden antipodal/complementary labeling.
+
+The definitions `TuckerLemmaStatement` and
+`KneserColoringProducesTuckerCounterexample` below isolate the discrete route:
+Tucker's lemma for nonzero sign vectors in `{−1,0,1}^n`, plus Matoušek's
+construction of a Tucker counterexample from a hypothetical
+`(n - 2*k + 1)`-coloring of `KG(n,k)`.  Proving those two statements is the
+honest frontier; the file does not package them as `False`.
 -/
 
 namespace ProofsInTheBook.Chapter39
@@ -315,10 +319,114 @@ theorem kneser_chromatic_upper_bound (n k : ℕ) (hk : 1 ≤ k) (hn : 2 * k ≤ 
       ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b :=
   ⟨kneserColor hk hn, kneserColor_proper hk hn⟩
 
+/-! ### Tucker-lemma route for the hard lower bound -/
+
+/-- A sign vector in `{−1,0,1}^n`, represented by its positive and negative supports. -/
+structure SignedSubset (n : ℕ) where
+  pos : Finset (Fin n)
+  neg : Finset (Fin n)
+  disjoint : Disjoint pos neg
+
+namespace SignedSubset
+
+/-- Antipodal sign vector: swap positive and negative supports. -/
+def antipode {n : ℕ} (X : SignedSubset n) : SignedSubset n where
+  pos := X.neg
+  neg := X.pos
+  disjoint := X.disjoint.symm
+
+/-- The sign vector is not the origin. -/
+def Nonzero {n : ℕ} (X : SignedSubset n) : Prop :=
+  X.pos.Nonempty ∨ X.neg.Nonempty
+
+theorem antipode_nonzero {n : ℕ} (X : SignedSubset n) :
+    X.antipode.Nonzero ↔ X.Nonzero := by
+  simp [Nonzero, antipode, or_comm]
+
+/-- The face order on the cross-polytope boundary, by support inclusion. -/
+def Le {n : ℕ} (X Y : SignedSubset n) : Prop :=
+  X.pos ⊆ Y.pos ∧ X.neg ⊆ Y.neg
+
+end SignedSubset
+
+/-- Nonzero sign vectors, i.e. vertices/faces of the deleted origin sign complex. -/
+abbrev NonzeroSignedSubset (n : ℕ) :=
+  {X : SignedSubset n // X.Nonzero}
+
+namespace NonzeroSignedSubset
+
+/-- Antipodal map on nonzero sign vectors. -/
+def antipode {n : ℕ} (X : NonzeroSignedSubset n) : NonzeroSignedSubset n :=
+  ⟨X.1.antipode, (SignedSubset.antipode_nonzero X.1).mpr X.2⟩
+
+end NonzeroSignedSubset
+
+/-- A signed label `±i`, with `i : Fin m`. -/
+structure SignedLabel (m : ℕ) where
+  positive : Bool
+  index : Fin m
+  deriving DecidableEq, Repr
+
+namespace SignedLabel
+
+/-- Negating a signed label flips its sign and keeps its index. -/
+def neg {m : ℕ} (L : SignedLabel m) : SignedLabel m where
+  positive := !L.positive
+  index := L.index
+
+end SignedLabel
+
+/--
+Tucker's lemma in the octahedral/sign-vector form needed for the
+Matoušek proof of Lovász's theorem.  Every antipodal labeling of nonzero sign
+vectors by `±1, …, ±(n-1)` has a complementary comparable pair.
+
+This is not currently present in Mathlib; it is the missing discrete
+replacement for Borsuk-Ulam.
+-/
+def TuckerLemmaStatement (n : ℕ) : Prop :=
+  ∀ label : NonzeroSignedSubset n → SignedLabel (n - 1),
+    (∀ X, label X.antipode = (label X).neg) →
+      ∃ X Y : NonzeroSignedSubset n,
+        SignedSubset.Le X.1 Y.1 ∧ label X = (label Y).neg
+
+/--
+Matoušek's bridge from a too-small Kneser coloring to a Tucker counterexample:
+given a proper `(n - 2*k + 1)`-coloring, construct an antipodal sign-vector
+labeling with no complementary comparable pair.
+
+This construction is finite and combinatorial, but still nontrivial: it must
+choose canonical `k`-subsets from large positive/negative supports and verify
+the no-complementary-edge property.  It is the other missing component of the
+Tucker route.
+-/
+def KneserColoringProducesTuckerCounterexample (n k : ℕ) : Prop :=
+  ∀ C : KneserVertex n k → Fin (n - 2 * k + 1),
+    (∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) →
+      ∃ label : NonzeroSignedSubset n → SignedLabel (n - 1),
+        (∀ X, label X.antipode = (label X).neg) ∧
+          ∀ X Y : NonzeroSignedSubset n,
+            SignedSubset.Le X.1 Y.1 → label X ≠ (label Y).neg
+
+/--
+If Tucker's lemma and Matoušek's coloring-to-labeling bridge are available,
+the hard Kneser lower bound follows immediately.
+-/
+theorem kneser_chromatic_lower_bound_from_tucker (n k : ℕ)
+    (htucker : TuckerLemmaStatement n)
+    (hbridge : KneserColoringProducesTuckerCounterexample n k) :
+    ¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
+      ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b := by
+  rintro ⟨C, hC⟩
+  obtain ⟨label, hantipodal, hno_complementary⟩ := hbridge C hC
+  obtain ⟨X, Y, hXY, hcomp⟩ := htucker label hantipodal
+  exact hno_complementary X Y hXY hcomp
+
 /--
 Kneser graph chromatic number lower bound: `KG(n,k)` is NOT
 `(n - 2k + 1)`-colorable. This is the hard direction, proved by Lovász
-using the Borsuk-Ulam theorem (or by Bárány's simplicial argument).
+using the Borsuk-Ulam theorem, or discretely from Tucker's lemma via
+Matoušek's labeling construction.
 -/
 theorem kneser_chromatic_lower_bound (n k : ℕ) (hk : 1 ≤ k) (hn : 2 * k ≤ n)
     (hhard : n ≠ 2 * k → ¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
@@ -399,13 +507,31 @@ theorem chapter39_two_mul (k : ℕ) (hk : 1 ≤ k) :
   · exact kneser_chromatic_upper_bound (2 * k) k hk (by omega)
   · exact kneser_chromatic_lower_bound_two_mul k hk
 
-/-- Certificate that Kneser graph KG(n,k) is not (n - 2k + 1)-colorable.
-This is the hard direction of Lovász's theorem, traditionally proved via
-Borsuk-Ulam (not currently in Mathlib). -/
+/--
+Certificate that Kneser graph KG(n,k) is not `(n - 2k + 1)`-colorable.
+This is the hard direction of Lovász's theorem.  It may be supplied by
+Borsuk-Ulam or by the Tucker/Matoušek route formalized above.
+-/
 structure KneserChromaticCertificate (n k : ℕ) where
   /-- The non-colorability witness for the n ≠ 2*k case. -/
   hhard : n ≠ 2 * k → ¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
     ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b
+
+namespace KneserChromaticCertificate
+
+/--
+Build the hard lower-bound certificate from Tucker's lemma plus Matoušek's
+finite coloring-to-labeling bridge.  This keeps the missing theorem precise:
+there is no assumed `False`, only the named discrete lemma and bridge.
+-/
+def of_tucker (n k : ℕ)
+    (htucker : TuckerLemmaStatement n)
+    (hbridge : n ≠ 2 * k → KneserColoringProducesTuckerCounterexample n k) :
+    KneserChromaticCertificate n k where
+  hhard := fun hne =>
+    kneser_chromatic_lower_bound_from_tucker n k htucker (hbridge hne)
+
+end KneserChromaticCertificate
 
 /--
 Chapter 39 (Lovász's theorem on Kneser graph chromatic number, Tier 1
@@ -413,8 +539,9 @@ conditional): given the hard direction (no (n-2k+1)-coloring exists when
 n ≠ 2k), and combined with the upper bound (n-2k+2 colorable) already proved,
 χ(KG(n,k)) = n - 2k + 2.
 
-TODO (Tier 2): construct hhard via Borsuk-Ulam / Bárány simplicial argument
-deferred — requires building Borsuk-Ulam in Mathlib first.
+TODO (Tier 2): construct `hhard` via Borsuk-Ulam or via
+`KneserChromaticCertificate.of_tucker`.  The Tucker route requires proving
+`TuckerLemmaStatement` and `KneserColoringProducesTuckerCounterexample`.
 -/
 theorem chapter39 {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
     (cert : KneserChromaticCertificate n k) :

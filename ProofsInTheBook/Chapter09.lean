@@ -777,6 +777,66 @@ theorem euclidean3_dist_sq_eq_coordinateDistSq3 (u v : Euclidean3) :
   rw [EuclideanSpace.dist_sq_eq]
   simp [coordinateDistSq3, Fin.sum_univ_three, dist_eq_norm]
 
+/-- Cube vertices as coordinate sign vectors. -/
+abbrev CubeVertexSign :=
+  Fin 3 → Bool
+
+noncomputable def cubeVertexPoint (v : CubeVertexSign) : Euclidean3 :=
+  !₂[if v ⟨0, by decide⟩ then (1 : ℝ) else -1,
+     if v ⟨1, by decide⟩ then (1 : ℝ) else -1,
+     if v ⟨2, by decide⟩ then (1 : ℝ) else -1]
+
+/--
+Coordinate cube edges: choose the axis along the edge and the signs on the
+two fixed coordinates.  The sign on the moving axis is normalized to `false`,
+so this type has no duplicate representation.
+-/
+abbrev CubeCoordinateEdge :=
+  {p : Fin 3 × CubeVertexSign // p.2 p.1 = false}
+
+theorem cubeCoordinateEdge_card : Fintype.card CubeCoordinateEdge = 12 := by
+  native_decide
+
+theorem cubeCoordinateEdge_univ_card :
+    (Finset.univ : Finset CubeCoordinateEdge).card = 12 := by
+  native_decide
+
+def cubeCoordinateEdgeEndpoint (e : CubeCoordinateEdge) (positiveAlongAxis : Bool) :
+    CubeVertexSign :=
+  fun i => if i = e.1.1 then positiveAlongAxis else e.1.2 i
+
+theorem cubeCoordinateEdgeEndpoint_coordinateDistSq3 (e : CubeCoordinateEdge) :
+    coordinateDistSq3
+        (cubeVertexPoint (cubeCoordinateEdgeEndpoint e false))
+        (cubeVertexPoint (cubeCoordinateEdgeEndpoint e true)) = 4 := by
+  fin_cases e <;>
+    simp [coordinateDistSq3, cubeVertexPoint, cubeCoordinateEdgeEndpoint] <;>
+    norm_num
+
+noncomputable def cubeCoordinateEdgeLength (e : CubeCoordinateEdge) : ℝ :=
+  dist
+    (cubeVertexPoint (cubeCoordinateEdgeEndpoint e false))
+    (cubeVertexPoint (cubeCoordinateEdgeEndpoint e true))
+
+theorem cubeCoordinateEdgeLength_eq_two (e : CubeCoordinateEdge) :
+    cubeCoordinateEdgeLength e = 2 := by
+  rw [cubeCoordinateEdgeLength]
+  rw [← sq_eq_sq₀ dist_nonneg (by norm_num : (0 : ℝ) ≤ 2)]
+  rw [euclidean3_dist_sq_eq_coordinateDistSq3,
+    cubeCoordinateEdgeEndpoint_coordinateDistSq3]
+  norm_num
+
+noncomputable def cubeCoordinateEdgeDihedralAngle (_e : CubeCoordinateEdge) : ℝ :=
+  Real.pi / 2
+
+theorem cubeCoordinate_dehnInvariantQ_edges_eq_zero :
+    dehnInvariantQ (Finset.univ : Finset CubeCoordinateEdge)
+        cubeCoordinateEdgeLength
+        (fun e => angleClassQ (cubeCoordinateEdgeDihedralAngle e)) = 0 := by
+  apply dehnInvariantQ_eq_zero_of_angles_zero
+  intro e _he
+  simp [cubeCoordinateEdgeDihedralAngle]
+
 theorem regularTetrahedronVertex_dot_self (i : Fin 4) :
     dot3 (regularTetrahedronVertex i) (regularTetrahedronVertex i) = 3 := by
   fin_cases i <;> simp [dot3, regularTetrahedronVertex] <;> norm_num
@@ -1280,6 +1340,21 @@ theorem cube_not_regularTetrahedron_concrete_edgeGeometry_dehnQ :
         (fun e => angleClassQ (regularTetrahedronEdgeDihedralAngle e)) := by
   exact impossible_scissors_congruence_of_dehn_ne
     cube_dehnInvariantQ_edges_eq_zero
+    regularTetrahedron_dehnInvariantQ_geometric_edges_ne_zero
+
+/--
+The coordinate-vertex cube edge model also has Dehn invariant different from
+the concrete tetrahedron edge model.
+-/
+theorem cubeCoordinate_not_regularTetrahedron_concrete_edgeGeometry_dehnQ :
+    dehnInvariantQ (Finset.univ : Finset CubeCoordinateEdge)
+        cubeCoordinateEdgeLength
+        (fun e => angleClassQ (cubeCoordinateEdgeDihedralAngle e)) ≠
+      dehnInvariantQ (Finset.univ : Finset RegularTetrahedronEdge)
+        regularTetrahedronEdgeLength
+        (fun e => angleClassQ (regularTetrahedronEdgeDihedralAngle e)) := by
+  exact impossible_scissors_congruence_of_dehn_ne
+    cubeCoordinate_dehnInvariantQ_edges_eq_zero
     regularTetrahedron_dehnInvariantQ_geometric_edges_ne_zero
 
 /--

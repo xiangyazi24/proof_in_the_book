@@ -704,12 +704,23 @@ theorem regularTetrahedronSimplex_equilateral :
 abbrev RegularTetrahedronEdge :=
   {p : Fin 4 × Fin 4 // p.1 < p.2}
 
+/--
+For an edge `e = {u, v}`, the two adjacent faces are the faces opposite the
+two vertices not equal to `u` or `v`.
+-/
+abbrev RegularTetrahedronEdgeAdjacentFaceVertex (e : RegularTetrahedronEdge) :=
+  {i : Fin 4 // i ≠ e.1.1 ∧ i ≠ e.1.2}
+
 theorem regularTetrahedronEdge_card : Fintype.card RegularTetrahedronEdge = 6 := by
   native_decide
 
 theorem regularTetrahedronEdge_univ_card :
     (Finset.univ : Finset RegularTetrahedronEdge).card = 6 := by
   native_decide
+
+theorem regularTetrahedronEdgeAdjacentFaceVertex_card (e : RegularTetrahedronEdge) :
+    Fintype.card (RegularTetrahedronEdgeAdjacentFaceVertex e) = 2 := by
+  fin_cases e <;> native_decide
 
 noncomputable def regularTetrahedronEdgeLength (e : RegularTetrahedronEdge) : ℝ :=
   dist (regularTetrahedronVertex e.1.1) (regularTetrahedronVertex e.1.2)
@@ -744,6 +755,18 @@ theorem regularTetrahedronVertex_orthogonal_to_opposite_face_edge
       (regularTetrahedronVertex j - regularTetrahedronVertex k) = 0 := by
   fin_cases i <;> fin_cases j <;> fin_cases k <;>
     simp [dot3, regularTetrahedronVertex] at hji hki ⊢
+
+/--
+The normal of a face adjacent to a tetrahedron edge is orthogonal to that
+edge.  This identifies the complement-vertex indexing above with the usual
+edge/face incidence geometry for the coordinate tetrahedron.
+-/
+theorem regularTetrahedronEdge_adjacentFaceNormal_orthogonal
+    (e : RegularTetrahedronEdge) (i : RegularTetrahedronEdgeAdjacentFaceVertex e) :
+    dot3 (regularTetrahedronVertex i.1)
+      (regularTetrahedronVertex e.1.1 - regularTetrahedronVertex e.1.2) = 0 := by
+  exact regularTetrahedronVertex_orthogonal_to_opposite_face_edge
+    (i := i.1) (j := e.1.1) (k := e.1.2) i.2.1.symm i.2.2.symm
 
 /--
 The face opposite vertex `i` has normal parallel to `regularTetrahedronVertex i`.
@@ -781,6 +804,12 @@ noncomputable def regularTetrahedronDihedralAngle (i j : Fin 4) : ℝ :=
 theorem regularTetrahedronDihedralAngle_of_ne {i j : Fin 4} (hij : i ≠ j) :
     regularTetrahedronDihedralAngle i j = Real.arccos (1 / 3) := by
   rw [regularTetrahedronDihedralAngle, regularTetrahedron_dihedralCosine_of_ne hij]
+
+theorem regularTetrahedronEdge_adjacentFaceDihedralAngle_of_ne
+    (e : RegularTetrahedronEdge) {i j : RegularTetrahedronEdgeAdjacentFaceVertex e}
+    (hij : i ≠ j) :
+    regularTetrahedronDihedralAngle i.1 j.1 = Real.arccos (1 / 3) := by
+  exact regularTetrahedronDihedralAngle_of_ne (fun h => hij (Subtype.ext h))
 
 /--
 The regular tetrahedron has nonzero Dehn invariant because its dihedral
@@ -932,6 +961,13 @@ theorem angleClassQ_arccos_one_third_ne_zero :
 theorem angleClassQ_regularTetrahedronDihedralAngle_ne_zero {i j : Fin 4} (hij : i ≠ j) :
     angleClassQ (regularTetrahedronDihedralAngle i j) ≠ 0 := by
   rw [regularTetrahedronDihedralAngle_of_ne hij]
+  exact angleClassQ_arccos_one_third_ne_zero
+
+theorem angleClassQ_regularTetrahedronEdge_adjacentFaceDihedralAngle_ne_zero
+    (e : RegularTetrahedronEdge) {i j : RegularTetrahedronEdgeAdjacentFaceVertex e}
+    (hij : i ≠ j) :
+    angleClassQ (regularTetrahedronDihedralAngle i.1 j.1) ≠ 0 := by
+  rw [regularTetrahedronEdge_adjacentFaceDihedralAngle_of_ne e hij]
   exact angleClassQ_arccos_one_third_ne_zero
 
 /--

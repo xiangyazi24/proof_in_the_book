@@ -760,6 +760,46 @@ theorem matousekLargeSupportLabel_ne_neg_of_le {n k : ℕ} (hk : 1 ≤ k)
       (matousekLargeSupportPositive_card C Y hYlarge)
   exact hmin_ne (by simpa [matousekLargeSupportColor] using hcolor)
 
+theorem matousekSmallSupportLabel_ne_neg_large {n k : ℕ} (hk : 1 ≤ k)
+    (hn : 2 * k ≤ n)
+    (C : KneserVertex n k → Fin (n - 2 * k + 1))
+    {X Y : SignedSubset n}
+    (hX : X.Nonzero) (hXsmall : X.card ≤ 2 * k - 2)
+    (hYlarge : 2 * k - 1 ≤ Y.card) :
+    matousekSmallSupportLabel hk hn X hX hXsmall ≠
+      (matousekLargeSupportLabel hk hn C Y hYlarge).neg := by
+  intro hcomp
+  have hindex :
+      matousekSmallSupportIndex hk hn X hX hXsmall =
+        matousekLargeSupportIndex hk hn (matousekLargeSupportColor C Y hYlarge) := by
+    have := congrArg SignedLabel.index hcomp
+    simpa [matousekSmallSupportLabel, matousekLargeSupportLabel, SignedLabel.neg] using this
+  have hindex_val := congrArg Fin.val hindex
+  have hXpos : 0 < X.card := SignedSubset.card_pos_of_nonzero hX
+  have hcolor := (matousekLargeSupportColor C Y hYlarge).isLt
+  simp [matousekSmallSupportIndex, matousekLargeSupportIndex] at hindex_val
+  omega
+
+theorem matousekLargeSupportLabel_ne_neg_small {n k : ℕ} (hk : 1 ≤ k)
+    (hn : 2 * k ≤ n)
+    (C : KneserVertex n k → Fin (n - 2 * k + 1))
+    {X Y : SignedSubset n}
+    (hXlarge : 2 * k - 1 ≤ X.card)
+    (hY : Y.Nonzero) (hYsmall : Y.card ≤ 2 * k - 2) :
+    matousekLargeSupportLabel hk hn C X hXlarge ≠
+      (matousekSmallSupportLabel hk hn Y hY hYsmall).neg := by
+  intro hcomp
+  have hindex :
+      matousekLargeSupportIndex hk hn (matousekLargeSupportColor C X hXlarge) =
+        matousekSmallSupportIndex hk hn Y hY hYsmall := by
+    have := congrArg SignedLabel.index hcomp
+    simpa [matousekSmallSupportLabel, matousekLargeSupportLabel, SignedLabel.neg] using this
+  have hindex_val := congrArg Fin.val hindex
+  have hYpos : 0 < Y.card := SignedSubset.card_pos_of_nonzero hY
+  have hcolor := (matousekLargeSupportColor C X hXlarge).isLt
+  simp [matousekSmallSupportIndex, matousekLargeSupportIndex] at hindex_val
+  omega
+
 /--
 In a proper Kneser coloring, if both signs of a signed support contain
 `k`-subsets, the minimum colors on the two sides are different.

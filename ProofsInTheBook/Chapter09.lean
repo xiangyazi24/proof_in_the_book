@@ -609,6 +609,41 @@ theorem cube_rightAngle_has_faceNormal_cosine {i j : Fin 6}
     Real.cos (Real.pi / 2) = cubeFaceNormalCosine i j := by
   rw [Real.cos_pi_div_two, cubeFaceNormalCosine_of_axis_ne haxis]
 
+/--
+Edges of the coordinate cube, represented as intersections of two adjacent
+faces.  The condition `cubeFaceAxis i ≠ cubeFaceAxis j` excludes opposite
+parallel face pairs, leaving the twelve actual cube edges.
+-/
+abbrev CubeEdge :=
+  {p : Fin 6 × Fin 6 // p.1 < p.2 ∧ cubeFaceAxis p.1 ≠ cubeFaceAxis p.2}
+
+theorem cubeEdge_card : Fintype.card CubeEdge = 12 := by
+  native_decide
+
+theorem cubeEdge_univ_card :
+    (Finset.univ : Finset CubeEdge).card = 12 := by
+  native_decide
+
+noncomputable def cubeEdgeLength (_e : CubeEdge) : ℝ :=
+  2
+
+noncomputable def cubeEdgeDihedralAngle (_e : CubeEdge) : ℝ :=
+  Real.pi / 2
+
+theorem cubeEdgeDihedralAngle_faceNormal_cosine (e : CubeEdge) :
+    Real.cos (cubeEdgeDihedralAngle e) =
+      cubeFaceNormalCosine e.1.1 e.1.2 := by
+  rw [cubeEdgeDihedralAngle, cube_rightAngle_has_faceNormal_cosine e.2.2]
+
+/-- Concrete cube Dehn invariant in the rational angle target. -/
+theorem cube_dehnInvariantQ_edges_eq_zero :
+    dehnInvariantQ (Finset.univ : Finset CubeEdge)
+        cubeEdgeLength
+        (fun e => angleClassQ (cubeEdgeDihedralAngle e)) = 0 := by
+  apply dehnInvariantQ_eq_zero_of_angles_zero
+  intro e _he
+  simp [cubeEdgeDihedralAngle]
+
 /-- Coordinate squared distance in `EuclideanSpace ℝ (Fin 3)`, written explicitly for computation. -/
 def coordinateDistSq3 (u v : Euclidean3) : ℝ :=
   (u ⟨0, by decide⟩ - v ⟨0, by decide⟩) ^ 2 +
@@ -991,6 +1026,21 @@ theorem cube_not_regularTetrahedron_concrete_dehnQ {cubeEdgeLength : ℝ} :
         (fun _ => angleClassQ (Real.arccos (1 / 3))) := by
   exact impossible_scissors_congruence_of_dehn_ne
     (dehnInvariantQ_cube_eq_zero (Finset.univ : Finset (Fin 12)) (fun _ => cubeEdgeLength))
+    regularTetrahedron_dehnInvariantQ_edges_ne_zero
+
+/--
+The concrete cube edge model and the concrete regular tetrahedron edge model
+have different rational Dehn invariants.
+-/
+theorem cube_not_regularTetrahedron_concrete_geometry_dehnQ :
+    dehnInvariantQ (Finset.univ : Finset CubeEdge)
+        cubeEdgeLength
+        (fun e => angleClassQ (cubeEdgeDihedralAngle e)) ≠
+      dehnInvariantQ (Finset.univ : Finset RegularTetrahedronEdge)
+        regularTetrahedronEdgeLength
+        (fun _ => angleClassQ (Real.arccos (1 / 3))) := by
+  exact impossible_scissors_congruence_of_dehn_ne
+    cube_dehnInvariantQ_edges_eq_zero
     regularTetrahedron_dehnInvariantQ_edges_ne_zero
 
 /--

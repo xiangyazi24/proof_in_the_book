@@ -1323,6 +1323,96 @@ noncomputable def KahnKalaiCertificate.ofPrimeDirectedCutFamilyOfLarge {d p : �
     hnonzero hlarge (exists_prime_intersection_of_large (d := d) sets hcard hinj hnonzero hlarge)
 
 /--
+Embedding-coordinate version of `ofPrimeDirectedCutFamily`.  This is used to
+place the same cut-incidence configuration in any larger ambient dimension.
+-/
+noncomputable def KahnKalaiCertificate.ofPrimeDirectedCutFamilyEmbedding {d p : ℕ}
+    [Fact p.Prime] {α ι : Type*} [Fintype α] [DecidableEq α] [Fintype ι]
+    (coord : (α × α) ↪ Fin d) (sets : ι → Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hcard : ∀ i, (sets i).card = 2 * p)
+    (hinj : Function.Injective sets)
+    (hnonzero : ∀ i j, i ≠ j → (sets i ∩ sets j).card ≠ 0)
+    (hlarge : (d + 1) *
+        Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card} <
+          Fintype.card ι)
+    (hpos : 0 < Metric.diam
+      ((Finset.univ.image (fun i => finEmbeddedDirectedCutPoint coord (sets i)) :
+          Finset (EuclideanSpace ℝ (Fin d))) : Set (EuclideanSpace ℝ (Fin d))))
+    (hdiamSq : Metric.diam
+      ((Finset.univ.image (fun i => finEmbeddedDirectedCutPoint coord (sets i)) :
+          Finset (EuclideanSpace ℝ (Fin d))) : Set (EuclideanSpace ℝ (Fin d))) ^ 2 =
+        ((8 * p * p : ℕ) : ℝ)) :
+    KahnKalaiCertificate d := by
+  refine KahnKalaiCertificate.ofPrimeFranklWilsonSquaredConfiguration (sets := sets)
+    (pointOf := fun i => finEmbeddedDirectedCutPoint coord (sets i))
+    hcard hinj hnonzero hlarge hpos ?_
+  intro i j _hij hinter
+  rw [finEmbeddedDirectedCutPoint_dist_sq_of_kahnKalai_intersection coord (sets i) (sets j)
+    hground (hcard i) (hcard j) hinter, ← hdiamSq]
+
+/--
+Embedding-coordinate directed-cut certificate with positivity derived from the
+squared-diameter calculation.
+-/
+noncomputable def KahnKalaiCertificate.ofPrimeDirectedCutFamilyEmbeddingOfDiameterSq
+    {d p : ℕ} [Fact p.Prime] {α ι : Type*} [Fintype α] [DecidableEq α] [Fintype ι]
+    (coord : (α × α) ↪ Fin d) (sets : ι → Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hcard : ∀ i, (sets i).card = 2 * p)
+    (hinj : Function.Injective sets)
+    (hnonzero : ∀ i j, i ≠ j → (sets i ∩ sets j).card ≠ 0)
+    (hlarge : (d + 1) *
+        Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card} <
+          Fintype.card ι)
+    (hdiamSq : Metric.diam
+      ((Finset.univ.image (fun i => finEmbeddedDirectedCutPoint coord (sets i)) :
+          Finset (EuclideanSpace ℝ (Fin d))) : Set (EuclideanSpace ℝ (Fin d))) ^ 2 =
+        ((8 * p * p : ℕ) : ℝ)) :
+    KahnKalaiCertificate d := by
+  have hsq_pos : (0 : ℝ) < ((8 * p * p : ℕ) : ℝ) := by
+    have hp : 0 < p := (Fact.out : Nat.Prime p).pos
+    positivity
+  refine KahnKalaiCertificate.ofPrimeDirectedCutFamilyEmbedding coord sets hground hcard hinj
+    hnonzero hlarge ?_ hdiamSq
+  exact diam_pos_of_diam_sq_eq_pos hdiamSq hsq_pos
+
+/-- Embedding-coordinate directed-cut certificate supplied by one critical pair. -/
+noncomputable def KahnKalaiCertificate.ofPrimeDirectedCutFamilyEmbeddingOfCriticalPair
+    {d p : ℕ} [Fact p.Prime] {α ι : Type*} [Fintype α] [DecidableEq α] [Fintype ι]
+    (coord : (α × α) ↪ Fin d) (sets : ι → Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hcard : ∀ i, (sets i).card = 2 * p)
+    (hinj : Function.Injective sets)
+    (hnonzero : ∀ i j, i ≠ j → (sets i ∩ sets j).card ≠ 0)
+    (hlarge : (d + 1) *
+        Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card} <
+          Fintype.card ι)
+    (hexists : ∃ i j, (sets i ∩ sets j).card = p) :
+    KahnKalaiCertificate d := by
+  refine KahnKalaiCertificate.ofPrimeDirectedCutFamilyEmbeddingOfDiameterSq coord sets hground
+    hcard hinj hnonzero hlarge ?_
+  exact primeDirectedCutFamilyEmbedding_diam_sq_eq coord sets hground hcard hexists
+
+/--
+Embedding-coordinate directed-cut certificate where Frankl-Wilson supplies both
+the monochromatic critical pair and the diameter-witnessing pair.
+-/
+noncomputable def KahnKalaiCertificate.ofPrimeDirectedCutFamilyEmbeddingOfLarge
+    {d p : ℕ} [Fact p.Prime] {α ι : Type*} [Fintype α] [DecidableEq α] [Fintype ι]
+    (coord : (α × α) ↪ Fin d) (sets : ι → Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hcard : ∀ i, (sets i).card = 2 * p)
+    (hinj : Function.Injective sets)
+    (hnonzero : ∀ i j, i ≠ j → (sets i ∩ sets j).card ≠ 0)
+    (hlarge : (d + 1) *
+        Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card} <
+          Fintype.card ι) :
+    KahnKalaiCertificate d :=
+  KahnKalaiCertificate.ofPrimeDirectedCutFamilyEmbeddingOfCriticalPair coord sets hground hcard hinj
+    hnonzero hlarge (exists_prime_intersection_of_large (d := d) sets hcard hinj hnonzero hlarge)
+
+/--
 The pointed half-size family used in the Kahn-Kalai construction: all
 `2p`-subsets of the ground set that contain a fixed base point.  Pointedness
 rules out the zero-intersection degeneracy needed by the directed-cut bridge.

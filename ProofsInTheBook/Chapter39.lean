@@ -600,6 +600,30 @@ theorem matousekSmallSupportLabel_antipode {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * 
     simp [matousekSmallSupportIndex, SignedSubset.card_antipode]
   exact SignedLabel.ext hpositive hindex
 
+theorem matousekSmallSupportLabel_ne_neg_of_le {n k : ℕ} (hk : 1 ≤ k)
+    (hn : 2 * k ≤ n) {X Y : SignedSubset n}
+    (hX : X.Nonzero) (hY : Y.Nonzero)
+    (hXsmall : X.card ≤ 2 * k - 2) (hYsmall : Y.card ≤ 2 * k - 2)
+    (hXY : SignedSubset.Le X Y) :
+    matousekSmallSupportLabel hk hn X hX hXsmall ≠
+      (matousekSmallSupportLabel hk hn Y hY hYsmall).neg := by
+  intro hcomp
+  have hindex :
+      matousekSmallSupportIndex hk hn X hX hXsmall =
+        matousekSmallSupportIndex hk hn Y hY hYsmall := by
+    have := congrArg SignedLabel.index hcomp
+    simpa [matousekSmallSupportLabel, SignedLabel.neg] using this
+  have hindex_val := congrArg Fin.val hindex
+  have hXpos : 0 < X.card := SignedSubset.card_pos_of_nonzero hX
+  have hYpos : 0 < Y.card := SignedSubset.card_pos_of_nonzero hY
+  have hcard : X.card = Y.card := by
+    simp [matousekSmallSupportIndex] at hindex_val
+    omega
+  have hXYeq : X = Y := SignedSubset.eq_of_le_card_eq hXY hcard
+  subst Y
+  have hpositive := congrArg SignedLabel.positive hcomp
+  simp [matousekSmallSupportLabel, SignedLabel.neg] at hpositive
+
 /--
 Large-support color labels occupy the range `2k - 2, …, n - 2`, obtained by
 adding the color value to the offset `2k - 2`.

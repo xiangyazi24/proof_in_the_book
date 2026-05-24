@@ -711,6 +711,55 @@ noncomputable def matousekLargeSupportLabel {n k : ℕ} (hk : 1 ≤ k) (hn : 2 *
   positive := matousekLargeSupportPositive C X hlarge
   index := matousekLargeSupportIndex hk hn (matousekLargeSupportColor C X hlarge)
 
+theorem matousekLargeSupportLabel_ne_neg_of_le {n k : ℕ} (hk : 1 ≤ k)
+    (hn : 2 * k ≤ n)
+    (C : KneserVertex n k → Fin (n - 2 * k + 1))
+    (hC : ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b)
+    {X Y : SignedSubset n}
+    (hXlarge : 2 * k - 1 ≤ X.card) (hYlarge : 2 * k - 1 ≤ Y.card)
+    (hXY : SignedSubset.Le X Y) :
+    matousekLargeSupportLabel hk hn C X hXlarge ≠
+      (matousekLargeSupportLabel hk hn C Y hYlarge).neg := by
+  intro hcomp
+  have hpositive :
+      matousekLargeSupportPositive C X hXlarge =
+        !(matousekLargeSupportPositive C Y hYlarge) := by
+    have := congrArg SignedLabel.positive hcomp
+    simpa [matousekLargeSupportLabel, SignedLabel.neg] using this
+  have hindex :
+      matousekLargeSupportIndex hk hn (matousekLargeSupportColor C X hXlarge) =
+        matousekLargeSupportIndex hk hn (matousekLargeSupportColor C Y hYlarge) := by
+    have := congrArg SignedLabel.index hcomp
+    simpa [matousekLargeSupportLabel, SignedLabel.neg] using this
+  have hcolor : matousekLargeSupportColor C X hXlarge =
+      matousekLargeSupportColor C Y hYlarge := by
+    apply Fin.ext
+    have hindex_val := congrArg Fin.val hindex
+    simp [matousekLargeSupportIndex] at hindex_val
+    omega
+  have hdisj :
+      Disjoint
+        (X.side (matousekLargeSupportPositive C X hXlarge))
+        (Y.side (matousekLargeSupportPositive C Y hYlarge)) := by
+    cases hYpos : matousekLargeSupportPositive C Y hYlarge
+    · have hXpos : matousekLargeSupportPositive C X hXlarge = true := by
+        simpa [hYpos] using hpositive
+      simpa [hXpos, hYpos] using SignedSubset.side_disjoint_of_le_not hXY true
+    · have hXpos : matousekLargeSupportPositive C X hXlarge = false := by
+        simpa [hYpos] using hpositive
+      simpa [hXpos, hYpos] using SignedSubset.side_disjoint_of_le_not hXY false
+  have hmin_ne :
+      minColorInSupport C
+          (X.side (matousekLargeSupportPositive C X hXlarge))
+          (matousekLargeSupportPositive_card C X hXlarge) ≠
+        minColorInSupport C
+          (Y.side (matousekLargeSupportPositive C Y hYlarge))
+          (matousekLargeSupportPositive_card C Y hYlarge) :=
+    minColorInSupport_ne_of_disjoint hk C hC hdisj
+      (matousekLargeSupportPositive_card C X hXlarge)
+      (matousekLargeSupportPositive_card C Y hYlarge)
+  exact hmin_ne (by simpa [matousekLargeSupportColor] using hcolor)
+
 /--
 In a proper Kneser coloring, if both signs of a signed support contain
 `k`-subsets, the minimum colors on the two sides are different.

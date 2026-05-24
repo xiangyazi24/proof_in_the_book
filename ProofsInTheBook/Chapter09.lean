@@ -497,6 +497,31 @@ theorem regularTetrahedronVertex_dist_sq_of_ne {i j : Fin 4} (hij : i ≠ j) :
   rw [euclidean3_dist_sq_eq_coordinateDistSq3]
   exact regularTetrahedronVertex_coordinateDistSq_of_ne hij
 
+theorem regularTetrahedronVertex_affineIndependent :
+    AffineIndependent ℝ regularTetrahedronVertex := by
+  rw [affineIndependent_iff_of_fintype]
+  intro w hsum hvec i
+  rw [Finset.weightedVSub_eq_linear_combination Finset.univ hsum] at hvec
+  have h0 := congrArg (fun v : Euclidean3 => v ⟨0, by decide⟩) hvec
+  have h1 := congrArg (fun v : Euclidean3 => v ⟨1, by decide⟩) hvec
+  have h2 := congrArg (fun v : Euclidean3 => v ⟨2, by decide⟩) hvec
+  simp [regularTetrahedronVertex, Fin.sum_univ_four] at hsum h0 h1 h2
+  fin_cases i <;> simp <;> linarith
+
+/-- The coordinate regular tetrahedron as a bundled Mathlib affine simplex. -/
+noncomputable def regularTetrahedronSimplex : Affine.Simplex ℝ Euclidean3 3 where
+  points := regularTetrahedronVertex
+  independent := regularTetrahedronVertex_affineIndependent
+
+theorem regularTetrahedronSimplex_equilateral :
+    regularTetrahedronSimplex.Equilateral := by
+  refine ⟨Real.sqrt 8, ?_⟩
+  intro i j hij
+  change dist (regularTetrahedronVertex i) (regularTetrahedronVertex j) = Real.sqrt 8
+  rw [← sq_eq_sq₀ dist_nonneg (Real.sqrt_nonneg 8)]
+  rw [regularTetrahedronVertex_dist_sq_of_ne hij, Real.sq_sqrt]
+  norm_num
+
 /--
 The face opposite vertex `i` has normal parallel to `regularTetrahedronVertex i`.
 Since all these normals have squared length `3`, this quotient is the cosine

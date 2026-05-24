@@ -1180,6 +1180,42 @@ noncomputable def KahnKalaiCertificate.ofPrimeDirectedCutFamilyOfLarge {d p : �
     hnonzero hlarge (exists_prime_intersection_of_large (d := d) sets hcard hinj hnonzero hlarge)
 
 /--
+The pointed half-size family used in the Kahn-Kalai construction: all
+`2p`-subsets of the ground set that contain a fixed base point.  Pointedness
+rules out the zero-intersection degeneracy needed by the directed-cut bridge.
+-/
+abbrev pointedHalfSubsets (α : Type*) [Fintype α] [DecidableEq α] (p : ℕ) (base : α) :
+    Type _ :=
+  {A : Finset α // A.card = 2 * p ∧ base ∈ A}
+
+/--
+Directed-cut certificate specialized to the pointed half-size family.  The
+remaining Kahn-Kalai arithmetic is the lower bound on this family size against
+the Frankl-Wilson low-degree bound.
+-/
+noncomputable def KahnKalaiCertificate.ofPrimePointedHalfFamilyOfLarge {d p : ℕ}
+    [Fact p.Prime] {α : Type*} [Fintype α] [DecidableEq α]
+    (base : α) (coord : (α × α) ≃ Fin d)
+    (hground : Fintype.card α = 4 * p)
+    (hlarge : (d + 1) *
+        Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card} <
+          Fintype.card (pointedHalfSubsets α p base)) :
+    KahnKalaiCertificate d := by
+  let sets : pointedHalfSubsets α p base → Finset α := fun A => A.1
+  have hcard : ∀ A, (sets A).card = 2 * p := fun A => A.2.1
+  have hinj : Function.Injective sets := by
+    intro A B h
+    exact Subtype.ext h
+  have hnonzero : ∀ A B, A ≠ B → (sets A ∩ sets B).card ≠ 0 := by
+    intro A B _hne hzero
+    have hbase : base ∈ sets A ∩ sets B := by
+      simp [sets, A.2.2, B.2.2]
+    have hpos : 0 < (sets A ∩ sets B).card := Finset.card_pos.mpr ⟨base, hbase⟩
+    omega
+  exact KahnKalaiCertificate.ofPrimeDirectedCutFamilyOfLarge coord sets hground hcard hinj
+    hnonzero hlarge
+
+/--
 Bridge from the Frankl-Wilson coloring obstruction to a Borsuk counterexample
 certificate.  A concrete Kahn-Kalai construction can use this once it supplies
 the Euclidean point map and proves that the forbidden intersection pairs are

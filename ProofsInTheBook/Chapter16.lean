@@ -14,10 +14,10 @@ by Kahn and Kalai (1993) using combinatorial arguments.
 Formalization status: this file defines finite color-class bookkeeping, states
 the corrected `BorsukConjecture d` for covers of a bounded set by subsets of
 itself in `EuclideanSpace ℝ (Fin d)`, packages a counterexample as
-`KahnKalaiCertificate d`, and proves `chapter16` from such a certificate.  It
-also formalizes enough of the Frankl-Wilson/Kahn-Kalai pipeline to construct
-unconditional certificates for `4624 ≤ d ≤ 6848` from the pointed `p = 17`
-family.
+`KahnKalaiCertificate d`, and formalizes enough of the
+Frankl-Wilson/Kahn-Kalai pipeline to prove the unconditional `chapter16`
+statement from the pointed `p = 17` family.  The local construction gives
+counterexamples for `4624 ≤ d ≤ 6848`.
 
 Gap to the full book theorem: the advertised `d ≥ 298` bound still needs the
 sharper Kahn-Kalai dimension reduction/numerics.  Mathlib has Euclidean metric
@@ -1694,7 +1694,7 @@ theorem kahnKalai_numeric_17 :
     (((4 * 17) * (4 * 17)) + 1) *
         (∑ k ∈ Finset.range 17, (4 * 17).choose k) <
           (4 * 17 - 1).choose (2 * 17 - 1) := by
-  native_decide
+  norm_num [Finset.sum_range_succ, Nat.choose_succ_succ]
 
 /-- A fully constructed Kahn-Kalai certificate in dimension `4624`. -/
 noncomputable def kahnKalaiCertificate_4624 : KahnKalaiCertificate 4624 := by
@@ -1706,7 +1706,7 @@ noncomputable def kahnKalaiCertificate_4624 : KahnKalaiCertificate 4624 := by
 theorem kahnKalai_numeric_17_6848 :
     (6848 + 1) * (∑ k ∈ Finset.range 17, (4 * 17).choose k) <
       (4 * 17 - 1).choose (2 * 17 - 1) := by
-  native_decide
+  norm_num [Finset.sum_range_succ, Nat.choose_succ_succ]
 
 theorem kahnKalai_numeric_17_of_le {d : ℕ} (hd : d ≤ 6848) :
     (d + 1) * (∑ k ∈ Finset.range 17, (4 * 17).choose k) <
@@ -1773,30 +1773,31 @@ theorem not_borsukConjecture_of_finite_diameter_obstruction {d : ℕ}
     (h _ (Finset.finite_toSet points).isBounded hpos)
 
 /--
-Chapter 16 (Borsuk's conjecture in high dimensions, Tier 1 conditional):
-Given a Kahn-Kalai-style counterexample — a bounded set with positive diameter
-in ℝ^d that cannot be covered by d+1 subsets of itself with strictly smaller
-diameter — Borsuk's conjecture fails in dimension d.
-
-TODO (Tier 2): Construct the actual Kahn-Kalai counterexample for `d ≥ 298`
-via Frankl-Wilson combinatorics on hypergraph color codes to produce a
-`KahnKalaiCertificate d`.
+A Kahn-Kalai certificate gives failure of Borsuk's conjecture in that dimension.
 -/
-theorem chapter16 {d : ℕ} (cert : KahnKalaiCertificate d) :
+theorem not_borsukConjecture_of_certificate {d : ℕ} (cert : KahnKalaiCertificate d) :
     ¬ BorsukConjecture d := fun h =>
   cert.no_partition (h cert.S cert.bounded cert.pos_diam)
 
 /-- Unconditional Borsuk counterexample obtained from the local Kahn-Kalai pipeline. -/
 theorem not_borsukConjecture_4624 : ¬ BorsukConjecture 4624 :=
-  chapter16 kahnKalaiCertificate_4624
+  not_borsukConjecture_of_certificate kahnKalaiCertificate_4624
 
 /-- Unconditional Borsuk counterexamples in the range covered by `p = 17`. -/
 theorem not_borsukConjecture_of_dim_between_4624_6848 {d : ℕ}
     (hlo : 4624 ≤ d) (hhi : d ≤ 6848) : ¬ BorsukConjecture d :=
-  chapter16 (kahnKalaiCertificate_of_dim_between_4624_6848 hlo hhi)
+  not_borsukConjecture_of_certificate
+    (kahnKalaiCertificate_of_dim_between_4624_6848 hlo hhi)
 
-/-- Borsuk's conjecture in dimension `d` is equivalent to the non-existence
-of a Kahn-Kalai certificate.  This packages `chapter16` as a biconditional. -/
+/--
+Chapter 16: Borsuk's conjecture is false in some finite dimension.
+
+The local formalization gives the explicit witness `d = 4624`.
+-/
+theorem chapter16 : ∃ d : ℕ, ¬ BorsukConjecture d :=
+  ⟨4624, not_borsukConjecture_4624⟩
+
+/-- Borsuk's conjecture in dimension `d` unfolded as its finite-dimensional statement. -/
 theorem borsukConjecture_iff_no_certificate (d : ℕ) :
     BorsukConjecture d ↔ ∀ S : Set (EuclideanSpace ℝ (Fin d)),
       Bornology.IsBounded S → 0 < Metric.diam S →
@@ -1864,6 +1865,6 @@ theorem not_borsukConjecture_iff_exists_certificate (d : ℕ) :
     by_contra hno_part
     exact hno.elim ⟨S, hbd, hpos, hno_part⟩
   · rintro ⟨cert⟩ hyp
-    exact chapter16 cert hyp
+    exact not_borsukConjecture_of_certificate cert hyp
 
 end ProofsInTheBook.Chapter16

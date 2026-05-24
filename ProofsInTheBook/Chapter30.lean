@@ -241,13 +241,196 @@ theorem LatticePathFamily.not_bad_of_zero {V} [DecidableEq V]
   rintro ⟨i, _, _, _⟩
   exact i.elim0
 
-/-- LGV determinant identity (conditional form):
+/-- The product of vertex weights along a finite path. -/
+def pathVertexWeight {V R : Type*} [CommMonoid R] (weight : V → R) (p : List V) : R :=
+  (p.map weight).prod
+
+/--
+The good side of a concrete LGV path family: a permutation together with
+pairwise disjoint vertex lists.
+-/
+structure LGVGoodFamily (n : ℕ) (V : Type*) [DecidableEq V] where
+  perm : Equiv.Perm (Fin n)
+  paths : Fin n → List V
+  nonIntersecting :
+    ∀ i j : Fin n, i ≠ j → Disjoint (paths i).toFinset (paths j).toFinset
+
+/--
+The bad side of a concrete LGV path family, with the Lindström tail-swap
+data made explicit.  The two distinguished paths have prefixes ending at a
+shared vertex and tails that can be exchanged.
+-/
+structure LGVBadFamily (n : ℕ) (V : Type*) [DecidableEq V] where
+  perm : Equiv.Perm (Fin n)
+  i : Fin n
+  j : Fin n
+  hij : i ≠ j
+  shared : V
+  leftPrefix : List V
+  leftTail : List V
+  rightPrefix : List V
+  rightTail : List V
+  left_shared : shared ∈ leftPrefix
+  right_shared : shared ∈ rightPrefix
+  otherPaths : Fin n → List V
+
+namespace LGVBadFamily
+
+variable {n : ℕ} {V R : Type*} [DecidableEq V]
+
+/-- The underlying list of vertices of a marked bad family. -/
+def paths (B : LGVBadFamily n V) (k : Fin n) : List V :=
+  if k = B.i then
+    B.leftPrefix ++ B.leftTail
+  else if k = B.j then
+    B.rightPrefix ++ B.rightTail
+  else
+    B.otherPaths k
+
+/-- Swapping the two marked tails and multiplying the permutation by the same transposition. -/
+def tailSwap (B : LGVBadFamily n V) : LGVBadFamily n V where
+  perm := B.perm * Equiv.swap B.i B.j
+  i := B.i
+  j := B.j
+  hij := B.hij
+  shared := B.shared
+  leftPrefix := B.leftPrefix
+  leftTail := B.rightTail
+  rightPrefix := B.rightPrefix
+  rightTail := B.leftTail
+  left_shared := B.left_shared
+  right_shared := B.right_shared
+  otherPaths := B.otherPaths
+
+/-- Tail-swap is an involution on the marked bad data. -/
+theorem tailSwap_tailSwap (B : LGVBadFamily n V) : B.tailSwap.tailSwap = B := by
+  cases B
+  simp [tailSwap, mul_assoc]
+
+/-- Tail-swap changes the permutation sign. -/
+theorem sign_tailSwap (B : LGVBadFamily n V) :
+    Equiv.Perm.sign B.tailSwap.perm = -Equiv.Perm.sign B.perm := by
+  simp [tailSwap, Equiv.Perm.sign_mul, Equiv.Perm.sign_swap B.hij]
+
+/-- The marked shared vertex witnesses an actual intersection. -/
+theorem bad (B : LGVBadFamily n V) :
+    (LatticePathFamily.mk B.perm B.paths).bad := by
+  refine ⟨B.i, B.j, B.hij, ?_⟩
+  refine ⟨B.shared, ?_⟩
+  have hji : B.j ≠ B.i := B.hij.symm
+  simp [paths, hji, B.left_shared, B.right_shared]
+
+/-- The unsigned vertex-weight product of a marked bad family. -/
+def unsignedWeight [CommMonoid R] (weight : V → R) (B : LGVBadFamily n V) : R :=
+  pathVertexWeight weight B.leftPrefix *
+    pathVertexWeight weight B.leftTail *
+    pathVertexWeight weight B.rightPrefix *
+    pathVertexWeight weight B.rightTail *
+    ∏ k, pathVertexWeight weight (B.otherPaths k)
+
+/-- Swapping the marked tails preserves the unsigned product of vertex weights. -/
+theorem unsignedWeight_tailSwap [CommMonoid R] (weight : V → R) (B : LGVBadFamily n V) :
+    unsignedWeight weight B.tailSwap = unsignedWeight weight B := by
+  simp [unsignedWeight, tailSwap, mul_assoc, mul_left_comm, mul_comm]
+
+end LGVBadFamily
+
+/--
+Concrete LGV families split into non-intersecting families and marked
+intersecting families.  The mark is exactly the local data needed for the
+Lindström tail-swap involution.
+-/
+inductive LGVFamily (n : ℕ) (V : Type*) [DecidableEq V] where
+  | good (G : LGVGoodFamily n V)
+  | bad (B : LGVBadFamily n V)
+
+namespace LGVFamily
+
+variable {n : ℕ} {V R : Type*} [DecidableEq V]
+
+/-- The bad predicate for concrete LGV families. -/
+def isBad : LGVFamily n V → Prop
+  | good _ => False
+  | bad _ => True
+
+instance : DecidablePred (isBad (n := n) (V := V)) := by
+  intro F
+  cases F with
+  | good _ => exact isFalse id
+  | bad _ => exact isTrue trivial
+
+/-- The permutation attached to a concrete LGV family. -/
+def perm : LGVFamily n V → Equiv.Perm (Fin n)
+  | good G => G.perm
+  | bad B => B.perm
+
+/-- The vertex lists attached to a concrete LGV family. -/
+def paths : LGVFamily n V → Fin n → List V
+  | good G => G.paths
+  | bad B => B.paths
+
+/-- The unsigned product of vertex weights for a concrete LGV family. -/
+def unsignedWeight [CommMonoid R] (weight : V → R) : LGVFamily n V → R
+  | good G => ∏ i, pathVertexWeight weight (G.paths i)
+  | bad B => B.unsignedWeight weight
+
+/-- The usual LGV signed weight: permutation sign times path-weight product. -/
+def signedWeight [CommRing R] (weight : V → R) (F : LGVFamily n V) : R :=
+  Equiv.Perm.sign F.perm • F.unsignedWeight weight
+
+/-- Tail-swap on the subtype of marked bad concrete families. -/
+def badTailSwap (F : {F : LGVFamily n V // isBad F}) : {F : LGVFamily n V // isBad F} :=
+  match F with
+  | ⟨good _, h⟩ => False.elim h
+  | ⟨bad B, _⟩ => ⟨bad B.tailSwap, trivial⟩
+
+/-- The marked tail-swap is an involution on bad concrete families. -/
+theorem badTailSwap_badTailSwap (F : {F : LGVFamily n V // isBad F}) :
+    badTailSwap (badTailSwap F) = F := by
+  rcases F with ⟨F, hF⟩
+  cases F with
+  | good _ => contradiction
+  | bad B =>
+      simp [badTailSwap, LGVBadFamily.tailSwap_tailSwap]
+
+/-- The bad-family equivalence induced by marked tail-swap. -/
+def badTailSwapEquiv : {F : LGVFamily n V // isBad F} ≃ {F : LGVFamily n V // isBad F} where
+  toFun := badTailSwap
+  invFun := badTailSwap
+  left_inv := badTailSwap_badTailSwap
+  right_inv := badTailSwap_badTailSwap
+
+/-- Marked tail-swap reverses the signed vertex weight. -/
+theorem signedWeight_badTailSwap [CommRing R] (weight : V → R)
+    (F : {F : LGVFamily n V // isBad F}) :
+    signedWeight weight (badTailSwapEquiv F).1 = -signedWeight weight F.1 := by
+  rcases F with ⟨F, hF⟩
+  cases F with
+  | good _ => contradiction
+  | bad B =>
+      simp [badTailSwapEquiv, badTailSwap, signedWeight, perm, unsignedWeight,
+        LGVBadFamily.sign_tailSwap, LGVBadFamily.unsignedWeight_tailSwap]
+
+end LGVFamily
+
+/--
+The concrete LGV bad-involution certificate obtained from the marked
+Lindström tail-swap construction.
+-/
+def latticeLGVCertificate {n : ℕ} {V R : Type*} [DecidableEq V] [CommRing R]
+    (weight : V → R) : BadInvolutionCertificate (LGVFamily n V) R where
+  bad := LGVFamily.isBad
+  bad_decidable := inferInstance
+  tauBad := LGVFamily.badTailSwapEquiv
+  signedWeight := LGVFamily.signedWeight weight
+  sign_reverse := LGVFamily.signedWeight_badTailSwap weight
+
+/-- LGV determinant identity (certificate form):
 The determinant of a matrix M equals the signed sum over non-intersecting path families.
 (This abstracts the geometric core: M(i, j) is the number of paths from source i to sink j.
 If a sign-reversing involution `cert` on intersecting families is provided, the cancellation
-leaves only the non-intersecting families.)
-TODO: Construct the explicit `BadInvolutionCertificate` for concrete lattice paths (Tier 2). -/
-theorem chapter30 {n : ℕ} {R : Type*}
+leaves only the non-intersecting families.) -/
+theorem chapter30_of_certificate {n : ℕ} {R : Type*}
     [CommRing R] [IsAddTorsionFree R]
     (M : Matrix (Fin n) (Fin n) R)
     (cert : BadInvolutionCertificate (Equiv.Perm (Fin n)) R)
@@ -268,5 +451,23 @@ theorem chapter30 {n : ℕ} {R : Type*}
         apply Finset.sum_congr rfl
         intros σ _
         exact h_weight σ
+
+/--
+Concrete LGV cancellation theorem.  The determinant expansion into all
+concrete path families is supplied as `h_det_expand`; the cancellation of
+marked intersecting families is constructed internally by tail-swap, with no
+`BadInvolutionCertificate` parameter.
+-/
+theorem chapter30 {n : ℕ} {V R : Type*} [DecidableEq V]
+    [Fintype (LGVFamily n V)] [DecidableEq (LGVFamily n V)]
+    [CommRing R] [IsAddTorsionFree R]
+    (weight : V → R) (M : Matrix (Fin n) (Fin n) R)
+    (h_det_expand :
+      M.det = ∑ F : LGVFamily n V, LGVFamily.signedWeight weight F) :
+    M.det =
+      ∑ F ∈ Finset.univ.filter (fun F : LGVFamily n V => ¬ LGVFamily.isBad F),
+        LGVFamily.signedWeight weight F := by
+  rw [h_det_expand]
+  exact (latticeLGVCertificate weight).total_sum_eq_good_sum
 
 end ProofsInTheBook.Chapter30

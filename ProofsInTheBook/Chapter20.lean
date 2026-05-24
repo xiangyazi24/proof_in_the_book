@@ -143,6 +143,55 @@ theorem colorOfValues_one_one {Γ : Type*} [LinearOrderedCommGroupWithZero Γ] :
     colorOfValues (1 : Γ) (1 : Γ) = green := by
   simp [colorOfValues]
 
+theorem colorOfValues_eq_red_iff {Γ : Type*} [LinearOrderedCommGroupWithZero Γ]
+    {vx vy : Γ} :
+    colorOfValues vx vy = red ↔ vx < 1 ∧ vy < 1 := by
+  unfold colorOfValues
+  by_cases hred : vx < 1 ∧ vy < 1
+  · simp [hred]
+  · by_cases hgreen : 1 ≤ vx ∧ vy ≤ vx
+    · simp [hred, hgreen]
+    · simp [hred, hgreen]
+
+theorem colorOfValues_green_le {Γ : Type*} [LinearOrderedCommGroupWithZero Γ]
+    {vx vy : Γ} (h : colorOfValues vx vy = green) : 1 ≤ vx ∧ vy ≤ vx := by
+  unfold colorOfValues at h
+  by_cases hred : vx < 1 ∧ vy < 1
+  · simp [hred] at h
+  · by_cases hgreen : 1 ≤ vx ∧ vy ≤ vx
+    · exact hgreen
+    · simp [hred, hgreen] at h
+
+theorem colorOfValues_green_not_red {Γ : Type*} [LinearOrderedCommGroupWithZero Γ]
+    {vx vy : Γ} (h : colorOfValues vx vy = green) : ¬ (vx < 1 ∧ vy < 1) := by
+  unfold colorOfValues at h
+  by_cases hred : vx < 1 ∧ vy < 1
+  · simp [hred] at h
+  · exact hred
+
+theorem colorOfValues_blue_lt_and_one_le {Γ : Type*} [LinearOrderedCommGroupWithZero Γ]
+    {vx vy : Γ} (h : colorOfValues vx vy = blue) : vx < vy ∧ 1 ≤ vy := by
+  unfold colorOfValues at h
+  by_cases hred : vx < 1 ∧ vy < 1
+  · simp [hred] at h
+  · by_cases hgreen : 1 ≤ vx ∧ vy ≤ vx
+    · simp [hred, hgreen] at h
+    · simp [hred, hgreen] at h
+      have hvx_lt_one_or : vx < 1 ∨ 1 ≤ vx := lt_or_ge vx 1
+      have hvy_lt_or : vy < 1 ∨ 1 ≤ vy := lt_or_ge vy 1
+      constructor
+      · by_contra hnot
+        have hvyle : vy ≤ vx := le_of_not_gt hnot
+        rcases hvx_lt_one_or with hvxlt | hvxge
+        · have hvylt : vy < 1 := lt_of_le_of_lt hvyle hvxlt
+          exact hred ⟨hvxlt, hvylt⟩
+        · exact hgreen ⟨hvxge, hvyle⟩
+      · rcases hvy_lt_or with hvylt | hvyge
+        · rcases hvx_lt_one_or with hvxlt | hvxge
+          · exact (hred ⟨hvxlt, hvylt⟩).elim
+          · exact (hgreen ⟨hvxge, (le_of_lt hvylt).trans hvxge⟩).elim
+        · exact hvyge
+
 /-- The Monsky coloring of a point from any multiplicative valuation. -/
 def valuationColor {K Γ : Type*} [Field K] [LinearOrderedCommGroupWithZero Γ]
     (v : Valuation K Γ) (p : K × K) : MonskyColor :=

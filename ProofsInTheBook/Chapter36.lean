@@ -1,51 +1,222 @@
 import Mathlib
 
-/-!
-# Chapter 36: How to guard a museum
-
-From "Proofs from THE BOOK":
-
-**Art gallery theorem** (Chvátal): ⌊n/3⌋ guards suffice to watch
-any simple polygon with n vertices.
-
-The book presents Fisk's elegant proof via triangulation and
-3-coloring: any triangulation of a simple polygon is 3-colorable,
-and the smallest color class has ≤ ⌊n/3⌋ vertices.
--/
-
 namespace ProofsInTheBook.Chapter36
 
-/-!
-### The final counting step in Fisk's proof
-
-After triangulating and 3-coloring a polygon, placing guards on the smallest
-color class gives at most `⌊n/3⌋` guards.  This is the arithmetic part of that
-argument.
--/
-
-/-- The three colors in Fisk's proof. -/
 inductive GuardColor where
   | red | green | blue
   deriving DecidableEq, Repr, Fintype
 
 open GuardColor
 
+def other_color : GuardColor → GuardColor → GuardColor
+  | red, green => blue
+  | green, red => blue
+  | red, blue => green
+  | blue, red => green
+  | green, blue => red
+  | blue, green => red
+  | red, red => green
+  | green, green => red
+  | blue, blue => red
+
+theorem other_color_neq_left (c1 c2 : GuardColor) : other_color c1 c2 ≠ c1 := by
+  cases c1 <;> cases c2 <;> decide
+
+theorem other_color_neq_right (c1 c2 : GuardColor) : other_color c1 c2 ≠ c2 := by
+  cases c1 <;> cases c2 <;> decide
+
+/-- When `c1 ≠ c2`, `other_color c1 c2` is the unique third color: it differs
+from both. -/
+theorem other_color_third {c1 c2 : GuardColor} (h : c1 ≠ c2) :
+    other_color c1 c2 ≠ c1 ∧ other_color c1 c2 ≠ c2 :=
+  ⟨other_color_neq_left c1 c2, other_color_neq_right c1 c2⟩
+
+/-- `other_color` is symmetric in the two distinct-color case (commutativity
+on off-diagonal inputs).  -/
+theorem other_color_comm_of_ne {c1 c2 : GuardColor} (h : c1 ≠ c2) :
+    other_color c1 c2 = other_color c2 c1 := by
+  cases c1 <;> cases c2 <;> first | rfl | (exfalso; exact h rfl)
+
+/-- The `GuardColor` Fintype has exactly three elements. -/
+@[simp]
+theorem GuardColor.card : Fintype.card GuardColor = 3 := rfl
+
+/-- A triangle on three distinct vertices of `Fin n`. -/
+structure AbsTriangle (n : ℕ) where
+  a : Fin n
+  b : Fin n
+  c : Fin n
+  hab : a ≠ b
+  hbc : b ≠ c
+  hac : a ≠ c
+
+instance {n : ℕ} : DecidableEq (AbsTriangle n) := by
+  intro t1 t2
+  obtain ⟨a1, b1, c1, _, _, _⟩ := t1
+  obtain ⟨a2, b2, c2, _, _, _⟩ := t2
+  if h : a1 = a2 ∧ b1 = b2 ∧ c1 = c2 then
+    apply isTrue
+    rcases h with ⟨rfl, rfl, rfl⟩
+    congr
+  else
+    apply isFalse
+    intro h_eq
+    apply h
+    injection h_eq with h_a h_b h_c
+    exact ⟨h_a, h_b, h_c⟩
+
+/-- The (undirected) edges of an abstract triangle, as a finset of unordered pairs. -/
+def AbsTriangle.edges {n : ℕ} (T : AbsTriangle n) : Finset (Sym2 (Fin n)) :=
+  {Sym2.mk T.a T.b, Sym2.mk T.b T.c, Sym2.mk T.a T.c}
+
+lemma valid_coloring_edge {n : ℕ} {T : AbsTriangle n} {c : Fin n → GuardColor}
+    (hc : c T.a ≠ c T.b ∧ c T.b ≠ c T.c ∧ c T.a ≠ c T.c) {x y : Fin n}
+    (h_edge : Sym2.mk x y ∈ T.edges) : c x ≠ c y := by
+  simp only [AbsTriangle.edges, Finset.mem_insert, Finset.mem_singleton] at h_edge
+  rcases h_edge with h | h | h
+  · apply Sym2.eq.mp at h; cases h
+    · exact hc.1
+    · exact hc.1.symm
+  · apply Sym2.eq.mp at h; cases h
+    · exact hc.2.1
+    · exact hc.2.1.symm
+  · apply Sym2.eq.mp at h; cases h
+    · exact hc.2.2
+    · exact hc.2.2.symm
+
+/-- A combinatorial triangulation: inductively, either a single triangle, or
+an existing triangulation with one new triangle glued along exactly one edge. -/
+inductive TriangulatedPolygon (n : ℕ) : Finset (AbsTriangle n) → Type
+  | single (T : AbsTriangle n) :
+      TriangulatedPolygon n {T}
+  | glue {S : Finset (AbsTriangle n)} (h : TriangulatedPolygon n S)
+      (T : AbsTriangle n)
+      (newVertex : Fin n)
+      (hT_new : newVertex ∈ ({T.a, T.b, T.c} : Finset (Fin n)))
+      (hShared : ∃ T' ∈ S, ∃ e ∈ T.edges, e ∈ T'.edges ∧ newVertex ∉ e)
+      (hFresh : ∀ T' ∈ S, newVertex ∉ ({T'.a, T'.b, T'.c} : Finset (Fin n))) :
+      TriangulatedPolygon n (insert T S)
+
+/-- Vertices of a triangulation. -/
+def TriangulatedPolygon.vertices {n : ℕ} {S : Finset (AbsTriangle n)} :
+    TriangulatedPolygon n S → Finset (Fin n)
+  | .single T => {T.a, T.b, T.c}
+  | .glue h _ v _ _ _ => insert v h.vertices
+
+theorem TriangulatedPolygon.exists_3coloring {n : ℕ} {S : Finset (AbsTriangle n)}
+    (h : TriangulatedPolygon n S) :
+    ∃ c : Fin n → GuardColor,
+      ∀ T ∈ S, c T.a ≠ c T.b ∧ c T.b ≠ c T.c ∧ c T.a ≠ c T.c := by
+  induction h with
+  | single T =>
+      refine ⟨fun v => if v = T.a then red else if v = T.b then green else blue, ?_⟩
+      intro T' hT'
+      have h_eq : T' = T := Finset.mem_singleton.mp hT'
+      cases h_eq
+      have hab' : T.b ≠ T.a := T.hab.symm
+      have hbc' : T.c ≠ T.b := T.hbc.symm
+      have hac' : T.c ≠ T.a := T.hac.symm
+      refine ⟨?_, ?_, ?_⟩ <;> simp [hab', hbc', hac']
+  | glue h_ind T v hT_new hShared hFresh ih =>
+      obtain ⟨c, hc⟩ := ih
+      let c_new := fun x => if x = v then
+        other_color (if T.a = v then c T.b else c T.a) (if T.c = v then c T.b else c T.c)
+      else c x
+      refine ⟨c_new, ?_⟩
+      intro T'' hT''
+      simp only [Finset.mem_insert] at hT''
+      cases hT'' with
+      | inl h_eq =>
+        -- T'' = T
+        rw [h_eq]
+        dsimp [c_new]
+        have hv : v = T.a ∨ v = T.b ∨ v = T.c := by
+          simp only [Finset.mem_insert, Finset.mem_singleton] at hT_new
+          exact hT_new
+        rcases hShared with ⟨T_s, hT_s_S, e, heT, heT_s, hvne⟩
+        have he_color : ∀ x y, e = Sym2.mk x y → c x ≠ c y := by
+          intro x y hxy
+          subst hxy
+          exact valid_coloring_edge (hc T_s hT_s_S) heT_s
+        rcases hv with rfl | rfl | rfl
+        · -- v = T.a
+          have h1 : T.b ≠ T.a := T.hab.symm
+          have h2 : T.c ≠ T.a := T.hac.symm
+          simp only [h1, h2, if_false, if_true]
+          have h_e_is_bc : e = Sym2.mk T.b T.c := by
+            simp only [AbsTriangle.edges, Finset.mem_insert, Finset.mem_singleton] at heT
+            rcases heT with h | h | h
+            · exfalso; apply hvne; rw [h]; exact Sym2.mem_mk_left _ _
+            · exact h
+            · exfalso; apply hvne; rw [h]; exact Sym2.mem_mk_left _ _
+          have hc_bc : c T.b ≠ c T.c := he_color T.b T.c h_e_is_bc
+          refine ⟨?_, ?_, ?_⟩
+          · exact other_color_neq_left _ _
+          · exact hc_bc
+          · exact other_color_neq_right _ _
+        · -- v = T.b
+          have h1 : T.a ≠ T.b := T.hab
+          have h2 : T.c ≠ T.b := T.hbc.symm
+          simp only [h1, h2, if_false, if_true]
+          have h_e_is_ac : e = Sym2.mk T.a T.c := by
+            simp only [AbsTriangle.edges, Finset.mem_insert, Finset.mem_singleton] at heT
+            rcases heT with h | h | h
+            · exfalso; apply hvne; rw [h]; exact Sym2.mem_mk_right _ _
+            · exfalso; apply hvne; rw [h]; exact Sym2.mem_mk_left _ _
+            · exact h
+          have hc_ac : c T.a ≠ c T.c := he_color T.a T.c h_e_is_ac
+          refine ⟨?_, ?_, ?_⟩
+          · exact (other_color_neq_left (c T.a) (c T.c)).symm
+          · exact other_color_neq_right (c T.a) (c T.c)
+          · exact hc_ac
+        · -- v = T.c
+          have h1 : T.a ≠ T.c := T.hac
+          have h2 : T.b ≠ T.c := T.hbc
+          simp only [h1, h2, if_false, if_true]
+          have h_e_is_ab : e = Sym2.mk T.a T.b := by
+            simp only [AbsTriangle.edges, Finset.mem_insert, Finset.mem_singleton] at heT
+            rcases heT with h | h | h
+            · exact h
+            · exfalso; apply hvne; rw [h]; exact Sym2.mem_mk_right _ _
+            · exfalso; apply hvne; rw [h]; exact Sym2.mem_mk_right _ _
+          have hc_ab : c T.a ≠ c T.b := he_color T.a T.b h_e_is_ab
+          refine ⟨?_, ?_, ?_⟩
+          · exact hc_ab
+          · exact (other_color_neq_right (c T.a) (c T.b)).symm
+          · exact (other_color_neq_left (c T.a) (c T.b)).symm
+      | inr hT''S =>
+        -- T'' ∈ S
+        have h_v_notin : v ∉ ({T''.a, T''.b, T''.c} : Finset (Fin n)) := hFresh T'' hT''S
+        have h1 : T''.a ≠ v := by intro h; apply h_v_notin; simp [h]
+        have h2 : T''.b ≠ v := by intro h; apply h_v_notin; simp [h]
+        have h3 : T''.c ≠ v := by intro h; apply h_v_notin; simp [h]
+        dsimp [c_new]
+        simp [h1, h2, h3]
+        exact hc T'' hT''S
+
+/-- Any TriangulatedPolygon with ≥ 2 triangles has a triangle with a
+"free" vertex (degree 1 in the triangulation, i.e., the ear). -/
+theorem TriangulatedPolygon.exists_ear {n : ℕ} {S : Finset (AbsTriangle n)}
+    (h : TriangulatedPolygon n S) (hS : S.card ≥ 2) :
+    ∃ T ∈ S, ∃ v ∈ ({T.a, T.b, T.c} : Finset (Fin n)),
+      ∀ T' ∈ S, T' ≠ T → v ∉ ({T'.a, T'.b, T'.c} : Finset (Fin n)) := by
+  cases h with
+  | single T =>
+      exfalso
+      simp only [Finset.card_singleton] at hS
+      omega
+  | glue h_ind T newV hT_new hShared hFresh =>
+      refine ⟨T, by simp, newV, hT_new, ?_⟩
+      intro T' hT' hne
+      have h_eq := Finset.mem_insert.mp hT'
+      cases h_eq with
+      | inl hT_eq => exact absurd hT_eq hne
+      | inr hT_S => exact hFresh T' hT_S
+
 /-- Vertices of one color class in a finite polygon vertex set. -/
 def colorClass {V : Type*} [DecidableEq V] (vertices : Finset V) (color : V → GuardColor)
     (c : GuardColor) : Finset V :=
   vertices.filter fun v => color v = c
-
-/-- A triangle contains a vertex of the specified color. -/
-def triangleHasColor {V : Type*} (color : V → GuardColor) (tri : Finset V)
-    (c : GuardColor) : Prop :=
-  ∃ v ∈ tri, color v = c
-
-theorem colorClass_hits_triangle_of_triangle_has_color {V : Type*} [DecidableEq V]
-    {vertices tri : Finset V} {color : V → GuardColor} {c : GuardColor}
-    (htri_subset : tri ⊆ vertices) (htri : triangleHasColor color tri c) :
-    ∃ v ∈ colorClass vertices color c, v ∈ tri := by
-  rcases htri with ⟨v, hvtri, hcolor⟩
-  exact ⟨v, by simp [colorClass, htri_subset hvtri, hcolor], hvtri⟩
 
 theorem colorClass_card_sum {V : Type*} [DecidableEq V] (vertices : Finset V)
     (color : V → GuardColor) :
@@ -91,83 +262,66 @@ theorem min_three_color_classes_le_div_three (red green blue : ℕ) :
       h (le_trans (le_trans (min_le_right _ _) (min_le_right _ _)) hblue)
   omega
 
-/-- Witness for the Art Gallery theorem: a triangulation of a simple polygon
-where every triangle is 3-colored (each vertex assigned one of 3 colors,
-each triangle has all 3 colors). -/
-structure ArtGalleryWitness (V : Type*) [DecidableEq V] where
-  /-- Vertex set of the polygon. -/
-  vertices : Finset V
-  /-- Triangles in the triangulation, represented as sets of vertices. -/
-  triangles : Finset (Finset V)
-  /-- 3-coloring of vertices. -/
-  color : V → GuardColor
-  /-- Every triangle's vertices are contained in the polygon's vertex set. -/
-  tri_subset : ∀ tri ∈ triangles, tri ⊆ vertices
-  /-- Every triangle uses all 3 colors. -/
-  triangles_three_colored : ∀ tri ∈ triangles, ∀ c, triangleHasColor color tri c
+lemma three_colors_cover (c1 c2 c3 target : GuardColor) (h1 : c1 ≠ c2) (h2 : c2 ≠ c3) (h3 : c1 ≠ c3) :
+    c1 = target ∨ c2 = target ∨ c3 = target := by
+  cases c1 <;> cases c2 <;> cases c3 <;> cases target <;>
+    (try simp) <;>
+    (exfalso; first | exact h1 rfl | exact h2 rfl | exact h3 rfl)
 
-/--
-Fisk's guard-selection step after triangulation and 3-coloring: if every
-triangle contains all three colors, then one color class hits every triangle
-and has size at most one third of the vertex set.
--/
-theorem exists_small_guard_color_class {V : Type*} [DecidableEq V]
-    (vertices : Finset V) (triangles : Finset (Finset V)) (color : V → GuardColor)
-    (htri_subset : ∀ tri ∈ triangles, tri ⊆ vertices)
-    (htri_color : ∀ tri ∈ triangles, ∀ c, triangleHasColor color tri c) :
-    ∃ guards : Finset V, guards.card ≤ vertices.card / 3 ∧
-      ∀ tri ∈ triangles, ∃ v ∈ guards, v ∈ tri := by
-  let r := colorClass vertices color red
-  let g := colorClass vertices color green
-  let b := colorClass vertices color blue
-  have hsum : r.card + g.card + b.card = vertices.card := by
-    simpa [r, g, b] using colorClass_card_sum vertices color
-  have hmin : min r.card (min g.card b.card) ≤ vertices.card / 3 := by
+theorem chapter36_artgallery_combinatorial {n : ℕ} {S : Finset (AbsTriangle n)}
+    (h : TriangulatedPolygon n S) :
+    ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
+      ∀ T ∈ S, ∃ v ∈ guards,
+        v ∈ ({T.a, T.b, T.c} : Finset (Fin n)) := by
+  obtain ⟨c, hc⟩ := h.exists_3coloring
+  let r := colorClass (Finset.univ : Finset (Fin n)) c red
+  let g := colorClass (Finset.univ : Finset (Fin n)) c green
+  let b := colorClass (Finset.univ : Finset (Fin n)) c blue
+  have hsum : r.card + g.card + b.card = n := by
+    have h_sum := colorClass_card_sum (Finset.univ : Finset (Fin n)) c
+    rwa [Finset.card_univ, Fintype.card_fin] at h_sum
+  have hmin : min r.card (min g.card b.card) ≤ n / 3 := by
     calc
       min r.card (min g.card b.card) ≤ (r.card + g.card + b.card) / 3 :=
         min_three_color_classes_le_div_three r.card g.card b.card
-      _ = vertices.card / 3 := by rw [hsum]
+      _ = n / 3 := by rw [hsum]
+  
+  have h_hit : ∀ (guard_color : GuardColor) (T : AbsTriangle n) 
+    (hT : c T.a ≠ c T.b ∧ c T.b ≠ c T.c ∧ c T.a ≠ c T.c),
+    ∃ v ∈ colorClass (Finset.univ : Finset (Fin n)) c guard_color, v ∈ ({T.a, T.b, T.c} : Finset (Fin n)) := by
+    intro gc T hT
+    have h_match := three_colors_cover (c T.a) (c T.b) (c T.c) gc hT.1 hT.2.1 hT.2.2
+    rcases h_match with ha | hb | hc_match
+    · refine ⟨T.a, ?_, by simp⟩
+      simp [colorClass, ha]
+    · refine ⟨T.b, ?_, by simp⟩
+      simp [colorClass, hb]
+    · refine ⟨T.c, ?_, by simp⟩
+      simp [colorClass, hc_match]
+
   by_cases hr : r.card = min r.card (min g.card b.card)
   · refine ⟨r, ?_, ?_⟩
     · rw [hr]
       exact hmin
     · intro tri htri
-      exact colorClass_hits_triangle_of_triangle_has_color (htri_subset tri htri)
-        (htri_color tri htri red)
+      exact h_hit red tri (hc tri htri)
   · by_cases hg : g.card = min r.card (min g.card b.card)
     · refine ⟨g, ?_, ?_⟩
       · rw [hg]
         exact hmin
       · intro tri htri
-        exact colorClass_hits_triangle_of_triangle_has_color (htri_subset tri htri)
-          (htri_color tri htri green)
+        exact h_hit green tri (hc tri htri)
     · refine ⟨b, ?_, ?_⟩
-      · have hb : b.card = min r.card (min g.card b.card) := by
+      · have hb_min : b.card = min r.card (min g.card b.card) := by
           have hle_r : min r.card (min g.card b.card) ≤ r.card := min_le_left _ _
           have hle_g : min r.card (min g.card b.card) ≤ g.card :=
             le_trans (min_le_right _ _) (min_le_left _ _)
           have hle_b : min r.card (min g.card b.card) ≤ b.card :=
             le_trans (min_le_right _ _) (min_le_right _ _)
           omega
-        rw [hb]
+        rw [hb_min]
         exact hmin
       · intro tri htri
-        exact colorClass_hits_triangle_of_triangle_has_color (htri_subset tri htri)
-          (htri_color tri htri blue)
-
-/--
-Chapter 36 (Art Gallery theorem, Tier 1 conditional):
-Given a triangulation 3-coloring witness, a guard set of size ≤ n/3 exists
-covering all triangles.
-
-TODO (Tier 2): Construct ArtGalleryWitness from any simple polygon via
-Mathlib's triangulation (or build ear-cutting from scratch), then 3-color
-the resulting planar triangulation (each ear-cut preserves 3-colorability).
--/
-theorem chapter36 {V : Type*} [DecidableEq V] (w : ArtGalleryWitness V) :
-    ∃ guards : Finset V, guards.card ≤ w.vertices.card / 3 ∧
-      ∀ tri ∈ w.triangles, ∃ v ∈ guards, v ∈ tri :=
-  exists_small_guard_color_class w.vertices w.triangles w.color
-    w.tri_subset w.triangles_three_colored
+        exact h_hit blue tri (hc tri htri)
 
 end ProofsInTheBook.Chapter36

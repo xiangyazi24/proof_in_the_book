@@ -426,6 +426,31 @@ theorem maxSupportPositive_antipode {n : ℕ} (X : SignedSubset n) (hX : X.Nonze
 def Le {n : ℕ} (X Y : SignedSubset n) : Prop :=
   X.pos ⊆ Y.pos ∧ X.neg ⊆ Y.neg
 
+/-- Select the positive or negative support of a sign vector. -/
+def side {n : ℕ} (X : SignedSubset n) (positive : Bool) : Finset (Fin n) :=
+  if positive then X.pos else X.neg
+
+@[simp]
+theorem side_true {n : ℕ} (X : SignedSubset n) : X.side true = X.pos := by
+  simp [side]
+
+@[simp]
+theorem side_false {n : ℕ} (X : SignedSubset n) : X.side false = X.neg := by
+  simp [side]
+
+theorem side_antipode_not {n : ℕ} (X : SignedSubset n) (positive : Bool) :
+    X.antipode.side (!positive) = X.side positive := by
+  cases positive <;> simp [side, antipode]
+
+theorem side_disjoint_of_le_not {n : ℕ} {X Y : SignedSubset n}
+    (hXY : Le X Y) (positive : Bool) :
+    Disjoint (X.side positive) (Y.side (!positive)) := by
+  cases positive
+  · simp [side]
+    exact Disjoint.mono hXY.2 (fun _ h => h) Y.disjoint.symm
+  · simp [side]
+    exact Disjoint.mono hXY.1 (fun _ h => h) Y.disjoint
+
 theorem eq_of_le_card_eq {n : ℕ} {X Y : SignedSubset n}
     (hXY : Le X Y) (hcard : X.card = Y.card) : X = Y := by
   have hpos_le : X.pos.card ≤ Y.pos.card := Finset.card_le_card hXY.1
@@ -642,6 +667,49 @@ theorem signedSubset_large_support_has_k_side {n k : ℕ} {X : SignedSubset n}
   push Not at h
   simp [SignedSubset.card] at hlarge
   omega
+
+/--
+Large-support side choice in Matoušek's construction: use the side whose
+contained `k`-subsets have smaller minimum color, breaking one-sided cases by
+choosing the only side that contains a `k`-subset.
+-/
+noncomputable def matousekLargeSupportPositive {n k q : ℕ}
+    (C : KneserVertex n k → Fin q) (X : SignedSubset n)
+    (_hlarge : 2 * k - 1 ≤ X.card) : Bool :=
+  if hpos : k ≤ X.pos.card then
+    if hneg : k ≤ X.neg.card then
+      decide (minColorInSupport C X.pos hpos < minColorInSupport C X.neg hneg)
+    else true
+  else false
+
+theorem matousekLargeSupportPositive_card {n k q : ℕ}
+    (C : KneserVertex n k → Fin q) (X : SignedSubset n)
+    (hlarge : 2 * k - 1 ≤ X.card) :
+    k ≤ (X.side (matousekLargeSupportPositive C X hlarge)).card := by
+  unfold matousekLargeSupportPositive
+  by_cases hpos : k ≤ X.pos.card
+  · by_cases hneg : k ≤ X.neg.card
+    · by_cases hlt : minColorInSupport C X.pos hpos < minColorInSupport C X.neg hneg
+      · simp [hpos, hneg, hlt]
+      · simp [hpos, hneg, hlt]
+    · simp [hpos, hneg]
+  · have hside := signedSubset_large_support_has_k_side (X := X) hlarge
+    have hneg : k ≤ X.neg.card := hside.resolve_left hpos
+    simp [hpos, hneg]
+
+/-- The minimum color on the selected large-support side. -/
+noncomputable def matousekLargeSupportColor {n k q : ℕ}
+    (C : KneserVertex n k → Fin q) (X : SignedSubset n)
+    (hlarge : 2 * k - 1 ≤ X.card) : Fin q :=
+  minColorInSupport C (X.side (matousekLargeSupportPositive C X hlarge))
+    (matousekLargeSupportPositive_card C X hlarge)
+
+/-- Full large-support signed label in Matoušek's construction. -/
+noncomputable def matousekLargeSupportLabel {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (C : KneserVertex n k → Fin (n - 2 * k + 1)) (X : SignedSubset n)
+    (hlarge : 2 * k - 1 ≤ X.card) : SignedLabel (n - 1) where
+  positive := matousekLargeSupportPositive C X hlarge
+  index := matousekLargeSupportIndex hk hn (matousekLargeSupportColor C X hlarge)
 
 /--
 In a proper Kneser coloring, if both signs of a signed support contain

@@ -4411,15 +4411,12 @@ TODO (Tier 2):
 3. Extend injectivity lemma to l≥3 and assemble full l≥3 contradiction.
    ~120 LOC future work. -/
 theorem chapter03_erdos {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l)
-    (h_l2_contra : (∏ j ∈ Finset.range k, lPowerFreePart 2 (n - j)) ∣ k ! → n.choose k ≠ m ^ 2)
     (h_ge3 : l ≥ 3 → n.choose k ≠ m ^ l) :
     n.choose k ≠ m ^ l := by
   intro h_eq
   by_cases hl2 : l = 2
   · subst hl2
-    -- `hprod_l2` is no longer assumed: it is derived from the perfect-power
-    -- equation via the already-proven `prod_lPowerFreeParts_dvd_factorial_l2`.
-    exact h_l2_contra (prod_lPowerFreeParts_dvd_factorial_l2 hk hn h_eq) h_eq
+    exact chapter03_erdos_l2 hk hn h_eq
   · exact h_ge3 (by omega) h_eq
 
 /-- Chapter 3's target theorem (Tier 1 conditional):
@@ -4428,10 +4425,9 @@ Takes hypotheses for the padicValNat divisibility proof (l=2), the
 combinatorial contradiction from that divisibility (l=2), and the
 l≥3 case, all deferred to Tier 2. -/
 theorem chapter03 {n k l m : ℕ} (hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l)
-    (h_l2_contra : (∏ j ∈ Finset.range k, lPowerFreePart 2 (n - j)) ∣ k ! → n.choose k ≠ m ^ 2)
     (h_ge3 : l ≥ 3 → n.choose k ≠ m ^ l) :
     n.choose k ≠ m ^ l :=
-  chapter03_erdos hk hn hl h_l2_contra h_ge3
+  chapter03_erdos hk hn hl h_ge3
 end Tier1
 
 end ProofsInTheBook.Chapter03

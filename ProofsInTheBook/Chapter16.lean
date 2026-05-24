@@ -233,6 +233,109 @@ theorem oddtown_card_le
   have hle := hlin.fintype_card_le_finrank
   simpa [Module.finrank_fintype_fun_eq_card] using hle
 
+/-- Boolean monomial on finite subsets: it evaluates to `1` exactly when `I ⊆ X`. -/
+def subsetMonomial (K : Type*) [Zero K] [One K] {α : Type*} [DecidableEq α]
+    (I : Finset α) : Finset α → K :=
+  fun X => if I ⊆ X then 1 else 0
+
+/--
+The subspace of Boolean functions spanned by monomials of degree at most `r`.
+This is the direct set-family substitute for the low-degree multilinear
+polynomial space in the Frankl-Wilson proof.
+-/
+def lowDegreeBooleanSubmodule (K : Type*) [Field K] (α : Type*) [Fintype α]
+    [DecidableEq α] (r : ℕ) : Submodule K (Finset α → K) :=
+  Submodule.span K
+    (Set.range (fun I : {I : Finset α // I.card ≤ r} => subsetMonomial K I.1))
+
+theorem subsetMonomial_mem_lowDegree {K α : Type*} [Field K] [Fintype α] [DecidableEq α]
+    {r : ℕ} {I : Finset α} (hI : I.card ≤ r) :
+    subsetMonomial K I ∈ lowDegreeBooleanSubmodule K α r :=
+  Submodule.subset_span ⟨⟨I, hI⟩, rfl⟩
+
+theorem finrank_lowDegreeBooleanSubmodule_le
+    (K α : Type*) [Field K] [Fintype α] [DecidableEq α] (r : ℕ) :
+    Module.finrank K (lowDegreeBooleanSubmodule K α r) ≤
+      Fintype.card {I : Finset α // I.card ≤ r} :=
+  finrank_range_le_card (R := K) (M := Finset α → K)
+    (b := fun I : {I : Finset α // I.card ≤ r} => subsetMonomial K I.1)
+
+theorem sum_subsetMonomial_insert_apply {K α : Type*} [Field K] [DecidableEq α]
+    (A I X : Finset α) :
+    (∑ a ∈ A, subsetMonomial K (insert a I) X) =
+      ((A ∩ X).card : K) * subsetMonomial K I X := by
+  by_cases hIX : I ⊆ X
+  · have h_insert_iff : ∀ a, insert a I ⊆ X ↔ a ∈ X := by
+      intro a
+      constructor
+      · intro h
+        exact h (Finset.mem_insert_self a I)
+      · intro ha x hx
+        rw [Finset.mem_insert] at hx
+        rcases hx with rfl | hx
+        · exact ha
+        · exact hIX hx
+    rw [Finset.card_eq_sum_ones]
+    simp [subsetMonomial, hIX, h_insert_iff]
+  · have h_insert_false : ∀ a, ¬ insert a I ⊆ X := by
+      intro a h
+      exact hIX ((Finset.subset_insert a I).trans h)
+    simp [subsetMonomial, hIX, h_insert_false]
+
+/-- Multiply a Boolean function by the affine intersection-count factor `|A ∩ X| - c`. -/
+def booleanIntersectionFactor (K : Type*) [Field K] {α : Type*} [DecidableEq α]
+    (A : Finset α) (c : K) : (Finset α → K) →ₗ[K] (Finset α → K) where
+  toFun f := fun X => (((A ∩ X).card : K) - c) * f X
+  map_add' f g := by
+    ext X
+    simp [mul_add]
+  map_smul' c' f := by
+    ext X
+    simp only [Pi.smul_apply, RingHom.id_apply]
+    ring
+
+/--
+The basic multilinearization identity: multiplying a monomial by `|A ∩ X| - c`
+is a linear combination of monomials whose supports have grown by at most one.
+-/
+theorem booleanIntersectionFactor_subsetMonomial {K α : Type*} [Field K] [Fintype α]
+    [DecidableEq α] (A I : Finset α) (c : K) :
+    booleanIntersectionFactor K A c (subsetMonomial K I) =
+      (∑ a ∈ A, subsetMonomial K (insert a I)) - c • subsetMonomial K I := by
+  ext X
+  simp only [booleanIntersectionFactor, LinearMap.coe_mk, AddHom.coe_mk, Pi.sub_apply,
+    Pi.smul_apply, Finset.sum_apply]
+  rw [sum_subsetMonomial_insert_apply (K := K) A I X]
+  ring
+
+/--
+One Frankl-Wilson factor raises Boolean degree by at most one.  Iterating this
+will put the usual product of forbidden-residue factors in the expected
+low-degree space.
+-/
+theorem booleanIntersectionFactor_mem_lowDegree_succ {K α : Type*} [Field K] [Fintype α]
+    [DecidableEq α] {r : ℕ} {A : Finset α} {c : K} {f : Finset α → K}
+    (hf : f ∈ lowDegreeBooleanSubmodule K α r) :
+    booleanIntersectionFactor K A c f ∈ lowDegreeBooleanSubmodule K α (r + 1) := by
+  let target := lowDegreeBooleanSubmodule K α (r + 1)
+  change booleanIntersectionFactor K A c f ∈ target
+  refine Submodule.span_induction (s := Set.range
+      (fun I : {I : Finset α // I.card ≤ r} => subsetMonomial K I.1)) ?_ ?_ ?_ ?_ hf
+  · rintro _ ⟨I, rfl⟩
+    rw [booleanIntersectionFactor_subsetMonomial]
+    apply target.sub_mem
+    · apply Submodule.sum_mem
+      intro a _ha
+      exact subsetMonomial_mem_lowDegree (K := K) (α := α)
+        ((Finset.card_insert_le a I.1).trans (Nat.succ_le_succ I.2))
+    · exact target.smul_mem c
+        (subsetMonomial_mem_lowDegree (K := K) (α := α) (I.2.trans (Nat.le_succ r)))
+  · simp
+  · intro x y _ _ hx hy
+    simpa using target.add_mem hx hy
+  · intro a x _ hx
+    simpa using target.smul_mem a hx
+
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
 diameter can be covered by d+1 subsets of itself, each of strictly smaller
 diameter.  The subset condition is essential: in a noncompact proper space

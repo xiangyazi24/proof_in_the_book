@@ -15,8 +15,9 @@ Formalization status: this file defines finite color-class bookkeeping, states
 the corrected `BorsukConjecture d` for covers of a bounded set by subsets of
 itself in `EuclideanSpace ℝ (Fin d)`, packages a counterexample as
 `KahnKalaiCertificate d`, and proves `chapter16` from such a certificate.  It
-also formalizes enough of the Frankl-Wilson/Kahn-Kalai pipeline to construct an
-unconditional certificate in dimension `4624` from the pointed `p = 17` family.
+also formalizes enough of the Frankl-Wilson/Kahn-Kalai pipeline to construct
+unconditional certificates for `4624 ≤ d ≤ 6848` from the pointed `p = 17`
+family.
 
 Gap to the full book theorem: the advertised `d ≥ 298` bound still needs the
 sharper Kahn-Kalai dimension reduction/numerics.  Mathlib has Euclidean metric

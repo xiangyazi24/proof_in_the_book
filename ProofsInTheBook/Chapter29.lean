@@ -250,6 +250,27 @@ def patternCompatible (a n : ℕ) (pattern : Fin n → Fin n → Prop)
     (seq : RiffleLabels a n) : Prop :=
   Monotone seq ∧ ∀ i j : Fin n, pattern i j → seq i < seq j
 
+private theorem exists_adjacent_drop_nat {α : Type*} [LinearOrder α] (f : ℕ → α) :
+    ∀ {i j : ℕ}, i < j → f j < f i →
+      ∃ k : ℕ, i ≤ k ∧ k + 1 ≤ j ∧ f (k + 1) < f k := by
+  intro i j hij hdrop
+  induction j generalizing i with
+  | zero =>
+      exact (Nat.not_lt_zero _ hij).elim
+  | succ j ih =>
+      by_cases hij' : i < j
+      · by_cases hstep : f (j + 1) < f j
+        · exact ⟨j, Nat.le_of_lt hij', le_rfl, hstep⟩
+        · have hle : f j ≤ f (j + 1) := le_of_not_gt hstep
+          have hdrop' : f j < f i := lt_of_le_of_lt hle hdrop
+          rcases ih hij' hdrop' with ⟨k, hik, hkj, hkdrop⟩
+          exact ⟨k, hik, hkj.trans (Nat.le_succ j), hkdrop⟩
+      · have hji : j ≤ i := Nat.le_of_not_gt hij'
+        have hij_le : i ≤ j := Nat.le_of_lt_succ hij
+        have hi_eq : i = j := le_antisymm hij_le hji
+        subst i
+        exact ⟨j, le_rfl, le_rfl, hdrop⟩
+
 /-- Precompose labels by a target permutation.  This changes from original-card
 coordinates to shuffled-position coordinates. -/
 def labelsEquivSortedSeq (a n : ℕ) (σ : Equiv.Perm (Fin n)) :

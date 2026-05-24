@@ -780,6 +780,18 @@ theorem realTwoAdic_squareBoundaryRGCount_odd_of_side_subdivisions
     (realTwoAdicColor_top_list_greenBlue top)
     (realTwoAdicColor_left_list_redBlue left)
 
+/-- Red-green count along the four color-constrained sides of the unit square. -/
+noncomputable def realTwoAdicSquareBoundaryRGChainCount
+    (bottom right top left : List ℝ) : ℕ :=
+  listRGTransitionCount (red :: ((bottom.map fun x => realTwoAdicColor (x, 0)) ++ [green])) +
+  listRGTransitionCount (green :: ((right.map fun y => realTwoAdicColor (1, y)) ++ [green])) +
+  listRGTransitionCount (green :: ((top.map fun x => realTwoAdicColor (x, 1)) ++ [blue])) +
+  listRGTransitionCount (blue :: ((left.map fun y => realTwoAdicColor (0, y)) ++ [red]))
+
+theorem realTwoAdicSquareBoundaryRGChainCount_odd (bottom right top left : List ℝ) :
+    Odd (realTwoAdicSquareBoundaryRGChainCount bottom right top left) := by
+  exact realTwoAdic_squareBoundaryRGCount_odd_of_side_subdivisions bottom right top left
+
 /-- `TrichromaticTriangle` is invariant under cyclic permutation of vertices. -/
 theorem trichromaticTriangle_cycle {a b c : MonskyColor} :
     TrichromaticTriangle a b c ↔ TrichromaticTriangle b c a := by
@@ -1219,6 +1231,46 @@ theorem no_odd_equalArea_realization_of_edgeParity_abs
       vertices (triangles i).2.2))
     cert
     (by intro i; rfl)
+    harea
+
+/--
+Turn the exact geometric boundary-incidence statement into the odd boundary
+hypothesis needed by the finite edge-parity form.  This isolates the remaining
+frontier lemma: for a real triangulation of the square, the red-green
+odd-multiplicity triangle edges must be exactly the four side chains.
+-/
+theorem oddEdgeRedGreenCount_odd_of_squareBoundaryIncidence
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (vertices : α → ℝ × ℝ) (triangles : Fin n → α × α × α)
+    (bottom right top left : List ℝ)
+    (hboundary : oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices) =
+      realTwoAdicSquareBoundaryRGChainCount bottom right top left) :
+    Odd (oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices)) := by
+  rw [hboundary]
+  exact realTwoAdicSquareBoundaryRGChainCount_odd bottom right top left
+
+/--
+Current non-fake frontier theorem: an extracted finite real triangulation with
+the correct square-boundary incidence and oriented equal-area facts cannot have
+odd size.  The remaining unproved geometric work is to derive `hboundary` and
+`harea` from an actual topological/geometric triangulation object.
+-/
+theorem no_odd_equalArea_realization_of_squareBoundaryIncidence_abs
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ} (hn : Odd n)
+    (vertices : α → ℝ × ℝ) (triangles : Fin n → α × α × α)
+    (bottom right top left : List ℝ)
+    (hboundary : oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices) =
+      realTwoAdicSquareBoundaryRGChainCount bottom right top left)
+    (harea : ∀ i : Fin n,
+      doubleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+          (vertices (triangles i).2.2) =
+        (((2 : ℚ) / n : ℚ) : ℝ) ∨
+      doubleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+          (vertices (triangles i).2.2) =
+        -(((2 : ℚ) / n : ℚ) : ℝ)) : False := by
+  exact no_odd_equalArea_realization_of_edgeParity_abs hn vertices triangles
+    (oddEdgeRedGreenCount_odd_of_squareBoundaryIncidence vertices triangles bottom right top left
+      hboundary)
     harea
 
 /-- The empty triangulation cannot carry a Monsky certificate: with 0 triangles,

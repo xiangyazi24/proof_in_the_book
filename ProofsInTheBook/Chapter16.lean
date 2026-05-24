@@ -710,6 +710,60 @@ theorem card_inter_eq_prime_of_zmod_eq_zero_of_half_cards_of_nonzero_of_ne
   refine card_inter_eq_prime_of_zmod_eq_zero_of_half_card_no_degenerate A B hA hcast hn0 ?_
   exact inter_card_ne_of_ne_of_card_eq hA hB hne
 
+/--
+Prime-modulus Frankl-Wilson, specialized to injective `2p`-uniform families:
+if the family is larger than the low-degree bound times the number of colors,
+then every coloring has a monochromatic pair with exact intersection size `p`.
+The `hnonzero` hypothesis is the partition-level exclusion of complementary
+representatives.
+-/
+theorem exists_monochromatic_pair_prime_intersection_eq
+    {p : ℕ} [Fact p.Prime] {α ι κ : Type*} [Fintype α] [DecidableEq α]
+    [Fintype ι] [Fintype κ] [DecidableEq κ]
+    (sets : ι → Finset α) (color : ι → κ)
+    (hcard : ∀ i, (sets i).card = 2 * p)
+    (hinj : Function.Injective sets)
+    (hnonzero : ∀ i j, i ≠ j → (sets i ∩ sets j).card ≠ 0)
+    (hlarge : Fintype.card κ *
+        Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card} <
+          Fintype.card ι) :
+    ∃ i j, i ≠ j ∧ color i = color j ∧ (sets i ∩ sets j).card = p := by
+  let L : Finset (ZMod p) := Finset.univ.erase 0
+  have hself : ∀ i, ((sets i).card : ZMod p) ∉ L := by
+    intro i
+    rw [hcard i]
+    simp [L]
+  obtain ⟨i, j, hij, hsame, hbad⟩ :=
+    exists_monochromatic_pair_intersection_notMem (sets := sets) (L := L) (color := color)
+      hself (by simpa [L] using hlarge)
+  have hcast : (((sets i ∩ sets j).card : ZMod p) = 0) := by
+    simpa [L] using hbad
+  have hinter : (sets i ∩ sets j).card = p :=
+    card_inter_eq_prime_of_zmod_eq_zero_of_half_cards_of_nonzero_of_ne
+      (sets i) (sets j) (hcard i) (hcard j) hcast (hnonzero i j hij) (hinj.ne hij)
+  exact ⟨i, j, hij, hsame, hinter⟩
+
+theorem exists_monochromatic_pair_directedCutSet_dist_sq_eq
+    {p : ℕ} [Fact p.Prime] {α ι κ : Type*} [Fintype α] [DecidableEq α]
+    [Fintype ι] [Fintype κ] [DecidableEq κ]
+    (sets : ι → Finset α) (color : ι → κ)
+    (hground : Fintype.card α = 4 * p)
+    (hcard : ∀ i, (sets i).card = 2 * p)
+    (hinj : Function.Injective sets)
+    (hnonzero : ∀ i j, i ≠ j → (sets i ∩ sets j).card ≠ 0)
+    (hlarge : Fintype.card κ *
+        Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card} <
+          Fintype.card ι) :
+    ∃ i j, i ≠ j ∧ color i = color j ∧
+      dist (realIncidencePoint (directedCutSet (sets i)))
+          (realIncidencePoint (directedCutSet (sets j))) ^ 2 = ((8 * p * p : ℕ) : ℝ) := by
+  obtain ⟨i, j, hij, hsame, hinter⟩ :=
+    exists_monochromatic_pair_prime_intersection_eq (sets := sets) (color := color)
+      hcard hinj hnonzero hlarge
+  exact ⟨i, j, hij, hsame,
+    directedCutSet_realIncidencePoint_dist_sq_of_kahnKalai_intersection
+      (sets i) (sets j) hground (hcard i) (hcard j) hinter⟩
+
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
 diameter can be covered by d+1 subsets of itself, each of strictly smaller
 diameter.  The subset condition is essential: in a noncompact proper space

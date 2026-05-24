@@ -574,4 +574,113 @@ theorem chapter30 {n : ℕ} {V R : Type*} [DecidableEq V]
   rw [S.det_matrix_eq_total]
   exact (latticeLGVCertificate S.vertexWeight).total_sum_eq_good_sum
 
+/-
+Tiny compiled application of `chapter30`.
+
+The current `PathCountSystem` still targets `LGVFamily n V`, whose paths are
+unbounded `List V`s.  For a nonempty geometric vertex type this is not a finite
+type without an additional bounded/geometric path layer, so full grid-path
+applications such as the hook-length formula still require more infrastructure.
+The empty-vertex case below is the smallest finite instance: there is one formal
+path in every entry of a `2 × 2` path-count matrix, and the two signed
+non-intersecting families cancel.
+-/
+namespace EmptyTwoByTwoExample
+
+def emptyVertexWeight : Empty → ℤ := Empty.elim
+
+def emptyGoodFamily (σ : Equiv.Perm (Fin 2)) : LGVFamily 2 Empty :=
+  LGVFamily.good
+    { perm := σ
+      paths := fun _ => []
+      nonIntersecting := by
+        intro _ _ _
+        simp }
+
+def emptyFamilyPerm : LGVFamily 2 Empty → Equiv.Perm (Fin 2)
+  | LGVFamily.good G => G.perm
+  | LGVFamily.bad B => Empty.elim B.shared
+
+theorem emptyGoodFamily_emptyFamilyPerm (F : LGVFamily 2 Empty) :
+    emptyGoodFamily (emptyFamilyPerm F) = F := by
+  cases F with
+  | good G =>
+      cases G with
+      | mk perm paths nonIntersecting =>
+          dsimp [emptyGoodFamily, emptyFamilyPerm]
+          have hpaths : paths = fun _ : Fin 2 => ([] : List Empty) := by
+            funext i
+            cases paths i with
+            | nil => rfl
+            | cons head _ => cases head
+          cases hpaths
+          rfl
+  | bad B =>
+      cases B.shared
+
+def emptyFamilyEquiv : LGVFamily 2 Empty ≃ Equiv.Perm (Fin 2) where
+  toFun := emptyFamilyPerm
+  invFun := emptyGoodFamily
+  left_inv := emptyGoodFamily_emptyFamilyPerm
+  right_inv := by intro _; rfl
+
+noncomputable instance instFintypeLGVFamilyEmptyTwo : Fintype (LGVFamily 2 Empty) :=
+  Fintype.ofEquiv (Equiv.Perm (Fin 2)) emptyFamilyEquiv.symm
+
+noncomputable instance instDecidableEqLGVFamilyEmptyTwo : DecidableEq (LGVFamily 2 Empty) :=
+  Equiv.decidableEq emptyFamilyEquiv
+
+def unitPathChoicesEquiv :
+    (Σ _ : Equiv.Perm (Fin 2), ∀ _ : Fin 2, Unit) ≃ Equiv.Perm (Fin 2) where
+  toFun X := X.1
+  invFun σ := ⟨σ, fun _ => Unit.unit⟩
+  left_inv := by
+    intro X
+    cases X with
+    | mk _ choices =>
+        have hchoices : choices = fun _ : Fin 2 => Unit.unit := by
+          funext i
+          cases choices i
+          rfl
+        cases hchoices
+        rfl
+  right_inv := by intro _; rfl
+
+def allOnesPathSystem : PathCountSystem 2 Empty ℤ where
+  vertexWeight := emptyVertexWeight
+  Path := fun _ _ => Unit
+  pathFintype := by intro _ _; infer_instance
+  pathWeight := fun _ => 1
+  familyEquiv := unitPathChoicesEquiv.trans emptyFamilyEquiv.symm
+  weight_eq := by
+    intro X
+    cases X with
+    | mk _ _ =>
+        dsimp [unitPathChoicesEquiv, emptyFamilyEquiv, emptyGoodFamily,
+          LGVFamily.signedWeight, LGVFamily.unsignedWeight, LGVFamily.perm,
+          pathVertexWeight]
+
+theorem allOnesPathSystem_matrix_apply (i j : Fin 2) :
+    allOnesPathSystem.matrix i j = (1 : ℤ) := by
+  simp [allOnesPathSystem, PathCountSystem.matrix, PathCountSystem.pathCount]
+
+theorem allOnesPathSystem_det : allOnesPathSystem.matrix.det = (0 : ℤ) := by
+  rw [Matrix.det_fin_two]
+  simp [allOnesPathSystem, PathCountSystem.matrix, PathCountSystem.pathCount]
+
+theorem allOnesPathSystem_chapter30 :
+    allOnesPathSystem.matrix.det =
+      ∑ F ∈ Finset.univ.filter (fun F : LGVFamily 2 Empty => ¬ LGVFamily.isBad F),
+        LGVFamily.signedWeight emptyVertexWeight F := by
+  simpa [allOnesPathSystem] using chapter30 allOnesPathSystem
+
+/-- In this `2 × 2` formal path system, the signed non-intersecting count is zero. -/
+theorem allOnesPathSystem_good_sum_eq_zero :
+    (∑ F ∈ Finset.univ.filter (fun F : LGVFamily 2 Empty => ¬ LGVFamily.isBad F),
+        LGVFamily.signedWeight emptyVertexWeight F) = (0 : ℤ) := by
+  rw [← allOnesPathSystem_chapter30]
+  exact allOnesPathSystem_det
+
+end EmptyTwoByTwoExample
+
 end ProofsInTheBook.Chapter30

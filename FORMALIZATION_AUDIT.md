@@ -81,18 +81,22 @@ with sustained effort, candidates for genuine closure):**
   path families).
 - Ch10 Sylvester–Gallai: `chapter10` (card = 2 → ordinary) is unconditional;
   the full theorem needs the `gallai` extremal closer-pair geometric step.
-  **Kelly's metric proof started (2026-05-24, commit fac587d):** concrete
-  `EPoint = EuclideanSpace ℝ (Fin 2)` foundation laid — `perpDist` (infDist
-  to `affineSpan ℝ {a,b}`), `perpDist_nonneg/_eq_zero_of_mem/_le_dist_*`,
-  `mem_of_perpDist_eq_zero` (line closed in finite dim), `perpDist_eq_zero_iff`,
-  `perpDist_pos`.  **Blocker for step 2** (minimal off-line pair existence):
-  `Finset.filter` over the predicate `· ∉ affineSpan …` on `EPoint` triggers a
-  `whnf` heartbeat timeout (Classical decidability + EuclideanSpace elaboration
-  pathology), not fixed by raising `maxHeartbeats`.  Next session: encode the
-  off-line incidence set without a `Finset.filter` over an undecidable affine
-  predicate (e.g. via a `Fintype`/subtype of `S×S×S` or an order-theoretic
-  `Set.Finite.exists_min`), then continue to the foot-of-perpendicular
-  distance-decrease contradiction.
+  **Kelly's metric proof — steps 1–2 done (2026-05-24):**
+  - Step 1 (commit fac587d): concrete `EPoint = EuclideanSpace ℝ (Fin 2)`
+    foundation — `perpDist` (infDist to `affineSpan ℝ {a,b}`),
+    `perpDist_nonneg/_eq_zero_of_mem/_le_dist_*`, `mem_of_perpDist_eq_zero`
+    (line closed in finite dim), `perpDist_eq_zero_iff`, `perpDist_pos`.
+  - Step 2 (commit 9d0d4ae): `exists_min_perpDist_offLine` — a minimum
+    perpendicular-distance off-line incidence exists.  The earlier `whnf`
+    blocker (Finset.filter over the undecidable `∉ affineSpan`) was resolved
+    by giving `OffLineTriple S` a `Finite` instance (injects into `S×ˢS×ˢS`)
+    and minimizing over `Finset.univ` — everything abstract, no concrete
+    Finset reduction.
+  - **Remaining (step 3, the crux):** foot of perpendicular
+    `F = orthogonalProjection line[a,b] P`; pigeonhole two on-line points to
+    the same side of `F`; then the similar-triangles inequality
+    `dist(Q, line[P,R]) < perpDist P a b` contradicts minimality, proving the
+    minimal pair's line is ordinary.  ~200–400 LOC of Euclidean geometry.
 
 ## Work Order
 

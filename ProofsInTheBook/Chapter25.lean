@@ -12,21 +12,19 @@ The book's proof uses the linearity of expectation: any curve of
 length L crosses E[crossings] = 2L/(πd) lines, proved by decomposing
 into infinitesimal segments and using rotational symmetry.
 
-Formalization status: this file closes the algebraic and elementary-calculus
-layer.  It defines the expected-crossing formula for one segment and finite
-polygonal curves, proves linearity in total length, proves the sine integrals
-used by the rotational computation, and states `chapter25` from a
-`BuffonProbabilitySpace` that already contains the expected-value identity.
+Formalization status: this file now removes the previous escape hatch where a
+structure field asserted the expected-value identity.  The public `chapter25`
+states the short-needle theorem as an explicit density-level probability
+calculation: the center distance from the nearest line is averaged uniformly on
+`[0,d/2]`, the angle is averaged uniformly on `[0,π]`, and the resulting
+one-dimensional angle integral is evaluated.
 
-Gap to the full book theorem: the missing work is the integral-geometric
-probability model.  A complete proof needs a probability measure for random
-needle placements relative to parallel lines, measurable crossing-count
-random variables, integrability and expected-value calculations from the
-uniform position-angle distribution, the proof that a short needle crosses at
-most one line so expectation equals crossing probability, and for the noodle
-version an arc-length/polygonal-approximation bridge.  Mathlib has measure
-theory and interval integrals, but not this Buffon/Crofton-style placement
-measure and crossing-count development.
+Remaining gap to the full measure-theoretic book statement: replace the
+density-level average with an actual product probability measure on
+`[0,d/2] × [0,π]`, prove measurability of the crossing event, identify the
+event integral with the conditional center-distance average used here, and
+then derive the expectation/probability equality from the Bernoulli crossing
+count.  No field below assumes this identity.
 -/
 
 namespace ProofsInTheBook.Chapter25
@@ -36,6 +34,71 @@ open scoped BigOperators
 /-- Expected crossings for a single segment in Buffon's needle model. -/
 noncomputable def segmentExpectedCrossings (d length : ℝ) : ℝ :=
   2 * length / (Real.pi * d)
+
+/-- Center-distance threshold for crossing at angle `θ`: a short needle crosses
+iff its center lies within this distance of the nearest parallel line. -/
+noncomputable def buffonCenterThreshold (length θ : ℝ) : ℝ :=
+  length * Real.sin θ / 2
+
+/-- The geometric crossing event in density coordinates.  Here `x` is the
+distance from the needle center to the nearest line, and `θ ∈ [0,π]` is the
+unoriented angle against the parallel lines. -/
+def buffonCrossingEvent (length x θ : ℝ) : Prop :=
+  x ≤ buffonCenterThreshold length θ
+
+/-- Conditional crossing probability after averaging the center distance
+uniformly over `[0,d/2]`, before averaging over the angle. -/
+noncomputable def buffonConditionalCrossingProbability (d length θ : ℝ) : ℝ :=
+  (2 / d) * buffonCenterThreshold length θ
+
+/-- The short-needle Buffon probability obtained by uniform angle averaging on
+`[0,π]` after the center-distance average. -/
+noncomputable def buffonNeedleCrossingProbability (d length : ℝ) : ℝ :=
+  (1 / Real.pi) *
+    ∫ θ in (0 : ℝ)..Real.pi, buffonConditionalCrossingProbability d length θ
+
+/-- The conditional probability is exactly the center-distance threshold divided
+by the length `d/2` of the uniform center-distance interval. -/
+theorem buffonConditionalCrossingProbability_eq_center_average
+    (d length θ : ℝ) :
+    buffonConditionalCrossingProbability d length θ =
+      (2 / d) * buffonCenterThreshold length θ := by
+  unfold buffonConditionalCrossingProbability buffonCenterThreshold
+  ring
+
+/-- In the short-needle range, the crossing threshold lies inside the possible
+center-distance interval. -/
+theorem buffonCenterThreshold_mem_Icc {d length θ : ℝ}
+    (hlen : 0 ≤ length) (hle : length ≤ d) (hθ0 : 0 ≤ θ) (hθπ : θ ≤ Real.pi) :
+    buffonCenterThreshold length θ ∈ Set.Icc (0 : ℝ) (d / 2) := by
+  have hsin0 : 0 ≤ Real.sin θ := Real.sin_nonneg_of_mem_Icc ⟨hθ0, hθπ⟩
+  have hsin1 : Real.sin θ ≤ 1 := Real.sin_le_one θ
+  constructor
+  · unfold buffonCenterThreshold
+    positivity
+  · unfold buffonCenterThreshold
+    have hmul : length * Real.sin θ ≤ length * 1 :=
+      mul_le_mul_of_nonneg_left hsin1 hlen
+    nlinarith
+
+/-- The conditional center-distance crossing probability is a genuine
+probability for every short-needle angle. -/
+theorem buffonConditionalCrossingProbability_mem_Icc {d length θ : ℝ}
+    (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d)
+    (hθ0 : 0 ≤ θ) (hθπ : θ ≤ Real.pi) :
+    buffonConditionalCrossingProbability d length θ ∈ Set.Icc (0 : ℝ) 1 := by
+  have hthreshold := buffonCenterThreshold_mem_Icc hlen hle hθ0 hθπ
+  have hscale_nonneg : 0 ≤ 2 / d := div_nonneg (by norm_num) hd.le
+  constructor
+  · unfold buffonConditionalCrossingProbability
+    exact mul_nonneg hscale_nonneg hthreshold.1
+  · unfold buffonConditionalCrossingProbability
+    have hscale :
+        (2 / d) * buffonCenterThreshold length θ ≤ (2 / d) * (d / 2) :=
+      mul_le_mul_of_nonneg_left hthreshold.2 hscale_nonneg
+    have hscale_eq : (2 / d) * (d / 2) = 1 := by
+      field_simp [hd.ne']
+    linarith
 
 /--
 Expected crossings for a polygonal curve, defined by summing the segment
@@ -156,7 +219,8 @@ theorem buffon_noodle_expected_crossings {ι : Type*} (segments : Finset ι)
 
 /--
 The book's proof of Buffon's formula proceeds in three steps:
-1. For a single segment of length ℓ, E[crossings] = 2ℓ/(πd) by rotational symmetry
+1. For a single segment of length ℓ, average the center-distance crossing
+   condition over the angle: `(1/π)∫₀^π (ℓ/d) sin θ dθ = 2ℓ/(πd)`.
 2. By linearity, any curve of length L has E[crossings] = 2L/(πd)
 3. For a needle (straight segment) of length ≤ d, at most one crossing occurs,
    so E[crossings] = P(crossing) = 2ℓ/(πd)
@@ -180,55 +244,32 @@ theorem buffon_half_range_sine_integral :
   rw [integral_sin]
   simp [Real.cos_pi_div_two, Real.cos_zero]
 
-/-- For the short-needle case (`ℓ ≤ d`), the crossing-probability formula
-`P = 2ℓ/(πd)` integrated over the canonical rotational-position joint density
-recovers `segmentExpectedCrossings` exactly.  This packages the elementary
-calculus identity behind the book's first step. -/
-theorem segmentExpectedCrossings_eq_two_div_pi_times_int
+/-- The honest core integral computation for Buffon's short-needle model. -/
+theorem buffonNeedleCrossingProbability_eq_segmentExpectedCrossings
     (d length : ℝ) (_hd : 0 < d) :
-    segmentExpectedCrossings d length =
-      (2 * length) / (Real.pi * d) := by
-  unfold segmentExpectedCrossings
-  rfl
-
-/-- Probability space carrying Buffon's needle distribution.
-A BuffonProbabilitySpace abstracts over the measure-theoretic machinery
-needed to talk about "the expected crossing count of a randomly placed
-needle is given by segmentExpectedCrossings d length". -/
-structure BuffonProbabilitySpace (d : ℝ) (length : ℝ) where
-  /-- The expected value of the crossing count for a length-`length` segment. -/
-  expectedCrossings : ℝ
-  /-- The fundamental measure-theoretic identity: the expected crossing
-      count equals 2·length/(π·d). -/
-  expected_eq : expectedCrossings = segmentExpectedCrossings d length
-
-/-- The canonical (structurally trivial) `BuffonProbabilitySpace`: takes the
-expected-crossings field equal to the formula by definition.
-
-**Caveat**: this constructor does NOT carry any measure-theoretic content; it
-only matches the structure's algebraic shape.  The Tier 2 goal is to provide
-a constructor that DERIVES `expected_eq` from a real probability measure on
-needle placements rather than asserting it tautologically.  Use of this
-canonical instance to invoke `chapter25` is a structural rephrasing of
-`segmentExpectedCrossings`, not a probabilistic proof. -/
-noncomputable def BuffonProbabilitySpace.canonical (d length : ℝ) :
-    BuffonProbabilitySpace d length where
-  expectedCrossings := segmentExpectedCrossings d length
-  expected_eq := rfl
+    buffonNeedleCrossingProbability d length = segmentExpectedCrossings d length := by
+  unfold buffonNeedleCrossingProbability buffonConditionalCrossingProbability
+    buffonCenterThreshold segmentExpectedCrossings
+  rw [intervalIntegral.integral_const_mul, intervalIntegral.integral_div,
+    intervalIntegral.integral_const_mul, buffon_rotational_symmetry_integral]
+  ring_nf
 
 /--
-Chapter 25 (Buffon's needle, Tier 1 conditional):
-Given a BuffonProbabilitySpace (which packages the measure-theoretic setup
-of random needle placement on parallel-line floor), the expected number
-of crossings equals 2·length/(π·d).
+Chapter 25 (Buffon's needle, short-needle density model):
+For `0 ≤ ℓ ≤ d`, averaging the explicit crossing event over the uniform
+center distance on `[0,d/2]` and the uniform angle on `[0,π]` gives crossing
+probability `2ℓ/(πd)`.
 
-TODO (Tier 2): Construct BuffonProbabilitySpace from `MeasureTheory.ProbabilityMeasure`
-on `[0, d/2] × [0, π/2]` with uniform density `1/(πd/4)`. The expected crossing
-count integrates to `2ℓ/(πd)` when `ℓ ≤ d` (short-needle case); long-needle case
-requires extra cases.
+This theorem deliberately has no probability-space structure parameter and no
+field asserting the expected-value identity.  The remaining measure-theoretic
+upgrade is to prove that the density-level average used in
+`buffonNeedleCrossingProbability` is equal to the integral of the indicator of
+`buffonCrossingEvent` over the normalized product measure on
+`[0,d/2] × [0,π]`.
 -/
-theorem chapter25 (d length : ℝ) (space : BuffonProbabilitySpace d length) :
-    space.expectedCrossings = 2 * length / (Real.pi * d) := by
-  rw [space.expected_eq, segmentExpectedCrossings]
+theorem chapter25 (d length : ℝ) (hd : 0 < d) (_hlen : 0 ≤ length) (_hle : length ≤ d) :
+    buffonNeedleCrossingProbability d length = 2 * length / (Real.pi * d) := by
+  rw [buffonNeedleCrossingProbability_eq_segmentExpectedCrossings d length hd]
+  rfl
 
 end ProofsInTheBook.Chapter25

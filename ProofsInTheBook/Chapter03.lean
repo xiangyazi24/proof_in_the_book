@@ -3778,6 +3778,73 @@ theorem lPowerFreePart_one (l : ℕ) : lPowerFreePart l 1 = 1 := by
 theorem lPowerRoot_one (l : ℕ) : lPowerRoot l 1 = 1 := by
   simp [lPowerRoot]
 
+/-- The l-power-free part is nonzero on nonzero input. -/
+theorem lPowerFreePart_ne_zero {l m : ℕ} (hm : m ≠ 0) :
+    lPowerFreePart l m ≠ 0 := by
+  intro hz
+  have hsplit := self_eq_lPowerFreePart_mul_lPowerRoot_pow l m hm
+  rw [hz, zero_mul] at hsplit
+  exact hm hsplit
+
+/-- The l-power-free part is positive on positive input. -/
+theorem lPowerFreePart_pos_of_ne_zero {l m : ℕ} (hm : m ≠ 0) :
+    0 < lPowerFreePart l m :=
+  Nat.pos_of_ne_zero (lPowerFreePart_ne_zero (l := l) hm)
+
+/-- The l-power root is nonzero on nonzero input when `l > 0`. -/
+theorem lPowerRoot_ne_zero {l m : ℕ} (hl : 0 < l) (hm : m ≠ 0) :
+    lPowerRoot l m ≠ 0 := by
+  intro hz
+  have hsplit := self_eq_lPowerFreePart_mul_lPowerRoot_pow l m hm
+  rw [hz, zero_pow hl.ne', mul_zero] at hsplit
+  exact hm hsplit
+
+/-- The l-power root is positive on positive input when `l > 0`. -/
+theorem lPowerRoot_pos_of_ne_zero {l m : ℕ} (hl : 0 < l) (hm : m ≠ 0) :
+    0 < lPowerRoot l m :=
+  Nat.pos_of_ne_zero (lPowerRoot_ne_zero hl hm)
+
+/-- For all `l`, the factorization of the l-power-free part is the original
+factorization reduced modulo `l`. -/
+private lemma lPowerFreePart_factorization_eq_mod_general (l m p : ℕ) :
+    (lPowerFreePart l m).factorization p = m.factorization p % l := by
+  classical
+  rw [lPowerFreePart]
+  have hfac_ne : ∀ q ∈ m.factorization.support, q ^ (m.factorization q % l) ≠ 0 := by
+    intro q hq
+    have hq_prime : q.Prime := Nat.prime_of_mem_primeFactors
+      ((Nat.support_factorization _).symm ▸ hq)
+    exact pow_ne_zero _ hq_prime.ne_zero
+  rw [Nat.factorization_prod_apply hfac_ne]
+  by_cases hp : p.Prime
+  · calc
+      ∑ q ∈ m.factorization.support, (q ^ (m.factorization q % l)).factorization p
+          = ∑ q ∈ m.factorization.support, if q = p then m.factorization p % l else 0 := by
+            refine Finset.sum_congr rfl (fun q hq => ?_)
+            have hq_prime : q.Prime := Nat.prime_of_mem_primeFactors
+              ((Nat.support_factorization _).symm ▸ hq)
+            rw [Nat.factorization_pow, hq_prime.factorization, Finsupp.smul_apply,
+              Finsupp.single_apply]
+            by_cases hqp : q = p
+            · subst hqp
+              simp
+            · simp [hqp]
+      _ = (if p ∈ m.factorization.support then m.factorization p % l else 0) := by
+            rw [Finset.sum_ite_eq']
+      _ = m.factorization p % l := by
+            split_ifs with hp_mem
+            · rfl
+            · have hp_zero : m.factorization p = 0 := by
+                exact not_not.mp ((Finsupp.mem_support_iff).not.mp hp_mem)
+              rw [hp_zero, zero_mod]
+  · have hsum_zero :
+        (∑ q ∈ m.factorization.support, (q ^ (m.factorization q % l)).factorization p) = 0 := by
+        apply Finset.sum_eq_zero
+        intro q _hq
+        exact Nat.factorization_eq_zero_of_not_prime _ hp
+    have hp_zero : m.factorization p = 0 := Nat.factorization_eq_zero_of_not_prime m hp
+    rw [hsum_zero, hp_zero, zero_mod]
+
 /-- `lPowerRoot 2` is positive on positive input. -/
 theorem lPowerRoot_pos {m : ℕ} (hm : m ≠ 0) :
     0 < lPowerRoot 2 m := by
@@ -4236,6 +4303,163 @@ private lemma factorization_factorial_eq_div_of_sq_lt
     exact hpk
   rw [padicValNat_factorial hlog]
   rw [show (Finset.Ico 1 2 : Finset ℕ) = {1} from rfl, Finset.sum_singleton, pow_one]
+
+/-- A factorization residue modulo `l` is bounded by the number of initial
+prime-power layers `p, p^2, ..., p^(l-1)` that divide the number. -/
+private lemma factorization_mod_le_count_pow_dvd
+    {p x l : ℕ} (hp : p.Prime) (hx : x ≠ 0) (hl : 0 < l) :
+    x.factorization p % l ≤
+      ∑ r ∈ Finset.range (l - 1), if p ^ (r + 1) ∣ x then 1 else 0 := by
+  classical
+  let t := x.factorization p % l
+  have ht_lt : t < l := by simpa [t] using Nat.mod_lt (x.factorization p) hl
+  have hsub : Finset.range t ⊆ (Finset.range (l - 1)).filter (fun r => p ^ (r + 1) ∣ x) := by
+    intro r hr
+    rw [Finset.mem_range] at hr
+    rw [Finset.mem_filter, Finset.mem_range]
+    refine ⟨by omega, ?_⟩
+    have hle_v : r + 1 ≤ x.factorization p := by
+      have hle_t : r + 1 ≤ t := by omega
+      exact hle_t.trans (Nat.mod_le _ _)
+    exact (hp.pow_dvd_iff_le_factorization hx).mpr hle_v
+  have hcard_le := Finset.card_le_card hsub
+  calc
+    x.factorization p % l = (Finset.range t).card := by simp [t]
+    _ ≤ ((Finset.range (l - 1)).filter (fun r => p ^ (r + 1) ∣ x)).card := hcard_le
+    _ = ∑ r ∈ Finset.range (l - 1), if p ^ (r + 1) ∣ x then 1 else 0 := by
+      rw [Finset.card_filter]
+
+/-- Legendre's formula, truncated to the first `l-1` prime-power layers. -/
+private lemma factorization_factorial_ge_sum_range_div_pow
+    (k p l : ℕ) (hp : p.Prime) :
+    (∑ r ∈ Finset.range (l - 1), k / p ^ (r + 1)) ≤ (k !).factorization p := by
+  classical
+  have hsum_eq :
+      (∑ r ∈ Finset.range (l - 1), k / p ^ (r + 1)) =
+        ∑ i ∈ Finset.Ico 1 l, k / p ^ i := by
+    rw [Finset.sum_Ico_eq_sum_range]
+    refine Finset.sum_congr rfl (fun r _hr => ?_)
+    rw [Nat.add_comm]
+  rw [hsum_eq]
+  let b := max l (Nat.log p k + 1)
+  have hlog : Nat.log p k < b := by
+    dsimp [b]
+    omega
+  have hfac : (k !).factorization p = ∑ i ∈ Finset.Ico 1 b, k / p ^ i :=
+    Nat.factorization_factorial hp hlog
+  rw [hfac]
+  apply Finset.sum_le_sum_of_subset_of_nonneg
+  · intro i hi
+    rw [Finset.mem_Ico] at hi ⊢
+    dsimp [b]
+    omega
+  · intro i _hi _hnot
+    exact Nat.zero_le _
+
+/-- If two naturals are congruent modulo `l`, and the first is within `l-1`
+above the second, then it is not above it at all. -/
+private lemma le_of_mod_eq_of_le_add_pred {x y l : ℕ} (hl : 0 < l)
+    (hmod : x % l = y % l) (hle : x ≤ y + (l - 1)) : x ≤ y := by
+  by_contra hnot
+  have hyx : y < x := lt_of_not_ge hnot
+  have hmodEq : y ≡ x [MOD l] := by
+    exact hmod.symm
+  have hdvd : l ∣ x - y := (Nat.modEq_iff_dvd' hyx.le).mp hmodEq
+  have hdiff_pos : 0 < x - y := Nat.sub_pos_of_lt hyx
+  have hdiff_ge_l : l ≤ x - y := Nat.le_of_dvd hdiff_pos hdvd
+  omega
+
+/-! ### Erdős divisibility step (general l) -/
+
+/-- **Erdős divisibility step**.  If `C(n,k)` is an l-th power, the product of
+the l-power-free parts of the descending factorial divides `k!`. -/
+theorem prod_lPowerFreeParts_dvd_factorial
+    {n k l m : ℕ} (_hk : 4 ≤ k) (hn : 2 * k ≤ n) (hl : 2 ≤ l)
+    (h_eq : n.choose k = m ^ l) :
+    (∏ j ∈ Finset.range k, lPowerFreePart l (n - j)) ∣ k ! := by
+  classical
+  set P : ℕ := ∏ j ∈ Finset.range k, lPowerFreePart l (n - j) with hP_def
+  have hl_pos : 0 < l := by omega
+  have h_njne : ∀ j ∈ Finset.range k, (n - j) ≠ 0 := fun j hj => by
+    have : j < k := Finset.mem_range.mp hj
+    omega
+  have h_factor_ne : ∀ j ∈ Finset.range k, lPowerFreePart l (n - j) ≠ 0 := by
+    intro j hj
+    exact lPowerFreePart_ne_zero (l := l) (m := n - j) (h_njne j hj)
+  have hP_ne : P ≠ 0 := by
+    rw [hP_def, Finset.prod_ne_zero_iff]
+    exact h_factor_ne
+  have hkfact_ne : (k ! : ℕ) ≠ 0 := Nat.factorial_ne_zero k
+  rw [← Nat.factorization_le_iff_dvd hP_ne hkfact_ne, Finsupp.le_def]
+  intro p
+  by_cases hp_prime : p.Prime
+  · have hP_factor :
+        P.factorization p =
+          ∑ j ∈ Finset.range k, (n - j).factorization p % l := by
+      rw [hP_def, Nat.factorization_prod_apply h_factor_ne]
+      refine Finset.sum_congr rfl (fun j _hj => ?_)
+      exact lPowerFreePart_factorization_eq_mod_general l (n - j) p
+    have h_upper : P.factorization p ≤ (k !).factorization p + (l - 1) := by
+      have h_count_bound :
+          P.factorization p ≤ ∑ r ∈ Finset.range (l - 1), (k / p ^ (r + 1) + 1) := by
+        rw [hP_factor]
+        calc
+          ∑ j ∈ Finset.range k, (n - j).factorization p % l
+              ≤ ∑ j ∈ Finset.range k,
+                  ∑ r ∈ Finset.range (l - 1), if p ^ (r + 1) ∣ (n - j) then 1 else 0 := by
+                apply Finset.sum_le_sum
+                intro j hj
+                exact factorization_mod_le_count_pow_dvd hp_prime (h_njne j hj) hl_pos
+          _ = ∑ r ∈ Finset.range (l - 1),
+                  ∑ j ∈ Finset.range k, if p ^ (r + 1) ∣ (n - j) then 1 else 0 := by
+                rw [Finset.sum_comm]
+          _ ≤ ∑ r ∈ Finset.range (l - 1), (k / p ^ (r + 1) + 1) := by
+                apply Finset.sum_le_sum
+                intro r _hr
+                rw [← Finset.card_filter]
+                exact card_filter_dvd_le_aux
+                  (by exact Nat.succ_le_of_lt (pow_pos hp_prime.pos (r + 1)))
+                  (by omega : k ≤ n)
+      have hsplit :
+          (∑ r ∈ Finset.range (l - 1), (k / p ^ (r + 1) + 1)) =
+            (∑ r ∈ Finset.range (l - 1), k / p ^ (r + 1)) + (l - 1) := by
+        rw [Finset.sum_add_distrib]
+        simp [Finset.sum_const, smul_eq_mul]
+      have hleg := factorization_factorial_ge_sum_range_div_pow k p l hp_prime
+      rw [hsplit] at h_count_bound
+      exact h_count_bound.trans (Nat.add_le_add_right hleg (l - 1))
+    have h_mod : P.factorization p % l = (k !).factorization p % l := by
+      set Q : ℕ := ∏ j ∈ Finset.range k, lPowerRoot l (n - j) with hQ_def
+      have h_desc_split : n.descFactorial k = P * Q ^ l := by
+        rw [hP_def, hQ_def, ← Finset.prod_pow, ← Finset.prod_mul_distrib,
+            Nat.descFactorial_eq_prod_range]
+        refine Finset.prod_congr rfl (fun j hj => ?_)
+        exact self_eq_lPowerFreePart_mul_lPowerRoot_pow l (n - j) (h_njne j hj)
+      have h_desc_choose : n.descFactorial k = k ! * m ^ l := by
+        rw [Nat.descFactorial_eq_factorial_mul_choose, h_eq]
+      have hQ_ne : Q ≠ 0 := by
+        rw [hQ_def, Finset.prod_ne_zero_iff]
+        intro j hj
+        exact lPowerRoot_ne_zero (l := l) hl_pos (h_njne j hj)
+      have hm_ne : m ≠ 0 := by
+        intro hz
+        rw [hz, zero_pow hl_pos.ne'] at h_eq
+        have h_choose_pos : 0 < n.choose k := Nat.choose_pos (by omega : k ≤ n)
+        omega
+      have h_eq_PQ : P * Q ^ l = k ! * m ^ l := by
+        rw [show P * Q ^ l = n.descFactorial k from h_desc_split.symm]
+        exact h_desc_choose
+      have h_apply : (P * Q ^ l).factorization p = (k ! * m ^ l).factorization p :=
+        congrArg (fun n => n.factorization p) h_eq_PQ
+      rw [Nat.factorization_mul hP_ne (pow_ne_zero l hQ_ne),
+          Nat.factorization_mul hkfact_ne (pow_ne_zero l hm_ne),
+          Nat.factorization_pow, Nat.factorization_pow] at h_apply
+      simp only [Finsupp.add_apply, Finsupp.smul_apply, smul_eq_mul] at h_apply
+      have h_apply_mod := congrArg (fun x : ℕ => x % l) h_apply
+      simpa [Nat.add_mul_mod_self_left] using h_apply_mod
+    exact le_of_mod_eq_of_le_add_pred hl_pos h_mod h_upper
+  · rw [Nat.factorization_eq_zero_of_not_prime _ hp_prime,
+        Nat.factorization_eq_zero_of_not_prime _ hp_prime]
 
 /-! ### Erdős divisibility step (l = 2 case): discharge of `hprod_l2` -/
 

@@ -161,6 +161,61 @@ theorem linearIndependent_of_linear_functionals_diagonal
   have hmul : g i * φ i (v i) = 0 := by simpa [smul_eq_mul] using happly
   exact (mul_eq_zero.mp hmul).resolve_right (hdiag i)
 
+/-- The incidence vector of a finite set over `ZMod 2`. -/
+def incidenceVector {α : Type*} [DecidableEq α] (A : Finset α) : α → ZMod 2 :=
+  fun a => if a ∈ A then 1 else 0
+
+/-- Dot product with a fixed vector over `ZMod 2`, as a linear functional. -/
+def modTwoDotLinear {α : Type*} [Fintype α] (w : α → ZMod 2) :
+    (α → ZMod 2) →ₗ[ZMod 2] ZMod 2 where
+  toFun v := ∑ a, v a * w a
+  map_add' v₁ v₂ := by simp [add_mul, Finset.sum_add_distrib]
+  map_smul' c v := by simp [mul_assoc, Finset.mul_sum]
+
+/-- The mod-2 dot product of incidence vectors counts the intersection modulo 2. -/
+theorem modTwoDotLinear_incidenceVector {α : Type*} [Fintype α] [DecidableEq α]
+    (A B : Finset α) :
+    modTwoDotLinear (incidenceVector B) (incidenceVector A) = ((A ∩ B).card : ZMod 2) := by
+  rw [Finset.card_eq_sum_ones]
+  simp [modTwoDotLinear, incidenceVector, Finset.inter_comm]
+
+/--
+Oddtown linear independence: over `ZMod 2`, incidence vectors of sets with odd
+self-intersection and even pairwise intersections are linearly independent.
+-/
+theorem incidenceVector_linearIndependent_of_odd_self_even_inter
+    {ι α : Type*} [Fintype ι] [Fintype α] [DecidableEq α]
+    (sets : ι → Finset α)
+    (hodd : ∀ i, Odd (sets i).card)
+    (heven : ∀ i j, i ≠ j → Even ((sets i ∩ sets j).card)) :
+    LinearIndependent (ZMod 2) (fun i => incidenceVector (sets i)) := by
+  refine linearIndependent_of_linear_functionals_diagonal
+    (K := ZMod 2) (v := fun i => incidenceVector (sets i))
+    (φ := fun i => modTwoDotLinear (incidenceVector (sets i))) ?_ ?_
+  · intro i
+    rw [modTwoDotLinear_incidenceVector, Finset.inter_self]
+    have hcast : ((sets i).card : ZMod 2) = 1 := Odd.natCast_zmod_two (hodd i)
+    simp [hcast]
+  · intro i j hne
+    rw [modTwoDotLinear_incidenceVector]
+    exact Even.natCast_zmod_two (heven j i hne.symm)
+
+/--
+Oddtown bound: a family of subsets of a finite ground set with odd sizes and
+even pairwise intersections has at most as many members as ground elements.
+This is the simplest eventown/oddtown-shaped fragment of the Frankl-Wilson
+linear algebra method.
+-/
+theorem oddtown_card_le
+    {ι α : Type*} [Fintype ι] [Fintype α] [DecidableEq α]
+    (sets : ι → Finset α)
+    (hodd : ∀ i, Odd (sets i).card)
+    (heven : ∀ i j, i ≠ j → Even ((sets i ∩ sets j).card)) :
+    Fintype.card ι ≤ Fintype.card α := by
+  have hlin := incidenceVector_linearIndependent_of_odd_self_even_inter sets hodd heven
+  have hle := hlin.fintype_card_le_finrank
+  simpa [Module.finrank_fintype_fun_eq_card] using hle
+
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
 diameter can be covered by d+1 subsets of itself, each of strictly smaller
 diameter.  The subset condition is essential: in a noncompact proper space

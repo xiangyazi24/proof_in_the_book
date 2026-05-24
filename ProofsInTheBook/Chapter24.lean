@@ -111,6 +111,24 @@ This is the finite truncation of the series that equals `π·cot(πx)`.
 noncomputable def rationalPartialSum (N : ℕ) (x : ℝ) : ℝ :=
   1 / x + ∑ n ∈ Finset.range N, (1 / (x + (n + 1 : ℕ)) + 1 / (x - (n + 1 : ℕ)))
 
+/-- `rationalPartialSum` is odd: `f(-x) = -f(x)` for all `N` and `x`.
+
+This is one of the two anchor properties for placing the partial sum series
+in `HerglotzClass` (the other being periodic-1, which fails for finite `N`
+but holds in the limit `N → ∞`). -/
+theorem rationalPartialSum_odd (N : ℕ) (x : ℝ) :
+    rationalPartialSum N (-x) = - rationalPartialSum N x := by
+  unfold rationalPartialSum
+  rw [neg_add]
+  congr 1
+  · rw [one_div, one_div, neg_inv]
+  · rw [← Finset.sum_neg_distrib]
+    refine Finset.sum_congr rfl (fun n _ => ?_)
+    rw [show (-x + ((n + 1 : ℕ) : ℝ)) = -(x - ((n + 1 : ℕ) : ℝ)) from by push_cast; ring,
+        show (-x - ((n + 1 : ℕ) : ℝ)) = -(x + ((n + 1 : ℕ) : ℝ)) from by push_cast; ring,
+        one_div, one_div, one_div, one_div, inv_neg, inv_neg]
+    ring
+
 /--
 Helper: if h achieves max M at x₀ and h(x₀) = (1/2)(h(x₀/2) + h((x₀+1)/2)) with
 both ≤ M, then h(x₀/2) = M.

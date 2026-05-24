@@ -12,10 +12,11 @@ The book discusses the conjecture and its eventual disproof (for d ≥ 298)
 by Kahn and Kalai (1993) using combinatorial arguments.
 
 Formalization status: this file closes the certificate layer for Borsuk's
-conjecture.  It defines finite color-class bookkeeping, states
-`BorsukConjecture d` for subsets of `EuclideanSpace ℝ (Fin d)`, packages a
-counterexample as `KahnKalaiCertificate d`, proves `chapter16` from such a
-certificate, and proves the dimension-zero sanity check.
+conjecture.  It defines finite color-class bookkeeping, states the corrected
+`BorsukConjecture d` for covers of a bounded set by subsets of itself in
+`EuclideanSpace ℝ (Fin d)`, packages a counterexample as
+`KahnKalaiCertificate d`, proves `chapter16` from such a certificate, and
+proves the dimension-zero sanity check.
 
 Gap to the full book theorem: the missing upstream mathematics is the actual
 Kahn-Kalai construction.  A complete proof needs the Frankl-Wilson modular
@@ -134,31 +135,37 @@ theorem same_color_dist_lt_of_mem_colorClass {α : Type*} [PseudoMetricSpace α]
   exact h x hx.1 y hy.1 (hx.2.trans hy.2.symm)
 
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
-diameter can be partitioned into d+1 sets, each of strictly smaller diameter. -/
+diameter can be covered by d+1 subsets of itself, each of strictly smaller
+diameter.  The subset condition is essential: in a noncompact proper space
+`Metric.diam Set.univ = 0`, so allowing arbitrary covering sets would make the
+formal statement spuriously true. -/
 def BorsukConjecture (d : ℕ) : Prop :=
   ∀ (S : Set (EuclideanSpace ℝ (Fin d))),
     Bornology.IsBounded S → 0 < Metric.diam S →
     ∃ parts : Fin (d + 1) → Set (EuclideanSpace ℝ (Fin d)),
       S ⊆ ⋃ i, parts i ∧
+      (∀ i, parts i ⊆ S) ∧
       ∀ i, Metric.diam (parts i) < Metric.diam S
 
 /--
 A Kahn-Kalai certificate is a counterexample set in `ℝ^d` that is bounded,
-has positive diameter, but cannot be partitioned into `d + 1` sets of strictly
-smaller diameter.
+has positive diameter, but cannot be covered by `d + 1` subsets of itself with
+strictly smaller diameter.
 -/
 structure KahnKalaiCertificate (d : ℕ) where
   S : Set (EuclideanSpace ℝ (Fin d))
   bounded : Bornology.IsBounded S
   pos_diam : 0 < Metric.diam S
   no_partition : ¬ ∃ parts : Fin (d + 1) → Set (EuclideanSpace ℝ (Fin d)),
-    S ⊆ ⋃ i, parts i ∧ ∀ i, Metric.diam (parts i) < Metric.diam S
+    S ⊆ ⋃ i, parts i ∧
+    (∀ i, parts i ⊆ S) ∧
+    ∀ i, Metric.diam (parts i) < Metric.diam S
 
 /--
 Chapter 16 (Borsuk's conjecture in high dimensions, Tier 1 conditional):
 Given a Kahn-Kalai-style counterexample — a bounded set with positive diameter
-in ℝ^d that cannot be partitioned into d+1 pieces of strictly smaller diameter —
-Borsuk's conjecture fails in dimension d.
+in ℝ^d that cannot be covered by d+1 subsets of itself with strictly smaller
+diameter — Borsuk's conjecture fails in dimension d.
 
 TODO (Tier 2): Construct the actual Kahn-Kalai counterexample for `d ≥ 298`
 via Frankl-Wilson combinatorics on hypergraph color codes to produce a
@@ -174,7 +181,9 @@ theorem borsukConjecture_iff_no_certificate (d : ℕ) :
     BorsukConjecture d ↔ ∀ S : Set (EuclideanSpace ℝ (Fin d)),
       Bornology.IsBounded S → 0 < Metric.diam S →
         ∃ parts : Fin (d + 1) → Set (EuclideanSpace ℝ (Fin d)),
-          S ⊆ ⋃ i, parts i ∧ ∀ i, Metric.diam (parts i) < Metric.diam S :=
+          S ⊆ ⋃ i, parts i ∧
+          (∀ i, parts i ⊆ S) ∧
+          ∀ i, Metric.diam (parts i) < Metric.diam S :=
   Iff.rfl
 
 /-- If a Kahn-Kalai certificate exists, the underlying set is nonempty

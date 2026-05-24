@@ -11,6 +11,22 @@ spaced d apart (ℓ ≤ d) crosses a line with probability 2ℓ/(πd).
 The book's proof uses the linearity of expectation: any curve of
 length L crosses E[crossings] = 2L/(πd) lines, proved by decomposing
 into infinitesimal segments and using rotational symmetry.
+
+Formalization status: this file closes the algebraic and elementary-calculus
+layer.  It defines the expected-crossing formula for one segment and finite
+polygonal curves, proves linearity in total length, proves the sine integrals
+used by the rotational computation, and states `chapter25` from a
+`BuffonProbabilitySpace` that already contains the expected-value identity.
+
+Gap to the full book theorem: the missing work is the integral-geometric
+probability model.  A complete proof needs a probability measure for random
+needle placements relative to parallel lines, measurable crossing-count
+random variables, integrability and expected-value calculations from the
+uniform position-angle distribution, the proof that a short needle crosses at
+most one line so expectation equals crossing probability, and for the noodle
+version an arc-length/polygonal-approximation bridge.  Mathlib has measure
+theory and interval integrals, but not this Buffon/Crofton-style placement
+measure and crossing-count development.
 -/
 
 namespace ProofsInTheBook.Chapter25

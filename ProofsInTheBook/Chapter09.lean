@@ -699,6 +699,18 @@ theorem regularTetrahedron_dehnInvariantQ_edges_eq :
       (angle := angleClassQ (Real.arccos (1 / 3))))
 
 /--
+The vector from the origin to a vertex is orthogonal to every edge of the
+opposite face.  This is the coordinate fact behind using these vertex vectors
+as face normals for the regular tetrahedron.
+-/
+theorem regularTetrahedronVertex_orthogonal_to_opposite_face_edge
+    {i j k : Fin 4} (hji : j ≠ i) (hki : k ≠ i) :
+    dot3 (regularTetrahedronVertex i)
+      (regularTetrahedronVertex j - regularTetrahedronVertex k) = 0 := by
+  fin_cases i <;> fin_cases j <;> fin_cases k <;>
+    simp [dot3, regularTetrahedronVertex] at hji hki ⊢
+
+/--
 The face opposite vertex `i` has normal parallel to `regularTetrahedronVertex i`.
 Since all these normals have squared length `3`, this quotient is the cosine
 between the two face normals.

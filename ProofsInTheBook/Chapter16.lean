@@ -10,6 +10,21 @@ into d+1 parts, each of smaller diameter? Borsuk conjectured yes (1933).
 
 The book discusses the conjecture and its eventual disproof (for d ≥ 298)
 by Kahn and Kalai (1993) using combinatorial arguments.
+
+Formalization status: this file closes the certificate layer for Borsuk's
+conjecture.  It defines finite color-class bookkeeping, states
+`BorsukConjecture d` for subsets of `EuclideanSpace ℝ (Fin d)`, packages a
+counterexample as `KahnKalaiCertificate d`, proves `chapter16` from such a
+certificate, and proves the dimension-zero sanity check.
+
+Gap to the full book theorem: the missing upstream mathematics is the actual
+Kahn-Kalai construction.  A complete proof needs the Frankl-Wilson modular
+intersection theorem in the finite-set form used by Kahn and Kalai, the
+translation from the resulting set system to a finite Euclidean point
+configuration, the exact diameter and smaller-diameter color-class estimates,
+and the dimension bookkeeping giving a counterexample in the advertised high
+dimensions.  Mathlib has Euclidean metric spaces and finite-set tools, but not
+this Frankl-Wilson/Kahn-Kalai pipeline as an available theorem.
 -/
 
 namespace ProofsInTheBook.Chapter16

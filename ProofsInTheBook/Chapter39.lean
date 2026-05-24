@@ -1003,6 +1003,28 @@ def TuckerLemmaStatement (n : ℕ) : Prop :=
       ∃ X Y : NonzeroSignedSubset n,
         SignedSubset.Le X.1 Y.1 ∧ label X = (label Y).neg
 
+theorem not_nonzeroSignedSubset_zero (X : NonzeroSignedSubset 0) : False := by
+  rcases X with ⟨X, hX⟩
+  have hpos : X.pos = ∅ := by
+    apply Finset.eq_empty_iff_forall_notMem.mpr
+    intro x _hx
+    exact Fin.elim0 x
+  have hneg : X.neg = ∅ := by
+    apply Finset.eq_empty_iff_forall_notMem.mpr
+    intro x _hx
+    exact Fin.elim0 x
+  simp [SignedSubset.Nonzero, hpos, hneg] at hX
+
+theorem not_tuckerLemmaStatement_zero : ¬ TuckerLemmaStatement 0 := by
+  intro htucker
+  let label : NonzeroSignedSubset 0 → SignedLabel (0 - 1) :=
+    fun X => False.elim (not_nonzeroSignedSubset_zero X)
+  have hantipodal : ∀ X, label X.antipode = (label X).neg := by
+    intro X
+    exact False.elim (not_nonzeroSignedSubset_zero X)
+  obtain ⟨X, _Y, _hXY, _hcomp⟩ := htucker label hantipodal
+  exact not_nonzeroSignedSubset_zero X
+
 /-- A sign-vector labeling has no complementary comparable pair. -/
 def NoComplementaryComparableLabels {n m : ℕ}
     (label : NonzeroSignedSubset n → SignedLabel m) : Prop :=

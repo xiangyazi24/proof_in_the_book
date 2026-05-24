@@ -651,6 +651,80 @@ theorem exists_min_perpDist_offLine (S : Finset EPoint) (T : OffLineTriple S) :
     (fun t : OffLineTriple S => perpDist t.P t.a t.b) ⟨T, Finset.mem_univ T⟩
   exact ⟨t, fun t' => hmin t' (Finset.mem_univ t')⟩
 
+open scoped Classical
+
+/-- **The Euclidean Sylvester–Gallai theorem.**
+A finite planar point set with at least one off-line incidence (equivalently,
+not all collinear) determines an *ordinary line*: two of its points whose line
+contains exactly those two points of the set.  Proved by Kelly's
+minimum-distance argument. -/
+theorem euclidean_sylvester_gallai (S : Finset EPoint) (T : OffLineTriple S) :
+    ∃ a b : EPoint, a ∈ S ∧ b ∈ S ∧ a ≠ b ∧
+      (S.filter (· ∈ affineSpan ℝ ({a, b} : Set EPoint))).card = 2 := by
+  classical
+  obtain ⟨T₀, hmin⟩ := exists_min_perpDist_offLine S T
+  refine ⟨T₀.a, T₀.b, T₀.ha, T₀.hb, T₀.hab, ?_⟩
+  set pts := S.filter (· ∈ affineSpan ℝ ({T₀.a, T₀.b} : Set EPoint)) with hpts
+  have haS : T₀.a ∈ pts :=
+    Finset.mem_filter.mpr ⟨T₀.ha, left_mem_affineSpan_pair ℝ _ _⟩
+  have hbS : T₀.b ∈ pts :=
+    Finset.mem_filter.mpr ⟨T₀.hb, right_mem_affineSpan_pair ℝ _ _⟩
+  -- the contradiction engine: no off-line incidence Q,R on the line can beat the minimum
+  have contra : ∀ Q R, Q ∈ pts → R ∈ pts → Q ≠ R →
+      Wbtw ℝ (foot T₀.P T₀.a T₀.b) Q R → False := by
+    intro Q R hQ hR hQR hw
+    have hQline : Q ∈ affineSpan ℝ {T₀.a, T₀.b} := (Finset.mem_filter.mp hQ).2
+    have hRline : R ∈ affineSpan ℝ {T₀.a, T₀.b} := (Finset.mem_filter.mp hR).2
+    have hspan : affineSpan ℝ ({Q, R} : Set EPoint) = affineSpan ℝ {T₀.a, T₀.b} :=
+      affineSpan_pair_eq_of_mem hQline hRline hQR
+    have hP_off : T₀.P ∉ affineSpan ℝ ({Q, R} : Set EPoint) := by rw [hspan]; exact T₀.hoff
+    have hw' : Wbtw ℝ (foot T₀.P Q R) Q R := by rw [foot_congr hspan]; exact hw
+    have hdec := perpDist_lt_perpDist_of_wbtw hP_off hw'
+    rw [perpDist_congr hspan] at hdec
+    -- (Q, T₀.P, R) is an off-line incidence
+    have hPR : T₀.P ≠ R := fun h => T₀.hoff (h ▸ hRline)
+    have hQ_off : Q ∉ affineSpan ℝ ({T₀.P, R} : Set EPoint) := by
+      intro hQin
+      have hRin : R ∈ affineSpan ℝ ({T₀.P, R} : Set EPoint) :=
+        right_mem_affineSpan_pair ℝ _ _
+      have he : affineSpan ℝ ({Q, R} : Set EPoint) = affineSpan ℝ {T₀.P, R} :=
+        affineSpan_pair_eq_of_mem hQin hRin hQR
+      rw [hspan] at he
+      exact T₀.hoff (he ▸ left_mem_affineSpan_pair ℝ T₀.P R)
+    let T' : OffLineTriple S :=
+      ⟨Q, T₀.P, R, (Finset.mem_filter.mp hQ).1, T₀.hP, (Finset.mem_filter.mp hR).1, hPR, hQ_off⟩
+    have := hmin T'
+    -- this : perpDist T₀.P T₀.a T₀.b ≤ perpDist Q T₀.P R ;  hdec : perpDist Q T₀.P R < perpDist T₀.P T₀.a T₀.b
+    exact absurd this (not_le.mpr hdec)
+  -- card pts = 2: at least 2 (a,b), and a third point would contradict via pigeonhole
+  have hge2 : 2 ≤ pts.card := by
+    have hsub : ({T₀.a, T₀.b} : Finset EPoint) ⊆ pts := by
+      intro x hx
+      rcases Finset.mem_insert.mp hx with h | h
+      · exact h ▸ haS
+      · exact (Finset.mem_singleton.mp h) ▸ hbS
+    calc 2 = ({T₀.a, T₀.b} : Finset EPoint).card := (Finset.card_pair T₀.hab).symm
+      _ ≤ pts.card := Finset.card_le_card hsub
+  rcases lt_or_eq_of_le hge2 with hlt | heq
+  · exfalso
+    have hlt2 : ({T₀.a, T₀.b} : Finset EPoint).card < pts.card := by
+      rw [Finset.card_pair T₀.hab]; exact hlt
+    obtain ⟨c, hc, hcab⟩ := Finset.exists_mem_notMem_of_card_lt_card hlt2
+    have hca : c ≠ T₀.a := fun h => hcab (h ▸ Finset.mem_insert_self _ _)
+    have hcb : c ≠ T₀.b := fun h =>
+      hcab (h ▸ Finset.mem_insert_of_mem (Finset.mem_singleton_self _))
+    have hcline : c ∈ affineSpan ℝ {T₀.a, T₀.b} := (Finset.mem_filter.mp hc).2
+    rcases exists_wbtw_foot_of_three_mem (P := T₀.P)
+      (left_mem_affineSpan_pair ℝ T₀.a T₀.b) (right_mem_affineSpan_pair ℝ T₀.a T₀.b) hcline with
+      (h | h) | (h | h) | (h | h)
+    · exact contra _ _ haS hbS T₀.hab h
+    · exact contra _ _ hbS haS T₀.hab.symm h
+    · exact contra _ _ hbS hc hcb.symm h
+    · exact contra _ _ hc hbS hcb h
+    · exact contra _ _ haS hc hca.symm h
+    · exact contra _ _ hc haS hca h
+  · exact heq.symm
+
 end EuclideanSylvesterGallai
 
 end ProofsInTheBook.Chapter10

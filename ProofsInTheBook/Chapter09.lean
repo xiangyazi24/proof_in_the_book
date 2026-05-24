@@ -740,14 +740,17 @@ abbrev CubeEdge :=
   {p : Fin 6 × Fin 6 // p.1 < p.2 ∧ cubeFaceAxis p.1 ≠ cubeFaceAxis p.2}
 
 theorem cubeEdge_card : Fintype.card CubeEdge = 12 := by
-  native_decide
+  decide
 
 theorem cubeEdge_univ_card :
     (Finset.univ : Finset CubeEdge).card = 12 := by
-  native_decide
+  decide
 
 noncomputable def cubeEdgeLength (_e : CubeEdge) : ℝ :=
   2
+
+noncomputable def unitCubeEdgeLength (_e : CubeEdge) : ℝ :=
+  1
 
 noncomputable def cubeEdgeDihedralAngle (_e : CubeEdge) : ℝ :=
   Real.pi / 2
@@ -762,6 +765,23 @@ theorem cube_dehnInvariantQ_edges_eq_zero :
     dehnInvariantQ (Finset.univ : Finset CubeEdge)
         cubeEdgeLength
         (fun e => angleClassQ (cubeEdgeDihedralAngle e)) = 0 := by
+  apply dehnInvariantQ_eq_zero_of_angles_zero
+  intro e _he
+  simp [cubeEdgeDihedralAngle]
+
+/-- The concrete unit-cube Dehn invariant in the rational angle target. -/
+noncomputable def unitCubeDehnInvariantQ : DehnPiQTarget :=
+  dehnInvariantQ (Finset.univ : Finset CubeEdge)
+    unitCubeEdgeLength
+    (fun e => angleClassQ (cubeEdgeDihedralAngle e))
+
+/--
+The unit cube has zero Dehn invariant: every dihedral angle is `π / 2`, which
+vanishes in `ℝ / πℚ`.
+-/
+theorem unitCubeDehnInvariantQ_eq_zero :
+    unitCubeDehnInvariantQ = 0 := by
+  rw [unitCubeDehnInvariantQ]
   apply dehnInvariantQ_eq_zero_of_angles_zero
   intro e _he
   simp [cubeEdgeDihedralAngle]
@@ -795,11 +815,11 @@ abbrev CubeCoordinateEdge :=
   {p : Fin 3 × CubeVertexSign // p.2 p.1 = false}
 
 theorem cubeCoordinateEdge_card : Fintype.card CubeCoordinateEdge = 12 := by
-  native_decide
+  decide
 
 theorem cubeCoordinateEdge_univ_card :
     (Finset.univ : Finset CubeCoordinateEdge).card = 12 := by
-  native_decide
+  decide
 
 def cubeCoordinateEdgeEndpoint (e : CubeCoordinateEdge) (positiveAlongAxis : Bool) :
     CubeVertexSign :=
@@ -894,15 +914,15 @@ abbrev RegularTetrahedronEdgeAdjacentFaceVertex (e : RegularTetrahedronEdge) :=
   {i : Fin 4 // i ≠ e.1.1 ∧ i ≠ e.1.2}
 
 theorem regularTetrahedronEdge_card : Fintype.card RegularTetrahedronEdge = 6 := by
-  native_decide
+  decide
 
 theorem regularTetrahedronEdge_univ_card :
     (Finset.univ : Finset RegularTetrahedronEdge).card = 6 := by
-  native_decide
+  decide
 
 theorem regularTetrahedronEdgeAdjacentFaceVertex_card (e : RegularTetrahedronEdge) :
     Fintype.card (RegularTetrahedronEdgeAdjacentFaceVertex e) = 2 := by
-  fin_cases e <;> native_decide
+  fin_cases e <;> decide
 
 noncomputable def regularTetrahedronEdgeLength (e : RegularTetrahedronEdge) : ℝ :=
   dist (regularTetrahedronVertex e.1.1) (regularTetrahedronVertex e.1.2)
@@ -1282,6 +1302,32 @@ theorem regularTetrahedron_dehnInvariantQ_geometric_edges_ne_zero :
       (ne_of_gt (Real.sqrt_pos_of_pos (by norm_num : (0 : ℝ) < 8))))
     angleClassQ_arccos_one_third_ne_zero
 
+/-- The concrete regular tetrahedron Dehn invariant in the rational angle target. -/
+noncomputable def regularTetrahedronDehnInvariantQ : DehnPiQTarget :=
+  dehnInvariantQ (Finset.univ : Finset RegularTetrahedronEdge)
+    regularTetrahedronEdgeLength
+    (fun e => angleClassQ (regularTetrahedronEdgeDihedralAngle e))
+
+/--
+The concrete regular tetrahedron has nonzero Dehn invariant.  The proof uses
+the computed dihedral angle `arccos (1 / 3)` and the proved irrationality of
+that angle over `π`.
+-/
+theorem regularTetrahedronDehnInvariantQ_ne_zero :
+    regularTetrahedronDehnInvariantQ ≠ 0 := by
+  simpa [regularTetrahedronDehnInvariantQ] using
+    regularTetrahedron_dehnInvariantQ_geometric_edges_ne_zero
+
+/--
+The computed Dehn values of the unit cube and the coordinate regular
+tetrahedron differ.
+-/
+theorem unitCube_not_regularTetrahedron_dehnQ :
+    unitCubeDehnInvariantQ ≠ regularTetrahedronDehnInvariantQ := by
+  exact impossible_scissors_congruence_of_dehn_ne
+    unitCubeDehnInvariantQ_eq_zero
+    regularTetrahedronDehnInvariantQ_ne_zero
+
 /--
 The abstract rational Dehn sums for a right-angled cube and a regular
 tetrahedron are different.  This still does not assert geometric scissors
@@ -1401,22 +1447,30 @@ theorem no_same_pieceDehnSum_concrete_cube_regularTetrahedron_geometricAdditivit
       (htetra.symm.trans hzero)
 
 /--
-Hilbert's third problem: a regular tetrahedron cannot be cut into finitely
-many polyhedral pieces and reassembled into a cube. The book's proof:
-1. The cube has Dehn invariant 0 (dihedral angles are π/2, which is 0 mod π)
-2. The tetrahedron has nonzero Dehn invariant (arccos(1/3) is irrational over π)
-3. Scissors-congruent polyhedra have equal Dehn invariants
-4. Therefore the cube and tetrahedron are not scissors-congruent
--/
-theorem hilbert_third_problem
-    (cubeDehn tetraDehn : DehnPiTarget)
-    (hcube : cubeDehn = 0)
-    (htetra : tetraDehn ≠ 0) :
-    cubeDehn ≠ tetraDehn :=
-  impossible_scissors_congruence_of_dehn_ne hcube htetra
+Known frontier for the full scissors-congruence theorem.
 
-theorem chapter09 {A : Type*} [AddCommMonoid A] {cube tetra : A}
-    (hcube : cube = 0) (htetra : tetra ≠ 0) : cube ≠ tetra :=
-  impossible_scissors_congruence_of_dehn_ne hcube htetra
+The two Dehn values below are now computed, not assumed: the unit cube
+has Dehn invariant zero in `ℝ ⊗[ℚ] (ℝ / πℚ)`, and the coordinate regular
+tetrahedron has nonzero Dehn invariant because `arccos (1 / 3)` is not a
+rational multiple of `π`.
+
+What remains outside current Mathlib infrastructure is the geometric theorem
+turning an actual finite dissection and rigid reassembly of polyhedra into an
+equality of these Dehn invariants.  That missing layer needs bundled
+three-dimensional polyhedra with faces, edges, incidences, edge lengths,
+dihedral angles, boundary/internal edge decomposition for dissections, and
+rigid-motion invariance of the geometric Dehn invariant.
+-/
+theorem hilbert_third_problem :
+    unitCubeDehnInvariantQ ≠ regularTetrahedronDehnInvariantQ :=
+  unitCube_not_regularTetrahedron_dehnQ
+
+/--
+Chapter 9's formalized endpoint in this file: the concrete computed Dehn
+obstruction between the unit cube and the coordinate regular tetrahedron.
+It has no `cube = 0` or `tetra ≠ 0` hypotheses.
+-/
+theorem chapter09 : unitCubeDehnInvariantQ ≠ regularTetrahedronDehnInvariantQ :=
+  hilbert_third_problem
 
 end ProofsInTheBook.Chapter09

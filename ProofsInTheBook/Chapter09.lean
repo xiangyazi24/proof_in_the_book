@@ -13,6 +13,21 @@ The book proves this via the **Dehn invariant**: for a polyhedron P,
 where θ(e) is the dihedral angle at edge e. Scissors-congruent polyhedra
 have equal Dehn invariants. The cube has D = 0, while the regular
 tetrahedron has D ≠ 0 (since arccos(1/3) is irrational over π).
+
+Formalization status: this file closes the algebraic obstruction layer.  It
+defines finite Dehn-invariant sums, the angle quotient by rational multiples
+of `π`, proves that cube-like right angles vanish in that quotient, proves
+`Real.arccos (1 / 3)` is not a rational multiple of `π`, and packages the
+final contradiction as `chapter09` / `hilbert_third_problem` once the cube
+and tetrahedron Dehn values are supplied.
+
+Gap to the full book theorem: Mathlib does not currently provide the required
+three-dimensional scissors-congruence geometry.  A complete proof still needs
+a robust Euclidean polyhedron type with faces, edges, lengths, and dihedral
+angles; concrete cube and regular tetrahedron models; a geometric Dehn
+invariant for those polyhedra; additivity under actual finite dissections and
+rigid reassembly; and the nonzero tensor-sum computation for the regular
+tetrahedron's six equal edge contributions.
 -/
 
 namespace ProofsInTheBook.Chapter09

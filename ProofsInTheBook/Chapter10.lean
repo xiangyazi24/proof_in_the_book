@@ -456,6 +456,44 @@ theorem dist_lt_dist_of_wbtw_foot {P a b Q R : EPoint}
     nlinarith [hpyth, mul_le_mul hQR hQR hQRnn hFRnn, mul_pos hPF hPF]
   exact lt_of_pow_lt_pow_left₀ 2 dist_nonneg hsq
 
+open scoped RealInnerProductSpace in
+/-- **Projection-length identity (Kelly step 3c core).**
+The squared inner product `⟪P -ᵥ Y, Z -ᵥ Y⟫²` equals `(dist Y F)² · (dist Y Z)²`
+where `F` is the foot of the perpendicular from `P` to line `YZ` — because the
+component of `P -ᵥ Y` along the line direction is exactly `F -ᵥ Y`. -/
+theorem inner_vsub_pair_sq (P Y Z : EPoint) :
+    ⟪P -ᵥ Y, Z -ᵥ Y⟫ ^ 2 = dist Y (foot P Y Z) ^ 2 * dist Y Z ^ 2 := by
+  set F := foot P Y Z with hF
+  -- `F -ᵥ Y` lies in the line direction, so it is a multiple `t • (Z -ᵥ Y)`.
+  have hFY : F -ᵥ Y ∈ vectorSpan ℝ ({Y, Z} : Set EPoint) := by
+    rw [← direction_affineSpan]
+    exact AffineSubspace.vsub_mem_direction (foot_mem P Y Z) (left_mem_affineSpan_pair ℝ Y Z)
+  obtain ⟨t, ht⟩ := mem_vectorSpan_pair_rev.mp hFY   -- t • (Z -ᵥ Y) = F -ᵥ Y
+  -- `P -ᵥ F` is orthogonal to the line direction.
+  have hv : P -ᵥ F ∈ (vectorSpan ℝ ({Y, Z} : Set EPoint))ᗮ := by
+    rw [← direction_affineSpan]
+    exact EuclideanGeometry.vsub_orthogonalProjection_mem_direction_orthogonal
+      (affineSpan ℝ {Y, Z}) P
+  have hu : Z -ᵥ Y ∈ vectorSpan ℝ ({Y, Z} : Set EPoint) := by
+    rw [← direction_affineSpan]
+    exact AffineSubspace.vsub_mem_direction
+      (right_mem_affineSpan_pair ℝ Y Z) (left_mem_affineSpan_pair ℝ Y Z)
+  have horth : ⟪P -ᵥ F, Z -ᵥ Y⟫ = 0 :=
+    real_inner_comm (Z -ᵥ Y) (P -ᵥ F) ▸ Submodule.inner_right_of_mem_orthogonal hu hv
+  -- inner product collapses to `t · ‖Z -ᵥ Y‖²`
+  have hinner : ⟪P -ᵥ Y, Z -ᵥ Y⟫ = t * ‖Z -ᵥ Y‖ ^ 2 := by
+    have hdecomp : P -ᵥ Y = (P -ᵥ F) + (F -ᵥ Y) := (vsub_add_vsub_cancel P F Y).symm
+    rw [hdecomp, inner_add_left, horth, zero_add, ← ht, real_inner_smul_left,
+      real_inner_self_eq_norm_sq]
+  -- distances in terms of `‖Z -ᵥ Y‖`
+  have hYZ : dist Y Z = ‖Z -ᵥ Y‖ := by
+    rw [dist_eq_norm_vsub' EPoint Y Z]
+  have hYF : dist Y F = |t| * ‖Z -ᵥ Y‖ := by
+    rw [dist_eq_norm_vsub' EPoint Y F, ← ht, norm_smul, Real.norm_eq_abs]
+  rw [hinner, hYZ, hYF]
+  rw [mul_pow, mul_pow, sq_abs]
+  ring
+
 /-- **Kelly step 2: a minimum-perpendicular-distance off-line pair exists.**
 Over a finite point set with at least one off-line incidence, the perpendicular
 distances of all off-line incidences attain a minimum — the well-ordering

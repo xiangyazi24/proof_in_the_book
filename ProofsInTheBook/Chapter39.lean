@@ -1003,6 +1003,68 @@ def TuckerLemmaStatement (n : ℕ) : Prop :=
       ∃ X Y : NonzeroSignedSubset n,
         SignedSubset.Le X.1 Y.1 ∧ label X = (label Y).neg
 
+/-- A sign-vector labeling has no complementary comparable pair. -/
+def NoComplementaryComparableLabels {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m) : Prop :=
+  ∀ X Y : NonzeroSignedSubset n,
+    SignedSubset.Le X.1 Y.1 → label X ≠ (label Y).neg
+
+theorem positive_eq_of_le_of_same_index_of_no_complement {n m : ℕ}
+    {label : NonzeroSignedSubset n → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label)
+    {X Y : NonzeroSignedSubset n}
+    (hXY : SignedSubset.Le X.1 Y.1)
+    (hindex : (label X).index = (label Y).index) :
+    (label X).positive = (label Y).positive := by
+  by_contra hne
+  have hbool : (label X).positive = !((label Y).positive) := by
+    cases hx : (label X).positive <;> cases hy : (label Y).positive <;>
+      simp [hx, hy] at hne ⊢
+  exact hno X Y hXY (SignedLabel.ext hbool (by simpa [SignedLabel.neg] using hindex))
+
+/--
+Ky Fan's alternating-chain form for the sign-vector/cross-polytope complex.
+Under an antipodal labeling with no complementary comparable pair, there is a
+chain of `n` sign-vector faces whose absolute label indices are strictly
+increasing.
+
+The missing proof is the standard finite parity count of alternating maximal
+chains in the barycentric subdivision of the cross-polytope boundary.
+-/
+def KyFanAlternatingChainStatement (n m : ℕ) : Prop :=
+  ∀ label : NonzeroSignedSubset n → SignedLabel m,
+    (∀ X, label X.antipode = (label X).neg) →
+      NoComplementaryComparableLabels label →
+        ∃ chain : Fin n → NonzeroSignedSubset n,
+          (∀ i j, i < j → SignedSubset.Le (chain i).1 (chain j).1) ∧
+            StrictMono fun i => (label (chain i)).index
+
+theorem not_strictMono_fin_pred (n : ℕ) (hn : 1 ≤ n) :
+    ¬ ∃ f : Fin n → Fin (n - 1), StrictMono f := by
+  rintro ⟨f, hf⟩
+  have hinj : Function.Injective f := by
+    intro i j hij
+    by_cases hij' : i = j
+    · exact hij'
+    · have hlt_or_gt : i < j ∨ j < i := lt_or_gt_of_ne hij'
+      rcases hlt_or_gt with hlt | hgt
+      · exact (ne_of_lt (hf hlt) hij).elim
+      · exact (ne_of_gt (hf hgt) hij).elim
+  have hcard := Fintype.card_le_of_injective f hinj
+  simp [Fintype.card_fin] at hcard
+  omega
+
+theorem tuckerLemmaStatement_of_kyFan {n : ℕ} (hn : 1 ≤ n)
+    (hfan : KyFanAlternatingChainStatement n (n - 1)) :
+    TuckerLemmaStatement n := by
+  intro label hantipodal
+  by_contra hnone
+  have hno : NoComplementaryComparableLabels label := by
+    intro X Y hXY hcomp
+    exact hnone ⟨X, Y, hXY, hcomp⟩
+  obtain ⟨chain, _hchain, hstrict⟩ := hfan label hantipodal hno
+  exact not_strictMono_fin_pred n hn ⟨fun i => (label (chain i)).index, hstrict⟩
+
 theorem tuckerLemmaStatement_one : TuckerLemmaStatement 1 := by
   intro label _
   let z : Fin 1 := ⟨0, by omega⟩

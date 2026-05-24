@@ -15,6 +15,50 @@ the proof bypasses the book argument.
 - The repository still contains chapters whose current `chapterNN` theorem is
   only a component of the book proof, not the book theorem.
 
+## Audit Classification (2026-05-24, playbook point 11)
+
+Whole repo: **0 sorry / 0 axiom / 0 admit / 0 `True := trivial`** (the two
+scan hits in Ch24/Ch32 are comment text).  All 40 chapters have a main
+theorem.  The honest split on audit points 3/7/8 (no certificate-escape;
+end-to-end with raw inputs) is:
+
+**A. Unconditional end-to-end (audit-pass):** ~27 chapters.  All basic
+chapters plus Ch04, Ch19, Ch31, Ch34, Ch35, and **Ch24** (cotangent
+partial-fraction, closed 2026-05-24 via Mathlib `cot_series_rep'`).
+**Ch03 general Sylvester** (`sylvester_general`) is unconditional; only the
+Erdős perfect-power corollary remains conditional.
+
+**B. Conditional — needs MAJOR Mathlib infrastructure (multi-week; not
+closable by lemma-adding):**
+- Ch16 Borsuk: `KahnKalaiCertificate.no_partition` — needs Frankl–Wilson
+  combinatorics (counterexample dimension d ≥ 298).
+- Ch20 Monsky: `MonskyCertificate` — needs 2-adic valuation extension to ℝ
+  (Hahn series / transcendence basis) + Sperner's lemma for triangulations.
+- Ch39 Kneser: `KneserChromaticCertificate.hhard` — needs Borsuk–Ulam
+  (absent from Mathlib).
+- Ch36 art gallery: takes a `TriangulatedPolygon` input — needs
+  simple-polygon triangulation existence (planar geometry).
+- Ch25 Buffon: `BuffonProbabilitySpace` — needs integral-geometry
+  probability measure on needle placements.
+- Ch09 Dehn: abstract monoid elements + hypotheses — needs 3-D dihedral-angle
+  geometry + Dehn additivity over real dissections.
+- Ch13 Cauchy: `CauchyRigidityCertificate.contradiction : False` — needs 3-D
+  convex-polyhedron geometry + the analytic arm lemma.
+- Ch11 Ungar: `chapter11` proves the easy direction (injective witness into
+  slopes); the `n-1 ≤ |directions|` bound needs the rotating-calipers sweep
+  certificate (≈8000 LOC of scaffolding present; sweep construction remains).
+
+**C. Conditional — self-contained combinatorics (no external infra; closable
+with sustained effort, candidates for genuine closure):**
+- Ch03 Erdős perfect-power: `h_l2_contra` (l=2) + `h_ge3` (l≥3).  Injectivity
+  (`lPowerFreePart_injective_l2`) and the divisibility step
+  (`prod_lPowerFreeParts_dvd_factorial_l2`, now wired in) are done.
+- Ch29 GSR: `count_determined_by_piles` (multinomial count of riffle labels).
+- Ch30 LGV: `BadInvolutionCertificate` (tail-swap involution on intersecting
+  path families).
+- Ch10 Sylvester–Gallai: `chapter10` (card = 2 → ordinary) is unconditional;
+  the full theorem needs the `gallai` extremal closer-pair geometric step.
+
 ## Work Order
 
 Proceed in the order below.  The next default focus is the earliest unchecked

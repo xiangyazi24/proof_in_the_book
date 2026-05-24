@@ -570,6 +570,39 @@ theorem perpDist_lt_perpDist_of_wbtw {P Q R : EPoint}
   have hpos : 0 < perpDist P Q R := perpDist_pos hP
   nlinarith [harea, hlt, hPR, hpos, mul_lt_mul_of_pos_left hlt hpos]
 
+/-- The carrier of the line through two points is a collinear set. -/
+theorem collinear_coe_affineSpan_pair (a b : EPoint) :
+    Collinear ℝ (↑(affineSpan ℝ ({a, b} : Set EPoint)) : Set EPoint) := by
+  have hv : vectorSpan ℝ (↑(affineSpan ℝ ({a, b} : Set EPoint)) : Set EPoint)
+      = vectorSpan ℝ ({a, b} : Set EPoint) := by
+    rw [← direction_affineSpan, AffineSubspace.affineSpan_coe, direction_affineSpan]
+  unfold Collinear
+  rw [hv]
+  exact collinear_pair ℝ a b
+
+/-- Two distinct points on the line span the same line. -/
+theorem affineSpan_pair_eq_of_mem {a b Q R : EPoint}
+    (hQ : Q ∈ affineSpan ℝ ({a, b} : Set EPoint))
+    (hR : R ∈ affineSpan ℝ ({a, b} : Set EPoint)) (hQR : Q ≠ R) :
+    affineSpan ℝ ({Q, R} : Set EPoint) = affineSpan ℝ ({a, b} : Set EPoint) := by
+  have h := (collinear_coe_affineSpan_pair a b).affineSpan_eq_of_ne
+    (SetLike.mem_coe.mpr hQ) (SetLike.mem_coe.mpr hR) hQR
+  rwa [AffineSubspace.affineSpan_coe] at h
+
+/-- `perpDist` depends only on the line: equal spans give equal distances. -/
+theorem perpDist_congr {P a b Q R : EPoint}
+    (h : affineSpan ℝ ({Q, R} : Set EPoint) = affineSpan ℝ ({a, b} : Set EPoint)) :
+    perpDist P Q R = perpDist P a b := by
+  unfold perpDist
+  rw [h]
+
+/-- The foot of the perpendicular depends only on the line. -/
+theorem foot_congr {P a b Q R : EPoint}
+    (h : affineSpan ℝ ({Q, R} : Set EPoint) = affineSpan ℝ ({a, b} : Set EPoint)) :
+    foot P Q R = foot P a b := by
+  unfold foot
+  exact EuclideanGeometry.orthogonalProjection_congr h rfl
+
 /-- A point on the line is a scalar multiple of the direction `b -ᵥ a`, offset
 from the foot of the perpendicular. -/
 theorem exists_smul_vadd_foot {P a b X : EPoint} (hX : X ∈ affineSpan ℝ {a, b}) :

@@ -771,6 +771,19 @@ theorem primeDirectedCutFamily_diam_eq_sqrt
     · exact finReindexedDirectedCutPoint_dist_eq_sqrt_of_kahnKalai_intersection coord
         (sets i) (sets j) hground (hcard i) (hcard j) hij
 
+theorem primeDirectedCutFamily_diam_sq_eq
+    {α ι : Type*} [Fintype α] [DecidableEq α] [Fintype ι] {d p : ℕ}
+    (coord : (α × α) ≃ Fin d) (sets : ι → Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hcard : ∀ i, (sets i).card = 2 * p)
+    (hexists : ∃ i j, (sets i ∩ sets j).card = p) :
+    Metric.diam
+      ((Finset.univ.image (fun i => finReindexedDirectedCutPoint coord (sets i)) :
+          Finset (EuclideanSpace ℝ (Fin d))) : Set (EuclideanSpace ℝ (Fin d))) ^ 2 =
+        ((8 * p * p : ℕ) : ℝ) := by
+  rw [primeDirectedCutFamily_diam_eq_sqrt coord sets hground hcard hexists,
+    Real.sq_sqrt (Nat.cast_nonneg _)]
+
 theorem directedCutSet_realIncidencePoint_dist_sq
     {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) :
     dist (realIncidencePoint (directedCutSet A)) (realIncidencePoint (directedCutSet B)) ^ 2 =
@@ -1108,6 +1121,26 @@ noncomputable def KahnKalaiCertificate.ofPrimeDirectedCutFamilyOfDiameterSq {d p
   refine KahnKalaiCertificate.ofPrimeDirectedCutFamily coord sets hground hcard hinj hnonzero
     hlarge ?_ hdiamSq
   exact diam_pos_of_diam_sq_eq_pos hdiamSq hsq_pos
+
+/--
+Directed-cut certificate with the diameter calculation supplied by the
+existence of one critical pair.
+-/
+noncomputable def KahnKalaiCertificate.ofPrimeDirectedCutFamilyOfCriticalPair {d p : ℕ}
+    [Fact p.Prime] {α ι : Type*} [Fintype α] [DecidableEq α] [Fintype ι]
+    (coord : (α × α) ≃ Fin d) (sets : ι → Finset α)
+    (hground : Fintype.card α = 4 * p)
+    (hcard : ∀ i, (sets i).card = 2 * p)
+    (hinj : Function.Injective sets)
+    (hnonzero : ∀ i j, i ≠ j → (sets i ∩ sets j).card ≠ 0)
+    (hlarge : (d + 1) *
+        Fintype.card {I : Finset α // I.card ≤ (Finset.univ.erase (0 : ZMod p)).card} <
+          Fintype.card ι)
+    (hexists : ∃ i j, (sets i ∩ sets j).card = p) :
+    KahnKalaiCertificate d := by
+  refine KahnKalaiCertificate.ofPrimeDirectedCutFamilyOfDiameterSq coord sets hground hcard hinj
+    hnonzero hlarge ?_
+  exact primeDirectedCutFamily_diam_sq_eq coord sets hground hcard hexists
 
 /--
 Bridge from the Frankl-Wilson coloring obstruction to a Borsuk counterexample

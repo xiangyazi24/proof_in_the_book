@@ -162,6 +162,57 @@ structure KahnKalaiCertificate (d : ℕ) where
     ∀ i, Metric.diam (parts i) < Metric.diam S
 
 /--
+A finite point configuration gives a Kahn-Kalai certificate once every
+`(d + 1)`-coloring has a monochromatic pair at the full diameter of the
+configuration.  This is the geometric interface needed after the
+Frankl-Wilson set-system construction: the combinatorics only has to rule out
+small-diameter color classes.
+-/
+def KahnKalaiCertificate.ofFiniteDiameterObstruction {d : ℕ}
+    (points : Finset (EuclideanSpace ℝ (Fin d)))
+    (hpos : 0 < Metric.diam (points : Set (EuclideanSpace ℝ (Fin d))))
+    (hobstruction : ∀ color : EuclideanSpace ℝ (Fin d) → Fin (d + 1),
+      ∃ x ∈ points, ∃ y ∈ points,
+        color x = color y ∧ dist x y = Metric.diam (points : Set (EuclideanSpace ℝ (Fin d)))) :
+    KahnKalaiCertificate d := by
+  classical
+  refine ⟨(points : Set (EuclideanSpace ℝ (Fin d))), (Finset.finite_toSet points).isBounded,
+    hpos, ?_⟩
+  rintro ⟨parts, hcover, hsub, hsmall⟩
+  let color : EuclideanSpace ℝ (Fin d) → Fin (d + 1) := fun x =>
+    if hx : x ∈ (points : Set (EuclideanSpace ℝ (Fin d))) then
+      Classical.choose (Set.mem_iUnion.mp (hcover hx))
+    else 0
+  have hmem_part {x : EuclideanSpace ℝ (Fin d)} (hx : x ∈ points) :
+      x ∈ parts (color x) := by
+    have hxset : x ∈ (points : Set (EuclideanSpace ℝ (Fin d))) := by simpa using hx
+    dsimp [color]
+    simpa [hxset] using Classical.choose_spec (Set.mem_iUnion.mp (hcover hxset))
+  obtain ⟨x, hx, y, hy, hsame, hdiam⟩ := hobstruction color
+  have hxpart : x ∈ parts (color x) := hmem_part hx
+  have hypart : y ∈ parts (color x) := by
+    have hy' : y ∈ parts (color y) := hmem_part hy
+    simpa [hsame] using hy'
+  have hpart_bounded : Bornology.IsBounded (parts (color x)) :=
+    (Finset.finite_toSet points).isBounded.subset (hsub (color x))
+  have hle : dist x y ≤ Metric.diam (parts (color x)) :=
+    Metric.dist_le_diam_of_mem hpart_bounded hxpart hypart
+  rw [hdiam] at hle
+  exact not_lt_of_ge hle (hsmall (color x))
+
+/-- The finite diameter obstruction immediately gives failure of Borsuk's conjecture. -/
+theorem not_borsukConjecture_of_finite_diameter_obstruction {d : ℕ}
+    (points : Finset (EuclideanSpace ℝ (Fin d)))
+    (hpos : 0 < Metric.diam (points : Set (EuclideanSpace ℝ (Fin d))))
+    (hobstruction : ∀ color : EuclideanSpace ℝ (Fin d) → Fin (d + 1),
+      ∃ x ∈ points, ∃ y ∈ points,
+        color x = color y ∧ dist x y = Metric.diam (points : Set (EuclideanSpace ℝ (Fin d)))) :
+    ¬ BorsukConjecture d := by
+  intro h
+  exact (KahnKalaiCertificate.ofFiniteDiameterObstruction points hpos hobstruction).no_partition
+    (h _ (Finset.finite_toSet points).isBounded hpos)
+
+/--
 Chapter 16 (Borsuk's conjecture in high dimensions, Tier 1 conditional):
 Given a Kahn-Kalai-style counterexample — a bounded set with positive diameter
 in ℝ^d that cannot be covered by d+1 subsets of itself with strictly smaller

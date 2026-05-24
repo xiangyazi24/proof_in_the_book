@@ -234,6 +234,13 @@ theorem dehnEdge_angle_sum {I Angle : Type*} [AddCommGroup Angle] [Module ℤ An
       ∑ i ∈ s, dehnEdge length (angle i) := by
   simp [dehnEdge, TensorProduct.tmul_sum]
 
+/-- Rational-target version of `dehnEdge_angle_sum`. -/
+theorem dehnEdgeQ_angle_sum {I Angle : Type*} [AddCommGroup Angle] [Module ℚ Angle]
+    (s : Finset I) (length : ℝ) (angle : I → Angle) :
+    dehnEdgeQ length (∑ i ∈ s, angle i) =
+      ∑ i ∈ s, dehnEdgeQ length (angle i) := by
+  simp [dehnEdgeQ, TensorProduct.tmul_sum]
+
 /--
 The algebraic cancellation used for an internal edge of a dissection: if the
 incident angles add to a rational multiple of `π`, the total edge contribution
@@ -246,6 +253,17 @@ theorem dehnEdge_angleClassQ_sum_eq_zero_of_sum_rat_mul_pi {I : Type*}
   rw [← dehnEdge_angle_sum, angleClassQ_sum_eq_zero_of_sum_rat_mul_pi s angle h]
   simp
 
+/--
+Rational-target version of the algebraic cancellation used for an internal edge
+of a dissection.
+-/
+theorem dehnEdgeQ_angleClassQ_sum_eq_zero_of_sum_rat_mul_pi {I : Type*}
+    (s : Finset I) (length : ℝ) (angle : I → ℝ) {q : ℚ}
+    (h : (∑ i ∈ s, angle i) = (q : ℝ) * Real.pi) :
+    (∑ i ∈ s, dehnEdgeQ length (angleClassQ (angle i))) = 0 := by
+  rw [← dehnEdgeQ_angle_sum, angleClassQ_sum_eq_zero_of_sum_rat_mul_pi s angle h]
+  simp [dehnEdgeQ]
+
 /-- Finite edge-sum model for the Dehn invariant. -/
 def dehnInvariant {Edge Angle : Type*} [AddCommGroup Angle] [Module ℤ Angle]
     (edges : Finset Edge) (length : Edge → ℝ) (angle : Edge → Angle) :
@@ -257,6 +275,12 @@ noncomputable def dehnInvariantQ {Edge Angle : Type*} [AddCommGroup Angle] [Modu
     (edges : Finset Edge) (length : Edge → ℝ) (angle : Edge → Angle) :
     DehnQTarget Angle :=
   ∑ e ∈ edges, dehnEdgeQ (length e) (angle e)
+
+@[simp]
+theorem dehnInvariantQ_empty {Edge Angle : Type*} [AddCommGroup Angle] [Module ℚ Angle]
+    (length : Edge → ℝ) (angle : Edge → Angle) :
+    dehnInvariantQ (∅ : Finset Edge) length angle = 0 := by
+  simp [dehnInvariantQ]
 
 @[simp]
 theorem dehnInvariant_empty {Edge Angle : Type*} [AddCommGroup Angle] [Module ℤ Angle]
@@ -286,6 +310,22 @@ theorem dehnInvariant_biUnion_of_pairwiseDisjoint {Piece Edge Angle : Type*}
     dehnInvariant (pieces.biUnion edges) length angle =
       ∑ p ∈ pieces, dehnInvariant (edges p) length angle := by
   simp [dehnInvariant, Finset.sum_biUnion hdisj]
+
+theorem dehnInvariantQ_union_of_disjoint {Edge Angle : Type*} [DecidableEq Edge]
+    [AddCommGroup Angle] [Module ℚ Angle] {left right : Finset Edge}
+    (hdisj : Disjoint left right) (length : Edge → ℝ) (angle : Edge → Angle) :
+    dehnInvariantQ (left ∪ right) length angle =
+      dehnInvariantQ left length angle + dehnInvariantQ right length angle := by
+  simp [dehnInvariantQ, Finset.sum_union hdisj]
+
+theorem dehnInvariantQ_biUnion_of_pairwiseDisjoint {Piece Edge Angle : Type*}
+    [DecidableEq Edge] [AddCommGroup Angle] [Module ℚ Angle]
+    {pieces : Finset Piece} {edges : Piece → Finset Edge}
+    (hdisj : Set.PairwiseDisjoint (↑pieces) edges)
+    (length : Edge → ℝ) (angle : Edge → Angle) :
+    dehnInvariantQ (pieces.biUnion edges) length angle =
+      ∑ p ∈ pieces, dehnInvariantQ (edges p) length angle := by
+  simp [dehnInvariantQ, Finset.sum_biUnion hdisj]
 
 /-- If every edge has the same angle, the invariant is one tensor with total length. -/
 theorem dehnInvariant_const_angle {Edge Angle : Type*}
@@ -340,6 +380,39 @@ theorem dehnInvariantQ_eq_zero_of_angles_zero {Edge Angle : Type*}
   intro e he
   unfold dehnEdgeQ
   rw [hangle e he, TensorProduct.tmul_zero]
+
+/--
+Algebraic skeleton for the geometric additivity proof: after grouping all
+piece-edge contributions by an internal geometric edge, the whole internal
+part vanishes if each grouped angle sum is a rational multiple of `π`.
+-/
+theorem internalDehnContributionQ_eq_zero {InternalEdge Incident : Type*}
+    (internalEdges : Finset InternalEdge) (incident : InternalEdge → Finset Incident)
+    (length : InternalEdge → ℝ) (angle : InternalEdge → Incident → ℝ)
+    (q : InternalEdge → ℚ)
+    (hangle : ∀ e ∈ internalEdges,
+      (∑ i ∈ incident e, angle e i) = (q e : ℝ) * Real.pi) :
+    (∑ e ∈ internalEdges, ∑ i ∈ incident e,
+      dehnEdgeQ (length e) (angleClassQ (angle e i))) = 0 := by
+  apply Finset.sum_eq_zero
+  intro e he
+  exact dehnEdgeQ_angleClassQ_sum_eq_zero_of_sum_rat_mul_pi (incident e) (length e)
+    (angle e) (hangle e he)
+
+/--
+Boundary plus grouped internal contributions reduces to the boundary part.
+The geometric work still needed is to supply the `incident` relation and the
+angle-sum hypotheses from an actual polyhedral dissection.
+-/
+theorem boundary_add_internalDehnContributionQ {InternalEdge Incident : Type*}
+    (boundary : DehnPiQTarget) (internalEdges : Finset InternalEdge)
+    (incident : InternalEdge → Finset Incident) (length : InternalEdge → ℝ)
+    (angle : InternalEdge → Incident → ℝ) (q : InternalEdge → ℚ)
+    (hangle : ∀ e ∈ internalEdges,
+      (∑ i ∈ incident e, angle e i) = (q e : ℝ) * Real.pi) :
+    boundary + (∑ e ∈ internalEdges, ∑ i ∈ incident e,
+      dehnEdgeQ (length e) (angleClassQ (angle e i))) = boundary := by
+  rw [internalDehnContributionQ_eq_zero internalEdges incident length angle q hangle, add_zero]
 
 /-- If every edge angle vanishes in the angle target, the Dehn invariant is zero.
 This is the cube case: all dihedral angles are `π/2`, which is a rational

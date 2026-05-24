@@ -28,6 +28,20 @@ partial-fraction, closed 2026-05-24 via Mathlib `cot_series_rep'`).
 **Ch03 general Sylvester** (`sylvester_general`) is unconditional; only the
 Erdős perfect-power corollary remains conditional.
 
+**Axiom audit (point 10) verified 2026-05-24** via `#print axioms` on the
+main theorem of each category-A chapter — every one depends ONLY on
+`[propext, Classical.choice, Quot.sound]` (no custom axiom, no sorry):
+Ch01 `chapter01_euclid`, Ch02 `chapter02_chebyshev`,
+Ch05 `chapter05_quadratic_reciprocity`, Ch06 `chapter06_wedderburn`,
+Ch07 `chapter07_sqrt_prime`, Ch12 `chapter12_platonic_solids`,
+Ch14, Ch15, Ch17 `chapter17_cantor`, Ch18 `chapter18_sq_abs_le`,
+Ch19 `chapter19`, Ch21, Ch22, Ch23 `chapter23_sperner_via_lym`,
+Ch24 `cot_pi_partial_fraction_identity`, Ch26 `chapter26_erdos_szekeres`,
+Ch27 `chapter27_debruijn`, Ch28 `chapter28_sperner`,
+Ch31 `chapter31`, Ch32 `chapter32_vandermonde`,
+Ch33 `hall_system_of_distinct_representatives`, Ch34 `chapter34`,
+Ch35 `chapter35`, Ch37 `chapter37_turan`, Ch38, Ch40 `chapter40_friendship_theorem`.
+
 **B. Conditional — needs MAJOR Mathlib infrastructure (multi-week; not
 closable by lemma-adding):**
 - Ch16 Borsuk: `KahnKalaiCertificate.no_partition` — needs Frankl–Wilson

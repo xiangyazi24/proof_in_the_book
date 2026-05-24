@@ -10,6 +10,14 @@ From "Proofs from THE BOOK":
 The book's proof uses Euler's formula (E ≤ 3V-6 for planar graphs)
 to find a vertex of degree ≤ 5, then applies induction with a
 Kempe chain argument to handle the degree-5 case.
+
+Mathlib does not currently provide the plane-embedding/Jordan-curve
+infrastructure needed to instantiate the last Kempe separation step for
+planar graphs.  The theorem named `chapter35` below is therefore the
+honest induction theorem for any vertex-deletion-closed graph class whose
+nonempty members have a local Kempe extension vertex.  For the planar
+class, Euler's degree bound and the planar Kempe-chain separation lemma
+are exactly the missing front needed to supply those hypotheses.
 -/
 
 namespace ProofsInTheBook.Chapter35
@@ -32,11 +40,6 @@ theorem exists_degree_le_five_of_average_lt_six {α : Type*} (vertices : Finset 
       _ ≤ ∑ v ∈ vertices, degree v := by
         exact Finset.sum_le_sum fun v hv => hall v hv
   omega
-
-theorem chapter35 {α : Type*} (vertices : Finset α) (degree : α → ℕ)
-    (hsum : (∑ v ∈ vertices, degree v) < 6 * vertices.card) :
-    ∃ v ∈ vertices, degree v ≤ 5 :=
-  exists_degree_le_five_of_average_lt_six vertices degree hsum
 
 theorem exists_unused_five_color (used : Finset (Fin 5)) (hused : used.card < 5) :
     ∃ c : Fin 5, c ∉ used := by
@@ -122,5 +125,187 @@ theorem kempeSwap_proper_abstract {V : Type*} [DecidableEq V]
   · exact hproper u v hadj heq
 
 end KempeChains
+
+section FiveColorInduction
+
+universe u
+
+/--
+If a color is absent from all neighbors of `v` in a coloring of `G - v`,
+then that coloring extends to a coloring of `G` by giving `v` that color.
+-/
+theorem coloring_extend_of_neighbor_color_free {V : Type u} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) (v : V)
+    (C : (G.induce ({x | x ≠ v} : Set V)).Coloring (Fin 5)) (c : Fin 5)
+    (hfree : ∀ x : ({x | x ≠ v} : Set V), G.Adj v x → C x ≠ c) :
+    ∃ C' : G.Coloring (Fin 5),
+      ∀ x : ({x | x ≠ v} : Set V), C' x = C x := by
+  classical
+  let color : V → Fin 5 := fun x => if hx : x = v then c else C ⟨x, hx⟩
+  refine ⟨SimpleGraph.Coloring.mk color ?_, ?_⟩
+  · intro a b hab
+    by_cases ha : a = v
+    · subst a
+      have hb : b ≠ v := (G.ne_of_adj hab).symm
+      have hfree_b : C ⟨b, hb⟩ ≠ c := hfree ⟨b, hb⟩ hab
+      simpa [color, hb] using hfree_b.symm
+    · by_cases hb : b = v
+      · subst b
+        have hfree_a : C ⟨a, ha⟩ ≠ c := hfree ⟨a, ha⟩ (G.symm hab)
+        simpa [color, ha] using hfree_a
+      · have hC : C ⟨a, ha⟩ ≠ C ⟨b, hb⟩ := by
+          exact C.valid (by simpa using hab)
+        simpa [color, ha, hb] using hC
+  · intro x
+    change color x.1 = C x
+    have hx : x.1 ≠ v := x.2
+    simp [color, hx]
+
+/--
+A vertex of degree at most four is a local extension vertex for five colors.
+This is the easy part of the induction: one of the five colors is unused
+among its neighbors.
+-/
+theorem coloring_extend_of_neighbor_finset_le_four {V : Type u} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) (v : V) (neighbors : Finset V)
+    (hneighbors : ∀ w : V, w ∈ neighbors ↔ G.Adj v w) (hcard : neighbors.card ≤ 4)
+    (C : (G.induce ({x | x ≠ v} : Set V)).Coloring (Fin 5)) :
+    ∃ C' : G.Coloring (Fin 5),
+      ∀ x : ({x | x ≠ v} : Set V), C' x = C x := by
+  classical
+  let deletedColor : V → Fin 5 := fun x => if hx : x = v then 0 else C ⟨x, hx⟩
+  rcases exists_unused_color_of_neighbor_bound neighbors deletedColor hcard with ⟨c, hc⟩
+  refine coloring_extend_of_neighbor_color_free G v C c ?_
+  intro x hx
+  have hxmem : x.1 ∈ neighbors := (hneighbors x.1).2 hx
+  have hcx : deletedColor x.1 ≠ c := hc x.1 hxmem
+  have hxne : x.1 ≠ v := x.2
+  simpa [deletedColor, hxne] using hcx
+
+theorem coloring_extend_of_degree_le_four {V : Type u} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) (v : V) [Fintype (G.neighborSet v)] (hdeg : G.degree v ≤ 4)
+    (C : (G.induce ({x | x ≠ v} : Set V)).Coloring (Fin 5)) :
+    ∃ C' : G.Coloring (Fin 5),
+      ∀ x : ({x | x ≠ v} : Set V), C' x = C x := by
+  classical
+  have hcard : (G.neighborFinset v).card ≤ 4 := by
+    simpa [SimpleGraph.card_neighborFinset_eq_degree] using hdeg
+  exact coloring_extend_of_neighbor_finset_le_four G v (G.neighborFinset v)
+    (by intro w; exact G.mem_neighborFinset v w) hcard C
+
+/--
+Kempe recoloring on `G - v`, followed by the same one-color extension step.
+The finite set `S` is the abstract Kempe component; the closure hypothesis is
+exactly what `kempeSwap_proper_abstract` needs to preserve properness.
+-/
+theorem coloring_extend_after_kempe_swap {V : Type u} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) (v : V)
+    (C : (G.induce ({x | x ≠ v} : Set V)).Coloring (Fin 5))
+    (c1 c2 c : Fin 5) (hne : c1 ≠ c2)
+    (S : Finset ({x | x ≠ v} : Set V))
+    (hclosed : ∀ u w,
+      (G.induce ({x | x ≠ v} : Set V)).Adj u w → u ∈ S →
+        (C u = c1 ∨ C u = c2) →
+        (C w = c1 ∨ C w = c2) → w ∈ S)
+    (hfree : ∀ x : ({x | x ≠ v} : Set V), G.Adj v x →
+      (if x ∈ S then swapColor c1 c2 (C x) else C x) ≠ c) :
+    ∃ C' : G.Coloring (Fin 5),
+      ∃ T : Finset ({x | x ≠ v} : Set V),
+        ∀ x : ({x | x ≠ v} : Set V), x ∉ T → C' x = C x := by
+  classical
+  let H := G.induce ({x | x ≠ v} : Set V)
+  let swapped : ({x | x ≠ v} : Set V) → Fin 5 :=
+    fun x => if x ∈ S then swapColor c1 c2 (C x) else C x
+  have hproper : ∀ u w, H.Adj u w → swapped u ≠ swapped w := by
+    exact kempeSwap_proper_abstract H C (fun u w hw => C.valid hw) c1 c2 hne S hclosed
+  let D : H.Coloring (Fin 5) := SimpleGraph.Coloring.mk swapped (by
+    intro u w hw
+    exact hproper u w hw)
+  have hfreeD : ∀ x : ({x | x ≠ v} : Set V), G.Adj v x → D x ≠ c := by
+    intro x hx
+    simpa [D, swapped] using hfree x hx
+  rcases coloring_extend_of_neighbor_color_free G v D c hfreeD with ⟨C', hC'⟩
+  refine ⟨C', S, ?_⟩
+  intro x hxS
+  have hD : D x = swapped x := rfl
+  have hx' : swapped x = C x := by
+    dsimp [swapped]
+    by_cases hxs : x ∈ S
+    · exact False.elim (hxS hxs)
+    · exact dif_neg hxs
+  calc
+    C' x = D x := hC' x
+    _ = swapped x := hD
+    _ = C x := hx'
+
+/--
+The five-color induction principle.
+
+Intended theorem in the book: every finite planar simple graph is 5-colorable.
+This theorem proves that conclusion for any graph class `P` once the two
+planar facts not supplied by Mathlib are available:
+
+* `hdelete`: deleting a vertex keeps the graph in the class;
+* `hstep`: every nonempty graph in the class has a vertex whose every
+  5-coloring of the deleted graph comes with either a degree-≤4 neighbor
+  certificate or an abstract Kempe-swap certificate freeing a color.
+
+For planar graphs, `hstep` is the Euler degree-≤5 step plus the Kempe-chain
+separation argument.  The degree-≤4 case is proved above, and the abstract
+Kempe recoloring step is `coloring_extend_after_kempe_swap`; the missing
+piece is the planar topological separation lemma that supplies the finite
+Kempe component and the freed color in the degree-5 case.
+-/
+theorem chapter35 {V : Type u} [Fintype V] [DecidableEq V] (G : SimpleGraph V)
+    (P : ∀ {W : Type u}, [Fintype W] → [DecidableEq W] → SimpleGraph W → Prop)
+    (hdelete : ∀ {W : Type u} [Fintype W] [DecidableEq W] (H : SimpleGraph W) (v : W),
+      P H → P (H.induce ({x | x ≠ v} : Set W)))
+    (hstep : ∀ {W : Type u} [Fintype W] [DecidableEq W] (H : SimpleGraph W),
+      P H → Nonempty W →
+        ∃ v : W, ∀ C : (H.induce ({x | x ≠ v} : Set W)).Coloring (Fin 5),
+          (∃ neighbors : Finset W,
+            (∀ w : W, w ∈ neighbors ↔ H.Adj v w) ∧ neighbors.card ≤ 4) ∨
+          ∃ c1 c2 c : Fin 5, c1 ≠ c2 ∧
+            ∃ S : Finset ({x | x ≠ v} : Set W),
+              (∀ u w,
+                (H.induce ({x | x ≠ v} : Set W)).Adj u w → u ∈ S →
+                  (C u = c1 ∨ C u = c2) →
+                  (C w = c1 ∨ C w = c2) → w ∈ S) ∧
+              (∀ x : ({x | x ≠ v} : Set W), H.Adj v x →
+                (if x ∈ S then swapColor c1 c2 (C x) else C x) ≠ c))
+    (hG : P G) :
+    G.Colorable 5 := by
+  classical
+  let motive : ℕ → Prop := fun n =>
+    ∀ {W : Type u} [Fintype W] [DecidableEq W] (H : SimpleGraph W),
+      Fintype.card W = n → P H → H.Colorable 5
+  have hall : ∀ n, motive n := by
+    intro n
+    refine Nat.strong_induction_on (p := motive) n ?_
+    intro n ih W _ _ H hcard hPH
+    by_cases hnonempty : Nonempty W
+    · rcases hstep H hPH hnonempty with ⟨v, hvext⟩
+      let S : Set W := {x | x ≠ v}
+      have hcard_lt : Fintype.card S < n := by
+        rw [← hcard]
+        exact Fintype.card_subtype_lt (p := fun x : W => x ≠ v) (x := v) (by simp)
+      have hPdel : P (H.induce S) := hdelete H v hPH
+      have hdel : (H.induce S).Colorable 5 :=
+        ih (Fintype.card S) hcard_lt (H.induce S) rfl hPdel
+      rcases hdel with ⟨C⟩
+      rcases hvext C with hlow | hkempe
+      · rcases hlow with ⟨neighbors, hneighbors, hneighbors_card⟩
+        rcases coloring_extend_of_neighbor_finset_le_four H v neighbors hneighbors
+          hneighbors_card C with ⟨C', _hC'⟩
+        exact ⟨C'⟩
+      · rcases hkempe with ⟨c1, c2, c, hc12, K, hclosed, hfree⟩
+        rcases coloring_extend_after_kempe_swap H v C c1 c2 c hc12 K hclosed hfree with
+          ⟨C', _T, _hC'⟩
+        exact ⟨C'⟩
+    · haveI : IsEmpty W := ⟨fun w => hnonempty ⟨w⟩⟩
+      exact SimpleGraph.Colorable.of_isEmpty (G := H) 5
+  exact hall (Fintype.card V) G rfl hG
+
+end FiveColorInduction
 
 end ProofsInTheBook.Chapter35

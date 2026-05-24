@@ -413,6 +413,25 @@ theorem franklWilson_modular_intersection_bound
     fintype_card_le_finrank_of_linear_functionals_diagonal v φ hdiag hoff
   exact hcard_le_finrank.trans (finrank_lowDegreeBooleanSubmodule_le K α L.card)
 
+/--
+Contrapositive form of `franklWilson_modular_intersection_bound`: a family
+larger than the low-degree bound must contain a distinct pair whose
+intersection cardinality avoids the allowed residue set.
+-/
+theorem exists_pair_intersection_notMem_of_card_bound_lt
+    {K α ι : Type*} [Field K] [Fintype α] [DecidableEq α] [DecidableEq K] [Fintype ι]
+    (sets : ι → Finset α) (L : Finset K)
+    (hself : ∀ i, ((sets i).card : K) ∉ L)
+    (hlarge : Fintype.card {I : Finset α // I.card ≤ L.card} < Fintype.card ι) :
+    ∃ i j, i ≠ j ∧ (((sets i ∩ sets j).card : K) ∉ L) := by
+  by_contra hno
+  push Not at hno
+  have hinter : ∀ i j, i ≠ j → (((sets i ∩ sets j).card : K) ∈ L) := by
+    intro i j hij
+    exact hno i j hij
+  have hle := franklWilson_modular_intersection_bound sets L hself hinter
+  exact (not_lt_of_ge hle) hlarge
+
 /-- Borsuk's conjecture in dimension d: every bounded set with positive
 diameter can be covered by d+1 subsets of itself, each of strictly smaller
 diameter.  The subset condition is essential: in a noncompact proper space

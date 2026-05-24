@@ -168,6 +168,16 @@ theorem linearIndependent_of_linear_functionals_diagonal
   have hmul : g i * φ i (v i) = 0 := by simpa [smul_eq_mul] using happly
   exact (mul_eq_zero.mp hmul).resolve_right (hdiag i)
 
+/-- Dimension bound form of `linearIndependent_of_linear_functionals_diagonal`. -/
+theorem fintype_card_le_finrank_of_linear_functionals_diagonal
+    {K : Type*} [Field K] {ι M : Type*} [Fintype ι]
+    [AddCommGroup M] [Module K M] [Module.Finite K M]
+    (v : ι → M) (φ : ι → M →ₗ[K] K)
+    (hdiag : ∀ i, φ i (v i) ≠ 0)
+    (hoff : ∀ i j, i ≠ j → φ i (v j) = 0) :
+    Fintype.card ι ≤ Module.finrank K M :=
+  (linearIndependent_of_linear_functionals_diagonal v φ hdiag hoff).fintype_card_le_finrank
+
 /-- The incidence vector of a finite set over `ZMod 2`. -/
 def incidenceVector {α : Type*} [DecidableEq α] (A : Finset α) : α → ZMod 2 :=
   fun a => if a ∈ A then 1 else 0

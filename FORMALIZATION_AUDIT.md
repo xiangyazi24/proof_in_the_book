@@ -94,17 +94,22 @@ with sustained effort, candidates for genuine closure):**
     Finset reduction.
   - Step 3a (commit 076ce77): foot of perpendicular
     `foot P a b := orthogonalProjection (affineSpan ℝ {a,b}) P`, `foot_mem`,
-    and `perpDist_eq_dist_foot` (`perpDist = dist P (foot)`).  Instances for
-    `Nonempty (affineSpan ℝ {a,b})` provided.
-  - **Remaining (step 3b–d, the crux):** pigeonhole two on-line points
-    `Q, R` to the same ray from `F` (`Q` between `F` and `R`); then the
-    similar-triangles / Pythagorean inequality
-    `perpDist Q P R ≤ dist Q (foot Q P R) < perpDist P a b` (using
-    `dist_sq_eq_dist_orthogonalProjection_sq_add_…`) contradicts minimality;
-    `(Q,P,R)` is a valid off-line incidence since `Q ∉ line[P,R]` (else
-    `line[P,R] = line[a,b] ∋ P`, contra).  ~200–400 LOC; warrants a dedicated
-    session with multi-model brainstorm per the playbook's hard-geometry
-    guidance.
+    `perpDist_eq_dist_foot`.  `Nonempty (affineSpan ℝ {a,b})` instance.
+  - Step 3b (commit c0c1e48): `dist_sq_eq_foot` (Pythagoras `PR² = RF² + PF²`)
+    and `dist_lt_dist_of_wbtw_foot`: if `R` on line, `Q` between foot `F` and
+    `R`, `P` off line, then `dist Q R < dist P R`.  (PF>0; QR≤FR via
+    `Wbtw.dist_add_dist`; QR² ≤ FR² < FR²+PF² = PR²; `lt_of_pow_lt_pow_left₀`.)
+  - **Remaining (step 3c–d):** (3c) the *area identity*
+    `perpDist Q P R · dist P R = perpDist P a b · dist Q R` — i.e. doubled
+    triangle area is base-independent, with `line[Q,R] = line[a,b]` folding the
+    second factor to `perpDist P a b`.  Mathlib has no direct base×height area
+    lemma; route via the law of sines (`Geometry/Euclidean/Triangle.lean`
+    `dist · sin angle` relations) or a 2-D determinant distance formula
+    `dist(X, line YZ) = |det[Z-Y, X-Y]| / dist Y Z`.  Then with step 3b
+    (`dist Q R < dist P R`) and `perpDist P a b > 0`, conclude
+    `perpDist Q P R < perpDist P a b`, contradicting minimality (the minimal
+    pair's line is therefore ordinary).  (3d) pigeonhole + assembly.  The
+    metric core is done; (3c) is the last genuinely hard piece, ~100–200 LOC.
 
 ## Work Order
 

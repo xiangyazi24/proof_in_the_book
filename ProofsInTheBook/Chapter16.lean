@@ -1248,6 +1248,12 @@ theorem pointedHalfSubsets_card_of_ground {α : Type*} [Fintype α] [DecidableEq
     Fintype.card (pointedHalfSubsets α p base) = (4 * p - 1).choose (2 * p - 1) := by
   rw [pointedHalfSubsets_card base hp, hground]
 
+/-- The nonzero residue classes modulo a prime `p` have cardinality `p - 1`. -/
+theorem zmod_nonzero_card (p : ℕ) [Fact p.Prime] :
+    (Finset.univ.erase (0 : ZMod p)).card = p - 1 := by
+  rw [Finset.card_erase_of_mem (Finset.mem_univ (0 : ZMod p)), Finset.card_univ,
+    ZMod.card p]
+
 /--
 Directed-cut certificate specialized to the pointed half-size family.  The
 remaining Kahn-Kalai arithmetic is the lower bound on this family size against
@@ -1290,6 +1296,20 @@ noncomputable def KahnKalaiCertificate.ofPrimePointedHalfFamilyOfChooseLarge {d 
   refine KahnKalaiCertificate.ofPrimePointedHalfFamilyOfLarge base coord hground ?_
   rw [pointedHalfSubsets_card_of_ground base (Fact.out : Nat.Prime p).pos hground]
   exact hlarge
+
+/--
+Numeric low-degree-bound version of the pointed Kahn-Kalai certificate, using
+`|ZMod p \ {0}| = p - 1`.
+-/
+noncomputable def KahnKalaiCertificate.ofPrimePointedHalfFamilyOfNumericLarge {d p : ℕ}
+    [Fact p.Prime] {α : Type*} [Fintype α] [DecidableEq α]
+    (base : α) (coord : (α × α) ≃ Fin d)
+    (hground : Fintype.card α = 4 * p)
+    (hlarge : (d + 1) * Fintype.card {I : Finset α // I.card ≤ p - 1} <
+          (4 * p - 1).choose (2 * p - 1)) :
+    KahnKalaiCertificate d := by
+  refine KahnKalaiCertificate.ofPrimePointedHalfFamilyOfChooseLarge base coord hground ?_
+  simpa [zmod_nonzero_card p] using hlarge
 
 /--
 Bridge from the Frankl-Wilson coloring obstruction to a Borsuk counterexample

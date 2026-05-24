@@ -99,17 +99,26 @@ with sustained effort, candidates for genuine closure):**
     and `dist_lt_dist_of_wbtw_foot`: if `R` on line, `Q` between foot `F` and
     `R`, `P` off line, then `dist Q R < dist P R`.  (PF>0; QR≤FR via
     `Wbtw.dist_add_dist`; QR² ≤ FR² < FR²+PF² = PR²; `lt_of_pow_lt_pow_left₀`.)
-  - **Remaining (step 3c–d):** (3c) the *area identity*
-    `perpDist Q P R · dist P R = perpDist P a b · dist Q R` — i.e. doubled
-    triangle area is base-independent, with `line[Q,R] = line[a,b]` folding the
-    second factor to `perpDist P a b`.  Mathlib has no direct base×height area
-    lemma; route via the law of sines (`Geometry/Euclidean/Triangle.lean`
-    `dist · sin angle` relations) or a 2-D determinant distance formula
-    `dist(X, line YZ) = |det[Z-Y, X-Y]| / dist Y Z`.  Then with step 3b
-    (`dist Q R < dist P R`) and `perpDist P a b > 0`, conclude
-    `perpDist Q P R < perpDist P a b`, contradicting minimality (the minimal
-    pair's line is therefore ordinary).  (3d) pigeonhole + assembly.  The
-    metric core is done; (3c) is the last genuinely hard piece, ~100–200 LOC.
+  - Step 3c (commits: projection-length, Gram/apex, area identity): DONE.
+    `inner_vsub_pair_sq` (⟪P-ᵥY,Z-ᵥY⟫² = dist Y(foot)²·dist Y Z², via
+    orthogonal decomposition + 1-D vectorSpan); `perpDist_sq_mul_dist_sq`
+    (Gram/Lagrange: perpDist²·base² = ‖edge‖²·base² − ⟪edge,base⟫²);
+    `gram_apex_symm` (apex-invariance, inner-product `ring`);
+    `perpDist_mul_dist_eq` (the area identity
+    `perpDist Q P R · dist P R = perpDist P Q R · dist Q R`, square roots via
+    `Real.sqrt_sq`).  No law-of-sines / determinant needed after all — the
+    orthogonal-projection route worked.
+  - Step 3d core (commit: strict decrease): DONE.
+    `perpDist_lt_perpDist_of_wbtw`: if `P` off line `QR`, `Q` between
+    `foot P Q R` and `R`, then `perpDist Q P R < perpDist P Q R`.  This is the
+    inequality that contradicts minimality.
+  - **Remaining (step 3d assembly only):** the combinatorial finish —
+    pigeonhole (a line with ≥3 configuration points has two on the same
+    closed side of the foot, giving `Wbtw (foot …) Q R`), construct the
+    off-line incidence `(Q, P₀, R)`, and derive the contradiction with
+    `exists_min_perpDist_offLine`'s minimal pair (`perpDist P₀ Q R =
+    perpDist P₀ a₀ b₀` since `line[Q,R] = line[a₀,b₀]`).  No more hard
+    geometry — pure betweenness + finite pigeonhole.
 
 ## Work Order
 

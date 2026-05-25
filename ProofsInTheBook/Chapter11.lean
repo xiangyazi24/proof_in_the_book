@@ -1957,6 +1957,22 @@ theorem middleLeft_reverseFin_symm_iff_not {k : ℕ} (a : Fin (2 * k)) :
   simp [reverseFin, middleLeft, Fin.revPerm_symm]
   omega
 
+theorem crossesMiddle_relabel {k : ℕ}
+    (π ρ τ : State (2 * k)) (a : Fin (2 * k)) :
+    crossesMiddle k (π.trans τ.symm) (ρ.trans τ.symm) a ↔
+      crossesMiddle k π ρ (τ a) := by
+  simp [crossesMiddle]
+
+theorem crossesMiddle_reverse_left {k : ℕ}
+    (π ρ : State (2 * k)) (a : Fin (2 * k)) :
+    crossesMiddle k ((reverseFin (2 * k)).trans π) ((reverseFin (2 * k)).trans ρ) a ↔
+      crossesMiddle k π ρ a := by
+  unfold crossesMiddle
+  simp
+  rw [middleLeft_reverseFin_symm_iff_not (k := k) (π.symm a),
+    middleLeft_reverseFin_symm_iff_not (k := k) (ρ.symm a)]
+  tauto
+
 /--
 A finite generalized allowable sequence, reduced to the data needed for the
 middle-barrier counting layer: a list of permutation states beginning at the
@@ -4377,6 +4393,41 @@ end ReversalStep
 noncomputable def stepCrossingLabelsCard (k : ℕ) (π ρ : State (2 * k)) : ℕ := by
   classical
   exact Fintype.card {a : Fin (2 * k) // crossesMiddle k π ρ a}
+
+theorem stepCrossingLabelsCard_relabel {k : ℕ}
+    (π ρ τ : State (2 * k)) :
+    stepCrossingLabelsCard k (π.trans τ.symm) (ρ.trans τ.symm) =
+      stepCrossingLabelsCard k π ρ := by
+  classical
+  unfold stepCrossingLabelsCard
+  refine Fintype.card_congr ?_
+  refine
+    { toFun := fun x => ⟨τ x.1, (crossesMiddle_relabel π ρ τ x.1).mp x.2⟩
+      invFun := fun x => ⟨τ.symm x.1, ?_⟩
+      left_inv := ?_
+      right_inv := ?_ }
+  · have hx := (crossesMiddle_relabel π ρ τ (τ.symm x.1)).mpr (by simpa using x.2)
+    simpa using hx
+  · intro x
+    simp
+  · intro x
+    simp
+
+theorem stepCrossingLabelsCard_reverse_left {k : ℕ}
+    (π ρ : State (2 * k)) :
+    stepCrossingLabelsCard k ((reverseFin (2 * k)).trans π)
+        ((reverseFin (2 * k)).trans ρ) =
+      stepCrossingLabelsCard k π ρ := by
+  classical
+  unfold stepCrossingLabelsCard
+  refine Fintype.card_congr ?_
+  refine
+    { toFun := fun x => ⟨x.1, (crossesMiddle_reverse_left π ρ x.1).mp x.2⟩
+      invFun := fun x => ⟨x.1, (crossesMiddle_reverse_left π ρ x.1).mpr x.2⟩
+      left_inv := ?_
+      right_inv := ?_ } <;>
+    intro x <;>
+    simp
 
 theorem stepCrossingLabelsCard_eq_labelCrossingCard
     (k : ℕ) (π ρ : State (2 * k)) :

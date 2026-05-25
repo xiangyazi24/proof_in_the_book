@@ -623,6 +623,27 @@ theorem sweepSort_reindex_of_injective {points : Finset Point2} {k : ℕ}
   have hstrict := sweepSort_strictMono_of_injective L θ hinj hij
   simpa [PointLabeling.reindex, Function.comp, Equiv.trans_apply] using hstrict
 
+theorem sweepSort_add_pi_eq_revPerm_trans {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) (θ₀ : ℝ)
+    (hinj : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₀ (L.point a))) :
+    sweepSort L (θ₀ + Real.pi) = Fin.revPerm.trans (sweepSort L θ₀) := by
+  have hinj_add :
+      Function.Injective (fun a : Fin (2 * k) => orientedLevel (θ₀ + Real.pi) (L.point a)) := by
+    intro a b hab
+    apply hinj
+    have ha := orientedLevel_add_pi θ₀ (L.point a)
+    have hb := orientedLevel_add_pi θ₀ (L.point b)
+    linarith
+  have hrev := sweepSort_reindex_add_pi_eq_revPerm L θ₀ hinj
+  have hreindex :=
+    sweepSort_reindex_of_injective L (sweepSort L θ₀) hinj_add
+  rw [hreindex] at hrev
+  apply Equiv.ext
+  intro a
+  have happ := congrFun (congrArg DFunLike.coe hrev) a
+  have happ' := congrArg (sweepSort L θ₀) happ
+  simpa [Equiv.trans_apply] using happ'
+
 /-! ### Level-block extraction from monotone functions -/
 
 noncomputable def levelBlockLo {N : ℕ} (f : Fin N → ℝ) (i : Fin N) : Fin N :=
@@ -9643,6 +9664,68 @@ theorem sweepSort_labelingAt_interEventAngle_no_wrap
   exact sweepSort_reindex_of_injective L (sweepSort L θs)
     (inj_at_interEventAngle hcard hne ⟨s.val + j.val, Nat.lt_succ_of_lt hwrap⟩)
 
+private theorem inj_at_interEventAngle_add_pi {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (j : Fin ((directionsDeterminedBy points).card + 1)) :
+    Function.Injective (fun a : Fin (2 * k) =>
+      orientedLevel (interEventAngle points hne j + Real.pi)
+        ((sweepLabeling hcard hne).point a)) := by
+  intro a b hab
+  apply inj_at_interEventAngle hcard hne j
+  have ha := orientedLevel_add_pi (interEventAngle points hne j)
+    ((sweepLabeling hcard hne).point a)
+  have hb := orientedLevel_add_pi (interEventAngle points hne j)
+    ((sweepLabeling hcard hne).point b)
+  linarith
+
+theorem sweepSort_labelingAt_interEventAngle_wrap
+    {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (s j : Fin (directionsDeterminedBy points).card)
+    (hwrap : (directionsDeterminedBy points).card ≤ s.val + j.val) :
+    sweepSort
+        (sweepLabelingAt (points := points) hcard
+          (interEventAngle points hne ⟨s.val, by omega⟩))
+        (interEventAngleAt points hne
+          (interEventAngle points hne ⟨s.val, by omega⟩) s
+          ⟨j.val, by omega⟩) =
+      (sweepSort (sweepLabeling hcard hne)
+        (interEventAngle points hne
+          ⟨s.val + j.val - (directionsDeterminedBy points).card, by omega⟩ +
+            Real.pi)).trans
+        (sweepSort (sweepLabeling hcard hne)
+          (interEventAngle points hne ⟨s.val, by omega⟩)).symm := by
+  let L := sweepLabeling hcard hne
+  let θs := interEventAngle points hne ⟨s.val, by omega⟩
+  let θjAt := interEventAngleAt points hne θs s ⟨j.val, by omega⟩
+  let t : Fin ((directionsDeterminedBy points).card + 1) :=
+    ⟨s.val + j.val - (directionsDeterminedBy points).card, by omega⟩
+  have hfun :
+      (fun a : Fin (2 * k) => orientedLevel θjAt
+        ((sweepLabelingAt (points := points) hcard θs).point a)) =
+      (fun a : Fin (2 * k) => orientedLevel θjAt
+        ((L.reindex (sweepSort L θs)).point a)) := by
+    funext a
+    rw [sweepLabelingAt_interEventAngle_point_eq hcard hne s a]
+  have hlabel :
+      sweepSort (sweepLabelingAt (points := points) hcard θs) θjAt =
+        sweepSort (L.reindex (sweepSort L θs)) θjAt := by
+    show Tuple.sort (fun a : Fin (2 * k) =>
+        orientedLevel θjAt
+          ((sweepLabelingAt (points := points) hcard θs).point a)) =
+      Tuple.sort (fun a : Fin (2 * k) =>
+        orientedLevel θjAt ((L.reindex (sweepSort L θs)).point a))
+    rw [hfun]
+  have hangle :
+      θjAt = interEventAngle points hne t + Real.pi := by
+    simpa [θjAt, θs, t] using interEventAngleAt_wrapped
+      (points := points) hne s j hwrap
+  rw [hlabel, hangle]
+  exact sweepSort_reindex_of_injective L (sweepSort L θs)
+    (inj_at_interEventAngle_add_pi hcard hne t)
+
 -- Starting angle θ₀ is between sortedAngleAt(s-1) and sortedAngleAt(s)
 -- (or equivalently, in the gap before event s).
 --
@@ -9695,6 +9778,7 @@ now exists and is wired into a concrete shifted sweep:
 - `sweepConcreteGAS_atIndex_mod_pi`
 - `sweepLabelingAt_interEventAngle_point_eq`
 - `sweepSort_labelingAt_interEventAngle_no_wrap`
+- `sweepSort_labelingAt_interEventAngle_wrap`
 
 The remaining blocker is the crossing-rotation transfer lemma.  For the
 ordinary sweep

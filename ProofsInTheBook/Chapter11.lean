@@ -607,6 +607,16 @@ theorem sweepSort_eq_of_strictMono {points : Finset Point2} {k : ℕ}
   exact ⟨hstrict.monotone, fun i j hij heq =>
     absurd heq (ne_of_lt (hstrict hij))⟩
 
+theorem sweepSort_reindex_of_injective {points : Finset Point2} {k : ℕ}
+    (L : PointLabeling points k) (τ : Equiv.Perm (Fin (2 * k))) {θ : ℝ}
+    (hinj : Function.Injective (fun a : Fin (2 * k) =>
+      orientedLevel θ (L.point a))) :
+    sweepSort (L.reindex τ) θ = (sweepSort L θ).trans τ.symm := by
+  apply sweepSort_eq_of_strictMono
+  intro i j hij
+  have hstrict := sweepSort_strictMono_of_injective L θ hinj hij
+  simpa [PointLabeling.reindex, Function.comp, Equiv.trans_apply] using hstrict
+
 /-! ### Level-block extraction from monotone functions -/
 
 noncomputable def levelBlockLo {N : ℕ} (f : Fin N → ℝ) (i : Fin N) : Fin N :=

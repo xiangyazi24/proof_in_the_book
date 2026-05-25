@@ -3370,6 +3370,25 @@ abbrev KyFanPathEndpointClass {n m : ℕ}
   AlternatingPuncturedPrefixChainType label ⊕
     (Bool ⊕ (PositivePrefixChainType label ⊕ NegativePrefixChainType label))
 
+theorem kyFanPathEndpointClass_card {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Fintype.card (KyFanPathEndpointClass label) =
+      Fintype.card (AlternatingPuncturedPrefixChainType label) + 2 +
+        Fintype.card (PositivePrefixChainType label) +
+          Fintype.card (NegativePrefixChainType label) := by
+  simp [KyFanPathEndpointClass, Fintype.card_sum]
+  omega
+
+theorem kyFanPathEndpointClass_card_finset {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Fintype.card (KyFanPathEndpointClass label) =
+      (alternatingPuncturedPrefixLabelChains label).card + 2 +
+        (positiveAlternatingPrefixLabelChains label).card +
+          (negativeAlternatingPrefixLabelChains label).card := by
+  rw [kyFanPathEndpointClass_card label,
+    alternatingPuncturedPrefixChainType_card label]
+  simp [PositivePrefixChainType, NegativePrefixChainType]
+
 theorem mem_alternatingPuncturedPrefixLabelChains_antipode {n m : ℕ}
     {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
     (hantipodal : ∀ X, label X.antipode = (label X).neg)

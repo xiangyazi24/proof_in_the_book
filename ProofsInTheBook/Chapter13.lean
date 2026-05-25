@@ -24,11 +24,11 @@ the final counting contradiction.  It defines edge signs, strict sign changes
 around triangular faces, proves the basic parity facts, packages the abstract
 consequence of Cauchy's arm lemma, and states `chapter13` / `chapter13_rigidity`
 from meaningful missing geometric/combinatorial facts.  The remaining
-frontier is now explicit: Cauchy's arm lemma must supply at least four sign
-changes at every surviving vertex, and the Euler polyhedron formula plus the
-triangulated incidence count must be supplied by real polyhedron
-infrastructure.  Once those are given, the Euler sign-count upper bound is
-proved here.
+frontier is now explicit: vertex-link geometry must turn the low sign-change
+cases into fixed-chord Cauchy-arm obstructions, and the Euler polyhedron
+formula plus the triangulated incidence count must be supplied by real
+polyhedron infrastructure.  Once those are given, the arm-lemma lower bound
+and Euler sign-count upper bound are proved here.
 
 Gap to the full book theorem: the missing work is genuine three-dimensional
 Euclidean polyhedron infrastructure.  A complete proof needs a formal convex
@@ -190,6 +190,70 @@ theorem arm_lemma_forbids_strict_closing_with_fixed_chord {n : ℕ}
   exact (lt_irrefl chord) hlt
 
 /--
+The concrete data needed to invoke the opening direction of Cauchy's arm
+lemma at a vertex link while the endpoint chord is fixed by congruent faces.
+-/
+structure CauchyArmOpeningObstruction where
+  n : ℕ
+  angles : Fin n → ℝ
+  newAngles : Fin n → ℝ
+  chord : ℝ
+  newChord : ℝ
+  fixed_chord : newChord = chord
+  opened : ∀ i, angles i ≤ newAngles i
+  some_angle_strictly_opened : ∃ i, angles i < newAngles i
+  convex_new_angles : ∀ i, newAngles i < Real.pi
+  arm_conclusion : chord < newChord ∨ (∀ i, angles i = newAngles i)
+
+namespace CauchyArmOpeningObstruction
+
+theorem contradiction (obs : CauchyArmOpeningObstruction) : False :=
+  arm_lemma_forbids_strict_opening_with_fixed_chord obs.angles obs.newAngles
+    obs.chord obs.newChord obs.fixed_chord obs.opened
+    obs.some_angle_strictly_opened obs.convex_new_angles obs.arm_conclusion
+
+end CauchyArmOpeningObstruction
+
+/--
+The corresponding data for the closing direction.  This is the same arm lemma
+with the old and new angle arrays swapped.
+-/
+structure CauchyArmClosingObstruction where
+  n : ℕ
+  angles : Fin n → ℝ
+  newAngles : Fin n → ℝ
+  chord : ℝ
+  newChord : ℝ
+  fixed_chord : newChord = chord
+  closed : ∀ i, newAngles i ≤ angles i
+  some_angle_strictly_closed : ∃ i, newAngles i < angles i
+  convex_old_angles : ∀ i, angles i < Real.pi
+  arm_conclusion : newChord < chord ∨ (∀ i, newAngles i = angles i)
+
+namespace CauchyArmClosingObstruction
+
+theorem contradiction (obs : CauchyArmClosingObstruction) : False :=
+  arm_lemma_forbids_strict_closing_with_fixed_chord obs.angles obs.newAngles
+    obs.chord obs.newChord obs.fixed_chord obs.closed
+    obs.some_angle_strictly_closed obs.convex_old_angles obs.arm_conclusion
+
+end CauchyArmClosingObstruction
+
+/-- A low sign-change vertex link supplies one of the two fixed-chord arm
+contradictions above. -/
+inductive CauchyArmFixedChordObstruction where
+  | opening : CauchyArmOpeningObstruction → CauchyArmFixedChordObstruction
+  | closing : CauchyArmClosingObstruction → CauchyArmFixedChordObstruction
+
+namespace CauchyArmFixedChordObstruction
+
+theorem contradiction : CauchyArmFixedChordObstruction → False
+  | opening obs => obs.contradiction
+  | closing obs => obs.contradiction
+
+end CauchyArmFixedChordObstruction
+
+/--
 The global sign-change counting step via Euler's formula. In Cauchy's proof,
 each face contributes an even number of sign changes around its boundary,
 so the total sum of sign changes over all faces is even. But Euler's formula
@@ -287,23 +351,33 @@ theorem euler_triangular_sign_change_bound {V E F : ℕ}
 /--
 Local data at a surviving vertex after zero edges have been removed.
 
-The two negative fields are the exact Cauchy-arm-lemma frontier at the
-finite sign layer: the geometric vertex-link argument must rule out a
-constant strict sign pattern and a single `+` block followed by a single `-`
-block (two sign changes).  Once those two cases and parity are supplied, the
-`≥ 4` lower bound is pure arithmetic and is proved below.
+The two obstruction fields are the exact Cauchy-arm frontier at the finite
+sign layer: the geometric vertex-link argument must convert a constant strict
+sign pattern and a single positive block followed by a single negative block
+into fixed-chord arm-lemma contradictions.  Once those obstructions and parity
+are supplied, the `≥ 4` lower bound is proved below.
 -/
 structure CauchyArmVertex where
   /-- Number of strict sign changes around this vertex. -/
   signChanges : ℕ
   /-- Cyclic strict plus/minus sign changes occur in pairs. -/
   signChanges_even : Even signChanges
-  /-- Cauchy's arm lemma rules out a constant strict sign pattern. -/
-  arm_lemma_no_zero_sign_changes : signChanges ≠ 0
-  /-- Cauchy's arm lemma rules out exactly one positive and one negative block. -/
-  arm_lemma_no_two_sign_changes : signChanges ≠ 2
+  /-- A constant strict sign pattern yields a fixed-chord arm contradiction. -/
+  zero_sign_changes_obstruction : signChanges = 0 → CauchyArmFixedChordObstruction
+  /-- Exactly one positive and one negative block yields a fixed-chord arm contradiction. -/
+  two_sign_changes_obstruction : signChanges = 2 → CauchyArmFixedChordObstruction
 
 namespace CauchyArmVertex
+
+theorem arm_lemma_no_zero_sign_changes (v : CauchyArmVertex) :
+    v.signChanges ≠ 0 := by
+  intro hzero
+  exact (v.zero_sign_changes_obstruction hzero).contradiction
+
+theorem arm_lemma_no_two_sign_changes (v : CauchyArmVertex) :
+    v.signChanges ≠ 2 := by
+  intro htwo
+  exact (v.two_sign_changes_obstruction htwo).contradiction
 
 theorem four_le_signChanges (v : CauchyArmVertex) :
     4 ≤ v.signChanges :=

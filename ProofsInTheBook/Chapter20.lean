@@ -1271,6 +1271,20 @@ theorem chapter20 {n : ℕ} (cert : MonskyCertificate n) :
     cert.boundaryRGCount cert.totalRG cert.htotal cert.hparity cert.hodd
 
 /--
+The stronger Sperner conclusion packaged by a `MonskyCertificate`: the number
+of trichromatic triangles is odd, not merely nonzero.
+-/
+theorem chapter20_trichromatic_count_odd {n : ℕ} (cert : MonskyCertificate n) :
+    Odd ((Finset.univ.filter fun i : Fin n =>
+      TrichromaticTriangle (cert.triangleColors i).1
+        (cert.triangleColors i).2.1 (cert.triangleColors i).2.2).card) := by
+  have hmod := sperner_parity_abstract n cert.triangleColors cert.boundaryRGCount
+    cert.totalRG cert.htotal cert.hparity
+  exact Nat.odd_iff.mpr (by
+    rw [hmod]
+    exact Nat.odd_iff.mp cert.hodd)
+
+/--
 Sperner conclusion from a finite edge-parity boundary count, without manually
 supplying the `MonskyCertificate` parity fields.
 -/

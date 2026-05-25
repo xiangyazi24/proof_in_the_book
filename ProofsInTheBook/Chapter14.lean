@@ -40,7 +40,14 @@ matrix from a raw family of touching simplices; see
   the local signed-distance opposite B-entries under that condition, but the
   converse/extraction from raw touching remains unproved;
 * construct a point outside all simplices and facet hyperplanes to obtain the
-  missing completed sign vector.
+  missing completed sign vector.  The halfspace side of this step is now
+  formalized for one simplex:
+  `DSimplex.mem_body_iff_forall_signedInfDist_nonneg` proves that the closed
+  simplex is exactly the intersection of its closed signed facet halfspaces;
+  `DSimplex.exists_signedInfDist_neg_of_notMem_body` gives the violated facet
+  for a point outside one simplex.  The remaining part is the
+  finite-avoidance/existence argument for such a point in the whole
+  configuration.
 
 Why this file does not claim `Fintype.card ι ≤ 2^d`: the current B/C-matrix
 data only proves that the completed rows form a proper subset of the `2^s` sign
@@ -152,6 +159,13 @@ abbrev Ambient (d : ℕ) := EuclideanSpace ℝ (Fin d)
 /-- A `d`-simplex in `ℝ^d`, using Mathlib's bundled affine simplex. -/
 abbrev DSimplex (d : ℕ) := Affine.Simplex ℝ (Ambient d) d
 
+/-- The affine basis of `ℝ^d` determined by the vertices of a `d`-simplex. -/
+noncomputable def DSimplex.affineBasis {d : ℕ} (S : DSimplex d) :
+    AffineBasis (Fin (d + 1)) ℝ (Ambient d) :=
+  AffineBasis.mk S.points S.independent (by
+    rw [AffineIndependent.affineSpan_eq_top_iff_card_eq_finrank_add_one S.independent]
+    simp [Ambient])
+
 /-- The closed simplex, i.e. the convex hull of its vertices. -/
 def DSimplex.body {d : ℕ} (S : DSimplex d) : Set (Ambient d) :=
   S.closedInterior
@@ -159,6 +173,35 @@ def DSimplex.body {d : ℕ} (S : DSimplex d) : Set (Ambient d) :=
 /-- The relative interior of a simplex in its affine span. -/
 def DSimplex.relInterior {d : ℕ} (S : DSimplex d) : Set (Ambient d) :=
   S.interior
+
+/-- Membership in the closed simplex in terms of barycentric coordinates. -/
+lemma DSimplex.mem_body_iff_forall_affineBasis_coord_nonneg {d : ℕ}
+    (S : DSimplex d) {p : Ambient d} :
+    p ∈ S.body ↔ ∀ i : Fin (d + 1), 0 ≤ (S.affineBasis).coord i p := by
+  classical
+  constructor
+  · intro hp i
+    rw [DSimplex.body] at hp
+    rcases hp with ⟨w, hw, hw01, hp_eq⟩
+    subst p
+    change 0 ≤ (S.affineBasis).coord i
+      ((Finset.univ.affineCombination ℝ S.affineBasis) w)
+    rw [(S.affineBasis).coord_apply_combination_of_mem (Finset.mem_univ i) hw]
+    exact (hw01 i).1
+  · intro hcoord
+    rw [DSimplex.body]
+    refine ⟨fun i => (S.affineBasis).coord i p, ?_, ?_, ?_⟩
+    · exact AffineBasis.sum_coord_apply_eq_one S.affineBasis p
+    · intro i
+      constructor
+      · exact hcoord i
+      · have hle : (S.affineBasis).coord i p ≤ ∑ j, (S.affineBasis).coord j p := by
+          exact Finset.single_le_sum (fun j _ => hcoord j) (Finset.mem_univ i)
+        rw [AffineBasis.sum_coord_apply_eq_one] at hle
+        exact hle
+    · change (Finset.univ.affineCombination ℝ S.affineBasis
+        fun i => (S.affineBasis).coord i p) = p
+      exact AffineBasis.affineCombination_coord_eq_self S.affineBasis p
 
 /-- The affine hyperplane spanned by the facet opposite a vertex. -/
 def DSimplex.facetHyperplane {d : ℕ} [NeZero d] (S : DSimplex d)
@@ -399,6 +442,52 @@ lemma DSimplex.opposite_vertex_vsub_orthogonalProjectionSpan_ne_zero {d : ℕ}
     rw [hEq, DSimplex.facetHyperplane]
     exact ((S.faceOpposite i).orthogonalProjectionSpan (S.points i)).2
   exact S.opposite_vertex_notMem_facetHyperplane i hmem
+
+/--
+A point is in the closed simplex iff it lies in all closed facet halfspaces
+for the signed-distance orientations toward the opposite vertices.
+-/
+lemma DSimplex.mem_body_iff_forall_signedInfDist_nonneg {d : ℕ} [NeZero d]
+    (S : DSimplex d) {p : Ambient d} :
+    p ∈ S.body ↔ ∀ i : Fin (d + 1), 0 ≤ S.signedInfDist i p := by
+  classical
+  constructor
+  · intro hp i
+    exact S.signedInfDist_nonneg_of_mem_body i hp
+  · intro hsign
+    rw [S.mem_body_iff_forall_affineBasis_coord_nonneg]
+    intro i
+    let B := S.affineBasis
+    have hsum : ∑ j, B.coord j p = 1 := AffineBasis.sum_coord_apply_eq_one B p
+    have hp_eq : (Finset.univ.affineCombination ℝ S.points fun j => B.coord j p) = p := by
+      change (Finset.univ.affineCombination ℝ B fun j => B.coord j p) = p
+      exact AffineBasis.affineCombination_coord_eq_self B p
+    have hsigned :
+        S.signedInfDist i p =
+          B.coord i p *
+            ‖S.points i -ᵥ ↑((S.faceOpposite i).orthogonalProjectionSpan (S.points i))‖ := by
+      calc
+        S.signedInfDist i p =
+            S.signedInfDist i
+              ((Finset.univ.affineCombination ℝ S.points) fun j => B.coord j p) := by
+          rw [hp_eq]
+        _ = B.coord i p *
+            ‖S.points i -ᵥ ↑((S.faceOpposite i).orthogonalProjectionSpan (S.points i))‖ := by
+          rw [S.signedInfDist_affineCombination i hsum]
+    have hnonneg :
+        0 ≤ B.coord i p *
+          ‖S.points i -ᵥ ↑((S.faceOpposite i).orthogonalProjectionSpan (S.points i))‖ := by
+      simpa [hsigned] using hsign i
+    exact nonneg_of_mul_nonneg_left hnonneg
+      (norm_pos_iff.mpr (S.opposite_vertex_vsub_orthogonalProjectionSpan_ne_zero i))
+
+/-- A point outside a simplex violates at least one signed facet halfspace. -/
+lemma DSimplex.exists_signedInfDist_neg_of_notMem_body {d : ℕ} [NeZero d]
+    (S : DSimplex d) {p : Ambient d} (hp : p ∉ S.body) :
+    ∃ i : Fin (d + 1), S.signedInfDist i p < 0 := by
+  rw [S.mem_body_iff_forall_signedInfDist_nonneg] at hp
+  push Not at hp
+  exact hp
 
 /--
 The signed-distance orientation is strictly positive on the simplex relative
@@ -1330,7 +1419,13 @@ lookup.  The current status of its main pieces is:
   the two opposite vertices of a `TouchesAcrossFacets` pair, then transfer the
   local signed-distance opposite-entry theorem to the globally chosen index;
 * choose a point avoiding the finite union of facet hyperplanes and simplex
-  bodies to obtain the missing completed sign vector.
+  bodies to obtain the missing completed sign vector.  The local conversion
+  from "same sign on every facet of a simplex" to "the point lies in that
+  simplex" is now `DSimplex.mem_body_iff_forall_signedInfDist_nonneg`, with
+  `DSimplex.exists_signedInfDist_neg_of_notMem_body` extracting a violated
+  facet from an outside point; what remains is the global finite-avoidance
+  construction and the bookkeeping that converts the avoiding point into a
+  Boolean sign vector for all globally oriented facet hyperplanes.
 
 The sharper `≤ 2^d` theorem additionally needs a half-cube invariant for the
 completed sign vectors.  This file proves both the fixed-coordinate endpoint

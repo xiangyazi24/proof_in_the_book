@@ -581,6 +581,65 @@ theorem odd_card_positive_endpoints_of_path_involution
     (Fintype.card Positive) (Fintype.card Negative) (Fintype.card Path)
     hneg (even_card_of_fixedPointFree_involutive pathAntipode hinv hfree) hendpoints
 
+theorem sigma_endpoint_card_eq_two_mul_paths
+    {Path : Type*} [Fintype Path]
+    (Endpoint : Path → Type*) [∀ p : Path, Fintype (Endpoint p)]
+    (htwo : ∀ p : Path, Fintype.card (Endpoint p) = 2) :
+    Fintype.card (Σ p : Path, Endpoint p) = 2 * Fintype.card Path := by
+  classical
+  rw [Fintype.card_sigma]
+  calc
+    (∑ p : Path, Fintype.card (Endpoint p)) = ∑ _p : Path, 2 := by
+      exact Finset.sum_congr rfl fun p _ => htwo p
+    _ = 2 * Fintype.card Path := by
+      simp [mul_comm]
+
+theorem endpoint_card_eq_base_add_positive_add_negative
+    {Endpoint Base Positive Negative : Type*}
+    [Fintype Endpoint] [Fintype Base] [Fintype Positive] [Fintype Negative]
+    (classify : Endpoint ≃ Base ⊕ (Positive ⊕ Negative)) :
+    Fintype.card Endpoint =
+      Fintype.card Base + Fintype.card Positive + Fintype.card Negative := by
+  have hcard := Fintype.card_congr classify
+  rw [hcard]
+  simp [Fintype.card_sum]
+  omega
+
+theorem endpoint_count_eq_two_mul_paths_of_endpoint_equiv
+    {Path Base Positive Negative : Type*}
+    [Fintype Path] [Fintype Base] [Fintype Positive] [Fintype Negative]
+    (Endpoint : Path → Type*) [∀ p : Path, Fintype (Endpoint p)]
+    (htwo : ∀ p : Path, Fintype.card (Endpoint p) = 2)
+    (classify : (Σ p : Path, Endpoint p) ≃ Base ⊕ (Positive ⊕ Negative))
+    (hbase : Fintype.card Base = 2) :
+    2 + Fintype.card Positive + Fintype.card Negative = 2 * Fintype.card Path := by
+  have hpath := sigma_endpoint_card_eq_two_mul_paths Endpoint htwo
+  have hclass := endpoint_card_eq_base_add_positive_add_negative classify
+  rw [hbase] at hclass
+  omega
+
+/--
+Structured endpoint-count version of the abstract path parity theorem.
+
+Instead of passing the endpoint-count equality directly, it is enough to give:
+each path has two endpoints, and all endpoints are classified as the two base
+endpoints, positive top endpoints, or negative top endpoints.
+-/
+theorem odd_card_positive_endpoints_of_path_endpoint_equiv
+    {Path Base Positive Negative : Type*}
+    [Fintype Path] [Fintype Base] [Fintype Positive] [Fintype Negative]
+    (Endpoint : Path → Type*) [∀ p : Path, Fintype (Endpoint p)]
+    (pathAntipode : Path ≃ Path)
+    (hinv : Function.Involutive pathAntipode)
+    (hfree : ∀ p : Path, pathAntipode p ≠ p)
+    (htwo : ∀ p : Path, Fintype.card (Endpoint p) = 2)
+    (classify : (Σ p : Path, Endpoint p) ≃ Base ⊕ (Positive ⊕ Negative))
+    (hbase : Fintype.card Base = 2)
+    (hneg : Fintype.card Negative = Fintype.card Positive) :
+    Odd (Fintype.card Positive) := by
+  exact odd_card_positive_endpoints_of_path_involution pathAntipode hinv hfree hneg
+    (endpoint_count_eq_two_mul_paths_of_endpoint_equiv Endpoint htwo classify hbase)
+
 /--
 Ky Fan prefix parity from a Prescott-Su/Fan path decomposition count.
 
@@ -608,5 +667,41 @@ theorem kyFanPrefixParity_of_path_endpoint_count {n m : ℕ}
     (positiveAlternatingPrefixLabelChains_card_eq_negative label hantipodal).symm
     (even_card_of_fixedPointFree_involutive pathAntipode hinv hfree)
     hendpoints
+
+/--
+Ky Fan prefix parity from a structured path endpoint decomposition.
+
+The target endpoint classes are exactly the positive- and negative-first
+alternating signed-permutation prefix chains.  A later octahedral-path
+construction only has to provide `Endpoint`, the antipodal involution on paths,
+the two-endpoints-per-path proof, and the endpoint classification equivalence.
+-/
+theorem kyFanPrefixParity_of_path_endpoint_equiv {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    {Path Base : Type*} [Fintype Path] [Fintype Base]
+    (Endpoint : Path → Type*) [∀ p : Path, Fintype (Endpoint p)]
+    (pathAntipode : Path ≃ Path)
+    (hinv : Function.Involutive pathAntipode)
+    (hfree : ∀ p : Path, pathAntipode p ≠ p)
+    (htwo : ∀ p : Path, Fintype.card (Endpoint p) = 2)
+    (classify :
+      (Σ p : Path, Endpoint p) ≃
+        Base ⊕
+          ({P : SignedPermutation n // P ∈ positiveAlternatingPrefixLabelChains label} ⊕
+            {P : SignedPermutation n // P ∈ negativeAlternatingPrefixLabelChains label}))
+    (hbase : Fintype.card Base = 2) :
+    Odd (positiveAlternatingPrefixLabelChains label).card := by
+  classical
+  let Positive := {P : SignedPermutation n // P ∈ positiveAlternatingPrefixLabelChains label}
+  let Negative := {P : SignedPermutation n // P ∈ negativeAlternatingPrefixLabelChains label}
+  have hneg : Fintype.card Negative = Fintype.card Positive := by
+    simp [Positive, Negative, positiveAlternatingPrefixLabelChains_card_eq_negative label hantipodal]
+  have hodd :
+      Odd (Fintype.card Positive) :=
+    odd_card_positive_endpoints_of_path_endpoint_equiv
+      (Path := Path) (Base := Base) (Positive := Positive) (Negative := Negative)
+      Endpoint pathAntipode hinv hfree htwo classify hbase hneg
+  simpa [Positive] using hodd
 
 end ProofsInTheBook.TuckerLemmaCore

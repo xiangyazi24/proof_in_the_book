@@ -15,14 +15,38 @@ From *Proofs from THE BOOK*, Chapter 14:
 The old formalization only proved a pigeonhole statement from an already
 injective map into `Fin d → Bool`.  That is not the Chapter 14 argument.  This
 file now records the geometric objects and proves the Perles B/C-matrix
-counting step.  The remaining unformalized frontier is the extraction of the
-certified Perles matrix from a raw family of touching simplices; see
+counting step.  It also proves the local simplex-side geometry available in
+Mathlib: a simplex's closed body is weakly on the same side of each facet as
+the opposite vertex, and its relative interior is strictly on that side.
+The remaining unformalized frontier is the extraction of the certified Perles
+matrix from a raw family of touching simplices; see
 `PerlesFacetSeparationData` below for the exact missing fields:
 
 * enumerate the distinct oriented facet hyperplanes of the configuration;
-* prove each simplex contributes exactly `d+1` nonzero B-entries;
-* prove a touching pair has opposite signs in some shared facet hyperplane, and
-  construct a point outside all simplices and facet hyperplanes to obtain the
+  this file now constructs the finite type of distinct unoriented affine facet
+  hyperplanes and proves the local `d+1` lower bound, but the orientation and
+  halfspace package is still frontier;
+* prove the exact row-incidence count for the chosen global oriented
+  hyperplanes: `HasFacetIn` must be equivalent to equality with one of a
+  simplex's own `d+1` facet hyperplanes.  The remaining geometric lemma is a
+  no-accidental-containment/dimension fact: if the `d` vertices of a facet of
+  `S` are contained in another simplex facet hyperplane, then the two affine
+  facet hyperplanes are equal;
+* package affine facet hyperplanes as oriented halfspaces compatible with the
+  Mathlib `WSameSide`/`SSameSide` facts proved below; this file now orients
+  each concrete simplex facet by signed distance and proves the owning simplex
+  is on its positive side.  For each distinct hyperplane,
+  `FacetHyperplanes.oriented` chooses one incident facet and orients by that
+  facet; the remaining frontier is classifying all other incident simplices as
+  positive or negative for that chosen orientation;
+* prove a touching pair has opposite signs in some shared facet hyperplane from
+  the raw touching relation; `TouchesAcrossFacets` isolates the exact
+  opposite-vertex `SOppSide` condition and proves it implies
+  `TouchesAlongFacets`, and
+  `exists_orientedHyperplane_opposite_entries_of_touchesAcrossFacets` proves
+  the local opposite B-entries under that condition, but the
+  converse/extraction from raw touching remains unproved;
+* construct a point outside all simplices and facet hyperplanes to obtain the
   missing completed sign vector.
 
 Why this file does not claim `Fintype.card ι ≤ 2^d`: the current B/C-matrix
@@ -73,6 +97,195 @@ def DSimplex.facetHyperplane {d : ℕ} [NeZero d] (S : DSimplex d)
     (i : Fin (d + 1)) : AffineSubspace ℝ (Ambient d) :=
   affineSpan ℝ (Set.range (S.faceOpposite i).points)
 
+/-- The vertices of the facet opposite `i` lie in its facet hyperplane. -/
+lemma DSimplex.face_points_subset_facetHyperplane {d : ℕ} [NeZero d] (S : DSimplex d)
+    (i : Fin (d + 1)) :
+    Set.range (S.faceOpposite i).points ⊆ S.facetHyperplane i := by
+  intro p hp
+  exact mem_affineSpan ℝ hp
+
+/-- The vertex opposite a facet is not contained in the facet hyperplane. -/
+lemma DSimplex.opposite_vertex_notMem_facetHyperplane {d : ℕ} [NeZero d]
+    (S : DSimplex d) (i : Fin (d + 1)) :
+    S.points i ∉ S.facetHyperplane i := by
+  simp [DSimplex.facetHyperplane]
+
+/-- Distinct vertices determine distinct opposite facet hyperplanes. -/
+lemma DSimplex.facetHyperplane_injective {d : ℕ} [NeZero d] (S : DSimplex d) :
+    Function.Injective S.facetHyperplane := by
+  intro i j hij
+  by_contra hne
+  have hi_mem_j : S.points i ∈ S.facetHyperplane j := by
+    rw [DSimplex.facetHyperplane]
+    exact (S.points_mem_affineSpan_faceOpposite (i := j) (j := i)).2 hne
+  rw [← hij] at hi_mem_j
+  exact S.opposite_vertex_notMem_facetHyperplane i hi_mem_j
+
+/-- A simplex has exactly `d+1` distinct facet hyperplanes. -/
+lemma DSimplex.card_facetHyperplane_image {d : ℕ} [NeZero d] (S : DSimplex d) :
+    (Finset.univ.image S.facetHyperplane).card = d + 1 := by
+  classical
+  rw [Finset.card_image_of_injective _ S.facetHyperplane_injective]
+  simp
+
+/-- The set of distinct affine facet hyperplanes appearing in a finite family. -/
+def FacetHyperplaneSet {ι : Type*} {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d) : Set (AffineSubspace ℝ (Ambient d)) :=
+  Set.range fun x : ι × Fin (d + 1) => (simplices x.1).facetHyperplane x.2
+
+/-- A bundled finite type of distinct affine facet hyperplanes of a family. -/
+abbrev FacetHyperplanes {ι : Type*} {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d) : Type _ :=
+  {H : AffineSubspace ℝ (Ambient d) // H ∈ FacetHyperplaneSet simplices}
+
+lemma facetHyperplane_mem_facetHyperplaneSet {ι : Type*} {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d) (a : ι) (i : Fin (d + 1)) :
+    (simplices a).facetHyperplane i ∈ FacetHyperplaneSet simplices := by
+  exact ⟨(a, i), rfl⟩
+
+lemma finite_facetHyperplaneSet {ι : Type*} [Fintype ι] {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d) :
+    (FacetHyperplaneSet simplices).Finite := by
+  simpa [FacetHyperplaneSet] using
+    (Set.finite_range fun x : ι × Fin (d + 1) => (simplices x.1).facetHyperplane x.2)
+
+noncomputable instance facetHyperplanesFintype {ι : Type*} [Fintype ι] {d : ℕ}
+    [NeZero d] (simplices : ι → DSimplex d) : Fintype (FacetHyperplanes simplices) :=
+  (finite_facetHyperplaneSet simplices).fintype
+
+/-- The facet-hyperplane subtype element corresponding to one concrete facet. -/
+def facetHyperplaneIndexOf {ι : Type*} {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d) (a : ι) (i : Fin (d + 1)) :
+    FacetHyperplanes simplices :=
+  ⟨(simplices a).facetHyperplane i, facetHyperplane_mem_facetHyperplaneSet simplices a i⟩
+
+lemma facetHyperplaneIndexOf_injective {ι : Type*} {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d) (a : ι) :
+    Function.Injective (facetHyperplaneIndexOf simplices a) := by
+  intro i j hij
+  exact (simplices a).facetHyperplane_injective (Subtype.ext_iff.mp hij)
+
+/--
+For a nonempty finite family, the distinct affine facet hyperplanes have
+cardinality at least `d+1`, because the facets of any one simplex are distinct.
+-/
+lemma card_facetHyperplanes_ge {ι : Type*} [Fintype ι] [Nonempty ι] {d : ℕ}
+    [NeZero d] (simplices : ι → DSimplex d) :
+    d + 1 ≤ Fintype.card (FacetHyperplanes simplices) := by
+  classical
+  let a : ι := Classical.choice (inferInstance : Nonempty ι)
+  calc
+    d + 1 = Fintype.card (Fin (d + 1)) := by simp
+    _ ≤ Fintype.card (FacetHyperplanes simplices) :=
+      Fintype.card_le_of_injective (facetHyperplaneIndexOf simplices a)
+        (facetHyperplaneIndexOf_injective simplices a)
+
+/--
+Every point of a simplex's closed body is weakly on the same side of a facet
+hyperplane as the opposite vertex.
+-/
+lemma DSimplex.body_wSameSide_opposite_vertex {d : ℕ} [NeZero d] (S : DSimplex d)
+    (i : Fin (d + 1)) {p : Ambient d} (hp : p ∈ S.body) :
+    (S.facetHyperplane i).WSameSide p (S.points i) := by
+  rw [DSimplex.body] at hp
+  rcases hp with ⟨w, hw, hw01, rfl⟩
+  rw [DSimplex.facetHyperplane]
+  exact (S.wSameSide_affineSpan_faceOpposite_point_right_iff hw).2 (hw01 i).1
+
+/--
+Signed-distance form of the previous weak-side fact: if a facet is oriented
+toward its opposite vertex by `Affine.Simplex.signedInfDist`, then the whole
+closed simplex has nonnegative signed distance from that facet.
+-/
+lemma DSimplex.signedInfDist_nonneg_of_mem_body {d : ℕ} [NeZero d] (S : DSimplex d)
+    (i : Fin (d + 1)) {p : Ambient d} (hp : p ∈ S.body) :
+    0 ≤ S.signedInfDist i p := by
+  rw [DSimplex.body] at hp
+  rcases hp with ⟨w, hw, hw01, rfl⟩
+  rw [S.signedInfDist_affineCombination i hw]
+  exact mul_nonneg (hw01 i).1 (norm_nonneg _)
+
+/-- The opposite vertex has nonzero perpendicular displacement from its facet span. -/
+lemma DSimplex.opposite_vertex_vsub_orthogonalProjectionSpan_ne_zero {d : ℕ}
+    [NeZero d] (S : DSimplex d) (i : Fin (d + 1)) :
+    S.points i -ᵥ (S.faceOpposite i).orthogonalProjectionSpan (S.points i) ≠ 0 := by
+  intro hzero
+  have hEq :
+      S.points i = ((S.faceOpposite i).orthogonalProjectionSpan (S.points i) : Ambient d) :=
+    vsub_eq_zero_iff_eq.mp hzero
+  have hmem : S.points i ∈ S.facetHyperplane i := by
+    rw [hEq, DSimplex.facetHyperplane]
+    exact ((S.faceOpposite i).orthogonalProjectionSpan (S.points i)).2
+  exact S.opposite_vertex_notMem_facetHyperplane i hmem
+
+/--
+The signed-distance orientation is strictly positive on the simplex relative
+interior.
+-/
+lemma DSimplex.signedInfDist_pos_of_mem_relInterior {d : ℕ} [NeZero d]
+    (S : DSimplex d) (i : Fin (d + 1)) {p : Ambient d} (hp : p ∈ S.relInterior) :
+    0 < S.signedInfDist i p := by
+  rw [DSimplex.relInterior] at hp
+  rcases hp with ⟨w, hw, hw01, rfl⟩
+  rw [S.signedInfDist_affineCombination i hw]
+  exact mul_pos (hw01 i).1
+    (norm_pos_iff.mpr (S.opposite_vertex_vsub_orthogonalProjectionSpan_ne_zero i))
+
+/--
+Every point of a simplex's relative interior is strictly on the same side of a
+facet hyperplane as the opposite vertex.
+-/
+lemma DSimplex.relInterior_sSameSide_opposite_vertex {d : ℕ} [NeZero d]
+    (S : DSimplex d) (i : Fin (d + 1)) {p : Ambient d} (hp : p ∈ S.relInterior) :
+    (S.facetHyperplane i).SSameSide p (S.points i) := by
+  rw [DSimplex.relInterior] at hp
+  rcases hp with ⟨w, hw, hw01, rfl⟩
+  rw [DSimplex.facetHyperplane]
+  exact (S.sSameSide_affineSpan_faceOpposite_point_right_iff hw).2 (hw01 i).1
+
+/--
+If two simplices have a common facet hyperplane and the two opposite vertices
+are strictly on opposite sides of it, then all relative-interior points are
+strictly on opposite sides.  This is the formal local side-composition lemma
+needed for the geometric `pairwiseOpposite` field.
+-/
+lemma DSimplex.relInterior_sOppSide_of_commonFacet_of_vertices_sOppSide {d : ℕ}
+    [NeZero d] (S T : DSimplex d) (i j : Fin (d + 1))
+    {p q : Ambient d} (hp : p ∈ S.relInterior) (hq : q ∈ T.relInterior)
+    (hfacet : S.facetHyperplane i = T.facetHyperplane j)
+    (hopposite : (S.facetHyperplane i).SOppSide (S.points i) (T.points j)) :
+    (S.facetHyperplane i).SOppSide p q := by
+  have hp_side := S.relInterior_sSameSide_opposite_vertex i hp
+  have hq_side : (S.facetHyperplane i).SSameSide (T.points j) q := by
+    simpa [hfacet] using (T.relInterior_sSameSide_opposite_vertex j hq).symm
+  exact (hp_side.trans_sOppSide hopposite).trans_sSameSide hq_side
+
+/--
+Closed-body version of the same side-composition fact: under the same common
+facet/opposite-vertex hypothesis, any two body points are weakly on opposite
+sides of the common facet hyperplane.
+-/
+lemma DSimplex.body_wOppSide_of_commonFacet_of_vertices_sOppSide {d : ℕ}
+    [NeZero d] (S T : DSimplex d) (i j : Fin (d + 1))
+    {p q : Ambient d} (hp : p ∈ S.body) (hq : q ∈ T.body)
+    (hfacet : S.facetHyperplane i = T.facetHyperplane j)
+    (hopposite : (S.facetHyperplane i).SOppSide (S.points i) (T.points j)) :
+    (S.facetHyperplane i).WOppSide p q := by
+  have hp_side := S.body_wSameSide_opposite_vertex i hp
+  have hq_side : (S.facetHyperplane i).WSameSide (T.points j) q := by
+    simpa [hfacet] using (T.body_wSameSide_opposite_vertex j hq).symm
+  exact (hp_side.trans_sOppSide hopposite).trans_wSameSide hq_side hopposite.2.2
+
+/--
+Structured touching data across a specified common facet hyperplane: the closed
+bodies meet, and the two opposite vertices are strictly on opposite sides of
+that common facet hyperplane.
+-/
+def TouchesAcrossFacets {d : ℕ} [NeZero d] (S T : DSimplex d) : Prop :=
+  (S.body ∩ T.body).Nonempty ∧
+    ∃ i j, S.facetHyperplane i = T.facetHyperplane j ∧
+      (S.facetHyperplane i).SOppSide (S.points i) (T.points j)
+
 /--
 Two `d`-simplices touch along facets if their relative interiors are disjoint,
 their closed bodies meet, and some facet hyperplane of one agrees with a facet
@@ -88,10 +301,36 @@ def TouchesAlongFacets {d : ℕ} [NeZero d] (S T : DSimplex d) : Prop :=
     (S.body ∩ T.body).Nonempty ∧
       ∃ i j, S.facetHyperplane i = T.facetHyperplane j
 
+/--
+The opposite-vertex side condition is strong enough to imply disjoint relative
+interiors, hence the weaker `TouchesAlongFacets` relation.
+-/
+lemma touchesAlongFacets_of_touchesAcrossFacets {d : ℕ} [NeZero d]
+    {S T : DSimplex d} (h : TouchesAcrossFacets S T) :
+    TouchesAlongFacets S T := by
+  rcases h with ⟨hmeet, i, j, hfacet, hopposite⟩
+  refine ⟨?_, hmeet, ⟨i, j, hfacet⟩⟩
+  rw [Set.disjoint_left]
+  intro p hpS hpT
+  exact AffineSubspace.not_sOppSide_self (S.facetHyperplane i) p
+    (S.relInterior_sOppSide_of_commonFacet_of_vertices_sOppSide T i j hpS hpT hfacet hopposite)
+
 /-- A finite family of pairwise touching `d`-simplices. -/
 def PairwiseTouching {ι : Type*} {d : ℕ} [NeZero d]
     (simplices : ι → DSimplex d) : Prop :=
   ∀ ⦃i j : ι⦄, i ≠ j → TouchesAlongFacets (simplices i) (simplices j)
+
+/-- Pairwise touching with the stronger explicit opposite-side facet data. -/
+def PairwiseTouchingAcrossFacets {ι : Type*} {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d) : Prop :=
+  ∀ ⦃i j : ι⦄, i ≠ j → TouchesAcrossFacets (simplices i) (simplices j)
+
+lemma pairwiseTouching_of_pairwiseTouchingAcrossFacets {ι : Type*} {d : ℕ}
+    [NeZero d] {simplices : ι → DSimplex d}
+    (h : PairwiseTouchingAcrossFacets simplices) :
+    PairwiseTouching simplices := by
+  intro i j hij
+  exact touchesAlongFacets_of_touchesAcrossFacets (h hij)
 
 /--
 An oriented affine hyperplane, represented by its carrier and the two closed
@@ -108,9 +347,90 @@ structure OrientedHyperplane (d : ℕ) where
 
 namespace OrientedHyperplane
 
+/--
+Orient one concrete simplex facet by signed distance, with the positive side
+chosen toward the facet's opposite vertex.
+-/
+def ofSimplexFacet {d : ℕ} [NeZero d] (S : DSimplex d) (i : Fin (d + 1)) :
+    OrientedHyperplane d where
+  carrier := S.facetHyperplane i
+  positiveSide := {p | 0 ≤ S.signedInfDist i p}
+  negativeSide := {p | S.signedInfDist i p ≤ 0}
+
+/--
+Orient one concrete simplex facet using Mathlib's weak side predicates.  This
+orientation is useful for the Perles B-entry proof because opposite vertices on
+opposite strict sides immediately force opposite weak-side containment.
+-/
+def ofSimplexFacetSide {d : ℕ} [NeZero d] (S : DSimplex d) (i : Fin (d + 1)) :
+    OrientedHyperplane d where
+  carrier := S.facetHyperplane i
+  positiveSide := {p | (S.facetHyperplane i).WSameSide p (S.points i)}
+  negativeSide := {p | (S.facetHyperplane i).WOppSide p (S.points i)}
+
 /-- A simplex has a facet in the carrier of an oriented hyperplane. -/
 def HasFacetIn {d : ℕ} [NeZero d] (H : OrientedHyperplane d) (S : DSimplex d) : Prop :=
   ∃ i : Fin (d + 1), Set.range (S.faceOpposite i).points ⊆ H.carrier
+
+lemma ofSimplexFacet_hasFacetIn_self {d : ℕ} [NeZero d] (S : DSimplex d)
+    (i : Fin (d + 1)) :
+    (ofSimplexFacet S i).HasFacetIn S := by
+  exact ⟨i, by simpa [ofSimplexFacet] using S.face_points_subset_facetHyperplane i⟩
+
+lemma ofSimplexFacetSide_hasFacetIn_self {d : ℕ} [NeZero d] (S : DSimplex d)
+    (i : Fin (d + 1)) :
+    (ofSimplexFacetSide S i).HasFacetIn S := by
+  exact ⟨i, by simpa [ofSimplexFacetSide] using S.face_points_subset_facetHyperplane i⟩
+
+lemma ofSimplexFacetSide_hasFacetIn_of_commonFacet {d : ℕ} [NeZero d]
+    (S T : DSimplex d) (i j : Fin (d + 1))
+    (hfacet : S.facetHyperplane i = T.facetHyperplane j) :
+    (ofSimplexFacetSide S i).HasFacetIn T := by
+  refine ⟨j, ?_⟩
+  intro p hp
+  have hp' : p ∈ T.facetHyperplane j := T.face_points_subset_facetHyperplane j hp
+  simpa [ofSimplexFacetSide, ← hfacet] using hp'
+
+lemma body_subset_positiveSide_ofSimplexFacet {d : ℕ} [NeZero d] (S : DSimplex d)
+    (i : Fin (d + 1)) :
+    S.body ⊆ (ofSimplexFacet S i).positiveSide := by
+  intro p hp
+  simpa [ofSimplexFacet] using S.signedInfDist_nonneg_of_mem_body i hp
+
+lemma body_subset_positiveSide_ofSimplexFacetSide {d : ℕ} [NeZero d] (S : DSimplex d)
+    (i : Fin (d + 1)) :
+    S.body ⊆ (ofSimplexFacetSide S i).positiveSide := by
+  intro p hp
+  simpa [ofSimplexFacetSide] using S.body_wSameSide_opposite_vertex i hp
+
+lemma relInterior_subset_positiveSide_ofSimplexFacet {d : ℕ} [NeZero d]
+    (S : DSimplex d) (i : Fin (d + 1)) :
+    S.relInterior ⊆ (ofSimplexFacet S i).positiveSide := by
+  intro p hp
+  simpa [ofSimplexFacet] using (S.signedInfDist_pos_of_mem_relInterior i hp).le
+
+lemma body_subset_negativeSide_ofSimplexFacetSide_of_vertices_sOppSide {d : ℕ}
+    [NeZero d] (S T : DSimplex d) (i j : Fin (d + 1))
+    (hfacet : S.facetHyperplane i = T.facetHyperplane j)
+    (hopposite : (S.facetHyperplane i).SOppSide (S.points i) (T.points j)) :
+    T.body ⊆ (ofSimplexFacetSide S i).negativeSide := by
+  intro q hq
+  have hpS : S.points i ∈ S.body := by
+    simpa [DSimplex.body] using S.point_mem_closedInterior i
+  have hOpp :=
+    S.body_wOppSide_of_commonFacet_of_vertices_sOppSide T i j hpS hq hfacet hopposite
+  simpa [ofSimplexFacetSide] using hOpp.symm
+
+lemma not_body_subset_positiveSide_ofSimplexFacetSide_of_vertices_sOppSide {d : ℕ}
+    [NeZero d] (S T : DSimplex d) (i j : Fin (d + 1))
+    (hopposite : (S.facetHyperplane i).SOppSide (S.points i) (T.points j)) :
+    ¬ T.body ⊆ (ofSimplexFacetSide S i).positiveSide := by
+  intro hsub
+  have hT : T.points j ∈ T.body := by
+    simpa [DSimplex.body] using T.point_mem_closedInterior j
+  have hsame : (S.facetHyperplane i).WSameSide (T.points j) (S.points i) := by
+    simpa [ofSimplexFacetSide] using hsub hT
+  exact hopposite.not_wSameSide hsame.symm
 
 /--
 The `B`-matrix entry attached to a simplex and an oriented facet hyperplane.
@@ -132,7 +452,116 @@ def simplexFacetSide {d : ℕ} [NeZero d] (H : OrientedHyperplane d)
     else
       none
 
+/-- The signed-distance orientation of a simplex's own facet gives a positive B-entry. -/
+lemma simplexFacetSide_ofSimplexFacet_self {d : ℕ} [NeZero d] (S : DSimplex d)
+    (i : Fin (d + 1)) :
+    (ofSimplexFacet S i).simplexFacetSide S = some true := by
+  classical
+  unfold simplexFacetSide
+  rw [if_pos (ofSimplexFacet_hasFacetIn_self S i)]
+  rw [if_pos (body_subset_positiveSide_ofSimplexFacet S i)]
+
+/-- The side-predicate orientation of a simplex's own facet gives a positive B-entry. -/
+lemma simplexFacetSide_ofSimplexFacetSide_self {d : ℕ} [NeZero d] (S : DSimplex d)
+    (i : Fin (d + 1)) :
+    (ofSimplexFacetSide S i).simplexFacetSide S = some true := by
+  classical
+  unfold simplexFacetSide
+  rw [if_pos (ofSimplexFacetSide_hasFacetIn_self S i)]
+  rw [if_pos (body_subset_positiveSide_ofSimplexFacetSide S i)]
+
+/--
+If another simplex has the same facet hyperplane and its opposite vertex is
+strictly on the opposite side, the side-predicate orientation gives that
+simplex a negative B-entry.
+-/
+lemma simplexFacetSide_ofSimplexFacetSide_of_vertices_sOppSide {d : ℕ} [NeZero d]
+    (S T : DSimplex d) (i j : Fin (d + 1))
+    (hfacet : S.facetHyperplane i = T.facetHyperplane j)
+    (hopposite : (S.facetHyperplane i).SOppSide (S.points i) (T.points j)) :
+    (ofSimplexFacetSide S i).simplexFacetSide T = some false := by
+  classical
+  unfold simplexFacetSide
+  rw [if_pos (ofSimplexFacetSide_hasFacetIn_of_commonFacet S T i j hfacet)]
+  rw [if_neg (not_body_subset_positiveSide_ofSimplexFacetSide_of_vertices_sOppSide
+    S T i j hopposite)]
+  rw [if_pos (body_subset_negativeSide_ofSimplexFacetSide_of_vertices_sOppSide
+    S T i j hfacet hopposite)]
+
 end OrientedHyperplane
+
+/--
+For one across-facet touching pair, the side-predicate orientation of the first
+simplex's common facet gives opposite B-entries.  This is the local geometric
+content of the `pairwiseOpposite` matrix field, before choosing a single global
+finite hyperplane index type for the whole configuration.
+-/
+lemma exists_orientedHyperplane_opposite_entries_of_touchesAcrossFacets {d : ℕ}
+    [NeZero d] {S T : DSimplex d} (h : TouchesAcrossFacets S T) :
+    ∃ H : OrientedHyperplane d, ∃ b : Bool,
+      H.simplexFacetSide S = some b ∧ H.simplexFacetSide T = some (!b) := by
+  rcases h with ⟨_, i, j, hfacet, hopposite⟩
+  refine ⟨OrientedHyperplane.ofSimplexFacetSide S i, true, ?_, ?_⟩
+  · exact OrientedHyperplane.simplexFacetSide_ofSimplexFacetSide_self S i
+  · simpa using
+      OrientedHyperplane.simplexFacetSide_ofSimplexFacetSide_of_vertices_sOppSide
+        S T i j hfacet hopposite
+
+namespace FacetHyperplanes
+
+variable {ι : Type*} {d : ℕ} [NeZero d] (simplices : ι → DSimplex d)
+
+/-- A chosen concrete facet witnessing a bundled distinct facet hyperplane. -/
+noncomputable def witness (H : FacetHyperplanes simplices) : ι × Fin (d + 1) :=
+  Classical.choose H.2
+
+lemma witness_spec (H : FacetHyperplanes simplices) :
+    (simplices (witness simplices H).1).facetHyperplane (witness simplices H).2 = H.1 :=
+  Classical.choose_spec H.2
+
+/--
+Orient a distinct facet hyperplane by the signed-distance orientation of one
+chosen incident facet.
+-/
+noncomputable def oriented (H : FacetHyperplanes simplices) : OrientedHyperplane d where
+  carrier := H.1
+  positiveSide :=
+    (OrientedHyperplane.ofSimplexFacet (simplices (witness simplices H).1)
+      (witness simplices H).2).positiveSide
+  negativeSide :=
+    (OrientedHyperplane.ofSimplexFacet (simplices (witness simplices H).1)
+      (witness simplices H).2).negativeSide
+
+lemma oriented_hasFacetIn_witness (H : FacetHyperplanes simplices) :
+    (oriented simplices H).HasFacetIn (simplices (witness simplices H).1) := by
+  refine ⟨(witness simplices H).2, ?_⟩
+  intro p hp
+  have hp' :
+      p ∈ (simplices (witness simplices H).1).facetHyperplane (witness simplices H).2 :=
+    (simplices (witness simplices H).1).face_points_subset_facetHyperplane
+      (witness simplices H).2 hp
+  simpa [oriented, witness_spec simplices H] using hp'
+
+lemma body_subset_positiveSide_oriented_witness (H : FacetHyperplanes simplices) :
+    (simplices (witness simplices H).1).body ⊆ (oriented simplices H).positiveSide := by
+  intro p hp
+  simpa [oriented] using
+    OrientedHyperplane.body_subset_positiveSide_ofSimplexFacet
+      (simplices (witness simplices H).1) (witness simplices H).2 hp
+
+/--
+For the chosen witness facet of a distinct hyperplane, the induced global
+orientation gives a positive B-entry.
+-/
+lemma simplexFacetSide_oriented_witness_self (H : FacetHyperplanes simplices) :
+    (oriented simplices H).simplexFacetSide (simplices (witness simplices H).1) =
+      some true := by
+  classical
+  unfold OrientedHyperplane.simplexFacetSide
+  rw [if_pos (oriented_hasFacetIn_witness simplices H)]
+  rw [if_pos (body_subset_positiveSide_oriented_witness simplices H)]
+
+end FacetHyperplanes
 
 /-! ## Perles B/C-matrix core -/
 
@@ -343,14 +772,33 @@ objects, but this file does not yet prove that every raw pairwise touching
 family supplies these data.  In playbook point-17 terms, `chapter14` below is
 state ③: conditional on the unproved geometric extraction of these fields.
 
-The missing geometric construction is not a single Lean API lookup.  It requires
-at least the following facts:
+This file now discharges the local simplex-side facts: see
+`DSimplex.body_wSameSide_opposite_vertex`,
+`DSimplex.relInterior_sSameSide_opposite_vertex`,
+`DSimplex.facetHyperplane_injective`, and the two common-facet side-composition
+lemmas above.  The remaining geometric construction is not a single Lean API
+lookup.  It still requires at least the following facts:
 
 * build the finite type of distinct facet hyperplanes from all simplex facets;
-* orient each affine hyperplane by closed halfspaces in `EuclideanSpace ℝ (Fin d)`;
-* prove every simplex with a facet in a listed hyperplane lies entirely in one
-  of the two closed sides;
-* prove that touching along a common facet forces opposite side signs;
+  the unoriented affine version is now `FacetHyperplanes`, with
+  `card_facetHyperplanes_ge` proving the local `d+1` lower bound for nonempty
+  families;
+* prove the exact row-zero count for `simplexFacetSide`; after constructing
+  global oriented hyperplanes this reduces to a no-accidental-containment
+  lemma saying that a simplex facet's vertices can be contained in a listed
+  facet hyperplane only when the affine facet hyperplanes are equal;
+* orient each such affine hyperplane by closed halfspaces in
+  `EuclideanSpace ℝ (Fin d)` and connect those halfspaces to Mathlib's
+  `WSameSide`/`SSameSide` predicates; `FacetHyperplanes.oriented` chooses one
+  incident facet for each distinct hyperplane, and
+  `simplexFacetSide_oriented_witness_self` proves that witness simplex's
+  positive B-entry, but all other incident simplices must still be classified
+  as lying in the chosen positive or negative side;
+* prove that the raw touching relation forces the opposite-vertex `SOppSide`
+  hypothesis isolated by `TouchesAcrossFacets`; the local opposite B-entry
+  theorem is now
+  `exists_orientedHyperplane_opposite_entries_of_touchesAcrossFacets`, but it
+  is not yet assembled into one global finite Perles matrix;
 * choose a point avoiding the finite union of facet hyperplanes and simplex
   bodies to obtain the missing completed sign vector.
 

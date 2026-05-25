@@ -27,11 +27,11 @@ matrix from a raw family of touching simplices; see
   hyperplanes and proves the local `d+1` lower bound, but the orientation and
   halfspace package is still frontier;
 * prove the exact row-incidence count for the chosen global oriented
-  hyperplanes: `HasFacetIn` must be equivalent to equality with one of a
-  simplex's own `d+1` facet hyperplanes.  The remaining geometric lemma is a
-  no-accidental-containment/dimension fact: if the `d` vertices of a facet of
-  `S` are contained in another simplex facet hyperplane, then the two affine
-  facet hyperplanes are equal;
+  hyperplanes: this file now proves the no-accidental-containment/dimension
+  fact needed to turn `HasFacetIn` into equality with one of a simplex's own
+  `d+1` facet hyperplanes.  The remaining row-count work is the global
+  orientation/side classification needed to make `simplexFacetSide = none`
+  exactly mean "no incident facet";
 * package affine facet hyperplanes as oriented halfspaces compatible with the
   Mathlib `WSameSide`/`SSameSide` facts proved below; this file now orients
   each concrete simplex facet by signed distance and proves the owning simplex
@@ -127,6 +127,31 @@ lemma DSimplex.card_facetHyperplane_image {d : ℕ} [NeZero d] (S : DSimplex d) 
   classical
   rw [Finset.card_image_of_injective _ S.facetHyperplane_injective]
   simp
+
+/-- The direction of a simplex facet hyperplane has dimension `d - 1`. -/
+lemma DSimplex.finrank_direction_facetHyperplane {d : ℕ} [NeZero d] (S : DSimplex d)
+    (i : Fin (d + 1)) :
+    Module.finrank ℝ (S.facetHyperplane i).direction = d - 1 := by
+  rw [DSimplex.facetHyperplane, direction_affineSpan]
+  exact (S.faceOpposite i).independent.finrank_vectorSpan (Fintype.card_fin _)
+
+/--
+No accidental containment: if all vertices of one facet of `S` lie in a facet
+hyperplane of `T`, then the two facet hyperplanes are equal.
+-/
+lemma DSimplex.facetHyperplane_eq_of_face_points_subset {d : ℕ} [NeZero d]
+    (S T : DSimplex d) (i j : Fin (d + 1))
+    (hsubset : Set.range (S.faceOpposite i).points ⊆ T.facetHyperplane j) :
+    S.facetHyperplane i = T.facetHyperplane j := by
+  have hle : S.facetHyperplane i ≤ T.facetHyperplane j :=
+    affineSpan_le_of_subset_coe hsubset
+  have hdir : (S.facetHyperplane i).direction = (T.facetHyperplane j).direction := by
+    refine Submodule.eq_of_le_of_finrank_eq (AffineSubspace.direction_le hle) ?_
+    rw [S.finrank_direction_facetHyperplane i, T.finrank_direction_facetHyperplane j]
+  have hnonempty : (S.facetHyperplane i : Set (Ambient d)).Nonempty := by
+    exact ⟨(S.faceOpposite i).points 0,
+      S.face_points_subset_facetHyperplane i (Set.mem_range_self 0)⟩
+  exact AffineSubspace.eq_of_direction_eq_of_nonempty_of_le hdir hnonempty hle
 
 /-- The set of distinct affine facet hyperplanes appearing in a finite family. -/
 def FacetHyperplaneSet {ι : Type*} {d : ℕ} [NeZero d]
@@ -391,6 +416,33 @@ lemma ofSimplexFacetSide_hasFacetIn_of_commonFacet {d : ℕ} [NeZero d]
   have hp' : p ∈ T.facetHyperplane j := T.face_points_subset_facetHyperplane j hp
   simpa [ofSimplexFacetSide, ← hfacet] using hp'
 
+lemma ofSimplexFacet_hasFacetIn_iff {d : ℕ} [NeZero d]
+    (S T : DSimplex d) (i : Fin (d + 1)) :
+    (ofSimplexFacet S i).HasFacetIn T ↔
+      ∃ j : Fin (d + 1), T.facetHyperplane j = S.facetHyperplane i := by
+  constructor
+  · rintro ⟨j, hsub⟩
+    have hsub' : Set.range (T.faceOpposite j).points ⊆ S.facetHyperplane i := by
+      simpa [ofSimplexFacet] using hsub
+    exact ⟨j, T.facetHyperplane_eq_of_face_points_subset S j i hsub'⟩
+  · rintro ⟨j, hfacet⟩
+    refine ⟨j, ?_⟩
+    intro p hp
+    have hp' : p ∈ T.facetHyperplane j := T.face_points_subset_facetHyperplane j hp
+    simpa [ofSimplexFacet, ← hfacet] using hp'
+
+lemma ofSimplexFacetSide_hasFacetIn_iff {d : ℕ} [NeZero d]
+    (S T : DSimplex d) (i : Fin (d + 1)) :
+    (ofSimplexFacetSide S i).HasFacetIn T ↔
+      ∃ j : Fin (d + 1), T.facetHyperplane j = S.facetHyperplane i := by
+  constructor
+  · rintro ⟨j, hsub⟩
+    have hsub' : Set.range (T.faceOpposite j).points ⊆ S.facetHyperplane i := by
+      simpa [ofSimplexFacetSide] using hsub
+    exact ⟨j, T.facetHyperplane_eq_of_face_points_subset S j i hsub'⟩
+  · rintro ⟨j, hfacet⟩
+    exact ofSimplexFacetSide_hasFacetIn_of_commonFacet S T i j hfacet.symm
+
 lemma body_subset_positiveSide_ofSimplexFacet {d : ℕ} [NeZero d] (S : DSimplex d)
     (i : Fin (d + 1)) :
     S.body ⊆ (ofSimplexFacet S i).positiveSide := by
@@ -451,6 +503,26 @@ def simplexFacetSide {d : ℕ} [NeZero d] (H : OrientedHyperplane d)
         none
     else
       none
+
+lemma simplexFacetSide_eq_none_iff_not_hasFacetIn_of_side_complete {d : ℕ} [NeZero d]
+    (H : OrientedHyperplane d) (S : DSimplex d)
+    (hside : H.HasFacetIn S → S.body ⊆ H.positiveSide ∨ S.body ⊆ H.negativeSide) :
+    H.simplexFacetSide S = none ↔ ¬ H.HasFacetIn S := by
+  constructor
+  · intro hnone hfacet
+    unfold simplexFacetSide at hnone
+    rw [if_pos hfacet] at hnone
+    rcases hside hfacet with hpos | hneg
+    · rw [if_pos hpos] at hnone
+      simp at hnone
+    · by_cases hpos : S.body ⊆ H.positiveSide
+      · rw [if_pos hpos] at hnone
+        simp at hnone
+      · rw [if_neg hpos, if_pos hneg] at hnone
+        simp at hnone
+  · intro hnot
+    unfold simplexFacetSide
+    rw [if_neg hnot]
 
 /-- The signed-distance orientation of a simplex's own facet gives a positive B-entry. -/
 lemma simplexFacetSide_ofSimplexFacet_self {d : ℕ} [NeZero d] (S : DSimplex d)
@@ -542,6 +614,25 @@ lemma oriented_hasFacetIn_witness (H : FacetHyperplanes simplices) :
       (witness simplices H).2 hp
   simpa [oriented, witness_spec simplices H] using hp'
 
+lemma oriented_hasFacetIn_iff (H : FacetHyperplanes simplices) (T : DSimplex d) :
+    (oriented simplices H).HasFacetIn T ↔
+      ∃ j : Fin (d + 1), T.facetHyperplane j = H.1 := by
+  constructor
+  · rintro ⟨j, hsub⟩
+    have hsub_carrier : Set.range (T.faceOpposite j).points ⊆ H.1 := by
+      simpa [oriented] using hsub
+    have hsub_witness : Set.range (T.faceOpposite j).points ⊆
+        (simplices (witness simplices H).1).facetHyperplane (witness simplices H).2 := by
+      simpa [witness_spec simplices H] using hsub_carrier
+    have hEq := T.facetHyperplane_eq_of_face_points_subset
+      (simplices (witness simplices H).1) j (witness simplices H).2 hsub_witness
+    exact ⟨j, by simpa [witness_spec simplices H] using hEq⟩
+  · rintro ⟨j, hfacet⟩
+    refine ⟨j, ?_⟩
+    intro p hp
+    have hp' : p ∈ T.facetHyperplane j := T.face_points_subset_facetHyperplane j hp
+    simpa [oriented, ← hfacet] using hp'
+
 lemma body_subset_positiveSide_oriented_witness (H : FacetHyperplanes simplices) :
     (simplices (witness simplices H).1).body ⊆ (oriented simplices H).positiveSide := by
   intro p hp
@@ -560,6 +651,81 @@ lemma simplexFacetSide_oriented_witness_self (H : FacetHyperplanes simplices) :
   unfold OrientedHyperplane.simplexFacetSide
   rw [if_pos (oriented_hasFacetIn_witness simplices H)]
   rw [if_pos (body_subset_positiveSide_oriented_witness simplices H)]
+
+lemma oriented_hasFacetIn_iff_exists_facetHyperplaneIndexOf
+    (H : FacetHyperplanes simplices) (a : ι) :
+    (oriented simplices H).HasFacetIn (simplices a) ↔
+      ∃ i : Fin (d + 1), facetHyperplaneIndexOf simplices a i = H := by
+  constructor
+  · rintro ⟨i, hsubset⟩
+    have hsubsetH :
+        Set.range ((simplices a).faceOpposite i).points ⊆ (H.1 : Set (Ambient d)) := by
+      simpa [oriented] using hsubset
+    have hsubsetWitness :
+        Set.range ((simplices a).faceOpposite i).points ⊆
+          (simplices (witness simplices H).1).facetHyperplane (witness simplices H).2 := by
+      intro p hp
+      rw [witness_spec simplices H]
+      exact hsubsetH hp
+    have heq :
+        (simplices a).facetHyperplane i =
+          (simplices (witness simplices H).1).facetHyperplane (witness simplices H).2 :=
+      (simplices a).facetHyperplane_eq_of_face_points_subset
+        (simplices (witness simplices H).1) i (witness simplices H).2 hsubsetWitness
+    refine ⟨i, Subtype.ext ?_⟩
+    exact heq.trans (witness_spec simplices H)
+  · rintro ⟨i, rfl⟩
+    refine ⟨i, ?_⟩
+    intro p hp
+    simpa [oriented] using (simplices a).face_points_subset_facetHyperplane i hp
+
+/--
+For the global type of distinct facet hyperplanes, a fixed simplex is incident
+with exactly its own `d+1` facet hyperplanes.
+-/
+lemma card_oriented_hasFacetIn [Fintype ι] (a : ι) :
+    (Finset.univ.filter fun H : FacetHyperplanes simplices =>
+      (oriented simplices H).HasFacetIn (simplices a)).card = d + 1 := by
+  classical
+  have hfilter :
+      (Finset.univ.filter fun H : FacetHyperplanes simplices =>
+        (oriented simplices H).HasFacetIn (simplices a)) =
+        Finset.univ.image (facetHyperplaneIndexOf simplices a) := by
+    ext H
+    simp [oriented_hasFacetIn_iff_exists_facetHyperplaneIndexOf]
+  rw [hfilter, Finset.card_image_of_injective _ (facetHyperplaneIndexOf_injective simplices a)]
+  simp
+
+/--
+Once every incident simplex is certified to lie in one of the two oriented
+sides, the zero count in the Perles B-row follows from the exact facet
+incidence count.
+-/
+lemma rowZeroCard_of_side_complete [Fintype ι] (a : ι)
+    (hside : ∀ H : FacetHyperplanes simplices,
+      (oriented simplices H).HasFacetIn (simplices a) →
+        (simplices a).body ⊆ (oriented simplices H).positiveSide ∨
+          (simplices a).body ⊆ (oriented simplices H).negativeSide) :
+    (Finset.univ.filter fun H : FacetHyperplanes simplices =>
+      (oriented simplices H).simplexFacetSide (simplices a) = none).card =
+        Fintype.card (FacetHyperplanes simplices) - (d + 1) := by
+  classical
+  have hfilter :
+      (Finset.univ.filter fun H : FacetHyperplanes simplices =>
+        (oriented simplices H).simplexFacetSide (simplices a) = none) =
+        Finset.univ.filter fun H : FacetHyperplanes simplices =>
+          ¬ (oriented simplices H).HasFacetIn (simplices a) := by
+    apply Finset.filter_congr
+    intro H _
+    exact OrientedHyperplane.simplexFacetSide_eq_none_iff_not_hasFacetIn_of_side_complete
+      (oriented simplices H) (simplices a) (hside H)
+  rw [hfilter]
+  have hsum := Finset.card_filter_add_card_filter_not
+    (s := (Finset.univ : Finset (FacetHyperplanes simplices)))
+    (p := fun H : FacetHyperplanes simplices =>
+      (oriented simplices H).HasFacetIn (simplices a))
+  rw [card_oriented_hasFacetIn simplices a, Finset.card_univ] at hsum
+  omega
 
 end FacetHyperplanes
 
@@ -783,10 +949,12 @@ lookup.  It still requires at least the following facts:
   the unoriented affine version is now `FacetHyperplanes`, with
   `card_facetHyperplanes_ge` proving the local `d+1` lower bound for nonempty
   families;
-* prove the exact row-zero count for `simplexFacetSide`; after constructing
-  global oriented hyperplanes this reduces to a no-accidental-containment
-  lemma saying that a simplex facet's vertices can be contained in a listed
-  facet hyperplane only when the affine facet hyperplanes are equal;
+* prove the exact row-zero count for `simplexFacetSide`; the
+  no-accidental-containment step is now proved as
+  `DSimplex.facetHyperplane_eq_of_face_points_subset` and connected to
+  `HasFacetIn` by `FacetHyperplanes.oriented_hasFacetIn_iff`.  What remains is
+  proving that every incident simplex is certified on one of the two chosen
+  sides, so that `simplexFacetSide = none` is exactly non-incidence;
 * orient each such affine hyperplane by closed halfspaces in
   `EuclideanSpace ℝ (Fin d)` and connect those halfspaces to Mathlib's
   `WSameSide`/`SSameSide` predicates; `FacetHyperplanes.oriented` chooses one
@@ -828,6 +996,35 @@ namespace PerlesFacetSeparationData
 
 variable {ι κ : Type*} [Fintype ι] [Fintype κ] {d : ℕ} [NeZero d]
     {simplices : ι → DSimplex d}
+
+/--
+Build certified Perles data using the actual finite type of distinct facet
+hyperplanes.  This discharges the hyperplane enumeration, dimension lower
+bound, and B-row zero count; the remaining inputs are exactly the side
+classification, pairwise opposite-sign, and missing-sign-vector geometry.
+-/
+def ofFacetHyperplanes [Nonempty ι] (simplices : ι → DSimplex d)
+    (hside : ∀ (a : ι) (H : FacetHyperplanes simplices),
+      (FacetHyperplanes.oriented simplices H).HasFacetIn (simplices a) →
+        (simplices a).body ⊆ (FacetHyperplanes.oriented simplices H).positiveSide ∨
+          (simplices a).body ⊆ (FacetHyperplanes.oriented simplices H).negativeSide)
+    (hpairwise : PairwiseTouching simplices →
+      ∀ ⦃a b : ι⦄, a ≠ b → ∃ H : FacetHyperplanes simplices, ∃ sign : Bool,
+        (FacetHyperplanes.oriented simplices H).simplexFacetSide (simplices a) = some sign ∧
+          (FacetHyperplanes.oriented simplices H).simplexFacetSide (simplices b) =
+            some (!sign))
+    (hmissing : ∃ v : FacetHyperplanes simplices → Bool, ∀ a : ι,
+      ¬ EntryExtends
+        (fun H : FacetHyperplanes simplices =>
+          (FacetHyperplanes.oriented simplices H).simplexFacetSide (simplices a)) v) :
+    PerlesFacetSeparationData simplices (FacetHyperplanes simplices) where
+  hyperplane := FacetHyperplanes.oriented simplices
+  dimension_le_hyperplanes := card_facetHyperplanes_ge simplices
+  rowZeroCard := by
+    intro a
+    exact FacetHyperplanes.rowZeroCard_of_side_complete simplices a (hside a)
+  pairwiseOpposite_of_touching := hpairwise
+  missingSignVector := hmissing
 
 /-- Convert certified geometric facet data into the abstract Perles matrix. -/
 def toPerlesMatrix (D : PerlesFacetSeparationData simplices κ)

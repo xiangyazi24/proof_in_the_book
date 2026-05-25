@@ -256,7 +256,7 @@ theorem sylvester_gallai_abstract {Point Line : Type*}
     obtain ⟨line', hline', _, hle⟩ := gallai line hmem.2.1 (by omega)
     exact ⟨line', hline', by omega⟩
 
-theorem chapter10 {Point Line : Type*} [DecidableEq Point]
+theorem ordinaryLine_of_card_pointsOnLine_eq_two {Point Line : Type*} [DecidableEq Point]
     (points : Finset Point) (onLine : Point → Line → Prop) [DecidableRel onLine]
     (line : Line) (hcard : (pointsOnLine points onLine line).card = 2) :
     OrdinaryLine points onLine line :=
@@ -529,7 +529,7 @@ theorem gram_apex_symm (P Q R : EPoint) :
   have hRP : R -ᵥ P = (R -ᵥ Q) - (P -ᵥ Q) := by
     rw [← vsub_sub_vsub_cancel_right R P Q]
   rw [e1, e2, e3, e4, hQP, hRP]
-  simp only [inner_sub_left, inner_sub_right, inner_neg_left, inner_neg_right]
+  simp only [inner_sub_left, inner_sub_right, inner_neg_left]
   rw [real_inner_comm (R -ᵥ Q) (P -ᵥ Q)]
   ring
 
@@ -724,6 +724,16 @@ theorem euclidean_sylvester_gallai (S : Finset EPoint) (T : OffLineTriple S) :
     · exact contra _ _ haS hc hca.symm h
     · exact contra _ _ hc haS hca h
   · exact heq.symm
+
+/-- **Sylvester-Gallai theorem in the Euclidean plane.**
+A finite planar point set with an off-line triple determines a line containing
+exactly two points of the set.  The off-line triple is the constructive
+non-collinearity hypothesis.
+-/
+theorem chapter10 (S : Finset EPoint) (T : OffLineTriple S) :
+    ∃ a b : EPoint, a ∈ S ∧ b ∈ S ∧ a ≠ b ∧
+      (S.filter (· ∈ affineSpan ℝ ({a, b} : Set EPoint))).card = 2 :=
+  euclidean_sylvester_gallai S T
 
 end EuclideanSylvesterGallai
 

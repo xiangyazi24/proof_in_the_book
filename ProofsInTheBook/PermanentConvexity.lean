@@ -12,6 +12,8 @@ facts used in Van der Waerden-style arguments:
   criterion when the mixed quadratic coefficient is nonnegative;
 * the discharge of that mixed-coefficient hypothesis for the elementary
   `2 × 2` checkerboard exchange directions;
+* the maximal feasible checkerboard exchange step, which keeps the
+  doubly-stochastic constraints and forces a boundary zero;
 * the elementary `2 × 2` row log-concavity model.
 
 The deep Alexandrov-Fenchel/Falikman-Egorychev/Gurvits log-concavity input is
@@ -259,9 +261,19 @@ def checkerboardDirection (c d : n) : n → ℝ :=
 def scaledCheckerboardDirection (a : ℝ) (c d : n) : n → ℝ :=
   a • checkerboardDirection c d
 
+def checkerboardExchangeAmount (M : Matrix n n ℝ) (r s c d : n) : ℝ :=
+  min (M r d) (M s c)
+
 theorem sum_checkerboardDirection (c d : n) :
     ∑ j, checkerboardDirection c d j = 0 := by
   simp [checkerboardDirection, Finset.sum_sub_distrib]
+
+omit [DecidableEq n] [Fintype n] in
+theorem checkerboardExchangeAmount_nonneg {M : Matrix n n ℝ} {r s c d : n}
+    (hM : ∀ i j, 0 ≤ M i j) :
+    0 ≤ checkerboardExchangeAmount M r s c d := by
+  unfold checkerboardExchangeAmount
+  exact le_min (hM r d) (hM s c)
 
 omit [Fintype n] in
 theorem checkerboardDirection_cancel (c d : n) (j : n) :
@@ -528,6 +540,58 @@ theorem scaledCheckerboardPerturbation_mem_and_permanent_convex_between_endpoint
       (scaledCheckerboardDirection_quadraticCoeff_nonneg
         (M := M) (r := r) (s := s) hrs
         (fun i j _ _ => nonneg_of_mem_doublyStochastic hM) c d a) ht0 ht1
+
+omit [Fintype n] in
+theorem scaledCheckerboardPerturbation_exchangeAmount_endpoint_zero
+    {M : Matrix n n ℝ} {r s c d : n} (hrs : r ≠ s) (hcd : c ≠ d) :
+    twoRowPerturbation M r s
+        (scaledCheckerboardDirection (n := n) (checkerboardExchangeAmount M r s c d) c d)
+        (-(scaledCheckerboardDirection (n := n) (checkerboardExchangeAmount M r s c d) c d))
+        1 r d = 0 ∨
+      twoRowPerturbation M r s
+        (scaledCheckerboardDirection (n := n) (checkerboardExchangeAmount M r s c d) c d)
+        (-(scaledCheckerboardDirection (n := n) (checkerboardExchangeAmount M r s c d) c d))
+        1 s c = 0 := by
+  by_cases hle : M r d ≤ M s c
+  · left
+    simp [twoRowPerturbation, scaledCheckerboardDirection, checkerboardDirection,
+      checkerboardExchangeAmount, hrs, hcd, min_eq_left hle]
+  · right
+    have hle' : M s c ≤ M r d := le_of_lt (lt_of_not_ge hle)
+    simp [twoRowPerturbation, scaledCheckerboardDirection, checkerboardDirection,
+      checkerboardExchangeAmount, hcd, min_eq_right hle']
+
+theorem checkerboardExchangeAmount_mem_and_permanent_convex_and_endpoint_zero
+    {c d : n} (hrs : r ≠ s) (hcd : c ≠ d) (hM : M ∈ doublyStochastic ℝ n)
+    {t : ℝ} (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
+    let a := checkerboardExchangeAmount M r s c d
+    twoRowPerturbation M r s (scaledCheckerboardDirection (n := n) a c d)
+        (-(scaledCheckerboardDirection (n := n) a c d)) t ∈ doublyStochastic ℝ n ∧
+      (twoRowPerturbation M r s (scaledCheckerboardDirection (n := n) a c d)
+        (-(scaledCheckerboardDirection (n := n) a c d)) t).permanent ≤
+        (1 - t) * M.permanent +
+          t * (twoRowPerturbation M r s (scaledCheckerboardDirection (n := n) a c d)
+            (-(scaledCheckerboardDirection (n := n) a c d)) 1).permanent ∧
+      (twoRowPerturbation M r s (scaledCheckerboardDirection (n := n) a c d)
+        (-(scaledCheckerboardDirection (n := n) a c d)) 1 r d = 0 ∨
+        twoRowPerturbation M r s (scaledCheckerboardDirection (n := n) a c d)
+          (-(scaledCheckerboardDirection (n := n) a c d)) 1 s c = 0) := by
+  dsimp only
+  have hmain := scaledCheckerboardPerturbation_mem_and_permanent_convex_between_endpoints
+    (M := M) (r := r) (s := s) (c := c) (d := d) hrs hcd hM
+    (checkerboardExchangeAmount_nonneg
+      (M := M) (r := r) (s := s) (c := c) (d := d)
+      (fun i j => nonneg_of_mem_doublyStochastic hM))
+    (by
+      unfold checkerboardExchangeAmount
+      exact min_le_left (M r d) (M s c))
+    (by
+      unfold checkerboardExchangeAmount
+      exact min_le_right (M r d) (M s c))
+    ht0 ht1
+  exact ⟨hmain.1, hmain.2,
+    scaledCheckerboardPerturbation_exchangeAmount_endpoint_zero
+      (M := M) (r := r) (s := s) (c := c) (d := d) hrs hcd⟩
 
 /-! ## Elementary `2 × 2` log-concavity model -/
 

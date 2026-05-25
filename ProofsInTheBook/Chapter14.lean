@@ -74,6 +74,78 @@ open scoped Classical
 
 /-! ## Geometric setup -/
 
+/-- Real inner product with the normalized copy of the same vector. -/
+lemma inner_normalize_self_real {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
+    (v : V) :
+    inner ℝ (NormedSpace.normalize v) v = ‖v‖ := by
+  by_cases hv : v = 0
+  · simp [hv]
+  · rw [NormedSpace.normalize, real_inner_smul_left, real_inner_self_eq_norm_mul_norm]
+    have hnorm : ‖v‖ ≠ 0 := by simpa [norm_eq_zero] using hv
+    field_simp [hnorm]
+
+/--
+Signed distance on the affine line normal to a subspace, written in the
+coordinates used by Mathlib's side-of-subspace API.
+-/
+lemma affineSubspace_signedInfDist_smul_vsub_orthogonalProjection_vadd
+    {V P : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P]
+    [NormedAddTorsor V P] {s : AffineSubspace ℝ P} [Nonempty s]
+    [s.direction.HasOrthogonalProjection] {x : P} {t : ℝ} {q : P} (hq : q ∈ s) :
+    s.signedInfDist x (t • (x -ᵥ ↑((EuclideanGeometry.orthogonalProjection s) x)) +ᵥ q) =
+      t * ‖x -ᵥ ↑((EuclideanGeometry.orthogonalProjection s) x)‖ := by
+  rw [AffineSubspace.signedInfDist_eq_signedDist_of_mem (p := x) hq]
+  rw [signedDist_apply_apply]
+  simp [real_inner_smul_right, inner_normalize_self_real]
+
+/-- Strict same side means positive signed distance from the reference point. -/
+lemma affineSubspace_signedInfDist_pos_of_sSameSide
+    {V P : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P]
+    [NormedAddTorsor V P] {s : AffineSubspace ℝ P} [Nonempty s]
+    [s.direction.HasOrthogonalProjection] {x y : P} (h : s.SSameSide x y) :
+    0 < s.signedInfDist x y := by
+  let p : P := ↑((EuclideanGeometry.orthogonalProjection s) x)
+  have hp : p ∈ s := by
+    dsimp [p]
+    exact EuclideanGeometry.orthogonalProjection_mem x
+  have hy : y ∈ ({z : P | s.SSameSide x z}) := h
+  rw [AffineSubspace.setOf_sSameSide_eq_image2 h.left_notMem hp] at hy
+  rcases hy with ⟨t, ht, q, hq, rfl⟩
+  dsimp [p] at hq ⊢
+  rw [affineSubspace_signedInfDist_smul_vsub_orthogonalProjection_vadd hq]
+  exact mul_pos ht (by
+    rw [norm_pos_iff]
+    intro hv
+    apply h.left_notMem
+    have hx_eq : x = ↑((EuclideanGeometry.orthogonalProjection s) x) :=
+      vsub_eq_zero_iff_eq.mp hv
+    rw [hx_eq]
+    exact EuclideanGeometry.orthogonalProjection_mem x)
+
+/-- Strict opposite side means negative signed distance from the reference point. -/
+lemma affineSubspace_signedInfDist_neg_of_sOppSide
+    {V P : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P]
+    [NormedAddTorsor V P] {s : AffineSubspace ℝ P} [Nonempty s]
+    [s.direction.HasOrthogonalProjection] {x y : P} (h : s.SOppSide x y) :
+    s.signedInfDist x y < 0 := by
+  let p : P := ↑((EuclideanGeometry.orthogonalProjection s) x)
+  have hp : p ∈ s := by
+    dsimp [p]
+    exact EuclideanGeometry.orthogonalProjection_mem x
+  have hy : y ∈ ({z : P | s.SOppSide x z}) := h
+  rw [AffineSubspace.setOf_sOppSide_eq_image2 h.left_notMem hp] at hy
+  rcases hy with ⟨t, ht, q, hq, rfl⟩
+  dsimp [p] at hq ⊢
+  rw [affineSubspace_signedInfDist_smul_vsub_orthogonalProjection_vadd hq]
+  exact mul_neg_of_neg_of_pos ht (by
+    rw [norm_pos_iff]
+    intro hv
+    apply h.left_notMem
+    have hx_eq : x = ↑((EuclideanGeometry.orthogonalProjection s) x) :=
+      vsub_eq_zero_iff_eq.mp hv
+    rw [hx_eq]
+    exact EuclideanGeometry.orthogonalProjection_mem x)
+
 /-- The ambient Euclidean space for Chapter 14. -/
 abbrev Ambient (d : ℕ) := EuclideanSpace ℝ (Fin d)
 
@@ -92,6 +164,15 @@ def DSimplex.relInterior {d : ℕ} (S : DSimplex d) : Set (Ambient d) :=
 def DSimplex.facetHyperplane {d : ℕ} [NeZero d] (S : DSimplex d)
     (i : Fin (d + 1)) : AffineSubspace ℝ (Ambient d) :=
   affineSpan ℝ (Set.range (S.faceOpposite i).points)
+
+/-- A simplex facet hyperplane is nonempty. -/
+instance DSimplex.facetHyperplaneNonempty {d : ℕ} [NeZero d] (S : DSimplex d)
+    (i : Fin (d + 1)) : Nonempty (S.facetHyperplane i) :=
+  ⟨⟨(S.faceOpposite i).points 0,
+    by
+      change (S.faceOpposite i).points 0 ∈
+        affineSpan ℝ (Set.range (S.faceOpposite i).points)
+      exact mem_affineSpan ℝ (Set.mem_range_self 0)⟩⟩
 
 /-- The vertices of the facet opposite `i` lie in its facet hyperplane. -/
 lemma DSimplex.face_points_subset_facetHyperplane {d : ℕ} [NeZero d] (S : DSimplex d)
@@ -235,6 +316,14 @@ lemma DSimplex.signedInfDist_eq_zero_of_mem_facetHyperplane {d : ℕ} [NeZero d]
   exact AffineSubspace.signedInfDist_apply_of_mem (S.points i) (by
     simpa [DSimplex.facetHyperplane, Affine.Simplex.range_faceOpposite_points] using hp)
 
+/-- Mathlib's simplex signed distance is the signed distance from the bundled facet hyperplane. -/
+lemma DSimplex.signedInfDist_eq_facetHyperplane_signedInfDist {d : ℕ} [NeZero d]
+    (S : DSimplex d) (i : Fin (d + 1)) :
+    S.signedInfDist i = (S.facetHyperplane i).signedInfDist (S.points i) := by
+  ext p
+  simp [Affine.Simplex.signedInfDist, DSimplex.facetHyperplane,
+    Affine.Simplex.range_faceOpposite_points]
+
 /--
 If a facet of `T` lies in the signed-distance facet hyperplane of `S`, then
 the signed distance of an affine combination of the vertices of `T` is
@@ -286,6 +375,17 @@ lemma DSimplex.body_subset_signedInfDist_nonneg_or_nonpos_of_commonFacet {d : �
     change S.signedInfDist i (Finset.univ.affineCombination ℝ T.points w) ≤ 0
     rw [S.signedInfDist_affineCombination_of_commonFacet T i j hfacet hw]
     exact mul_nonpos_of_nonneg_of_nonpos (hw01 j).1 hnonpos
+
+/--
+If a point is strictly opposite the simplex's opposite vertex across a facet,
+then its signed distance for that facet orientation is negative.
+-/
+lemma DSimplex.signedInfDist_neg_of_vertices_sOppSide {d : ℕ} [NeZero d]
+    (S : DSimplex d) (i : Fin (d + 1)) {p : Ambient d}
+    (hopposite : (S.facetHyperplane i).SOppSide (S.points i) p) :
+    S.signedInfDist i p < 0 := by
+  rw [S.signedInfDist_eq_facetHyperplane_signedInfDist i]
+  exact affineSubspace_signedInfDist_neg_of_sOppSide hopposite
 
 /-- The opposite vertex has nonzero perpendicular displacement from its facet span. -/
 lemma DSimplex.opposite_vertex_vsub_orthogonalProjectionSpan_ne_zero {d : ℕ}
@@ -518,6 +618,30 @@ lemma relInterior_subset_positiveSide_ofSimplexFacet {d : ℕ} [NeZero d]
   intro p hp
   simpa [ofSimplexFacet] using (S.signedInfDist_pos_of_mem_relInterior i hp).le
 
+lemma body_subset_negativeSide_ofSimplexFacet_of_vertices_sOppSide {d : ℕ}
+    [NeZero d] (S T : DSimplex d) (i j : Fin (d + 1))
+    (hfacet : S.facetHyperplane i = T.facetHyperplane j)
+    (hopposite : (S.facetHyperplane i).SOppSide (S.points i) (T.points j)) :
+    T.body ⊆ (ofSimplexFacet S i).negativeSide := by
+  intro q hq
+  rw [DSimplex.body] at hq
+  rcases hq with ⟨w, hw, hw01, rfl⟩
+  change S.signedInfDist i (Finset.univ.affineCombination ℝ T.points w) ≤ 0
+  rw [S.signedInfDist_affineCombination_of_commonFacet T i j hfacet.symm hw]
+  exact mul_nonpos_of_nonneg_of_nonpos (hw01 j).1
+    (le_of_lt (S.signedInfDist_neg_of_vertices_sOppSide i hopposite))
+
+lemma not_body_subset_positiveSide_ofSimplexFacet_of_vertices_sOppSide {d : ℕ}
+    [NeZero d] (S T : DSimplex d) (i j : Fin (d + 1))
+    (hopposite : (S.facetHyperplane i).SOppSide (S.points i) (T.points j)) :
+    ¬ T.body ⊆ (ofSimplexFacet S i).positiveSide := by
+  intro hsub
+  have hT : T.points j ∈ T.body := by
+    simpa [DSimplex.body] using T.point_mem_closedInterior j
+  have hnonneg : 0 ≤ S.signedInfDist i (T.points j) := by
+    simpa [ofSimplexFacet] using hsub hT
+  exact not_le_of_gt (S.signedInfDist_neg_of_vertices_sOppSide i hopposite) hnonneg
+
 lemma body_subset_negativeSide_ofSimplexFacetSide_of_vertices_sOppSide {d : ℕ}
     [NeZero d] (S T : DSimplex d) (i j : Fin (d + 1))
     (hfacet : S.facetHyperplane i = T.facetHyperplane j)
@@ -590,6 +714,24 @@ lemma simplexFacetSide_ofSimplexFacet_self {d : ℕ} [NeZero d] (S : DSimplex d)
   rw [if_pos (ofSimplexFacet_hasFacetIn_self S i)]
   rw [if_pos (body_subset_positiveSide_ofSimplexFacet S i)]
 
+/--
+If another simplex has the same facet hyperplane and its opposite vertex is
+strictly on the opposite side, the signed-distance orientation gives that
+simplex a negative B-entry.
+-/
+lemma simplexFacetSide_ofSimplexFacet_of_vertices_sOppSide {d : ℕ} [NeZero d]
+    (S T : DSimplex d) (i j : Fin (d + 1))
+    (hfacet : S.facetHyperplane i = T.facetHyperplane j)
+    (hopposite : (S.facetHyperplane i).SOppSide (S.points i) (T.points j)) :
+    (ofSimplexFacet S i).simplexFacetSide T = some false := by
+  classical
+  unfold simplexFacetSide
+  rw [if_pos ((ofSimplexFacet_hasFacetIn_iff S T i).2 ⟨j, hfacet.symm⟩)]
+  rw [if_neg (not_body_subset_positiveSide_ofSimplexFacet_of_vertices_sOppSide
+    S T i j hopposite)]
+  rw [if_pos (body_subset_negativeSide_ofSimplexFacet_of_vertices_sOppSide
+    S T i j hfacet hopposite)]
+
 /-- The side-predicate orientation of a simplex's own facet gives a positive B-entry. -/
 lemma simplexFacetSide_ofSimplexFacetSide_self {d : ℕ} [NeZero d] (S : DSimplex d)
     (i : Fin (d + 1)) :
@@ -620,20 +762,20 @@ lemma simplexFacetSide_ofSimplexFacetSide_of_vertices_sOppSide {d : ℕ} [NeZero
 end OrientedHyperplane
 
 /--
-For one across-facet touching pair, the side-predicate orientation of the first
-simplex's common facet gives opposite B-entries.  This is the local geometric
-content of the `pairwiseOpposite` matrix field, before choosing a single global
-finite hyperplane index type for the whole configuration.
+For one across-facet touching pair, the signed-distance orientation of the
+first simplex's common facet gives opposite B-entries.  This is the local
+geometric content of the `pairwiseOpposite` matrix field, before choosing a
+single global finite hyperplane index type for the whole configuration.
 -/
 lemma exists_orientedHyperplane_opposite_entries_of_touchesAcrossFacets {d : ℕ}
     [NeZero d] {S T : DSimplex d} (h : TouchesAcrossFacets S T) :
     ∃ H : OrientedHyperplane d, ∃ b : Bool,
       H.simplexFacetSide S = some b ∧ H.simplexFacetSide T = some (!b) := by
   rcases h with ⟨_, i, j, hfacet, hopposite⟩
-  refine ⟨OrientedHyperplane.ofSimplexFacetSide S i, true, ?_, ?_⟩
-  · exact OrientedHyperplane.simplexFacetSide_ofSimplexFacetSide_self S i
+  refine ⟨OrientedHyperplane.ofSimplexFacet S i, true, ?_, ?_⟩
+  · exact OrientedHyperplane.simplexFacetSide_ofSimplexFacet_self S i
   · simpa using
-      OrientedHyperplane.simplexFacetSide_ofSimplexFacetSide_of_vertices_sOppSide
+      OrientedHyperplane.simplexFacetSide_ofSimplexFacet_of_vertices_sOppSide
         S T i j hfacet hopposite
 
 namespace FacetHyperplanes

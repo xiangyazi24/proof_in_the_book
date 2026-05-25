@@ -329,6 +329,14 @@ noncomputable instance (n : ℕ) : Fintype (SignedPermutation n) :=
 
 namespace SignedPermutation
 
+theorem card_zero : Fintype.card (SignedPermutation 0) = 1 := by
+  calc
+    Fintype.card (SignedPermutation 0) =
+        Fintype.card (Equiv.Perm (Fin 0) × (Fin 0 → Bool)) :=
+      Fintype.card_congr (signedPermutationEquiv 0)
+    _ = 1 := by
+      simp
+
 /-- Antipodal signed permutation: keep the order and flip every sign. -/
 def antipode {n : ℕ} (P : SignedPermutation n) : SignedPermutation n where
   order := P.order
@@ -514,6 +522,24 @@ def NegativeAlternatingPrefixLabels {n m : ℕ}
   (StrictMono fun i => (label (P.prefixChain i)).index) ∧
     ∀ i : Fin n, (label (P.prefixChain i)).positive = !decide (Even i.val)
 
+theorem positiveAlternatingPrefixLabels_zero {m : ℕ}
+    (label : NonzeroSignedSubset 0 → SignedLabel m) (P : SignedPermutation 0) :
+    PositiveAlternatingPrefixLabels label P := by
+  constructor
+  · intro i _j _hij
+    exact Fin.elim0 i
+  · intro i
+    exact Fin.elim0 i
+
+theorem negativeAlternatingPrefixLabels_zero {m : ℕ}
+    (label : NonzeroSignedSubset 0 → SignedLabel m) (P : SignedPermutation 0) :
+    NegativeAlternatingPrefixLabels label P := by
+  constructor
+  · intro i _j _hij
+    exact Fin.elim0 i
+  · intro i
+    exact Fin.elim0 i
+
 theorem label_prefixChain_antipode {n m : ℕ}
     (label : NonzeroSignedSubset n → SignedLabel m)
     (hantipodal : ∀ X, label X.antipode = (label X).neg)
@@ -564,6 +590,30 @@ noncomputable def negativeAlternatingPrefixLabelChains {n m : ℕ}
   by
     classical
     exact Finset.univ.filter fun P => NegativeAlternatingPrefixLabels label P
+
+theorem positiveAlternatingPrefixLabelChains_zero_eq_univ {m : ℕ}
+    (label : NonzeroSignedSubset 0 → SignedLabel m) :
+    positiveAlternatingPrefixLabelChains label = Finset.univ := by
+  classical
+  ext P
+  constructor
+  · intro _hP
+    simp
+  · intro _hP
+    simpa [positiveAlternatingPrefixLabelChains] using
+      positiveAlternatingPrefixLabels_zero label P
+
+theorem negativeAlternatingPrefixLabelChains_zero_eq_univ {m : ℕ}
+    (label : NonzeroSignedSubset 0 → SignedLabel m) :
+    negativeAlternatingPrefixLabelChains label = Finset.univ := by
+  classical
+  ext P
+  constructor
+  · intro _hP
+    simp
+  · intro _hP
+    simpa [negativeAlternatingPrefixLabelChains] using
+      negativeAlternatingPrefixLabels_zero label P
 
 theorem positiveAlternatingPrefixLabelChains_card_eq_negative {n m : ℕ}
     (label : NonzeroSignedSubset n → SignedLabel m)
@@ -731,29 +781,9 @@ theorem tuckerLemmaStatement_le_two {n : ℕ} (hnpos : 1 ≤ n) (hnle : n ≤ 2)
 theorem kyFanPrefixParityStatement_zero : KyFanPrefixParityStatement 0 0 := by
   intro label _hantipodal _hno
   classical
-  have huniv :
-      positiveAlternatingPrefixLabelChains label = (Finset.univ : Finset (SignedPermutation 0)) := by
-    ext P
-    constructor
-    · intro _hP
-      simp
-    · intro _hP
-      simp only [positiveAlternatingPrefixLabelChains, Finset.mem_filter, Finset.mem_univ,
-        true_and, PositiveAlternatingPrefixLabels]
-      constructor
-      · intro i _j _hij
-        exact Fin.elim0 i
-      · intro i
-        exact Fin.elim0 i
-  rw [huniv]
+  rw [positiveAlternatingPrefixLabelChains_zero_eq_univ label]
   have hcard : (Finset.univ : Finset (SignedPermutation 0)).card = 1 := by
-    calc
-      (Finset.univ : Finset (SignedPermutation 0)).card = Fintype.card (SignedPermutation 0) := by
-        simp
-      _ = Fintype.card (Equiv.Perm (Fin 0) × (Fin 0 → Bool)) :=
-        Fintype.card_congr (signedPermutationEquiv 0)
-      _ = 1 := by
-        simp
+    simp [SignedPermutation.card_zero]
   rw [hcard]
   exact odd_one
 

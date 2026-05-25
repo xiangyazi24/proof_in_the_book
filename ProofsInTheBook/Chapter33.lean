@@ -14,17 +14,21 @@ The book's proof uses Hall's marriage theorem applied row by row:
 at each step, the remaining entries in each row form a system of
 distinct representatives.
 
-Point-17 status: this file now contains two genuine Hall engines: the
-row-completion step for a sparse partial square and the standard extension of
-a Latin rectangle by one row.  It is still not the full Evans/Smetaniuk
-completion theorem.  The remaining missing infrastructure is Smetaniuk's
-stateful induction: conjugating a sparse partial square so the active entries
-lie below the diagonal, applying the order-`n - 1` induction hypothesis, and
-performing the final column-switching process.  A direct iteration of
-`latin_square_completion_step_from_partial` is not valid after one whole row
-is added, because the current partial square then has more than `n - 1`
-filled cells and the double-counting hypotheses below no longer describe the
-enlarged state.
+Point-17 status: this file now contains three genuine pieces: the
+row-completion Hall step for a sparse partial square, the standard extension
+of a Latin rectangle by one row, and the padding reduction
+`completion_from_exact_cardinality_case`, which proves that the `|P| < n - 1`
+case reduces to the exact `|P| = n - 1` Evans case by adding legal entries one
+at a time.  It is still not the full Evans/Smetaniuk completion theorem.  The
+remaining missing infrastructure is the exact-cardinality Smetaniuk induction:
+permuting rows/columns/symbols so a singleton symbol lies on the back diagonal
+and all other filled cells lie above it, applying the order-`n - 1` induction
+hypothesis after deleting that diagonal cell and the last row/column, and
+formalizing Smetaniuk's completion of the associated `P(L)` by column
+switching.  A direct iteration of `latin_square_completion_step_from_partial`
+is not valid after one whole row is added, because the current partial square
+then has more than `n - 1` filled cells and the double-counting hypotheses
+below no longer describe the enlarged state.
 
 The tempting strengthened row step with fixed entries in the active row also
 does not follow from the existing count alone.  After `r` completed rows and
@@ -334,6 +338,396 @@ A partial Latin square is `P : Fin n → Fin n → Option (Fin n)` where
 /-- The set of filled cells of a partial Latin square. -/
 def filledCells {n : ℕ} (P : Fin n → Fin n → Option (Fin n)) : Finset (Fin n × Fin n) :=
   Finset.univ.filter fun ij : Fin n × Fin n => (P ij.1 ij.2).isSome
+
+/-- Row and column Latin conditions for a partial square. -/
+def IsPartialLatin {n : ℕ} (P : Fin n → Fin n → Option (Fin n)) : Prop :=
+  (∀ i j₁ j₂ a, P i j₁ = some a → P i j₂ = some a → j₁ = j₂) ∧
+    ∀ i₁ i₂ j a, P i₁ j = some a → P i₂ j = some a → i₁ = i₂
+
+/-- A full Latin square, represented by its value in each cell. -/
+def IsLatinSquare {n : ℕ} (L : Fin n → Fin n → Fin n) : Prop :=
+  (∀ i : Fin n, Function.Injective (L i)) ∧
+    ∀ j : Fin n, Function.Injective fun i : Fin n => L i j
+
+/-- A full square completes a partial square if it is Latin and preserves filled cells. -/
+def Completes {n : ℕ} (P : Fin n → Fin n → Option (Fin n))
+    (L : Fin n → Fin n → Fin n) : Prop :=
+  IsLatinSquare L ∧ ∀ i j a, P i j = some a → L i j = a
+
+/-- One partial square extends another when all filled cells are preserved. -/
+def ExtendsPartial {n : ℕ} (P Q : Fin n → Fin n → Option (Fin n)) : Prop :=
+  ∀ i j a, P i j = some a → Q i j = some a
+
+/-- Symbols already used in row `i`. -/
+def rowSymbols {n : ℕ} (P : Fin n → Fin n → Option (Fin n)) (i : Fin n) :
+    Finset (Fin n) :=
+  Finset.univ.filter fun a => ∃ j, P i j = some a
+
+/-- Symbols already used in column `j`. -/
+def colSymbols {n : ℕ} (P : Fin n → Fin n → Option (Fin n)) (j : Fin n) :
+    Finset (Fin n) :=
+  Finset.univ.filter fun a => ∃ i, P i j = some a
+
+/-- Filled cells in a fixed row. -/
+def rowCells {n : ℕ} (P : Fin n → Fin n → Option (Fin n)) (i : Fin n) :
+    Finset (Fin n × Fin n) :=
+  (filledCells P).filter fun ij => ij.1 = i
+
+/-- Filled cells in a fixed column. -/
+def colCells {n : ℕ} (P : Fin n → Fin n → Option (Fin n)) (j : Fin n) :
+    Finset (Fin n × Fin n) :=
+  (filledCells P).filter fun ij => ij.2 = j
+
+/-- Fill one cell of a partial square, leaving all other cells unchanged. -/
+def setCell {n : ℕ} (P : Fin n → Fin n → Option (Fin n))
+    (i₀ j₀ a : Fin n) : Fin n → Fin n → Option (Fin n) :=
+  fun i j => if i = i₀ ∧ j = j₀ then some a else P i j
+
+lemma completes_of_extendsPartial {n : ℕ} {P Q : Fin n → Fin n → Option (Fin n)}
+    {L : Fin n → Fin n → Fin n} (hPQ : ExtendsPartial P Q) (hQL : Completes Q L) :
+    Completes P L := by
+  rcases hQL with ⟨hLatin, hcomp⟩
+  exact ⟨hLatin, fun i j a hP => hcomp i j a (hPQ i j a hP)⟩
+
+lemma extendsPartial_refl {n : ℕ} (P : Fin n → Fin n → Option (Fin n)) :
+    ExtendsPartial P P := by
+  intro i j a h
+  exact h
+
+lemma extendsPartial_trans {n : ℕ} {P Q R : Fin n → Fin n → Option (Fin n)}
+    (hPQ : ExtendsPartial P Q) (hQR : ExtendsPartial Q R) :
+    ExtendsPartial P R := by
+  intro i j a h
+  exact hQR i j a (hPQ i j a h)
+
+lemma extendsPartial_setCell_of_empty {n : ℕ} (P : Fin n → Fin n → Option (Fin n))
+    {i₀ j₀ a : Fin n} (hempty : P i₀ j₀ = none) :
+    ExtendsPartial P (setCell P i₀ j₀ a) := by
+  intro i j b hP
+  by_cases hcell : i = i₀ ∧ j = j₀
+  · rcases hcell with ⟨hi, hj⟩
+    subst i
+    subst j
+    rw [hempty] at hP
+    cases hP
+  · simp [setCell, hcell, hP]
+
+lemma isPartialLatin_setCell {n : ℕ} {P : Fin n → Fin n → Option (Fin n)}
+    {i₀ j₀ a : Fin n} (hP : IsPartialLatin P) (_hempty : P i₀ j₀ = none)
+    (haRow : a ∉ rowSymbols P i₀) (haCol : a ∉ colSymbols P j₀) :
+    IsPartialLatin (setCell P i₀ j₀ a) := by
+  constructor
+  · intro i j₁ j₂ b hb₁ hb₂
+    by_cases h₁ : i = i₀ ∧ j₁ = j₀
+    · by_cases h₂ : i = i₀ ∧ j₂ = j₀
+      · exact h₁.2.trans h₂.2.symm
+      · have hi : i = i₀ := h₁.1
+        have hj₁ : j₁ = j₀ := h₁.2
+        have hab : a = b := Option.some.inj (by simpa [setCell, h₁] using hb₁)
+        have hb₂P : P i j₂ = some b := by simpa [setCell, h₂] using hb₂
+        have : a ∈ rowSymbols P i₀ := by
+          simp [rowSymbols]
+          exact ⟨j₂, by simpa [hi, hab] using hb₂P⟩
+        exact False.elim (haRow this)
+    · by_cases h₂ : i = i₀ ∧ j₂ = j₀
+      · have hi : i = i₀ := h₂.1
+        have hj₂ : j₂ = j₀ := h₂.2
+        have hab : a = b := Option.some.inj (by simpa [setCell, h₂] using hb₂)
+        have hb₁P : P i j₁ = some b := by simpa [setCell, h₁] using hb₁
+        have : a ∈ rowSymbols P i₀ := by
+          simp [rowSymbols]
+          exact ⟨j₁, by simpa [hi, hab] using hb₁P⟩
+        exact False.elim (haRow this)
+      · have hb₁P : P i j₁ = some b := by simpa [setCell, h₁] using hb₁
+        have hb₂P : P i j₂ = some b := by simpa [setCell, h₂] using hb₂
+        exact hP.1 i j₁ j₂ b hb₁P hb₂P
+  · intro i₁ i₂ j b hb₁ hb₂
+    by_cases h₁ : i₁ = i₀ ∧ j = j₀
+    · by_cases h₂ : i₂ = i₀ ∧ j = j₀
+      · exact h₁.1.trans h₂.1.symm
+      · have hi₁ : i₁ = i₀ := h₁.1
+        have hj : j = j₀ := h₁.2
+        have hab : a = b := Option.some.inj (by simpa [setCell, h₁] using hb₁)
+        have hb₂P : P i₂ j = some b := by simpa [setCell, h₂] using hb₂
+        have : a ∈ colSymbols P j₀ := by
+          simp [colSymbols]
+          exact ⟨i₂, by simpa [hj, hab] using hb₂P⟩
+        exact False.elim (haCol this)
+    · by_cases h₂ : i₂ = i₀ ∧ j = j₀
+      · have hi₂ : i₂ = i₀ := h₂.1
+        have hj : j = j₀ := h₂.2
+        have hab : a = b := Option.some.inj (by simpa [setCell, h₂] using hb₂)
+        have hb₁P : P i₁ j = some b := by simpa [setCell, h₁] using hb₁
+        have : a ∈ colSymbols P j₀ := by
+          simp [colSymbols]
+          exact ⟨i₁, by simpa [hj, hab] using hb₁P⟩
+        exact False.elim (haCol this)
+      · have hb₁P : P i₁ j = some b := by simpa [setCell, h₁] using hb₁
+        have hb₂P : P i₂ j = some b := by simpa [setCell, h₂] using hb₂
+        exact hP.2 i₁ i₂ j b hb₁P hb₂P
+
+lemma filledCells_setCell_of_empty {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n)) {i₀ j₀ a : Fin n}
+    (hempty : P i₀ j₀ = none) :
+    filledCells (setCell P i₀ j₀ a) = insert (i₀, j₀) (filledCells P) := by
+  classical
+  ext ij
+  by_cases hcell : ij = (i₀, j₀)
+  · subst ij
+    simp [filledCells, setCell, hempty]
+  · have hnot : ¬ (ij.1 = i₀ ∧ ij.2 = j₀) := by
+      intro h
+      exact hcell (Prod.ext h.1 h.2)
+    simp [filledCells, setCell, hnot, hcell]
+
+lemma filledCells_setCell_card_of_empty {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n)) {i₀ j₀ a : Fin n}
+    (hempty : P i₀ j₀ = none) :
+    (filledCells (setCell P i₀ j₀ a)).card = (filledCells P).card + 1 := by
+  classical
+  rw [filledCells_setCell_of_empty P hempty]
+  have hnotmem : (i₀, j₀) ∉ filledCells P := by
+    simp [filledCells, hempty]
+  rw [Finset.card_insert_of_notMem hnotmem]
+
+lemma rowSymbols_card_le_rowCells_card {n : ℕ} (P : Fin n → Fin n → Option (Fin n))
+    (i : Fin n) :
+    (rowSymbols P i).card ≤ (rowCells P i).card := by
+  classical
+  let witness : Fin n → Fin n := fun a =>
+    if h : ∃ j, P i j = some a then Classical.choose h else i
+  refine Finset.card_le_card_of_injOn (fun a => (i, witness a)) ?_ ?_
+  · intro a ha
+    have hex : ∃ j, P i j = some a := by simpa [rowSymbols] using ha
+    have hcell : P i (witness a) = some a := by
+      simpa [witness, hex] using Classical.choose_spec hex
+    simp [rowCells, filledCells, hcell]
+  · intro a ha b hb hab
+    have hexa : ∃ j, P i j = some a := by simpa [rowSymbols] using ha
+    have hexb : ∃ j, P i j = some b := by simpa [rowSymbols] using hb
+    have hw : witness a = witness b := Prod.mk.inj hab |>.2
+    have hcella : P i (witness a) = some a := by
+      simpa [witness, hexa] using Classical.choose_spec hexa
+    have hcellb : P i (witness b) = some b := by
+      simpa [witness, hexb] using Classical.choose_spec hexb
+    have hsome : some a = some b := by
+      rw [← hcella, hw, hcellb]
+    exact Option.some.inj hsome
+
+lemma colSymbols_card_le_colCells_card {n : ℕ} (P : Fin n → Fin n → Option (Fin n))
+    (j : Fin n) :
+    (colSymbols P j).card ≤ (colCells P j).card := by
+  classical
+  let witness : Fin n → Fin n := fun a =>
+    if h : ∃ i, P i j = some a then Classical.choose h else j
+  refine Finset.card_le_card_of_injOn (fun a => (witness a, j)) ?_ ?_
+  · intro a ha
+    have hex : ∃ i, P i j = some a := by simpa [colSymbols] using ha
+    have hcell : P (witness a) j = some a := by
+      simpa [witness, hex] using Classical.choose_spec hex
+    simp [colCells, filledCells, hcell]
+  · intro a ha b hb hab
+    have hexa : ∃ i, P i j = some a := by simpa [colSymbols] using ha
+    have hexb : ∃ i, P i j = some b := by simpa [colSymbols] using hb
+    have hw : witness a = witness b := Prod.mk.inj hab |>.1
+    have hcella : P (witness a) j = some a := by
+      simpa [witness, hexa] using Classical.choose_spec hexa
+    have hcellb : P (witness b) j = some b := by
+      simpa [witness, hexb] using Classical.choose_spec hexb
+    have hsome : some a = some b := by
+      rw [← hcella, hw, hcellb]
+    exact Option.some.inj hsome
+
+lemma rowCells_disjoint_colCells_of_empty {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n)) {i₀ j₀ : Fin n}
+    (hempty : P i₀ j₀ = none) :
+    Disjoint (rowCells P i₀) (colCells P j₀) := by
+  rw [Finset.disjoint_left]
+  intro ij hijRow hijCol
+  have hfilled : (P ij.1 ij.2).isSome := by
+    simpa [rowCells, filledCells] using (Finset.mem_filter.mp hijRow).1
+  have hi : ij.1 = i₀ := (Finset.mem_filter.mp hijRow).2
+  have hj : ij.2 = j₀ := (Finset.mem_filter.mp hijCol).2
+  rw [hi, hj, hempty] at hfilled
+  simp at hfilled
+
+lemma rowCells_union_colCells_card_le_filledCells {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n)) (i₀ j₀ : Fin n) :
+    ((rowCells P i₀) ∪ (colCells P j₀)).card ≤ (filledCells P).card := by
+  exact Finset.card_le_card (by
+    intro ij hij
+    rcases Finset.mem_union.mp hij with hijRow | hijCol
+    · exact (Finset.mem_filter.mp hijRow).1
+    · exact (Finset.mem_filter.mp hijCol).1)
+
+lemma row_col_symbols_card_le_filledCells_of_empty {n : ℕ}
+    {P : Fin n → Fin n → Option (Fin n)}
+    {i₀ j₀ : Fin n} (hempty : P i₀ j₀ = none) :
+    ((rowSymbols P i₀) ∪ (colSymbols P j₀)).card ≤ (filledCells P).card := by
+  classical
+  have hrow := rowSymbols_card_le_rowCells_card P i₀
+  have hcol := colSymbols_card_le_colCells_card P j₀
+  have hsym_union :
+      ((rowSymbols P i₀) ∪ (colSymbols P j₀)).card ≤
+        (rowSymbols P i₀).card + (colSymbols P j₀).card :=
+    Finset.card_union_le _ _
+  have hcell_sum :
+      (rowCells P i₀).card + (colCells P j₀).card =
+        ((rowCells P i₀) ∪ (colCells P j₀)).card := by
+    rw [Finset.card_union_of_disjoint (rowCells_disjoint_colCells_of_empty P hempty)]
+  have hcell_union := rowCells_union_colCells_card_le_filledCells P i₀ j₀
+  calc
+    ((rowSymbols P i₀) ∪ (colSymbols P j₀)).card
+        ≤ (rowSymbols P i₀).card + (colSymbols P j₀).card := hsym_union
+    _ ≤ (rowCells P i₀).card + (colCells P j₀).card := Nat.add_le_add hrow hcol
+    _ = ((rowCells P i₀) ∪ (colCells P j₀)).card := hcell_sum
+    _ ≤ (filledCells P).card := hcell_union
+
+lemma exists_symbol_not_row_col_of_filledCells_le {n : ℕ}
+    {P : Fin n → Fin n → Option (Fin n)}
+    {i₀ j₀ : Fin n} (hempty : P i₀ j₀ = none)
+    (hfilled_le : (filledCells P).card ≤ n - 2) :
+    ∃ a : Fin n, a ∉ rowSymbols P i₀ ∧ a ∉ colSymbols P j₀ := by
+  classical
+  let U := (rowSymbols P i₀) ∪ (colSymbols P j₀)
+  have hU_le : U.card ≤ n - 2 := by
+    exact le_trans (row_col_symbols_card_le_filledCells_of_empty hempty) hfilled_le
+  have hU_lt : U.card < n := by
+    have hnpos : 0 < n := lt_of_le_of_lt (Nat.zero_le i₀.val) i₀.isLt
+    omega
+  by_contra hnone
+  have hsub : (Finset.univ : Finset (Fin n)) ⊆ U := by
+    intro a _ha
+    by_cases haU : a ∈ U
+    · exact haU
+    · have hrow : a ∉ rowSymbols P i₀ := by
+        intro h
+        exact haU (Finset.mem_union.mpr (Or.inl h))
+      have hcol : a ∉ colSymbols P j₀ := by
+        intro h
+        exact haU (Finset.mem_union.mpr (Or.inr h))
+      exact False.elim (hnone ⟨a, hrow, hcol⟩)
+  have hn_le : n ≤ U.card := by
+    calc
+      n = (Finset.univ : Finset (Fin n)).card := by simp
+      _ ≤ U.card := Finset.card_le_card hsub
+  omega
+
+lemma exists_empty_cell_of_filledCells_lt_pred {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n))
+    (hcard_lt : (filledCells P).card < n - 1) :
+    ∃ i j, P i j = none := by
+  classical
+  have hnpos : 0 < n := by omega
+  have hnn : n ≤ n * n := by
+    nth_rewrite 1 [← Nat.mul_one n]
+    exact Nat.mul_le_mul_left n (Nat.succ_le_of_lt hnpos)
+  have hlt_univ : (filledCells P).card < (Finset.univ : Finset (Fin n × Fin n)).card := by
+    have hcard_univ : (Finset.univ : Finset (Fin n × Fin n)).card = n * n := by simp
+    rw [hcard_univ]
+    exact lt_of_lt_of_le hcard_lt (le_trans (Nat.sub_le n 1) hnn)
+  by_contra hnone
+  push Not at hnone
+  have hfull : filledCells P = (Finset.univ : Finset (Fin n × Fin n)) := by
+    ext ij
+    simp [filledCells]
+    cases hcell : P ij.1 ij.2 with
+    | none =>
+        exact False.elim (hnone ij.1 ij.2 hcell)
+    | some a =>
+        simp
+  have hnot_lt : ¬ (filledCells P).card < (Finset.univ : Finset (Fin n × Fin n)).card := by
+    rw [hfull]
+    exact lt_irrefl _
+  exact hnot_lt hlt_univ
+
+/--
+If a partial Latin square has fewer than `n - 1` entries, one more entry can be
+added while preserving the partial Latin property.
+
+This formalizes the easy final sentence in Smetaniuk's proof: the case
+`|P| < n - 1` can be reduced to the exact `|P| = n - 1` case by adding
+entries one at a time.
+-/
+theorem extend_partialLatin_one {n : ℕ} {P : Fin n → Fin n → Option (Fin n)}
+    (hP : IsPartialLatin P) (hcard_lt : (filledCells P).card < n - 1) :
+    ∃ Q : Fin n → Fin n → Option (Fin n),
+      IsPartialLatin Q ∧ ExtendsPartial P Q ∧
+        (filledCells Q).card = (filledCells P).card + 1 := by
+  classical
+  obtain ⟨i₀, j₀, hempty⟩ := exists_empty_cell_of_filledCells_lt_pred P hcard_lt
+  have hfilled_le : (filledCells P).card ≤ n - 2 := by omega
+  obtain ⟨a, haRow, haCol⟩ :=
+    exists_symbol_not_row_col_of_filledCells_le hempty hfilled_le
+  refine ⟨setCell P i₀ j₀ a, ?_, ?_, ?_⟩
+  · exact isPartialLatin_setCell hP hempty haRow haCol
+  · exact extendsPartial_setCell_of_empty P hempty
+  · exact filledCells_setCell_card_of_empty P hempty
+
+theorem extend_partialLatin_to_exact {n : ℕ} {P : Fin n → Fin n → Option (Fin n)}
+    (hP : IsPartialLatin P) (hfilled_le : (filledCells P).card ≤ n - 1) :
+    ∃ Q : Fin n → Fin n → Option (Fin n),
+      IsPartialLatin Q ∧ ExtendsPartial P Q ∧ (filledCells Q).card = n - 1 := by
+  classical
+  let d₀ := n - 1 - (filledCells P).card
+  have hmain :
+      ∀ d : ℕ,
+        (∀ e < d,
+          ∀ R : Fin n → Fin n → Option (Fin n),
+            IsPartialLatin R →
+              (filledCells R).card ≤ n - 1 →
+                e = n - 1 - (filledCells R).card →
+                  ∃ Q : Fin n → Fin n → Option (Fin n),
+                    IsPartialLatin Q ∧ ExtendsPartial R Q ∧
+                      (filledCells Q).card = n - 1) →
+        ∀ R : Fin n → Fin n → Option (Fin n),
+          IsPartialLatin R →
+            (filledCells R).card ≤ n - 1 →
+              d = n - 1 - (filledCells R).card →
+                ∃ Q : Fin n → Fin n → Option (Fin n),
+                  IsPartialLatin Q ∧ ExtendsPartial R Q ∧
+                    (filledCells Q).card = n - 1 := by
+    intro d ih R hR hR_le hd
+    by_cases hexact : (filledCells R).card = n - 1
+    · refine ⟨R, hR, extendsPartial_refl R, hexact⟩
+    · have hlt : (filledCells R).card < n - 1 := lt_of_le_of_ne hR_le hexact
+      obtain ⟨R₁, hR₁, hRR₁, hcard₁⟩ := extend_partialLatin_one hR hlt
+      have hR₁_le : (filledCells R₁).card ≤ n - 1 := by omega
+      let e := n - 1 - (filledCells R₁).card
+      have heq : e = n - 1 - (filledCells R₁).card := rfl
+      have he_lt : e < d := by
+        subst d
+        dsimp [e]
+        omega
+      obtain ⟨Q, hQ, hR₁Q, hQcard⟩ := ih e he_lt R₁ hR₁ hR₁_le heq
+      exact ⟨Q, hQ, extendsPartial_trans hRR₁ hR₁Q, hQcard⟩
+  let motive := fun d : ℕ =>
+    ∀ R : Fin n → Fin n → Option (Fin n),
+      IsPartialLatin R →
+        (filledCells R).card ≤ n - 1 →
+          d = n - 1 - (filledCells R).card →
+            ∃ Q : Fin n → Fin n → Option (Fin n),
+              IsPartialLatin Q ∧ ExtendsPartial R Q ∧ (filledCells Q).card = n - 1
+  exact (Nat.strong_induction_on (p := motive) d₀ hmain) P hP hfilled_le rfl
+
+/--
+Reduction from the `≤ n - 1` Evans statement to the exact `= n - 1` case.
+
+The remaining unformalized Smetaniuk frontier is therefore the exact-cardinality
+case; the padding step for smaller partial squares is proved here without any
+extra premise.
+-/
+theorem completion_from_exact_cardinality_case {n : ℕ}
+    (hexact :
+      ∀ P : Fin n → Fin n → Option (Fin n),
+        IsPartialLatin P → (filledCells P).card = n - 1 →
+          ∃ L : Fin n → Fin n → Fin n, Completes P L)
+    (P : Fin n → Fin n → Option (Fin n))
+    (hP : IsPartialLatin P) (hfilled_le : (filledCells P).card ≤ n - 1) :
+    ∃ L : Fin n → Fin n → Fin n, Completes P L := by
+  obtain ⟨Q, hQ, hPQ, hQcard⟩ := extend_partialLatin_to_exact hP hfilled_le
+  obtain ⟨L, hL⟩ := hexact Q hQ hQcard
+  exact ⟨L, completes_of_extendsPartial hPQ hL⟩
 
 /-- If every used symbol has a witness cell, then the pair count of common-used
 symbols times columns is bounded by the total filled cells. -/

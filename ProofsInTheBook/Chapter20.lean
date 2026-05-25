@@ -1049,6 +1049,148 @@ theorem realTwoAdicSquareBoundaryPointEdgeList_RGCount_odd
   rw [realTwoAdicSquareBoundaryPointEdgeList_RGCount_eq]
   exact realTwoAdicSquareBoundaryRGChainCount_odd bottom right top left
 
+theorem squareBoundaryVertexChainRGCount_odd_of_side_colors {α : Type*}
+    (bottom right top left : List α) (bottomLeft bottomRight topRight topLeft : α)
+    (color : α → MonskyColor)
+    (hbottomLeft : color bottomLeft = red)
+    (hbottomRight : color bottomRight = green)
+    (htopRight : color topRight = green)
+    (htopLeft : color topLeft = blue)
+    (hbottom : ∀ v ∈ bottom, colorIsRedGreen (color v))
+    (hright : ∀ v ∈ right, colorIsGreenBlue (color v))
+    (htop : ∀ v ∈ top, colorIsGreenBlue (color v))
+    (hleft : ∀ v ∈ left, colorIsRedBlue (color v)) :
+    Odd (listEdgeRGCount
+      (squareBoundaryEdgeList bottom right top left bottomLeft bottomRight topRight topLeft)
+      color) := by
+  rw [squareBoundaryEdgeList_RGCount_eq]
+  have hbottomColors :
+      ∀ c ∈ red :: (bottom.map color) ++ [green], colorIsRedGreen c := by
+    intro c hc
+    simp only [List.mem_cons, List.mem_append, List.mem_map] at hc
+    rcases hc with hfirst | hlast
+    · rcases hfirst with hc | ⟨v, hv, hvc⟩
+      · subst c
+        exact Or.inl rfl
+      · rw [← hvc]
+        exact hbottom v hv
+    · rcases hlast with hc | hnil
+      · subst c
+        exact Or.inr rfl
+      · cases hnil
+  have hrightColors :
+      ∀ c ∈ green :: (right.map color) ++ [green], colorIsGreenBlue c := by
+    intro c hc
+    simp only [List.mem_cons, List.mem_append, List.mem_map] at hc
+    rcases hc with hfirst | hlast
+    · rcases hfirst with hc | ⟨v, hv, hvc⟩
+      · subst c
+        exact Or.inl rfl
+      · rw [← hvc]
+        exact hright v hv
+    · rcases hlast with hc | hnil
+      · subst c
+        exact Or.inl rfl
+      · cases hnil
+  have htopColors :
+      ∀ c ∈ green :: (top.map color) ++ [blue], colorIsGreenBlue c := by
+    intro c hc
+    simp only [List.mem_cons, List.mem_append, List.mem_map] at hc
+    rcases hc with hfirst | hlast
+    · rcases hfirst with hc | ⟨v, hv, hvc⟩
+      · subst c
+        exact Or.inl rfl
+      · rw [← hvc]
+        exact htop v hv
+    · rcases hlast with hc | hnil
+      · subst c
+        exact Or.inr rfl
+      · cases hnil
+  have hleftColors :
+      ∀ c ∈ blue :: (left.map color) ++ [red], colorIsRedBlue c := by
+    intro c hc
+    simp only [List.mem_cons, List.mem_append, List.mem_map] at hc
+    rcases hc with hfirst | hlast
+    · rcases hfirst with hc | ⟨v, hv, hvc⟩
+      · subst c
+        exact Or.inr rfl
+      · rw [← hvc]
+        exact hleft v hv
+    · rcases hlast with hc | hnil
+      · subst c
+        exact Or.inl rfl
+      · cases hnil
+  have hodd := squareBoundaryRGCount_odd_of_side_color_lists
+    (bottom.map color) (right.map color) (top.map color) (left.map color)
+    hbottomColors hrightColors htopColors hleftColors
+  simpa [hbottomLeft, hbottomRight, htopRight, htopLeft, List.map_append] using hodd
+
+theorem oddEdgeRedGreenCount_odd_of_squareBoundaryVertexChain
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (triangles : Fin n → α × α × α) (color : α → MonskyColor)
+    (bottom right top left : List α) (bottomLeft bottomRight topRight topLeft : α)
+    (hboundary : ∀ e : Sym2 α,
+      Odd (edgeMultiplicity triangles e) ↔
+        e ∈ (squareBoundaryEdgeList bottom right top left
+          bottomLeft bottomRight topRight topLeft).toFinset)
+    (hnodup : (squareBoundaryEdgeList bottom right top left
+      bottomLeft bottomRight topRight topLeft).Nodup)
+    (hbottomLeft : color bottomLeft = red)
+    (hbottomRight : color bottomRight = green)
+    (htopRight : color topRight = green)
+    (htopLeft : color topLeft = blue)
+    (hbottom : ∀ v ∈ bottom, colorIsRedGreen (color v))
+    (hright : ∀ v ∈ right, colorIsGreenBlue (color v))
+    (htop : ∀ v ∈ top, colorIsGreenBlue (color v))
+    (hleft : ∀ v ∈ left, colorIsRedBlue (color v)) :
+    Odd (oddEdgeRedGreenCount triangles color) := by
+  refine oddEdgeRedGreenCount_odd_of_boundaryEdges triangles color
+    (squareBoundaryEdgeList bottom right top left bottomLeft bottomRight topRight topLeft).toFinset
+    hboundary ?_
+  rw [boundaryEdgeRedGreenCount_toFinset _ color hnodup]
+  exact squareBoundaryVertexChainRGCount_odd_of_side_colors bottom right top left
+    bottomLeft bottomRight topRight topLeft color
+    hbottomLeft hbottomRight htopRight htopLeft hbottom hright htop hleft
+
+theorem oddEdgeRedGreenCount_odd_of_realSquareBoundaryVertexChain
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (vertices : α → ℝ × ℝ) (triangles : Fin n → α × α × α)
+    (bottom right top left : List α) (bottomLeft bottomRight topRight topLeft : α)
+    (hboundary : ∀ e : Sym2 α,
+      Odd (edgeMultiplicity triangles e) ↔
+        e ∈ (squareBoundaryEdgeList bottom right top left
+          bottomLeft bottomRight topRight topLeft).toFinset)
+    (hnodup : (squareBoundaryEdgeList bottom right top left
+      bottomLeft bottomRight topRight topLeft).Nodup)
+    (hbottomLeft : vertices bottomLeft = (0, 0))
+    (hbottomRight : vertices bottomRight = (1, 0))
+    (htopRight : vertices topRight = (1, 1))
+    (htopLeft : vertices topLeft = (0, 1))
+    (hbottom : ∀ v ∈ bottom, ∃ x : ℝ, vertices v = (x, 0))
+    (hright : ∀ v ∈ right, ∃ y : ℝ, vertices v = (1, y))
+    (htop : ∀ v ∈ top, ∃ x : ℝ, vertices v = (x, 1))
+    (hleft : ∀ v ∈ left, ∃ y : ℝ, vertices v = (0, y)) :
+    Odd (oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices)) := by
+  refine oddEdgeRedGreenCount_odd_of_squareBoundaryVertexChain triangles
+    (realTwoAdicColor ∘ vertices) bottom right top left bottomLeft bottomRight topRight topLeft
+    hboundary hnodup ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · simp [hbottomLeft]
+  · simp [hbottomRight]
+  · simp [htopRight]
+  · simp [htopLeft]
+  · intro v hv
+    obtain ⟨x, hx⟩ := hbottom v hv
+    simpa [Function.comp_def, hx] using realTwoAdicColor_bottom_red_or_green x
+  · intro v hv
+    obtain ⟨y, hy⟩ := hright v hv
+    simpa [Function.comp_def, hy] using realTwoAdicColor_right_green_or_blue y
+  · intro v hv
+    obtain ⟨x, hx⟩ := htop v hv
+    simpa [Function.comp_def, hx] using realTwoAdicColor_top_green_or_blue x
+  · intro v hv
+    obtain ⟨y, hy⟩ := hleft v hv
+    simpa [Function.comp_def, hy] using realTwoAdicColor_left_red_or_blue y
+
 theorem sum_triangle_edge_indicators_eq_sum_multiplicity
     {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
     (triangles : Fin n → α × α × α) (color : α → MonskyColor) :
@@ -1483,6 +1625,46 @@ theorem no_odd_equalArea_realization_of_squareBoundaryPointEdgeList_abs
   exact no_odd_equalArea_realization_of_edgeParity_abs hn vertices triangles
     (oddEdgeRedGreenCount_odd_of_squareBoundaryPointEdgeList vertices triangles
       bottom right top left hboundary)
+    harea
+
+/--
+Finite-vertex square-boundary-chain version of the Monsky contradiction.  This
+is closer to a genuine triangulation extraction than the count-equality
+frontier above: the remaining geometric input identifies odd-multiplicity
+triangle edges with an explicit finite boundary vertex chain, proves that the
+chain vertices lie on the four sides of the unit square, and supplies oriented
+equal-area alternatives.
+-/
+theorem no_odd_equalArea_realization_of_realSquareBoundaryVertexChain_abs
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ} (hn : Odd n)
+    (vertices : α → ℝ × ℝ) (triangles : Fin n → α × α × α)
+    (bottom right top left : List α) (bottomLeft bottomRight topRight topLeft : α)
+    (hboundary : ∀ e : Sym2 α,
+      Odd (edgeMultiplicity triangles e) ↔
+        e ∈ (squareBoundaryEdgeList bottom right top left
+          bottomLeft bottomRight topRight topLeft).toFinset)
+    (hnodup : (squareBoundaryEdgeList bottom right top left
+      bottomLeft bottomRight topRight topLeft).Nodup)
+    (hbottomLeft : vertices bottomLeft = (0, 0))
+    (hbottomRight : vertices bottomRight = (1, 0))
+    (htopRight : vertices topRight = (1, 1))
+    (htopLeft : vertices topLeft = (0, 1))
+    (hbottom : ∀ v ∈ bottom, ∃ x : ℝ, vertices v = (x, 0))
+    (hright : ∀ v ∈ right, ∃ y : ℝ, vertices v = (1, y))
+    (htop : ∀ v ∈ top, ∃ x : ℝ, vertices v = (x, 1))
+    (hleft : ∀ v ∈ left, ∃ y : ℝ, vertices v = (0, y))
+    (harea : ∀ i : Fin n,
+      doubleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+          (vertices (triangles i).2.2) =
+        (((2 : ℚ) / n : ℚ) : ℝ) ∨
+      doubleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+          (vertices (triangles i).2.2) =
+        -(((2 : ℚ) / n : ℚ) : ℝ)) : False := by
+  exact no_odd_equalArea_realization_of_edgeParity_abs hn vertices triangles
+    (oddEdgeRedGreenCount_odd_of_realSquareBoundaryVertexChain vertices triangles
+      bottom right top left bottomLeft bottomRight topRight topLeft
+      hboundary hnodup hbottomLeft hbottomRight htopRight htopLeft
+      hbottom hright htop hleft)
     harea
 
 /-- The empty triangulation cannot carry a Monsky certificate: with 0 triangles,

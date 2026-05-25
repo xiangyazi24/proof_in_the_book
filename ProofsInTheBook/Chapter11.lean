@@ -4532,6 +4532,28 @@ theorem crossingLabelsCard_eq_two_mul_moveOrder {k r : ℕ}
     GeneralizedAllowableSequence.crossingLabelsCard A.seq j = 2 * A.moveOrder j := by
   exact A.toStepCounting.crossed_labels_card j
 
+theorem moveOrder_eq_of_crossingLabelsCard_eq {k r s : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r)
+    (B : CountedGeneralizedAllowableSequence k s)
+    {i : Fin r} {j : Fin s}
+    (hcard :
+      GeneralizedAllowableSequence.crossingLabelsCard A.seq i =
+        GeneralizedAllowableSequence.crossingLabelsCard B.seq j) :
+    A.moveOrder i = B.moveOrder j := by
+  have hA := A.crossingLabelsCard_eq_two_mul_moveOrder i
+  have hB := B.crossingLabelsCard_eq_two_mul_moveOrder j
+  omega
+
+theorem isCrossing_iff_of_crossingLabelsCard_eq {k r s : ℕ}
+    (A : CountedGeneralizedAllowableSequence k r)
+    (B : CountedGeneralizedAllowableSequence k s)
+    {i : Fin r} {j : Fin s}
+    (hcard :
+      GeneralizedAllowableSequence.crossingLabelsCard A.seq i =
+        GeneralizedAllowableSequence.crossingLabelsCard B.seq j) :
+    A.IsCrossing i ↔ B.IsCrossing j := by
+  rw [IsCrossing, IsCrossing, A.moveOrder_eq_of_crossingLabelsCard_eq B hcard]
+
 theorem moveOrder_eq_middle_of_directFullMove {k r : ℕ}
     (A : CountedGeneralizedAllowableSequence k r) {j : Fin r}
     (hsource : A.seq.π (stepFrom j) = Equiv.refl (Fin (2 * k)))

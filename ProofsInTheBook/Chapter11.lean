@@ -9887,6 +9887,54 @@ theorem sweepConcreteGAS_atIndex_mod_pi_seq_wrap_rev
     sweepGAS_at_mod_pi, GeneralizedAllowableSequence.ofSweepAngles] using
     sweepSort_labelingAt_interEventAngle_wrap_rev hcard hne s j hwrap
 
+theorem sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_no_wrap
+    {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points)
+    (s j : Fin (directionsDeterminedBy points).card)
+    (hwrap : s.val + j.val + 1 < (directionsDeterminedBy points).card) :
+    GeneralizedAllowableSequence.crossingLabelsCard
+        (sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).seq j =
+      GeneralizedAllowableSequence.crossingLabelsCard
+        (sweepConcreteGAS hcard hne hr hncoll).seq
+          ⟨s.val + j.val, by omega⟩ := by
+  let L := sweepLabeling hcard hne
+  let θs := interEventAngle points hne ⟨s.val, by omega⟩
+  let τ := sweepSort L θs
+  let l : Fin (directionsDeterminedBy points).card := ⟨s.val + j.val, by omega⟩
+  let jnext : Fin (directionsDeterminedBy points).card := ⟨j.val + 1, by omega⟩
+  have hB0 := sweepConcreteGAS_atIndex_mod_pi_seq_no_wrap
+    hcard hne hr hncoll s j (by omega : s.val + j.val < (directionsDeterminedBy points).card)
+  have hB1 := sweepConcreteGAS_atIndex_mod_pi_seq_no_wrap
+    hcard hne hr hncoll s jnext (by
+      dsimp [jnext]
+      omega)
+  have hA0 : (sweepConcreteGAS hcard hne hr hncoll).seq.π (stepFrom l) =
+      sweepSort L (interEventAngle points hne ⟨s.val + j.val, by omega⟩) := by
+    simp [sweepConcreteGAS, CountedGeneralizedAllowableSequence.ofReversesBlocks,
+      sweepGAS, GeneralizedAllowableSequence.ofSweepAngles, stepFrom, L, l]
+  have hA1 : (sweepConcreteGAS hcard hne hr hncoll).seq.π (stepTo l) =
+      sweepSort L (interEventAngle points hne ⟨s.val + j.val + 1, by omega⟩) := by
+    simp [sweepConcreteGAS, CountedGeneralizedAllowableSequence.ofReversesBlocks,
+      sweepGAS, GeneralizedAllowableSequence.ofSweepAngles, stepTo, L, l]
+  change stepCrossingLabelsCard k
+      ((sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).seq.π (stepFrom j))
+      ((sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).seq.π (stepTo j)) =
+    stepCrossingLabelsCard k
+      ((sweepConcreteGAS hcard hne hr hncoll).seq.π (stepFrom l))
+      ((sweepConcreteGAS hcard hne hr hncoll).seq.π (stepTo l))
+  dsimp [stepFrom, stepTo] at hB0 hB1 hA0 hA1 ⊢
+  rw [hB0, hB1, hA0, hA1]
+  change stepCrossingLabelsCard k
+      ((sweepSort L (interEventAngle points hne ⟨s.val + j.val, by omega⟩)).trans τ.symm)
+      ((sweepSort L (interEventAngle points hne ⟨s.val + j.val + 1, by omega⟩)).trans τ.symm) =
+    stepCrossingLabelsCard k
+      (sweepSort L (interEventAngle points hne ⟨s.val + j.val, by omega⟩))
+      (sweepSort L (interEventAngle points hne ⟨s.val + j.val + 1, by omega⟩))
+  exact stepCrossingLabelsCard_relabel _ _ τ
+
 -- Starting angle θ₀ is between sortedAngleAt(s-1) and sortedAngleAt(s)
 -- (or equivalently, in the gap before event s).
 --
@@ -9944,6 +9992,7 @@ now exists and is wired into a concrete shifted sweep:
 - `sweepConcreteGAS_atIndex_mod_pi_seq_no_wrap`
 - `sweepConcreteGAS_atIndex_mod_pi_seq_wrap`
 - `sweepConcreteGAS_atIndex_mod_pi_seq_wrap_rev`
+- `sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_no_wrap`
 
 The remaining blocker is the crossing-rotation transfer lemma.  For the
 ordinary sweep

@@ -9256,6 +9256,67 @@ noncomputable def sweepConcreteGAS_atIndex_mod_pi {points : Finset Point2} {k : 
     (fun d hd => interEventAngle_lt_direction_angle_add_pi_index hne s d hd)
     (fun d hd => interEventAngle_ne_direction_angle_index hne s d hd)
 
+private theorem shiftedSortedAngleAt_unwrapped {points : Finset Point2}
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (s j : Fin (directionsDeterminedBy points).card)
+    (hwrap : s.val + j.val < (directionsDeterminedBy points).card) :
+    shiftedSortedAngleAt points hne s j =
+      sortedAngleAt points ⟨s.val + j.val, hwrap⟩ := by
+  let r : ℕ := (directionsDeterminedBy points).card
+  have hmod : (s.val + j.val) % r = s.val + j.val := by
+    exact Nat.mod_eq_of_lt (by simpa [r] using hwrap)
+  have hfin :
+      (⟨(s.val + j.val) % (directionsDeterminedBy points).card,
+        Nat.mod_lt _ (Finset.card_pos.mpr hne)⟩ :
+          Fin (directionsDeterminedBy points).card) =
+        ⟨s.val + j.val, hwrap⟩ := by
+    apply Fin.ext
+    simpa [r] using hmod
+  simp [shiftedSortedAngleAt, hwrap, hfin]
+
+private theorem interEventAngleAt_unwrapped {points : Finset Point2}
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (s j : Fin (directionsDeterminedBy points).card)
+    (hwrap : s.val + j.val < (directionsDeterminedBy points).card) :
+    interEventAngleAt points hne
+        (interEventAngle points hne ⟨s.val, by omega⟩) s
+        ⟨j.val, by omega⟩ =
+      interEventAngle points hne ⟨s.val + j.val, by omega⟩ := by
+  by_cases hj0 : j.val = 0
+  · have hj : (⟨j.val, by omega⟩ :
+        Fin ((directionsDeterminedBy points).card + 1)) =
+        ⟨0, Nat.succ_pos _⟩ := Fin.ext hj0
+    have hsj : (⟨s.val + j.val, by omega⟩ :
+        Fin ((directionsDeterminedBy points).card + 1)) =
+        ⟨s.val, by omega⟩ := by
+      apply Fin.ext
+      simp [hj0]
+    rw [hj, interEventAngleAt_zero, hsj]
+  · let jprev : Fin (directionsDeterminedBy points).card := ⟨j.val - 1, by omega⟩
+    have hj_not_last : j.val ≠ (directionsDeterminedBy points).card := by omega
+    have hsum_ne_last :
+        s.val + j.val ≠ (directionsDeterminedBy points).card := by omega
+    have hwrap_prev : s.val + jprev.val < (directionsDeterminedBy points).card := by
+      dsimp [jprev]
+      omega
+    have hprev :
+        shiftedSortedAngleAt points hne s jprev =
+          sortedAngleAt points ⟨s.val + j.val - 1, by omega⟩ := by
+      have hprev0 := shiftedSortedAngleAt_unwrapped (points := points) hne s jprev hwrap_prev
+      have hidx : (⟨s.val + jprev.val, hwrap_prev⟩ :
+          Fin (directionsDeterminedBy points).card) =
+          ⟨s.val + j.val - 1, by omega⟩ := by
+        apply Fin.ext
+        dsimp [jprev]
+        omega
+      simpa [hidx] using hprev0
+    have hcur :
+        shiftedSortedAngleAt points hne s j =
+          sortedAngleAt points ⟨s.val + j.val, hwrap⟩ :=
+      shiftedSortedAngleAt_unwrapped (points := points) hne s j hwrap
+    simp [interEventAngleAt, interEventAngle, hj0, hj_not_last,
+      hsum_ne_last, jprev, hprev, hcur]
+
 -- Starting angle θ₀ is between sortedAngleAt(s-1) and sortedAngleAt(s)
 -- (or equivalently, in the gap before event s).
 --

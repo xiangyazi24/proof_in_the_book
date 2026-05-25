@@ -256,6 +256,9 @@ one row.  Paired with its negative in another row, this is the elementary
 def checkerboardDirection (c d : n) : n → ℝ :=
   Pi.single c (1 : ℝ) - Pi.single d (1 : ℝ)
 
+def scaledCheckerboardDirection (a : ℝ) (c d : n) : n → ℝ :=
+  a • checkerboardDirection c d
+
 theorem sum_checkerboardDirection (c d : n) :
     ∑ j, checkerboardDirection c d j = 0 := by
   simp [checkerboardDirection, Finset.sum_sub_distrib]
@@ -277,6 +280,42 @@ theorem twoRowPerturbation_checkerboard_mem_doublyStochastic {M : Matrix n n ℝ
     (sum_checkerboardDirection c d) ?_ ?_ hnonneg
   · simp [sum_checkerboardDirection]
   · exact checkerboardDirection_cancel c d
+
+omit [Fintype n] in
+theorem scaledCheckerboardPerturbation_one_nonneg {M : Matrix n n ℝ} {r s c d : n}
+    (hrs : r ≠ s) (hcd : c ≠ d)
+    (hM : ∀ i j, 0 ≤ M i j) {a : ℝ} (ha0 : 0 ≤ a)
+    (hrd : a ≤ M r d) (hsc : a ≤ M s c) :
+    ∀ i : n, ∀ j : n,
+      0 ≤ twoRowPerturbation M r s (scaledCheckerboardDirection (n := n) a c d)
+      (-(scaledCheckerboardDirection (n := n) a c d)) 1 i j := by
+  intro i j
+  by_cases his : i = s
+  · subst i
+    by_cases hjc : j = c
+    · subst j
+      simp [twoRowPerturbation, scaledCheckerboardDirection, checkerboardDirection, hcd]
+      linarith
+    · by_cases hjd : j = d
+      · subst j
+        simp [twoRowPerturbation, scaledCheckerboardDirection, checkerboardDirection, hcd]
+        nlinarith [hM s d, ha0]
+      · simp [twoRowPerturbation, scaledCheckerboardDirection, checkerboardDirection, hjc, hjd]
+        exact hM s j
+  · by_cases hir : i = r
+    · subst i
+      by_cases hjc : j = c
+      · subst j
+        simp [twoRowPerturbation, scaledCheckerboardDirection, checkerboardDirection, hrs, hcd]
+        nlinarith [hM r c, ha0]
+      · by_cases hjd : j = d
+        · subst j
+          simp [twoRowPerturbation, scaledCheckerboardDirection, checkerboardDirection, hrs, hcd]
+          linarith
+        · simp [twoRowPerturbation, scaledCheckerboardDirection, checkerboardDirection, his, hjc, hjd]
+          exact hM r j
+    · simp [twoRowPerturbation, his, hir]
+      exact hM i j
 
 theorem twoRowPermanent_same_single_eq_zero (hrs : r ≠ s) (c : n) :
     twoRowPermanent M r s (Pi.single c (1 : ℝ)) (Pi.single c (1 : ℝ)) = 0 := by
@@ -337,6 +376,22 @@ theorem checkerboardDirection_quadraticCoeff_nonneg (hrs : r ≠ s)
     exact twoRowPermanent_nonneg_of_nonneg hM h_ed_nonneg h_ec_nonneg
   rw [checkerboardDirection_quadraticCoeff_eq_crossSum (M := M) (r := r) (s := s) hrs c d]
   exact add_nonneg h_ec_ed h_ed_ec
+
+theorem scaledCheckerboardDirection_quadraticCoeff_nonneg {M : Matrix n n ℝ} {r s : n}
+    (hrs : r ≠ s)
+    (hM : ∀ i j, i ≠ r → i ≠ s → 0 ≤ M i j) (c d : n) (a : ℝ) :
+    0 ≤ twoRowPermanent M r s (scaledCheckerboardDirection (n := n) a c d)
+      (-(scaledCheckerboardDirection (n := n) a c d)) := by
+  have hneg : -(scaledCheckerboardDirection (n := n) a c d) =
+      a • (-checkerboardDirection c d) := by
+    ext j
+    simp [scaledCheckerboardDirection]
+  rw [hneg]
+  unfold scaledCheckerboardDirection
+  rw [twoRowPermanent_smul_left M hrs, twoRowPermanent_smul_right]
+  have hq := checkerboardDirection_quadraticCoeff_nonneg
+    (M := M) (r := r) (s := s) hrs hM c d
+  nlinarith [sq_nonneg a, hq]
 
 /-! ## Quadratic expansion and convexity along a two-row line -/
 
@@ -437,6 +492,42 @@ theorem checkerboardPerturbation_mem_and_permanent_convex_between_endpoints
   · exact twoRowPerturbation_checkerboard_mem_doublyStochastic hrs hM hnonneg_t
   · exact permanent_checkerboardPerturbation_convex_on_unit_interval hrs
       (fun i j _ _ => nonneg_of_mem_doublyStochastic hM) c d ht0 ht1
+
+theorem scaledCheckerboardPerturbation_mem_and_permanent_convex_between_endpoints
+    {c d : n} (hrs : r ≠ s) (hcd : c ≠ d) (hM : M ∈ doublyStochastic ℝ n)
+    {a : ℝ} (ha0 : 0 ≤ a) (hrd : a ≤ M r d) (hsc : a ≤ M s c)
+    {t : ℝ} (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
+    twoRowPerturbation M r s (scaledCheckerboardDirection (n := n) a c d)
+        (-(scaledCheckerboardDirection (n := n) a c d)) t ∈ doublyStochastic ℝ n ∧
+      (twoRowPerturbation M r s (scaledCheckerboardDirection (n := n) a c d)
+        (-(scaledCheckerboardDirection (n := n) a c d)) t).permanent ≤
+        (1 - t) * M.permanent +
+          t * (twoRowPerturbation M r s (scaledCheckerboardDirection (n := n) a c d)
+            (-(scaledCheckerboardDirection (n := n) a c d)) 1).permanent := by
+  have h1 : ∀ i j, 0 ≤ twoRowPerturbation M r s
+      (scaledCheckerboardDirection (n := n) a c d)
+      (-(scaledCheckerboardDirection (n := n) a c d)) 1 i j := by
+    exact scaledCheckerboardPerturbation_one_nonneg
+      (M := M) (r := r) (s := s) (c := c) (d := d) hrs hcd
+      (fun i j => nonneg_of_mem_doublyStochastic hM) ha0 hrd hsc
+  have hnonneg_t : ∀ i j, 0 ≤ twoRowPerturbation M r s
+      (scaledCheckerboardDirection (n := n) a c d)
+      (-(scaledCheckerboardDirection (n := n) a c d)) t i j := by
+    exact twoRowPerturbation_nonneg_of_endpoints (M := M) (r := r) (s := s) hrs _ _
+      (fun i j => nonneg_of_mem_doublyStochastic hM) h1 ht0 ht1
+  refine ⟨?_, ?_⟩
+  · refine twoRowPerturbation_mem_doublyStochastic hrs hM ?_ ?_ ?_ hnonneg_t
+    · simp_rw [scaledCheckerboardDirection, Pi.smul_apply, smul_eq_mul]
+      rw [← Finset.mul_sum, sum_checkerboardDirection, mul_zero]
+    · simp_rw [scaledCheckerboardDirection, Pi.neg_apply, Pi.smul_apply, smul_eq_mul]
+      rw [Finset.sum_neg_distrib, ← Finset.mul_sum]
+      rw [sum_checkerboardDirection, mul_zero, neg_zero]
+    · intro j
+      simp
+  · exact permanent_twoRowPerturbation_convex_on_unit_interval hrs _ _
+      (scaledCheckerboardDirection_quadraticCoeff_nonneg
+        (M := M) (r := r) (s := s) hrs
+        (fun i j _ _ => nonneg_of_mem_doublyStochastic hM) c d a) ht0 ht1
 
 /-! ## Elementary `2 × 2` log-concavity model -/
 

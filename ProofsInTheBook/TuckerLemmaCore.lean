@@ -1104,6 +1104,18 @@ theorem exists_complementaryComparable_of_kyFanPrefixParity_of_lt {n m : ℕ}
   obtain ⟨P, hstrict⟩ := hchain
   exact not_strictMono_fin_of_lt hmn ⟨fun i => (label (P.prefixChain i)).index, hstrict⟩
 
+theorem not_noComplementaryComparableLabels_of_kyFanPrefixParity_of_lt {n m : ℕ}
+    (hmn : m < n) (hparity : KyFanPrefixParityStatement n m)
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    ¬ NoComplementaryComparableLabels label := by
+  intro hno
+  have hodd := hparity label hantipodal hno
+  have hzero := positiveAlternatingPrefixLabelChains_card_eq_zero_of_lt hmn label
+  rw [hzero] at hodd
+  rcases hodd with ⟨r, hr⟩
+  omega
+
 theorem exists_complementaryComparable_of_kyFanPrefixModFour_of_lt {n m : ℕ}
     (hmn : m < n) (hmodFour : KyFanPrefixModFourStatement n m)
     (label : NonzeroSignedSubset n → SignedLabel m)
@@ -1113,6 +1125,17 @@ theorem exists_complementaryComparable_of_kyFanPrefixModFour_of_lt {n m : ℕ}
   exists_complementaryComparable_of_kyFanPrefixParity_of_lt hmn
     ((kyFanPrefixParityStatement_iff_modFour (Nat.zero_lt_of_lt hmn)).mpr hmodFour)
     label hantipodal
+
+theorem not_noComplementaryComparableLabels_of_kyFanPrefixModFour_of_lt {n m : ℕ}
+    (hmn : m < n) (hmodFour : KyFanPrefixModFourStatement n m)
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    ¬ NoComplementaryComparableLabels label := by
+  intro hno
+  obtain ⟨r, hcard⟩ := hmodFour label hantipodal hno
+  have hzero := alternatingPrefixLabelChains_card_eq_zero_of_lt hmn label
+  rw [hzero] at hcard
+  omega
 
 /-! ## Abstract path parity core -/
 

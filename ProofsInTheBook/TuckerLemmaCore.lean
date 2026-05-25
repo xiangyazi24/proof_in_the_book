@@ -768,6 +768,46 @@ theorem negativeAlternatingPrefixLabels_punctured_last {n m : ℕ}
     have hsign := h.2 (Fin.castSucc i)
     simpa [Fin.succAbove_last] using hsign
 
+theorem positiveAlternatingPrefixLabels_punctured_zero {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {P : SignedPermutation (n + 1)}
+    (h : PositiveAlternatingPrefixLabels label P) :
+    NegativeAlternatingPuncturedPrefixLabels label P 0 := by
+  constructor
+  · intro i j hij
+    have hsucc : (Fin.succ i : Fin (n + 1)) < Fin.succ j := by
+      exact Fin.succ_lt_succ_iff.mpr hij
+    simpa [Fin.succAbove_zero] using h.1 hsucc
+  · intro i
+    calc
+      (label (P.prefixChain ((0 : Fin (n + 1)).succAbove i))).positive =
+          decide (Even (Fin.succ i).val) := by
+        simpa [Fin.succAbove_zero] using h.2 (Fin.succ i)
+      _ = !decide (Even i.val) := by
+        by_cases hi : Even i.val
+        · simp [Fin.val_succ, Nat.even_add_one, hi]
+        · simp [Fin.val_succ, Nat.even_add_one, hi]
+
+theorem negativeAlternatingPrefixLabels_punctured_zero {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {P : SignedPermutation (n + 1)}
+    (h : NegativeAlternatingPrefixLabels label P) :
+    PositiveAlternatingPuncturedPrefixLabels label P 0 := by
+  constructor
+  · intro i j hij
+    have hsucc : (Fin.succ i : Fin (n + 1)) < Fin.succ j := by
+      exact Fin.succ_lt_succ_iff.mpr hij
+    simpa [Fin.succAbove_zero] using h.1 hsucc
+  · intro i
+    calc
+      (label (P.prefixChain ((0 : Fin (n + 1)).succAbove i))).positive =
+          !decide (Even (Fin.succ i).val) := by
+        simpa [Fin.succAbove_zero] using h.2 (Fin.succ i)
+      _ = decide (Even i.val) := by
+        by_cases hi : Even i.val
+        · simp [Fin.val_succ, Nat.even_add_one, hi]
+        · simp [Fin.val_succ, Nat.even_add_one, hi]
+
 def puncturedPrefixAntipode {n : ℕ} :
     SignedPermutation (n + 1) × Fin (n + 1) ≃ SignedPermutation (n + 1) × Fin (n + 1) where
   toFun data := (data.1.antipode, data.2)

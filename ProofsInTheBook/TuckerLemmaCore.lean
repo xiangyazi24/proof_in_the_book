@@ -1048,6 +1048,36 @@ theorem negativeAlternatingPrefixLabelChains_card_le_punctured_last {n m : ℕ}
   · intro P _ Q _ hPQ
     exact congrArg Prod.fst hPQ
 
+theorem positiveAlternatingPrefixLabelChains_card_le_negative_punctured_zero {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    (positiveAlternatingPrefixLabelChains label).card ≤
+      (negativeAlternatingPuncturedPrefixLabelChains label).card := by
+  classical
+  refine Finset.card_le_card_of_injOn (fun P : SignedPermutation (n + 1) =>
+      (P, (0 : Fin (n + 1)))) ?mem ?inj
+  · intro P hP
+    have hpos : PositiveAlternatingPrefixLabels label P := by
+      simpa [positiveAlternatingPrefixLabelChains] using hP
+    simpa [negativeAlternatingPuncturedPrefixLabelChains] using
+      positiveAlternatingPrefixLabels_punctured_zero hpos
+  · intro P _ Q _ hPQ
+    exact congrArg Prod.fst hPQ
+
+theorem negativeAlternatingPrefixLabelChains_card_le_positive_punctured_zero {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    (negativeAlternatingPrefixLabelChains label).card ≤
+      (positiveAlternatingPuncturedPrefixLabelChains label).card := by
+  classical
+  refine Finset.card_le_card_of_injOn (fun P : SignedPermutation (n + 1) =>
+      (P, (0 : Fin (n + 1)))) ?mem ?inj
+  · intro P hP
+    have hneg : NegativeAlternatingPrefixLabels label P := by
+      simpa [negativeAlternatingPrefixLabelChains] using hP
+    simpa [positiveAlternatingPuncturedPrefixLabelChains] using
+      negativeAlternatingPrefixLabels_punctured_zero hneg
+  · intro P _ Q _ hPQ
+    exact congrArg Prod.fst hPQ
+
 theorem positive_negative_alternating_disjoint {n m : ℕ} (hn : 0 < n)
     (label : NonzeroSignedSubset n → SignedLabel m) (P : SignedPermutation n) :
     PositiveAlternatingPrefixLabels label P →

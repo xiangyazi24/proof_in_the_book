@@ -716,6 +716,66 @@ theorem prefixChain_reindexPositions_of_symm_le_iff {n : ℕ}
   apply Subtype.ext
   exact P.prefixSignedSubset_reindexPositions_of_symm_le_iff τ i hτ
 
+theorem swap_adjacent_symm_le_iff_of_ne_left {n : ℕ} {a b i : Fin n}
+    (hab : b.val = a.val + 1) (hi : i ≠ a) :
+    ∀ k : Fin n, (Equiv.swap a b).symm k ≤ i ↔ k ≤ i := by
+  have habne : a ≠ b := by
+    intro h
+    have hval := congrArg Fin.val h
+    omega
+  intro k
+  by_cases hka : k = a
+  · subst k
+    have hswap : (Equiv.swap a b).symm a = b := by
+      simp
+    rw [hswap]
+    constructor
+    · intro h
+      exact le_trans (Fin.le_iff_val_le_val.mpr (by omega)) h
+    · intro h
+      exact Fin.le_iff_val_le_val.mpr (by
+        have hle : a.val ≤ i.val := Fin.le_iff_val_le_val.mp h
+        have hne : i.val ≠ a.val := by
+          intro hval
+          exact hi (Fin.ext hval)
+        omega)
+  · by_cases hkb : k = b
+    · subst k
+      have hswap : (Equiv.swap a b).symm b = a := by
+        simp
+      rw [hswap]
+      constructor
+      · intro h
+        exact Fin.le_iff_val_le_val.mpr (by
+          have hle : a.val ≤ i.val := Fin.le_iff_val_le_val.mp h
+          have hne : i.val ≠ a.val := by
+            intro hval
+            exact hi (Fin.ext hval)
+          omega)
+      · intro h
+        exact le_trans (Fin.le_iff_val_le_val.mpr (by omega)) h
+    · have hswap : (Equiv.swap a b).symm k = k := by
+        simp [Equiv.swap_apply_def, hka, hkb]
+      rw [hswap]
+
+theorem prefixChain_reindexPositions_swap_adjacent_of_ne_left {n : ℕ}
+    (P : SignedPermutation n) {a b i : Fin n}
+    (hab : b.val = a.val + 1) (hi : i ≠ a) :
+    (P.reindexPositions (Equiv.swap a b)).prefixChain i = P.prefixChain i :=
+  P.prefixChain_reindexPositions_of_symm_le_iff (Equiv.swap a b) i
+    (swap_adjacent_symm_le_iff_of_ne_left hab hi)
+
+theorem prefixChain_reindexPositions_swap_gap_succAbove {n : ℕ}
+    (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) (hgap : gap.val < n)
+    (i : Fin n) :
+    (P.reindexPositions
+        (Equiv.swap gap (⟨gap.val + 1, by omega⟩ : Fin (n + 1)))).prefixChain
+        (gap.succAbove i) =
+      P.prefixChain (gap.succAbove i) := by
+  apply P.prefixChain_reindexPositions_swap_adjacent_of_ne_left
+  · rfl
+  · exact Fin.succAbove_ne gap i
+
 end SignedPermutation
 
 /--

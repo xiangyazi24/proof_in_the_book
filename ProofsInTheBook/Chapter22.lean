@@ -1,4 +1,5 @@
 import Mathlib
+import ProofsInTheBook.PermanentConvexity
 
 /-!
 # Chapter 22: Van der Waerden's permanent conjecture
@@ -16,10 +17,13 @@ Formalization status: this file now states the genuine theorem over Mathlib's
 computation for the flat matrix, the `n ≤ 2` unconditional lower bounds, the
 `n = 0,1,2` instances of the coefficient-from-capacity analytic core, and the
 weighted-AM-GM capacity lower bound for row-linear products of doubly
-stochastic matrices.  The remaining arbitrary-dimension lower bound is exposed
-as a point-17 honest frontier: it is conditional on the missing
+stochastic matrices.  It also identifies the row-linear mixed coefficient with
+the permanent and packages the checkerboard boundary-convexity step for
+opposite exchange endpoints.  The remaining arbitrary-dimension lower bound is
+exposed as a point-17 honest frontier: it is conditional on the missing
 Falikman-Egorychev/Gurvits coefficient-from-capacity inequality for `n ≥ 3`,
-not replaced by the flat-matrix special case.  The
+now stated on the actual mixed coefficient of the row-linear polynomial rather
+than replaced by the flat-matrix special case.  The
 equality-only-if-flat strengthening belongs to the same unformalized analytic
 equality-case layer.
 
@@ -36,6 +40,7 @@ theorem van_der_waerden_permanent_conjecture (n : ℕ)
 namespace ProofsInTheBook.Chapter22
 
 open Matrix
+open ProofsInTheBook.PermanentConvexity
 
 noncomputable section
 
@@ -86,6 +91,48 @@ stable-polynomial proof of Van der Waerden's conjecture. -/
 def rowLinearProduct {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ) (x : Fin n → ℝ) : ℝ :=
   ∏ i, ∑ j, A i j * x j
 
+/-- The same row-linear product as a multivariate polynomial. -/
+def rowLinearMvPolynomial {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ) :
+    MvPolynomial (Fin n) ℝ :=
+  ∏ i, ∑ j, MvPolynomial.C (A i j) * MvPolynomial.X j
+
+theorem eval_rowLinearMvPolynomial {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
+    (x : Fin n → ℝ) :
+    MvPolynomial.eval x (rowLinearMvPolynomial A) = rowLinearProduct A x := by
+  simp [rowLinearMvPolynomial, rowLinearProduct]
+
+/--
+The mixed coefficient of the row-linear product, written as the sum over
+choosing one column in each row and requiring that every column is chosen once.
+This is the coefficient of the squarefree monomial `∏ⱼ xⱼ` in the expanded
+row-linear product.
+-/
+def rowLinearMixedCoefficient {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ) : ℝ :=
+  ∑ σ : Equiv.Perm (Fin n), ∏ i, A i (σ i)
+
+private def permInvEquiv (α : Type*) : Equiv.Perm α ≃ Equiv.Perm α where
+  toFun σ := σ.symm
+  invFun σ := σ.symm
+  left_inv σ := by ext x; simp
+  right_inv σ := by ext x; simp
+
+/-- The mixed coefficient of the row-linear product is the permanent. -/
+theorem rowLinearMixedCoefficient_eq_permanent {n : ℕ}
+    (A : Matrix (Fin n) (Fin n) ℝ) :
+    rowLinearMixedCoefficient A = A.permanent := by
+  classical
+  unfold rowLinearMixedCoefficient Matrix.permanent
+  refine (Fintype.sum_equiv (permInvEquiv (Fin n))
+    (fun σ : Equiv.Perm (Fin n) => ∏ i, A i (σ i))
+    (fun σ : Equiv.Perm (Fin n) => ∏ i, A (σ i) i) ?_).trans ?_
+  · intro σ
+    simp
+    exact Fintype.prod_equiv σ
+      (fun i => A i (σ i))
+      (fun i => A (σ.symm i) i)
+      (by intro i; simp)
+  · rfl
+
 /--
 The capacity lower bound needed for the row-linear product:
 `∏ⱼ xⱼ ≤ ∏ᵢ ∑ⱼ Aᵢⱼ xⱼ` on the positive orthant.  For a doubly stochastic
@@ -134,6 +181,19 @@ theorem rowLinearCapacityAtLeastOne_of_doublyStochastic {n : ℕ}
     _ ≤ rowLinearProduct A x := hprod
 
 /--
+Gurvits's coefficient-from-capacity step, expressed on the actual mixed
+coefficient of the row-linear polynomial.  This is the analytic theorem still
+needed in arbitrary dimension: capacity at least one implies the squarefree
+mixed coefficient is at least `n! / n^n`.
+-/
+structure GurvitsCoefficientFromCapacityCore (n : ℕ) where
+  mixed_coefficient_bound :
+    ∀ A : Matrix (Fin n) (Fin n) ℝ,
+      (∀ i j, 0 ≤ A i j) →
+      RowLinearCapacityAtLeastOne A →
+      (n.factorial : ℝ) / (n : ℝ) ^ n ≤ rowLinearMixedCoefficient A
+
+/--
 The remaining analytic core behind the full theorem.
 
 * `coefficient_bound` is the deep Falikman-Egorychev/Gurvits
@@ -157,6 +217,26 @@ structure VanDerWaerdenAnalyticCore (n : ℕ) where
       (∀ i j, 0 ≤ A i j) →
       RowLinearCapacityAtLeastOne A →
       (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent
+
+/--
+The Gurvits mixed-coefficient theorem implies the permanent-form analytic
+core, because the row-linear mixed coefficient is exactly the permanent.
+-/
+theorem vanDerWaerdenAnalyticCore_of_gurvitsCoefficientFromCapacityCore
+    {n : ℕ} (core : GurvitsCoefficientFromCapacityCore n) :
+    VanDerWaerdenAnalyticCore n := by
+  refine ⟨?_⟩
+  intro A hA hcap
+  simpa [rowLinearMixedCoefficient_eq_permanent A] using
+    core.mixed_coefficient_bound A hA hcap
+
+theorem gurvitsCoefficientFromCapacityCore_of_vanDerWaerdenAnalyticCore
+    {n : ℕ} (core : VanDerWaerdenAnalyticCore n) :
+    GurvitsCoefficientFromCapacityCore n := by
+  refine ⟨?_⟩
+  intro A hA hcap
+  simpa [rowLinearMixedCoefficient_eq_permanent A] using
+    core.coefficient_bound A hA hcap
 
 theorem permanent_nonneg_of_entrywise_nonneg {n : ℕ}
     (A : Matrix (Fin n) (Fin n) ℝ) (hA : ∀ i j, 0 ≤ A i j) :
@@ -340,6 +420,11 @@ theorem vanDerWaerdenAnalyticCore_of_le_two (n : ℕ) (hn : n ≤ 2) :
   · exact vanDerWaerdenAnalyticCore_fin_one
   · exact vanDerWaerdenAnalyticCore_fin_two
 
+theorem gurvitsCoefficientFromCapacityCore_of_le_two (n : ℕ) (hn : n ≤ 2) :
+    GurvitsCoefficientFromCapacityCore n :=
+  gurvitsCoefficientFromCapacityCore_of_vanDerWaerdenAnalyticCore
+    (vanDerWaerdenAnalyticCore_of_le_two n hn)
+
 theorem van_der_Waerden_permanent_conjecture_of_le_two (n : ℕ) (hn : n ≤ 2)
     (A : Matrix (Fin n) (Fin n) ℝ)
     (hA : A ∈ doublyStochastic ℝ (Fin n)) :
@@ -356,6 +441,49 @@ theorem chapter22_of_le_two (n : ℕ) (hn : n ≤ 2)
     (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent :=
   van_der_Waerden_permanent_conjecture_of_le_two n hn A hA
 
+/-! ### Boundary-convexity interface from checkerboard exchanges -/
+
+/--
+The Chapter 22 specialization of the checkerboard boundary-convexity package:
+from any positive-width opposite checkerboard direction, both maximal
+endpoints remain doubly stochastic, each endpoint lies on the boundary, and
+the permanent at the original matrix is bounded by the corresponding convex
+combination of the two endpoint permanents.
+
+This is not yet the Van der Waerden lower bound by itself: a convexity upper
+bound is the input needed for the minimizer/equality-case analysis or for the
+stronger AF/Gurvits coefficient inequality.
+-/
+theorem checkerboardEndpointPair_boundaryConvexity {n : ℕ}
+    {A : Matrix (Fin n) (Fin n) ℝ} {r s c d : Fin n}
+    (hrs : r ≠ s) (hcd : c ≠ d) (hA : A ∈ doublyStochastic ℝ (Fin n))
+    (hpos : 0 < checkerboardExchangeAmount A r s c d +
+      checkerboardExchangeAmount A r s d c) :
+    checkerboardExchangeEndpoint A r s c d ∈ doublyStochastic ℝ (Fin n) ∧
+      checkerboardExchangeEndpoint A r s d c ∈ doublyStochastic ℝ (Fin n) ∧
+      (checkerboardExchangeEndpoint A r s c d r d = 0 ∨
+        checkerboardExchangeEndpoint A r s c d s c = 0) ∧
+      (checkerboardExchangeEndpoint A r s d c r c = 0 ∨
+        checkerboardExchangeEndpoint A r s d c s d = 0) ∧
+      A.permanent ≤
+        (1 - checkerboardExchangeAmount A r s d c /
+            (checkerboardExchangeAmount A r s c d +
+              checkerboardExchangeAmount A r s d c)) *
+          (checkerboardExchangeEndpoint A r s d c).permanent +
+        (checkerboardExchangeAmount A r s d c /
+            (checkerboardExchangeAmount A r s c d +
+              checkerboardExchangeAmount A r s d c)) *
+          (checkerboardExchangeEndpoint A r s c d).permanent := by
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · exact checkerboardExchangeEndpoint_mem_doublyStochastic hrs hcd hA
+  · exact checkerboardExchangeEndpoint_mem_doublyStochastic hrs hcd.symm hA
+  · exact checkerboardExchangeEndpoint_boundary_zero
+      (M := A) (r := r) (s := s) (c := c) (d := d) hrs hcd
+  · exact checkerboardExchangeEndpoint_boundary_zero
+      (M := A) (r := r) (s := s) (c := d) (d := c) hrs hcd.symm
+  · exact checkerboardExchangeEndpoint_backward_line_permanent_le
+      (M := A) (r := r) (s := s) (c := c) (d := d) hrs hcd hA hpos
+
 /-- The genuine Van der Waerden permanent lower-bound statement, conditional
 on the named analytic core above.  Point-17 status: ③, conditional on an
 unproved but precisely identified analytic theorem, not a flat-matrix
@@ -368,6 +496,18 @@ theorem van_der_Waerden_permanent_conjecture_from_analyticCore (n : ℕ)
   exact core.coefficient_bound A
     (fun i j => nonneg_of_mem_doublyStochastic hA)
     (rowLinearCapacityAtLeastOne_of_doublyStochastic A hA)
+
+/--
+The same conditional endpoint, but stated with the genuine Gurvits
+mixed-coefficient theorem as the assumption.
+-/
+theorem van_der_Waerden_permanent_conjecture_from_gurvitsCoefficientCore
+    (n : ℕ) (core : GurvitsCoefficientFromCapacityCore n)
+    (A : Matrix (Fin n) (Fin n) ℝ)
+    (hA : A ∈ doublyStochastic ℝ (Fin n)) :
+    (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent := by
+  exact van_der_Waerden_permanent_conjecture_from_analyticCore n
+    (vanDerWaerdenAnalyticCore_of_gurvitsCoefficientFromCapacityCore core) A hA
 
 /--
 The genuine Van der Waerden permanent lower-bound statement, with the analytic
@@ -383,6 +523,15 @@ theorem van_der_Waerden_permanent_conjecture_from_large_dim_analyticCore
   · exact van_der_Waerden_permanent_conjecture_of_le_two n hn A hA
   · have h3 : 3 ≤ n := by omega
     exact van_der_Waerden_permanent_conjecture_from_analyticCore n (core n h3) A hA
+
+theorem van_der_Waerden_permanent_conjecture_from_large_dim_gurvitsCore
+    (core : ∀ m : ℕ, 3 ≤ m → GurvitsCoefficientFromCapacityCore m)
+    (n : ℕ) (A : Matrix (Fin n) (Fin n) ℝ)
+    (hA : A ∈ doublyStochastic ℝ (Fin n)) :
+    (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent := by
+  exact van_der_Waerden_permanent_conjecture_from_large_dim_analyticCore
+    (fun m hm => vanDerWaerdenAnalyticCore_of_gurvitsCoefficientFromCapacityCore
+      (core m hm)) n A hA
 
 theorem chapter22
     (core : ∀ m : ℕ, 3 ≤ m → VanDerWaerdenAnalyticCore m)

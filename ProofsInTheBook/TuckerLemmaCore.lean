@@ -862,6 +862,18 @@ theorem tuckerLemmaStatement_of_kyFanPrefixParity {n : ℕ} (hn : 1 ≤ n)
     TuckerLemmaStatement n :=
   tuckerLemmaStatement_of_kyFanPrefix hn (kyFanPrefixChainStatement_of_parity hparity)
 
+theorem kyFanPrefixChainStatement_of_modFour {n m : ℕ} (hn : 0 < n)
+    (hmodFour : KyFanPrefixModFourStatement n m) :
+    KyFanPrefixChainStatement n m :=
+  kyFanPrefixChainStatement_of_parity
+    ((kyFanPrefixParityStatement_iff_modFour hn).mpr hmodFour)
+
+theorem tuckerLemmaStatement_of_kyFanPrefixModFour {n : ℕ} (hn : 1 ≤ n)
+    (hmodFour : KyFanPrefixModFourStatement n (n - 1)) :
+    TuckerLemmaStatement n :=
+  tuckerLemmaStatement_of_kyFanPrefix hn
+    (kyFanPrefixChainStatement_of_modFour (by omega) hmodFour)
+
 theorem not_nonzeroSignedSubset_zero (X : NonzeroSignedSubset 0) : False := by
   rcases X with ⟨X, hX⟩
   have hpos : X.pos = ∅ := by
@@ -1012,6 +1024,16 @@ theorem exists_complementaryComparable_of_kyFanPrefixParity_of_lt {n m : ℕ}
   have hchain := kyFanPrefixChainStatement_of_parity hparity label hantipodal hno
   obtain ⟨P, hstrict⟩ := hchain
   exact not_strictMono_fin_of_lt hmn ⟨fun i => (label (P.prefixChain i)).index, hstrict⟩
+
+theorem exists_complementaryComparable_of_kyFanPrefixModFour_of_lt {n m : ℕ}
+    (hmn : m < n) (hmodFour : KyFanPrefixModFourStatement n m)
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    ∃ X Y : NonzeroSignedSubset n,
+      SignedSubset.Le X.1 Y.1 ∧ label X = (label Y).neg :=
+  exists_complementaryComparable_of_kyFanPrefixParity_of_lt hmn
+    ((kyFanPrefixParityStatement_iff_modFour (Nat.zero_lt_of_lt hmn)).mpr hmodFour)
+    label hantipodal
 
 /-! ## Abstract path parity core -/
 

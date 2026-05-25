@@ -151,6 +151,45 @@ theorem arm_lemma_abstract {n : ℕ} (angles newAngles : Fin n → ℝ)
     exact absurd (h i) (ne_of_lt hi)
 
 /--
+An immediate contradiction form of Cauchy's arm lemma: a genuinely opened
+arm cannot keep the same endpoint chord.
+
+This still assumes the geometric arm-lemma alternative `harm`; proving that
+alternative from Euclidean polygonal chains is part of the remaining
+polyhedron/vertex-link frontier.
+-/
+theorem arm_lemma_forbids_strict_opening_with_fixed_chord {n : ℕ}
+    (angles newAngles : Fin n → ℝ) (chord newChord : ℝ)
+    (hfixed : newChord = chord)
+    (hopen : ∀ i, angles i ≤ newAngles i)
+    (hstrict : ∃ i, angles i < newAngles i)
+    (hconvex : ∀ i, newAngles i < Real.pi)
+    (harm : chord < newChord ∨ (∀ i, angles i = newAngles i)) :
+    False := by
+  have hlt : chord < newChord :=
+    arm_lemma_abstract angles newAngles chord newChord hopen hstrict hconvex harm
+  rw [hfixed] at hlt
+  exact (lt_irrefl chord) hlt
+
+/--
+The same contradiction in the reversed direction: a genuinely closed arm
+cannot keep the same endpoint chord.  It is just `arm_lemma_abstract` applied
+with the old and new angle arrays swapped.
+-/
+theorem arm_lemma_forbids_strict_closing_with_fixed_chord {n : ℕ}
+    (angles newAngles : Fin n → ℝ) (chord newChord : ℝ)
+    (hfixed : newChord = chord)
+    (hclose : ∀ i, newAngles i ≤ angles i)
+    (hstrict : ∃ i, newAngles i < angles i)
+    (hconvex : ∀ i, angles i < Real.pi)
+    (harm : newChord < chord ∨ (∀ i, newAngles i = angles i)) :
+    False := by
+  have hlt : newChord < chord :=
+    arm_lemma_abstract newAngles angles newChord chord hclose hstrict hconvex harm
+  rw [hfixed] at hlt
+  exact (lt_irrefl chord) hlt
+
+/--
 The global sign-change counting step via Euler's formula. In Cauchy's proof,
 each face contributes an even number of sign changes around its boundary,
 so the total sum of sign changes over all faces is even. But Euler's formula
@@ -201,6 +240,12 @@ theorem cauchy_counting_contradiction {V : ℕ}
     False :=
   not_lt_of_ge (four_mul_vertices_le_total_signChanges vertexSignChanges hlocal) hglobal
 
+theorem four_le_of_even_ne_zero_ne_two {m : ℕ}
+    (heven : Even m) (hzero : m ≠ 0) (htwo : m ≠ 2) :
+    4 ≤ m := by
+  rcases heven with ⟨k, rfl⟩
+  omega
+
 /--
 Euler plus the fact that every face is a triangle gives `F + 4 = 2V`.
 The Euler formula is stated over `ℤ` to avoid truncated subtraction on `ℕ`.
@@ -240,12 +285,40 @@ theorem euler_triangular_sign_change_bound {V E F : ℕ}
   omega
 
 /--
+Local data at a surviving vertex after zero edges have been removed.
+
+The two negative fields are the exact Cauchy-arm-lemma frontier at the
+finite sign layer: the geometric vertex-link argument must rule out a
+constant strict sign pattern and a single `+` block followed by a single `-`
+block (two sign changes).  Once those two cases and parity are supplied, the
+`≥ 4` lower bound is pure arithmetic and is proved below.
+-/
+structure CauchyArmVertex where
+  /-- Number of strict sign changes around this vertex. -/
+  signChanges : ℕ
+  /-- Cyclic strict plus/minus sign changes occur in pairs. -/
+  signChanges_even : Even signChanges
+  /-- Cauchy's arm lemma rules out a constant strict sign pattern. -/
+  arm_lemma_no_zero_sign_changes : signChanges ≠ 0
+  /-- Cauchy's arm lemma rules out exactly one positive and one negative block. -/
+  arm_lemma_no_two_sign_changes : signChanges ≠ 2
+
+namespace CauchyArmVertex
+
+theorem four_le_signChanges (v : CauchyArmVertex) :
+    4 ≤ v.signChanges :=
+  four_le_of_even_ne_zero_ne_two v.signChanges_even
+    v.arm_lemma_no_zero_sign_changes v.arm_lemma_no_two_sign_changes
+
+end CauchyArmVertex
+
+/--
 Certificate for Cauchy's rigidity theorem after removing the circular
 `False` field.  The fields are the mathematically meaningful facts supplied
 by the missing geometry:
 * a nontrivial edge-sign assignment survives;
-* the arm lemma forces at least four sign changes around every surviving
-  vertex;
+* the vertex-link arm-lemma obstruction rules out the two low sign-change
+  cases, from which the four-change lower bound is proved in this file;
 * the face/vertex sign-change counts are linked by double-counting;
 * Euler's polyhedron formula and the triangular face-edge incidence count
   hold for the reduced triangulated sign graph.
@@ -253,28 +326,44 @@ by the missing geometry:
 structure CauchyRigidityCertificate {V E F : ℕ} (edgeSigns : Fin E → EdgeSign) where
   /-- A nontrivial perturbation exists (at least one edge has a nonzero sign). -/
   nontrivial : ∃ e, edgeSigns e ≠ EdgeSign.zero
-  /-- Number of sign changes around each vertex of the reduced sign graph. -/
-  vertexSignChanges : Fin V → ℕ
+  /-- Arm-lemma local data around each vertex of the reduced sign graph. -/
+  vertexArmData : Fin V → CauchyArmVertex
   /-- Strict edge signs around each triangular face of the reduced sign graph. -/
   faceSigns : Fin F → StrictTriangleSigns
-  /-- Cauchy's arm lemma: every surviving vertex has at least four sign changes. -/
-  arm_lemma_four_sign_changes : ∀ v, 4 ≤ vertexSignChanges v
   /-- Double-counting: vertex sign changes and face sign changes count the same incidences. -/
   total_vertex_eq_total_face :
-    (∑ v : Fin V, vertexSignChanges v) =
+    (∑ v : Fin V, (vertexArmData v).signChanges) =
       ∑ f : Fin F, StrictTriangleSigns.signChanges (faceSigns f)
   /-- Euler's formula for the reduced triangulated sign graph. -/
   euler_formula : (V : ℤ) - (E : ℤ) + (F : ℤ) = 2
   /-- Every face is triangular, so counting face-edge incidences gives `3F = 2E`. -/
   triangular_face_edge_count : 3 * F = 2 * E
 
-theorem CauchyRigidityCertificate.euler_sign_change_bound {V E F : ℕ}
+namespace CauchyRigidityCertificate
+
+def vertexSignChanges {V E F : ℕ} {edgeSigns : Fin E → EdgeSign}
+    (cert : CauchyRigidityCertificate (V := V) (F := F) edgeSigns) :
+    Fin V → ℕ :=
+  fun v => (cert.vertexArmData v).signChanges
+
+theorem arm_lemma_four_sign_changes {V E F : ℕ}
+    {edgeSigns : Fin E → EdgeSign}
+    (cert : CauchyRigidityCertificate (V := V) (F := F) edgeSigns) :
+    ∀ v, 4 ≤ cert.vertexSignChanges v := by
+  intro v
+  exact CauchyArmVertex.four_le_signChanges (cert.vertexArmData v)
+
+theorem euler_sign_change_bound {V E F : ℕ}
     {edgeSigns : Fin E → EdgeSign}
     (cert : CauchyRigidityCertificate (V := V) (F := F) edgeSigns) :
     (∑ v : Fin V, cert.vertexSignChanges v) < 4 * V :=
   euler_triangular_sign_change_bound cert.vertexSignChanges cert.faceSigns
-    cert.total_vertex_eq_total_face
+    (by
+      simpa [CauchyRigidityCertificate.vertexSignChanges] using
+        cert.total_vertex_eq_total_face)
     cert.euler_formula cert.triangular_face_edge_count
+
+end CauchyRigidityCertificate
 
 /--
 Chapter 13 (Cauchy's rigidity theorem, Tier 1 conditional):

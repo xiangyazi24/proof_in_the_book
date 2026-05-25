@@ -6171,6 +6171,18 @@ theorem noFullCrossing {S : Finset Point2} {k : ℕ}
   C.sequence.moveOrder_lt_middle_of_noDirectFullMove hk
     (C.noDirectFullMove hk hncoll)
 
+def toCertificate {S : Finset Point2} {k : ℕ}
+    (C : UngarLevelSweepCore S k) (hk : 0 < k)
+    (hend : C.sequence.CyclicEndGap
+      (C.sequence.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk)) :
+    UngarLevelSweepCertificate S k hk where
+  labeling := C.labeling
+  sequence := C.sequence
+  stepDir := C.stepDir
+  blocks_level := C.blocks_level
+  stepDir_injective := C.stepDir_injective
+  cyclic_end_gap := hend
+
 end UngarLevelSweepCore
 
 abbrev EvenUngarLevelSweepCertificatePremise : Prop :=
@@ -7531,6 +7543,28 @@ noncomputable def ungarLevelSweepCore {points : Finset Point2} {k : ℕ}
     (directionsDeterminedBy_card_ge_two_of_noncollinear hncoll) hncoll
   stepDir_injective := sweepStepDir_injective points
 
+abbrev EvenSweepCyclicEndGapPremise : Prop :=
+  ∀ S : Finset Point2, ∀ k : ℕ, ∀ hk : 0 < k, ∀ hcard : S.card = 2 * k,
+    ∀ hncoll : NoncollinearSet S,
+      let C := ungarLevelSweepCore (points := S) (k := k) hcard hncoll
+      C.sequence.CyclicEndGap
+        (C.sequence.toCountedGeneralizedAllowableSequence.crossingMoves_card_pos hk)
+
+theorem evenUngarLevelSweepCertificatePremise_of_sweep_cyclicEndGap
+    (hend : EvenSweepCyclicEndGapPremise) :
+    EvenUngarLevelSweepCertificatePremise := by
+  intro S k hk hcard hncoll
+  let C := ungarLevelSweepCore (points := S) (k := k) hcard hncoll
+  exact ⟨C.toCertificate hk (hend S k hk hcard hncoll)⟩
+
+theorem chapter11_from_sweep_cyclicEndGap (points : Finset Point2)
+    (hn : 3 ≤ points.card)
+    (hncoll : NoncollinearSet points)
+    (hend : EvenSweepCyclicEndGapPremise) :
+    2 * (points.card / 2) ≤ (directionsDeterminedBy points).card :=
+  chapter11 points hn hncoll
+    (evenUngarLevelSweepCertificatePremise_of_sweep_cyclicEndGap hend)
+
 /-!
 ### Certificate assembly status
 
@@ -7544,10 +7578,10 @@ The rotating-level sweep now constructs `ungarLevelSweepCore`, which is all of
 - `stepDir_injective` = `sweepStepDir_injective`
 - `cyclic_end_gap` = **TODO**: requires CyclicEndGapWitness via shifted sweep
 
-Also needed: `NoncollinearSet S → (directionsDeterminedBy S).Nonempty` and
-`NoncollinearSet S → 2 ≤ (directionsDeterminedBy S).card` to provide `hne` and `hr`.
-
-Once CyclicEndGap is proved, `EvenUngarLevelSweepCertificatePremise` follows directly.
+The assembly theorem `evenUngarLevelSweepCertificatePremise_of_sweep_cyclicEndGap`
+now proves that this single `cyclic_end_gap` field is the only remaining input
+needed to obtain `EvenUngarLevelSweepCertificatePremise`; the public
+`chapter11_from_sweep_cyclicEndGap` exposes that narrower frontier.
 -/
 
 /-! ### Parameterized sweep for CyclicEndGap -/
@@ -9262,6 +9296,37 @@ noncomputable def sweepConcreteGAS_atIndex_mod_pi {points : Finset Point2} {k : 
     (fun d hd => interEventAngle_lt_direction_angle_add_pi_index hne s d hd)
     (fun d hd => interEventAngle_ne_direction_angle_index hne s d hd)
 
+theorem sweepLabelingAt_interEventAngle_point_eq {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (s : Fin (directionsDeterminedBy points).card)
+    (a : Fin (2 * k)) :
+    (sweepLabelingAt (points := points) hcard
+      (interEventAngle points hne ⟨s.val, by omega⟩)).point a =
+      ((sweepLabeling hcard hne).reindex
+        (sweepSort (sweepLabeling hcard hne)
+          (interEventAngle points hne ⟨s.val, by omega⟩))).point a := by
+  let B := PointLabeling.ofCard hcard
+  let θ := interEventAngle points hne ⟨s.val, by omega⟩
+  let τ0 := sweepSort B (sweepStartAngle points hne)
+  have hinjB : Function.Injective (fun x : Fin (2 * k) => orientedLevel θ (B.point x)) := by
+    have hinjL := inj_at_interEventAngle hcard hne ⟨s.val, by omega⟩
+    intro x y hxy
+    have hxyL :
+        orientedLevel θ ((B.reindex τ0).point (τ0.symm x)) =
+          orientedLevel θ ((B.reindex τ0).point (τ0.symm y)) := by
+      simp [PointLabeling.reindex, Function.comp, τ0, hxy]
+    have hidx : τ0.symm x = τ0.symm y := by
+      simpa [sweepLabeling, B, τ0, θ] using hinjL hxyL
+    exact τ0.symm.injective hidx
+  have hsort :
+      sweepSort (B.reindex τ0) θ = (sweepSort B θ).trans τ0.symm :=
+    sweepSort_reindex_of_injective B τ0 hinjB
+  change B.point ((sweepSort B θ) a) =
+    B.point (τ0 ((sweepSort (B.reindex τ0) θ) a))
+  rw [hsort]
+  simp [Equiv.trans_apply]
+
 private theorem shiftedSortedAngleAt_unwrapped {points : Finset Point2}
     (hne : (directionsDeterminedBy points).Nonempty)
     (s j : Fin (directionsDeterminedBy points).card)
@@ -9585,6 +9650,7 @@ now exists and is wired into a concrete shifted sweep:
 - `mono_at_eventAt_mod_pi`
 - `sweepConcreteGAS_at_mod_pi`
 - `sweepConcreteGAS_atIndex_mod_pi`
+- `sweepLabelingAt_interEventAngle_point_eq`
 
 The remaining blocker is the crossing-rotation transfer lemma.  For the
 ordinary sweep

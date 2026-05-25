@@ -2531,6 +2531,34 @@ theorem even_card_negativePuncturedPrefixChainType {n m : ℕ}
     (negativePuncturedPrefixChainPartner_involutive label)
     (negativePuncturedPrefixChainPartner_fixedPointFree label)
 
+theorem positivePuncturedPrefixChainType_card {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Fintype.card (PositivePuncturedPrefixChainType label) =
+      (positiveAlternatingPuncturedPrefixLabelChains label).card := by
+  classical
+  exact Fintype.card_of_subtype (positiveAlternatingPuncturedPrefixLabelChains label)
+    (fun _ => Iff.rfl)
+
+theorem negativePuncturedPrefixChainType_card {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Fintype.card (NegativePuncturedPrefixChainType label) =
+      (negativeAlternatingPuncturedPrefixLabelChains label).card := by
+  classical
+  exact Fintype.card_of_subtype (negativeAlternatingPuncturedPrefixLabelChains label)
+    (fun _ => Iff.rfl)
+
+theorem positiveAlternatingPuncturedPrefixLabelChains_card_even {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Even (positiveAlternatingPuncturedPrefixLabelChains label).card := by
+  simpa [positivePuncturedPrefixChainType_card label] using
+    even_card_positivePuncturedPrefixChainType label
+
+theorem negativeAlternatingPuncturedPrefixLabelChains_card_even {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Even (negativeAlternatingPuncturedPrefixLabelChains label).card := by
+  simpa [negativePuncturedPrefixChainType_card label] using
+    even_card_negativePuncturedPrefixChainType label
+
 /--
 The numerical endpoint count used in the Ky Fan path proof.
 

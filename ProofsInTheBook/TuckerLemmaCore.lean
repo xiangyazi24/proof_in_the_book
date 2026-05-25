@@ -786,6 +786,44 @@ noncomputable def alternatingPrefixLabelChains {n m : ℕ}
     (label : NonzeroSignedSubset n → SignedLabel m) : Finset (SignedPermutation n) :=
   positiveAlternatingPrefixLabelChains label ∪ negativeAlternatingPrefixLabelChains label
 
+theorem positiveAlternatingPrefixLabelChains_eq_empty_of_lt {n m : ℕ} (hmn : m < n)
+    (label : NonzeroSignedSubset n → SignedLabel m) :
+    positiveAlternatingPrefixLabelChains label = ∅ := by
+  classical
+  apply Finset.eq_empty_iff_forall_notMem.mpr
+  intro P hP
+  have hpos : PositiveAlternatingPrefixLabels label P := by
+    simpa [positiveAlternatingPrefixLabelChains] using hP
+  exact not_strictMono_fin_of_lt hmn ⟨fun i => (label (P.prefixChain i)).index, hpos.1⟩
+
+theorem negativeAlternatingPrefixLabelChains_eq_empty_of_lt {n m : ℕ} (hmn : m < n)
+    (label : NonzeroSignedSubset n → SignedLabel m) :
+    negativeAlternatingPrefixLabelChains label = ∅ := by
+  classical
+  apply Finset.eq_empty_iff_forall_notMem.mpr
+  intro P hP
+  have hneg : NegativeAlternatingPrefixLabels label P := by
+    simpa [negativeAlternatingPrefixLabelChains] using hP
+  exact not_strictMono_fin_of_lt hmn ⟨fun i => (label (P.prefixChain i)).index, hneg.1⟩
+
+theorem alternatingPrefixLabelChains_eq_empty_of_lt {n m : ℕ} (hmn : m < n)
+    (label : NonzeroSignedSubset n → SignedLabel m) :
+    alternatingPrefixLabelChains label = ∅ := by
+  rw [alternatingPrefixLabelChains, positiveAlternatingPrefixLabelChains_eq_empty_of_lt hmn,
+    negativeAlternatingPrefixLabelChains_eq_empty_of_lt hmn, Finset.empty_union]
+
+theorem positiveAlternatingPrefixLabelChains_card_eq_zero_of_lt {n m : ℕ} (hmn : m < n)
+    (label : NonzeroSignedSubset n → SignedLabel m) :
+    (positiveAlternatingPrefixLabelChains label).card = 0 := by
+  rw [positiveAlternatingPrefixLabelChains_eq_empty_of_lt hmn label]
+  simp
+
+theorem alternatingPrefixLabelChains_card_eq_zero_of_lt {n m : ℕ} (hmn : m < n)
+    (label : NonzeroSignedSubset n → SignedLabel m) :
+    (alternatingPrefixLabelChains label).card = 0 := by
+  rw [alternatingPrefixLabelChains_eq_empty_of_lt hmn label]
+  simp
+
 theorem alternatingPrefixLabelChains_card {n m : ℕ} (hn : 0 < n)
     (label : NonzeroSignedSubset n → SignedLabel m)
     (hantipodal : ∀ X, label X.antipode = (label X).neg) :

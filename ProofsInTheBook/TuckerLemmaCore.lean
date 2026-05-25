@@ -2559,6 +2559,27 @@ theorem negativeAlternatingPuncturedPrefixLabelChains_card_even {n m : ℕ}
   simpa [negativePuncturedPrefixChainType_card label] using
     even_card_negativePuncturedPrefixChainType label
 
+theorem alternatingPuncturedPrefixLabelChains_card_even {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Even (alternatingPuncturedPrefixLabelChains label).card := by
+  classical
+  rw [alternatingPuncturedPrefixLabelChains,
+    Finset.card_union_of_disjoint
+      (positive_negativeAlternatingPuncturedPrefixLabelChains_disjoint hn label)]
+  rcases positiveAlternatingPuncturedPrefixLabelChains_card_even label with ⟨a, ha⟩
+  rcases negativeAlternatingPuncturedPrefixLabelChains_card_even label with ⟨b, hb⟩
+  refine ⟨a + b, ?_⟩
+  omega
+
+theorem alternatingPuncturedPrefixLabelChains_card_eq_four_mul {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    ∃ r, (alternatingPuncturedPrefixLabelChains label).card = 4 * r := by
+  rcases positiveAlternatingPuncturedPrefixLabelChains_card_even label with ⟨r, hr⟩
+  refine ⟨r, ?_⟩
+  rw [alternatingPuncturedPrefixLabelChains_card hn label hantipodal, hr]
+  omega
+
 /--
 The numerical endpoint count used in the Ky Fan path proof.
 

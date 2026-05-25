@@ -219,6 +219,44 @@ theorem positive_eq_of_le_of_same_index_of_no_complement {n m : ℕ}
       simp [hx, hy] at hne ⊢
   exact hno X Y hXY (SignedLabel.ext hbool (by simpa [SignedLabel.neg] using hindex))
 
+/--
+Ky Fan's alternating-chain form for the sign-vector/cross-polytope complex.
+The chain order is the face-inclusion order.
+-/
+def KyFanAlternatingChainStatement (n m : ℕ) : Prop :=
+  ∀ label : NonzeroSignedSubset n → SignedLabel m,
+    (∀ X, label X.antipode = (label X).neg) →
+      NoComplementaryComparableLabels label →
+        ∃ chain : Fin n → NonzeroSignedSubset n,
+          (∀ i j, i < j → SignedSubset.Le (chain i).1 (chain j).1) ∧
+            StrictMono fun i => (label (chain i)).index
+
+theorem not_strictMono_fin_pred (n : ℕ) (hn : 1 ≤ n) :
+    ¬ ∃ f : Fin n → Fin (n - 1), StrictMono f := by
+  rintro ⟨f, hf⟩
+  have hinj : Function.Injective f := by
+    intro i j hij
+    by_cases hij' : i = j
+    · exact hij'
+    · have hlt_or_gt : i < j ∨ j < i := lt_or_gt_of_ne hij'
+      rcases hlt_or_gt with hlt | hgt
+      · exact (ne_of_lt (hf hlt) hij).elim
+      · exact (ne_of_gt (hf hgt) hij).elim
+  have hcard := Fintype.card_le_of_injective f hinj
+  simp [Fintype.card_fin] at hcard
+  omega
+
+theorem tuckerLemmaStatement_of_kyFan {n : ℕ} (hn : 1 ≤ n)
+    (hfan : KyFanAlternatingChainStatement n (n - 1)) :
+    TuckerLemmaStatement n := by
+  intro label hantipodal
+  by_contra hnone
+  have hno : NoComplementaryComparableLabels label := by
+    intro X Y hXY hcomp
+    exact hnone ⟨X, Y, hXY, hcomp⟩
+  obtain ⟨chain, _hchain, hstrict⟩ := hfan label hantipodal hno
+  exact not_strictMono_fin_pred n hn ⟨fun i => (label (chain i)).index, hstrict⟩
+
 /-! ## Signed-permutation maximal chains -/
 
 /-- A signed permutation, i.e. a maximal chain in the face lattice of the
@@ -434,12 +472,51 @@ theorem positiveAlternatingPrefixLabelChains_card_eq_negative {n m : ℕ}
       simpa [positiveAlternatingPrefixLabelChains] using hpos
     · exact SignedPermutation.antipode_involutive Q
 
+/-- The explicit maximal-chain version of the Ky Fan frontier. -/
+def KyFanPrefixChainStatement (n m : ℕ) : Prop :=
+  ∀ label : NonzeroSignedSubset n → SignedLabel m,
+    (∀ X, label X.antipode = (label X).neg) →
+      NoComplementaryComparableLabels label →
+        ∃ P : SignedPermutation n,
+          StrictMono fun i => (label (P.prefixChain i)).index
+
+theorem kyFanAlternatingChainStatement_of_prefix {n m : ℕ}
+    (hprefix : KyFanPrefixChainStatement n m) :
+    KyFanAlternatingChainStatement n m := by
+  intro label hantipodal hno
+  obtain ⟨P, hstrict⟩ := hprefix label hantipodal hno
+  exact ⟨P.prefixChain, P.prefixChain_strictly_ordered, hstrict⟩
+
+theorem tuckerLemmaStatement_of_kyFanPrefix {n : ℕ} (hn : 1 ≤ n)
+    (hprefix : KyFanPrefixChainStatement n (n - 1)) :
+    TuckerLemmaStatement n :=
+  tuckerLemmaStatement_of_kyFan hn (kyFanAlternatingChainStatement_of_prefix hprefix)
+
 /-- The Ky Fan signed-permutation parity frontier. -/
 def KyFanPrefixParityStatement (n m : ℕ) : Prop :=
   ∀ label : NonzeroSignedSubset n → SignedLabel m,
     (∀ X, label X.antipode = (label X).neg) →
       NoComplementaryComparableLabels label →
         Odd (positiveAlternatingPrefixLabelChains label).card
+
+theorem kyFanPrefixChainStatement_of_parity {n m : ℕ}
+    (hparity : KyFanPrefixParityStatement n m) :
+    KyFanPrefixChainStatement n m := by
+  intro label hantipodal hno
+  have hodd := hparity label hantipodal hno
+  have hpos : 0 < (positiveAlternatingPrefixLabelChains label).card := by
+    rcases hodd with ⟨r, hr⟩
+    omega
+  obtain ⟨P, hP⟩ := Finset.card_pos.mp hpos
+  exact ⟨P, (by
+    have hP' : PositiveAlternatingPrefixLabels label P := by
+      simpa [positiveAlternatingPrefixLabelChains] using hP
+    exact hP'.1)⟩
+
+theorem tuckerLemmaStatement_of_kyFanPrefixParity {n : ℕ} (hn : 1 ≤ n)
+    (hparity : KyFanPrefixParityStatement n (n - 1)) :
+    TuckerLemmaStatement n :=
+  tuckerLemmaStatement_of_kyFanPrefix hn (kyFanPrefixChainStatement_of_parity hparity)
 
 /-! ## Abstract path parity core -/
 

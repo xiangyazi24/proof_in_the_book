@@ -14,13 +14,16 @@ The book's proof uses Hall's marriage theorem applied row by row:
 at each step, the remaining entries in each row form a system of
 distinct representatives.
 
-Point-17 status: this file now contains four genuine pieces: the
+Point-17 status: this file now contains several genuine pieces: the
 row-completion Hall step for a sparse partial square, the standard extension
 of a Latin rectangle by one row, and the padding reduction
-`completion_from_exact_cardinality_case`, which proves that the `|P| < n - 1`
+`completion_from_exact_cardinality_case`, which proves that the `|P| ≤ n - 1`
 case reduces to the exact `|P| = n - 1` Evans case by adding legal entries one
-at a time.  The complete completion theorem is also discharged for orders
-`0`, `1`, and `2`.  It is still not the full Evans/Smetaniuk completion theorem.  The
+at a time.  The complete completion theorem is also discharged for all partial
+squares with at most one filled cell and for orders `0`, `1`, and `2`.
+The canonical `chapter33` theorem is now stated as the full completion theorem
+conditional on the exact-cardinality Evans/Smetaniuk case.  It is still not an
+unconditional full Evans/Smetaniuk completion theorem.  The
 remaining missing infrastructure is the exact-cardinality Smetaniuk induction:
 permuting rows/columns/symbols so a singleton symbol lies on the back diagonal
 and all other filled cells lie above it, applying the order-`n - 1` induction
@@ -354,6 +357,22 @@ def IsLatinSquare {n : ℕ} (L : Fin n → Fin n → Fin n) : Prop :=
 def Completes {n : ℕ} (P : Fin n → Fin n → Option (Fin n))
     (L : Fin n → Fin n → Fin n) : Prop :=
   IsLatinSquare L ∧ ∀ i j a, P i j = some a → L i j = a
+
+/-- The full Evans/Smetaniuk completion theorem for one order. -/
+def LatinSquareCompletionTheorem (n : ℕ) : Prop :=
+  ∀ P : Fin n → Fin n → Option (Fin n),
+    IsPartialLatin P → (filledCells P).card ≤ n - 1 →
+      ∃ L : Fin n → Fin n → Fin n, Completes P L
+
+/--
+The exact-cardinality case left by the proved padding reduction.  This is the
+Smetaniuk switching frontier: once `|P| = n - 1` is completed, the full
+`≤ n - 1` theorem follows.
+-/
+def EvansExactCardinalityCase (n : ℕ) : Prop :=
+  ∀ P : Fin n → Fin n → Option (Fin n),
+    IsPartialLatin P → (filledCells P).card = n - 1 →
+      ∃ L : Fin n → Fin n → Fin n, Completes P L
 
 /-- One partial square extends another when all filled cells are preserved. -/
 def ExtendsPartial {n : ℕ} (P Q : Fin n → Fin n → Option (Fin n)) : Prop :=
@@ -719,13 +738,9 @@ case; the padding step for smaller partial squares is proved here without any
 extra premise.
 -/
 theorem completion_from_exact_cardinality_case {n : ℕ}
-    (hexact :
-      ∀ P : Fin n → Fin n → Option (Fin n),
-        IsPartialLatin P → (filledCells P).card = n - 1 →
-          ∃ L : Fin n → Fin n → Fin n, Completes P L)
-    (P : Fin n → Fin n → Option (Fin n))
-    (hP : IsPartialLatin P) (hfilled_le : (filledCells P).card ≤ n - 1) :
-    ∃ L : Fin n → Fin n → Fin n, Completes P L := by
+    (hexact : EvansExactCardinalityCase n) :
+    LatinSquareCompletionTheorem n := by
+  intro P hP hfilled_le
   obtain ⟨Q, hQ, hPQ, hQcard⟩ := extend_partialLatin_to_exact hP hfilled_le
   obtain ⟨L, hL⟩ := hexact Q hQ hQcard
   exact ⟨L, completes_of_extendsPartial hPQ hL⟩
@@ -733,8 +748,72 @@ theorem completion_from_exact_cardinality_case {n : ℕ}
 /-!
 ### Elementary complete orders
 
-Orders `0`, `1`, and `2` do not need the Evans/Smetaniuk induction.
+Squares with at most one filled cell, and orders `0`, `1`, and `2`, do not
+need the Evans/Smetaniuk induction.
 -/
+
+/-- The cyclic Latin square on `Fin n`. -/
+def cyclicLatinSquare (n : ℕ) : Fin n → Fin n → Fin n := fun i j => i + j
+
+theorem isLatinSquare_cyclicLatinSquare (n : ℕ) : IsLatinSquare (cyclicLatinSquare n) := by
+  constructor
+  · intro i x y h
+    exact add_left_cancel h
+  · intro j x y h
+    exact add_right_cancel h
+
+/-- A cyclic Latin square with one prescribed cell value, obtained by a symbol swap. -/
+def cyclicLatinSquareWithCell {n : ℕ} (i₀ j₀ a₀ : Fin n) : Fin n → Fin n → Fin n :=
+  fun i j => Equiv.swap (i₀ + j₀) a₀ (i + j)
+
+theorem isLatinSquare_cyclicLatinSquareWithCell {n : ℕ} (i₀ j₀ a₀ : Fin n) :
+    IsLatinSquare (cyclicLatinSquareWithCell i₀ j₀ a₀) := by
+  constructor
+  · intro i x y h
+    unfold cyclicLatinSquareWithCell at h
+    have h' : i + x = i + y := (Equiv.swap (i₀ + j₀) a₀).injective h
+    exact add_left_cancel h'
+  · intro j x y h
+    unfold cyclicLatinSquareWithCell at h
+    have h' : x + j = y + j := (Equiv.swap (i₀ + j₀) a₀).injective h
+    exact add_right_cancel h'
+
+theorem cyclicLatinSquareWithCell_spec {n : ℕ} (i₀ j₀ a₀ : Fin n) :
+    cyclicLatinSquareWithCell i₀ j₀ a₀ i₀ j₀ = a₀ := by
+  simp [cyclicLatinSquareWithCell]
+
+theorem latin_square_completion_card_le_one {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n))
+    (hfilled_le : (filledCells P).card ≤ 1) :
+    ∃ L : Fin n → Fin n → Fin n, Completes P L := by
+  classical
+  by_cases hfilled : ∃ i j a, P i j = some a
+  · rcases hfilled with ⟨i₀, j₀, a₀, hcell₀⟩
+    refine ⟨cyclicLatinSquareWithCell i₀ j₀ a₀, ?_⟩
+    constructor
+    · exact isLatinSquare_cyclicLatinSquareWithCell i₀ j₀ a₀
+    · intro i j a hcell
+      have hmem : (i, j) ∈ filledCells P := by
+        simp [filledCells, hcell]
+      have hmem₀ : (i₀, j₀) ∈ filledCells P := by
+        simp [filledCells, hcell₀]
+      have hp_eq : (i, j) = (i₀, j₀) :=
+        (Finset.card_le_one_iff.mp hfilled_le) hmem hmem₀
+      have hi : i = i₀ := congrArg Prod.fst hp_eq
+      have hj : j = j₀ := congrArg Prod.snd hp_eq
+      subst i
+      subst j
+      have ha : a = a₀ := by
+        have hsome : some a = some a₀ := by
+          rw [← hcell, hcell₀]
+        exact Option.some.inj hsome
+      subst a
+      exact cyclicLatinSquareWithCell_spec i₀ j₀ a₀
+  · refine ⟨cyclicLatinSquare n, ?_⟩
+    constructor
+    · exact isLatinSquare_cyclicLatinSquare n
+    · intro i j a hcell
+      exact False.elim (hfilled ⟨i, j, a, hcell⟩)
 
 theorem latin_square_completion_order_zero (P : Fin 0 → Fin 0 → Option (Fin 0)) :
     ∃ L : Fin 0 → Fin 0 → Fin 0, Completes P L := by
@@ -824,6 +903,11 @@ theorem latin_square_completion_order_le_two (n : ℕ) (hn : n ≤ 2)
   · simpa using latin_square_completion_order_zero P
   · simpa using latin_square_completion_order_one P
   · simpa using latin_square_completion_order_two P hfilled_le
+
+theorem latin_square_completion_theorem_order_le_two (n : ℕ) (hn : n ≤ 2) :
+    LatinSquareCompletionTheorem n := by
+  intro P _hP hfilled_le
+  exact latin_square_completion_order_le_two n hn P hfilled_le
 
 /-- If every used symbol has a witness cell, then the pair count of common-used
 symbols times columns is bounded by the total filled cells. -/
@@ -919,14 +1003,11 @@ theorem latin_square_completion_step_from_partial {n : ℕ}
   exact ⟨choice, hinj, fun j => by simpa using hmem j⟩
 
 /--
-Canonical Chapter 33 entry point.
-
-This is currently the genuine Hall row-completion step from the partial-square
-hypotheses, with Hall's condition proved internally.  It is intentionally kept
-as a step theorem until the stateful fixed-entry row-extension lemma described
-in the module note is formalized.
+The genuine Hall row-completion step from the sparse partial-square hypotheses.
+Hall's condition is proved internally, but this theorem is only a one-row step:
+it is not by itself an iteration proof of the full Evans/Smetaniuk theorem.
 -/
-theorem chapter33 {n : ℕ}
+theorem chapter33_row_completion_step {n : ℕ}
     (P : Fin n → Fin n → Option (Fin n))
     (usedInCol : Fin n → Finset (Fin n))
     (_hused : ∀ j, (usedInCol j).card < n)
@@ -934,5 +1015,16 @@ theorem chapter33 {n : ℕ}
     (hfilled_le : (filledCells P).card ≤ n - 1) :
     ∃ row : Fin n → Fin n, Function.Injective row ∧ ∀ j, row j ∉ usedInCol j :=
   latin_square_completion_step_from_partial P usedInCol _hused hused_witness hfilled_le
+
+/--
+Canonical Chapter 33 entry point: the full Latin-square completion theorem,
+reduced to the exact-cardinality Evans/Smetaniuk switching case.
+
+The missing unconditional ingredient is precisely `EvansExactCardinalityCase n`;
+the Hall row step above cannot simply be iterated after a whole row is added.
+-/
+theorem chapter33 {n : ℕ} (hexact : EvansExactCardinalityCase n) :
+    LatinSquareCompletionTheorem n :=
+  completion_from_exact_cardinality_case hexact
 
 end ProofsInTheBook.Chapter33

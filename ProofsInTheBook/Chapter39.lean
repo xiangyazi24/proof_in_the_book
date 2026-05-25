@@ -1479,6 +1479,174 @@ theorem kyFanPrefixChainStatement_of_parity {n m : ℕ}
       simpa [positiveAlternatingPrefixLabelChains] using hP
     exact hP'.1)⟩
 
+/-! ### Endpoint-count form of the remaining Ky Fan parity frontier -/
+
+theorem even_card_of_fixedPointFree_involutive {α : Type*} [Fintype α]
+    (e : α ≃ α) (hinv : Function.Involutive e) (hfree : ∀ x : α, e x ≠ x) :
+    Even (Fintype.card α) := by
+  classical
+  let p : Equiv.Perm α := e
+  have hp2 : p ^ 2 = 1 := by
+    ext x
+    exact hinv x
+  have hsupp : p.support = Finset.univ := by
+    ext x
+    simp [Equiv.Perm.mem_support]
+    exact hfree x
+  have htwo : 2 ∣ Fintype.card α := by
+    simpa [hsupp] using Equiv.Perm.two_dvd_card_support (σ := p) hp2
+  exact even_iff_two_dvd.mpr htwo
+
+/--
+The numerical core of the Prescott-Su/Fan path count: if paths come in
+antipodal pairs, every path has two endpoints, and the endpoints are exactly
+the two base endpoints plus equally many positive and negative top endpoints,
+then the positive top endpoints are odd.
+-/
+theorem odd_positive_endpoints_of_antipodal_path_count
+    (positive negative pathCount : ℕ)
+    (hneg : negative = positive)
+    (hpath_even : Even pathCount)
+    (hendpoints : 2 + positive + negative = 2 * pathCount) :
+    Odd positive := by
+  rcases hpath_even with ⟨r, hr⟩
+  rw [Nat.odd_iff]
+  omega
+
+theorem sigma_endpoint_card_eq_two_mul_paths
+    {Path : Type*} [Fintype Path]
+    (Endpoint : Path → Type*) [∀ p : Path, Fintype (Endpoint p)]
+    (htwo : ∀ p : Path, Fintype.card (Endpoint p) = 2) :
+    Fintype.card (Σ p : Path, Endpoint p) = 2 * Fintype.card Path := by
+  classical
+  rw [Fintype.card_sigma]
+  calc
+    (∑ p : Path, Fintype.card (Endpoint p)) = ∑ _p : Path, 2 := by
+      exact Finset.sum_congr rfl fun p _ => htwo p
+    _ = 2 * Fintype.card Path := by
+      simp [mul_comm]
+
+theorem endpoint_card_eq_base_add_positive_add_negative
+    {Endpoint Base Positive Negative : Type*}
+    [Fintype Endpoint] [Fintype Base] [Fintype Positive] [Fintype Negative]
+    (classify : Endpoint ≃ Base ⊕ (Positive ⊕ Negative)) :
+    Fintype.card Endpoint =
+      Fintype.card Base + Fintype.card Positive + Fintype.card Negative := by
+  have hcard := Fintype.card_congr classify
+  rw [hcard]
+  simp [Fintype.card_sum]
+  omega
+
+theorem endpoint_count_eq_two_mul_paths_of_endpoint_equiv
+    {Path Base Positive Negative : Type*}
+    [Fintype Path] [Fintype Base] [Fintype Positive] [Fintype Negative]
+    (Endpoint : Path → Type*) [∀ p : Path, Fintype (Endpoint p)]
+    (htwo : ∀ p : Path, Fintype.card (Endpoint p) = 2)
+    (classify : (Σ p : Path, Endpoint p) ≃ Base ⊕ (Positive ⊕ Negative))
+    (hbase : Fintype.card Base = 2) :
+    2 + Fintype.card Positive + Fintype.card Negative = 2 * Fintype.card Path := by
+  have hpath := sigma_endpoint_card_eq_two_mul_paths Endpoint htwo
+  have hclass := endpoint_card_eq_base_add_positive_add_negative classify
+  rw [hbase] at hclass
+  omega
+
+theorem odd_card_positive_endpoints_of_path_endpoint_equiv
+    {Path Base Positive Negative : Type*}
+    [Fintype Path] [Fintype Base] [Fintype Positive] [Fintype Negative]
+    (Endpoint : Path → Type*) [∀ p : Path, Fintype (Endpoint p)]
+    (pathAntipode : Path ≃ Path)
+    (hinv : Function.Involutive pathAntipode)
+    (hfree : ∀ p : Path, pathAntipode p ≠ p)
+    (htwo : ∀ p : Path, Fintype.card (Endpoint p) = 2)
+    (classify : (Σ p : Path, Endpoint p) ≃ Base ⊕ (Positive ⊕ Negative))
+    (hbase : Fintype.card Base = 2)
+    (hneg : Fintype.card Negative = Fintype.card Positive) :
+    Odd (Fintype.card Positive) := by
+  exact odd_positive_endpoints_of_antipodal_path_count
+    (Fintype.card Positive) (Fintype.card Negative) (Fintype.card Path)
+    hneg
+    (even_card_of_fixedPointFree_involutive pathAntipode hinv hfree)
+    (endpoint_count_eq_two_mul_paths_of_endpoint_equiv Endpoint htwo classify hbase)
+
+abbrev PositivePrefixChainType {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m) :=
+  {P : SignedPermutation n // P ∈ positiveAlternatingPrefixLabelChains label}
+
+abbrev NegativePrefixChainType {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m) :=
+  {P : SignedPermutation n // P ∈ negativeAlternatingPrefixLabelChains label}
+
+/--
+Packaged endpoint data for the Prescott-Su/Fan path proof.  The only
+remaining combinatorial construction is to instantiate this structure for the
+octahedral flag graph of a concrete Tucker labeling.
+-/
+structure PathEndpointDecomposition (Positive Negative : Type) [Fintype Positive]
+    [Fintype Negative] where
+  Path : Type
+  Base : Type
+  Endpoint : Path → Type
+  instPath : Fintype Path
+  instBase : Fintype Base
+  instEndpoint : ∀ p : Path, Fintype (Endpoint p)
+  pathAntipode : Path ≃ Path
+  pathAntipode_involutive : Function.Involutive pathAntipode
+  pathAntipode_fixedPointFree : ∀ p : Path, pathAntipode p ≠ p
+  endpoint_card_two : ∀ p : Path, Fintype.card (Endpoint p) = 2
+  classify : (Σ p : Path, Endpoint p) ≃ Base ⊕ (Positive ⊕ Negative)
+  base_card : Fintype.card Base = 2
+
+namespace PathEndpointDecomposition
+
+theorem positive_card_odd {Positive Negative : Type} [Fintype Positive] [Fintype Negative]
+    (D : PathEndpointDecomposition Positive Negative)
+    (hneg : Fintype.card Negative = Fintype.card Positive) :
+    Odd (Fintype.card Positive) := by
+  letI := D.instPath
+  letI := D.instBase
+  letI : ∀ p : D.Path, Fintype (D.Endpoint p) := D.instEndpoint
+  exact odd_card_positive_endpoints_of_path_endpoint_equiv
+    D.Endpoint D.pathAntipode D.pathAntipode_involutive D.pathAntipode_fixedPointFree
+    D.endpoint_card_two D.classify D.base_card hneg
+
+end PathEndpointDecomposition
+
+abbrev KyFanPrefixPathEndpointDecomposition {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m) :=
+  PathEndpointDecomposition (PositivePrefixChainType label) (NegativePrefixChainType label)
+
+/--
+Ky Fan prefix parity follows from the structured endpoint decomposition.  This
+is now the concrete finite-combinatorics frontier for the general Tucker
+lemma: build the path graph and endpoint classifier.
+-/
+theorem kyFanPrefixParity_of_pathEndpointDecomposition {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (D : KyFanPrefixPathEndpointDecomposition label) :
+    Odd (positiveAlternatingPrefixLabelChains label).card := by
+  classical
+  have hneg :
+      Fintype.card (NegativePrefixChainType label) =
+        Fintype.card (PositivePrefixChainType label) := by
+    simp [PositivePrefixChainType, NegativePrefixChainType,
+      positiveAlternatingPrefixLabelChains_card_eq_negative label hantipodal]
+  have hodd := D.positive_card_odd hneg
+  simpa [PositivePrefixChainType] using hodd
+
+def KyFanPrefixPathEndpointDecompositionStatement (n m : ℕ) : Prop :=
+  ∀ label : NonzeroSignedSubset n → SignedLabel m,
+    (∀ X, label X.antipode = (label X).neg) →
+      NoComplementaryComparableLabels label →
+        Nonempty (KyFanPrefixPathEndpointDecomposition label)
+
+theorem kyFanPrefixParityStatement_of_pathEndpointDecomposition {n m : ℕ}
+    (hpaths : KyFanPrefixPathEndpointDecompositionStatement n m) :
+    KyFanPrefixParityStatement n m := by
+  intro label hantipodal hno
+  rcases hpaths label hantipodal hno with ⟨D⟩
+  exact kyFanPrefixParity_of_pathEndpointDecomposition label hantipodal D
+
 theorem tuckerLemmaStatement_of_kyFanPrefixParity {n : ℕ} (hn : 1 ≤ n)
     (hparity : KyFanPrefixParityStatement n (n - 1)) :
     TuckerLemmaStatement n :=
@@ -1758,5 +1926,20 @@ theorem chapter39_of_kyFanPrefixModFour {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k �
     (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
   chapter39 hk hn (tuckerLemmaStatement_of_kyFanPrefixModFour (by omega) hmodFour)
+
+/--
+Chapter 39 from the concrete Prescott-Su/Fan path endpoint decomposition.
+This is a tighter frontier than the abstract parity statement: the remaining
+work is to construct the finite path decomposition for the octahedral labeling.
+-/
+theorem chapter39_of_kyFanPrefixPathEndpointDecomposition {n k : ℕ}
+    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (hpaths : KyFanPrefixPathEndpointDecompositionStatement n (n - 1)) :
+    (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
+  chapter39_of_kyFanPrefixParity hk hn
+    (kyFanPrefixParityStatement_of_pathEndpointDecomposition hpaths)
 
 end ProofsInTheBook.Chapter39

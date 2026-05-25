@@ -9447,9 +9447,7 @@ theorem interEventAngleAt_wrapped {points : Finset Point2}
   by_cases hstrict : (directionsDeterminedBy points).card < s.val + j.val
   · exact interEventAngleAt_wrapped_nonzero hne s j hstrict
   · have heq : s.val + j.val = (directionsDeterminedBy points).card := by omega
-    have hj0 : j.val ≠ 0 := by
-      have hs := s.isLt
-      omega
+    have hj0 : j.val ≠ 0 := by omega
     have hj_not_last : j.val ≠ (directionsDeterminedBy points).card := by
       exact ne_of_lt j.isLt
     let jprev : Fin (directionsDeterminedBy points).card := ⟨j.val - 1, by omega⟩

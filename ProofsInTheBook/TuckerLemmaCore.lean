@@ -692,6 +692,115 @@ theorem positiveAlternatingPrefixLabels_antipode_iff {n m : ℕ}
     rw [label_prefixChain_antipode label hantipodal P i]
     simp [SignedLabel.neg, hsign]
 
+/--
+Positive-first alternating labels on the prefix chain of a signed permutation
+after deleting one prefix position.  This is the codimension-one chain type used
+by the Fan/Prescott-Su path graph.
+-/
+def PositiveAlternatingPuncturedPrefixLabels {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) : Prop :=
+  (StrictMono fun i : Fin n => (label (P.prefixChain (gap.succAbove i))).index) ∧
+    ∀ i : Fin n, (label (P.prefixChain (gap.succAbove i))).positive = decide (Even i.val)
+
+/-- Negative-first version of `PositiveAlternatingPuncturedPrefixLabels`. -/
+def NegativeAlternatingPuncturedPrefixLabels {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) : Prop :=
+  (StrictMono fun i : Fin n => (label (P.prefixChain (gap.succAbove i))).index) ∧
+    ∀ i : Fin n, (label (P.prefixChain (gap.succAbove i))).positive = !decide (Even i.val)
+
+theorem punctured_prefix_strictMono_antipode_iff {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) :
+    (StrictMono fun i : Fin n =>
+      (label (P.antipode.prefixChain (gap.succAbove i))).index) ↔
+      StrictMono fun i : Fin n => (label (P.prefixChain (gap.succAbove i))).index := by
+  simp [label_prefixChain_antipode label hantipodal P, SignedLabel.neg]
+
+theorem positiveAlternatingPuncturedPrefixLabels_antipode_iff {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) :
+    PositiveAlternatingPuncturedPrefixLabels label P.antipode gap ↔
+      NegativeAlternatingPuncturedPrefixLabels label P gap := by
+  constructor
+  · intro h
+    refine ⟨(punctured_prefix_strictMono_antipode_iff label hantipodal P gap).mp h.1, ?_⟩
+    intro i
+    have hsign := h.2 i
+    rw [label_prefixChain_antipode label hantipodal P (gap.succAbove i)] at hsign
+    simpa [NegativeAlternatingPuncturedPrefixLabels, PositiveAlternatingPuncturedPrefixLabels,
+      SignedLabel.neg] using hsign
+  · intro h
+    refine ⟨(punctured_prefix_strictMono_antipode_iff label hantipodal P gap).mpr h.1, ?_⟩
+    intro i
+    have hsign := h.2 i
+    rw [label_prefixChain_antipode label hantipodal P (gap.succAbove i)]
+    simp [SignedLabel.neg, hsign]
+
+def puncturedPrefixAntipode {n : ℕ} :
+    SignedPermutation (n + 1) × Fin (n + 1) ≃ SignedPermutation (n + 1) × Fin (n + 1) where
+  toFun data := (data.1.antipode, data.2)
+  invFun data := (data.1.antipode, data.2)
+  left_inv := by
+    intro data
+    cases data with
+    | mk P gap =>
+        simp [SignedPermutation.antipode_involutive P]
+  right_inv := by
+    intro data
+    cases data with
+    | mk P gap =>
+        simp [SignedPermutation.antipode_involutive P]
+
+noncomputable def positiveAlternatingPuncturedPrefixLabelChains {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Finset (SignedPermutation (n + 1) × Fin (n + 1)) :=
+  by
+    classical
+    exact Finset.univ.filter fun data =>
+      PositiveAlternatingPuncturedPrefixLabels label data.1 data.2
+
+noncomputable def negativeAlternatingPuncturedPrefixLabelChains {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Finset (SignedPermutation (n + 1) × Fin (n + 1)) :=
+  by
+    classical
+    exact Finset.univ.filter fun data =>
+      NegativeAlternatingPuncturedPrefixLabels label data.1 data.2
+
+theorem positiveAlternatingPuncturedPrefixLabelChains_card_eq_negative {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    (positiveAlternatingPuncturedPrefixLabelChains label).card =
+      (negativeAlternatingPuncturedPrefixLabelChains label).card := by
+  classical
+  let e : SignedPermutation (n + 1) × Fin (n + 1) ≃
+      SignedPermutation (n + 1) × Fin (n + 1) := puncturedPrefixAntipode
+  refine Finset.card_bij (fun data _ => e data) ?mem ?inj ?surj
+  · rintro ⟨P, gap⟩ hP
+    have hpos : PositiveAlternatingPuncturedPrefixLabels label P gap := by
+      simpa [positiveAlternatingPuncturedPrefixLabelChains] using hP
+    have hneg : NegativeAlternatingPuncturedPrefixLabels label P.antipode gap := by
+      have hiff := positiveAlternatingPuncturedPrefixLabels_antipode_iff label hantipodal
+        P.antipode gap
+      have hpos' : PositiveAlternatingPuncturedPrefixLabels label P.antipode.antipode gap := by
+        simpa [SignedPermutation.antipode_involutive P] using hpos
+      exact hiff.mp hpos'
+    simpa [negativeAlternatingPuncturedPrefixLabelChains, e, puncturedPrefixAntipode] using hneg
+  · intro data _ other _ hdata
+    exact e.injective hdata
+  · rintro ⟨P, gap⟩ hP
+    have hneg : NegativeAlternatingPuncturedPrefixLabels label P gap := by
+      simpa [negativeAlternatingPuncturedPrefixLabelChains] using hP
+    refine ⟨e (P, gap), ?_, ?_⟩
+    · have hpos : PositiveAlternatingPuncturedPrefixLabels label P.antipode gap := by
+        exact (positiveAlternatingPuncturedPrefixLabels_antipode_iff label hantipodal P).mpr hneg
+      simpa [positiveAlternatingPuncturedPrefixLabelChains, e, puncturedPrefixAntipode] using hpos
+    · simp [e, puncturedPrefixAntipode, SignedPermutation.antipode_involutive P]
+
 /-- Signed permutations whose prefix labels are positive-first alternating. -/
 noncomputable def positiveAlternatingPrefixLabelChains {n m : ℕ}
     (label : NonzeroSignedSubset n → SignedLabel m) : Finset (SignedPermutation n) :=

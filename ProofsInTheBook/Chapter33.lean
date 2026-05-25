@@ -558,6 +558,25 @@ lemma filledCells_relabelPartial_card {n : ℕ}
   exact Prod.ext (rowPerm.symm.injective (congrArg Prod.fst h))
     (colPerm.symm.injective (congrArg Prod.snd h))
 
+lemma relabelPartial_swap_cell {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n))
+    {iOld jOld aOld iNew jNew aNew : Fin n}
+    (hcell : P iOld jOld = some aOld) :
+    relabelPartial (Equiv.swap iNew iOld) (Equiv.swap jNew jOld)
+        (Equiv.swap aOld aNew) P iNew jNew = some aNew := by
+  simp [relabelPartial, hcell]
+
+lemma completion_exists_relabelPartial_swap_cell_iff {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n))
+    (iOld jOld aOld iNew jNew aNew : Fin n) :
+    (∃ L : Fin n → Fin n → Fin n,
+        Completes
+          (relabelPartial (Equiv.swap iNew iOld) (Equiv.swap jNew jOld)
+            (Equiv.swap aOld aNew) P) L) ↔
+      ∃ L : Fin n → Fin n → Fin n, Completes P L :=
+  completion_exists_relabelPartial_iff
+    (Equiv.swap iNew iOld) (Equiv.swap jNew jOld) (Equiv.swap aOld aNew) P
+
 lemma completes_of_extendsPartial {n : ℕ} {P Q : Fin n → Fin n → Option (Fin n)}
     {L : Fin n → Fin n → Fin n} (hPQ : ExtendsPartial P Q) (hQL : Completes Q L) :
     Completes P L := by

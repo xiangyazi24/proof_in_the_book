@@ -897,6 +897,60 @@ theorem positiveAlternatingPuncturedPrefixLabels_antipode_iff {n m : ℕ}
     rw [label_prefixChain_antipode label hantipodal P (gap.succAbove i)]
     simp [SignedLabel.neg, hsign]
 
+theorem positiveAlternatingPuncturedPrefixLabels_reindexPositions_swap_gap_iff {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) (hgap : gap.val < n) :
+    PositiveAlternatingPuncturedPrefixLabels label
+        (P.reindexPositions (Equiv.swap gap (⟨gap.val + 1, by omega⟩ : Fin (n + 1))))
+        gap ↔
+      PositiveAlternatingPuncturedPrefixLabels label P gap := by
+  constructor
+  · intro h
+    constructor
+    · intro i j hij
+      have hmono := h.1 hij
+      simpa [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i,
+        P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap j] using hmono
+    · intro i
+      have hsign := h.2 i
+      simpa [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i] using hsign
+  · intro h
+    constructor
+    · intro i j hij
+      have hmono := h.1 hij
+      simpa [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i,
+        P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap j] using hmono
+    · intro i
+      have hsign := h.2 i
+      simpa [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i] using hsign
+
+theorem negativeAlternatingPuncturedPrefixLabels_reindexPositions_swap_gap_iff {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) (hgap : gap.val < n) :
+    NegativeAlternatingPuncturedPrefixLabels label
+        (P.reindexPositions (Equiv.swap gap (⟨gap.val + 1, by omega⟩ : Fin (n + 1))))
+        gap ↔
+      NegativeAlternatingPuncturedPrefixLabels label P gap := by
+  constructor
+  · intro h
+    constructor
+    · intro i j hij
+      have hmono := h.1 hij
+      simpa [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i,
+        P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap j] using hmono
+    · intro i
+      have hsign := h.2 i
+      simpa [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i] using hsign
+  · intro h
+    constructor
+    · intro i j hij
+      have hmono := h.1 hij
+      simpa [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i,
+        P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap j] using hmono
+    · intro i
+      have hsign := h.2 i
+      simpa [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i] using hsign
+
 theorem positiveAlternatingPrefixLabels_punctured_last {n m : ℕ}
     {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
     {P : SignedPermutation (n + 1)}
@@ -1009,6 +1063,28 @@ theorem mem_negativeAlternatingPuncturedPrefixLabelChains_iff {n m : ℕ}
     data ∈ negativeAlternatingPuncturedPrefixLabelChains label ↔
       NegativeAlternatingPuncturedPrefixLabels label data.1 data.2 := by
   simp [negativeAlternatingPuncturedPrefixLabelChains]
+
+theorem mem_positiveAlternatingPuncturedPrefixLabelChains_reindexPositions_swap_gap_iff
+    {n m : ℕ} {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) (hgap : gap.val < n) :
+    (P.reindexPositions (Equiv.swap gap (⟨gap.val + 1, by omega⟩ : Fin (n + 1))), gap) ∈
+        positiveAlternatingPuncturedPrefixLabelChains label ↔
+      (P, gap) ∈ positiveAlternatingPuncturedPrefixLabelChains label := by
+  rw [mem_positiveAlternatingPuncturedPrefixLabelChains_iff,
+    mem_positiveAlternatingPuncturedPrefixLabelChains_iff]
+  exact positiveAlternatingPuncturedPrefixLabels_reindexPositions_swap_gap_iff
+    label P gap hgap
+
+theorem mem_negativeAlternatingPuncturedPrefixLabelChains_reindexPositions_swap_gap_iff
+    {n m : ℕ} {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) (hgap : gap.val < n) :
+    (P.reindexPositions (Equiv.swap gap (⟨gap.val + 1, by omega⟩ : Fin (n + 1))), gap) ∈
+        negativeAlternatingPuncturedPrefixLabelChains label ↔
+      (P, gap) ∈ negativeAlternatingPuncturedPrefixLabelChains label := by
+  rw [mem_negativeAlternatingPuncturedPrefixLabelChains_iff,
+    mem_negativeAlternatingPuncturedPrefixLabelChains_iff]
+  exact negativeAlternatingPuncturedPrefixLabels_reindexPositions_swap_gap_iff
+    label P gap hgap
 
 theorem positiveAlternatingPuncturedPrefixLabelChains_card_eq_negative {n m : ℕ}
     (label : NonzeroSignedSubset (n + 1) → SignedLabel m)

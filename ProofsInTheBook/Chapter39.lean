@@ -1098,6 +1098,11 @@ structure SignedPermutation (n : ℕ) where
 
 namespace SignedPermutation
 
+/-- Antipodal signed permutation: keep the order and flip every sign. -/
+def antipode {n : ℕ} (P : SignedPermutation n) : SignedPermutation n where
+  order := P.order
+  positive := fun i => !P.positive i
+
 /-- Positive coordinates in the `i`th prefix face of a signed permutation. -/
 def prefixPos {n : ℕ} (P : SignedPermutation n) (i : Fin n) : Finset (Fin n) :=
   Finset.univ.filter fun x => P.order.symm x ≤ i ∧ P.positive (P.order.symm x)
@@ -1112,6 +1117,16 @@ theorem prefix_disjoint {n : ℕ} (P : SignedPermutation n) (i : Fin n) :
   intro x hxpos hxneg
   simp [prefixPos, prefixNeg] at hxpos hxneg
   cases h : P.positive (P.order.symm x) <;> simp [h] at hxpos hxneg
+
+theorem prefixPos_antipode {n : ℕ} (P : SignedPermutation n) (i : Fin n) :
+    P.antipode.prefixPos i = P.prefixNeg i := by
+  ext x
+  simp [antipode, prefixPos, prefixNeg]
+
+theorem prefixNeg_antipode {n : ℕ} (P : SignedPermutation n) (i : Fin n) :
+    P.antipode.prefixNeg i = P.prefixPos i := by
+  ext x
+  simp [antipode, prefixPos, prefixNeg]
 
 /-- The `i`th prefix face as a sign vector. -/
 def prefixSignedSubset {n : ℕ} (P : SignedPermutation n) (i : Fin n) : SignedSubset n where
@@ -1134,6 +1149,17 @@ theorem prefix_nonzero {n : ℕ} (P : SignedPermutation n) (i : Fin n) :
 /-- The maximal chain associated to a signed permutation. -/
 def prefixChain {n : ℕ} (P : SignedPermutation n) (i : Fin n) : NonzeroSignedSubset n :=
   ⟨P.prefixSignedSubset i, P.prefix_nonzero i⟩
+
+theorem prefixSignedSubset_antipode {n : ℕ} (P : SignedPermutation n) (i : Fin n) :
+    P.antipode.prefixSignedSubset i = (P.prefixSignedSubset i).antipode := by
+  cases P with
+  | mk order positive =>
+      simp [antipode, prefixSignedSubset, prefixPos, prefixNeg, SignedSubset.antipode]
+
+theorem prefixChain_antipode {n : ℕ} (P : SignedPermutation n) (i : Fin n) :
+    P.antipode.prefixChain i = (P.prefixChain i).antipode := by
+  apply Subtype.ext
+  exact P.prefixSignedSubset_antipode i
 
 theorem prefixChain_le {n : ℕ} (P : SignedPermutation n) {i j : Fin n} (hij : i ≤ j) :
     SignedSubset.Le (P.prefixChain i).1 (P.prefixChain j).1 := by

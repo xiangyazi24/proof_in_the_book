@@ -611,6 +611,39 @@ lemma filledCells_setRow_card_of_empty {n : ℕ}
   rw [fullRowCells_card]
   omega
 
+lemma exists_empty_row_of_filledCells_lt {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n))
+    (hcard : (filledCells P).card < n) :
+    ∃ i : Fin n, ∀ j, P i j = none := by
+  classical
+  by_contra hno
+  have hex : ∀ i : Fin n, ∃ j : Fin n, (i, j) ∈ filledCells P := by
+    intro i
+    by_contra hrow
+    have hempty : ∀ j, P i j = none := by
+      intro j
+      cases h : P i j with
+      | none => rfl
+      | some a =>
+          have hmem : (i, j) ∈ filledCells P := by
+            simp [filledCells, h]
+          exact False.elim (hrow ⟨j, hmem⟩)
+    exact hno ⟨i, hempty⟩
+  let chosenCell : Fin n → {ij : Fin n × Fin n // ij ∈ filledCells P} :=
+    fun i => ⟨(i, Classical.choose (hex i)), Classical.choose_spec (hex i)⟩
+  have hinj : Function.Injective chosenCell := by
+    intro i₁ i₂ h
+    exact congrArg (fun ij : {ij : Fin n × Fin n // ij ∈ filledCells P} => ij.1.1) h
+  have hle := Fintype.card_le_of_injective chosenCell hinj
+  simp [Fintype.card_fin] at hle
+  omega
+
+lemma exists_empty_row_of_filledCells_le_pred {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n)) (hn : 0 < n)
+    (hcard : (filledCells P).card ≤ n - 1) :
+    ∃ i : Fin n, ∀ j, P i j = none :=
+  exists_empty_row_of_filledCells_lt P (by omega)
+
 lemma rowSymbols_card_le_rowCells_card {n : ℕ} (P : Fin n → Fin n → Option (Fin n))
     (i : Fin n) :
     (rowSymbols P i).card ≤ (rowCells P i).card := by

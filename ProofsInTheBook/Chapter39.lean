@@ -31,8 +31,9 @@ positive-first alternating signed-permutation prefix chains are odd, while
 `KyFanPrefixModFourStatement` says that both orientations together have
 cardinality `2 mod 4`.  This file proves the Matoušek construction from a
 hypothetical `(n - 2*k + 1)`-coloring of `KG(n,k)` to a Tucker counterexample,
-proves low-dimensional Tucker cases, and proves either Ky Fan parity frontier
-implies `TuckerLemmaStatement → chapter39`.
+proves low-dimensional Tucker cases, proves the one-dimensional Ky Fan
+prefix-parity count, and proves either Ky Fan parity frontier implies
+`TuckerLemmaStatement → chapter39`.
 -/
 
 namespace ProofsInTheBook.Chapter39
@@ -1396,6 +1397,58 @@ def KyFanPrefixParityStatement (n m : ℕ) : Prop :=
       NoComplementaryComparableLabels label →
         Odd (positiveAlternatingPrefixLabelChains label).card
 
+/-- In dimension one, every signed-permutation prefix chain is alternating
+in exactly one of the two possible first signs. -/
+theorem alternatingPrefixLabelChains_card_one
+    (label : NonzeroSignedSubset 1 → SignedLabel 0) :
+    (alternatingPrefixLabelChains label).card = 2 := by
+  classical
+  have huniv : alternatingPrefixLabelChains label = (Finset.univ : Finset (SignedPermutation 1)) := by
+    ext P
+    simp only [alternatingPrefixLabelChains, Finset.mem_union, Finset.mem_filter,
+      Finset.mem_univ, true_and, positiveAlternatingPrefixLabelChains,
+      negativeAlternatingPrefixLabelChains, PositiveAlternatingPrefixLabels,
+      NegativeAlternatingPrefixLabels]
+    constructor
+    · intro _
+      trivial
+    · intro _
+      have hstrict : StrictMono fun i : Fin 1 => (label (P.prefixChain i)).index := by
+        intro a b hab
+        fin_cases a
+        fin_cases b
+        omega
+      cases h : (label (P.prefixChain 0)).positive
+      · right
+        refine ⟨hstrict, ?_⟩
+        intro i
+        fin_cases i
+        simp [h]
+      · left
+        refine ⟨hstrict, ?_⟩
+        intro i
+        fin_cases i
+        simp [h]
+  rw [huniv]
+  calc
+    (Finset.univ : Finset (SignedPermutation 1)).card =
+        Fintype.card (SignedPermutation 1) := by
+      simp
+    _ = Fintype.card (Equiv.Perm (Fin 1) × (Fin 1 → Bool)) :=
+      Fintype.card_congr (signedPermutationEquiv 1)
+    _ = 2 := by simp
+
+/-- The Ky Fan prefix-parity frontier is fully discharged in dimension one. -/
+theorem kyFanPrefixParityStatement_one : KyFanPrefixParityStatement 1 0 := by
+  intro label hantipodal _hno
+  have halt := alternatingPrefixLabelChains_card_one label
+  have htwice := alternatingPrefixLabelChains_card (n := 1) (m := 0) (by omega) label hantipodal
+  rw [halt] at htwice
+  have hpos : (positiveAlternatingPrefixLabelChains label).card = 1 := by
+    omega
+  rw [hpos]
+  exact odd_one
+
 theorem kyFanPrefixParityStatement_iff_modFour {n m : ℕ} (hn : 0 < n) :
     KyFanPrefixParityStatement n m ↔ KyFanPrefixModFourStatement n m := by
   constructor
@@ -1428,6 +1481,11 @@ theorem tuckerLemmaStatement_of_kyFanPrefixParity {n : ℕ} (hn : 1 ≤ n)
     (hparity : KyFanPrefixParityStatement n (n - 1)) :
     TuckerLemmaStatement n :=
   tuckerLemmaStatement_of_kyFanPrefix hn (kyFanPrefixChainStatement_of_parity hparity)
+
+/-- The one-dimensional Tucker case also follows through the Ky Fan prefix
+parity pipeline, not only by the direct ad-hoc proof below. -/
+theorem tuckerLemmaStatement_one_of_kyFanPrefixParity : TuckerLemmaStatement 1 :=
+  tuckerLemmaStatement_of_kyFanPrefixParity (by omega) kyFanPrefixParityStatement_one
 
 theorem tuckerLemmaStatement_of_kyFanPrefixModFour {n : ℕ} (hn : 1 ≤ n)
     (hmodFour : KyFanPrefixModFourStatement n (n - 1)) :

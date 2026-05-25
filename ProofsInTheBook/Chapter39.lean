@@ -1087,6 +1087,94 @@ theorem tuckerLemmaStatement_of_kyFan {n : ℕ} (hn : 1 ≤ n)
   obtain ⟨chain, _hchain, hstrict⟩ := hfan label hantipodal hno
   exact not_strictMono_fin_pred n hn ⟨fun i => (label (chain i)).index, hstrict⟩
 
+/--
+A signed permutation, i.e. a maximal chain in the face lattice of the
+cross-polytope boundary: reveal the coordinates in `order`, with the prescribed
+sign at each coordinate.
+-/
+structure SignedPermutation (n : ℕ) where
+  order : Equiv.Perm (Fin n)
+  positive : Fin n → Bool
+
+namespace SignedPermutation
+
+/-- Positive coordinates in the `i`th prefix face of a signed permutation. -/
+def prefixPos {n : ℕ} (P : SignedPermutation n) (i : Fin n) : Finset (Fin n) :=
+  Finset.univ.filter fun x => P.order.symm x ≤ i ∧ P.positive (P.order.symm x)
+
+/-- Negative coordinates in the `i`th prefix face of a signed permutation. -/
+def prefixNeg {n : ℕ} (P : SignedPermutation n) (i : Fin n) : Finset (Fin n) :=
+  Finset.univ.filter fun x => P.order.symm x ≤ i ∧ !P.positive (P.order.symm x)
+
+theorem prefix_disjoint {n : ℕ} (P : SignedPermutation n) (i : Fin n) :
+    Disjoint (P.prefixPos i) (P.prefixNeg i) := by
+  rw [Finset.disjoint_left]
+  intro x hxpos hxneg
+  simp [prefixPos, prefixNeg] at hxpos hxneg
+  cases h : P.positive (P.order.symm x) <;> simp [h] at hxpos hxneg
+
+/-- The `i`th prefix face as a sign vector. -/
+def prefixSignedSubset {n : ℕ} (P : SignedPermutation n) (i : Fin n) : SignedSubset n where
+  pos := P.prefixPos i
+  neg := P.prefixNeg i
+  disjoint := P.prefix_disjoint i
+
+theorem prefix_nonzero {n : ℕ} (P : SignedPermutation n) (i : Fin n) :
+    (P.prefixSignedSubset i).Nonzero := by
+  let x : Fin n := P.order i
+  have hxuniv : x ∈ (Finset.univ : Finset (Fin n)) := by simp
+  have hsymm : P.order.symm x = i := by simp [x]
+  have hle : P.order.symm x ≤ i := le_of_eq hsymm
+  by_cases hpos : P.positive (P.order.symm x) = true
+  · left
+    exact ⟨x, by simp [prefixSignedSubset, prefixPos, hxuniv, hle, hpos]⟩
+  · right
+    exact ⟨x, by simp [prefixSignedSubset, prefixNeg, hxuniv, hle, hpos]⟩
+
+/-- The maximal chain associated to a signed permutation. -/
+def prefixChain {n : ℕ} (P : SignedPermutation n) (i : Fin n) : NonzeroSignedSubset n :=
+  ⟨P.prefixSignedSubset i, P.prefix_nonzero i⟩
+
+theorem prefixChain_le {n : ℕ} (P : SignedPermutation n) {i j : Fin n} (hij : i ≤ j) :
+    SignedSubset.Le (P.prefixChain i).1 (P.prefixChain j).1 := by
+  constructor
+  · intro x hx
+    simp [prefixChain, prefixSignedSubset, prefixPos] at hx ⊢
+    exact ⟨hx.1.trans hij, hx.2⟩
+  · intro x hx
+    simp [prefixChain, prefixSignedSubset, prefixNeg] at hx ⊢
+    exact ⟨hx.1.trans hij, hx.2⟩
+
+theorem prefixChain_strictly_ordered {n : ℕ} (P : SignedPermutation n) :
+    ∀ i j, i < j → SignedSubset.Le (P.prefixChain i).1 (P.prefixChain j).1 := by
+  intro i j hij
+  exact P.prefixChain_le hij.le
+
+end SignedPermutation
+
+/--
+The explicit maximal-chain version of the Ky Fan frontier.  It is the standard
+odd-count statement specialized to signed permutations/prefix chains.
+-/
+def KyFanPrefixChainStatement (n m : ℕ) : Prop :=
+  ∀ label : NonzeroSignedSubset n → SignedLabel m,
+    (∀ X, label X.antipode = (label X).neg) →
+      NoComplementaryComparableLabels label →
+        ∃ P : SignedPermutation n,
+          StrictMono fun i => (label (P.prefixChain i)).index
+
+theorem kyFanAlternatingChainStatement_of_prefix {n m : ℕ}
+    (hprefix : KyFanPrefixChainStatement n m) :
+    KyFanAlternatingChainStatement n m := by
+  intro label hantipodal hno
+  obtain ⟨P, hstrict⟩ := hprefix label hantipodal hno
+  exact ⟨P.prefixChain, P.prefixChain_strictly_ordered, hstrict⟩
+
+theorem tuckerLemmaStatement_of_kyFanPrefix {n : ℕ} (hn : 1 ≤ n)
+    (hprefix : KyFanPrefixChainStatement n (n - 1)) :
+    TuckerLemmaStatement n :=
+  tuckerLemmaStatement_of_kyFan hn (kyFanAlternatingChainStatement_of_prefix hprefix)
+
 theorem tuckerLemmaStatement_one : TuckerLemmaStatement 1 := by
   intro label _
   let z : Fin 1 := ⟨0, by omega⟩

@@ -32,12 +32,18 @@ vectors.  That gives
 two would require an additional half-cube invariant, for example that completed
 rows contain at most one vector from each antipodal pair, or equivalently that
 one sign coordinate/parity is determined by the rest.  Such an invariant is not
-part of `PerlesFacetSeparationData`, and it is not implied by the current
-abstract matrix fields: already for `d = 1`, three distinct full rows in a
-four-element sign cube can satisfy the pairwise-opposite and missing-vector
-conditions.  The gap to `≤ 2^d`, if one wants to pursue the conjectural sharp
-bound rather than the book's Perles theorem, is exactly this extra geometric
-half-cube argument.
+part of `PerlesFacetSeparationData` and is not proved from the current abstract
+matrix fields.  The gap to `≤ 2^d`, if one wants to pursue the conjectural
+sharp bound rather than the book's Perles theorem, is exactly this extra
+geometric half-cube argument.
+
+This file does formalize the sharpened combinatorial endpoint under one such
+extra half-cube invariant: if all completed sign vectors have a fixed value in
+one coordinate, then the completed rows inject into a half-cube and
+`Fintype.card ι ≤ 2^d`; see `PerlesMatrix.card_le_two_pow_of_fixedCoordinate`
+and `chapter14_sharp_of_fixedCoordinate`.  The remaining gap is geometric:
+derive that fixed-coordinate/parity/antipodal-free invariant, or an equivalent
+half-cube bound, from raw touching simplices.
 -/
 
 noncomputable section
@@ -260,6 +266,71 @@ theorem card_lt_two_pow_succ (M : PerlesMatrix ι κ d) :
   rw [hpow] at hscaled
   exact Nat.lt_of_mul_lt_mul_right hscaled
 
+/-- Remove one sign coordinate from a full Boolean sign vector. -/
+def eraseCoordinate (anchor : κ) (v : κ → Bool) : ({j : κ // j ≠ anchor} → Bool) :=
+  fun j => v j.1
+
+/--
+The half-cube invariant needed to remove the extra factor of two: every
+completed row has a fixed value in one sign coordinate.
+
+This is a sufficient sharpened endpoint condition.  A parity or antipodal-free
+condition could replace it, but none of these is currently derived from the raw
+touching-simplex geometry.
+-/
+def FixedCoordinateCompletions (M : PerlesMatrix ι κ d) : Prop :=
+  ∃ anchor : κ, ∀ x : M.CompletionIndex, M.completedSign x anchor = true
+
+lemma eraseCoordinate_completedSign_injective_of_fixed (M : PerlesMatrix ι κ d)
+    {anchor : κ} (hfixed : ∀ x : M.CompletionIndex, M.completedSign x anchor = true) :
+    Function.Injective
+      (fun x : M.CompletionIndex => eraseCoordinate anchor (M.completedSign x)) := by
+  intro x y hxy
+  apply M.completedSign_injective
+  funext j
+  by_cases hj : j = anchor
+  · subst j
+    rw [hfixed x, hfixed y]
+  · exact congrFun hxy ⟨j, hj⟩
+
+lemma card_bool_functions_off_coordinate (anchor : κ) :
+    Fintype.card ({j : κ // j ≠ anchor} → Bool) = 2 ^ (Fintype.card κ - 1) := by
+  classical
+  simp [Fintype.card_subtype_compl]
+
+lemma completionIndex_card_le_halfCube_of_fixed (M : PerlesMatrix ι κ d)
+    {anchor : κ} (hfixed : ∀ x : M.CompletionIndex, M.completedSign x anchor = true) :
+    Fintype.card M.CompletionIndex ≤ 2 ^ (Fintype.card κ - 1) := by
+  classical
+  calc
+    Fintype.card M.CompletionIndex ≤
+        Fintype.card ({j : κ // j ≠ anchor} → Bool) :=
+      Fintype.card_le_of_injective
+        (fun x : M.CompletionIndex => eraseCoordinate anchor (M.completedSign x))
+        (M.eraseCoordinate_completedSign_injective_of_fixed hfixed)
+    _ = 2 ^ (Fintype.card κ - 1) := card_bool_functions_off_coordinate anchor
+
+/--
+Sharp combinatorial endpoint: a Perles B/C-matrix whose completions lie in a
+fixed half-cube gives the conjectural `2^d` bound.
+-/
+theorem card_le_two_pow_of_fixedCoordinate (M : PerlesMatrix ι κ d)
+    (hfixed : M.FixedCoordinateCompletions) :
+    Fintype.card ι ≤ 2 ^ d := by
+  classical
+  rcases hfixed with ⟨anchor, hanchor⟩
+  have hhalf := M.completionIndex_card_le_halfCube_of_fixed hanchor
+  rw [M.card_completionIndex] at hhalf
+  have hpow :
+      2 ^ (Fintype.card κ - 1) =
+        2 ^ d * 2 ^ (Fintype.card κ - (d + 1)) := by
+    rw [← pow_add]
+    congr
+    have hcolumns : d + 1 ≤ Fintype.card κ := M.dimension_le_columns
+    omega
+  rw [hpow] at hhalf
+  exact Nat.le_of_mul_le_mul_right hhalf (Nat.two_pow_pos _)
+
 end PerlesMatrix
 
 /-! ## Certified geometric data for Chapter 14 -/
@@ -271,6 +342,21 @@ The type exposes the current honest frontier: Mathlib has the basic simplex
 objects, but this file does not yet prove that every raw pairwise touching
 family supplies these data.  In playbook point-17 terms, `chapter14` below is
 state ③: conditional on the unproved geometric extraction of these fields.
+
+The missing geometric construction is not a single Lean API lookup.  It requires
+at least the following facts:
+
+* build the finite type of distinct facet hyperplanes from all simplex facets;
+* orient each affine hyperplane by closed halfspaces in `EuclideanSpace ℝ (Fin d)`;
+* prove every simplex with a facet in a listed hyperplane lies entirely in one
+  of the two closed sides;
+* prove that touching along a common facet forces opposite side signs;
+* choose a point avoiding the finite union of facet hyperplanes and simplex
+  bodies to obtain the missing completed sign vector.
+
+The sharper `≤ 2^d` theorem would additionally need a half-cube invariant for
+the completed sign vectors, such as the fixed-coordinate condition formalized
+in `PerlesMatrix.FixedCoordinateCompletions`.
 -/
 structure PerlesFacetSeparationData {ι : Type*} [Fintype ι] {d : ℕ} [NeZero d]
     (simplices : ι → DSimplex d) (κ : Type*) [Fintype κ] where
@@ -320,5 +406,21 @@ theorem chapter14 {ι κ : Type*} [Fintype ι] [Fintype κ] {d : ℕ} [NeZero d]
     (data : PerlesFacetSeparationData simplices κ) :
     Fintype.card ι < 2 ^ (d + 1) :=
   (data.toPerlesMatrix htouch).card_lt_two_pow_succ
+
+/--
+Conditional sharp version: if the geometric Perles data also supply a
+half-cube invariant in the concrete fixed-coordinate form, then the cardinality
+bound tightens to `2^d`.
+
+The unproved frontier is deriving `FixedCoordinateCompletions` from the raw
+touching-simplex geometry, or replacing it by an equivalent parity/antipodal
+condition and proving that condition geometrically.
+-/
+theorem chapter14_sharp_of_fixedCoordinate {ι κ : Type*} [Fintype ι] [Fintype κ]
+    {d : ℕ} [NeZero d] (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouching simplices) (data : PerlesFacetSeparationData simplices κ)
+    (hfixed : (data.toPerlesMatrix htouch).FixedCoordinateCompletions) :
+    Fintype.card ι ≤ 2 ^ d :=
+  (data.toPerlesMatrix htouch).card_le_two_pow_of_fixedCoordinate hfixed
 
 end ProofsInTheBook.Chapter14

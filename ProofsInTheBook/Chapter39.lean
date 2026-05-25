@@ -1673,6 +1673,25 @@ theorem chapter39_two_mul (k : ℕ) (hk : 1 ≤ k) :
   · exact kneser_chromatic_upper_bound (2 * k) k hk (by omega)
   · exact kneser_chromatic_lower_bound_two_mul k hk
 
+/-- Unconditional Chapter 39 whenever the Kneser graph has singleton vertices. -/
+theorem chapter39_of_k_eq_one {n k : ℕ} (hk_eq : k = 1) (hk : 1 ≤ k)
+    (hn : 2 * k ≤ n) :
+    (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) := by
+  subst k
+  exact chapter39_one n (by omega)
+
+/-- Unconditional Chapter 39 on the boundary `n = 2k`, in the general theorem's parameters. -/
+theorem chapter39_of_two_mul_eq {n k : ℕ} (hk : 1 ≤ k) (hn_eq : n = 2 * k) :
+    (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) := by
+  subst n
+  exact chapter39_two_mul k hk
+
 /--
 Chapter 39 (Lovász's theorem on Kneser graph chromatic number, conditional on
 the discrete Tucker lemma): the upper bound is explicit, and the lower bound

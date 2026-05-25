@@ -1532,7 +1532,6 @@ structure, eliminating the need for an external premise.
 theorem latin_square_completion_step_from_partial {n : ℕ}
     (P : Fin n → Fin n → Option (Fin n))
     (usedInCol : Fin n → Finset (Fin n))
-    (_hused : ∀ j, (usedInCol j).card < n)
     (hused_witness : ∀ j a, a ∈ usedInCol j → ∃ i, P i j = some a)
     (hfilled_le : (filledCells P).card ≤ n - 1) :
     ∃ row : Fin n → Fin n, Function.Injective row ∧ ∀ j, row j ∉ usedInCol j := by
@@ -1562,23 +1561,11 @@ theorem extend_partialLatin_empty_row {n : ℕ}
     ∃ Q : Fin n → Fin n → Option (Fin n),
       IsPartialLatin Q ∧ ExtendsPartial P Q ∧ ∀ j, ∃ a, Q i₀ j = some a := by
   classical
-  have hnpos : 0 < n := by
-    have hi : i₀.val < n := i₀.isLt
-    omega
-  have hused : ∀ j, (colSymbols P j).card < n := by
-    intro j
-    have hcolcells : (colCells P j).card ≤ (filledCells P).card := by
-      exact Finset.card_le_card (by
-        intro ij hij
-        exact (Finset.mem_filter.mp hij).1)
-    have hle : (colSymbols P j).card ≤ n - 1 := by
-      exact le_trans (le_trans (colSymbols_card_le_colCells_card P j) hcolcells) hfilled_le
-    omega
   have hused_witness : ∀ j a, a ∈ colSymbols P j → ∃ i, P i j = some a := by
     intro j a ha
     simpa [colSymbols] using ha
   obtain ⟨row, hrow, havoid⟩ :=
-    latin_square_completion_step_from_partial P (colSymbols P) hused hused_witness hfilled_le
+    latin_square_completion_step_from_partial P (colSymbols P) hused_witness hfilled_le
   refine ⟨setRow P i₀ row, ?_, ?_, ?_⟩
   · exact isPartialLatin_setRow_of_empty hP hempty hrow havoid
   · exact extendsPartial_setRow_of_empty P hempty
@@ -1599,23 +1586,11 @@ theorem extend_partialLatin_empty_row_with_card {n : ℕ}
         (∀ j, ∃ a, Q i₀ j = some a) ∧
         (filledCells Q).card = (filledCells P).card + n := by
   classical
-  have hnpos : 0 < n := by
-    have hi : i₀.val < n := i₀.isLt
-    omega
-  have hused : ∀ j, (colSymbols P j).card < n := by
-    intro j
-    have hcolcells : (colCells P j).card ≤ (filledCells P).card := by
-      exact Finset.card_le_card (by
-        intro ij hij
-        exact (Finset.mem_filter.mp hij).1)
-    have hle : (colSymbols P j).card ≤ n - 1 := by
-      exact le_trans (le_trans (colSymbols_card_le_colCells_card P j) hcolcells) hfilled_le
-    omega
   have hused_witness : ∀ j a, a ∈ colSymbols P j → ∃ i, P i j = some a := by
     intro j a ha
     simpa [colSymbols] using ha
   obtain ⟨row, hrow, havoid⟩ :=
-    latin_square_completion_step_from_partial P (colSymbols P) hused hused_witness hfilled_le
+    latin_square_completion_step_from_partial P (colSymbols P) hused_witness hfilled_le
   refine ⟨setRow P i₀ row, ?_, ?_, ?_, ?_⟩
   · exact isPartialLatin_setRow_of_empty hP hempty hrow havoid
   · exact extendsPartial_setRow_of_empty P hempty
@@ -1649,11 +1624,25 @@ it is not by itself an iteration proof of the full Evans/Smetaniuk theorem.
 theorem chapter33_row_completion_step {n : ℕ}
     (P : Fin n → Fin n → Option (Fin n))
     (usedInCol : Fin n → Finset (Fin n))
-    (_hused : ∀ j, (usedInCol j).card < n)
     (hused_witness : ∀ j a, a ∈ usedInCol j → ∃ i, P i j = some a)
     (hfilled_le : (filledCells P).card ≤ n - 1) :
     ∃ row : Fin n → Fin n, Function.Injective row ∧ ∀ j, row j ∉ usedInCol j :=
-  latin_square_completion_step_from_partial P usedInCol _hused hused_witness hfilled_le
+  latin_square_completion_step_from_partial P usedInCol hused_witness hfilled_le
+
+/--
+The sparse Hall row step specialized to the actual column symbols of a partial
+square.  This is the unconditional row-completion interface for the current
+partial-square representation: the support witness for `colSymbols` is
+definitional, so the theorem exposes only the sparse count hypothesis.
+-/
+theorem chapter33_column_row_completion_step {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n))
+    (hfilled_le : (filledCells P).card ≤ n - 1) :
+    ∃ row : Fin n → Fin n, Function.Injective row ∧ ∀ j, row j ∉ colSymbols P j := by
+  have hused_witness : ∀ j a, a ∈ colSymbols P j → ∃ i, P i j = some a := by
+    intro j a ha
+    simpa [colSymbols] using ha
+  exact latin_square_completion_step_from_partial P (colSymbols P) hused_witness hfilled_le
 
 /--
 Canonical Chapter 33 entry point: the full Latin-square completion theorem,

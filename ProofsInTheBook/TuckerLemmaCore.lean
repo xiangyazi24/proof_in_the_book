@@ -375,6 +375,58 @@ theorem prefixChain_antipode {n : ℕ} (P : SignedPermutation n) (i : Fin n) :
   apply Subtype.ext
   exact P.prefixSignedSubset_antipode i
 
+theorem prefixSignedSubset_support {n : ℕ} (P : SignedPermutation n) (i : Fin n) :
+    (P.prefixSignedSubset i).support =
+      Finset.univ.filter fun x : Fin n => P.order.symm x ≤ i := by
+  ext x
+  by_cases hpos : P.positive (P.order.symm x)
+  · simp [SignedSubset.support, prefixSignedSubset, prefixPos, prefixNeg, hpos]
+  · simp [SignedSubset.support, prefixSignedSubset, prefixPos, prefixNeg, hpos]
+
+theorem prefix_support_eq_order_image_Iic {n : ℕ} (P : SignedPermutation n) (i : Fin n) :
+    (Finset.univ.filter fun x : Fin n => P.order.symm x ≤ i) =
+      (Finset.Iic i).map P.order.toEmbedding := by
+  ext x
+  constructor
+  · intro hx
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hx
+    refine Finset.mem_map.mpr ⟨P.order.symm x, ?_, by simp⟩
+    simpa using hx
+  · intro hx
+    rcases Finset.mem_map.mp hx with ⟨j, hj, rfl⟩
+    simpa using hj
+
+theorem prefix_support_card {n : ℕ} (P : SignedPermutation n) (i : Fin n) :
+    (Finset.univ.filter fun x : Fin n => P.order.symm x ≤ i).card = i.val + 1 := by
+  rw [prefix_support_eq_order_image_Iic P i, Finset.card_map]
+  simp
+
+theorem prefixSignedSubset_card {n : ℕ} (P : SignedPermutation n) (i : Fin n) :
+    (P.prefixSignedSubset i).card = i.val + 1 := by
+  have hsupport_card :
+      (P.prefixSignedSubset i).support.card = (P.prefixSignedSubset i).card := by
+    simp [SignedSubset.support, SignedSubset.card, prefixSignedSubset,
+      Finset.card_union_of_disjoint (P.prefix_disjoint i)]
+  rw [← hsupport_card, prefixSignedSubset_support, prefix_support_card]
+
+theorem prefixChain_card {n : ℕ} (P : SignedPermutation n) (i : Fin n) :
+    (P.prefixChain i).1.card = i.val + 1 :=
+  P.prefixSignedSubset_card i
+
+theorem prefixChain_card_lt_of_lt {n : ℕ} (P : SignedPermutation n) {i j : Fin n}
+    (hij : i < j) :
+    (P.prefixChain i).1.card < (P.prefixChain j).1.card := by
+  rw [P.prefixChain_card i, P.prefixChain_card j]
+  omega
+
+theorem prefixChain_ne_of_lt {n : ℕ} (P : SignedPermutation n) {i j : Fin n}
+    (hij : i < j) :
+    P.prefixChain i ≠ P.prefixChain j := by
+  intro h
+  have hcard := congrArg (fun X : NonzeroSignedSubset n => X.1.card) h
+  have hlt := P.prefixChain_card_lt_of_lt hij
+  exact (ne_of_lt hlt) hcard
+
 theorem prefixChain_le {n : ℕ} (P : SignedPermutation n) {i j : Fin n} (hij : i ≤ j) :
     SignedSubset.Le (P.prefixChain i).1 (P.prefixChain j).1 := by
   constructor

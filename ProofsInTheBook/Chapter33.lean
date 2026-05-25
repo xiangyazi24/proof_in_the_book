@@ -18,7 +18,8 @@ Point-17 status: this file now contains several genuine pieces: the
 row-completion Hall step for a sparse partial square, the state update that
 fills an empty row while preserving the partial Latin property and with an
 exact filled-cell count, row/column/symbol relabeling infrastructure for the
-normalization step in Smetaniuk's exact-cardinality induction, the standard
+normalization step in Smetaniuk's exact-cardinality induction, a reduction from
+the exact case to a normalized exact case with one prescribed filled cell, the standard
 extension of a Latin rectangle by one row, and the padding reduction
 `completion_from_exact_cardinality_case`, which proves that the `|P| ≤ n - 1`
 case reduces to the exact `|P| = n - 1` Evans case by adding legal entries one
@@ -576,6 +577,49 @@ lemma completion_exists_relabelPartial_swap_cell_iff {n : ℕ}
       ∃ L : Fin n → Fin n → Fin n, Completes P L :=
   completion_exists_relabelPartial_iff
     (Equiv.swap iNew iOld) (Equiv.swap jNew jOld) (Equiv.swap aOld aNew) P
+
+/--
+It is enough to prove the exact-cardinality case for partial squares with one
+fixed prescribed cell.  Any exact square of order at least two has a filled
+cell, and the relabeling lemmas above move that cell to the prescribed
+position and symbol without changing partial Latinity, cardinality, or
+completion existence.
+-/
+theorem evansExactCardinalityCase_of_normalized_cell_case {n : ℕ}
+    (hn : 2 ≤ n) (iTarget jTarget aTarget : Fin n)
+    (hnormal : ∀ P : Fin n → Fin n → Option (Fin n),
+      IsPartialLatin P → (filledCells P).card = n - 1 →
+        P iTarget jTarget = some aTarget →
+          ∃ L : Fin n → Fin n → Fin n, Completes P L) :
+    EvansExactCardinalityCase n := by
+  intro P hP hcard
+  have hcard_pos : 0 < (filledCells P).card := by
+    rw [hcard]
+    omega
+  obtain ⟨ij, hij⟩ := Finset.card_pos.mp hcard_pos
+  have hSome : (P ij.1 ij.2).isSome := by
+    simpa [filledCells] using hij
+  cases hcell_eq : P ij.1 ij.2 with
+  | none =>
+      simp [hcell_eq] at hSome
+  | some aOld =>
+      let P' := relabelPartial (Equiv.swap iTarget ij.1) (Equiv.swap jTarget ij.2)
+        (Equiv.swap aOld aTarget) P
+      have hP' : IsPartialLatin P' := by
+        dsimp [P']
+        exact isPartialLatin_relabelPartial
+          (Equiv.swap iTarget ij.1) (Equiv.swap jTarget ij.2)
+          (Equiv.swap aOld aTarget) hP
+      have hcard' : (filledCells P').card = n - 1 := by
+        dsimp [P']
+        rw [filledCells_relabelPartial_card]
+        exact hcard
+      have htarget : P' iTarget jTarget = some aTarget := by
+        dsimp [P']
+        exact relabelPartial_swap_cell P hcell_eq
+      obtain ⟨L', hL'⟩ := hnormal P' hP' hcard' htarget
+      exact (completion_exists_relabelPartial_swap_cell_iff P ij.1 ij.2 aOld
+        iTarget jTarget aTarget).mp ⟨L', hL'⟩
 
 lemma completes_of_extendsPartial {n : ℕ} {P Q : Fin n → Fin n → Option (Fin n)}
     {L : Fin n → Fin n → Fin n} (hPQ : ExtendsPartial P Q) (hQL : Completes Q L) :

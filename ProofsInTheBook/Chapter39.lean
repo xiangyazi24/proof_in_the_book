@@ -1119,6 +1119,19 @@ def antipode {n : ℕ} (P : SignedPermutation n) : SignedPermutation n where
   order := P.order
   positive := fun i => !P.positive i
 
+theorem antipode_involutive {n : ℕ} : Function.Involutive (@antipode n) := by
+  intro P
+  cases P
+  simp [antipode]
+
+theorem antipode_ne_self {n : ℕ} (hn : 0 < n) (P : SignedPermutation n) :
+    P.antipode ≠ P := by
+  intro h
+  let i : Fin n := ⟨0, hn⟩
+  have hfun := congrArg SignedPermutation.positive h
+  have hi := congrFun hfun i
+  simp [antipode] at hi
+
 /-- Positive coordinates in the `i`th prefix face of a signed permutation. -/
 def prefixPos {n : ℕ} (P : SignedPermutation n) (i : Fin n) : Finset (Fin n) :=
   Finset.univ.filter fun x => P.order.symm x ≤ i ∧ P.positive (P.order.symm x)
@@ -1275,6 +1288,18 @@ theorem positiveAlternatingPrefixLabels_antipode_iff {n m : ℕ}
     have hsign := h.2 i
     rw [label_prefixChain_antipode label hantipodal P i]
     simp [SignedLabel.neg, hsign]
+
+theorem positive_negative_alternating_disjoint {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset n → SignedLabel m) (P : SignedPermutation n) :
+    PositiveAlternatingPrefixLabels label P →
+      NegativeAlternatingPrefixLabels label P → False := by
+  intro hpos hneg
+  let i : Fin n := ⟨0, hn⟩
+  have hp := hpos.2 i
+  have hn' := hneg.2 i
+  simp [i] at hp hn'
+  rw [hp] at hn'
+  simp at hn'
 
 /-- Signed permutations whose prefix labels are positive-first alternating. -/
 noncomputable def positiveAlternatingPrefixLabelChains {n m : ℕ}

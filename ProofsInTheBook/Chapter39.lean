@@ -1507,6 +1507,34 @@ theorem exists_complementaryComparable_of_kyFanPrefixParity_of_lt {n m : ℕ}
   obtain ⟨P, hstrict⟩ := kyFanPrefixChainStatement_of_parity hparity label hantipodal hno
   exact not_strictMono_fin_of_lt hmn ⟨fun i => (label (P.prefixChain i)).index, hstrict⟩
 
+theorem not_noComplementaryComparableLabels_of_kyFanPrefixParity_of_lt {n m : ℕ}
+    (hmn : m < n) (hparity : KyFanPrefixParityStatement n m)
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    ¬ NoComplementaryComparableLabels label := by
+  intro hno
+  obtain ⟨P, hstrict⟩ := kyFanPrefixChainStatement_of_parity hparity label hantipodal hno
+  exact not_strictMono_fin_of_lt hmn ⟨fun i => (label (P.prefixChain i)).index, hstrict⟩
+
+theorem exists_complementaryComparable_of_kyFanPrefixModFour_of_lt {n m : ℕ}
+    (hmn : m < n) (hmodFour : KyFanPrefixModFourStatement n m)
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    ∃ X Y : NonzeroSignedSubset n,
+      SignedSubset.Le X.1 Y.1 ∧ label X = (label Y).neg :=
+  exists_complementaryComparable_of_kyFanPrefixParity_of_lt hmn
+    ((kyFanPrefixParityStatement_iff_modFour (Nat.zero_lt_of_lt hmn)).mpr hmodFour)
+    label hantipodal
+
+theorem not_noComplementaryComparableLabels_of_kyFanPrefixModFour_of_lt {n m : ℕ}
+    (hmn : m < n) (hmodFour : KyFanPrefixModFourStatement n m)
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    ¬ NoComplementaryComparableLabels label :=
+  not_noComplementaryComparableLabels_of_kyFanPrefixParity_of_lt hmn
+    ((kyFanPrefixParityStatement_iff_modFour (Nat.zero_lt_of_lt hmn)).mpr hmodFour)
+    label hantipodal
+
 /-! ### Endpoint-count form of the remaining Ky Fan parity frontier -/
 
 theorem even_card_of_fixedPointFree_involutive {α : Type*} [Fintype α]

@@ -3096,6 +3096,20 @@ theorem kyFanPrefixParityStatement_succ_of_pathEndpointDecompositionWithPuncture
   rcases hpaths label hantipodal hno with ⟨D⟩
   exact kyFanPrefixParity_of_pathEndpointDecompositionWithPunctured hn label hantipodal D
 
+theorem kyFanPrefixModFourStatement_succ_of_pathEndpointDecompositionWithPunctured
+    {n m : ℕ} (hn : 0 < n)
+    (hpaths : KyFanPrefixPathEndpointDecompositionWithPuncturedStatement n m) :
+    KyFanPrefixModFourStatement (n + 1) m :=
+  (kyFanPrefixParityStatement_iff_modFour (by omega)).mp
+    (kyFanPrefixParityStatement_succ_of_pathEndpointDecompositionWithPunctured hn hpaths)
+
+theorem tuckerLemmaStatement_succ_of_pathEndpointDecompositionWithPunctured
+    {n : ℕ} (hn : 0 < n)
+    (hpaths : KyFanPrefixPathEndpointDecompositionWithPuncturedStatement n n) :
+    TuckerLemmaStatement (n + 1) :=
+  tuckerLemmaStatement_of_kyFanPrefixParity (by omega)
+    (kyFanPrefixParityStatement_succ_of_pathEndpointDecompositionWithPunctured hn hpaths)
+
 theorem exists_complementaryComparable_of_pathEndpointDecomposition_of_lt {n m : ℕ}
     (hmn : m < n) (hpaths : KyFanPrefixPathEndpointDecompositionStatement n m)
     (label : NonzeroSignedSubset n → SignedLabel m)

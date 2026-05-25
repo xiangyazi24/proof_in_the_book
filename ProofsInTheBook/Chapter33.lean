@@ -15,8 +15,9 @@ at each step, the remaining entries in each row form a system of
 distinct representatives.
 
 Point-17 status: this file now contains several genuine pieces: the
-row-completion Hall step for a sparse partial square, the standard extension
-of a Latin rectangle by one row, and the padding reduction
+row-completion Hall step for a sparse partial square, the state update that
+fills an empty row while preserving the partial Latin property, the standard
+extension of a Latin rectangle by one row, and the padding reduction
 `completion_from_exact_cardinality_case`, which proves that the `|P| ≤ n - 1`
 case reduces to the exact `|P| = n - 1` Evans case by adding legal entries one
 at a time.  The complete completion theorem is also discharged for all partial
@@ -403,6 +404,11 @@ def setCell {n : ℕ} (P : Fin n → Fin n → Option (Fin n))
     (i₀ j₀ a : Fin n) : Fin n → Fin n → Option (Fin n) :=
   fun i j => if i = i₀ ∧ j = j₀ then some a else P i j
 
+/-- Fill a whole row of a partial square, leaving all other rows unchanged. -/
+def setRow {n : ℕ} (P : Fin n → Fin n → Option (Fin n))
+    (i₀ : Fin n) (row : Fin n → Fin n) : Fin n → Fin n → Option (Fin n) :=
+  fun i j => if i = i₀ then some (row j) else P i j
+
 lemma completes_of_extendsPartial {n : ℕ} {P Q : Fin n → Fin n → Option (Fin n)}
     {L : Fin n → Fin n → Fin n} (hPQ : ExtendsPartial P Q) (hQL : Completes Q L) :
     Completes P L := by
@@ -431,6 +437,16 @@ lemma extendsPartial_setCell_of_empty {n : ℕ} (P : Fin n → Fin n → Option 
     rw [hempty] at hP
     cases hP
   · simp [setCell, hcell, hP]
+
+lemma extendsPartial_setRow_of_empty {n : ℕ} (P : Fin n → Fin n → Option (Fin n))
+    {i₀ : Fin n} {row : Fin n → Fin n} (hempty : ∀ j, P i₀ j = none) :
+    ExtendsPartial P (setRow P i₀ row) := by
+  intro i j a hP
+  by_cases hi : i = i₀
+  · subst i
+    rw [hempty j] at hP
+    cases hP
+  · simp [setRow, hi, hP]
 
 lemma isPartialLatin_setCell {n : ℕ} {P : Fin n → Fin n → Option (Fin n)}
     {i₀ j₀ a : Fin n} (hP : IsPartialLatin P) (_hempty : P i₀ j₀ = none)
@@ -485,6 +501,44 @@ lemma isPartialLatin_setCell {n : ℕ} {P : Fin n → Fin n → Option (Fin n)}
       · have hb₁P : P i₁ j = some b := by simpa [setCell, h₁] using hb₁
         have hb₂P : P i₂ j = some b := by simpa [setCell, h₂] using hb₂
         exact hP.2 i₁ i₂ j b hb₁P hb₂P
+
+lemma isPartialLatin_setRow_of_empty {n : ℕ} {P : Fin n → Fin n → Option (Fin n)}
+    {i₀ : Fin n} {row : Fin n → Fin n} (hP : IsPartialLatin P)
+    (_hempty : ∀ j, P i₀ j = none)
+    (hrow : Function.Injective row) (havoid : ∀ j, row j ∉ colSymbols P j) :
+    IsPartialLatin (setRow P i₀ row) := by
+  constructor
+  · intro i j₁ j₂ a h₁ h₂
+    by_cases hi : i = i₀
+    · subst i
+      have ha₁ : row j₁ = a := Option.some.inj (by simpa [setRow] using h₁)
+      have ha₂ : row j₂ = a := Option.some.inj (by simpa [setRow] using h₂)
+      exact hrow (ha₁.trans ha₂.symm)
+    · have h₁P : P i j₁ = some a := by simpa [setRow, hi] using h₁
+      have h₂P : P i j₂ = some a := by simpa [setRow, hi] using h₂
+      exact hP.1 i j₁ j₂ a h₁P h₂P
+  · intro i₁ i₂ j a h₁ h₂
+    by_cases hi₁ : i₁ = i₀
+    · by_cases hi₂ : i₂ = i₀
+      · exact hi₁.trans hi₂.symm
+      · subst i₁
+        have ha : row j = a := Option.some.inj (by simpa [setRow] using h₁)
+        have h₂P : P i₂ j = some a := by simpa [setRow, hi₂] using h₂
+        have hmem : row j ∈ colSymbols P j := by
+          simp [colSymbols]
+          exact ⟨i₂, by simpa [ha] using h₂P⟩
+        exact False.elim (havoid j hmem)
+    · by_cases hi₂ : i₂ = i₀
+      · subst i₂
+        have h₁P : P i₁ j = some a := by simpa [setRow, hi₁] using h₁
+        have ha : row j = a := Option.some.inj (by simpa [setRow] using h₂)
+        have hmem : row j ∈ colSymbols P j := by
+          simp [colSymbols]
+          exact ⟨i₁, by simpa [ha] using h₁P⟩
+        exact False.elim (havoid j hmem)
+      · have h₁P : P i₁ j = some a := by simpa [setRow, hi₁] using h₁
+        have h₂P : P i₂ j = some a := by simpa [setRow, hi₂] using h₂
+        exact hP.2 i₁ i₂ j a h₁P h₂P
 
 lemma filledCells_setCell_of_empty {n : ℕ}
     (P : Fin n → Fin n → Option (Fin n)) {i₀ j₀ a : Fin n}
@@ -1206,6 +1260,43 @@ theorem latin_square_completion_step_from_partial {n : ℕ}
     hHall'
   obtain ⟨choice, hinj, hmem⟩ := this
   exact ⟨choice, hinj, fun j => by simpa using hmem j⟩
+
+/--
+Use the sparse Hall row step to fill a genuinely empty row of a partial Latin
+square.  This packages the row returned by Hall into a new partial square and
+proves the state update preserves both extension and the partial Latin
+property.  It is still only one state update; after the row is filled the
+global `≤ n - 1` count needed by the sparse Hall lemma need not remain true.
+-/
+theorem extend_partialLatin_empty_row {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n)) (hP : IsPartialLatin P)
+    (hfilled_le : (filledCells P).card ≤ n - 1) {i₀ : Fin n}
+    (hempty : ∀ j, P i₀ j = none) :
+    ∃ Q : Fin n → Fin n → Option (Fin n),
+      IsPartialLatin Q ∧ ExtendsPartial P Q ∧ ∀ j, ∃ a, Q i₀ j = some a := by
+  classical
+  have hnpos : 0 < n := by
+    have hi : i₀.val < n := i₀.isLt
+    omega
+  have hused : ∀ j, (colSymbols P j).card < n := by
+    intro j
+    have hcolcells : (colCells P j).card ≤ (filledCells P).card := by
+      exact Finset.card_le_card (by
+        intro ij hij
+        exact (Finset.mem_filter.mp hij).1)
+    have hle : (colSymbols P j).card ≤ n - 1 := by
+      exact le_trans (le_trans (colSymbols_card_le_colCells_card P j) hcolcells) hfilled_le
+    omega
+  have hused_witness : ∀ j a, a ∈ colSymbols P j → ∃ i, P i j = some a := by
+    intro j a ha
+    simpa [colSymbols] using ha
+  obtain ⟨row, hrow, havoid⟩ :=
+    latin_square_completion_step_from_partial P (colSymbols P) hused hused_witness hfilled_le
+  refine ⟨setRow P i₀ row, ?_, ?_, ?_⟩
+  · exact isPartialLatin_setRow_of_empty hP hempty hrow havoid
+  · exact extendsPartial_setRow_of_empty P hempty
+  · intro j
+    exact ⟨row j, by simp [setRow]⟩
 
 /--
 The genuine Hall row-completion step from the sparse partial-square hypotheses.

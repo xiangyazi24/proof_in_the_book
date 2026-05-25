@@ -1308,6 +1308,79 @@ noncomputable def positiveAlternatingPrefixLabelChains {n m : ℕ}
     classical
     exact Finset.univ.filter fun P => PositiveAlternatingPrefixLabels label P
 
+/-- Signed permutations whose prefix labels are negative-first alternating. -/
+noncomputable def negativeAlternatingPrefixLabelChains {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m) : Finset (SignedPermutation n) :=
+  by
+    classical
+    exact Finset.univ.filter fun P => NegativeAlternatingPrefixLabels label P
+
+theorem positiveAlternatingPrefixLabelChains_card_eq_negative {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    (positiveAlternatingPrefixLabelChains label).card =
+      (negativeAlternatingPrefixLabelChains label).card := by
+  classical
+  refine Finset.card_bij (fun P _ => SignedPermutation.antipode P) ?mem ?inj ?surj
+  · intro P hP
+    have hpos : PositiveAlternatingPrefixLabels label P := by
+      simpa [positiveAlternatingPrefixLabelChains] using hP
+    have hneg : NegativeAlternatingPrefixLabels label P.antipode := by
+      have hiff := positiveAlternatingPrefixLabels_antipode_iff label hantipodal P.antipode
+      have hpos' : PositiveAlternatingPrefixLabels label P.antipode.antipode := by
+        simpa [SignedPermutation.antipode_involutive P] using hpos
+      exact hiff.mp hpos'
+    simpa [negativeAlternatingPrefixLabelChains] using hneg
+  · intro P hP Q hQ hPQ
+    have h := congrArg SignedPermutation.antipode hPQ
+    simpa [SignedPermutation.antipode_involutive P, SignedPermutation.antipode_involutive Q] using h
+  · intro Q hQ
+    have hneg : NegativeAlternatingPrefixLabels label Q := by
+      simpa [negativeAlternatingPrefixLabelChains] using hQ
+    refine ⟨Q.antipode, ?_, ?_⟩
+    · have hpos : PositiveAlternatingPrefixLabels label Q.antipode := by
+        exact (positiveAlternatingPrefixLabels_antipode_iff label hantipodal Q).mpr hneg
+      simpa [positiveAlternatingPrefixLabelChains] using hpos
+    · exact SignedPermutation.antipode_involutive Q
+
+theorem positive_negativeAlternatingPrefixLabelChains_disjoint {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset n → SignedLabel m) :
+    Disjoint (positiveAlternatingPrefixLabelChains label)
+      (negativeAlternatingPrefixLabelChains label) := by
+  classical
+  rw [Finset.disjoint_left]
+  intro P hpos hneg
+  exact positive_negative_alternating_disjoint hn label P
+    (by simpa [positiveAlternatingPrefixLabelChains] using hpos)
+    (by simpa [negativeAlternatingPrefixLabelChains] using hneg)
+
+/-- Positive- or negative-first alternating prefix-label chains. -/
+noncomputable def alternatingPrefixLabelChains {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m) : Finset (SignedPermutation n) :=
+  positiveAlternatingPrefixLabelChains label ∪ negativeAlternatingPrefixLabelChains label
+
+theorem alternatingPrefixLabelChains_card {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    (alternatingPrefixLabelChains label).card =
+      2 * (positiveAlternatingPrefixLabelChains label).card := by
+  classical
+  rw [alternatingPrefixLabelChains,
+    Finset.card_union_of_disjoint (positive_negativeAlternatingPrefixLabelChains_disjoint hn label),
+    positiveAlternatingPrefixLabelChains_card_eq_negative label hantipodal]
+  omega
+
+/--
+Equivalent mod-four form of the Ky Fan prefix-chain frontier: after both
+orientations are counted, the number of alternating maximal chains is `2`
+modulo `4`.
+-/
+def KyFanPrefixModFourStatement (n m : ℕ) : Prop :=
+  ∀ label : NonzeroSignedSubset n → SignedLabel m,
+    (∀ X, label X.antipode = (label X).neg) →
+      NoComplementaryComparableLabels label →
+        ∃ r, (alternatingPrefixLabelChains label).card = 4 * r + 2
+
 /--
 The exact finite parity statement still missing from Mathlib for this chapter:
 under an antipodal labeling with no complementary comparable pair, the number
@@ -1320,6 +1393,20 @@ def KyFanPrefixParityStatement (n m : ℕ) : Prop :=
     (∀ X, label X.antipode = (label X).neg) →
       NoComplementaryComparableLabels label →
         Odd (positiveAlternatingPrefixLabelChains label).card
+
+theorem kyFanPrefixParityStatement_iff_modFour {n m : ℕ} (hn : 0 < n) :
+    KyFanPrefixParityStatement n m ↔ KyFanPrefixModFourStatement n m := by
+  constructor
+  · intro hparity label hantipodal hno
+    rcases hparity label hantipodal hno with ⟨r, hr⟩
+    refine ⟨r, ?_⟩
+    rw [alternatingPrefixLabelChains_card hn label hantipodal, hr]
+    omega
+  · intro hmodFour label hantipodal hno
+    obtain ⟨r, hcard⟩ := hmodFour label hantipodal hno
+    have htwo := alternatingPrefixLabelChains_card hn label hantipodal
+    refine ⟨r, ?_⟩
+    omega
 
 theorem kyFanPrefixChainStatement_of_parity {n m : ℕ}
     (hparity : KyFanPrefixParityStatement n m) :

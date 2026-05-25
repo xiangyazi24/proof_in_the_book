@@ -909,6 +909,15 @@ theorem latin_square_completion_theorem_order_le_two (n : ℕ) (hn : n ≤ 2) :
   intro P _hP hfilled_le
   exact latin_square_completion_order_le_two n hn P hfilled_le
 
+/--
+The exact-cardinality Evans/Smetaniuk premise is already unconditional in the
+degenerate and order-two cases.
+-/
+theorem evansExactCardinalityCase_le_two (n : ℕ) (hn : n ≤ 2) :
+    EvansExactCardinalityCase n := by
+  intro P _hP hcard
+  exact latin_square_completion_order_le_two n hn P (by omega)
+
 /-- If every used symbol has a witness cell, then the pair count of common-used
 symbols times columns is bounded by the total filled cells. -/
 lemma commonUsed_mul_le_filledCells {n : ℕ}
@@ -1026,5 +1035,10 @@ the Hall row step above cannot simply be iterated after a whole row is added.
 theorem chapter33 {n : ℕ} (hexact : EvansExactCardinalityCase n) :
     LatinSquareCompletionTheorem n :=
   completion_from_exact_cardinality_case hexact
+
+/-- Canonical Chapter 33 is fully unconditional in orders `0`, `1`, and `2`. -/
+theorem chapter33_low_dim (n : ℕ) (hn : n ≤ 2) :
+    LatinSquareCompletionTheorem n :=
+  chapter33 (evansExactCardinalityCase_le_two n hn)
 
 end ProofsInTheBook.Chapter33

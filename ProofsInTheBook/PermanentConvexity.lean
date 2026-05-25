@@ -275,6 +275,18 @@ theorem checkerboardExchangeAmount_nonneg {M : Matrix n n ℝ} {r s c d : n}
   unfold checkerboardExchangeAmount
   exact le_min (hM r d) (hM s c)
 
+omit [DecidableEq n] [Fintype n] in
+theorem checkerboardExchangeAmount_le_rowSub {M : Matrix n n ℝ} {r s c d : n} :
+    checkerboardExchangeAmount M r s c d ≤ M r d := by
+  unfold checkerboardExchangeAmount
+  exact min_le_left _ _
+
+omit [DecidableEq n] [Fintype n] in
+theorem checkerboardExchangeAmount_le_colSub {M : Matrix n n ℝ} {r s c d : n} :
+    checkerboardExchangeAmount M r s c d ≤ M s c := by
+  unfold checkerboardExchangeAmount
+  exact min_le_right _ _
+
 omit [Fintype n] in
 theorem checkerboardDirection_cancel (c d : n) (j : n) :
     checkerboardDirection c d j + (-checkerboardDirection c d) j = 0 := by
@@ -582,12 +594,7 @@ theorem checkerboardExchangeAmount_mem_and_permanent_convex_and_endpoint_zero
     (checkerboardExchangeAmount_nonneg
       (M := M) (r := r) (s := s) (c := c) (d := d)
       (fun i j => nonneg_of_mem_doublyStochastic hM))
-    (by
-      unfold checkerboardExchangeAmount
-      exact min_le_left (M r d) (M s c))
-    (by
-      unfold checkerboardExchangeAmount
-      exact min_le_right (M r d) (M s c))
+    checkerboardExchangeAmount_le_rowSub checkerboardExchangeAmount_le_colSub
     ht0 ht1
   exact ⟨hmain.1, hmain.2,
     scaledCheckerboardPerturbation_exchangeAmount_endpoint_zero

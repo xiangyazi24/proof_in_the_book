@@ -1421,6 +1421,23 @@ theorem oddEdgeRedGreenCount_odd_of_squareBoundaryIncidence
   exact realTwoAdicSquareBoundaryRGChainCount_odd bottom right top left
 
 /--
+Variant of the boundary bridge stated directly with the explicit unit-square
+point-edge chain.  This is the shape produced by a geometric extraction theorem
+which identifies the odd-multiplicity triangle boundary edges with the concrete
+four-side point list, before reducing that list to the side-chain count.
+-/
+theorem oddEdgeRedGreenCount_odd_of_squareBoundaryPointEdgeList
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (vertices : α → ℝ × ℝ) (triangles : Fin n → α × α × α)
+    (bottom right top left : List ℝ)
+    (hboundary : oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices) =
+      listEdgeRGCount (realTwoAdicSquareBoundaryPointEdgeList bottom right top left)
+        realTwoAdicColor) :
+    Odd (oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices)) := by
+  rw [hboundary]
+  exact realTwoAdicSquareBoundaryPointEdgeList_RGCount_odd bottom right top left
+
+/--
 Current non-fake frontier theorem: an extracted finite real triangulation with
 the correct square-boundary incidence and oriented equal-area facts cannot have
 odd size.  The remaining unproved geometric work is to derive `hboundary` and
@@ -1442,6 +1459,30 @@ theorem no_odd_equalArea_realization_of_squareBoundaryIncidence_abs
   exact no_odd_equalArea_realization_of_edgeParity_abs hn vertices triangles
     (oddEdgeRedGreenCount_odd_of_squareBoundaryIncidence vertices triangles bottom right top left
       hboundary)
+    harea
+
+/--
+Same contradiction with the boundary assumption phrased using the explicit
+unit-square point-edge list rather than the already-simplified side-chain
+count.
+-/
+theorem no_odd_equalArea_realization_of_squareBoundaryPointEdgeList_abs
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ} (hn : Odd n)
+    (vertices : α → ℝ × ℝ) (triangles : Fin n → α × α × α)
+    (bottom right top left : List ℝ)
+    (hboundary : oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices) =
+      listEdgeRGCount (realTwoAdicSquareBoundaryPointEdgeList bottom right top left)
+        realTwoAdicColor)
+    (harea : ∀ i : Fin n,
+      doubleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+          (vertices (triangles i).2.2) =
+        (((2 : ℚ) / n : ℚ) : ℝ) ∨
+      doubleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+          (vertices (triangles i).2.2) =
+        -(((2 : ℚ) / n : ℚ) : ℝ)) : False := by
+  exact no_odd_equalArea_realization_of_edgeParity_abs hn vertices triangles
+    (oddEdgeRedGreenCount_odd_of_squareBoundaryPointEdgeList vertices triangles
+      bottom right top left hboundary)
     harea
 
 /-- The empty triangulation cannot carry a Monsky certificate: with 0 triangles,

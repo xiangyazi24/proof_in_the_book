@@ -1,0 +1,304 @@
+import Mathlib
+
+/-!
+# Permanent convexity lemmas
+
+This file is independent of `Chapter22`.  It records algebraic permanent
+facts used in Van der Waerden-style arguments:
+
+* additivity and affine-linearity in one row or one column;
+* bilinearity of the permanent after two rows are singled out;
+* the quadratic expansion along a two-row line, and the resulting convexity
+  criterion when the mixed quadratic coefficient is nonnegative;
+* the elementary `2 × 2` row log-concavity model.
+
+The deep Alexandrov-Fenchel/Falikman-Egorychev/Gurvits log-concavity input is
+not hidden here.  The general convexity theorem below states exactly the local
+mixed-coefficient nonnegativity hypothesis needed for a two-row slice.
+-/
+
+namespace ProofsInTheBook.PermanentConvexity
+
+open Matrix
+
+noncomputable section
+
+variable {n : Type*} [DecidableEq n] [Fintype n]
+
+/-! ## Basic multilinearity -/
+
+variable {R : Type*} [CommSemiring R]
+
+theorem permanent_updateCol_add (M : Matrix n n R) (j : n) (u v : n → R) :
+    (M.updateCol j (u + v)).permanent =
+      (M.updateCol j u).permanent + (M.updateCol j v).permanent := by
+  classical
+  simp only [Matrix.permanent, ← Finset.mul_prod_erase _ _ (Finset.mem_univ j),
+    Matrix.updateCol_self, Pi.add_apply, add_mul, Finset.sum_add_distrib]
+  apply congrArg₂ HAdd.hAdd
+  · refine Finset.sum_congr rfl ?_
+    intro p _hp
+    congr 1
+    refine Finset.prod_congr rfl ?_
+    intro i hi
+    rw [Matrix.updateCol_ne (Finset.ne_of_mem_erase hi)]
+    rw [Matrix.updateCol_ne (Finset.ne_of_mem_erase hi)]
+  · refine Finset.sum_congr rfl ?_
+    intro p _hp
+    congr 1
+    refine Finset.prod_congr rfl ?_
+    intro i hi
+    rw [Matrix.updateCol_ne (Finset.ne_of_mem_erase hi)]
+    rw [Matrix.updateCol_ne (Finset.ne_of_mem_erase hi)]
+
+theorem permanent_updateRow_add (M : Matrix n n R) (i : n) (u v : n → R) :
+    (M.updateRow i (u + v)).permanent =
+      (M.updateRow i u).permanent + (M.updateRow i v).permanent := by
+  rw [← Matrix.permanent_transpose, ← Matrix.updateCol_transpose, permanent_updateCol_add]
+  simp [Matrix.updateCol_transpose]
+
+theorem permanent_updateCol_linear_comb (M : Matrix n n R) (j : n)
+    (a b : R) (u v : n → R) :
+    (M.updateCol j (a • u + b • v)).permanent =
+      a * (M.updateCol j u).permanent + b * (M.updateCol j v).permanent := by
+  rw [permanent_updateCol_add, Matrix.permanent_updateCol_smul,
+    Matrix.permanent_updateCol_smul]
+
+theorem permanent_updateRow_linear_comb (M : Matrix n n R) (i : n)
+    (a b : R) (u v : n → R) :
+    (M.updateRow i (a • u + b • v)).permanent =
+      a * (M.updateRow i u).permanent + b * (M.updateRow i v).permanent := by
+  rw [permanent_updateRow_add, Matrix.permanent_updateRow_smul,
+    Matrix.permanent_updateRow_smul]
+
+theorem permanent_nonneg_of_entrywise_nonneg {A : Matrix n n ℝ}
+    (hA : ∀ i j, 0 ≤ A i j) :
+    0 ≤ A.permanent := by
+  classical
+  unfold Matrix.permanent
+  exact Finset.sum_nonneg fun σ _hσ =>
+    Finset.prod_nonneg fun j _hj => hA (σ j) j
+
+/-! ## Two-row slices -/
+
+/-- Permanent after replacing rows `r` and `s` by `u` and `v`. -/
+def twoRowPermanent (M : Matrix n n R) (r s : n) (u v : n → R) : R :=
+  ((M.updateRow r u).updateRow s v).permanent
+
+theorem twoRowPermanent_add_left (M : Matrix n n R) {r s : n} (hrs : r ≠ s)
+    (u v w : n → R) :
+    twoRowPermanent M r s (u + v) w =
+      twoRowPermanent M r s u w + twoRowPermanent M r s v w := by
+  unfold twoRowPermanent
+  rw [Matrix.updateRow_comm M hrs, permanent_updateRow_add]
+  rw [← Matrix.updateRow_comm M hrs, ← Matrix.updateRow_comm M hrs]
+
+theorem twoRowPermanent_add_right (M : Matrix n n R) (r s : n) (u v w : n → R) :
+    twoRowPermanent M r s u (v + w) =
+      twoRowPermanent M r s u v + twoRowPermanent M r s u w := by
+  unfold twoRowPermanent
+  rw [permanent_updateRow_add]
+
+theorem twoRowPermanent_smul_left (M : Matrix n n R) {r s : n} (hrs : r ≠ s)
+    (a : R) (u v : n → R) :
+    twoRowPermanent M r s (a • u) v = a * twoRowPermanent M r s u v := by
+  unfold twoRowPermanent
+  rw [Matrix.updateRow_comm M hrs, Matrix.permanent_updateRow_smul]
+  rw [← Matrix.updateRow_comm M hrs]
+
+theorem twoRowPermanent_smul_right (M : Matrix n n R) (r s : n)
+    (a : R) (u v : n → R) :
+    twoRowPermanent M r s u (a • v) = a * twoRowPermanent M r s u v := by
+  unfold twoRowPermanent
+  rw [Matrix.permanent_updateRow_smul]
+
+theorem twoRowPermanent_linear_comb_left (M : Matrix n n R) {r s : n}
+    (hrs : r ≠ s) (a b : R) (u v w : n → R) :
+    twoRowPermanent M r s (a • u + b • v) w =
+      a * twoRowPermanent M r s u w + b * twoRowPermanent M r s v w := by
+  rw [twoRowPermanent_add_left M hrs, twoRowPermanent_smul_left M hrs,
+    twoRowPermanent_smul_left M hrs]
+
+theorem twoRowPermanent_linear_comb_right (M : Matrix n n R) (r s : n)
+    (a b : R) (u v w : n → R) :
+    twoRowPermanent M r s u (a • v + b • w) =
+      a * twoRowPermanent M r s u v + b * twoRowPermanent M r s u w := by
+  rw [twoRowPermanent_add_right, twoRowPermanent_smul_right,
+    twoRowPermanent_smul_right]
+
+theorem twoRowPermanent_nonneg_of_nonneg {M : Matrix n n ℝ} {r s : n}
+    {u v : n → ℝ}
+    (hM : ∀ i j, i ≠ r → i ≠ s → 0 ≤ M i j)
+    (hu : ∀ j, 0 ≤ u j) (hv : ∀ j, 0 ≤ v j) :
+    0 ≤ twoRowPermanent M r s u v := by
+  apply permanent_nonneg_of_entrywise_nonneg
+  intro i j
+  by_cases his : i = s
+  · subst i
+    simp [hv j]
+  · by_cases hir : i = r
+    · subst i
+      simp [his, hu j]
+    · simp [his, hir, hM i j hir his]
+
+private theorem sum_piecewise_two {f : n → ℝ} {r s : n} (hrs : r ≠ s) (a b : ℝ) :
+    (∑ i, (if i = s then b else if i = r then a else f i)) =
+      ∑ i, f i + (a - f r) + (b - f s) := by
+  let g : n → ℝ := fun i => if i = s then b else if i = r then a else f i
+  have hrs_mem : r ∈ (Finset.univ.erase s : Finset n) := by
+    exact Finset.mem_erase.mpr ⟨hrs, Finset.mem_univ r⟩
+  have hsum_g : (∑ i, g i) = (∑ i ∈ (Finset.univ.erase s).erase r, f i) + a + b := by
+    rw [← Finset.sum_erase_add _ g (Finset.mem_univ s)]
+    rw [← Finset.sum_erase_add (Finset.univ.erase s) g hrs_mem]
+    have hrest : (∑ x ∈ (Finset.univ.erase s).erase r, g x) =
+        ∑ x ∈ (Finset.univ.erase s).erase r, f x := by
+      refine Finset.sum_congr rfl ?_
+      intro x hx
+      have hxr : x ≠ r := Finset.ne_of_mem_erase hx
+      have hxs : x ≠ s := by
+        exact (Finset.mem_erase.mp (Finset.mem_of_mem_erase hx)).1
+      simp [g, hxs, hxr]
+    rw [hrest]
+    simp [g, hrs]
+  have hsum_f : (∑ i, f i) = (∑ i ∈ (Finset.univ.erase s).erase r, f i) + f r + f s := by
+    rw [← Finset.sum_erase_add _ f (Finset.mem_univ s)]
+    rw [← Finset.sum_erase_add (Finset.univ.erase s) f hrs_mem]
+  rw [hsum_g, hsum_f]
+  ring
+
+/-! ## Doubly-stochastic two-row perturbations -/
+
+/--
+The row-pair perturbation that adds `t • du` to row `r` and `t • dv` to row
+`s`.  If the two direction rows have zero row sums and cancel columnwise, this
+is the standard line inside the doubly-stochastic affine subspace.
+-/
+def twoRowPerturbation (M : Matrix n n ℝ) (r s : n) (du dv : n → ℝ) (t : ℝ) :
+    Matrix n n ℝ :=
+  (M.updateRow r (M r + t • du)).updateRow s (M s + t • dv)
+
+theorem twoRowPermanent_self (M : Matrix n n ℝ) (r s : n) :
+    twoRowPermanent M r s (M r) (M s) = M.permanent := by
+  unfold twoRowPermanent
+  rw [Matrix.updateRow_eq_self, Matrix.updateRow_eq_self]
+
+theorem twoRowPerturbation_mem_doublyStochastic {M : Matrix n n ℝ} {r s : n}
+    (hrs : r ≠ s) (hM : M ∈ doublyStochastic ℝ n)
+    {du dv : n → ℝ} (hdu : ∑ j, du j = 0) (hdv : ∑ j, dv j = 0)
+    (hcol : ∀ j, du j + dv j = 0)
+    {t : ℝ} (hnonneg : ∀ i j, 0 ≤ twoRowPerturbation M r s du dv t i j) :
+    twoRowPerturbation M r s du dv t ∈ doublyStochastic ℝ n := by
+  rw [mem_doublyStochastic_iff_sum]
+  refine ⟨hnonneg, ?_, ?_⟩
+  · intro i
+    by_cases his : i = s
+    · subst i
+      simp only [twoRowPerturbation, Matrix.updateRow_self, Pi.add_apply, Pi.smul_apply,
+        smul_eq_mul]
+      calc
+        (∑ x, (M s x + t * dv x)) = (∑ x, M s x) + t * ∑ x, dv x := by
+          simp [Finset.sum_add_distrib, Finset.mul_sum]
+        _ = 1 := by rw [sum_row_of_mem_doublyStochastic hM s, hdv]; ring
+    · by_cases hir : i = r
+      · subst i
+        simp only [twoRowPerturbation, Matrix.updateRow_ne hrs, Matrix.updateRow_self,
+          Pi.add_apply, Pi.smul_apply, smul_eq_mul]
+        calc
+          (∑ x, (M r x + t * du x)) = (∑ x, M r x) + t * ∑ x, du x := by
+            simp [Finset.sum_add_distrib, Finset.mul_sum]
+          _ = 1 := by rw [sum_row_of_mem_doublyStochastic hM r, hdu]; ring
+      · simp [twoRowPerturbation, his, hir, sum_row_of_mem_doublyStochastic hM i]
+  · intro j
+    simp only [twoRowPerturbation, Matrix.updateRow_apply, Pi.add_apply, Pi.smul_apply,
+      smul_eq_mul]
+    rw [sum_piecewise_two hrs (M r j + t * du j) (M s j + t * dv j)]
+    rw [sum_col_of_mem_doublyStochastic hM j]
+    have htd : t * du j + t * dv j = 0 := by
+      rw [← mul_add, hcol j, mul_zero]
+    nlinarith
+
+/-! ## Quadratic expansion and convexity along a two-row line -/
+
+variable {M : Matrix n n ℝ} {r s : n}
+
+theorem permanent_twoRowLine_eq_quadratic (hrs : r ≠ s)
+    (u v du dv : n → ℝ) (t : ℝ) :
+    twoRowPermanent M r s (u + t • du) (v + t • dv) =
+      twoRowPermanent M r s u v +
+        t * (twoRowPermanent M r s du v + twoRowPermanent M r s u dv) +
+        t ^ 2 * twoRowPermanent M r s du dv := by
+  rw [twoRowPermanent_add_right]
+  rw [twoRowPermanent_add_left M hrs]
+  rw [twoRowPermanent_smul_left M hrs]
+  rw [twoRowPermanent_smul_right]
+  rw [twoRowPermanent_add_left M hrs]
+  rw [twoRowPermanent_smul_left M hrs]
+  ring
+
+/--
+Convexity criterion for a two-row permanent slice.
+
+The hypothesis is exactly the local nonnegativity of the mixed quadratic
+coefficient.  In a full Van der Waerden proof this is where the relevant
+permanent log-concavity/Alexandrov-Fenchel input must enter.
+-/
+theorem permanent_twoRowLine_convex_on_unit_interval (hrs : r ≠ s)
+    (u v du dv : n → ℝ)
+    (hquad : 0 ≤ twoRowPermanent M r s du dv)
+    {t : ℝ} (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
+    twoRowPermanent M r s (u + t • du) (v + t • dv) ≤
+      (1 - t) * twoRowPermanent M r s u v +
+        t * twoRowPermanent M r s (u + du) (v + dv) := by
+  rw [permanent_twoRowLine_eq_quadratic hrs u v du dv t]
+  rw [show twoRowPermanent M r s (u + du) (v + dv) =
+      twoRowPermanent M r s (u + (1 : ℝ) • du) (v + (1 : ℝ) • dv) by simp]
+  rw [permanent_twoRowLine_eq_quadratic hrs u v du dv 1]
+  have ht_sq_le : t ^ 2 ≤ t := by
+    nlinarith [mul_nonneg ht0 (sub_nonneg.mpr ht1)]
+  have hquad_le : t ^ 2 * twoRowPermanent M r s du dv ≤
+      t * twoRowPermanent M r s du dv := by
+    exact mul_le_mul_of_nonneg_right ht_sq_le hquad
+  nlinarith
+
+theorem permanent_twoRowLine_convex_from_nonnegative_directions (hrs : r ≠ s)
+    (u v du dv : n → ℝ)
+    (hM : ∀ i j, i ≠ r → i ≠ s → 0 ≤ M i j)
+    (hdu : ∀ j, 0 ≤ du j) (hdv : ∀ j, 0 ≤ dv j)
+    {t : ℝ} (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
+    twoRowPermanent M r s (u + t • du) (v + t • dv) ≤
+      (1 - t) * twoRowPermanent M r s u v +
+        t * twoRowPermanent M r s (u + du) (v + dv) := by
+  exact permanent_twoRowLine_convex_on_unit_interval hrs u v du dv
+    (twoRowPermanent_nonneg_of_nonneg hM hdu hdv) ht0 ht1
+
+theorem permanent_twoRowPerturbation_convex_on_unit_interval (hrs : r ≠ s)
+    (du dv : n → ℝ)
+    (hquad : 0 ≤ twoRowPermanent M r s du dv)
+    {t : ℝ} (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
+    (twoRowPerturbation M r s du dv t).permanent ≤
+      (1 - t) * M.permanent +
+        t * (twoRowPerturbation M r s du dv 1).permanent := by
+  simpa [twoRowPerturbation, twoRowPermanent_self] using
+    permanent_twoRowLine_convex_on_unit_interval (M := M) (r := r) (s := s) hrs
+      (M r) (M s) du dv hquad ht0 ht1
+
+/-! ## Elementary `2 × 2` log-concavity model -/
+
+/-- The permanent bilinear form for a matrix with rows `u` and `v` in dimension `2`. -/
+def twoByTwoRowPermanent (u v : Fin 2 → ℝ) : ℝ :=
+  u 0 * v 1 + u 1 * v 0
+
+theorem twoByTwoRowPermanent_self (u : Fin 2 → ℝ) :
+    twoByTwoRowPermanent u u = 2 * (u 0 * u 1) := by
+  unfold twoByTwoRowPermanent
+  ring
+
+theorem twoByTwoRowPermanent_logConcave (u v : Fin 2 → ℝ) :
+    twoByTwoRowPermanent u u * twoByTwoRowPermanent v v ≤
+      twoByTwoRowPermanent u v ^ 2 := by
+  unfold twoByTwoRowPermanent
+  nlinarith [sq_nonneg (u 0 * v 1 - u 1 * v 0)]
+
+end
+
+end ProofsInTheBook.PermanentConvexity

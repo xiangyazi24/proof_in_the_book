@@ -20,7 +20,7 @@ of a Latin rectangle by one row, and the padding reduction
 `completion_from_exact_cardinality_case`, which proves that the `|P| ≤ n - 1`
 case reduces to the exact `|P| = n - 1` Evans case by adding legal entries one
 at a time.  The complete completion theorem is also discharged for all partial
-squares with at most one filled cell and for orders `0`, `1`, and `2`.
+squares with at most one filled cell and for orders `0`, `1`, `2`, and `3`.
 The canonical `chapter33` theorem is now stated as the full completion theorem
 conditional on the exact-cardinality Evans/Smetaniuk case.  It is still not an
 unconditional full Evans/Smetaniuk completion theorem.  The
@@ -748,7 +748,7 @@ theorem completion_from_exact_cardinality_case {n : ℕ}
 /-!
 ### Elementary complete orders
 
-Squares with at most one filled cell, and orders `0`, `1`, and `2`, do not
+Squares with at most one filled cell, and orders `0`, `1`, `2`, and `3`, do not
 need the Evans/Smetaniuk induction.
 -/
 
@@ -917,6 +917,188 @@ theorem evansExactCardinalityCase_le_two (n : ℕ) (hn : n ≤ 2) :
     EvansExactCardinalityCase n := by
   intro P _hP hcard
   exact latin_square_completion_order_le_two n hn P (by omega)
+
+private theorem finThree_sub_eq_zero_iff_eq (x y : Fin 3) : x - y = 0 ↔ x = y := by
+  fin_cases x <;> fin_cases y <;> decide
+
+private theorem finThree_mul_sub (u x y : Fin 3) :
+    u * (x - y) = u * x - u * y := by
+  fin_cases u <;> fin_cases x <;> fin_cases y <;> decide
+
+private theorem finThree_sub_add_sub (a b c d : Fin 3) :
+    (a - b) + (c - d) = (a + c) - (b + d) := by
+  fin_cases a <;> fin_cases b <;> fin_cases c <;> fin_cases d <;> decide
+
+private theorem finThree_add_sub_of_sub_eq {x y a b : Fin 3}
+    (h : x - y = b - a) : x + (a - y) = b := by
+  fin_cases x <;> fin_cases y <;> fin_cases a <;> fin_cases b <;> revert h <;> decide
+
+private theorem exists_nonzero_mul_add_eq_finThree
+    (di dj da : Fin 3) (hnot : di ≠ 0 ∨ dj ≠ 0)
+    (hrow : di = 0 → da ≠ 0) (hcol : dj = 0 → da ≠ 0) :
+    ∃ u v : Fin 3, u ≠ 0 ∧ v ≠ 0 ∧ u * di + v * dj = da := by
+  fin_cases di <;> fin_cases dj <;> fin_cases da <;>
+    simp at hnot hrow hcol ⊢ <;> decide
+
+private theorem mul_left_cancel_finThree {u x y : Fin 3} (hu : u ≠ 0)
+    (h : u * x = u * y) : x = y := by
+  fin_cases u <;> simp at hu h ⊢
+  all_goals fin_cases x <;> fin_cases y <;> simp at h ⊢
+
+/-- The linear Latin squares of order three over `Fin 3`. -/
+private def linearLatinFinThree (u v c : Fin 3) : Fin 3 → Fin 3 → Fin 3 :=
+  fun i j => u * i + v * j + c
+
+private theorem isLatinSquare_linearLatinFinThree {u v c : Fin 3}
+    (hu : u ≠ 0) (hv : v ≠ 0) :
+    IsLatinSquare (linearLatinFinThree u v c) := by
+  constructor
+  · intro i x y hxy
+    unfold linearLatinFinThree at hxy
+    have h1 : u * i + v * x = u * i + v * y := add_right_cancel hxy
+    have h2 : v * x = v * y := add_left_cancel h1
+    exact mul_left_cancel_finThree hv h2
+  · intro j x y hxy
+    unfold linearLatinFinThree at hxy
+    have h1 : u * x + v * j = u * y + v * j := add_right_cancel hxy
+    have h2 : u * x = u * y := add_right_cancel h1
+    exact mul_left_cancel_finThree hu h2
+
+private theorem linearLatinFinThree_spec_left
+    (u v i j a : Fin 3) :
+    linearLatinFinThree u v (a - (u * i + v * j)) i j = a := by
+  fin_cases u <;> fin_cases v <;> fin_cases i <;> fin_cases j <;> fin_cases a <;>
+    decide
+
+private theorem linearLatinFinThree_spec_right
+    (u v i₁ j₁ a₁ i₂ j₂ a₂ : Fin 3)
+    (h : u * (i₂ - i₁) + v * (j₂ - j₁) = a₂ - a₁) :
+    linearLatinFinThree u v (a₁ - (u * i₁ + v * j₁)) i₂ j₂ = a₂ := by
+  apply finThree_add_sub_of_sub_eq
+  calc
+    u * i₂ + v * j₂ - (u * i₁ + v * j₁)
+        = (u * i₂ - u * i₁) + (v * j₂ - v * j₁) := by
+            rw [finThree_sub_add_sub]
+    _ = u * (i₂ - i₁) + v * (j₂ - j₁) := by
+            rw [finThree_mul_sub, finThree_mul_sub]
+    _ = a₂ - a₁ := h
+
+private theorem latin_square_completion_order_three_two_cells
+    (P : Fin 3 → Fin 3 → Option (Fin 3)) (hP : IsPartialLatin P)
+    {i₁ j₁ a₁ i₂ j₂ a₂ : Fin 3}
+    (hcell₁ : P i₁ j₁ = some a₁) (hcell₂ : P i₂ j₂ = some a₂)
+    (hne : (i₁, j₁) ≠ (i₂, j₂))
+    (hfilled_le : (filledCells P).card ≤ 2) :
+    ∃ L : Fin 3 → Fin 3 → Fin 3, Completes P L := by
+  classical
+  have hnot : i₂ - i₁ ≠ 0 ∨ j₂ - j₁ ≠ 0 := by
+    by_contra h
+    push Not at h
+    have hi₂ : i₂ = i₁ := (finThree_sub_eq_zero_iff_eq i₂ i₁).mp h.1
+    have hj₂ : j₂ = j₁ := (finThree_sub_eq_zero_iff_eq j₂ j₁).mp h.2
+    exact hne (Prod.ext hi₂.symm hj₂.symm)
+  have hrow : i₂ - i₁ = 0 → a₂ - a₁ ≠ 0 := by
+    intro hi hsym
+    have hi₂ : i₂ = i₁ := (finThree_sub_eq_zero_iff_eq i₂ i₁).mp hi
+    have ha₂ : a₂ = a₁ := (finThree_sub_eq_zero_iff_eq a₂ a₁).mp hsym
+    have hcell₂' : P i₁ j₂ = some a₁ := by simpa [hi₂, ha₂] using hcell₂
+    have hj : j₁ = j₂ := hP.1 i₁ j₁ j₂ a₁ hcell₁ hcell₂'
+    exact hne (Prod.ext hi₂.symm hj)
+  have hcol : j₂ - j₁ = 0 → a₂ - a₁ ≠ 0 := by
+    intro hj hsym
+    have hj₂ : j₂ = j₁ := (finThree_sub_eq_zero_iff_eq j₂ j₁).mp hj
+    have ha₂ : a₂ = a₁ := (finThree_sub_eq_zero_iff_eq a₂ a₁).mp hsym
+    have hcell₂' : P i₂ j₁ = some a₁ := by simpa [hj₂, ha₂] using hcell₂
+    have hi : i₁ = i₂ := hP.2 i₁ i₂ j₁ a₁ hcell₁ hcell₂'
+    exact hne (Prod.ext hi hj₂.symm)
+  obtain ⟨u, v, hu, hv, hsolve⟩ :=
+    exists_nonzero_mul_add_eq_finThree (i₂ - i₁) (j₂ - j₁) (a₂ - a₁) hnot hrow hcol
+  let c : Fin 3 := a₁ - (u * i₁ + v * j₁)
+  refine ⟨linearLatinFinThree u v c, ?_⟩
+  constructor
+  · exact isLatinSquare_linearLatinFinThree hu hv
+  · intro i j a hcell
+    let S := filledCells P
+    have hmem : (i, j) ∈ S := by simp [S, filledCells, hcell]
+    have hmem₁ : (i₁, j₁) ∈ S := by simp [S, filledCells, hcell₁]
+    have hmem₂ : (i₂, j₂) ∈ S := by simp [S, filledCells, hcell₂]
+    by_cases hp₁ : (i, j) = (i₁, j₁)
+    · have hi : i = i₁ := congrArg Prod.fst hp₁
+      have hj : j = j₁ := congrArg Prod.snd hp₁
+      subst i
+      subst j
+      have ha : a = a₁ := by
+        have hsome : some a = some a₁ := by rw [← hcell, hcell₁]
+        exact Option.some.inj hsome
+      subst a
+      exact linearLatinFinThree_spec_left u v i₁ j₁ a₁
+    · have hcard_erase : (S.erase (i₁, j₁)).card ≤ 1 := by
+        have hcard : S.card ≤ 2 := hfilled_le
+        rw [Finset.card_erase_of_mem hmem₁]
+        omega
+      have hmem_erase : (i, j) ∈ S.erase (i₁, j₁) := by simp [hmem, hp₁]
+      have hmem₂_erase : (i₂, j₂) ∈ S.erase (i₁, j₁) := by simp [hmem₂, hne.symm]
+      have hp₂ : (i, j) = (i₂, j₂) :=
+        (Finset.card_le_one_iff.mp hcard_erase) hmem_erase hmem₂_erase
+      have hi : i = i₂ := congrArg Prod.fst hp₂
+      have hj : j = j₂ := congrArg Prod.snd hp₂
+      subst i
+      subst j
+      have ha : a = a₂ := by
+        have hsome : some a = some a₂ := by rw [← hcell, hcell₂]
+        exact Option.some.inj hsome
+      subst a
+      exact linearLatinFinThree_spec_right u v i₁ j₁ a₁ i₂ j₂ a₂ hsolve
+
+theorem latin_square_completion_order_three
+    (P : Fin 3 → Fin 3 → Option (Fin 3))
+    (hP : IsPartialLatin P) (hfilled_le : (filledCells P).card ≤ 2) :
+    ∃ L : Fin 3 → Fin 3 → Fin 3, Completes P L := by
+  classical
+  by_cases hle_one : (filledCells P).card ≤ 1
+  · exact latin_square_completion_card_le_one P hle_one
+  · have hone_lt : 1 < (filledCells P).card := by omega
+    obtain ⟨p₁, hp₁, p₂, hp₂, hpne⟩ := Finset.one_lt_card.mp hone_lt
+    obtain ⟨a₁, hcell₁⟩ : ∃ a, P p₁.1 p₁.2 = some a := by
+      have hs : (P p₁.1 p₁.2).isSome := by simpa [filledCells] using hp₁
+      cases hopt : P p₁.1 p₁.2 with
+      | none => simp [hopt] at hs
+      | some a => exact ⟨a, rfl⟩
+    obtain ⟨a₂, hcell₂⟩ : ∃ a, P p₂.1 p₂.2 = some a := by
+      have hs : (P p₂.1 p₂.2).isSome := by simpa [filledCells] using hp₂
+      cases hopt : P p₂.1 p₂.2 with
+      | none => simp [hopt] at hs
+      | some a => exact ⟨a, rfl⟩
+    exact latin_square_completion_order_three_two_cells P hP hcell₁ hcell₂ hpne hfilled_le
+
+theorem latin_square_completion_order_le_three (n : ℕ) (hn : n ≤ 3)
+    (P : Fin n → Fin n → Option (Fin n))
+    (hP : IsPartialLatin P) (hfilled_le : (filledCells P).card ≤ n - 1) :
+    ∃ L : Fin n → Fin n → Fin n, Completes P L := by
+  interval_cases n
+  · simpa using latin_square_completion_order_zero P
+  · simpa using latin_square_completion_order_one P
+  · simpa using latin_square_completion_order_two P hfilled_le
+  · simpa using latin_square_completion_order_three P hP hfilled_le
+
+theorem latin_square_completion_theorem_order_le_three (n : ℕ) (hn : n ≤ 3) :
+    LatinSquareCompletionTheorem n := by
+  intro P hP hfilled_le
+  exact latin_square_completion_order_le_three n hn P hP hfilled_le
+
+theorem evansExactCardinalityCase_of_completion {n : ℕ}
+    (hcomplete : LatinSquareCompletionTheorem n) :
+    EvansExactCardinalityCase n := by
+  intro P hP hcard
+  exact hcomplete P hP (by omega)
+
+theorem evansExactCardinalityCase_le_three (n : ℕ) (hn : n ≤ 3) :
+    EvansExactCardinalityCase n :=
+  evansExactCardinalityCase_of_completion (latin_square_completion_theorem_order_le_three n hn)
+
+theorem chapter33_order_le_three (n : ℕ) (hn : n ≤ 3) :
+    LatinSquareCompletionTheorem n :=
+  completion_from_exact_cardinality_case (evansExactCardinalityCase_le_three n hn)
 
 /-- If every used symbol has a witness cell, then the pair count of common-used
 symbols times columns is bounded by the total filled cells. -/

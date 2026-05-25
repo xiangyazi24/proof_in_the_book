@@ -75,8 +75,12 @@ one coordinate, then the completed rows inject into a half-cube and
 and `chapter14_sharp_of_fixedCoordinate`.  It also proves the more natural
 antipodal-free half-cube endpoint; see
 `PerlesMatrix.card_le_two_pow_of_antipodalFree` and
-`chapter14_sharp_of_antipodalFree`.  The remaining gap is geometric: derive
-that fixed-coordinate/parity/antipodal-free invariant, or an equivalent
+`chapter14_sharp_of_antipodalFree`.  The data-free wrappers
+`chapter14_sharp_of_pairwiseTouchingAcrossFacets_fixedCoordinate`,
+`chapter14_sharp_of_pairwiseTouchingAcrossFacets_antipodalFree`, and their
+`PairwiseNoSameSideCommonFacet` analogues apply these endpoints to the
+canonical matrix extracted in this file.  The remaining gap is geometric:
+derive that fixed-coordinate/parity/antipodal-free invariant, or an equivalent
 half-cube bound, from raw touching simplices.
 -/
 
@@ -718,6 +722,19 @@ def TouchesAcrossFacets {d : ℕ} [NeZero d] (S T : DSimplex d) : Prop :=
     ∃ i j, S.facetHyperplane i = T.facetHyperplane j ∧
       (S.facetHyperplane i).SOppSide (S.points i) (T.points j)
 
+/-- Across-facet touching is symmetric. -/
+lemma touchesAcrossFacets_comm {d : ℕ} [NeZero d] (S T : DSimplex d) :
+    TouchesAcrossFacets S T ↔ TouchesAcrossFacets T S := by
+  constructor
+  · rintro ⟨hmeet, i, j, hfacet, hopposite⟩
+    refine ⟨?_, j, i, hfacet.symm, ?_⟩
+    · simpa [Set.inter_comm] using hmeet
+    · simpa [hfacet] using hopposite.symm
+  · rintro ⟨hmeet, j, i, hfacet, hopposite⟩
+    refine ⟨?_, i, j, hfacet.symm, ?_⟩
+    · simpa [Set.inter_comm] using hmeet
+    · simpa [hfacet] using hopposite.symm
+
 /--
 Two `d`-simplices touch along facets if their relative interiors are disjoint,
 their closed bodies meet, and some facet hyperplane of one agrees with a facet
@@ -732,6 +749,17 @@ def TouchesAlongFacets {d : ℕ} [NeZero d] (S T : DSimplex d) : Prop :=
   Disjoint S.relInterior T.relInterior ∧
     (S.body ∩ T.body).Nonempty ∧
       ∃ i j, S.facetHyperplane i = T.facetHyperplane j
+
+/-- The current along-facets touching relation is symmetric. -/
+lemma touchesAlongFacets_comm {d : ℕ} [NeZero d] (S T : DSimplex d) :
+    TouchesAlongFacets S T ↔ TouchesAlongFacets T S := by
+  constructor
+  · rintro ⟨hdisj, hmeet, i, j, hfacet⟩
+    refine ⟨hdisj.symm, ?_, j, i, hfacet.symm⟩
+    simpa [Set.inter_comm] using hmeet
+  · rintro ⟨hdisj, hmeet, j, i, hfacet⟩
+    refine ⟨hdisj.symm, ?_, i, j, hfacet.symm⟩
+    simpa [Set.inter_comm] using hmeet
 
 /--
 For a touching pair with a common facet hyperplane, the opposite vertex of the
@@ -2029,6 +2057,26 @@ def toPerlesMatrix (D : PerlesFacetSeparationData simplices κ)
   pairwiseOpposite := D.pairwiseOpposite_of_touching htouch
   missingSignVector := D.missingSignVector
 
+variable [Nonempty ι]
+
+/-- The canonical Perles matrix extracted from across-facet touching geometry. -/
+def acrossFacetMatrix (simplices : ι → DSimplex d)
+    (hacross : PairwiseTouchingAcrossFacets simplices) :
+    PerlesMatrix ι (FacetHyperplanes simplices) d :=
+  (ofFacetHyperplanesAcross simplices hacross).toPerlesMatrix
+    (pairwiseTouching_of_pairwiseTouchingAcrossFacets hacross)
+
+/--
+The canonical Perles matrix extracted from pairwise touching plus the isolated
+same-side obstruction.
+-/
+def noSameSideFacetMatrix (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouching simplices)
+    (hno : PairwiseNoSameSideCommonFacet simplices) :
+    PerlesMatrix ι (FacetHyperplanes simplices) d :=
+  acrossFacetMatrix simplices
+    (pairwiseTouchingAcrossFacets_of_pairwiseTouching_of_noSameSideCommonFacet htouch hno)
+
 end PerlesFacetSeparationData
 
 /--
@@ -2084,6 +2132,66 @@ theorem chapter14_of_pairwiseTouching_noSameSideCommonFacet {ι : Type*} [Fintyp
     Fintype.card ι < 2 ^ (d + 1) :=
   chapter14_of_pairwiseTouchingAcrossFacets simplices
     (pairwiseTouchingAcrossFacets_of_pairwiseTouching_of_noSameSideCommonFacet htouch hno)
+
+/--
+Data-free sharp conditional endpoint for across-facet touching, in the
+fixed-coordinate half-cube form.
+-/
+theorem chapter14_sharp_of_pairwiseTouchingAcrossFacets_fixedCoordinate
+    {ι : Type*} [Fintype ι] [Nonempty ι] {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d) (hacross : PairwiseTouchingAcrossFacets simplices)
+    (hfixed : PerlesMatrix.FixedCoordinateCompletions
+      (PerlesFacetSeparationData.acrossFacetMatrix simplices hacross)) :
+    Fintype.card ι ≤ 2 ^ d :=
+  PerlesMatrix.card_le_two_pow_of_fixedCoordinate
+    (PerlesFacetSeparationData.acrossFacetMatrix simplices hacross) hfixed
+
+/--
+Data-free sharp conditional endpoint for across-facet touching, in the
+antipodal-free half-cube form.
+-/
+theorem chapter14_sharp_of_pairwiseTouchingAcrossFacets_antipodalFree
+    {ι : Type*} [Fintype ι] [Nonempty ι] {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d) (hacross : PairwiseTouchingAcrossFacets simplices)
+    (hanti : PerlesMatrix.AntipodalFreeCompletions
+      (PerlesFacetSeparationData.acrossFacetMatrix simplices hacross)) :
+    Fintype.card ι ≤ 2 ^ d := by
+  have hκpos : 0 < Fintype.card (FacetHyperplanes simplices) :=
+    Nat.lt_of_lt_of_le (Nat.zero_lt_succ d) (card_facetHyperplanes_ge simplices)
+  haveI : Nonempty (FacetHyperplanes simplices) := Fintype.card_pos_iff.mp hκpos
+  exact PerlesMatrix.card_le_two_pow_of_antipodalFree
+    (PerlesFacetSeparationData.acrossFacetMatrix simplices hacross) hanti
+
+/--
+Data-free sharp conditional endpoint from pairwise touching plus the isolated
+same-side obstruction, in the fixed-coordinate half-cube form.
+-/
+theorem chapter14_sharp_of_pairwiseTouching_noSameSideCommonFacet_fixedCoordinate
+    {ι : Type*} [Fintype ι] [Nonempty ι] {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d) (htouch : PairwiseTouching simplices)
+    (hno : PairwiseNoSameSideCommonFacet simplices)
+    (hfixed : PerlesMatrix.FixedCoordinateCompletions
+      (PerlesFacetSeparationData.noSameSideFacetMatrix simplices htouch hno)) :
+    Fintype.card ι ≤ 2 ^ d :=
+  PerlesMatrix.card_le_two_pow_of_fixedCoordinate
+    (PerlesFacetSeparationData.noSameSideFacetMatrix simplices htouch hno) hfixed
+
+/--
+Data-free sharp conditional endpoint from pairwise touching plus the isolated
+same-side obstruction, in the antipodal-free half-cube form.
+-/
+theorem chapter14_sharp_of_pairwiseTouching_noSameSideCommonFacet_antipodalFree
+    {ι : Type*} [Fintype ι] [Nonempty ι] {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d) (htouch : PairwiseTouching simplices)
+    (hno : PairwiseNoSameSideCommonFacet simplices)
+    (hanti : PerlesMatrix.AntipodalFreeCompletions
+      (PerlesFacetSeparationData.noSameSideFacetMatrix simplices htouch hno)) :
+    Fintype.card ι ≤ 2 ^ d := by
+  have hκpos : 0 < Fintype.card (FacetHyperplanes simplices) :=
+    Nat.lt_of_lt_of_le (Nat.zero_lt_succ d) (card_facetHyperplanes_ge simplices)
+  haveI : Nonempty (FacetHyperplanes simplices) := Fintype.card_pos_iff.mp hκpos
+  exact PerlesMatrix.card_le_two_pow_of_antipodalFree
+    (PerlesFacetSeparationData.noSameSideFacetMatrix simplices htouch hno) hanti
 
 /--
 Conditional sharp version: if the geometric Perles data also supply a

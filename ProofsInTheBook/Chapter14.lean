@@ -24,14 +24,13 @@ matrix from a raw family of touching simplices; see
 
 * enumerate the distinct oriented facet hyperplanes of the configuration;
   this file now constructs the finite type of distinct unoriented affine facet
-  hyperplanes and proves the local `d+1` lower bound, but the orientation and
-  halfspace package is still frontier;
+  hyperplanes, proves the no-accidental-containment/dimension lemma, and proves
+  the exact `d+1` row-incidence count for `HasFacetIn`;
 * prove the exact row-incidence count for the chosen global oriented
-  hyperplanes: this file now proves the no-accidental-containment/dimension
-  fact needed to turn `HasFacetIn` into equality with one of a simplex's own
-  `d+1` facet hyperplanes.  The remaining row-count work is the global
-  orientation/side classification needed to make `simplexFacetSide = none`
-  exactly mean "no incident facet";
+  hyperplanes: this is now `FacetHyperplanes.card_oriented_hasFacetIn`.  Under
+  the precise side-completeness condition that every incident simplex lies in
+  one of the two chosen sides, `FacetHyperplanes.rowZeroCard_of_side_complete`
+  proves the B-row zero count;
 * package affine facet hyperplanes as oriented halfspaces compatible with the
   Mathlib `WSameSide`/`SSameSide` facts proved below; this file now orients
   each concrete simplex facet by signed distance and proves the owning simplex
@@ -952,9 +951,11 @@ lookup.  It still requires at least the following facts:
 * prove the exact row-zero count for `simplexFacetSide`; the
   no-accidental-containment step is now proved as
   `DSimplex.facetHyperplane_eq_of_face_points_subset` and connected to
-  `HasFacetIn` by `FacetHyperplanes.oriented_hasFacetIn_iff`.  What remains is
-  proving that every incident simplex is certified on one of the two chosen
-  sides, so that `simplexFacetSide = none` is exactly non-incidence;
+  `HasFacetIn` by
+  `FacetHyperplanes.oriented_hasFacetIn_iff_exists_facetHyperplaneIndexOf`.
+  Under side completeness, `FacetHyperplanes.rowZeroCard_of_side_complete`
+  proves the row-zero count, and `ofFacetHyperplanes` uses it to fill the
+  `rowZeroCard` field;
 * orient each such affine hyperplane by closed halfspaces in
   `EuclideanSpace ℝ (Fin d)` and connect those halfspaces to Mathlib's
   `WSameSide`/`SSameSide` predicates; `FacetHyperplanes.oriented` chooses one

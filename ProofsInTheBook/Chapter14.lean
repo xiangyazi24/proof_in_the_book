@@ -259,6 +259,46 @@ lemma DSimplex.faceOpposite_interior_subset_facetHyperplane {d : ℕ} [NeZero d]
       (show affineSpan ℝ (Set.range (S.faceOpposite i).points) ≤ S.facetHyperplane i from
         le_rfl))
 
+/--
+Barycentric coordinates of a point in the relative interior of the facet
+opposite `i`: the missing coordinate is zero, and all other coordinates are
+strictly positive.
+-/
+lemma DSimplex.affineBasis_coord_faceOpposite_interior {d : ℕ} [NeZero d]
+    (S : DSimplex d) (i : Fin (d + 1)) {p : Ambient d}
+    (hp : p ∈ (S.faceOpposite i).interior) :
+    (∀ k : Fin (d + 1), k ≠ i → 0 < (S.affineBasis).coord k p) ∧
+      (S.affineBasis).coord i p = 0 := by
+  classical
+  let B := S.affineBasis
+  have hsum : ∑ k, B.coord k p = 1 := AffineBasis.sum_coord_apply_eq_one B p
+  have hp_eq : (Finset.univ.affineCombination ℝ S.points fun k => B.coord k p) = p := by
+    change (Finset.univ.affineCombination ℝ B fun k => B.coord k p) = p
+    exact AffineBasis.affineCombination_coord_eq_self B p
+  have hp_face : (Finset.univ.affineCombination ℝ S.points fun k => B.coord k p) ∈
+      (S.faceOpposite i).interior := by
+    simpa [hp_eq] using hp
+  rw [Affine.Simplex.faceOpposite] at hp_face
+  have hcoords := (S.affineCombination_mem_interior_face_iff_mem_Ioo
+    (fs := ({i}ᶜ : Finset (Fin (d + 1))))
+    (m := d - 1) (by simp [Finset.card_compl, NeZero.one_le]) hsum).1 hp_face
+  constructor
+  · intro k hk
+    exact (hcoords.1 k (by simpa using hk)).1
+  · exact hcoords.2 i (by simp)
+
+lemma DSimplex.affineBasis_coord_pos_of_mem_faceOpposite_interior {d : ℕ}
+    [NeZero d] (S : DSimplex d) (i : Fin (d + 1)) {p : Ambient d}
+    (hp : p ∈ (S.faceOpposite i).interior) {k : Fin (d + 1)} (hk : k ≠ i) :
+    0 < (S.affineBasis).coord k p :=
+  (S.affineBasis_coord_faceOpposite_interior i hp).1 k hk
+
+lemma DSimplex.affineBasis_coord_eq_zero_of_mem_faceOpposite_interior {d : ℕ}
+    [NeZero d] (S : DSimplex d) (i : Fin (d + 1)) {p : Ambient d}
+    (hp : p ∈ (S.faceOpposite i).interior) :
+    (S.affineBasis).coord i p = 0 :=
+  (S.affineBasis_coord_faceOpposite_interior i hp).2
+
 /-- The vertex opposite a facet is not contained in the facet hyperplane. -/
 lemma DSimplex.opposite_vertex_notMem_facetHyperplane {d : ℕ} [NeZero d]
     (S : DSimplex d) (i : Fin (d + 1)) :
@@ -496,6 +536,19 @@ lemma DSimplex.signedInfDist_pos_of_vertices_sSameSide {d : ℕ} [NeZero d]
     0 < S.signedInfDist i p := by
   rw [S.signedInfDist_eq_facetHyperplane_signedInfDist i]
   exact affineSubspace_signedInfDist_pos_of_sSameSide hsame
+
+/-- Same-side position is exactly positive barycentric coordinate at the opposite vertex. -/
+lemma DSimplex.affineBasis_coord_pos_of_vertices_sSameSide {d : ℕ} [NeZero d]
+    (S : DSimplex d) (i : Fin (d + 1)) {p : Ambient d}
+    (hsame : (S.facetHyperplane i).SSameSide (S.points i) p) :
+    0 < (S.affineBasis).coord i p := by
+  let B := S.affineBasis
+  have hsigned : 0 < S.signedInfDist i p :=
+    S.signedInfDist_pos_of_vertices_sSameSide i hsame
+  have hmul : 0 < B.coord i p *
+      ‖S.points i -ᵥ ↑((S.faceOpposite i).orthogonalProjectionSpan (S.points i))‖ := by
+    simpa [S.signedInfDist_eq_affineBasis_coord_mul_norm i p, B] using hsigned
+  exact pos_of_mul_pos_left hmul (norm_nonneg _)
 
 /-- The opposite vertex has nonzero perpendicular displacement from its facet span. -/
 lemma DSimplex.opposite_vertex_vsub_orthogonalProjectionSpan_ne_zero {d : ℕ}
@@ -2267,6 +2320,20 @@ theorem chapter14_of_pairwiseTouching_noSameSideCommonFacet {ι : Type*} [Fintyp
     (pairwiseTouchingAcrossFacets_of_pairwiseTouching_of_noSameSideCommonFacet htouch hno)
 
 /--
+Chapter 14 from the stronger facet-interior touching relation plus the same-side
+obstruction.  This is a data-free endpoint for a raw touching model that proves
+common facets meet through relative interiors.
+-/
+theorem chapter14_of_pairwiseTouchingAlongFacetInteriors_noSameSideCommonFacet
+    {ι : Type*} [Fintype ι] {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouchingAlongFacetInteriors simplices)
+    (hno : PairwiseNoSameSideCommonFacet simplices) :
+    Fintype.card ι < 2 ^ (d + 1) :=
+  chapter14_of_pairwiseTouching_noSameSideCommonFacet simplices
+    (pairwiseTouching_of_pairwiseTouchingAlongFacetInteriors htouch) hno
+
+/--
 Data-free sharp conditional endpoint for across-facet touching, in the
 fixed-coordinate half-cube form.
 -/
@@ -2325,6 +2392,39 @@ theorem chapter14_sharp_of_pairwiseTouching_noSameSideCommonFacet_antipodalFree
   haveI : Nonempty (FacetHyperplanes simplices) := Fintype.card_pos_iff.mp hκpos
   exact PerlesMatrix.card_le_two_pow_of_antipodalFree
     (PerlesFacetSeparationData.noSameSideFacetMatrix simplices htouch hno) hanti
+
+/--
+Sharp fixed-coordinate endpoint from facet-interior touching plus the isolated
+same-side obstruction.
+-/
+theorem chapter14_sharp_of_pairwiseTouchingAlongFacetInteriors_noSameSideCommonFacet_fixedCoordinate
+    {ι : Type*} [Fintype ι] [Nonempty ι] {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouchingAlongFacetInteriors simplices)
+    (hno : PairwiseNoSameSideCommonFacet simplices)
+    (hfixed : PerlesMatrix.FixedCoordinateCompletions
+      (PerlesFacetSeparationData.facetInteriorsNoSameSideMatrix simplices htouch hno)) :
+    Fintype.card ι ≤ 2 ^ d :=
+  PerlesMatrix.card_le_two_pow_of_fixedCoordinate
+    (PerlesFacetSeparationData.facetInteriorsNoSameSideMatrix simplices htouch hno) hfixed
+
+/--
+Sharp antipodal-free endpoint from facet-interior touching plus the isolated
+same-side obstruction.
+-/
+theorem chapter14_sharp_of_pairwiseTouchingAlongFacetInteriors_noSameSideCommonFacet_antipodalFree
+    {ι : Type*} [Fintype ι] [Nonempty ι] {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouchingAlongFacetInteriors simplices)
+    (hno : PairwiseNoSameSideCommonFacet simplices)
+    (hanti : PerlesMatrix.AntipodalFreeCompletions
+      (PerlesFacetSeparationData.facetInteriorsNoSameSideMatrix simplices htouch hno)) :
+    Fintype.card ι ≤ 2 ^ d := by
+  have hκpos : 0 < Fintype.card (FacetHyperplanes simplices) :=
+    Nat.lt_of_lt_of_le (Nat.zero_lt_succ d) (card_facetHyperplanes_ge simplices)
+  haveI : Nonempty (FacetHyperplanes simplices) := Fintype.card_pos_iff.mp hκpos
+  exact PerlesMatrix.card_le_two_pow_of_antipodalFree
+    (PerlesFacetSeparationData.facetInteriorsNoSameSideMatrix simplices htouch hno) hanti
 
 /--
 Conditional sharp version: if the geometric Perles data also supply a

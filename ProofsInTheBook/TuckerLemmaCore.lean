@@ -770,6 +770,16 @@ theorem reindexPositions_swap_gap_ne_self {n : ℕ}
   have hval := congrArg Fin.val h
   simp [gapNext] at hval
 
+theorem reindexPositions_swap_gap_ne_antipode {n : ℕ}
+    (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) (hgap : gap.val < n) :
+    P.reindexPositions (Equiv.swap gap (gapNext gap hgap)) ≠ P.antipode := by
+  intro h
+  have horder := congrArg SignedPermutation.order h
+  have hfun := congrArg (fun order : Equiv.Perm (Fin (n + 1)) => order gap) horder
+  simp [reindexPositions, antipode] at hfun
+  have hval := congrArg Fin.val hfun
+  simp [gapNext] at hval
+
 theorem prefixPos_reindexPositions_of_symm_le_iff {n : ℕ}
     (P : SignedPermutation n) (τ : Equiv.Perm (Fin n)) (i : Fin n)
     (hτ : ∀ k : Fin n, τ.symm k ≤ i ↔ k ≤ i) :
@@ -875,6 +885,20 @@ theorem antipode_flipSignAt {n : ℕ} (P : SignedPermutation n) (j : Fin n) :
   · rfl
   · funext i
     by_cases hij : i = j <;> simp [antipode, flipSignAt, hij]
+
+theorem flipSignAt_last_ne_antipode {n : ℕ} (hn : 0 < n)
+    (P : SignedPermutation (n + 1)) :
+    P.flipSignAt (Fin.last n) ≠ P.antipode := by
+  intro h
+  have hpositive := congrArg SignedPermutation.positive h
+  let i : Fin (n + 1) := ⟨0, by omega⟩
+  have hi : i ≠ Fin.last n := by
+    intro hi
+    have hval := congrArg Fin.val hi
+    simp [i, Fin.last] at hval
+    omega
+  have hsign := congrFun hpositive i
+  simp [flipSignAt, antipode, hi] at hsign
 
 theorem flipSignAt_ne_self {n : ℕ} (P : SignedPermutation n) (j : Fin n) :
     P.flipSignAt j ≠ P := by
@@ -1328,6 +1352,25 @@ theorem puncturedPrefixPartnerData_antipode {n : ℕ}
       SignedPermutation.antipode_reindexPositions]
   · simp [puncturedPrefixPartnerData, puncturedPrefixAntipode, hgap,
       SignedPermutation.antipode_flipSignAt]
+
+theorem puncturedPrefixPartnerData_ne_antipode {n : ℕ} (hn : 0 < n)
+    (data : SignedPermutation (n + 1) × Fin (n + 1)) :
+    puncturedPrefixPartnerData data ≠ puncturedPrefixAntipode data := by
+  rcases data with ⟨P, gap⟩
+  by_cases hgap : gap.val < n
+  · intro h
+    have hP := congrArg Prod.fst h
+    exact SignedPermutation.reindexPositions_swap_gap_ne_antipode P gap hgap
+      (by simpa [puncturedPrefixPartnerData, puncturedPrefixAntipode, hgap] using hP)
+  · have hlast : gap = Fin.last n := by
+      apply Fin.ext
+      have hle : gap.val ≤ n := Nat.le_of_lt_succ gap.isLt
+      simp [Fin.last]
+      omega
+    intro h
+    have hP := congrArg Prod.fst h
+    exact SignedPermutation.flipSignAt_last_ne_antipode hn P
+      (by simpa [puncturedPrefixPartnerData, puncturedPrefixAntipode, hgap, hlast] using hP)
 
 noncomputable def positiveAlternatingPuncturedPrefixLabelChains {n m : ℕ}
     (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
@@ -3473,6 +3516,19 @@ theorem alternatingPuncturedPrefixChainPartner_antipode_comm {n m : ℕ} (hn : 0
     alternatingPuncturedPrefixChainPartner_val hn label
       (alternatingPuncturedPrefixChainAntipode label hantipodal data)]
   exact (puncturedPrefixPartnerData_antipode data.1).symm
+
+theorem alternatingPuncturedPrefixChainPartner_not_antipodal {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (data : AlternatingPuncturedPrefixChainType label) :
+    alternatingPuncturedPrefixChainAntipode label hantipodal data ≠
+      alternatingPuncturedPrefixChainPartner hn label data := by
+  intro h
+  have hval := congrArg Subtype.val h
+  change puncturedPrefixAntipode data.1 =
+    (alternatingPuncturedPrefixChainPartner hn label data).1 at hval
+  rw [alternatingPuncturedPrefixChainPartner_val hn label data] at hval
+  exact puncturedPrefixPartnerData_ne_antipode hn data.1 hval.symm
 
 noncomputable def positivePrefixChainAntipode {n m : ℕ}
     (label : NonzeroSignedSubset n → SignedLabel m)

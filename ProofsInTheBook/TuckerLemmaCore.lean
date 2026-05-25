@@ -2946,6 +2946,199 @@ theorem positive_card_odd {Punctured Positive Negative : Type}
 
 end PathEndpointDecompositionWithPunctured
 
+/--
+The path represented by the two endpoint orbit `{x, partner x}` of a
+fixed-point-free endpoint pairing.
+-/
+abbrev TwoCyclePath {α : Type*} [DecidableEq α] (partner : α ≃ α) :=
+  {s : Finset α // ∃ x, s = {x, partner x}}
+
+abbrev TwoCycleEndpoint {α : Type*} [DecidableEq α] {partner : α ≃ α}
+    (path : TwoCyclePath partner) :=
+  {x : α // x ∈ path.1}
+
+def twoCyclePathOf {α : Type*} [DecidableEq α] (partner : α ≃ α) (x : α) :
+    TwoCyclePath partner :=
+  ⟨{x, partner x}, ⟨x, rfl⟩⟩
+
+theorem twoCycle_pair_eq_of_mem {α : Type*} [DecidableEq α] {partner : α ≃ α}
+    (hinv : Function.Involutive partner) {root x : α}
+    (hx : x ∈ ({root, partner root} : Finset α)) :
+    ({x, partner x} : Finset α) = {root, partner root} := by
+  rw [Finset.mem_insert, Finset.mem_singleton] at hx
+  rcases hx with rfl | hx
+  · rfl
+  · subst x
+    ext y
+    simp [hinv root, eq_comm, or_comm]
+
+theorem twoCyclePathOf_eq_of_mem {α : Type*} [DecidableEq α] {partner : α ≃ α}
+    (hinv : Function.Involutive partner) {path : TwoCyclePath partner} {x : α}
+    (hx : x ∈ path.1) :
+    twoCyclePathOf partner x = path := by
+  rcases path with ⟨s, root, rfl⟩
+  apply Subtype.ext
+  exact twoCycle_pair_eq_of_mem hinv hx
+
+theorem twoCycleEndpoint_card {α : Type*} [Fintype α] [DecidableEq α]
+    {partner : α ≃ α} (hfree : ∀ x : α, partner x ≠ x)
+    (path : TwoCyclePath partner) :
+    Fintype.card (TwoCycleEndpoint path) = 2 := by
+  classical
+  rcases path with ⟨s, x, rfl⟩
+  have hne : x ≠ partner x := by
+    intro h
+    exact hfree x h.symm
+  simpa [TwoCycleEndpoint, Finset.mem_insert, Finset.mem_singleton, eq_comm] using
+    (Fintype.card_subtype_eq_or_eq_of_ne (α := α) (a := x) (b := partner x) hne)
+
+noncomputable def twoCycleEndpointClassify {α : Type*} [Fintype α] [DecidableEq α]
+    {partner : α ≃ α} (hinv : Function.Involutive partner) :
+    (Σ path : TwoCyclePath partner, TwoCycleEndpoint path) ≃ α :=
+  Equiv.ofBijective (fun endpoint => endpoint.2.1) ⟨by
+    rintro ⟨path, endpoint⟩ ⟨path', endpoint'⟩ hendpoint
+    change endpoint.1 = endpoint'.1 at hendpoint
+    have endpoint'_mem : endpoint.1 ∈ path'.1 := by
+      rw [hendpoint]
+      exact endpoint'.2
+    have hpath : path = path' := by
+      have hleft : twoCyclePathOf partner endpoint.1 = path :=
+        twoCyclePathOf_eq_of_mem hinv endpoint.2
+      have hright : twoCyclePathOf partner endpoint.1 = path' :=
+        twoCyclePathOf_eq_of_mem hinv endpoint'_mem
+      exact hleft.symm.trans hright
+    cases hpath
+    have hendpoint' : endpoint = endpoint' := Subtype.ext hendpoint
+    cases hendpoint'
+    rfl, by
+    intro x
+    refine ⟨⟨twoCyclePathOf partner x, ⟨x, ?_⟩⟩, rfl⟩
+    simp [twoCyclePathOf]⟩
+
+noncomputable def twoCyclePathAntipode {α : Type*} [Fintype α] [DecidableEq α]
+    {partner endpointAntipode : α ≃ α}
+    (hendpointAntipode_involutive : Function.Involutive endpointAntipode)
+    (hcomm : ∀ x : α, endpointAntipode (partner x) = partner (endpointAntipode x)) :
+    TwoCyclePath partner ≃ TwoCyclePath partner where
+  toFun path := by
+    refine ⟨path.1.image endpointAntipode, ?_⟩
+    rcases path with ⟨s, hs⟩
+    rcases hs with ⟨x, hx⟩
+    subst s
+    refine ⟨endpointAntipode x, ?_⟩
+    ext y
+    simp [hcomm x]
+  invFun path := by
+    refine ⟨path.1.image endpointAntipode, ?_⟩
+    rcases path with ⟨s, hs⟩
+    rcases hs with ⟨x, hx⟩
+    subst s
+    refine ⟨endpointAntipode x, ?_⟩
+    ext y
+    simp [hcomm x]
+  left_inv := by
+    rintro ⟨s, hs⟩
+    rcases hs with ⟨x, hx⟩
+    subst s
+    apply Subtype.ext
+    ext y
+    simp [hendpointAntipode_involutive x, hendpointAntipode_involutive (partner x)]
+  right_inv := by
+    rintro ⟨s, hs⟩
+    rcases hs with ⟨x, hx⟩
+    subst s
+    apply Subtype.ext
+    ext y
+    simp [hendpointAntipode_involutive x, hendpointAntipode_involutive (partner x)]
+
+theorem twoCyclePathAntipode_involutive {α : Type*} [Fintype α] [DecidableEq α]
+    {partner endpointAntipode : α ≃ α}
+    (hendpointAntipode_involutive : Function.Involutive endpointAntipode)
+    (hcomm : ∀ x : α, endpointAntipode (partner x) = partner (endpointAntipode x)) :
+    Function.Involutive
+      (twoCyclePathAntipode (partner := partner) (endpointAntipode := endpointAntipode)
+        hendpointAntipode_involutive hcomm) := by
+  intro path
+  exact (twoCyclePathAntipode (partner := partner) (endpointAntipode := endpointAntipode)
+    hendpointAntipode_involutive hcomm).left_inv path
+
+theorem twoCyclePathAntipode_fixedPointFree {α : Type*} [Fintype α] [DecidableEq α]
+    {partner endpointAntipode : α ≃ α}
+    (hendpointAntipode_involutive : Function.Involutive endpointAntipode)
+    (hcomm : ∀ x : α, endpointAntipode (partner x) = partner (endpointAntipode x))
+    (hendpointAntipode_fixedPointFree : ∀ x : α, endpointAntipode x ≠ x)
+    (hendpointAntipode_not_partner : ∀ x : α, endpointAntipode x ≠ partner x)
+    (path : TwoCyclePath partner) :
+    twoCyclePathAntipode (partner := partner) (endpointAntipode := endpointAntipode)
+      hendpointAntipode_involutive hcomm path ≠ path := by
+  intro hpath
+  rcases path with ⟨s, hs⟩
+  rcases hs with ⟨x, hx⟩
+  subst s
+  have hcarrier := congrArg Subtype.val hpath
+  have hxmem :
+      endpointAntipode x ∈ ({x, partner x} : Finset α) := by
+    have hximage :
+        endpointAntipode x ∈
+          Finset.image endpointAntipode ({x, partner x} : Finset α) := by
+      simp
+    have hcarrier' :
+        Finset.image endpointAntipode ({x, partner x} : Finset α) =
+          {x, partner x} := by
+      simpa [twoCyclePathAntipode] using hcarrier
+    rw [hcarrier'] at hximage
+    exact hximage
+  rw [Finset.mem_insert, Finset.mem_singleton] at hxmem
+  rcases hxmem with hx | hx
+  · exact hendpointAntipode_fixedPointFree x hx
+  · exact hendpointAntipode_not_partner x hx
+
+noncomputable def pathEndpointDecompositionWithPunctured_of_endpointPartner
+    {Punctured Base Positive Negative : Type}
+    [Fintype Punctured] [Fintype Base] [Fintype Positive] [Fintype Negative]
+    [DecidableEq (Punctured ⊕ (Base ⊕ (Positive ⊕ Negative)))]
+    (endpointPartner :
+      Punctured ⊕ (Base ⊕ (Positive ⊕ Negative)) ≃
+        Punctured ⊕ (Base ⊕ (Positive ⊕ Negative)))
+    (endpointPartner_involutive : Function.Involutive endpointPartner)
+    (endpointPartner_fixedPointFree : ∀ endpoint, endpointPartner endpoint ≠ endpoint)
+    (endpointAntipode :
+      Punctured ⊕ (Base ⊕ (Positive ⊕ Negative)) ≃
+        Punctured ⊕ (Base ⊕ (Positive ⊕ Negative)))
+    (endpointAntipode_involutive : Function.Involutive endpointAntipode)
+    (endpointAntipode_fixedPointFree : ∀ endpoint, endpointAntipode endpoint ≠ endpoint)
+    (endpointAntipode_comm :
+      ∀ endpoint, endpointAntipode (endpointPartner endpoint) =
+        endpointPartner (endpointAntipode endpoint))
+    (endpointAntipode_not_partner :
+      ∀ endpoint, endpointAntipode endpoint ≠ endpointPartner endpoint)
+    (hbase : Fintype.card Base = 2) :
+    PathEndpointDecompositionWithPunctured Punctured Positive Negative where
+  Path := TwoCyclePath endpointPartner
+  Base := Base
+  Endpoint := fun path => TwoCycleEndpoint path
+  instPath := inferInstance
+  instBase := inferInstance
+  instEndpoint := fun _ => inferInstance
+  pathAntipode :=
+    twoCyclePathAntipode
+      (partner := endpointPartner) (endpointAntipode := endpointAntipode)
+      endpointAntipode_involutive endpointAntipode_comm
+  pathAntipode_involutive :=
+    twoCyclePathAntipode_involutive
+      (partner := endpointPartner) (endpointAntipode := endpointAntipode)
+      endpointAntipode_involutive endpointAntipode_comm
+  pathAntipode_fixedPointFree :=
+    twoCyclePathAntipode_fixedPointFree
+      (partner := endpointPartner) (endpointAntipode := endpointAntipode)
+      endpointAntipode_involutive endpointAntipode_comm
+      endpointAntipode_fixedPointFree endpointAntipode_not_partner
+  endpoint_card_two :=
+    twoCycleEndpoint_card endpointPartner_fixedPointFree
+  classify :=
+    twoCycleEndpointClassify endpointPartner_involutive
+  base_card := hbase
+
 abbrev PositivePrefixChainType {n m : ℕ}
     (label : NonzeroSignedSubset n → SignedLabel m) :=
   {P : SignedPermutation n // P ∈ positiveAlternatingPrefixLabelChains label}
@@ -3045,6 +3238,13 @@ theorem alternatingPuncturedPrefixChainAntipode_fixedPointFree {n m : ℕ}
   simp [alternatingPuncturedPrefixChainAntipode, puncturedPrefixAntipode] at hP
   exact SignedPermutation.antipode_ne_self (by omega) P hP
 
+theorem alternatingPuncturedPrefixChainAntipode_involutive {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    Function.Involutive (alternatingPuncturedPrefixChainAntipode label hantipodal) := by
+  intro data
+  exact (alternatingPuncturedPrefixChainAntipode label hantipodal).left_inv data
+
 noncomputable def positivePrefixChainAntipode {n m : ℕ}
     (label : NonzeroSignedSubset n → SignedLabel m)
     (hantipodal : ∀ X, label X.antipode = (label X).neg) :
@@ -3105,6 +3305,13 @@ noncomputable def topPrefixChainEndpointAntipode {n m : ℕ}
   right_inv := by
     rintro (P | N) <;> simp [negativePrefixChainAntipode]
 
+theorem topPrefixChainEndpointAntipode_involutive {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    Function.Involutive (topPrefixChainEndpointAntipode label hantipodal) := by
+  intro endpoint
+  exact (topPrefixChainEndpointAntipode label hantipodal).left_inv endpoint
+
 noncomputable def kyFanPathEndpointClassAntipode {n m : ℕ}
     (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
     (hantipodal : ∀ X, label X.antipode = (label X).neg) :
@@ -3127,6 +3334,26 @@ theorem kyFanPathEndpointClassAntipode_fixedPointFree {n m : ℕ}
     · rcases top with positive | negative <;> simp [kyFanPathEndpointClassAntipode,
         topPrefixChainEndpointAntipode] at h
 
+theorem kyFanPathEndpointClassAntipode_involutive {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    Function.Involutive (kyFanPathEndpointClassAntipode label hantipodal) := by
+  intro endpoint
+  rcases endpoint with punctured | rest
+  · simpa [kyFanPathEndpointClassAntipode] using
+      congrArg
+        (fun x : AlternatingPuncturedPrefixChainType label =>
+          (Sum.inl x : KyFanPathEndpointClass label))
+        (alternatingPuncturedPrefixChainAntipode_involutive label hantipodal punctured)
+  · rcases rest with base | top
+    · cases base <;> rfl
+    · change
+        Sum.inr (Sum.inr
+            (topPrefixChainEndpointAntipode label hantipodal
+              (topPrefixChainEndpointAntipode label hantipodal top))) =
+          Sum.inr (Sum.inr top)
+      rw [topPrefixChainEndpointAntipode_involutive label hantipodal top]
+
 structure KyFanConcretePathEndpointDecomposition {n m : ℕ}
     (label : NonzeroSignedSubset (n + 1) → SignedLabel m) where
   Path : Type
@@ -3138,6 +3365,62 @@ structure KyFanConcretePathEndpointDecomposition {n m : ℕ}
   pathAntipode_fixedPointFree : ∀ p : Path, pathAntipode p ≠ p
   endpoint_card_two : ∀ p : Path, Fintype.card (Endpoint p) = 2
   classify : (Σ p : Path, Endpoint p) ≃ KyFanPathEndpointClass label
+
+/--
+The remaining local graph datum in the Ky Fan path proof, after the endpoint
+classes and antipodal action have been formalized.  It is a fixed-point-free
+pairing of endpoints into two-ended paths, commuting with antipodes, with no
+path fixed by the antipodal action.
+-/
+structure KyFanEndpointPairing {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) where
+  endpointPartner : KyFanPathEndpointClass label ≃ KyFanPathEndpointClass label
+  endpointPartner_involutive : Function.Involutive endpointPartner
+  endpointPartner_fixedPointFree : ∀ endpoint, endpointPartner endpoint ≠ endpoint
+  endpointPartner_comm :
+    ∀ endpoint,
+      kyFanPathEndpointClassAntipode label hantipodal (endpointPartner endpoint) =
+        endpointPartner (kyFanPathEndpointClassAntipode label hantipodal endpoint)
+  endpointPartner_not_antipodal :
+    ∀ endpoint,
+      kyFanPathEndpointClassAntipode label hantipodal endpoint ≠ endpointPartner endpoint
+
+noncomputable def kyFanConcretePathEndpointDecomposition_of_endpointPairing
+    {n m : ℕ} {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hantipodal : ∀ X, label X.antipode = (label X).neg}
+    (pairing : KyFanEndpointPairing label hantipodal) :
+    KyFanConcretePathEndpointDecomposition label := by
+  classical
+  exact
+    { Path := TwoCyclePath pairing.endpointPartner
+      Endpoint := fun path => TwoCycleEndpoint path
+      instPath := inferInstance
+      instEndpoint := fun _ => inferInstance
+      pathAntipode :=
+        twoCyclePathAntipode
+          (partner := pairing.endpointPartner)
+          (endpointAntipode := kyFanPathEndpointClassAntipode label hantipodal)
+          (kyFanPathEndpointClassAntipode_involutive label hantipodal)
+          pairing.endpointPartner_comm
+      pathAntipode_involutive :=
+        twoCyclePathAntipode_involutive
+          (partner := pairing.endpointPartner)
+          (endpointAntipode := kyFanPathEndpointClassAntipode label hantipodal)
+          (kyFanPathEndpointClassAntipode_involutive label hantipodal)
+          pairing.endpointPartner_comm
+      pathAntipode_fixedPointFree :=
+        twoCyclePathAntipode_fixedPointFree
+          (partner := pairing.endpointPartner)
+          (endpointAntipode := kyFanPathEndpointClassAntipode label hantipodal)
+          (kyFanPathEndpointClassAntipode_involutive label hantipodal)
+          pairing.endpointPartner_comm
+          (kyFanPathEndpointClassAntipode_fixedPointFree label hantipodal)
+          pairing.endpointPartner_not_antipodal
+      endpoint_card_two :=
+        twoCycleEndpoint_card pairing.endpointPartner_fixedPointFree
+      classify :=
+        twoCycleEndpointClassify pairing.endpointPartner_involutive }
 
 theorem kyFanPrefixParity_of_pathEndpointDecomposition {n m : ℕ}
     (label : NonzeroSignedSubset n → SignedLabel m)
@@ -3226,6 +3509,19 @@ def KyFanConcretePathEndpointDecompositionStatement (n m : ℕ) : Prop :=
     (∀ X, label X.antipode = (label X).neg) →
       NoComplementaryComparableLabels label →
         Nonempty (KyFanConcretePathEndpointDecomposition label)
+
+def KyFanEndpointPairingStatement (n m : ℕ) : Prop :=
+  ∀ label : NonzeroSignedSubset (n + 1) → SignedLabel m,
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) →
+      NoComplementaryComparableLabels label →
+        Nonempty (KyFanEndpointPairing label hantipodal)
+
+theorem kyFanConcretePathEndpointDecompositionStatement_of_endpointPairing
+    {n m : ℕ} (hpairing : KyFanEndpointPairingStatement n m) :
+    KyFanConcretePathEndpointDecompositionStatement n m := by
+  intro label hantipodal hno
+  rcases hpairing label hantipodal hno with ⟨pairing⟩
+  exact ⟨kyFanConcretePathEndpointDecomposition_of_endpointPairing pairing⟩
 
 noncomputable def kyFanPrefixPathEndpointDecomposition_zero {m : ℕ}
     (label : NonzeroSignedSubset 0 → SignedLabel m) :
@@ -3326,6 +3622,27 @@ theorem tuckerLemmaStatement_succ_of_concretePathEndpointDecomposition
     TuckerLemmaStatement (n + 1) :=
   tuckerLemmaStatement_of_kyFanPrefixParity (by omega)
     (kyFanPrefixParityStatement_succ_of_concretePathEndpointDecomposition hn hpaths)
+
+theorem kyFanPrefixParityStatement_succ_of_endpointPairing
+    {n m : ℕ} (hn : 0 < n)
+    (hpairing : KyFanEndpointPairingStatement n m) :
+    KyFanPrefixParityStatement (n + 1) m :=
+  kyFanPrefixParityStatement_succ_of_concretePathEndpointDecomposition hn
+    (kyFanConcretePathEndpointDecompositionStatement_of_endpointPairing hpairing)
+
+theorem kyFanPrefixModFourStatement_succ_of_endpointPairing
+    {n m : ℕ} (hn : 0 < n)
+    (hpairing : KyFanEndpointPairingStatement n m) :
+    KyFanPrefixModFourStatement (n + 1) m :=
+  (kyFanPrefixParityStatement_iff_modFour (by omega)).mp
+    (kyFanPrefixParityStatement_succ_of_endpointPairing hn hpairing)
+
+theorem tuckerLemmaStatement_succ_of_endpointPairing
+    {n : ℕ} (hn : 0 < n)
+    (hpairing : KyFanEndpointPairingStatement n n) :
+    TuckerLemmaStatement (n + 1) :=
+  tuckerLemmaStatement_of_kyFanPrefixParity (by omega)
+    (kyFanPrefixParityStatement_succ_of_endpointPairing hn hpairing)
 
 theorem exists_complementaryComparable_of_pathEndpointDecomposition_of_lt {n m : ℕ}
     (hmn : m < n) (hpaths : KyFanPrefixPathEndpointDecompositionStatement n m)

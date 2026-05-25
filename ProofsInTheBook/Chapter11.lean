@@ -9726,6 +9726,94 @@ theorem sweepSort_labelingAt_interEventAngle_wrap
   exact sweepSort_reindex_of_injective L (sweepSort L θs)
     (inj_at_interEventAngle_add_pi hcard hne t)
 
+theorem sweepSort_labelingAt_interEventAngle_wrap_rev
+    {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (s j : Fin (directionsDeterminedBy points).card)
+    (hwrap : (directionsDeterminedBy points).card ≤ s.val + j.val) :
+    sweepSort
+        (sweepLabelingAt (points := points) hcard
+          (interEventAngle points hne ⟨s.val, by omega⟩))
+        (interEventAngleAt points hne
+          (interEventAngle points hne ⟨s.val, by omega⟩) s
+          ⟨j.val, by omega⟩) =
+      ((Fin.revPerm : Equiv.Perm (Fin (2 * k))).trans
+        (sweepSort (sweepLabeling hcard hne)
+          (interEventAngle points hne
+            ⟨s.val + j.val - (directionsDeterminedBy points).card, by omega⟩))).trans
+        (sweepSort (sweepLabeling hcard hne)
+          (interEventAngle points hne ⟨s.val, by omega⟩)).symm := by
+  let t : Fin ((directionsDeterminedBy points).card + 1) :=
+    ⟨s.val + j.val - (directionsDeterminedBy points).card, by omega⟩
+  rw [sweepSort_labelingAt_interEventAngle_wrap hcard hne s j hwrap]
+  rw [show (interEventAngle points hne
+        ⟨s.val + j.val - (directionsDeterminedBy points).card, by omega⟩) =
+      interEventAngle points hne t by rfl]
+  rw [sweepSort_add_pi_eq_revPerm_trans (sweepLabeling hcard hne)
+    (interEventAngle points hne t) (inj_at_interEventAngle hcard hne t)]
+
+theorem sweepConcreteGAS_atIndex_mod_pi_seq_no_wrap
+    {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points)
+    (s j : Fin (directionsDeterminedBy points).card)
+    (hwrap : s.val + j.val < (directionsDeterminedBy points).card) :
+    (sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).seq.π
+        ⟨j.val, by omega⟩ =
+      (sweepSort (sweepLabeling hcard hne)
+        (interEventAngle points hne ⟨s.val + j.val, Nat.lt_succ_of_lt hwrap⟩)).trans
+        (sweepSort (sweepLabeling hcard hne)
+          (interEventAngle points hne ⟨s.val, by omega⟩)).symm := by
+  simpa [sweepConcreteGAS_atIndex_mod_pi, sweepConcreteGAS_at_mod_pi,
+    CountedGeneralizedAllowableSequence.ofReversesBlocks,
+    sweepGAS_at_mod_pi, GeneralizedAllowableSequence.ofSweepAngles] using
+    sweepSort_labelingAt_interEventAngle_no_wrap hcard hne s j hwrap
+
+theorem sweepConcreteGAS_atIndex_mod_pi_seq_wrap
+    {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points)
+    (s j : Fin (directionsDeterminedBy points).card)
+    (hwrap : (directionsDeterminedBy points).card ≤ s.val + j.val) :
+    (sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).seq.π
+        ⟨j.val, by omega⟩ =
+      (sweepSort (sweepLabeling hcard hne)
+        (interEventAngle points hne
+          ⟨s.val + j.val - (directionsDeterminedBy points).card, by omega⟩ +
+            Real.pi)).trans
+        (sweepSort (sweepLabeling hcard hne)
+          (interEventAngle points hne ⟨s.val, by omega⟩)).symm := by
+  simpa [sweepConcreteGAS_atIndex_mod_pi, sweepConcreteGAS_at_mod_pi,
+    CountedGeneralizedAllowableSequence.ofReversesBlocks,
+    sweepGAS_at_mod_pi, GeneralizedAllowableSequence.ofSweepAngles] using
+    sweepSort_labelingAt_interEventAngle_wrap hcard hne s j hwrap
+
+theorem sweepConcreteGAS_atIndex_mod_pi_seq_wrap_rev
+    {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points)
+    (s j : Fin (directionsDeterminedBy points).card)
+    (hwrap : (directionsDeterminedBy points).card ≤ s.val + j.val) :
+    (sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).seq.π
+        ⟨j.val, by omega⟩ =
+      ((Fin.revPerm : Equiv.Perm (Fin (2 * k))).trans
+        (sweepSort (sweepLabeling hcard hne)
+          (interEventAngle points hne
+            ⟨s.val + j.val - (directionsDeterminedBy points).card, by omega⟩))).trans
+        (sweepSort (sweepLabeling hcard hne)
+          (interEventAngle points hne ⟨s.val, by omega⟩)).symm := by
+  simpa [sweepConcreteGAS_atIndex_mod_pi, sweepConcreteGAS_at_mod_pi,
+    CountedGeneralizedAllowableSequence.ofReversesBlocks,
+    sweepGAS_at_mod_pi, GeneralizedAllowableSequence.ofSweepAngles] using
+    sweepSort_labelingAt_interEventAngle_wrap_rev hcard hne s j hwrap
+
 -- Starting angle θ₀ is between sortedAngleAt(s-1) and sortedAngleAt(s)
 -- (or equivalently, in the gap before event s).
 --
@@ -9779,6 +9867,10 @@ now exists and is wired into a concrete shifted sweep:
 - `sweepLabelingAt_interEventAngle_point_eq`
 - `sweepSort_labelingAt_interEventAngle_no_wrap`
 - `sweepSort_labelingAt_interEventAngle_wrap`
+- `sweepSort_labelingAt_interEventAngle_wrap_rev`
+- `sweepConcreteGAS_atIndex_mod_pi_seq_no_wrap`
+- `sweepConcreteGAS_atIndex_mod_pi_seq_wrap`
+- `sweepConcreteGAS_atIndex_mod_pi_seq_wrap_rev`
 
 The remaining blocker is the crossing-rotation transfer lemma.  For the
 ordinary sweep

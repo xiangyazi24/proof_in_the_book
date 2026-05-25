@@ -1617,32 +1617,41 @@ theorem extend_partialLatin_some_empty_row_with_card {n : ℕ}
   exact ⟨i₀, Q, hQ, hPQ, hrow, hcard⟩
 
 /--
-The genuine Hall row-completion step from the sparse partial-square hypotheses.
-Hall's condition is proved internally, but this theorem is only a one-row step:
-it is not by itself an iteration proof of the full Evans/Smetaniuk theorem.
+The actual marriage condition for the sparse row-completion step.  For the
+true column-symbol sets of a partial square, Hall's inequality follows from
+the double-counting argument above and is not an external assumption.
 -/
-theorem chapter33_row_completion_step {n : ℕ}
-    (P : Fin n → Fin n → Option (Fin n))
-    (usedInCol : Fin n → Finset (Fin n))
-    (hused_witness : ∀ j a, a ∈ usedInCol j → ∃ i, P i j = some a)
-    (hfilled_le : (filledCells P).card ≤ n - 1) :
-    ∃ row : Fin n → Fin n, Function.Injective row ∧ ∀ j, row j ∉ usedInCol j :=
-  latin_square_completion_step_from_partial P usedInCol hused_witness hfilled_le
-
-/--
-The sparse Hall row step specialized to the actual column symbols of a partial
-square.  This is the unconditional row-completion interface for the current
-partial-square representation: the support witness for `colSymbols` is
-definitional, so the theorem exposes only the sparse count hypothesis.
--/
-theorem chapter33_column_row_completion_step {n : ℕ}
+theorem chapter33_hall_condition {n : ℕ}
     (P : Fin n → Fin n → Option (Fin n))
     (hfilled_le : (filledCells P).card ≤ n - 1) :
-    ∃ row : Fin n → Fin n, Function.Injective row ∧ ∀ j, row j ∉ colSymbols P j := by
+    ∀ S : Finset (Fin n),
+      S.card ≤ (S.biUnion fun j => Finset.univ.filter (· ∉ colSymbols P j)).card := by
   have hused_witness : ∀ j a, a ∈ colSymbols P j → ∃ i, P i j = some a := by
     intro j a ha
     simpa [colSymbols] using ha
-  exact latin_square_completion_step_from_partial P (colSymbols P) hused_witness hfilled_le
+  intro S
+  simpa [available] using hall_from_partial_square P (colSymbols P) hused_witness hfilled_le S
+
+/--
+The genuine Hall row-completion step from the sparse partial-square hypotheses.
+The marriage condition is proved by `chapter33_hall_condition`, so this public
+row-step interface exposes only the partial square and its sparse count.
+-/
+theorem chapter33_row_completion_step {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n))
+    (hfilled_le : (filledCells P).card ≤ n - 1) :
+    ∃ row : Fin n → Fin n, Function.Injective row ∧ ∀ j, row j ∉ colSymbols P j := by
+  have hHall := chapter33_hall_condition P hfilled_le
+  have := hall_system_of_distinct_representatives
+    (fun j : Fin n => Finset.univ.filter (· ∉ colSymbols P j)) hHall
+  obtain ⟨choice, hinj, hmem⟩ := this
+  exact ⟨choice, hinj, fun j => by simpa using hmem j⟩
+
+theorem chapter33_column_row_completion_step {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n))
+    (hfilled_le : (filledCells P).card ≤ n - 1) :
+    ∃ row : Fin n → Fin n, Function.Injective row ∧ ∀ j, row j ∉ colSymbols P j :=
+  chapter33_row_completion_step P hfilled_le
 
 /--
 Canonical Chapter 33 entry point: the full Latin-square completion theorem,

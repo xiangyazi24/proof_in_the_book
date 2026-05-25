@@ -9506,6 +9506,35 @@ theorem interEventAngleAt_wrapped {points : Finset Point2}
     rw [hrepr, htarget, interEventAngle_zero]
     exact genericAngleBetween_last_first_add_pi_eq_start_add_pi hne
 
+theorem shiftedSortedAngleAt_rotate {points : Finset Point2}
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (s j : Fin (directionsDeterminedBy points).card) :
+    shiftedSortedAngleAt points hne s j =
+      if h : s.val + j.val < (directionsDeterminedBy points).card then
+        sortedAngleAt points ⟨s.val + j.val, h⟩
+      else
+        sortedAngleAt points
+          ⟨s.val + j.val - (directionsDeterminedBy points).card, by omega⟩ + Real.pi := by
+  by_cases h : s.val + j.val < (directionsDeterminedBy points).card
+  · simp [h, shiftedSortedAngleAt_unwrapped (points := points) hne s j h]
+  · simp [h, shiftedSortedAngleAt_wrapped (points := points) hne s j h]
+
+theorem interEventAngleAt_rotate {points : Finset Point2}
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (s j : Fin (directionsDeterminedBy points).card) :
+    interEventAngleAt points hne
+        (interEventAngle points hne ⟨s.val, by omega⟩) s
+        ⟨j.val, by omega⟩ =
+      if h : s.val + j.val < (directionsDeterminedBy points).card then
+        interEventAngle points hne ⟨s.val + j.val, Nat.lt_succ_of_lt h⟩
+      else
+        interEventAngle points hne
+          ⟨s.val + j.val - (directionsDeterminedBy points).card, by omega⟩ + Real.pi := by
+  by_cases h : s.val + j.val < (directionsDeterminedBy points).card
+  · simp [h, interEventAngleAt_unwrapped (points := points) hne s j h]
+  · have hwrap : (directionsDeterminedBy points).card ≤ s.val + j.val := by omega
+    simp [h, interEventAngleAt_wrapped (points := points) hne s j hwrap]
+
 -- Starting angle θ₀ is between sortedAngleAt(s-1) and sortedAngleAt(s)
 -- (or equivalently, in the gap before event s).
 --
@@ -9547,8 +9576,9 @@ now exists and is wired into a concrete shifted sweep:
 - `sweepGAS_at_mod_pi`
 - the `_mod_pi` start/end bounds for `shiftedSortedAngleAt` and
   `interEventAngleAt`
-- the no-wrap/wrap angle-identification lemmas, culminating in
-  `interEventAngleAt_wrapped`
+- the no-wrap/wrap angle-identification lemmas, culminating in the
+  rotation formulas `shiftedSortedAngleAt_rotate` and
+  `interEventAngleAt_rotate`
 - `interEventAngleAt_no_other_shiftedEventAngle`
 - `only_event_between_interEventAnglesAt_mod_pi`
 - `inj_at_interEventAngleAt_mod_pi`

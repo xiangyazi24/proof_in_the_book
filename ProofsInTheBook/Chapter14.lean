@@ -41,11 +41,15 @@ matrix from a raw family of touching simplices; see
   now also transfers those opposite entries to the globally chosen
   `FacetHyperplanes.oriented` representative, and
   `chapter14_of_pairwiseTouchingAcrossFacets` proves the Perles bound directly
-  from this stronger geometric relation.  The remaining gap is the
-  converse/extraction of `TouchesAcrossFacets` from raw touching; this file now
-  isolates the precise side obstruction as
-  `PairwiseNoSameSideCommonFacet`, since the current `TouchesAlongFacets`
-  records only a shared facet hyperplane, not equality of the facet bodies;
+  from this stronger geometric relation.  This file now also proves the
+  same-side obstruction impossible for the strengthened relation
+  `TouchesAlongFacetInteriors`: if the two facet relative interiors overlap
+  and the opposite vertices are on the same side, a small barycentric move from
+  the overlap point produces a common full relative-interior point.  Thus
+  `chapter14_of_pairwiseTouchingAlongFacetInteriors` constructs the Perles
+  data without `PairwiseNoSameSideCommonFacet`.  The remaining semantic gap is
+  deriving this facet-interior touching data from the raw book touching
+  relation, whose boundary-contact formulation is not yet formalized here;
 * construct a point outside all simplex bodies to obtain the missing completed
   sign vector.  The halfspace side of this step is now formalized for one
   simplex:
@@ -77,18 +81,19 @@ antipodal-free half-cube endpoint; see
 `PerlesMatrix.card_le_two_pow_of_antipodalFree` and
 `chapter14_sharp_of_antipodalFree`.  The data-free wrappers
 `chapter14_sharp_of_pairwiseTouchingAcrossFacets_fixedCoordinate`,
-`chapter14_sharp_of_pairwiseTouchingAcrossFacets_antipodalFree`, and their
-`PairwiseNoSameSideCommonFacet` analogues apply these endpoints to the
-canonical matrix extracted in this file.  The remaining gap is geometric:
-derive that fixed-coordinate/parity/antipodal-free invariant, or an equivalent
-half-cube bound, from raw touching simplices.
+`chapter14_sharp_of_pairwiseTouchingAcrossFacets_antipodalFree`, the
+`TouchesAlongFacetInteriors` wrappers, and the
+`PairwiseNoSameSideCommonFacet` analogues apply these endpoints to canonical
+matrices extracted in this file.  The remaining gap is geometric: derive that
+fixed-coordinate/parity/antipodal-free invariant, or an equivalent half-cube
+bound, from raw touching simplices.
 -/
 
 noncomputable section
 
 namespace ProofsInTheBook.Chapter14
 
-open scoped Classical
+open scoped Classical Topology
 
 /-! ## Geometric setup -/
 
@@ -862,6 +867,146 @@ lemma facetInteriorOverlap_body_inter_nonempty {d : ℕ} [NeZero d]
   exact ⟨p, S.faceOpposite_interior_subset_body i hpS,
     T.faceOpposite_interior_subset_body j hpT⟩
 
+/-- Positive barycentric weights summing to one are strictly between zero and one. -/
+lemma fin_weight_mem_Ioo_of_pos_of_sum_eq_one {d : ℕ} [NeZero d]
+    {w : Fin (d + 1) → ℝ} (hpos : ∀ k, 0 < w k) (hsum : ∑ k, w k = 1)
+    (k : Fin (d + 1)) :
+    w k ∈ Set.Ioo (0 : ℝ) 1 := by
+  refine ⟨hpos k, ?_⟩
+  obtain ⟨l, hlk⟩ := exists_ne k
+  have hlt : w k < ∑ x ∈ Finset.univ, w x := by
+    exact Finset.single_lt_sum hlk (Finset.mem_univ k) (Finset.mem_univ l) (hpos l)
+      (fun x _ hx => (hpos x).le)
+  simpa [hsum] using hlt
+
+/--
+For finitely many positive coordinates `a k`, a sufficiently small positive
+line-map parameter keeps all interpolated coordinates
+`(1 - δ) * a k + δ * b k` positive.
+-/
+lemma exists_pos_lt_one_forall_lineMap_pos {α : Type*} [Fintype α]
+    (a b : α → ℝ) (ha : ∀ k, 0 < a k) :
+    ∃ δ : ℝ, 0 < δ ∧ δ < 1 ∧ ∀ k, 0 < (1 - δ) * a k + δ * b k := by
+  classical
+  have hpos : ∀ k : α, ∀ᶠ δ in 𝓝[>] (0 : ℝ),
+      0 < (1 - δ) * a k + δ * b k := by
+    intro k
+    have hcont : ContinuousAt (fun δ : ℝ => (1 - δ) * a k + δ * b k) 0 := by
+      fun_prop
+    have hlim : Filter.Tendsto (fun δ : ℝ => (1 - δ) * a k + δ * b k)
+        (𝓝[>] (0 : ℝ)) (𝓝 (a k)) := by
+      simpa using hcont.tendsto.mono_left nhdsWithin_le_nhds
+    exact hlim.eventually (isOpen_Ioi.mem_nhds (ha k))
+  have hall : ∀ᶠ δ in 𝓝[>] (0 : ℝ),
+      ∀ k : α, 0 < (1 - δ) * a k + δ * b k := by
+    simpa using (Filter.eventually_all_finite
+      (Set.finite_univ : (Set.univ : Set α).Finite)).mpr (fun k _ => hpos k)
+  have hδpos : ∀ᶠ δ in 𝓝[>] (0 : ℝ), 0 < δ := self_mem_nhdsWithin
+  have hδlt : ∀ᶠ δ in 𝓝[>] (0 : ℝ), δ < 1 := by
+    exact eventually_nhdsWithin_of_eventually_nhds (eventually_lt_nhds zero_lt_one)
+  rcases (hall.and hδpos |>.and hδlt).exists with ⟨δ, hδall, hδlt⟩
+  exact ⟨δ, hδall.2, hδlt, hδall.1⟩
+
+/--
+If two facet interiors overlap and the opposite vertices are strictly on the
+same side of the first facet hyperplane, then the two full simplex relative
+interiors intersect.  Algebraically, move a sufficiently small distance from
+the common facet-interior point toward `T`'s opposite vertex.
+-/
+lemma facetInteriorOverlap_relInterior_inter_nonempty_of_vertices_sSameSide
+    {d : ℕ} [NeZero d] {S T : DSimplex d} {i j : Fin (d + 1)}
+    (hoverlap : FacetInteriorOverlap S T i j)
+    (hsame : (S.facetHyperplane i).SSameSide (S.points i) (T.points j)) :
+    (S.relInterior ∩ T.relInterior).Nonempty := by
+  classical
+  rcases hoverlap with ⟨p, hpS, hpT⟩
+  let BS := S.affineBasis
+  let BT := T.affineBasis
+  have hSface := S.affineBasis_coord_faceOpposite_interior i hpS
+  have hTface := T.affineBasis_coord_faceOpposite_interior j hpT
+  have hSi0 : BS.coord i p = 0 := by simpa [BS] using hSface.2
+  have hTj0 : BT.coord j p = 0 := by simpa [BT] using hTface.2
+  have hTiS : 0 < BS.coord i (T.points j) := by
+    simpa [BS] using S.affineBasis_coord_pos_of_vertices_sSameSide i hsame
+  let a : {k : Fin (d + 1) // k ≠ i} → ℝ := fun k => BS.coord k.1 p
+  let b : {k : Fin (d + 1) // k ≠ i} → ℝ := fun k => BS.coord k.1 (T.points j)
+  have ha : ∀ k, 0 < a k := by
+    intro k
+    exact hSface.1 k.1 k.2
+  rcases exists_pos_lt_one_forall_lineMap_pos a b ha with
+    ⟨δ, hδpos, hδlt, hδSrest⟩
+  let q : Ambient d := AffineMap.lineMap p (T.points j) δ
+  refine ⟨q, ?_, ?_⟩
+  · let wS : Fin (d + 1) → ℝ := AffineMap.lineMap (fun k => BS.coord k p)
+      (fun k => BS.coord k (T.points j)) δ
+    have hsumS : ∑ k, wS k = 1 := by
+      simp [wS, AffineMap.lineMap_apply_module, Finset.sum_add_distrib, ← Finset.mul_sum,
+        AffineBasis.sum_coord_apply_eq_one]
+    have hp_eqS : (Finset.univ.affineCombination ℝ S.points fun k => BS.coord k p) = p := by
+      change (Finset.univ.affineCombination ℝ BS fun k => BS.coord k p) = p
+      exact AffineBasis.affineCombination_coord_eq_self BS p
+    have hTj_eqS :
+        (Finset.univ.affineCombination ℝ S.points fun k => BS.coord k (T.points j)) =
+          T.points j := by
+      change (Finset.univ.affineCombination ℝ BS fun k => BS.coord k (T.points j)) =
+        T.points j
+      exact AffineBasis.affineCombination_coord_eq_self BS (T.points j)
+    have hqS : q = Finset.univ.affineCombination ℝ S.points wS := by
+      calc
+        q = AffineMap.lineMap
+            (Finset.univ.affineCombination ℝ S.points fun k => BS.coord k p)
+            (Finset.univ.affineCombination ℝ S.points fun k => BS.coord k (T.points j)) δ := by
+          rw [hp_eqS, hTj_eqS]
+        _ = Finset.univ.affineCombination ℝ S.points wS := by
+          rw [Finset.lineMap_affineCombination]
+    rw [DSimplex.relInterior, hqS]
+    exact (Affine.Simplex.affineCombination_mem_interior_iff (s := S) hsumS).2 (fun k =>
+      fin_weight_mem_Ioo_of_pos_of_sum_eq_one (d := d) (w := wS) (by
+        intro l
+        by_cases hli : l = i
+        · subst l
+          have hw : wS i = δ * BS.coord i (T.points j) := by
+            simp [wS, AffineMap.lineMap_apply_module, hSi0]
+          rw [hw]
+          exact mul_pos hδpos hTiS
+        · have hw : wS l = (1 - δ) * BS.coord l p + δ * BS.coord l (T.points j) := by
+            simp [wS, AffineMap.lineMap_apply_module]
+          rw [hw]
+          exact hδSrest ⟨l, hli⟩) hsumS k)
+  · let wT : Fin (d + 1) → ℝ := AffineMap.lineMap (fun k => BT.coord k p)
+      (Pi.single j (1 : ℝ)) δ
+    have hsumT : ∑ k, wT k = 1 := by
+      simp [wT, AffineMap.lineMap_apply_module, Finset.sum_add_distrib, ← Finset.mul_sum,
+        AffineBasis.sum_coord_apply_eq_one]
+    have hp_eqT : (Finset.univ.affineCombination ℝ T.points fun k => BT.coord k p) = p := by
+      change (Finset.univ.affineCombination ℝ BT fun k => BT.coord k p) = p
+      exact AffineBasis.affineCombination_coord_eq_self BT p
+    have hTj_eqT :
+        (Finset.univ.affineCombination ℝ T.points (Pi.single j (1 : ℝ))) = T.points j := by
+      exact Finset.univ.affineCombination_piSingle ℝ T.points (Finset.mem_univ j)
+    have hqT : q = Finset.univ.affineCombination ℝ T.points wT := by
+      calc
+        q = AffineMap.lineMap
+            (Finset.univ.affineCombination ℝ T.points fun k => BT.coord k p)
+            (Finset.univ.affineCombination ℝ T.points (Pi.single j (1 : ℝ))) δ := by
+          rw [hp_eqT, hTj_eqT]
+        _ = Finset.univ.affineCombination ℝ T.points wT := by
+          rw [Finset.lineMap_affineCombination]
+    rw [DSimplex.relInterior, hqT]
+    exact (Affine.Simplex.affineCombination_mem_interior_iff (s := T) hsumT).2 (fun k =>
+      fin_weight_mem_Ioo_of_pos_of_sum_eq_one (d := d) (w := wT) (by
+        intro l
+        by_cases hlj : l = j
+        · subst l
+          have hw : wT j = δ := by
+            simp [wT, AffineMap.lineMap_apply_module, hTj0]
+          rw [hw]
+          exact hδpos
+        · have hw : wT l = (1 - δ) * BT.coord l p := by
+            simp [wT, AffineMap.lineMap_apply_module, hlj]
+          rw [hw]
+          exact mul_pos (sub_pos.mpr hδlt) (hTface.1 l hlj)) hsumT k)
+
 /--
 A stronger along-facet relation: the simplices have disjoint relative
 interiors and some common facet hyperplane whose two facet relative interiors
@@ -905,6 +1050,28 @@ lemma touchesAlongFacets_commonFacet_sSameSide_or_sOppSide {d : ℕ} [NeZero d]
     exact T.opposite_vertex_notMem_facetHyperplane j (by simpa [hfacet] using hmem)
   exact ⟨i, j, hfacet, S.sSameSide_or_sOppSide_opposite_vertex_of_notMem_facetHyperplane
     i hnot⟩
+
+/--
+Facet-interior touching rules out the same-side alternative: if the opposite
+vertices were on the same side, the local barycentric construction above would
+produce a common relative-interior point.
+-/
+lemma touchesAcrossFacets_of_touchesAlongFacetInteriors {d : ℕ} [NeZero d]
+    {S T : DSimplex d} (h : TouchesAlongFacetInteriors S T) :
+    TouchesAcrossFacets S T := by
+  rcases h with ⟨hdisj, i, j, hfacet, hoverlap⟩
+  have hnotSame : ¬ (S.facetHyperplane i).SSameSide (S.points i) (T.points j) := by
+    intro hsame
+    rcases facetInteriorOverlap_relInterior_inter_nonempty_of_vertices_sSameSide
+      hoverlap hsame with ⟨p, hpS, hpT⟩
+    exact Set.disjoint_left.mp hdisj hpS hpT
+  have hnot : T.points j ∉ S.facetHyperplane i := by
+    intro hmem
+    exact T.opposite_vertex_notMem_facetHyperplane j (by simpa [hfacet] using hmem)
+  rcases S.sSameSide_or_sOppSide_opposite_vertex_of_notMem_facetHyperplane i hnot with
+    hsame | hopp
+  · exact False.elim (hnotSame hsame)
+  · exact ⟨facetInteriorOverlap_body_inter_nonempty hoverlap, i, j, hfacet, hopp⟩
 
 /--
 The exact extra condition needed to upgrade the current `TouchesAlongFacets`
@@ -980,6 +1147,14 @@ lemma pairwiseTouching_of_pairwiseTouchingAlongFacetInteriors {ι : Type*} {d : 
     PairwiseTouching simplices := by
   intro i j hij
   exact touchesAlongFacets_of_touchesAlongFacetInteriors (h hij)
+
+/-- Facet-interior touching gives the across-facet certificates directly. -/
+lemma pairwiseTouchingAcrossFacets_of_pairwiseTouchingAlongFacetInteriors
+    {ι : Type*} {d : ℕ} [NeZero d] {simplices : ι → DSimplex d}
+    (h : PairwiseTouchingAlongFacetInteriors simplices) :
+    PairwiseTouchingAcrossFacets simplices := by
+  intro i j hij
+  exact touchesAcrossFacets_of_touchesAlongFacetInteriors (h hij)
 
 /-- Excluding the same-side alternative upgrades pairwise touching to across-facet touching. -/
 lemma pairwiseTouchingAcrossFacets_of_pairwiseTouching_of_noSameSideCommonFacet
@@ -2093,13 +2268,13 @@ lookup.  The current status of its main pieces is:
   global-orientation bridge is now also proved:
   `FacetHyperplanes.exists_oriented_opposite_entries_of_touchesAcrossFacets`
   transfers those entries to the arbitrary witness facet chosen by
-  `FacetHyperplanes.oriented`.  The remaining bridge is the semantic one:
-  rule out the same-side common-hyperplane alternative for raw touching, or
-  strengthen the touching definition so it records a shared facet body rather
-  than only a shared facet hyperplane.  The formal isolated condition is
-  `PairwiseNoSameSideCommonFacet`, and under it
-  `chapter14_of_pairwiseTouching_noSameSideCommonFacet` now removes the
-  across-facet hypothesis;
+  `FacetHyperplanes.oriented`.  For `TouchesAlongFacetInteriors`, the
+  same-side common-facet alternative is now ruled out by
+  `facetInteriorOverlap_relInterior_inter_nonempty_of_vertices_sSameSide`, so
+  `chapter14_of_pairwiseTouchingAlongFacetInteriors` removes both the
+  across-facet and `PairwiseNoSameSideCommonFacet` hypotheses.  For the weaker
+  `TouchesAlongFacets`, which records only a common facet hyperplane, the
+  isolated remaining condition is still `PairwiseNoSameSideCommonFacet`;
 * choose a point outside the finite union of simplex bodies to obtain the
   missing completed sign vector.  The local conversion from "same sign on every
   facet of a simplex" to "the point lies in that simplex" is now
@@ -2213,6 +2388,18 @@ def ofFacetHyperplanesNoSameSide [Nonempty ι] (simplices : ι → DSimplex d)
     (pairwiseTouchingAcrossFacets_of_pairwiseTouching_of_noSameSideCommonFacet htouch hno)
 
 /--
+Build certified Perles data from the stronger facet-interior touching relation.
+The local barycentric same-side obstruction has been discharged above, so this
+does not need `PairwiseNoSameSideCommonFacet`.
+-/
+def ofFacetHyperplanesFacetInteriors [Nonempty ι]
+    (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouchingAlongFacetInteriors simplices) :
+    PerlesFacetSeparationData simplices (FacetHyperplanes simplices) :=
+  ofFacetHyperplanesAcross simplices
+    (pairwiseTouchingAcrossFacets_of_pairwiseTouchingAlongFacetInteriors htouch)
+
+/--
 Build certified Perles data from the stronger facet-interior touching relation
 plus the isolated same-side obstruction.
 -/
@@ -2251,6 +2438,13 @@ def noSameSideFacetMatrix (simplices : ι → DSimplex d)
     (hno : PairwiseNoSameSideCommonFacet simplices) :
     PerlesMatrix ι (FacetHyperplanes simplices) d :=
   (ofFacetHyperplanesNoSameSide simplices htouch hno).toPerlesMatrix htouch
+
+/-- The canonical Perles matrix extracted from facet-interior touching. -/
+def facetInteriorsMatrix (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouchingAlongFacetInteriors simplices) :
+    PerlesMatrix ι (FacetHyperplanes simplices) d :=
+  (ofFacetHyperplanesFacetInteriors simplices htouch).toPerlesMatrix
+    (pairwiseTouching_of_pairwiseTouchingAlongFacetInteriors htouch)
 
 /--
 The canonical Perles matrix extracted from facet-interior touching plus the
@@ -2300,6 +2494,18 @@ theorem chapter14_of_pairwiseTouchingAcrossFacets {ι : Type*} [Fintype ι]
       (PerlesFacetSeparationData.ofFacetHyperplanesAcross simplices hacross)
   · haveI : IsEmpty ι := ⟨fun x => hι ⟨x⟩⟩
     simp
+
+/--
+Chapter 14 from the stronger facet-interior touching relation.  The same-side
+common-facet obstruction is now proved impossible for this relation, so the
+across-facet Perles data are constructed directly from the geometry.
+-/
+theorem chapter14_of_pairwiseTouchingAlongFacetInteriors {ι : Type*} [Fintype ι]
+    {d : ℕ} [NeZero d] (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouchingAlongFacetInteriors simplices) :
+    Fintype.card ι < 2 ^ (d + 1) :=
+  chapter14_of_pairwiseTouchingAcrossFacets simplices
+    (pairwiseTouchingAcrossFacets_of_pairwiseTouchingAlongFacetInteriors htouch)
 
 /--
 Chapter 14 from the current raw touching relation plus the exact side
@@ -2361,6 +2567,37 @@ theorem chapter14_sharp_of_pairwiseTouchingAcrossFacets_antipodalFree
   haveI : Nonempty (FacetHyperplanes simplices) := Fintype.card_pos_iff.mp hκpos
   exact PerlesMatrix.card_le_two_pow_of_antipodalFree
     (PerlesFacetSeparationData.acrossFacetMatrix simplices hacross) hanti
+
+/--
+Data-free sharp conditional endpoint from facet-interior touching, in the
+fixed-coordinate half-cube form.
+-/
+theorem chapter14_sharp_of_pairwiseTouchingAlongFacetInteriors_fixedCoordinate
+    {ι : Type*} [Fintype ι] [Nonempty ι] {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouchingAlongFacetInteriors simplices)
+    (hfixed : PerlesMatrix.FixedCoordinateCompletions
+      (PerlesFacetSeparationData.facetInteriorsMatrix simplices htouch)) :
+    Fintype.card ι ≤ 2 ^ d :=
+  PerlesMatrix.card_le_two_pow_of_fixedCoordinate
+    (PerlesFacetSeparationData.facetInteriorsMatrix simplices htouch) hfixed
+
+/--
+Data-free sharp conditional endpoint from facet-interior touching, in the
+antipodal-free half-cube form.
+-/
+theorem chapter14_sharp_of_pairwiseTouchingAlongFacetInteriors_antipodalFree
+    {ι : Type*} [Fintype ι] [Nonempty ι] {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouchingAlongFacetInteriors simplices)
+    (hanti : PerlesMatrix.AntipodalFreeCompletions
+      (PerlesFacetSeparationData.facetInteriorsMatrix simplices htouch)) :
+    Fintype.card ι ≤ 2 ^ d := by
+  have hκpos : 0 < Fintype.card (FacetHyperplanes simplices) :=
+    Nat.lt_of_lt_of_le (Nat.zero_lt_succ d) (card_facetHyperplanes_ge simplices)
+  haveI : Nonempty (FacetHyperplanes simplices) := Fintype.card_pos_iff.mp hκpos
+  exact PerlesMatrix.card_le_two_pow_of_antipodalFree
+    (PerlesFacetSeparationData.facetInteriorsMatrix simplices htouch) hanti
 
 /--
 Data-free sharp conditional endpoint from pairwise touching plus the isolated

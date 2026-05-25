@@ -797,9 +797,51 @@ theorem positiveAlternatingPuncturedPrefixLabelChains_card_eq_negative {n m : �
       simpa [negativeAlternatingPuncturedPrefixLabelChains] using hP
     refine ⟨e (P, gap), ?_, ?_⟩
     · have hpos : PositiveAlternatingPuncturedPrefixLabels label P.antipode gap := by
-        exact (positiveAlternatingPuncturedPrefixLabels_antipode_iff label hantipodal P).mpr hneg
+        exact (positiveAlternatingPuncturedPrefixLabels_antipode_iff label hantipodal P gap).mpr hneg
       simpa [positiveAlternatingPuncturedPrefixLabelChains, e, puncturedPrefixAntipode] using hpos
     · simp [e, puncturedPrefixAntipode, SignedPermutation.antipode_involutive P]
+
+theorem positive_negative_punctured_alternating_disjoint {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) :
+    PositiveAlternatingPuncturedPrefixLabels label P gap →
+      NegativeAlternatingPuncturedPrefixLabels label P gap → False := by
+  intro hpos hneg
+  let i : Fin n := ⟨0, hn⟩
+  have hp := hpos.2 i
+  have hn' := hneg.2 i
+  simp [i] at hp hn'
+  rw [hp] at hn'
+  simp at hn'
+
+theorem positive_negativeAlternatingPuncturedPrefixLabelChains_disjoint {n m : ℕ}
+    (hn : 0 < n) (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Disjoint (positiveAlternatingPuncturedPrefixLabelChains label)
+      (negativeAlternatingPuncturedPrefixLabelChains label) := by
+  classical
+  rw [Finset.disjoint_left]
+  rintro ⟨P, gap⟩ hpos hneg
+  exact positive_negative_punctured_alternating_disjoint hn label P gap
+    (by simpa [positiveAlternatingPuncturedPrefixLabelChains] using hpos)
+    (by simpa [negativeAlternatingPuncturedPrefixLabelChains] using hneg)
+
+noncomputable def alternatingPuncturedPrefixLabelChains {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Finset (SignedPermutation (n + 1) × Fin (n + 1)) :=
+  positiveAlternatingPuncturedPrefixLabelChains label ∪
+    negativeAlternatingPuncturedPrefixLabelChains label
+
+theorem alternatingPuncturedPrefixLabelChains_card {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    (alternatingPuncturedPrefixLabelChains label).card =
+      2 * (positiveAlternatingPuncturedPrefixLabelChains label).card := by
+  classical
+  rw [alternatingPuncturedPrefixLabelChains,
+    Finset.card_union_of_disjoint
+      (positive_negativeAlternatingPuncturedPrefixLabelChains_disjoint hn label),
+    positiveAlternatingPuncturedPrefixLabelChains_card_eq_negative label hantipodal]
+  omega
 
 /-- Signed permutations whose prefix labels are positive-first alternating. -/
 noncomputable def positiveAlternatingPrefixLabelChains {n m : ℕ}

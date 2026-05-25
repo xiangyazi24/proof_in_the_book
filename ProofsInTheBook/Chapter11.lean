@@ -6484,19 +6484,19 @@ Ungar's rotating-calipers theorem, stated for projective directions. This is
 the coordinate-correct target: vertical lines count as one direction, so the
 book's lower bound is `2 * ⌊n / 2⌋`.
 -/
-theorem ungar_directions_lower_bound (points : Finset Point2)
+theorem ungar_directions_lower_bound_from_level_sweep_certificate (points : Finset Point2)
     (hn : 3 ≤ points.card)
     (hncoll : NoncollinearSet points)
     (hcert : EvenUngarLevelSweepCertificatePremise) :
     2 * (points.card / 2) ≤ (directionsDeterminedBy points).card :=
   ungar_directions_floor_lower_bound_from_level_sweep_certificate points hn hncoll hcert
 
-theorem chapter11 (points : Finset Point2)
+theorem chapter11_from_level_sweep_certificate (points : Finset Point2)
     (hn : 3 ≤ points.card)
     (hncoll : NoncollinearSet points)
     (hcert : EvenUngarLevelSweepCertificatePremise) :
     2 * (points.card / 2) ≤ (directionsDeterminedBy points).card :=
-  ungar_directions_lower_bound points hn hncoll hcert
+  ungar_directions_lower_bound_from_level_sweep_certificate points hn hncoll hcert
 
 /-! ## Sweep certificate construction
 
@@ -7665,26 +7665,24 @@ theorem chapter11_from_sweep_cyclicEndGap (points : Finset Point2)
     (hncoll : NoncollinearSet points)
     (hend : EvenSweepCyclicEndGapPremise) :
     2 * (points.card / 2) ≤ (directionsDeterminedBy points).card :=
-  chapter11 points hn hncoll
+  chapter11_from_level_sweep_certificate points hn hncoll
     (evenUngarLevelSweepCertificatePremise_of_sweep_cyclicEndGap hend)
 
 /-!
 ### Certificate assembly status
 
-The rotating-level sweep now constructs `ungarLevelSweepCore`, which is all of
-`UngarLevelSweepCertificate` except `CyclicEndGap`:
+The rotating-level sweep constructs `ungarLevelSweepCore`; the cyclic end gap is
+then supplied by the shifted-sweep witness assembled below:
 
 - `labeling` = `sweepLabeling`
 - `sequence` = `sweepConcreteGAS`
 - `stepDir` = `sweepStepDir`
 - `blocks_level` = `sweepConcreteGAS_blocksHaveCommonLevel`
 - `stepDir_injective` = `sweepStepDir_injective`
-- `cyclic_end_gap` = **TODO**: requires CyclicEndGapWitness via shifted sweep
+- `cyclic_end_gap` = `sweepConcreteGAS_cyclicEndGap_of_noFull`
 
-The assembly theorem `evenUngarLevelSweepCertificatePremise_of_sweep_cyclicEndGap`
-now proves that this single `cyclic_end_gap` field is the only remaining input
-needed to obtain `EvenUngarLevelSweepCertificatePremise`; the public
-`chapter11_from_sweep_cyclicEndGap` exposes that narrower frontier.
+The theorem `evenSweepCyclicEndGapPremise` discharges the last sweep premise,
+and `chapter11` is now the unconditional projective-direction lower bound.
 -/
 
 /-! ### Parameterized sweep for CyclicEndGap -/
@@ -10801,6 +10799,188 @@ theorem sweepConcreteGAS_atIndex_mod_pi_isCrossing_shifted_nonfinal
   exact CountedGeneralizedAllowableSequence.isCrossing_iff_of_crossingLabelsCard_eq
     B.toCountedGeneralizedAllowableSequence A.toCountedGeneralizedAllowableSequence hcount
 
+noncomputable def sweepConcreteGAS_cyclicEndGapWitness_of_noFull
+    {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hk : 0 < k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points)
+    (hnoFull :
+      ∀ j : Fin (directionsDeterminedBy points).card,
+        (sweepConcreteGAS hcard hne hr hncoll).IsCrossing j →
+          (sweepConcreteGAS hcard hne hr hncoll).moveOrder j < k) :
+    (sweepConcreteGAS hcard hne hr hncoll).CyclicEndGapWitness
+      ((sweepConcreteGAS hcard hne hr hncoll).toCountedGeneralizedAllowableSequence
+        |>.crossingMoves_card_pos hk) := by
+  let A := sweepConcreteGAS hcard hne hr hncoll
+  let AC := A.toCountedGeneralizedAllowableSequence
+  have hpos : 0 < AC.crossingMoves.card := AC.crossingMoves_card_pos hk
+  have htwo : 2 ≤ AC.crossingMoves.card := by
+    exact AC.two_le_crossingMoves_card_of_no_full_crossing hk (by
+      intro j hj
+      exact hnoFull j (by simpa [A, AC] using hj))
+  let firstOrd : Fin (directionsDeterminedBy points).card :=
+    AC.crossingIdx ⟨0, hpos⟩
+  let lastOrd : Fin (directionsDeterminedBy points).card :=
+    AC.crossingIdx ⟨AC.crossingMoves.card - 1, by omega⟩
+  have hfirst_lt_last : firstOrd.val < lastOrd.val := by
+    have hfinlt :
+        (⟨0, hpos⟩ : Fin AC.crossingMoves.card) <
+          ⟨AC.crossingMoves.card - 1, by omega⟩ := by
+      change 0 < AC.crossingMoves.card - 1
+      omega
+    exact AC.crossingIdx_strict hfinlt
+  have hlast_pos : 0 < lastOrd.val := by omega
+  let s : Fin (directionsDeterminedBy points).card := lastOrd
+  let B := sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s
+  let lastB : Fin (directionsDeterminedBy points).card :=
+    ⟨lastOrd.val - s.val, by omega⟩
+  let nextFirstB : Fin (directionsDeterminedBy points).card :=
+    ⟨firstOrd.val + (directionsDeterminedBy points).card - lastOrd.val, by omega⟩
+  have hlastB_zero : lastB.val = 0 := by
+    dsimp [lastB, s]
+    omega
+  have hnextFirstB_pos : 0 < nextFirstB.val := by
+    dsimp [nextFirstB]
+    omega
+  have hnextFirstB_lt : nextFirstB.val < (directionsDeterminedBy points).card :=
+    nextFirstB.isLt
+  have hlastB_cross : B.IsCrossing lastB := by
+    have h :=
+      (sweepConcreteGAS_atIndex_mod_pi_isCrossing_index_at_or_after_shifted_nonlast
+        hcard hne hr hncoll s lastOrd (by simp [s]) (by
+          dsimp [s]
+          have hrpos : 0 < (directionsDeterminedBy points).card :=
+            Finset.card_pos.mpr hne
+          omega)).mpr
+        (by simpa [A, AC, lastOrd] using
+          AC.crossingIdx_isCrossing ⟨AC.crossingMoves.card - 1, by omega⟩)
+    simpa [B, A, lastB, s] using h
+  have hnextFirstB_cross : B.IsCrossing nextFirstB := by
+    have h :=
+      (sweepConcreteGAS_atIndex_mod_pi_isCrossing_index_before
+        hcard hne hr hncoll s firstOrd (by simpa [s] using hfirst_lt_last)).mpr
+        (by simpa [A, AC, firstOrd] using AC.crossingIdx_isCrossing ⟨0, hpos⟩)
+    simpa [B, A, nextFirstB, s] using h
+  refine
+    { periodMoves := (directionsDeterminedBy points).card
+      cyclic := B
+      lastCrossing := lastB
+      nextFirstCrossing := nextFirstB
+      consecutive := ?_
+      last_order := ?_
+      next_order := ?_
+      cyclic_gap_eq := ?_ }
+  · refine ⟨hlastB_cross, hnextFirstB_cross, ?_, ?_⟩
+    · omega
+    · intro l hlast_l hl_first
+      intro hBl
+      have hlnext : l.val + 1 < (directionsDeterminedBy points).card := by
+        omega
+      let idx : Fin (directionsDeterminedBy points).card :=
+        ⟨(s.val + l.val) % (directionsDeterminedBy points).card,
+          Nat.mod_lt _ (Finset.card_pos.mpr hne)⟩
+      have hAidx : AC.IsCrossing idx := by
+        have hrot :=
+          (sweepConcreteGAS_atIndex_mod_pi_isCrossing_shifted_nonfinal
+            hcard hne hr hncoll s l hlnext).mp (by simpa [B] using hBl)
+        simpa [A, AC, idx] using hrot
+      by_cases hnowrap : s.val + l.val < (directionsDeterminedBy points).card
+      · have hidx_after : lastOrd.val < idx.val := by
+          dsimp [idx, s]
+          rw [Nat.mod_eq_of_lt hnowrap]
+          omega
+        exact (AC.not_isCrossing_after_last_crossingIdx hpos (j := idx) hidx_after) hAidx
+      · have hwrap : (directionsDeterminedBy points).card ≤ s.val + l.val := by omega
+        have hidx_before : idx.val < firstOrd.val := by
+          dsimp [idx, s, nextFirstB] at hl_first ⊢
+          have hlt_sub : lastOrd.val + l.val - (directionsDeterminedBy points).card <
+              (directionsDeterminedBy points).card := by
+            omega
+          have hmod : (lastOrd.val + l.val) % (directionsDeterminedBy points).card =
+              lastOrd.val + l.val - (directionsDeterminedBy points).card := by
+            rw [Nat.mod_eq_sub_mod hwrap]
+            exact Nat.mod_eq_of_lt hlt_sub
+          rw [hmod]
+          omega
+        exact (AC.not_isCrossing_before_first_crossingIdx hpos (j := idx) hidx_before) hAidx
+  · have h :=
+      sweepConcreteGAS_atIndex_mod_pi_moveOrder_index_at_or_after_shifted_nonlast
+        hcard hne hr hncoll s lastOrd (by simp [s]) (by
+          dsimp [s]
+          have hrpos : 0 < (directionsDeterminedBy points).card :=
+            Finset.card_pos.mpr hne
+          omega)
+    simpa [A, B, AC, lastB, lastOrd, s] using h
+  · have h :=
+      sweepConcreteGAS_atIndex_mod_pi_moveOrder_index_before
+        hcard hne hr hncoll s firstOrd (by simpa [s] using hfirst_lt_last)
+    simpa [A, B, AC, nextFirstB, firstOrd, s] using h
+  · have hgap :
+        nextFirstB.val - lastB.val - 1 =
+          firstOrd.val + ((directionsDeterminedBy points).card - 1 - lastOrd.val) := by
+      have hnext_val :
+          nextFirstB.val =
+            firstOrd.val + (directionsDeterminedBy points).card - lastOrd.val := by
+        rfl
+      have hlast_val : lastB.val = 0 := hlastB_zero
+      have hlast_lt : lastOrd.val < (directionsDeterminedBy points).card := lastOrd.isLt
+      have hfirst_lt : firstOrd.val < lastOrd.val := hfirst_lt_last
+      rw [hnext_val, hlast_val]
+      omega
+    simpa [A, AC, firstOrd, lastOrd] using hgap
+
+theorem sweepConcreteGAS_cyclicEndGap_of_noFull
+    {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hk : 0 < k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points)
+    (hnoFull :
+      ∀ j : Fin (directionsDeterminedBy points).card,
+        (sweepConcreteGAS hcard hne hr hncoll).IsCrossing j →
+          (sweepConcreteGAS hcard hne hr hncoll).moveOrder j < k) :
+    (sweepConcreteGAS hcard hne hr hncoll).CyclicEndGap
+      ((sweepConcreteGAS hcard hne hr hncoll).toCountedGeneralizedAllowableSequence
+        |>.crossingMoves_card_pos hk) := by
+  exact (sweepConcreteGAS hcard hne hr hncoll).cyclicEndGap_of_witness
+    (sweepConcreteGAS_cyclicEndGapWitness_of_noFull
+      hcard hk hne hr hncoll hnoFull)
+
+theorem evenSweepCyclicEndGapPremise :
+    EvenSweepCyclicEndGapPremise := by
+  intro S k hk hcard hncoll
+  let hne := directionsDeterminedBy_nonempty_of_noncollinear hncoll
+  let hr := directionsDeterminedBy_card_ge_two_of_noncollinear hncoll
+  let C := ungarLevelSweepCore (points := S) (k := k) hcard hncoll
+  have hnoFull :
+      ∀ j : Fin (directionsDeterminedBy S).card,
+        (sweepConcreteGAS hcard hne hr hncoll).IsCrossing j →
+          (sweepConcreteGAS hcard hne hr hncoll).moveOrder j < k := by
+    simpa [C, ungarLevelSweepCore, hne, hr] using C.noFullCrossing hk hncoll
+  simpa [C, ungarLevelSweepCore, hne, hr] using
+    sweepConcreteGAS_cyclicEndGap_of_noFull hcard hk hne hr hncoll hnoFull
+
+theorem evenUngarLevelSweepCertificatePremise :
+    EvenUngarLevelSweepCertificatePremise :=
+  evenUngarLevelSweepCertificatePremise_of_sweep_cyclicEndGap
+    evenSweepCyclicEndGapPremise
+
+theorem ungar_directions_lower_bound (points : Finset Point2)
+    (hn : 3 ≤ points.card)
+    (hncoll : NoncollinearSet points) :
+    2 * (points.card / 2) ≤ (directionsDeterminedBy points).card :=
+  chapter11_from_level_sweep_certificate points hn hncoll
+    evenUngarLevelSweepCertificatePremise
+
+theorem chapter11 (points : Finset Point2)
+    (hn : 3 ≤ points.card)
+    (hncoll : NoncollinearSet points) :
+    2 * (points.card / 2) ≤ (directionsDeterminedBy points).card :=
+  ungar_directions_lower_bound points hn hncoll
+
 -- Starting angle θ₀ is between sortedAngleAt(s-1) and sortedAngleAt(s)
 -- (or equivalently, in the gap before event s).
 --
@@ -10827,15 +11007,12 @@ theorem shifted_start_eq_zero_of_global_before {points : Finset Point2}
   linarith
 
 /-!
-### Remaining blocker for the shifted cyclic sweep
+### Shifted cyclic sweep
 
-The ordinary sweep is wired into `ungarLevelSweepCore`; the missing field of
-`UngarLevelSweepCertificate` is exactly `cyclic_end_gap`.
-
-The intended proof of `cyclic_end_gap` is to start a second sweep in the gap
-between the last and first crossing directions, turning the cyclic end gap into
-an interior consecutive-crossing gap.  The local modulo-`π` start infrastructure
-now exists and is wired into a concrete shifted sweep:
+The proof of `cyclic_end_gap` starts a second sweep in the gap between the last
+and first crossing directions, turning the cyclic end gap into an interior
+consecutive-crossing gap.  The local modulo-`π` start infrastructure is wired
+into a concrete shifted sweep:
 
 - `orientedLevel_injective_of_all_angles_mod_pi`
 - `sweepLabelingAt_inj_mod_pi`
@@ -10886,30 +11063,12 @@ now exists and is wired into a concrete shifted sweep:
 - `sweepConcreteGAS_atIndex_mod_pi_isCrossing_index_at_or_after_shifted_nonlast`
 - `sweepConcreteGAS_atIndex_mod_pi_isCrossing_shifted_nonfinal`
 
-The transfer is now split into the interior no-wrap case, the boundary where
-the target state first wraps past `π`, and the nonfinal/final wrapped cases.
-These are the four cases needed for a complete rotation transfer of crossing
-status and move order.
-
-The remaining blocker is the crossing-rotation transfer lemma.  For the
-ordinary sweep
-`A := sweepConcreteGAS hcard hne hr hncoll`, choose
-`s := A.crossingIdx last`, and let
-`B := sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s`.
-The missing theorem must show that the shifted event order preserves crossing
-status and move order for the ordinary event indices, in particular:
-
-- the ordinary last crossing becomes `B`'s crossing at shifted index `0`;
-- the ordinary first crossing becomes the next crossing of `B`;
-- the two move orders agree with the original last/first move orders;
-- no shifted crossing lies between them, using the ordinary first/last
-  `crossingIdx` extremality lemmas.
-
-Those facts assemble a `CyclicEndGapWitness` immediately.  Without this
-rotation-transfer theorem, `EvenUngarLevelSweepCertificatePremise` remains an
-honest front-line premise.
-The public `chapter11` statement is nevertheless the genuine Ungar lower bound,
-not the old injective-witness pigeonhole statement.
+The transfer is split into the interior no-wrap case, the boundary where the
+target state first wraps past `π`, and the nonfinal/final wrapped cases.  These
+cases feed `sweepConcreteGAS_cyclicEndGapWitness_of_noFull`, where the ordinary
+last crossing becomes the shifted crossing at index `0`, the ordinary first
+crossing becomes the next shifted crossing, and the `crossingIdx` extremality
+lemmas rule out shifted crossings between them.
 -/
 
 end ProofsInTheBook.Chapter11

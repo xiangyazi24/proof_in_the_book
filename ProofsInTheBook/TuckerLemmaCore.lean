@@ -191,6 +191,27 @@ theorem maxSupport_le_of_le {n : ℕ} {X Y : SignedSubset n}
     X.maxSupport hX ≤ Y.maxSupport hY :=
   maxSupport_le_of_support_subset hX hY (support_subset_of_le hXY)
 
+theorem maxSupportPositive_eq_of_le_of_maxSupport_eq {n : ℕ} {X Y : SignedSubset n}
+    (hX : X.Nonzero) (hY : Y.Nonzero) (hXY : Le X Y)
+    (hmax : X.maxSupport hX = Y.maxSupport hY) :
+    X.maxSupportPositive hX = Y.maxSupportPositive hY := by
+  unfold maxSupportPositive
+  by_cases hxpos : X.maxSupport hX ∈ X.pos
+  · have hypos : Y.maxSupport hY ∈ Y.pos := by
+      rw [← hmax]
+      exact hXY.1 hxpos
+    simp [hxpos, hypos]
+  · have hypos : Y.maxSupport hY ∉ Y.pos := by
+      intro hypos
+      have hxmem := X.maxSupport_mem_support hX
+      rcases Finset.mem_union.mp hxmem with hxpos' | hxneg
+      · exact hxpos hxpos'
+      · have hyneg : Y.maxSupport hY ∈ Y.neg := by
+          rw [← hmax]
+          exact hXY.2 hxneg
+        exact (Finset.disjoint_left.mp Y.disjoint) hypos hyneg
+    simp [hxpos, hypos]
+
 theorem card_le_card_of_le {n : ℕ} {X Y : SignedSubset n} (hXY : Le X Y) :
     X.card ≤ Y.card := by
   have hpos_le : X.pos.card ≤ Y.pos.card := Finset.card_le_card hXY.1
@@ -1902,6 +1923,14 @@ theorem exists_complementaryComparable_of_pathEndpointDecomposition_of_lt {n m :
     ∃ X Y : NonzeroSignedSubset n,
       SignedSubset.Le X.1 Y.1 ∧ label X = (label Y).neg :=
   exists_complementaryComparable_of_kyFanPrefixParity_of_lt hmn
+    (kyFanPrefixParityStatement_of_pathEndpointDecomposition hpaths) label hantipodal
+
+theorem not_noComplementaryComparableLabels_of_pathEndpointDecomposition_of_lt {n m : ℕ}
+    (hmn : m < n) (hpaths : KyFanPrefixPathEndpointDecompositionStatement n m)
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    ¬ NoComplementaryComparableLabels label :=
+  not_noComplementaryComparableLabels_of_kyFanPrefixParity_of_lt hmn
     (kyFanPrefixParityStatement_of_pathEndpointDecomposition hpaths) label hantipodal
 
 theorem tuckerLemmaStatement_of_pathEndpointDecomposition {n : ℕ} (hn : 1 ≤ n)

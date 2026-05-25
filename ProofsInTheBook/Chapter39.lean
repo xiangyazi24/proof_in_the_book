@@ -1703,6 +1703,23 @@ theorem kyFanPrefixParityStatement_of_pathEndpointDecomposition {n m : ℕ}
   rcases hpaths label hantipodal hno with ⟨D⟩
   exact kyFanPrefixParity_of_pathEndpointDecomposition label hantipodal D
 
+theorem exists_complementaryComparable_of_pathEndpointDecomposition_of_lt {n m : ℕ}
+    (hmn : m < n) (hpaths : KyFanPrefixPathEndpointDecompositionStatement n m)
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    ∃ X Y : NonzeroSignedSubset n,
+      SignedSubset.Le X.1 Y.1 ∧ label X = (label Y).neg :=
+  exists_complementaryComparable_of_kyFanPrefixParity_of_lt hmn
+    (kyFanPrefixParityStatement_of_pathEndpointDecomposition hpaths) label hantipodal
+
+theorem not_noComplementaryComparableLabels_of_pathEndpointDecomposition_of_lt {n m : ℕ}
+    (hmn : m < n) (hpaths : KyFanPrefixPathEndpointDecompositionStatement n m)
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    ¬ NoComplementaryComparableLabels label :=
+  not_noComplementaryComparableLabels_of_kyFanPrefixParity_of_lt hmn
+    (kyFanPrefixParityStatement_of_pathEndpointDecomposition hpaths) label hantipodal
+
 theorem tuckerLemmaStatement_of_kyFanPrefixParity {n : ℕ} (hn : 1 ≤ n)
     (hparity : KyFanPrefixParityStatement n (n - 1)) :
     TuckerLemmaStatement n :=

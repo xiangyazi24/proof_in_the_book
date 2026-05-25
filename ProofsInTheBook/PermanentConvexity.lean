@@ -10,6 +10,8 @@ facts used in Van der Waerden-style arguments:
 * bilinearity of the permanent after two rows are singled out;
 * the quadratic expansion along a two-row line, and the resulting convexity
   criterion when the mixed quadratic coefficient is nonnegative;
+* the discharge of that mixed-coefficient hypothesis for the elementary
+  `2 × 2` checkerboard exchange directions;
 * the elementary `2 × 2` row log-concavity model.
 
 The deep Alexandrov-Fenchel/Falikman-Egorychev/Gurvits log-concavity input is
@@ -217,6 +219,89 @@ theorem twoRowPerturbation_mem_doublyStochastic {M : Matrix n n ℝ} {r s : n}
       rw [← mul_add, hcol j, mul_zero]
     nlinarith
 
+/-! ## Checkerboard exchange directions -/
+
+/--
+The signed direction that adds to column `c` and subtracts from column `d` in
+one row.  Paired with its negative in another row, this is the elementary
+`2 × 2` exchange direction preserving row and column sums.
+-/
+def checkerboardDirection (c d : n) : n → ℝ :=
+  Pi.single c (1 : ℝ) - Pi.single d (1 : ℝ)
+
+theorem sum_checkerboardDirection (c d : n) :
+    ∑ j, checkerboardDirection c d j = 0 := by
+  simp [checkerboardDirection, Finset.sum_sub_distrib]
+
+omit [Fintype n] in
+theorem checkerboardDirection_cancel (c d : n) (j : n) :
+    checkerboardDirection c d j + (-checkerboardDirection c d) j = 0 := by
+  simp
+
+theorem twoRowPerturbation_checkerboard_mem_doublyStochastic {M : Matrix n n ℝ}
+    {r s c d : n} (hrs : r ≠ s) (hM : M ∈ doublyStochastic ℝ n)
+    {t : ℝ}
+    (hnonneg : ∀ i j, 0 ≤
+      twoRowPerturbation M r s (checkerboardDirection c d)
+        (-checkerboardDirection c d) t i j) :
+    twoRowPerturbation M r s (checkerboardDirection c d)
+        (-checkerboardDirection c d) t ∈ doublyStochastic ℝ n := by
+  refine twoRowPerturbation_mem_doublyStochastic hrs hM
+    (sum_checkerboardDirection c d) ?_ ?_ hnonneg
+  · simp [sum_checkerboardDirection]
+  · exact checkerboardDirection_cancel c d
+
+theorem twoRowPermanent_same_single_eq_zero (hrs : r ≠ s) (c : n) :
+    twoRowPermanent M r s (Pi.single c (1 : ℝ)) (Pi.single c (1 : ℝ)) = 0 := by
+  classical
+  unfold twoRowPermanent Matrix.permanent
+  refine Finset.sum_eq_zero fun σ _hσ => ?_
+  have hpre : σ.symm r ≠ σ.symm s := by
+    intro h
+    apply hrs
+    simpa using congrArg σ h
+  by_cases hsc : σ.symm s = c
+  · have hrc : σ.symm r ≠ c := by
+      intro hrc
+      exact hpre (by rw [hrc, hsc])
+    exact Finset.prod_eq_zero (Finset.mem_univ (σ.symm r)) (by
+      simp [Matrix.updateRow_apply, hrc])
+  · exact Finset.prod_eq_zero (Finset.mem_univ (σ.symm s)) (by
+      simp [Matrix.updateRow_apply, hsc])
+
+/--
+The local mixed-coefficient nonnegativity needed for convexity is elementary
+for checkerboard exchange directions: only the two cross terms survive, and
+each is a permanent with nonnegative replaced rows.
+-/
+theorem checkerboardDirection_quadraticCoeff_nonneg (hrs : r ≠ s)
+    (hM : ∀ i j, i ≠ r → i ≠ s → 0 ≤ M i j) (c d : n) :
+    0 ≤ twoRowPermanent M r s (checkerboardDirection c d)
+      (-checkerboardDirection c d) := by
+  let ec : n → ℝ := Pi.single c (1 : ℝ)
+  let ed : n → ℝ := Pi.single d (1 : ℝ)
+  have hp : checkerboardDirection c d = (1 : ℝ) • ec + (-1 : ℝ) • ed := by
+    ext j
+    simp [checkerboardDirection, ec, ed]
+    ring
+  have hq : -checkerboardDirection c d = (1 : ℝ) • ed + (-1 : ℝ) • ec := by
+    ext j
+    simp [checkerboardDirection, ec, ed]
+    ring
+  have h_ec_nonneg : ∀ j, 0 ≤ ec j := fun j =>
+    (Pi.single_nonneg.mpr zero_le_one : 0 ≤ ec) j
+  have h_ed_nonneg : ∀ j, 0 ≤ ed j := fun j =>
+    (Pi.single_nonneg.mpr zero_le_one : 0 ≤ ed) j
+  have h_ec_ed : 0 ≤ twoRowPermanent M r s ec ed := by
+    exact twoRowPermanent_nonneg_of_nonneg hM h_ec_nonneg h_ed_nonneg
+  have h_ed_ec : 0 ≤ twoRowPermanent M r s ed ec := by
+    exact twoRowPermanent_nonneg_of_nonneg hM h_ed_nonneg h_ec_nonneg
+  rw [hq, hp]
+  rw [twoRowPermanent_linear_comb_left M hrs]
+  rw [twoRowPermanent_linear_comb_right, twoRowPermanent_linear_comb_right]
+  rw [twoRowPermanent_same_single_eq_zero hrs c, twoRowPermanent_same_single_eq_zero hrs d]
+  nlinarith
+
 /-! ## Quadratic expansion and convexity along a two-row line -/
 
 variable {M : Matrix n n ℝ} {r s : n}
@@ -281,6 +366,17 @@ theorem permanent_twoRowPerturbation_convex_on_unit_interval (hrs : r ≠ s)
   simpa [twoRowPerturbation, twoRowPermanent_self] using
     permanent_twoRowLine_convex_on_unit_interval (M := M) (r := r) (s := s) hrs
       (M r) (M s) du dv hquad ht0 ht1
+
+theorem permanent_checkerboardPerturbation_convex_on_unit_interval (hrs : r ≠ s)
+    (hM : ∀ i j, i ≠ r → i ≠ s → 0 ≤ M i j) (c d : n)
+    {t : ℝ} (ht0 : 0 ≤ t) (ht1 : t ≤ 1) :
+    (twoRowPerturbation M r s (checkerboardDirection c d)
+      (-checkerboardDirection c d) t).permanent ≤
+      (1 - t) * M.permanent +
+        t * (twoRowPerturbation M r s (checkerboardDirection c d)
+          (-checkerboardDirection c d) 1).permanent := by
+  exact permanent_twoRowPerturbation_convex_on_unit_interval hrs _ _
+    (checkerboardDirection_quadraticCoeff_nonneg hrs hM c d) ht0 ht1
 
 /-! ## Elementary `2 × 2` log-concavity model -/
 

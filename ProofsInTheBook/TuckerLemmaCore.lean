@@ -740,6 +740,34 @@ theorem positiveAlternatingPuncturedPrefixLabels_antipode_iff {n m : ℕ}
     rw [label_prefixChain_antipode label hantipodal P (gap.succAbove i)]
     simp [SignedLabel.neg, hsign]
 
+theorem positiveAlternatingPrefixLabels_punctured_last {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {P : SignedPermutation (n + 1)}
+    (h : PositiveAlternatingPrefixLabels label P) :
+    PositiveAlternatingPuncturedPrefixLabels label P (Fin.last n) := by
+  constructor
+  · intro i j hij
+    have hcast : (Fin.castSucc i : Fin (n + 1)) < Fin.castSucc j := by
+      exact Fin.castSucc_lt_castSucc_iff.mpr hij
+    simpa [Fin.succAbove_last] using h.1 hcast
+  · intro i
+    have hsign := h.2 (Fin.castSucc i)
+    simpa [Fin.succAbove_last] using hsign
+
+theorem negativeAlternatingPrefixLabels_punctured_last {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {P : SignedPermutation (n + 1)}
+    (h : NegativeAlternatingPrefixLabels label P) :
+    NegativeAlternatingPuncturedPrefixLabels label P (Fin.last n) := by
+  constructor
+  · intro i j hij
+    have hcast : (Fin.castSucc i : Fin (n + 1)) < Fin.castSucc j := by
+      exact Fin.castSucc_lt_castSucc_iff.mpr hij
+    simpa [Fin.succAbove_last] using h.1 hcast
+  · intro i
+    have hsign := h.2 (Fin.castSucc i)
+    simpa [Fin.succAbove_last] using hsign
+
 def puncturedPrefixAntipode {n : ℕ} :
     SignedPermutation (n + 1) × Fin (n + 1) ≃ SignedPermutation (n + 1) × Fin (n + 1) where
   toFun data := (data.1.antipode, data.2)

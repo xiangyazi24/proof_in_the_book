@@ -10237,6 +10237,43 @@ theorem sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_index_at_or_after_non
     omega
   simpa [j, htarget] using h
 
+theorem sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_index_at_or_after_shifted_nonlast
+    {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points)
+    (s idx : Fin (directionsDeterminedBy points).card)
+    (hidx : s.val ≤ idx.val)
+    (hshift_next : idx.val - s.val + 1 < (directionsDeterminedBy points).card) :
+    GeneralizedAllowableSequence.crossingLabelsCard
+        (sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).seq
+        ⟨idx.val - s.val, by omega⟩ =
+      GeneralizedAllowableSequence.crossingLabelsCard
+        (sweepConcreteGAS hcard hne hr hncoll).seq idx := by
+  by_cases hordinary_next : idx.val + 1 < (directionsDeterminedBy points).card
+  · exact sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_index_at_or_after_nonlast
+      hcard hne hr hncoll s idx hidx hordinary_next
+  · let j : Fin (directionsDeterminedBy points).card := ⟨idx.val - s.val, by omega⟩
+    have hsource : s.val + j.val < (directionsDeterminedBy points).card := by
+      dsimp [j]
+      omega
+    have hboundary : s.val + j.val + 1 = (directionsDeterminedBy points).card := by
+      dsimp [j]
+      have hle : idx.val + 1 ≤ (directionsDeterminedBy points).card := idx.isLt
+      omega
+    have hnext : j.val + 1 < (directionsDeterminedBy points).card := by
+      dsimp [j]
+      omega
+    have h := sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_no_wrap_to_wrap
+      hcard hne hr hncoll s j hsource hboundary hnext
+    have htarget :
+        (⟨s.val + j.val, hsource⟩ : Fin (directionsDeterminedBy points).card) = idx := by
+      apply Fin.ext
+      dsimp [j]
+      omega
+    simpa [j, htarget] using h
+
 theorem sweepConcreteGAS_atIndex_mod_pi_moveOrder_no_wrap
     {points : Finset Point2} {k : ℕ}
     (hcard : points.card = 2 * k)
@@ -10409,6 +10446,41 @@ theorem sweepConcreteGAS_atIndex_mod_pi_moveOrder_index_at_or_after_nonlast
     dsimp [j]
     omega
   simpa [j, htarget] using h
+
+theorem sweepConcreteGAS_atIndex_mod_pi_moveOrder_index_at_or_after_shifted_nonlast
+    {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points)
+    (s idx : Fin (directionsDeterminedBy points).card)
+    (hidx : s.val ≤ idx.val)
+    (hshift_next : idx.val - s.val + 1 < (directionsDeterminedBy points).card) :
+    (sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).moveOrder
+        ⟨idx.val - s.val, by omega⟩ =
+      (sweepConcreteGAS hcard hne hr hncoll).moveOrder idx := by
+  by_cases hordinary_next : idx.val + 1 < (directionsDeterminedBy points).card
+  · exact sweepConcreteGAS_atIndex_mod_pi_moveOrder_index_at_or_after_nonlast
+      hcard hne hr hncoll s idx hidx hordinary_next
+  · let j : Fin (directionsDeterminedBy points).card := ⟨idx.val - s.val, by omega⟩
+    have hsource : s.val + j.val < (directionsDeterminedBy points).card := by
+      dsimp [j]
+      omega
+    have hboundary : s.val + j.val + 1 = (directionsDeterminedBy points).card := by
+      dsimp [j]
+      have hle : idx.val + 1 ≤ (directionsDeterminedBy points).card := idx.isLt
+      omega
+    have hnext : j.val + 1 < (directionsDeterminedBy points).card := by
+      dsimp [j]
+      omega
+    have h := sweepConcreteGAS_atIndex_mod_pi_moveOrder_no_wrap_to_wrap
+      hcard hne hr hncoll s j hsource hboundary hnext
+    have htarget :
+        (⟨s.val + j.val, hsource⟩ : Fin (directionsDeterminedBy points).card) = idx := by
+      apply Fin.ext
+      dsimp [j]
+      omega
+    simpa [j, htarget] using h
 
 theorem sweepConcreteGAS_atIndex_mod_pi_isCrossing_no_wrap
     {points : Finset Point2} {k : ℕ}
@@ -10583,6 +10655,41 @@ theorem sweepConcreteGAS_atIndex_mod_pi_isCrossing_index_at_or_after_nonlast
     omega
   simpa [j, htarget] using h
 
+theorem sweepConcreteGAS_atIndex_mod_pi_isCrossing_index_at_or_after_shifted_nonlast
+    {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points)
+    (s idx : Fin (directionsDeterminedBy points).card)
+    (hidx : s.val ≤ idx.val)
+    (hshift_next : idx.val - s.val + 1 < (directionsDeterminedBy points).card) :
+    (sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).IsCrossing
+        ⟨idx.val - s.val, by omega⟩ ↔
+      (sweepConcreteGAS hcard hne hr hncoll).IsCrossing idx := by
+  by_cases hordinary_next : idx.val + 1 < (directionsDeterminedBy points).card
+  · exact sweepConcreteGAS_atIndex_mod_pi_isCrossing_index_at_or_after_nonlast
+      hcard hne hr hncoll s idx hidx hordinary_next
+  · let j : Fin (directionsDeterminedBy points).card := ⟨idx.val - s.val, by omega⟩
+    have hsource : s.val + j.val < (directionsDeterminedBy points).card := by
+      dsimp [j]
+      omega
+    have hboundary : s.val + j.val + 1 = (directionsDeterminedBy points).card := by
+      dsimp [j]
+      have hle : idx.val + 1 ≤ (directionsDeterminedBy points).card := idx.isLt
+      omega
+    have hnext : j.val + 1 < (directionsDeterminedBy points).card := by
+      dsimp [j]
+      omega
+    have h := sweepConcreteGAS_atIndex_mod_pi_isCrossing_no_wrap_to_wrap
+      hcard hne hr hncoll s j hsource hboundary hnext
+    have htarget :
+        (⟨s.val + j.val, hsource⟩ : Fin (directionsDeterminedBy points).card) = idx := by
+      apply Fin.ext
+      dsimp [j]
+      omega
+    simpa [j, htarget] using h
+
 -- Starting angle θ₀ is between sortedAngleAt(s-1) and sortedAngleAt(s)
 -- (or equivalently, in the gap before event s).
 --
@@ -10647,6 +10754,7 @@ now exists and is wired into a concrete shifted sweep:
 - `sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_wrap`
 - `sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_index_before`
 - `sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_index_at_or_after_nonlast`
+- `sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_index_at_or_after_shifted_nonlast`
 - `sweepConcreteGAS_atIndex_mod_pi_moveOrder_no_wrap`
 - `sweepConcreteGAS_atIndex_mod_pi_moveOrder_no_wrap_to_wrap`
 - `sweepConcreteGAS_atIndex_mod_pi_moveOrder_wrap_nonlast`
@@ -10654,6 +10762,7 @@ now exists and is wired into a concrete shifted sweep:
 - `sweepConcreteGAS_atIndex_mod_pi_moveOrder_wrap`
 - `sweepConcreteGAS_atIndex_mod_pi_moveOrder_index_before`
 - `sweepConcreteGAS_atIndex_mod_pi_moveOrder_index_at_or_after_nonlast`
+- `sweepConcreteGAS_atIndex_mod_pi_moveOrder_index_at_or_after_shifted_nonlast`
 - `sweepConcreteGAS_atIndex_mod_pi_isCrossing_no_wrap`
 - `sweepConcreteGAS_atIndex_mod_pi_isCrossing_no_wrap_to_wrap`
 - `sweepConcreteGAS_atIndex_mod_pi_isCrossing_wrap_nonlast`
@@ -10661,6 +10770,7 @@ now exists and is wired into a concrete shifted sweep:
 - `sweepConcreteGAS_atIndex_mod_pi_isCrossing_wrap`
 - `sweepConcreteGAS_atIndex_mod_pi_isCrossing_index_before`
 - `sweepConcreteGAS_atIndex_mod_pi_isCrossing_index_at_or_after_nonlast`
+- `sweepConcreteGAS_atIndex_mod_pi_isCrossing_index_at_or_after_shifted_nonlast`
 
 The transfer is now split into the interior no-wrap case, the boundary where
 the target state first wraps past `π`, and the nonfinal/final wrapped cases.

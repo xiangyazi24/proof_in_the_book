@@ -9435,7 +9435,7 @@ private theorem genericAngleBetween_last_first_add_pi_eq_start_add_pi
   simp [angles, hzero, hlast]
   ring
 
-private theorem interEventAngleAt_wrapped {points : Finset Point2}
+theorem interEventAngleAt_wrapped {points : Finset Point2}
     (hne : (directionsDeterminedBy points).Nonempty)
     (s j : Fin (directionsDeterminedBy points).card)
     (hwrap : (directionsDeterminedBy points).card ≤ s.val + j.val) :
@@ -9549,6 +9549,8 @@ now exists and is wired into a concrete shifted sweep:
 - `sweepGAS_at_mod_pi`
 - the `_mod_pi` start/end bounds for `shiftedSortedAngleAt` and
   `interEventAngleAt`
+- the no-wrap/wrap angle-identification lemmas, culminating in
+  `interEventAngleAt_wrapped`
 - `interEventAngleAt_no_other_shiftedEventAngle`
 - `only_event_between_interEventAnglesAt_mod_pi`
 - `inj_at_interEventAngleAt_mod_pi`

@@ -533,6 +533,118 @@ theorem tuckerLemmaStatement_of_kyFanPrefixParity {n : ℕ} (hn : 1 ≤ n)
     TuckerLemmaStatement n :=
   tuckerLemmaStatement_of_kyFanPrefix hn (kyFanPrefixChainStatement_of_parity hparity)
 
+theorem not_nonzeroSignedSubset_zero (X : NonzeroSignedSubset 0) : False := by
+  rcases X with ⟨X, hX⟩
+  have hpos : X.pos = ∅ := by
+    apply Finset.eq_empty_iff_forall_notMem.mpr
+    intro x _hx
+    exact Fin.elim0 x
+  have hneg : X.neg = ∅ := by
+    apply Finset.eq_empty_iff_forall_notMem.mpr
+    intro x _hx
+    exact Fin.elim0 x
+  simp [SignedSubset.Nonzero, hpos, hneg] at hX
+
+theorem not_tuckerLemmaStatement_zero : ¬ TuckerLemmaStatement 0 := by
+  intro htucker
+  let label : NonzeroSignedSubset 0 → SignedLabel (0 - 1) :=
+    fun X => False.elim (not_nonzeroSignedSubset_zero X)
+  have hantipodal : ∀ X, label X.antipode = (label X).neg := by
+    intro X
+    exact False.elim (not_nonzeroSignedSubset_zero X)
+  obtain ⟨X, _Y, _hXY, _hcomp⟩ := htucker label hantipodal
+  exact not_nonzeroSignedSubset_zero X
+
+theorem tuckerLemmaStatement_one : TuckerLemmaStatement 1 := by
+  intro label _
+  let z : Fin 1 := ⟨0, by omega⟩
+  let X : NonzeroSignedSubset 1 :=
+    ⟨{ pos := {z}, neg := ∅, disjoint := by simp },
+      by simp [SignedSubset.Nonzero]⟩
+  exact Fin.elim0 (label X).index
+
+theorem tuckerLemmaStatement_two : TuckerLemmaStatement 2 := by
+  classical
+  intro label hantipodal
+  by_contra hnone
+  have hno :
+      ∀ X Y : NonzeroSignedSubset 2,
+        SignedSubset.Le X.1 Y.1 → label X ≠ (label Y).neg := by
+    intro X Y hXY hcomp
+    exact hnone ⟨X, Y, hXY, hcomp⟩
+  have hsame :
+      ∀ {X Y : NonzeroSignedSubset 2},
+        SignedSubset.Le X.1 Y.1 → (label X).positive = (label Y).positive := by
+    intro X Y hXY
+    apply positive_eq_of_le_of_same_index_of_no_complement hno hXY
+    apply Fin.ext
+    omega
+  let z : Fin 2 := ⟨0, by omega⟩
+  let o : Fin 2 := ⟨1, by omega⟩
+  let P0 : NonzeroSignedSubset 2 :=
+    ⟨{ pos := {z}, neg := ∅, disjoint := by simp },
+      by simp [SignedSubset.Nonzero]⟩
+  let P1 : NonzeroSignedSubset 2 :=
+    ⟨{ pos := {o}, neg := ∅, disjoint := by simp },
+      by simp [SignedSubset.Nonzero]⟩
+  let N1 : NonzeroSignedSubset 2 := P1.antipode
+  let PP : NonzeroSignedSubset 2 :=
+    ⟨{ pos := {z, o}, neg := ∅, disjoint := by simp },
+      by simp [SignedSubset.Nonzero]⟩
+  let PN : NonzeroSignedSubset 2 :=
+    ⟨{ pos := {z}, neg := {o}, disjoint := by
+        simp [z, o] },
+      by simp [SignedSubset.Nonzero]⟩
+  have hP0PP : (label P0).positive = (label PP).positive :=
+    hsame (X := P0) (Y := PP) (by simp [SignedSubset.Le, P0, PP])
+  have hP1PP : (label P1).positive = (label PP).positive :=
+    hsame (X := P1) (Y := PP) (by simp [SignedSubset.Le, P1, PP])
+  have hP0PN : (label P0).positive = (label PN).positive :=
+    hsame (X := P0) (Y := PN) (by simp [SignedSubset.Le, P0, PN])
+  have hN1PN : (label N1).positive = (label PN).positive :=
+    hsame (X := N1) (Y := PN) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, N1, P1, PN])
+  have hP0P1 : (label P0).positive = (label P1).positive :=
+    hP0PP.trans hP1PP.symm
+  have hP0N1 : (label P0).positive = (label N1).positive :=
+    hP0PN.trans hN1PN.symm
+  have hN1neg : (label N1).positive = !((label P1).positive) := by
+    have := congrArg SignedLabel.positive (hantipodal P1)
+    simpa [N1, SignedLabel.neg] using this
+  have hself : (label P1).positive = !((label P1).positive) :=
+    hP0P1.symm.trans (hP0N1.trans hN1neg)
+  cases (label P1).positive <;> simp at hself
+
+/-- Tucker's lemma is unconditional in dimensions one and two. -/
+theorem tuckerLemmaStatement_le_two {n : ℕ} (hnpos : 1 ≤ n) (hnle : n ≤ 2) :
+    TuckerLemmaStatement n := by
+  interval_cases n
+  · exact tuckerLemmaStatement_one
+  · exact tuckerLemmaStatement_two
+
+theorem kyFanPrefixParityStatement_one : KyFanPrefixParityStatement 1 0 := by
+  intro label _hantipodal _hno
+  let z : Fin 1 := ⟨0, by omega⟩
+  let X : NonzeroSignedSubset 1 :=
+    ⟨{ pos := {z}, neg := ∅, disjoint := by simp },
+      by simp [SignedSubset.Nonzero]⟩
+  exact Fin.elim0 (label X).index
+
+/--
+The two-dimensional Ky Fan prefix-parity statement follows because the
+`NoComplementaryComparableLabels` hypothesis is already impossible.
+-/
+theorem kyFanPrefixParityStatement_two : KyFanPrefixParityStatement 2 1 := by
+  intro label hantipodal hno
+  obtain ⟨X, Y, hXY, hcomp⟩ := tuckerLemmaStatement_two label hantipodal
+  exact False.elim (hno X Y hXY hcomp)
+
+theorem tuckerLemmaStatement_one_of_kyFanPrefixParity : TuckerLemmaStatement 1 :=
+  tuckerLemmaStatement_of_kyFanPrefixParity (by omega) kyFanPrefixParityStatement_one
+
+theorem tuckerLemmaStatement_two_of_kyFanPrefixParity : TuckerLemmaStatement 2 :=
+  tuckerLemmaStatement_of_kyFanPrefixParity (by omega) kyFanPrefixParityStatement_two
+
 theorem exists_complementaryComparable_of_kyFanPrefixParity_of_lt {n m : ℕ}
     (hmn : m < n) (hparity : KyFanPrefixParityStatement n m)
     (label : NonzeroSignedSubset n → SignedLabel m)

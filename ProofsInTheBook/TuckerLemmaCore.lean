@@ -2587,6 +2587,37 @@ theorem four_dvd_alternatingPuncturedPrefixLabelChains_card {n m : ℕ} (hn : 0 
   rcases alternatingPuncturedPrefixLabelChains_card_eq_four_mul hn label hantipodal with ⟨r, hr⟩
   exact ⟨r, hr⟩
 
+abbrev AlternatingPuncturedPrefixChainType {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :=
+  {data : SignedPermutation (n + 1) × Fin (n + 1) //
+    data ∈ alternatingPuncturedPrefixLabelChains label}
+
+theorem alternatingPuncturedPrefixChainType_card {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Fintype.card (AlternatingPuncturedPrefixChainType label) =
+      (alternatingPuncturedPrefixLabelChains label).card := by
+  classical
+  exact Fintype.card_of_subtype (alternatingPuncturedPrefixLabelChains label)
+    (fun _ => Iff.rfl)
+
+theorem four_dvd_alternatingPuncturedPrefixChainType_card {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    4 ∣ Fintype.card (AlternatingPuncturedPrefixChainType label) := by
+  rw [alternatingPuncturedPrefixChainType_card label]
+  exact four_dvd_alternatingPuncturedPrefixLabelChains_card hn label hantipodal
+
+/-- Statement-level API for the codimension-one alternating facet count. -/
+def KyFanPuncturedPrefixDivisibilityStatement (n m : ℕ) : Prop :=
+  ∀ label : NonzeroSignedSubset (n + 1) → SignedLabel m,
+    (∀ X, label X.antipode = (label X).neg) →
+      4 ∣ (alternatingPuncturedPrefixLabelChains label).card
+
+theorem kyFanPuncturedPrefixDivisibilityStatement {n m : ℕ} (hn : 0 < n) :
+    KyFanPuncturedPrefixDivisibilityStatement n m := by
+  intro label hantipodal
+  exact four_dvd_alternatingPuncturedPrefixLabelChains_card hn label hantipodal
+
 /--
 The numerical endpoint count used in the Ky Fan path proof.
 
@@ -2627,6 +2658,42 @@ theorem odd_card_positive_endpoints_of_path_involution
     (Fintype.card Positive) (Fintype.card Negative) (Fintype.card Path)
     hneg (even_card_of_fixedPointFree_involutive pathAntipode hinv hfree) hendpoints
 
+/--
+Endpoint count with an explicit punctured-endpoint class.  This is the
+counting core used once the path graph's endpoints have been partitioned into
+punctured endpoints, the two base endpoints, and positive/negative top
+alternating chains.
+-/
+theorem odd_positive_endpoints_of_antipodal_path_count_with_punctured
+    (punctured positive negative pathCount : ℕ)
+    (hneg : negative = positive)
+    (hpath_even : Even pathCount)
+    (hpunctured : 4 ∣ punctured)
+    (hendpoints : punctured + 2 + positive + negative = 2 * pathCount) :
+    Odd positive := by
+  rcases hpath_even with ⟨r, hr⟩
+  rcases hpunctured with ⟨s, hs⟩
+  rw [Nat.odd_iff]
+  omega
+
+theorem odd_card_positive_endpoints_of_path_involution_with_punctured
+    {Path Punctured Positive Negative : Type*}
+    [Fintype Path] [Fintype Punctured] [Fintype Positive] [Fintype Negative]
+    (pathAntipode : Path ≃ Path)
+    (hinv : Function.Involutive pathAntipode)
+    (hfree : ∀ p : Path, pathAntipode p ≠ p)
+    (hneg : Fintype.card Negative = Fintype.card Positive)
+    (hpunctured : 4 ∣ Fintype.card Punctured)
+    (hendpoints :
+      Fintype.card Punctured + 2 + Fintype.card Positive + Fintype.card Negative =
+        2 * Fintype.card Path) :
+    Odd (Fintype.card Positive) := by
+  exact odd_positive_endpoints_of_antipodal_path_count_with_punctured
+    (Fintype.card Punctured) (Fintype.card Positive) (Fintype.card Negative)
+    (Fintype.card Path) hneg
+    (even_card_of_fixedPointFree_involutive pathAntipode hinv hfree)
+    hpunctured hendpoints
+
 theorem sigma_endpoint_card_eq_two_mul_paths
     {Path : Type*} [Fintype Path]
     (Endpoint : Path → Type*) [∀ p : Path, Fintype (Endpoint p)]
@@ -2651,6 +2718,19 @@ theorem endpoint_card_eq_base_add_positive_add_negative
   simp [Fintype.card_sum]
   omega
 
+theorem endpoint_card_eq_punctured_add_base_add_positive_add_negative
+    {Endpoint Punctured Base Positive Negative : Type*}
+    [Fintype Endpoint] [Fintype Punctured] [Fintype Base]
+    [Fintype Positive] [Fintype Negative]
+    (classify : Endpoint ≃ Punctured ⊕ (Base ⊕ (Positive ⊕ Negative))) :
+    Fintype.card Endpoint =
+      Fintype.card Punctured + Fintype.card Base +
+        Fintype.card Positive + Fintype.card Negative := by
+  have hcard := Fintype.card_congr classify
+  rw [hcard]
+  simp [Fintype.card_sum]
+  omega
+
 theorem endpoint_count_eq_two_mul_paths_of_endpoint_equiv
     {Path Base Positive Negative : Type*}
     [Fintype Path] [Fintype Base] [Fintype Positive] [Fintype Negative]
@@ -2661,6 +2741,22 @@ theorem endpoint_count_eq_two_mul_paths_of_endpoint_equiv
     2 + Fintype.card Positive + Fintype.card Negative = 2 * Fintype.card Path := by
   have hpath := sigma_endpoint_card_eq_two_mul_paths Endpoint htwo
   have hclass := endpoint_card_eq_base_add_positive_add_negative classify
+  rw [hbase] at hclass
+  omega
+
+theorem endpoint_count_eq_two_mul_paths_of_endpoint_equiv_with_punctured
+    {Path Punctured Base Positive Negative : Type*}
+    [Fintype Path] [Fintype Punctured] [Fintype Base]
+    [Fintype Positive] [Fintype Negative]
+    (Endpoint : Path → Type*) [∀ p : Path, Fintype (Endpoint p)]
+    (htwo : ∀ p : Path, Fintype.card (Endpoint p) = 2)
+    (classify :
+      (Σ p : Path, Endpoint p) ≃ Punctured ⊕ (Base ⊕ (Positive ⊕ Negative)))
+    (hbase : Fintype.card Base = 2) :
+    Fintype.card Punctured + 2 + Fintype.card Positive + Fintype.card Negative =
+      2 * Fintype.card Path := by
+  have hpath := sigma_endpoint_card_eq_two_mul_paths Endpoint htwo
+  have hclass := endpoint_card_eq_punctured_add_base_add_positive_add_negative classify
   rw [hbase] at hclass
   omega
 
@@ -2685,6 +2781,34 @@ theorem odd_card_positive_endpoints_of_path_endpoint_equiv
     Odd (Fintype.card Positive) := by
   exact odd_card_positive_endpoints_of_path_involution pathAntipode hinv hfree hneg
     (endpoint_count_eq_two_mul_paths_of_endpoint_equiv Endpoint htwo classify hbase)
+
+/--
+Structured endpoint-count version with a punctured-endpoint class.
+
+The endpoint classification has four pieces: punctured endpoints, the two base
+endpoints, positive top chains, and negative top chains.  The only additional
+numeric input is that the punctured endpoint class has cardinality divisible by
+four.
+-/
+theorem odd_card_positive_endpoints_of_path_endpoint_equiv_with_punctured
+    {Path Punctured Base Positive Negative : Type*}
+    [Fintype Path] [Fintype Punctured] [Fintype Base]
+    [Fintype Positive] [Fintype Negative]
+    (Endpoint : Path → Type*) [∀ p : Path, Fintype (Endpoint p)]
+    (pathAntipode : Path ≃ Path)
+    (hinv : Function.Involutive pathAntipode)
+    (hfree : ∀ p : Path, pathAntipode p ≠ p)
+    (htwo : ∀ p : Path, Fintype.card (Endpoint p) = 2)
+    (classify :
+      (Σ p : Path, Endpoint p) ≃ Punctured ⊕ (Base ⊕ (Positive ⊕ Negative)))
+    (hbase : Fintype.card Base = 2)
+    (hpunctured : 4 ∣ Fintype.card Punctured)
+    (hneg : Fintype.card Negative = Fintype.card Positive) :
+    Odd (Fintype.card Positive) := by
+  exact odd_card_positive_endpoints_of_path_involution_with_punctured
+    pathAntipode hinv hfree hneg hpunctured
+    (endpoint_count_eq_two_mul_paths_of_endpoint_equiv_with_punctured
+      Endpoint htwo classify hbase)
 
 /--
 Ky Fan prefix parity from a Prescott-Su/Fan path decomposition count.
@@ -2784,6 +2908,44 @@ theorem positive_card_odd {Positive Negative : Type} [Fintype Positive] [Fintype
 
 end PathEndpointDecomposition
 
+/--
+Path endpoint data with the punctured-endpoint class kept explicit.  This is
+the finite combinatorial shape of the Ky Fan path graph before the punctured
+endpoints are discarded modulo four.
+-/
+structure PathEndpointDecompositionWithPunctured
+    (Punctured Positive Negative : Type) [Fintype Punctured]
+    [Fintype Positive] [Fintype Negative] where
+  Path : Type
+  Base : Type
+  Endpoint : Path → Type
+  instPath : Fintype Path
+  instBase : Fintype Base
+  instEndpoint : ∀ p : Path, Fintype (Endpoint p)
+  pathAntipode : Path ≃ Path
+  pathAntipode_involutive : Function.Involutive pathAntipode
+  pathAntipode_fixedPointFree : ∀ p : Path, pathAntipode p ≠ p
+  endpoint_card_two : ∀ p : Path, Fintype.card (Endpoint p) = 2
+  classify : (Σ p : Path, Endpoint p) ≃ Punctured ⊕ (Base ⊕ (Positive ⊕ Negative))
+  base_card : Fintype.card Base = 2
+
+namespace PathEndpointDecompositionWithPunctured
+
+theorem positive_card_odd {Punctured Positive Negative : Type}
+    [Fintype Punctured] [Fintype Positive] [Fintype Negative]
+    (D : PathEndpointDecompositionWithPunctured Punctured Positive Negative)
+    (hpunctured : 4 ∣ Fintype.card Punctured)
+    (hneg : Fintype.card Negative = Fintype.card Positive) :
+    Odd (Fintype.card Positive) := by
+  letI := D.instPath
+  letI := D.instBase
+  letI : ∀ p : D.Path, Fintype (D.Endpoint p) := D.instEndpoint
+  exact odd_card_positive_endpoints_of_path_endpoint_equiv_with_punctured
+    D.Endpoint D.pathAntipode D.pathAntipode_involutive D.pathAntipode_fixedPointFree
+    D.endpoint_card_two D.classify D.base_card hpunctured hneg
+
+end PathEndpointDecompositionWithPunctured
+
 abbrev PositivePrefixChainType {n m : ℕ}
     (label : NonzeroSignedSubset n → SignedLabel m) :=
   {P : SignedPermutation n // P ∈ positiveAlternatingPrefixLabelChains label}
@@ -2810,6 +2972,13 @@ abbrev KyFanPrefixPathEndpointDecomposition {n m : ℕ}
     (label : NonzeroSignedSubset n → SignedLabel m) :=
   PathEndpointDecomposition (PositivePrefixChainType label) (NegativePrefixChainType label)
 
+abbrev KyFanPrefixPathEndpointDecompositionWithPunctured {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :=
+  PathEndpointDecompositionWithPunctured
+    (AlternatingPuncturedPrefixChainType label)
+    (PositivePrefixChainType label)
+    (NegativePrefixChainType label)
+
 theorem kyFanPrefixParity_of_pathEndpointDecomposition {n m : ℕ}
     (label : NonzeroSignedSubset n → SignedLabel m)
     (hantipodal : ∀ X, label X.antipode = (label X).neg)
@@ -2824,6 +2993,24 @@ theorem kyFanPrefixParity_of_pathEndpointDecomposition {n m : ℕ}
   have hodd := D.positive_card_odd hneg
   simpa [PositivePrefixChainType] using hodd
 
+theorem kyFanPrefixParity_of_pathEndpointDecompositionWithPunctured {n m : ℕ}
+    (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (D : KyFanPrefixPathEndpointDecompositionWithPunctured label) :
+    Odd (positiveAlternatingPrefixLabelChains label).card := by
+  classical
+  have hpunctured :
+      4 ∣ Fintype.card (AlternatingPuncturedPrefixChainType label) :=
+    four_dvd_alternatingPuncturedPrefixChainType_card hn label hantipodal
+  have hneg :
+      Fintype.card (NegativePrefixChainType label) =
+        Fintype.card (PositivePrefixChainType label) := by
+    simp [PositivePrefixChainType, NegativePrefixChainType,
+      positiveAlternatingPrefixLabelChains_card_eq_negative label hantipodal]
+  have hodd := D.positive_card_odd hpunctured hneg
+  simpa [PositivePrefixChainType] using hodd
+
 /--
 The remaining geometric/local-combinatorial obligation for the octahedral Ky
 Fan lemma: for every admissible labeling, construct the path decomposition.
@@ -2833,6 +3020,17 @@ def KyFanPrefixPathEndpointDecompositionStatement (n m : ℕ) : Prop :=
     (∀ X, label X.antipode = (label X).neg) →
       NoComplementaryComparableLabels label →
         Nonempty (KyFanPrefixPathEndpointDecomposition label)
+
+/--
+The refined path-construction obligation with punctured endpoints retained in
+the endpoint classification.  For dimension `n + 1`, the punctured endpoint
+type is the already formalized alternating punctured prefix-chain finset.
+-/
+def KyFanPrefixPathEndpointDecompositionWithPuncturedStatement (n m : ℕ) : Prop :=
+  ∀ label : NonzeroSignedSubset (n + 1) → SignedLabel m,
+    (∀ X, label X.antipode = (label X).neg) →
+      NoComplementaryComparableLabels label →
+        Nonempty (KyFanPrefixPathEndpointDecompositionWithPunctured label)
 
 noncomputable def kyFanPrefixPathEndpointDecomposition_zero {m : ℕ}
     (label : NonzeroSignedSubset 0 → SignedLabel m) :
@@ -2889,6 +3087,14 @@ theorem kyFanPrefixParityStatement_of_pathEndpointDecomposition {n m : ℕ}
   intro label hantipodal hno
   rcases hpaths label hantipodal hno with ⟨D⟩
   exact kyFanPrefixParity_of_pathEndpointDecomposition label hantipodal D
+
+theorem kyFanPrefixParityStatement_succ_of_pathEndpointDecompositionWithPunctured
+    {n m : ℕ} (hn : 0 < n)
+    (hpaths : KyFanPrefixPathEndpointDecompositionWithPuncturedStatement n m) :
+    KyFanPrefixParityStatement (n + 1) m := by
+  intro label hantipodal hno
+  rcases hpaths label hantipodal hno with ⟨D⟩
+  exact kyFanPrefixParity_of_pathEndpointDecompositionWithPunctured hn label hantipodal D
 
 theorem exists_complementaryComparable_of_pathEndpointDecomposition_of_lt {n m : ℕ}
     (hmn : m < n) (hpaths : KyFanPrefixPathEndpointDecompositionStatement n m)

@@ -548,6 +548,28 @@ theorem prefixChain_le_iff {n : ℕ} (P : SignedPermutation n) {i j : Fin n} :
   · intro hij
     exact P.prefixChain_le hij
 
+theorem prefixChain_eq_iff {n : ℕ} (P : SignedPermutation n) {i j : Fin n} :
+    P.prefixChain i = P.prefixChain j ↔ i = j := by
+  constructor
+  · intro h
+    exact P.prefixChain_injective h
+  · intro h
+    rw [h]
+
+theorem prefixChain_le_and_ne_iff_lt {n : ℕ} (P : SignedPermutation n) {i j : Fin n} :
+    SignedSubset.Le (P.prefixChain i).1 (P.prefixChain j).1 ∧
+        P.prefixChain i ≠ P.prefixChain j ↔
+      i < j := by
+  constructor
+  · rintro ⟨hle, hne⟩
+    have hij : i ≤ j := (P.prefixChain_le_iff).mp hle
+    have hij_ne : i ≠ j := by
+      intro h
+      exact hne ((P.prefixChain_eq_iff).mpr h)
+    exact lt_of_le_of_ne hij hij_ne
+  · intro hij
+    exact ⟨P.prefixChain_le hij.le, P.prefixChain_ne_of_lt hij⟩
+
 end SignedPermutation
 
 /--
@@ -687,6 +709,45 @@ theorem positiveAlternatingPrefixLabelChains_card_eq_negative {n m : ℕ}
       simpa [positiveAlternatingPrefixLabelChains] using hpos
     · exact SignedPermutation.antipode_involutive Q
 
+theorem positive_negative_alternating_disjoint {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset n → SignedLabel m) (P : SignedPermutation n) :
+    PositiveAlternatingPrefixLabels label P →
+      NegativeAlternatingPrefixLabels label P → False := by
+  intro hpos hneg
+  let i : Fin n := ⟨0, hn⟩
+  have hp := hpos.2 i
+  have hn' := hneg.2 i
+  simp [i] at hp hn'
+  rw [hp] at hn'
+  simp at hn'
+
+theorem positive_negativeAlternatingPrefixLabelChains_disjoint {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset n → SignedLabel m) :
+    Disjoint (positiveAlternatingPrefixLabelChains label)
+      (negativeAlternatingPrefixLabelChains label) := by
+  classical
+  rw [Finset.disjoint_left]
+  intro P hpos hneg
+  exact positive_negative_alternating_disjoint hn label P
+    (by simpa [positiveAlternatingPrefixLabelChains] using hpos)
+    (by simpa [negativeAlternatingPrefixLabelChains] using hneg)
+
+/-- Positive- or negative-first alternating prefix-label chains. -/
+noncomputable def alternatingPrefixLabelChains {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m) : Finset (SignedPermutation n) :=
+  positiveAlternatingPrefixLabelChains label ∪ negativeAlternatingPrefixLabelChains label
+
+theorem alternatingPrefixLabelChains_card {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    (alternatingPrefixLabelChains label).card =
+      2 * (positiveAlternatingPrefixLabelChains label).card := by
+  classical
+  rw [alternatingPrefixLabelChains,
+    Finset.card_union_of_disjoint (positive_negativeAlternatingPrefixLabelChains_disjoint hn label),
+    positiveAlternatingPrefixLabelChains_card_eq_negative label hantipodal]
+  omega
+
 /-- The explicit maximal-chain version of the Ky Fan frontier. -/
 def KyFanPrefixChainStatement (n m : ℕ) : Prop :=
   ∀ label : NonzeroSignedSubset n → SignedLabel m,
@@ -713,6 +774,31 @@ def KyFanPrefixParityStatement (n m : ℕ) : Prop :=
     (∀ X, label X.antipode = (label X).neg) →
       NoComplementaryComparableLabels label →
         Odd (positiveAlternatingPrefixLabelChains label).card
+
+/--
+Equivalent mod-four form of the Ky Fan prefix-chain frontier: after both
+orientations are counted, the number of alternating maximal chains is `2`
+modulo `4`.
+-/
+def KyFanPrefixModFourStatement (n m : ℕ) : Prop :=
+  ∀ label : NonzeroSignedSubset n → SignedLabel m,
+    (∀ X, label X.antipode = (label X).neg) →
+      NoComplementaryComparableLabels label →
+        ∃ r, (alternatingPrefixLabelChains label).card = 4 * r + 2
+
+theorem kyFanPrefixParityStatement_iff_modFour {n m : ℕ} (hn : 0 < n) :
+    KyFanPrefixParityStatement n m ↔ KyFanPrefixModFourStatement n m := by
+  constructor
+  · intro hparity label hantipodal hno
+    rcases hparity label hantipodal hno with ⟨r, hr⟩
+    refine ⟨r, ?_⟩
+    rw [alternatingPrefixLabelChains_card hn label hantipodal, hr]
+    omega
+  · intro hmodFour label hantipodal hno
+    obtain ⟨r, hcard⟩ := hmodFour label hantipodal hno
+    have htwo := alternatingPrefixLabelChains_card hn label hantipodal
+    refine ⟨r, ?_⟩
+    omega
 
 theorem kyFanPrefixChainStatement_of_parity {n m : ℕ}
     (hparity : KyFanPrefixParityStatement n m) :
@@ -860,6 +946,11 @@ theorem kyFanPrefixParityStatement_sub_one_le_two {n : ℕ} (hnle : n ≤ 2) :
   · exact kyFanPrefixParityStatement_zero
   · exact kyFanPrefixParityStatement_one
   · exact kyFanPrefixParityStatement_two
+
+theorem kyFanPrefixModFourStatement_sub_one_le_two {n : ℕ} (hnpos : 0 < n) (hnle : n ≤ 2) :
+    KyFanPrefixModFourStatement n (n - 1) :=
+  (kyFanPrefixParityStatement_iff_modFour hnpos).mp
+    (kyFanPrefixParityStatement_sub_one_le_two hnle)
 
 theorem exists_complementaryComparable_of_kyFanPrefixParity_of_lt {n m : ℕ}
     (hmn : m < n) (hparity : KyFanPrefixParityStatement n m)

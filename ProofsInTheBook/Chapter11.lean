@@ -9944,6 +9944,88 @@ theorem sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_no_wrap
       (sweepSort L (interEventAngle points hne ⟨s.val + j.val + 1, by omega⟩))
   exact stepCrossingLabelsCard_relabel _ _ τ
 
+theorem sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_no_wrap_to_wrap
+    {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points)
+    (s j : Fin (directionsDeterminedBy points).card)
+    (hsource : s.val + j.val < (directionsDeterminedBy points).card)
+    (hboundary : s.val + j.val + 1 = (directionsDeterminedBy points).card)
+    (hnext : j.val + 1 < (directionsDeterminedBy points).card) :
+    GeneralizedAllowableSequence.crossingLabelsCard
+        (sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).seq j =
+      GeneralizedAllowableSequence.crossingLabelsCard
+        (sweepConcreteGAS hcard hne hr hncoll).seq
+          ⟨s.val + j.val, hsource⟩ := by
+  let L := sweepLabeling hcard hne
+  let θs := interEventAngle points hne ⟨s.val, by omega⟩
+  let τ := sweepSort L θs
+  let l : Fin (directionsDeterminedBy points).card := ⟨s.val + j.val, hsource⟩
+  let jnext : Fin (directionsDeterminedBy points).card := ⟨j.val + 1, hnext⟩
+  have hwrap_next :
+      (directionsDeterminedBy points).card ≤ s.val + jnext.val := by
+    dsimp [jnext]
+    omega
+  have hB0 := sweepConcreteGAS_atIndex_mod_pi_seq_no_wrap
+    hcard hne hr hncoll s j hsource
+  have hB1 := sweepConcreteGAS_atIndex_mod_pi_seq_wrap_rev
+    hcard hne hr hncoll s jnext hwrap_next
+  have hB1' :
+      (sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).seq.π (stepTo j) =
+        (((Fin.revPerm : Equiv.Perm (Fin (2 * k))).trans
+          (sweepSort L (interEventAngle points hne ⟨0, Nat.succ_pos _⟩))).trans
+          τ.symm) := by
+    have hidx :
+        (⟨s.val + jnext.val - (directionsDeterminedBy points).card, by omega⟩ :
+          Fin ((directionsDeterminedBy points).card + 1)) =
+          ⟨0, Nat.succ_pos _⟩ := by
+      apply Fin.ext
+      dsimp [jnext]
+      omega
+    dsimp [stepTo] at hB1 ⊢
+    simpa [L, τ, hidx] using hB1
+  have hA0 : (sweepConcreteGAS hcard hne hr hncoll).seq.π (stepFrom l) =
+      sweepSort L (interEventAngle points hne ⟨s.val + j.val, by omega⟩) := by
+    simp [sweepConcreteGAS, CountedGeneralizedAllowableSequence.ofReversesBlocks,
+      sweepGAS, GeneralizedAllowableSequence.ofSweepAngles, stepFrom, L, l]
+  have hA1 : (sweepConcreteGAS hcard hne hr hncoll).seq.π (stepTo l) =
+      reverseFin (2 * k) := by
+    have hidx : (stepTo l : Fin ((directionsDeterminedBy points).card + 1)) =
+        ⟨(directionsDeterminedBy points).card, Nat.lt_succ_self _⟩ := by
+      apply Fin.ext
+      dsimp [stepTo, l]
+      exact hboundary
+    rw [hidx]
+    exact (sweepConcreteGAS hcard hne hr hncoll).seq.finish
+  have hsort0 :
+      sweepSort L (interEventAngle points hne ⟨0, Nat.succ_pos _⟩) =
+        Equiv.refl (Fin (2 * k)) := by
+    simpa [sweepConcreteGAS, CountedGeneralizedAllowableSequence.ofReversesBlocks,
+      sweepGAS, GeneralizedAllowableSequence.ofSweepAngles, L] using
+      (sweepConcreteGAS hcard hne hr hncoll).seq.start
+  have hsort0_ofNat :
+      sweepSort L (interEventAngle points hne
+          (0 : Fin ((directionsDeterminedBy points).card + 1))) =
+        Equiv.refl (Fin (2 * k)) := by
+    simpa using hsort0
+  change stepCrossingLabelsCard k
+      ((sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).seq.π (stepFrom j))
+      ((sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).seq.π (stepTo j)) =
+    stepCrossingLabelsCard k
+      ((sweepConcreteGAS hcard hne hr hncoll).seq.π (stepFrom l))
+      ((sweepConcreteGAS hcard hne hr hncoll).seq.π (stepTo l))
+  dsimp [stepFrom, stepTo] at hB0 hB1' hA0 hA1 ⊢
+  rw [hB0, hB1', hA0, hA1, hsort0_ofNat]
+  change stepCrossingLabelsCard k
+      ((sweepSort L (interEventAngle points hne ⟨s.val + j.val, by omega⟩)).trans τ.symm)
+      ((reverseFin (2 * k)).trans τ.symm) =
+    stepCrossingLabelsCard k
+      (sweepSort L (interEventAngle points hne ⟨s.val + j.val, by omega⟩))
+      (reverseFin (2 * k))
+  exact stepCrossingLabelsCard_relabel _ _ τ
+
 theorem sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_wrap_nonlast
     {points : Finset Point2} {k : ℕ}
     (hcard : points.card = 2 * k)
@@ -10100,6 +10182,34 @@ theorem sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_wrap
         have hjle : j.val + 1 ≤ (directionsDeterminedBy points).card := j.isLt
         omega)
 
+theorem sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_index_before
+    {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points)
+    (s idx : Fin (directionsDeterminedBy points).card)
+    (hidx : idx.val < s.val) :
+    GeneralizedAllowableSequence.crossingLabelsCard
+        (sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).seq
+        ⟨idx.val + (directionsDeterminedBy points).card - s.val, by omega⟩ =
+      GeneralizedAllowableSequence.crossingLabelsCard
+        (sweepConcreteGAS hcard hne hr hncoll).seq idx := by
+  let j : Fin (directionsDeterminedBy points).card :=
+    ⟨idx.val + (directionsDeterminedBy points).card - s.val, by omega⟩
+  have hwrap : (directionsDeterminedBy points).card ≤ s.val + j.val := by
+    dsimp [j]
+    omega
+  have h := sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_wrap
+    hcard hne hr hncoll s j hwrap
+  have htarget :
+      (⟨s.val + j.val - (directionsDeterminedBy points).card, by omega⟩ :
+        Fin (directionsDeterminedBy points).card) = idx := by
+    apply Fin.ext
+    dsimp [j]
+    omega
+  simpa [j, htarget] using h
+
 theorem sweepConcreteGAS_atIndex_mod_pi_moveOrder_no_wrap
     {points : Finset Point2} {k : ℕ}
     (hcard : points.card = 2 * k)
@@ -10118,6 +10228,32 @@ theorem sweepConcreteGAS_atIndex_mod_pi_moveOrder_no_wrap
       sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_no_wrap hcard hne hr hncoll s j hwrap
   change B.toCountedGeneralizedAllowableSequence.moveOrder j =
     A.toCountedGeneralizedAllowableSequence.moveOrder ⟨s.val + j.val, by omega⟩
+  exact CountedGeneralizedAllowableSequence.moveOrder_eq_of_crossingLabelsCard_eq
+    B.toCountedGeneralizedAllowableSequence A.toCountedGeneralizedAllowableSequence hcount
+
+theorem sweepConcreteGAS_atIndex_mod_pi_moveOrder_no_wrap_to_wrap
+    {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points)
+    (s j : Fin (directionsDeterminedBy points).card)
+    (hsource : s.val + j.val < (directionsDeterminedBy points).card)
+    (hboundary : s.val + j.val + 1 = (directionsDeterminedBy points).card)
+    (hnext : j.val + 1 < (directionsDeterminedBy points).card) :
+    (sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).moveOrder j =
+      (sweepConcreteGAS hcard hne hr hncoll).moveOrder
+        ⟨s.val + j.val, hsource⟩ := by
+  let B := sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s
+  let A := sweepConcreteGAS hcard hne hr hncoll
+  have hcount : GeneralizedAllowableSequence.crossingLabelsCard B.seq j =
+      GeneralizedAllowableSequence.crossingLabelsCard A.seq
+        ⟨s.val + j.val, hsource⟩ := by
+    simpa [A, B] using
+      sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_no_wrap_to_wrap
+        hcard hne hr hncoll s j hsource hboundary hnext
+  change B.toCountedGeneralizedAllowableSequence.moveOrder j =
+    A.toCountedGeneralizedAllowableSequence.moveOrder ⟨s.val + j.val, hsource⟩
   exact CountedGeneralizedAllowableSequence.moveOrder_eq_of_crossingLabelsCard_eq
     B.toCountedGeneralizedAllowableSequence A.toCountedGeneralizedAllowableSequence hcount
 
@@ -10198,6 +10334,31 @@ theorem sweepConcreteGAS_atIndex_mod_pi_moveOrder_wrap
   exact CountedGeneralizedAllowableSequence.moveOrder_eq_of_crossingLabelsCard_eq
     B.toCountedGeneralizedAllowableSequence A.toCountedGeneralizedAllowableSequence hcount
 
+theorem sweepConcreteGAS_atIndex_mod_pi_moveOrder_index_before
+    {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points)
+    (s idx : Fin (directionsDeterminedBy points).card)
+    (hidx : idx.val < s.val) :
+    (sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).moveOrder
+        ⟨idx.val + (directionsDeterminedBy points).card - s.val, by omega⟩ =
+      (sweepConcreteGAS hcard hne hr hncoll).moveOrder idx := by
+  let j : Fin (directionsDeterminedBy points).card :=
+    ⟨idx.val + (directionsDeterminedBy points).card - s.val, by omega⟩
+  have hwrap : (directionsDeterminedBy points).card ≤ s.val + j.val := by
+    dsimp [j]
+    omega
+  have h := sweepConcreteGAS_atIndex_mod_pi_moveOrder_wrap hcard hne hr hncoll s j hwrap
+  have htarget :
+      (⟨s.val + j.val - (directionsDeterminedBy points).card, by omega⟩ :
+        Fin (directionsDeterminedBy points).card) = idx := by
+    apply Fin.ext
+    dsimp [j]
+    omega
+  simpa [j, htarget] using h
+
 theorem sweepConcreteGAS_atIndex_mod_pi_isCrossing_no_wrap
     {points : Finset Point2} {k : ℕ}
     (hcard : points.card = 2 * k)
@@ -10216,6 +10377,32 @@ theorem sweepConcreteGAS_atIndex_mod_pi_isCrossing_no_wrap
       sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_no_wrap hcard hne hr hncoll s j hwrap
   change B.toCountedGeneralizedAllowableSequence.IsCrossing j ↔
     A.toCountedGeneralizedAllowableSequence.IsCrossing ⟨s.val + j.val, by omega⟩
+  exact CountedGeneralizedAllowableSequence.isCrossing_iff_of_crossingLabelsCard_eq
+    B.toCountedGeneralizedAllowableSequence A.toCountedGeneralizedAllowableSequence hcount
+
+theorem sweepConcreteGAS_atIndex_mod_pi_isCrossing_no_wrap_to_wrap
+    {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points)
+    (s j : Fin (directionsDeterminedBy points).card)
+    (hsource : s.val + j.val < (directionsDeterminedBy points).card)
+    (hboundary : s.val + j.val + 1 = (directionsDeterminedBy points).card)
+    (hnext : j.val + 1 < (directionsDeterminedBy points).card) :
+    (sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).IsCrossing j ↔
+      (sweepConcreteGAS hcard hne hr hncoll).IsCrossing
+        ⟨s.val + j.val, hsource⟩ := by
+  let B := sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s
+  let A := sweepConcreteGAS hcard hne hr hncoll
+  have hcount : GeneralizedAllowableSequence.crossingLabelsCard B.seq j =
+      GeneralizedAllowableSequence.crossingLabelsCard A.seq
+        ⟨s.val + j.val, hsource⟩ := by
+    simpa [A, B] using
+      sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_no_wrap_to_wrap
+        hcard hne hr hncoll s j hsource hboundary hnext
+  change B.toCountedGeneralizedAllowableSequence.IsCrossing j ↔
+    A.toCountedGeneralizedAllowableSequence.IsCrossing ⟨s.val + j.val, hsource⟩
   exact CountedGeneralizedAllowableSequence.isCrossing_iff_of_crossingLabelsCard_eq
     B.toCountedGeneralizedAllowableSequence A.toCountedGeneralizedAllowableSequence hcount
 
@@ -10296,6 +10483,31 @@ theorem sweepConcreteGAS_atIndex_mod_pi_isCrossing_wrap
   exact CountedGeneralizedAllowableSequence.isCrossing_iff_of_crossingLabelsCard_eq
     B.toCountedGeneralizedAllowableSequence A.toCountedGeneralizedAllowableSequence hcount
 
+theorem sweepConcreteGAS_atIndex_mod_pi_isCrossing_index_before
+    {points : Finset Point2} {k : ℕ}
+    (hcard : points.card = 2 * k)
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (hr : 2 ≤ (directionsDeterminedBy points).card)
+    (hncoll : NoncollinearSet points)
+    (s idx : Fin (directionsDeterminedBy points).card)
+    (hidx : idx.val < s.val) :
+    (sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).IsCrossing
+        ⟨idx.val + (directionsDeterminedBy points).card - s.val, by omega⟩ ↔
+      (sweepConcreteGAS hcard hne hr hncoll).IsCrossing idx := by
+  let j : Fin (directionsDeterminedBy points).card :=
+    ⟨idx.val + (directionsDeterminedBy points).card - s.val, by omega⟩
+  have hwrap : (directionsDeterminedBy points).card ≤ s.val + j.val := by
+    dsimp [j]
+    omega
+  have h := sweepConcreteGAS_atIndex_mod_pi_isCrossing_wrap hcard hne hr hncoll s j hwrap
+  have htarget :
+      (⟨s.val + j.val - (directionsDeterminedBy points).card, by omega⟩ :
+        Fin (directionsDeterminedBy points).card) = idx := by
+    apply Fin.ext
+    dsimp [j]
+    omega
+  simpa [j, htarget] using h
+
 -- Starting angle θ₀ is between sortedAngleAt(s-1) and sortedAngleAt(s)
 -- (or equivalently, in the gap before event s).
 --
@@ -10357,14 +10569,17 @@ now exists and is wired into a concrete shifted sweep:
 - `sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_wrap_nonlast`
 - `sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_wrap_last`
 - `sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_wrap`
+- `sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_index_before`
 - `sweepConcreteGAS_atIndex_mod_pi_moveOrder_no_wrap`
 - `sweepConcreteGAS_atIndex_mod_pi_moveOrder_wrap_nonlast`
 - `sweepConcreteGAS_atIndex_mod_pi_moveOrder_wrap_last`
 - `sweepConcreteGAS_atIndex_mod_pi_moveOrder_wrap`
+- `sweepConcreteGAS_atIndex_mod_pi_moveOrder_index_before`
 - `sweepConcreteGAS_atIndex_mod_pi_isCrossing_no_wrap`
 - `sweepConcreteGAS_atIndex_mod_pi_isCrossing_wrap_nonlast`
 - `sweepConcreteGAS_atIndex_mod_pi_isCrossing_wrap_last`
 - `sweepConcreteGAS_atIndex_mod_pi_isCrossing_wrap`
+- `sweepConcreteGAS_atIndex_mod_pi_isCrossing_index_before`
 
 The wrapped transfer is now split into nonfinal and final shifted steps.  The
 final case uses the sequence finish state together with the same finite

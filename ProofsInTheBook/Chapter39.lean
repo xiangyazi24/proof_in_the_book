@@ -1517,9 +1517,9 @@ theorem chapter39 {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
   · exact kneser_chromatic_lower_bound_from_tucker_matousek n k hk hn htucker
 
 /--
-The same Chapter 39 conclusion from the finer Ky Fan alternating-chain
-frontier.  Proving `KyFanAlternatingChainStatement n (n-1)` is the remaining
-finite parity argument.
+The same Chapter 39 conclusion from Ky Fan's alternating-chain form.  The
+smaller frontier below is the signed-permutation positive-first parity count,
+which implies this alternating-chain form.
 -/
 theorem chapter39_of_kyFan {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
     (hfan : KyFanAlternatingChainStatement n (n - 1)) :

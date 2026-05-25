@@ -17,15 +17,15 @@ Formalization status: this file now states the genuine theorem over Mathlib's
 computation for the flat matrix, the `n ≤ 2` unconditional lower bounds, the
 `n = 0,1,2` instances of the coefficient-from-capacity analytic core, and the
 weighted-AM-GM capacity lower bound for row-linear products of doubly
-stochastic matrices.  It also identifies the row-linear mixed coefficient with
-the permanent and packages the checkerboard boundary-convexity step for
+stochastic matrices.  It identifies the squarefree coefficient of the
+row-linear `MvPolynomial` with the row-linear mixed coefficient and hence with
+the permanent, and packages the checkerboard boundary-convexity step for
 opposite exchange endpoints.  The remaining arbitrary-dimension lower bound is
 exposed as a point-17 honest frontier: it is conditional on the missing
 Falikman-Egorychev/Gurvits coefficient-from-capacity inequality for `n ≥ 3`,
-now stated on the actual mixed coefficient of the row-linear polynomial rather
-than replaced by the flat-matrix special case.  The
-equality-only-if-flat strengthening belongs to the same unformalized analytic
-equality-case layer.
+now stated on the actual squarefree coefficient of the row-linear polynomial
+rather than replaced by the flat-matrix special case.  The equality-only-if-flat
+strengthening belongs to the same unformalized analytic equality-case layer.
 
 The exact intended unconditional Lean endpoint is:
 
@@ -101,6 +101,14 @@ theorem eval_rowLinearMvPolynomial {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
     MvPolynomial.eval x (rowLinearMvPolynomial A) = rowLinearProduct A x := by
   simp [rowLinearMvPolynomial, rowLinearProduct]
 
+/-- The exponent vector of the squarefree monomial `∏ⱼ xⱼ`. -/
+def squarefreeExponent (n : ℕ) : Fin n →₀ ℕ :=
+  Finsupp.equivFunOnFinite.symm (fun _ => 1)
+
+/-- The squarefree coefficient of `∏ᵢ ∑ⱼ Aᵢⱼ xⱼ`. -/
+def rowLinearSquarefreeCoefficient {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ) : ℝ :=
+  MvPolynomial.coeff (squarefreeExponent n) (rowLinearMvPolynomial A)
+
 /--
 The mixed coefficient of the row-linear product, written as the sum over
 choosing one column in each row and requiring that every column is chosen once.
@@ -132,6 +140,144 @@ theorem rowLinearMixedCoefficient_eq_permanent {n : ℕ}
       (fun i => A (σ.symm i) i)
       (by intro i; simp)
   · rfl
+
+private theorem sum_single_one_eq_squarefreeExponent_iff_bijective {n : ℕ}
+    (f : Fin n → Fin n) :
+    (∑ i, Finsupp.single (f i) 1) = squarefreeExponent n ↔ Function.Bijective f := by
+  constructor
+  · intro h
+    have hcard : ∀ j : Fin n, (Finset.univ.filter (fun i => f i = j)).card = 1 := by
+      intro j
+      have hj : (∑ i, Finsupp.single (f i) 1) j = 1 := by
+        rw [h]
+        simp [squarefreeExponent]
+      have hsum : (∑ i, (if f i = j then (1 : ℕ) else 0)) = 1 := by
+        simpa [Finsupp.single_apply, eq_comm] using hj
+      rw [Finset.card_eq_sum_ones]
+      simpa [Finset.sum_filter] using hsum
+    refine ⟨?_, ?_⟩
+    · intro i k hik
+      have hi : i ∈ Finset.univ.filter (fun x => f x = f i) := by simp
+      have hk : k ∈ Finset.univ.filter (fun x => f x = f i) := by simp [hik]
+      rcases Finset.card_eq_one.mp (hcard (f i)) with ⟨a, ha⟩
+      have hi_eq : i = a := by simpa [ha] using hi
+      have hk_eq : k = a := by simpa [ha] using hk
+      exact hi_eq.trans hk_eq.symm
+    · intro j
+      rcases Finset.card_eq_one.mp (hcard j) with ⟨i, hi⟩
+      refine ⟨i, ?_⟩
+      have : i ∈ Finset.univ.filter (fun x => f x = j) := by simp [hi]
+      simpa using this
+  · intro hbij
+    ext j
+    have hsum : (∑ i, (if f i = j then (1 : ℕ) else 0)) = 1 := by
+      rcases hbij.2 j with ⟨i, hi⟩
+      rw [Finset.sum_eq_single i]
+      · simp [hi]
+      · intro k _hk hki
+        have hfk : f k ≠ j := by
+          intro hkj
+          exact hki (hbij.1 (hkj.trans hi.symm))
+        simp [hfk]
+      · intro hi_not
+        exact (hi_not (Finset.mem_univ i)).elim
+    have hleft : (∑ i, Finsupp.single (f i) 1) j =
+        ∑ i, (if f i = j then (1 : ℕ) else 0) := by
+      simp [Finsupp.single_apply, eq_comm]
+    rw [hleft, hsum]
+    simp [squarefreeExponent]
+
+private theorem rowLinearTerm_eq_monomial {n : Type*} [DecidableEq n] [Fintype n]
+    (a : n → ℝ) (f : n → n) :
+    (∏ i, MvPolynomial.C (a i) * MvPolynomial.X (f i) : MvPolynomial n ℝ) =
+      MvPolynomial.monomial (∑ i, Finsupp.single (f i) 1) (∏ i, a i) := by
+  classical
+  simp_rw [show ∀ i, MvPolynomial.C (a i) * MvPolynomial.X (f i) =
+      (MvPolynomial.monomial (Finsupp.single (f i) 1) (a i) : MvPolynomial n ℝ) by
+    intro i
+    rw [MvPolynomial.X, MvPolynomial.C_mul_monomial]
+    simp]
+  induction (Finset.univ : Finset n) using Finset.induction with
+  | empty =>
+      simp
+  | insert i s his ih =>
+      simp [Finset.prod_insert, Finset.sum_insert, his, ih, MvPolynomial.monomial_mul]
+
+private theorem rowLinearMvPolynomial_expand {n : ℕ}
+    (A : Matrix (Fin n) (Fin n) ℝ) :
+    rowLinearMvPolynomial A =
+      ∑ f : Fin n → Fin n, ∏ i, MvPolynomial.C (A i (f i)) * MvPolynomial.X (f i) := by
+  classical
+  unfold rowLinearMvPolynomial
+  rw [Fintype.prod_sum]
+
+theorem rowLinearSquarefreeCoefficient_eq_function_sum {n : ℕ}
+    (A : Matrix (Fin n) (Fin n) ℝ) :
+    rowLinearSquarefreeCoefficient A =
+      ∑ f : Fin n → Fin n, if Function.Bijective f then ∏ i, A i (f i) else 0 := by
+  classical
+  unfold rowLinearSquarefreeCoefficient
+  rw [rowLinearMvPolynomial_expand A]
+  simp_rw [rowLinearTerm_eq_monomial]
+  rw [MvPolynomial.coeff_sum]
+  refine Finset.sum_congr rfl ?_
+  intro f _hf
+  have hcoeff : MvPolynomial.coeff (squarefreeExponent n)
+      (MvPolynomial.monomial (∑ i, Finsupp.single (f i) 1) (∏ i, A i (f i)) :
+        MvPolynomial (Fin n) ℝ) =
+      if (∑ i, Finsupp.single (f i) 1) = squarefreeExponent n then
+        ∏ i, A i (f i) else 0 := by
+    rw [MvPolynomial.coeff_monomial]
+  rw [hcoeff]
+  by_cases hbij : Function.Bijective f
+  · have hexp : (∑ i, Finsupp.single (f i) 1) = squarefreeExponent n :=
+      (sum_single_one_eq_squarefreeExponent_iff_bijective f).2 hbij
+    rw [if_pos hexp, if_pos hbij]
+  · have hexp : (∑ i, Finsupp.single (f i) 1) ≠ squarefreeExponent n := by
+      intro h
+      exact hbij ((sum_single_one_eq_squarefreeExponent_iff_bijective f).1 h)
+    rw [if_neg hexp, if_neg hbij]
+
+private def bijectiveFunctionEquivPerm (n : ℕ) :
+    {f : Fin n → Fin n // Function.Bijective f} ≃ Equiv.Perm (Fin n) where
+  toFun f := Equiv.ofBijective f.1 f.2
+  invFun σ := ⟨σ, σ.bijective⟩
+  left_inv f := by
+    apply Subtype.ext
+    funext i
+    exact Equiv.ofBijective_apply f.1 f.2 i
+  right_inv σ := by
+    ext i
+    rfl
+
+private theorem function_sum_bijective_eq_rowLinearMixedCoefficient {n : ℕ}
+    (A : Matrix (Fin n) (Fin n) ℝ) :
+    (∑ f : Fin n → Fin n, if Function.Bijective f then ∏ i, A i (f i) else 0) =
+      rowLinearMixedCoefficient A := by
+  classical
+  rw [← Finset.sum_filter]
+  rw [Finset.sum_subtype
+    (s := Finset.univ.filter (fun f : Fin n → Fin n => Function.Bijective f))]
+  · unfold rowLinearMixedCoefficient
+    exact Fintype.sum_equiv (bijectiveFunctionEquivPerm n)
+      (fun f : {f : Fin n → Fin n // Function.Bijective f} => ∏ i, A i (f.1 i))
+      (fun σ : Equiv.Perm (Fin n) => ∏ i, A i (σ i))
+      (by intro f; rfl)
+  · intro f
+    simp
+
+/-- The squarefree `MvPolynomial` coefficient is the row-linear mixed coefficient. -/
+theorem rowLinearSquarefreeCoefficient_eq_mixedCoefficient {n : ℕ}
+    (A : Matrix (Fin n) (Fin n) ℝ) :
+    rowLinearSquarefreeCoefficient A = rowLinearMixedCoefficient A := by
+  rw [rowLinearSquarefreeCoefficient_eq_function_sum,
+    function_sum_bijective_eq_rowLinearMixedCoefficient]
+
+/-- The squarefree `MvPolynomial` coefficient of the row-linear product is the permanent. -/
+theorem rowLinearSquarefreeCoefficient_eq_permanent {n : ℕ}
+    (A : Matrix (Fin n) (Fin n) ℝ) :
+    rowLinearSquarefreeCoefficient A = A.permanent := by
+  rw [rowLinearSquarefreeCoefficient_eq_mixedCoefficient, rowLinearMixedCoefficient_eq_permanent]
 
 /--
 The capacity lower bound needed for the row-linear product:
@@ -194,11 +340,39 @@ structure GurvitsCoefficientFromCapacityCore (n : ℕ) where
       (n.factorial : ℝ) / (n : ℝ) ^ n ≤ rowLinearMixedCoefficient A
 
 /--
+The same Gurvits coefficient-from-capacity frontier, stated literally on the
+squarefree coefficient of the row-linear `MvPolynomial`.
+-/
+structure GurvitsSquarefreeCoefficientFromCapacityCore (n : ℕ) where
+  squarefree_coefficient_bound :
+    ∀ A : Matrix (Fin n) (Fin n) ℝ,
+      (∀ i j, 0 ≤ A i j) →
+      RowLinearCapacityAtLeastOne A →
+      (n.factorial : ℝ) / (n : ℝ) ^ n ≤ rowLinearSquarefreeCoefficient A
+
+theorem gurvitsCoefficientFromCapacityCore_of_squarefreeCoefficientCore
+    {n : ℕ} (core : GurvitsSquarefreeCoefficientFromCapacityCore n) :
+    GurvitsCoefficientFromCapacityCore n := by
+  refine ⟨?_⟩
+  intro A hA hcap
+  simpa [rowLinearSquarefreeCoefficient_eq_mixedCoefficient A] using
+    core.squarefree_coefficient_bound A hA hcap
+
+theorem squarefreeCoefficientCore_of_gurvitsCoefficientFromCapacityCore
+    {n : ℕ} (core : GurvitsCoefficientFromCapacityCore n) :
+    GurvitsSquarefreeCoefficientFromCapacityCore n := by
+  refine ⟨?_⟩
+  intro A hA hcap
+  simpa [rowLinearSquarefreeCoefficient_eq_mixedCoefficient A] using
+    core.mixed_coefficient_bound A hA hcap
+
+/--
 The remaining analytic core behind the full theorem.
 
 * `coefficient_bound` is the deep Falikman-Egorychev/Gurvits
   coefficient-from-capacity inequality specialized to row-linear products:
-  the mixed coefficient, i.e. the permanent, is at least `n! / n^n`.
+  the squarefree coefficient, equivalently the mixed coefficient/permanent, is
+  at least `n! / n^n`.
 
 This is deliberately not a proof of Van der Waerden hidden in a harmless name:
 the capacity hypothesis is now proved above from double stochasticity, and
@@ -229,6 +403,12 @@ theorem vanDerWaerdenAnalyticCore_of_gurvitsCoefficientFromCapacityCore
   intro A hA hcap
   simpa [rowLinearMixedCoefficient_eq_permanent A] using
     core.mixed_coefficient_bound A hA hcap
+
+theorem vanDerWaerdenAnalyticCore_of_squarefreeCoefficientCore
+    {n : ℕ} (core : GurvitsSquarefreeCoefficientFromCapacityCore n) :
+    VanDerWaerdenAnalyticCore n :=
+  vanDerWaerdenAnalyticCore_of_gurvitsCoefficientFromCapacityCore
+    (gurvitsCoefficientFromCapacityCore_of_squarefreeCoefficientCore core)
 
 theorem gurvitsCoefficientFromCapacityCore_of_vanDerWaerdenAnalyticCore
     {n : ℕ} (core : VanDerWaerdenAnalyticCore n) :
@@ -425,6 +605,11 @@ theorem gurvitsCoefficientFromCapacityCore_of_le_two (n : ℕ) (hn : n ≤ 2) :
   gurvitsCoefficientFromCapacityCore_of_vanDerWaerdenAnalyticCore
     (vanDerWaerdenAnalyticCore_of_le_two n hn)
 
+theorem squarefreeCoefficientCore_of_le_two (n : ℕ) (hn : n ≤ 2) :
+    GurvitsSquarefreeCoefficientFromCapacityCore n :=
+  squarefreeCoefficientCore_of_gurvitsCoefficientFromCapacityCore
+    (gurvitsCoefficientFromCapacityCore_of_le_two n hn)
+
 theorem van_der_Waerden_permanent_conjecture_of_le_two (n : ℕ) (hn : n ≤ 2)
     (A : Matrix (Fin n) (Fin n) ℝ)
     (hA : A ∈ doublyStochastic ℝ (Fin n)) :
@@ -510,6 +695,18 @@ theorem van_der_Waerden_permanent_conjecture_from_gurvitsCoefficientCore
     (vanDerWaerdenAnalyticCore_of_gurvitsCoefficientFromCapacityCore core) A hA
 
 /--
+The same conditional endpoint from the literal squarefree-coefficient version
+of the Gurvits/AF theorem.
+-/
+theorem van_der_Waerden_permanent_conjecture_from_squarefreeCoefficientCore
+    (n : ℕ) (core : GurvitsSquarefreeCoefficientFromCapacityCore n)
+    (A : Matrix (Fin n) (Fin n) ℝ)
+    (hA : A ∈ doublyStochastic ℝ (Fin n)) :
+    (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent := by
+  exact van_der_Waerden_permanent_conjecture_from_analyticCore n
+    (vanDerWaerdenAnalyticCore_of_squarefreeCoefficientCore core) A hA
+
+/--
 The genuine Van der Waerden permanent lower-bound statement, with the analytic
 core assumption needed only in dimensions `n ≥ 3`; dimensions `0`, `1`, and
 `2` are discharged above.
@@ -531,6 +728,15 @@ theorem van_der_Waerden_permanent_conjecture_from_large_dim_gurvitsCore
     (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent := by
   exact van_der_Waerden_permanent_conjecture_from_large_dim_analyticCore
     (fun m hm => vanDerWaerdenAnalyticCore_of_gurvitsCoefficientFromCapacityCore
+      (core m hm)) n A hA
+
+theorem van_der_Waerden_permanent_conjecture_from_large_dim_squarefreeCoefficientCore
+    (core : ∀ m : ℕ, 3 ≤ m → GurvitsSquarefreeCoefficientFromCapacityCore m)
+    (n : ℕ) (A : Matrix (Fin n) (Fin n) ℝ)
+    (hA : A ∈ doublyStochastic ℝ (Fin n)) :
+    (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent := by
+  exact van_der_Waerden_permanent_conjecture_from_large_dim_analyticCore
+    (fun m hm => vanDerWaerdenAnalyticCore_of_squarefreeCoefficientCore
       (core m hm)) n A hA
 
 theorem chapter22

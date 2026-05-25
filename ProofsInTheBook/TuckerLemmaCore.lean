@@ -282,6 +282,25 @@ theorem antipode_involutive {n : ℕ} : Function.Involutive (@antipode n) := by
       cases X
       rfl
 
+/-- Face inclusion order restricted to nonzero sign vectors. -/
+def Le {n : ℕ} (X Y : NonzeroSignedSubset n) : Prop :=
+  SignedSubset.Le X.1 Y.1
+
+theorem le_refl {n : ℕ} (X : NonzeroSignedSubset n) : Le X X :=
+  SignedSubset.le_refl X.1
+
+theorem le_trans {n : ℕ} {X Y Z : NonzeroSignedSubset n} (hXY : Le X Y) (hYZ : Le Y Z) :
+    Le X Z :=
+  SignedSubset.le_trans hXY hYZ
+
+theorem le_antisymm {n : ℕ} {X Y : NonzeroSignedSubset n} (hXY : Le X Y) (hYX : Le Y X) :
+    X = Y := by
+  exact Subtype.ext (SignedSubset.le_antisymm hXY hYX)
+
+theorem antipode_le_antipode_iff {n : ℕ} {X Y : NonzeroSignedSubset n} :
+    Le X.antipode Y.antipode ↔ Le X Y :=
+  SignedSubset.antipode_le_antipode_iff
+
 end NonzeroSignedSubset
 
 /-- A signed label `±i`, with `i : Fin m`. -/

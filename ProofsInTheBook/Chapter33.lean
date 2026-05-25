@@ -17,7 +17,8 @@ distinct representatives.
 Point-17 status: this file now contains several genuine pieces: the
 row-completion Hall step for a sparse partial square, the state update that
 fills an empty row while preserving the partial Latin property and with an
-exact filled-cell count, the standard
+exact filled-cell count, row/column/symbol relabeling infrastructure for the
+normalization step in Smetaniuk's exact-cardinality induction, the standard
 extension of a Latin rectangle by one row, and the padding reduction
 `completion_from_exact_cardinality_case`, which proves that the `|P| ≤ n - 1`
 case reduces to the exact `|P| = n - 1` Evans case by adding legal entries one
@@ -413,6 +414,149 @@ def setRow {n : ℕ} (P : Fin n → Fin n → Option (Fin n))
 /-- The cells in a fixed full row, independent of whether they are filled. -/
 def fullRowCells {n : ℕ} (i₀ : Fin n) : Finset (Fin n × Fin n) :=
   Finset.univ.image fun j : Fin n => (i₀, j)
+
+/--
+Relabel rows, columns, and symbols of a partial Latin square.
+
+The row and column permutations are read as new-coordinate to old-coordinate
+maps, so a filled old cell `(i,j)` appears at
+`(rowPerm.symm i, colPerm.symm j)`.
+-/
+def relabelPartial {n : ℕ} (rowPerm colPerm symPerm : Equiv.Perm (Fin n))
+    (P : Fin n → Fin n → Option (Fin n)) : Fin n → Fin n → Option (Fin n) :=
+  fun i j => Option.map symPerm (P (rowPerm i) (colPerm j))
+
+/-- Relabel rows, columns, and symbols of a full Latin square. -/
+def relabelSquare {n : ℕ} (rowPerm colPerm symPerm : Equiv.Perm (Fin n))
+    (L : Fin n → Fin n → Fin n) : Fin n → Fin n → Fin n :=
+  fun i j => symPerm (L (rowPerm i) (colPerm j))
+
+lemma relabelPartial_eq_some_iff {n : ℕ} (rowPerm colPerm symPerm : Equiv.Perm (Fin n))
+    (P : Fin n → Fin n → Option (Fin n)) (i j a : Fin n) :
+    relabelPartial rowPerm colPerm symPerm P i j = some a ↔
+      P (rowPerm i) (colPerm j) = some (symPerm.symm a) := by
+  constructor
+  · intro h
+    rcases (by simpa [relabelPartial] using h) with ⟨b, hb, hbmap⟩
+    have hb_eq : b = symPerm.symm a := by
+      rw [← hbmap]
+      simp
+    simpa [hb_eq] using hb
+  · intro h
+    simp [relabelPartial, h]
+
+lemma isPartialLatin_relabelPartial {n : ℕ}
+    (rowPerm colPerm symPerm : Equiv.Perm (Fin n))
+    {P : Fin n → Fin n → Option (Fin n)} (hP : IsPartialLatin P) :
+    IsPartialLatin (relabelPartial rowPerm colPerm symPerm P) := by
+  constructor
+  · intro i j₁ j₂ a h₁ h₂
+    have h₁P : P (rowPerm i) (colPerm j₁) = some (symPerm.symm a) :=
+      (relabelPartial_eq_some_iff rowPerm colPerm symPerm P i j₁ a).mp h₁
+    have h₂P : P (rowPerm i) (colPerm j₂) = some (symPerm.symm a) :=
+      (relabelPartial_eq_some_iff rowPerm colPerm symPerm P i j₂ a).mp h₂
+    have hcol : colPerm j₁ = colPerm j₂ :=
+      hP.1 (rowPerm i) (colPerm j₁) (colPerm j₂) (symPerm.symm a) h₁P h₂P
+    exact colPerm.injective hcol
+  · intro i₁ i₂ j a h₁ h₂
+    have h₁P : P (rowPerm i₁) (colPerm j) = some (symPerm.symm a) :=
+      (relabelPartial_eq_some_iff rowPerm colPerm symPerm P i₁ j a).mp h₁
+    have h₂P : P (rowPerm i₂) (colPerm j) = some (symPerm.symm a) :=
+      (relabelPartial_eq_some_iff rowPerm colPerm symPerm P i₂ j a).mp h₂
+    have hrow : rowPerm i₁ = rowPerm i₂ :=
+      hP.2 (rowPerm i₁) (rowPerm i₂) (colPerm j) (symPerm.symm a) h₁P h₂P
+    exact rowPerm.injective hrow
+
+lemma isLatinSquare_relabelSquare {n : ℕ}
+    (rowPerm colPerm symPerm : Equiv.Perm (Fin n))
+    {L : Fin n → Fin n → Fin n} (hL : IsLatinSquare L) :
+    IsLatinSquare (relabelSquare rowPerm colPerm symPerm L) := by
+  constructor
+  · intro i j₁ j₂ h
+    have h' : L (rowPerm i) (colPerm j₁) = L (rowPerm i) (colPerm j₂) :=
+      symPerm.injective h
+    have hcol : colPerm j₁ = colPerm j₂ := hL.1 (rowPerm i) h'
+    exact colPerm.injective hcol
+  · intro j i₁ i₂ h
+    have h' : L (rowPerm i₁) (colPerm j) = L (rowPerm i₂) (colPerm j) :=
+      symPerm.injective h
+    have hrow : rowPerm i₁ = rowPerm i₂ := hL.2 (colPerm j) h'
+    exact rowPerm.injective hrow
+
+lemma completes_relabelPartial {n : ℕ} (rowPerm colPerm symPerm : Equiv.Perm (Fin n))
+    {P : Fin n → Fin n → Option (Fin n)} {L : Fin n → Fin n → Fin n}
+    (hL : Completes P L) :
+    Completes (relabelPartial rowPerm colPerm symPerm P)
+      (relabelSquare rowPerm colPerm symPerm L) := by
+  constructor
+  · exact isLatinSquare_relabelSquare rowPerm colPerm symPerm hL.1
+  · intro i j a hcell
+    have hP : P (rowPerm i) (colPerm j) = some (symPerm.symm a) :=
+      (relabelPartial_eq_some_iff rowPerm colPerm symPerm P i j a).mp hcell
+    have hbase := hL.2 (rowPerm i) (colPerm j) (symPerm.symm a) hP
+    simp [relabelSquare, hbase]
+
+lemma completes_of_relabelPartial {n : ℕ} (rowPerm colPerm symPerm : Equiv.Perm (Fin n))
+    {P : Fin n → Fin n → Option (Fin n)} {L' : Fin n → Fin n → Fin n}
+    (hL' : Completes (relabelPartial rowPerm colPerm symPerm P) L') :
+    Completes P (relabelSquare rowPerm.symm colPerm.symm symPerm.symm L') := by
+  constructor
+  · exact isLatinSquare_relabelSquare rowPerm.symm colPerm.symm symPerm.symm hL'.1
+  · intro i j a hP
+    have hcell :
+        relabelPartial rowPerm colPerm symPerm P (rowPerm.symm i) (colPerm.symm j) =
+          some (symPerm a) := by
+      simp [relabelPartial, hP]
+    have hbase := hL'.2 (rowPerm.symm i) (colPerm.symm j) (symPerm a) hcell
+    simp [relabelSquare, hbase]
+
+lemma completion_exists_relabelPartial_iff {n : ℕ}
+    (rowPerm colPerm symPerm : Equiv.Perm (Fin n))
+    (P : Fin n → Fin n → Option (Fin n)) :
+    (∃ L : Fin n → Fin n → Fin n, Completes (relabelPartial rowPerm colPerm symPerm P) L) ↔
+      ∃ L : Fin n → Fin n → Fin n, Completes P L := by
+  constructor
+  · intro h
+    rcases h with ⟨L', hL'⟩
+    exact ⟨relabelSquare rowPerm.symm colPerm.symm symPerm.symm L',
+      completes_of_relabelPartial rowPerm colPerm symPerm hL'⟩
+  · intro h
+    rcases h with ⟨L, hL⟩
+    exact ⟨relabelSquare rowPerm colPerm symPerm L,
+      completes_relabelPartial rowPerm colPerm symPerm hL⟩
+
+lemma filledCells_relabelPartial {n : ℕ} (rowPerm colPerm symPerm : Equiv.Perm (Fin n))
+    (P : Fin n → Fin n → Option (Fin n)) :
+    filledCells (relabelPartial rowPerm colPerm symPerm P) =
+      (filledCells P).image (fun ij : Fin n × Fin n =>
+        (rowPerm.symm ij.1, colPerm.symm ij.2)) := by
+  classical
+  ext ij
+  constructor
+  · intro hij
+    have hfilled : (P (rowPerm ij.1) (colPerm ij.2)).isSome := by
+      simpa [filledCells, relabelPartial] using hij
+    refine Finset.mem_image.mpr ⟨(rowPerm ij.1, colPerm ij.2), ?_, ?_⟩
+    · simpa [filledCells] using hfilled
+    · simp
+  · intro hij
+    rcases Finset.mem_image.mp hij with ⟨ijOld, hOld, hijEq⟩
+    have hfilledOld : (P ijOld.1 ijOld.2).isSome := by
+      simpa [filledCells] using hOld
+    have hi : ij.1 = rowPerm.symm ijOld.1 := (congrArg Prod.fst hijEq).symm
+    have hj : ij.2 = colPerm.symm ijOld.2 := (congrArg Prod.snd hijEq).symm
+    simp [filledCells, relabelPartial, hi, hj, hfilledOld]
+
+lemma filledCells_relabelPartial_card {n : ℕ}
+    (rowPerm colPerm symPerm : Equiv.Perm (Fin n))
+    (P : Fin n → Fin n → Option (Fin n)) :
+    (filledCells (relabelPartial rowPerm colPerm symPerm P)).card =
+      (filledCells P).card := by
+  rw [filledCells_relabelPartial rowPerm colPerm symPerm P]
+  rw [Finset.card_image_of_injective]
+  intro x y h
+  exact Prod.ext (rowPerm.symm.injective (congrArg Prod.fst h))
+    (colPerm.symm.injective (congrArg Prod.snd h))
 
 lemma completes_of_extendsPartial {n : ℕ} {P Q : Fin n → Fin n → Option (Fin n)}
     {L : Fin n → Fin n → Fin n} (hPQ : ExtendsPartial P Q) (hQL : Completes Q L) :

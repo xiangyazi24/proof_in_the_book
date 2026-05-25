@@ -669,6 +669,26 @@ theorem checkerboardExchangeEndpoint_boundary_zero
     scaledCheckerboardPerturbation_exchangeAmount_endpoint_zero
       (M := M) (r := r) (s := s) (c := c) (d := d) hrs hcd
 
+omit [Fintype n] in
+theorem checkerboardExchangeEndpoint_rowSub_zero_of_le
+    {M : Matrix n n ℝ} {r s c d : n} (hrs : r ≠ s) (hcd : c ≠ d)
+    (hle : M r d ≤ M s c) :
+    checkerboardExchangeEndpoint M r s c d r d = 0 := by
+  rw [checkerboardExchangeEndpoint_apply_add_sub hrs hcd]
+  unfold checkerboardExchangeAmount
+  rw [min_eq_left hle]
+  ring
+
+omit [Fintype n] in
+theorem checkerboardExchangeEndpoint_colSub_zero_of_le
+    {M : Matrix n n ℝ} {r s c d : n} (hcd : c ≠ d)
+    (hle : M s c ≤ M r d) :
+    checkerboardExchangeEndpoint M r s c d s c = 0 := by
+  rw [checkerboardExchangeEndpoint_apply_sub_sub hcd]
+  unfold checkerboardExchangeAmount
+  rw [min_eq_right hle]
+  ring
+
 /-! ## Elementary `2 × 2` log-concavity model -/
 
 /-- The permanent bilinear form for a matrix with rows `u` and `v` in dimension `2`. -/

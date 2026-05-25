@@ -1455,4 +1455,16 @@ theorem chapter39_of_kyFan {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
   chapter39 hk hn (tuckerLemmaStatement_of_kyFan (by omega) hfan)
 
+/--
+Chapter 39 from the exact signed-permutation parity count.  This is the
+smallest remaining combinatorial frontier in this file.
+-/
+theorem chapter39_of_kyFanPrefixParity {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (hparity : KyFanPrefixParityStatement n (n - 1)) :
+    (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
+  chapter39 hk hn (tuckerLemmaStatement_of_kyFanPrefixParity (by omega) hparity)
+
 end ProofsInTheBook.Chapter39

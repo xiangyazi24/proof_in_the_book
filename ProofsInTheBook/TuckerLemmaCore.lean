@@ -1155,6 +1155,58 @@ theorem alternatingPrefixLabelChains_card {n m : ℕ} (hn : 0 < n)
     positiveAlternatingPrefixLabelChains_card_eq_negative label hantipodal]
   omega
 
+theorem alternatingPrefixLabelChains_card_le_punctured_last {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    (alternatingPrefixLabelChains label).card ≤
+      (alternatingPuncturedPrefixLabelChains label).card := by
+  classical
+  refine Finset.card_le_card_of_injOn (fun P : SignedPermutation (n + 1) =>
+      (P, Fin.last n)) ?mem ?inj
+  · intro P hP
+    rw [alternatingPrefixLabelChains] at hP
+    rw [alternatingPuncturedPrefixLabelChains]
+    rcases Finset.mem_union.mp hP with hpos | hneg
+    · exact Finset.mem_union_left _
+        (by
+          have hpos' : PositiveAlternatingPrefixLabels label P := by
+            simpa [positiveAlternatingPrefixLabelChains] using hpos
+          simpa [positiveAlternatingPuncturedPrefixLabelChains] using
+            positiveAlternatingPrefixLabels_punctured_last hpos')
+    · exact Finset.mem_union_right _
+        (by
+          have hneg' : NegativeAlternatingPrefixLabels label P := by
+            simpa [negativeAlternatingPrefixLabelChains] using hneg
+          simpa [negativeAlternatingPuncturedPrefixLabelChains] using
+            negativeAlternatingPrefixLabels_punctured_last hneg')
+  · intro P _ Q _ hPQ
+    exact congrArg Prod.fst hPQ
+
+theorem alternatingPrefixLabelChains_card_le_punctured_zero {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    (alternatingPrefixLabelChains label).card ≤
+      (alternatingPuncturedPrefixLabelChains label).card := by
+  classical
+  refine Finset.card_le_card_of_injOn (fun P : SignedPermutation (n + 1) =>
+      (P, (0 : Fin (n + 1)))) ?mem ?inj
+  · intro P hP
+    rw [alternatingPrefixLabelChains] at hP
+    rw [alternatingPuncturedPrefixLabelChains]
+    rcases Finset.mem_union.mp hP with hpos | hneg
+    · exact Finset.mem_union_right _
+        (by
+          have hpos' : PositiveAlternatingPrefixLabels label P := by
+            simpa [positiveAlternatingPrefixLabelChains] using hpos
+          simpa [negativeAlternatingPuncturedPrefixLabelChains] using
+            positiveAlternatingPrefixLabels_punctured_zero hpos')
+    · exact Finset.mem_union_left _
+        (by
+          have hneg' : NegativeAlternatingPrefixLabels label P := by
+            simpa [negativeAlternatingPrefixLabelChains] using hneg
+          simpa [positiveAlternatingPuncturedPrefixLabelChains] using
+            negativeAlternatingPrefixLabels_punctured_zero hneg')
+  · intro P _ Q _ hPQ
+    exact congrArg Prod.fst hPQ
+
 /-- In dimension one, every signed-permutation prefix chain is alternating
 in exactly one of the two possible first signs. -/
 theorem alternatingPrefixLabelChains_card_one

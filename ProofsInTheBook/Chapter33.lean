@@ -25,6 +25,17 @@ performing the final column-switching process.  A direct iteration of
 is added, because the current partial square then has more than `n - 1`
 filled cells and the double-counting hypotheses below no longer describe the
 enlarged state.
+
+The tempting strengthened row step with fixed entries in the active row also
+does not follow from the existing count alone.  After `r` completed rows and
+`m = n - r` unfinished rows, Hall for a set `S` of still-empty columns can be
+forced by elementary counting in the small range `|S| ≤ m - k` and in the
+large range `r < |S|`, where `k` is the number of fixed entries in the active
+row.  The middle range `m - k < |S| ≤ r` is exactly where the naive induction
+has no contradiction from the available pair counts; this is the point where
+the book uses Smetaniuk's diagonal placement and switching construction.  That
+switching lemma is the honest remaining frontier for upgrading `chapter33` to
+the full completion theorem.
 -/
 
 namespace ProofsInTheBook.Chapter33

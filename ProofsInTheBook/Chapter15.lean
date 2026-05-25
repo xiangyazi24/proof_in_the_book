@@ -10,15 +10,14 @@ Intended Lean theorem: for `points : Finset (EuclideanSpace ℝ (Fin d))`,
 `2^d < points.card` should imply that three points of `points` make an obtuse
 angle, expressed by a negative inner product.
 
-Formalization status (playbook point 17): status ③. The reduction from the
+Formalization status (playbook point 17): status ①. The reduction from the
 no-obtuse-angle condition to the antipodal/supporting-strip condition is
 formalized below. The Klee packing geometry is formalized through the
 half-sized convex-hull copies: they lie inside the original convex hull, have
-volume `2^{-d}` times the hull volume, and are pairwise a.e.-disjoint. This
-proves the antipodal cardinality bound in the positive-volume case. The
-remaining formal gap is the lower-dimensional zero-volume case, i.e. reducing
-to the affine span of the point set and reapplying the argument in that smaller
-Euclidean space.
+volume `2^{-d}` times the hull volume, and are pairwise a.e.-disjoint. The
+zero ambient-volume case is discharged by reducing to the affine span of the
+point set and reapplying the same antipodal bound in that smaller Euclidean
+space.
 
 This file intentionally does not contain the old sign-vector pigeonhole theorem:
 there is no assumed `sign` map and no assumed injectivity.
@@ -272,20 +271,150 @@ theorem antipodal_card_bound_of_positive_volume {d : ℕ} {points : Finset (Poin
     exact_mod_cast hreal_bound : (points.card : ℝ) ≤ ((2 ^ d : ℕ) : ℝ))
 
 /--
-The remaining frontier after the Klee packing formalization: if the convex hull
-has zero ambient `d`-dimensional volume, one should reduce to its affine span and
-apply the same theorem in lower dimension.
+Coordinates on the affine span direction of a point set, with an arbitrary base
+point in the affine span. Points outside the affine span are sent to `0`; all
+uses below are restricted to the original finite set.
 -/
-theorem antipodal_card_bound_from_zero_volume_frontier {d : ℕ}
-    (zero_volume_antipodal_card_bound :
-      ∀ points : Finset (Point d), HasAntipodalStrips points →
-        MeasureTheory.volume (convexHull ℝ (points : Set (Point d))) = 0 →
-        points.card ≤ 2 ^ d)
-    (points : Finset (Point d)) (hanti : HasAntipodalStrips points) :
-    points.card ≤ 2 ^ d := by
+def affineSpanCoord {d : ℕ} (points : Finset (Point d)) (p0 : Point d)
+    (hp0A : p0 ∈ affineSpan ℝ (points : Set (Point d)))
+    (p : Point d) :
+    Point (Module.finrank ℝ (affineSpan ℝ (points : Set (Point d))).direction) := by
+  classical
+  let A := affineSpan ℝ (points : Set (Point d))
+  let W := A.direction
+  exact if hp : p ∈ A then
+    (stdOrthonormalBasis ℝ W).repr ⟨p - p0, A.vsub_mem_direction hp hp0A⟩
+  else 0
+
+theorem affineSpanCoord_inner_eq {d : ℕ} {points : Finset (Point d)}
+    {p0 a b x : Point d}
+    (hp0A : p0 ∈ affineSpan ℝ (points : Set (Point d)))
+    (haA : a ∈ affineSpan ℝ (points : Set (Point d)))
+    (hbA : b ∈ affineSpan ℝ (points : Set (Point d)))
+    (hxA : x ∈ affineSpan ℝ (points : Set (Point d))) :
+    ⟪affineSpanCoord points p0 hp0A b - affineSpanCoord points p0 hp0A a,
+      affineSpanCoord points p0 hp0A x - affineSpanCoord points p0 hp0A a⟫ =
+      ⟪b - a, x - a⟫ := by
+  let A := affineSpan ℝ (points : Set (Point d))
+  let W := A.direction
+  let e := (stdOrthonormalBasis ℝ W).repr
+  let va : W := ⟨a - p0, A.vsub_mem_direction haA hp0A⟩
+  let vb : W := ⟨b - p0, A.vsub_mem_direction hbA hp0A⟩
+  let vx : W := ⟨x - p0, A.vsub_mem_direction hxA hp0A⟩
+  have haCoord : affineSpanCoord points p0 hp0A a = e va := by
+    simp [affineSpanCoord, A, W, e, va, haA]
+  have hbCoord : affineSpanCoord points p0 hp0A b = e vb := by
+    simp [affineSpanCoord, A, W, e, vb, hbA]
+  have hxCoord : affineSpanCoord points p0 hp0A x = e vx := by
+    simp [affineSpanCoord, A, W, e, vx, hxA]
+  rw [haCoord, hbCoord, hxCoord]
+  calc
+    ⟪e vb - e va, e vx - e va⟫ = ⟪e (vb - va), e (vx - va)⟫ := by simp
+    _ = ⟪vb - va, vx - va⟫ := by rw [LinearIsometryEquiv.inner_map_map]
+    _ = ⟪b - a, x - a⟫ := by
+      rw [Submodule.coe_inner]
+      change ⟪((vb - va : W) : Point d), ((vx - va : W) : Point d)⟫ =
+        ⟪b - a, x - a⟫
+      simp [va, vb, vx]
+
+theorem affineSpanCoord_injOn {d : ℕ} {points : Finset (Point d)} {p0 : Point d}
+    (hp0A : p0 ∈ affineSpan ℝ (points : Set (Point d))) :
+    Set.InjOn (affineSpanCoord points p0 hp0A) (points : Set (Point d)) := by
+  intro x hx y hy hxy
+  let A := affineSpan ℝ (points : Set (Point d))
+  let W := A.direction
+  let e := (stdOrthonormalBasis ℝ W).repr
+  have hxA : x ∈ A := subset_affineSpan ℝ (points : Set (Point d)) hx
+  have hyA : y ∈ A := subset_affineSpan ℝ (points : Set (Point d)) hy
+  let vx : W := ⟨x - p0, A.vsub_mem_direction hxA hp0A⟩
+  let vy : W := ⟨y - p0, A.vsub_mem_direction hyA hp0A⟩
+  have hxCoord : affineSpanCoord points p0 hp0A x = e vx := by
+    simp [affineSpanCoord, A, W, e, vx, hxA]
+  have hyCoord : affineSpanCoord points p0 hp0A y = e vy := by
+    simp [affineSpanCoord, A, W, e, vy, hyA]
+  have hxy' : e vx = e vy := by simpa [hxCoord, hyCoord] using hxy
+  have hv : vx = vy := e.injective hxy'
+  have hval : x - p0 = y - p0 := by
+    simpa [vx, vy] using congrArg Subtype.val hv
+  exact sub_left_injective hval
+
+theorem HasAntipodalStrips.image_affineSpanCoord {d : ℕ} {points : Finset (Point d)}
+    (hanti : HasAntipodalStrips points) {p0 : Point d}
+    (hp0A : p0 ∈ affineSpan ℝ (points : Set (Point d))) :
+    HasAntipodalStrips (points.image (affineSpanCoord points p0 hp0A)) := by
+  intro a' ha' b' hb' hab' x' hx'
+  rw [Finset.mem_image] at ha' hb' hx'
+  rcases ha' with ⟨a, ha, rfl⟩
+  rcases hb' with ⟨b, hb, rfl⟩
+  rcases hx' with ⟨x, hx, rfl⟩
+  have hab : a ≠ b := by
+    intro h
+    subst h
+    exact hab' rfl
+  have haA : a ∈ affineSpan ℝ (points : Set (Point d)) := subset_affineSpan ℝ _ ha
+  have hbA : b ∈ affineSpan ℝ (points : Set (Point d)) := subset_affineSpan ℝ _ hb
+  have hxA : x ∈ affineSpan ℝ (points : Set (Point d)) := subset_affineSpan ℝ _ hx
+  constructor
+  · simpa [affineSpanCoord_inner_eq hp0A haA hbA hxA] using
+      (hanti a ha b hb hab x hx).1
+  · simpa [affineSpanCoord_inner_eq hp0A hbA haA hxA] using
+      (hanti a ha b hb hab x hx).2
+
+theorem convexHull_volume_pos_of_affineSpan_eq_top {d : ℕ} (points : Finset (Point d))
+    (hspan : affineSpan ℝ (points : Set (Point d)) = ⊤) :
+    0 < MeasureTheory.volume (convexHull ℝ (points : Set (Point d))) := by
+  have hnonempty : (interior (convexHull ℝ (points : Set (Point d)))).Nonempty := by
+    exact interior_convexHull_nonempty_iff_affineSpan_eq_top.2 hspan
+  exact (isOpen_interior.measure_pos MeasureTheory.volume hnonempty).trans_le
+    (measure_mono interior_subset)
+
+theorem affineSpan_ne_top_of_convexHull_volume_zero {d : ℕ} {points : Finset (Point d)}
+    (hzero : MeasureTheory.volume (convexHull ℝ (points : Set (Point d))) = 0) :
+    affineSpan ℝ (points : Set (Point d)) ≠ ⊤ := by
+  intro hspan
+  have hpos := convexHull_volume_pos_of_affineSpan_eq_top points hspan
+  rw [hzero] at hpos
+  exact (lt_irrefl (0 : ℝ≥0∞)) hpos
+
+/-- Klee's antipodal-set cardinality bound, including the lower-dimensional zero-volume case. -/
+theorem antipodal_card_bound {d : ℕ} (points : Finset (Point d))
+    (hanti : HasAntipodalStrips points) : points.card ≤ 2 ^ d := by
+  classical
+  revert points
+  refine Nat.strong_induction_on d ?_
+  intro d ih points hanti
   by_cases hvol0 : MeasureTheory.volume (convexHull ℝ (points : Set (Point d))) ≠ 0
   · exact antipodal_card_bound_of_positive_volume hanti hvol0
-  · exact zero_volume_antipodal_card_bound points hanti (not_not.mp hvol0)
+  · have hzero :
+        MeasureTheory.volume (convexHull ℝ (points : Set (Point d))) = 0 := not_not.mp hvol0
+    by_cases hempty : points = ∅
+    · simp [hempty]
+    · obtain ⟨p0, hp0⟩ := Finset.nonempty_iff_ne_empty.2 hempty
+      have hp0A : p0 ∈ affineSpan ℝ (points : Set (Point d)) := subset_affineSpan ℝ _ hp0
+      let k := Module.finrank ℝ (affineSpan ℝ (points : Set (Point d))).direction
+      let f := affineSpanCoord points p0 hp0A
+      let qpoints : Finset (Point k) := points.image f
+      have hqanti : HasAntipodalStrips qpoints := by
+        dsimp [qpoints, f]
+        exact hanti.image_affineSpanCoord hp0A
+      have hqcard : qpoints.card = points.card := by
+        dsimp [qpoints, f]
+        exact Finset.card_image_of_injOn (affineSpanCoord_injOn hp0A)
+      have hspan_ne : affineSpan ℝ (points : Set (Point d)) ≠ ⊤ :=
+        affineSpan_ne_top_of_convexHull_volume_zero hzero
+      have hdir_ne : (affineSpan ℝ (points : Set (Point d))).direction ≠ ⊤ := by
+        intro hdir
+        exact hspan_ne ((AffineSubspace.direction_eq_top_iff_of_nonempty ⟨p0, hp0A⟩).1 hdir)
+      have hklt : k < d := by
+        dsimp [k]
+        simpa [finrank_euclideanSpace_fin] using
+          (Submodule.finrank_lt (K := ℝ) (V := Point d)
+            (s := (affineSpan ℝ (points : Set (Point d))).direction) hdir_ne)
+      have hqbound : qpoints.card ≤ 2 ^ k := ih k hklt qpoints hqanti
+      calc
+        points.card = qpoints.card := hqcard.symm
+        _ ≤ 2 ^ k := hqbound
+        _ ≤ 2 ^ d := Nat.pow_le_pow_right (by norm_num : 0 < 2) (Nat.le_of_lt hklt)
 
 theorem noObtuseAngles_iff_not_exists_obtuse {d : ℕ} (points : Finset (Point d)) :
     NoObtuseAngles points ↔
@@ -346,36 +475,12 @@ theorem chapter15_from_antipodal_card_bound {d : ℕ}
   exact (not_lt_of_ge (antipodal_card_bound points hno.hasAntipodalStrips)) hcard
 
 /--
-Chapter 15 from the only remaining geometric frontier after the Klee packing
-work above: the zero ambient-volume case.
--/
-theorem chapter15_from_zero_volume_frontier {d : ℕ}
-    (zero_volume_antipodal_card_bound :
-      ∀ points : Finset (Point d), HasAntipodalStrips points →
-        MeasureTheory.volume (convexHull ℝ (points : Set (Point d))) = 0 →
-        points.card ≤ 2 ^ d)
-    (points : Finset (Point d)) (hcard : 2 ^ d < points.card) :
-    ∃ x ∈ points, ∃ y ∈ points, ∃ z ∈ points,
-      x ≠ y ∧ x ≠ z ∧ y ≠ z ∧ ObtuseTriple x y z :=
-  chapter15_from_antipodal_card_bound
-    (antipodal_card_bound_from_zero_volume_frontier zero_volume_antipodal_card_bound) points hcard
-
-/--
 Canonical Chapter 15 theorem.
-
-Status ③ in the playbook: this has the genuine Danzer-Grünbaum conclusion, but
-is conditional only on the honest remaining frontier, the zero ambient-volume
-case of the antipodal cardinality bound.
 -/
-theorem chapter15 {d : ℕ}
-    (zero_volume_antipodal_card_bound :
-      ∀ points : Finset (Point d), HasAntipodalStrips points →
-        MeasureTheory.volume (convexHull ℝ (points : Set (Point d))) = 0 →
-        points.card ≤ 2 ^ d)
-    (points : Finset (Point d)) (hcard : 2 ^ d < points.card) :
+theorem chapter15 {d : ℕ} (points : Finset (Point d)) (hcard : 2 ^ d < points.card) :
     ∃ x ∈ points, ∃ y ∈ points, ∃ z ∈ points,
       x ≠ y ∧ x ≠ z ∧ y ≠ z ∧ ObtuseTriple x y z :=
-  chapter15_from_zero_volume_frontier zero_volume_antipodal_card_bound points hcard
+  chapter15_from_antipodal_card_bound antipodal_card_bound points hcard
 
 end
 

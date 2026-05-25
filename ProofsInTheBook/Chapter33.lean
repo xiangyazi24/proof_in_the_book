@@ -19,7 +19,8 @@ row-completion Hall step for a sparse partial square, the standard extension
 of a Latin rectangle by one row, and the padding reduction
 `completion_from_exact_cardinality_case`, which proves that the `|P| < n - 1`
 case reduces to the exact `|P| = n - 1` Evans case by adding legal entries one
-at a time.  It is still not the full Evans/Smetaniuk completion theorem.  The
+at a time.  The complete completion theorem is also discharged for orders `0`
+and `1`.  It is still not the full Evans/Smetaniuk completion theorem.  The
 remaining missing infrastructure is the exact-cardinality Smetaniuk induction:
 permuting rows/columns/symbols so a singleton symbol lies on the back diagonal
 and all other filled cells lie above it, applying the order-`n - 1` induction
@@ -728,6 +729,36 @@ theorem completion_from_exact_cardinality_case {n : ℕ}
   obtain ⟨Q, hQ, hPQ, hQcard⟩ := extend_partialLatin_to_exact hP hfilled_le
   obtain ⟨L, hL⟩ := hexact Q hQ hQcard
   exact ⟨L, completes_of_extendsPartial hPQ hL⟩
+
+/-!
+### Elementary complete orders
+
+Orders `0` and `1` do not need the Evans/Smetaniuk induction.
+-/
+
+theorem latin_square_completion_order_zero (P : Fin 0 → Fin 0 → Option (Fin 0)) :
+    ∃ L : Fin 0 → Fin 0 → Fin 0, Completes P L := by
+  refine ⟨fun i => Fin.elim0 i, ?_⟩
+  simp [Completes, IsLatinSquare]
+
+theorem latin_square_completion_order_one (P : Fin 1 → Fin 1 → Option (Fin 1)) :
+    ∃ L : Fin 1 → Fin 1 → Fin 1, Completes P L := by
+  refine ⟨fun _ _ => 0, ?_⟩
+  constructor
+  · constructor
+    · intro _i x y _h
+      exact Subsingleton.elim x y
+    · intro _j x y _h
+      exact Subsingleton.elim x y
+  · intro _i _j _a _hP
+    exact Subsingleton.elim _ _
+
+theorem latin_square_completion_order_le_one (n : ℕ) (hn : n ≤ 1)
+    (P : Fin n → Fin n → Option (Fin n)) :
+    ∃ L : Fin n → Fin n → Fin n, Completes P L := by
+  interval_cases n
+  · simpa using latin_square_completion_order_zero P
+  · simpa using latin_square_completion_order_one P
 
 /-- If every used symbol has a witness cell, then the pair count of common-used
 symbols times columns is bounded by the total filled cells. -/

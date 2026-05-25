@@ -689,6 +689,172 @@ theorem checkerboardExchangeEndpoint_colSub_zero_of_le
   rw [min_eq_right hle]
   ring
 
+omit [Fintype n] in
+theorem checkerboardExchangeEndpoint_backward_line_self
+    {M : Matrix n n ℝ} {r s c d : n} (hrs : r ≠ s) (hcd : c ≠ d)
+    (hpos : 0 < checkerboardExchangeAmount M r s c d +
+      checkerboardExchangeAmount M r s d c) :
+    twoRowPerturbation (checkerboardExchangeEndpoint M r s d c) r s
+        (scaledCheckerboardDirection (n := n)
+          (checkerboardExchangeAmount M r s c d +
+            checkerboardExchangeAmount M r s d c) c d)
+        (-(scaledCheckerboardDirection (n := n)
+          (checkerboardExchangeAmount M r s c d +
+            checkerboardExchangeAmount M r s d c) c d))
+        (checkerboardExchangeAmount M r s d c /
+          (checkerboardExchangeAmount M r s c d +
+            checkerboardExchangeAmount M r s d c)) = M := by
+  ext i j
+  by_cases his : i = s
+  · subst i
+    by_cases hjc : j = c
+    · subst j
+      simp [checkerboardExchangeEndpoint, twoRowPerturbation, scaledCheckerboardDirection,
+        checkerboardDirection, hcd]
+      field_simp [ne_of_gt hpos]
+      ring
+    · by_cases hjd : j = d
+      · subst j
+        simp [checkerboardExchangeEndpoint, twoRowPerturbation, scaledCheckerboardDirection,
+          checkerboardDirection, hcd]
+        field_simp [ne_of_gt hpos]
+        ring
+      · simp [checkerboardExchangeEndpoint, twoRowPerturbation, scaledCheckerboardDirection,
+          checkerboardDirection, hjc, hjd]
+  · by_cases hir : i = r
+    · subst i
+      by_cases hjc : j = c
+      · subst j
+        simp [checkerboardExchangeEndpoint, twoRowPerturbation, scaledCheckerboardDirection,
+          checkerboardDirection, hrs, hcd]
+        field_simp [ne_of_gt hpos]
+        ring
+      · by_cases hjd : j = d
+        · subst j
+          simp [checkerboardExchangeEndpoint, twoRowPerturbation, scaledCheckerboardDirection,
+            checkerboardDirection, hrs, hcd]
+          field_simp [ne_of_gt hpos]
+          ring
+        · simp [checkerboardExchangeEndpoint, twoRowPerturbation, scaledCheckerboardDirection,
+            checkerboardDirection, his, hjc, hjd]
+    · simp [checkerboardExchangeEndpoint, twoRowPerturbation, his, hir]
+
+omit [Fintype n] in
+theorem checkerboardExchangeEndpoint_backward_line_forwardEndpoint
+    {M : Matrix n n ℝ} {r s c d : n} (hrs : r ≠ s) (hcd : c ≠ d) :
+    twoRowPerturbation (checkerboardExchangeEndpoint M r s d c) r s
+        (scaledCheckerboardDirection (n := n)
+          (checkerboardExchangeAmount M r s c d +
+            checkerboardExchangeAmount M r s d c) c d)
+        (-(scaledCheckerboardDirection (n := n)
+          (checkerboardExchangeAmount M r s c d +
+            checkerboardExchangeAmount M r s d c) c d)) 1 =
+      checkerboardExchangeEndpoint M r s c d := by
+  ext i j
+  by_cases his : i = s
+  · subst i
+    by_cases hjc : j = c
+    · subst j
+      simp [checkerboardExchangeEndpoint, twoRowPerturbation, scaledCheckerboardDirection,
+        checkerboardDirection, hcd]
+    · by_cases hjd : j = d
+      · subst j
+        simp [checkerboardExchangeEndpoint, twoRowPerturbation, scaledCheckerboardDirection,
+          checkerboardDirection, hcd]
+        ring
+      · simp [checkerboardExchangeEndpoint, twoRowPerturbation, scaledCheckerboardDirection,
+          checkerboardDirection, hjc, hjd]
+  · by_cases hir : i = r
+    · subst i
+      by_cases hjc : j = c
+      · subst j
+        simp [checkerboardExchangeEndpoint, twoRowPerturbation, scaledCheckerboardDirection,
+          checkerboardDirection, hrs, hcd]
+        ring
+      · by_cases hjd : j = d
+        · subst j
+          simp [checkerboardExchangeEndpoint, twoRowPerturbation, scaledCheckerboardDirection,
+            checkerboardDirection, hrs, hcd]
+        · simp [checkerboardExchangeEndpoint, twoRowPerturbation, scaledCheckerboardDirection,
+            checkerboardDirection, his, hjc, hjd]
+    · simp [checkerboardExchangeEndpoint, twoRowPerturbation, his, hir]
+
+/--
+Convexity on the line joining the two opposite checkerboard exchange
+endpoints.  The original matrix is an interior point of that line whenever the
+two exchange amounts have positive sum, so its permanent is bounded by the
+corresponding convex combination of the two endpoint permanents.
+-/
+theorem checkerboardExchangeEndpoint_backward_line_permanent_le
+    {M : Matrix n n ℝ} {r s c d : n} (hrs : r ≠ s) (hcd : c ≠ d)
+    (hM : M ∈ doublyStochastic ℝ n)
+    (hpos : 0 < checkerboardExchangeAmount M r s c d +
+      checkerboardExchangeAmount M r s d c) :
+    M.permanent ≤
+      (1 - checkerboardExchangeAmount M r s d c /
+          (checkerboardExchangeAmount M r s c d +
+            checkerboardExchangeAmount M r s d c)) *
+        (checkerboardExchangeEndpoint M r s d c).permanent +
+      (checkerboardExchangeAmount M r s d c /
+          (checkerboardExchangeAmount M r s c d +
+            checkerboardExchangeAmount M r s d c)) *
+        (checkerboardExchangeEndpoint M r s c d).permanent := by
+  let a := checkerboardExchangeAmount M r s c d
+  let b := checkerboardExchangeAmount M r s d c
+  have ha0 : 0 ≤ a := by
+    dsimp [a]
+    exact checkerboardExchangeAmount_nonneg
+      (fun i j => nonneg_of_mem_doublyStochastic hM)
+  have hb0 : 0 ≤ b := by
+    dsimp [b]
+    exact checkerboardExchangeAmount_nonneg
+      (fun i j => nonneg_of_mem_doublyStochastic hM)
+  have hsumpos : 0 < a + b := by
+    simpa [a, b] using hpos
+  have hsum0 : 0 ≤ a + b := le_of_lt hsumpos
+  have hstart :
+      checkerboardExchangeEndpoint M r s d c ∈ doublyStochastic ℝ n :=
+    checkerboardExchangeEndpoint_mem_doublyStochastic
+      (M := M) (r := r) (s := s) (c := d) (d := c) hrs hcd.symm hM
+  have hrd : a + b ≤ checkerboardExchangeEndpoint M r s d c r d := by
+    rw [checkerboardExchangeEndpoint_apply_add_add
+      (M := M) (r := r) (s := s) (c := d) (d := c) hrs hcd.symm]
+    dsimp [a, b]
+    linarith [checkerboardExchangeAmount_le_rowSub
+      (M := M) (r := r) (s := s) (c := c) (d := d)]
+  have hsc : a + b ≤ checkerboardExchangeEndpoint M r s d c s c := by
+    rw [checkerboardExchangeEndpoint_apply_sub_add
+      (M := M) (r := r) (s := s) (c := d) (d := c) hcd.symm]
+    dsimp [a, b]
+    linarith [checkerboardExchangeAmount_le_colSub
+      (M := M) (r := r) (s := s) (c := c) (d := d)]
+  have ht0 : 0 ≤ b / (a + b) := div_nonneg hb0 hsum0
+  have ht1 : b / (a + b) ≤ 1 := by
+    rw [div_le_one hsumpos]
+    linarith
+  have hconv :=
+    (scaledCheckerboardPerturbation_mem_and_permanent_convex_between_endpoints
+      (M := checkerboardExchangeEndpoint M r s d c) (r := r) (s := s)
+      (c := c) (d := d) hrs hcd hstart (a := a + b) hsum0 hrd hsc
+      (t := b / (a + b)) ht0 ht1).2
+  have hself :
+      twoRowPerturbation (checkerboardExchangeEndpoint M r s d c) r s
+          (scaledCheckerboardDirection (n := n) (a + b) c d)
+          (-(scaledCheckerboardDirection (n := n) (a + b) c d)) (b / (a + b)) = M := by
+    simpa [a, b] using
+      checkerboardExchangeEndpoint_backward_line_self
+        (M := M) (r := r) (s := s) (c := c) (d := d) hrs hcd hpos
+  have hforward :
+      twoRowPerturbation (checkerboardExchangeEndpoint M r s d c) r s
+          (scaledCheckerboardDirection (n := n) (a + b) c d)
+          (-(scaledCheckerboardDirection (n := n) (a + b) c d)) 1 =
+        checkerboardExchangeEndpoint M r s c d := by
+    simpa [a, b] using
+      checkerboardExchangeEndpoint_backward_line_forwardEndpoint
+        (M := M) (r := r) (s := s) (c := c) (d := d) hrs hcd
+  rw [hself, hforward] at hconv
+  simpa [a, b] using hconv
+
 /-! ## Elementary `2 × 2` log-concavity model -/
 
 /-- The permanent bilinear form for a matrix with rows `u` and `v` in dimension `2`. -/

@@ -64,8 +64,11 @@ This file does formalize the sharpened combinatorial endpoint under one such
 extra half-cube invariant: if all completed sign vectors have a fixed value in
 one coordinate, then the completed rows inject into a half-cube and
 `Fintype.card ι ≤ 2^d`; see `PerlesMatrix.card_le_two_pow_of_fixedCoordinate`
-and `chapter14_sharp_of_fixedCoordinate`.  The remaining gap is geometric:
-derive that fixed-coordinate/parity/antipodal-free invariant, or an equivalent
+and `chapter14_sharp_of_fixedCoordinate`.  It also proves the more natural
+antipodal-free half-cube endpoint; see
+`PerlesMatrix.card_le_two_pow_of_antipodalFree` and
+`chapter14_sharp_of_antipodalFree`.  The remaining gap is geometric: derive
+that fixed-coordinate/parity/antipodal-free invariant, or an equivalent
 half-cube bound, from raw touching simplices.
 -/
 
@@ -875,6 +878,14 @@ touching-simplex geometry.
 def FixedCoordinateCompletions (M : PerlesMatrix ι κ d) : Prop :=
   ∃ anchor : κ, ∀ x : M.CompletionIndex, M.completedSign x anchor = true
 
+/-- Flip every coordinate of a Boolean sign vector. -/
+def complementSign (v : κ → Bool) : κ → Bool :=
+  fun j => !v j
+
+/-- The natural half-cube condition: completed rows contain no antipodal pair. -/
+def AntipodalFreeCompletions (M : PerlesMatrix ι κ d) : Prop :=
+  ∀ x y : M.CompletionIndex, M.completedSign y ≠ complementSign (M.completedSign x)
+
 lemma eraseCoordinate_completedSign_injective_of_fixed (M : PerlesMatrix ι κ d)
     {anchor : κ} (hfixed : ∀ x : M.CompletionIndex, M.completedSign x anchor = true) :
     Function.Injective
@@ -892,6 +903,76 @@ lemma card_bool_functions_off_coordinate (anchor : κ) :
   classical
   simp [Fintype.card_subtype_compl]
 
+/--
+Choose the representative of an antipodal pair whose anchor coordinate is
+`true`, then erase the anchor coordinate.
+-/
+def normalizeOffCoordinate (anchor : κ) (v : κ → Bool) : ({j : κ // j ≠ anchor} → Bool) :=
+  if v anchor = true then eraseCoordinate anchor v else eraseCoordinate anchor (complementSign v)
+
+omit [Fintype κ] in
+lemma eq_or_eq_complementSign_of_normalizeOffCoordinate_eq (anchor : κ)
+    {v w : κ → Bool} (h : normalizeOffCoordinate anchor v = normalizeOffCoordinate anchor w) :
+    w = v ∨ w = complementSign v := by
+  classical
+  by_cases hv : v anchor = true
+  · by_cases hw : w anchor = true
+    · left
+      funext j
+      by_cases hj : j = anchor
+      · subst j
+        rw [hv, hw]
+      · have hj_eq := congrFun h ⟨j, hj⟩
+        exact (by simpa [normalizeOffCoordinate, eraseCoordinate, hv, hw] using hj_eq.symm)
+    · right
+      have hwfalse : w anchor = false := by
+        cases hwa : w anchor <;> simp_all
+      funext j
+      by_cases hj : j = anchor
+      · subst j
+        simp [complementSign, hv, hwfalse]
+      · have hj_eq := congrFun h ⟨j, hj⟩
+        have hcoord : v j = !w j := by
+          simpa [normalizeOffCoordinate, eraseCoordinate, complementSign, hv, hw] using hj_eq
+        cases hvj : v j <;> cases hwj : w j <;>
+          simp [complementSign, hvj, hwj] at hcoord ⊢
+  · by_cases hw : w anchor = true
+    · right
+      have hvfalse : v anchor = false := by
+        cases hva : v anchor <;> simp_all
+      funext j
+      by_cases hj : j = anchor
+      · subst j
+        simp [complementSign, hvfalse, hw]
+      · have hj_eq := congrFun h ⟨j, hj⟩
+        have hcoord : v j = !w j := by
+          simpa [normalizeOffCoordinate, eraseCoordinate, complementSign, hv, hw] using hj_eq
+        cases hvj : v j <;> cases hwj : w j <;>
+          simp [complementSign, hvj, hwj] at hcoord ⊢
+    · left
+      have hvfalse : v anchor = false := by
+        cases hva : v anchor <;> simp_all
+      have hwfalse : w anchor = false := by
+        cases hwa : w anchor <;> simp_all
+      funext j
+      by_cases hj : j = anchor
+      · subst j
+        rw [hvfalse, hwfalse]
+      · have hj_eq := congrFun h ⟨j, hj⟩
+        have hcoord : !v j = !w j := by
+          simpa [normalizeOffCoordinate, eraseCoordinate, complementSign, hv, hw] using hj_eq
+        cases hvj : v j <;> cases hwj : w j <;>
+          simp [hvj, hwj] at hcoord ⊢
+
+lemma normalizeOffCoordinate_completedSign_injective_of_antipodalFree (M : PerlesMatrix ι κ d)
+    {anchor : κ} (hanti : M.AntipodalFreeCompletions) :
+    Function.Injective
+      (fun x : M.CompletionIndex => normalizeOffCoordinate anchor (M.completedSign x)) := by
+  intro x y hxy
+  rcases eq_or_eq_complementSign_of_normalizeOffCoordinate_eq anchor hxy with hsame | hantiPair
+  · exact M.completedSign_injective hsame.symm
+  · exact False.elim (hanti x y hantiPair)
+
 lemma completionIndex_card_le_halfCube_of_fixed (M : PerlesMatrix ι κ d)
     {anchor : κ} (hfixed : ∀ x : M.CompletionIndex, M.completedSign x anchor = true) :
     Fintype.card M.CompletionIndex ≤ 2 ^ (Fintype.card κ - 1) := by
@@ -905,6 +986,22 @@ lemma completionIndex_card_le_halfCube_of_fixed (M : PerlesMatrix ι κ d)
     _ = 2 ^ (Fintype.card κ - 1) := card_bool_functions_off_coordinate anchor
 
 /--
+The C-matrix has at most half of the Boolean cube if its completed rows contain
+no antipodal pair.
+-/
+lemma completionIndex_card_le_halfCube_of_antipodalFree (M : PerlesMatrix ι κ d)
+    (anchor : κ) (hanti : M.AntipodalFreeCompletions) :
+    Fintype.card M.CompletionIndex ≤ 2 ^ (Fintype.card κ - 1) := by
+  classical
+  calc
+    Fintype.card M.CompletionIndex ≤
+        Fintype.card ({j : κ // j ≠ anchor} → Bool) :=
+      Fintype.card_le_of_injective
+        (fun x : M.CompletionIndex => normalizeOffCoordinate anchor (M.completedSign x))
+        (M.normalizeOffCoordinate_completedSign_injective_of_antipodalFree hanti)
+    _ = 2 ^ (Fintype.card κ - 1) := card_bool_functions_off_coordinate anchor
+
+/--
 Sharp combinatorial endpoint: a Perles B/C-matrix whose completions lie in a
 fixed half-cube gives the conjectural `2^d` bound.
 -/
@@ -914,6 +1011,27 @@ theorem card_le_two_pow_of_fixedCoordinate (M : PerlesMatrix ι κ d)
   classical
   rcases hfixed with ⟨anchor, hanchor⟩
   have hhalf := M.completionIndex_card_le_halfCube_of_fixed hanchor
+  rw [M.card_completionIndex] at hhalf
+  have hpow :
+      2 ^ (Fintype.card κ - 1) =
+        2 ^ d * 2 ^ (Fintype.card κ - (d + 1)) := by
+    rw [← pow_add]
+    congr
+    have hcolumns : d + 1 ≤ Fintype.card κ := M.dimension_le_columns
+    omega
+  rw [hpow] at hhalf
+  exact Nat.le_of_mul_le_mul_right hhalf (Nat.two_pow_pos _)
+
+/--
+Sharp combinatorial endpoint in the antipodal-free form: if the completed rows
+contain no antipodal pair, then the cardinality bound tightens to `2^d`.
+-/
+theorem card_le_two_pow_of_antipodalFree [Nonempty κ] (M : PerlesMatrix ι κ d)
+    (hanti : M.AntipodalFreeCompletions) :
+    Fintype.card ι ≤ 2 ^ d := by
+  classical
+  let anchor : κ := Classical.choice (inferInstance : Nonempty κ)
+  have hhalf := M.completionIndex_card_le_halfCube_of_antipodalFree anchor hanti
   rw [M.card_completionIndex] at hhalf
   have hpow :
       2 ^ (Fintype.card κ - 1) =
@@ -971,9 +1089,11 @@ lookup.  It still requires at least the following facts:
 * choose a point avoiding the finite union of facet hyperplanes and simplex
   bodies to obtain the missing completed sign vector.
 
-The sharper `≤ 2^d` theorem would additionally need a half-cube invariant for
-the completed sign vectors, such as the fixed-coordinate condition formalized
-in `PerlesMatrix.FixedCoordinateCompletions`.
+The sharper `≤ 2^d` theorem additionally needs a half-cube invariant for the
+completed sign vectors.  This file proves both the fixed-coordinate endpoint
+(`PerlesMatrix.FixedCoordinateCompletions`) and the antipodal-free endpoint
+(`PerlesMatrix.AntipodalFreeCompletions`); the remaining task is deriving one
+of these invariants geometrically.
 -/
 structure PerlesFacetSeparationData {ι : Type*} [Fintype ι] {d : ℕ} [NeZero d]
     (simplices : ι → DSimplex d) (κ : Type*) [Fintype κ] where
@@ -1068,5 +1188,24 @@ theorem chapter14_sharp_of_fixedCoordinate {ι κ : Type*} [Fintype ι] [Fintype
     (hfixed : (data.toPerlesMatrix htouch).FixedCoordinateCompletions) :
     Fintype.card ι ≤ 2 ^ d :=
   (data.toPerlesMatrix htouch).card_le_two_pow_of_fixedCoordinate hfixed
+
+/--
+Conditional sharp version in the antipodal-free form: if the completed sign
+vectors contain no antipodal pair, then the cardinality bound tightens to
+`2^d`.
+
+The unproved frontier is deriving this antipodal-free condition from the raw
+touching-simplex geometry.
+-/
+theorem chapter14_sharp_of_antipodalFree {ι κ : Type*} [Fintype ι] [Fintype κ]
+    {d : ℕ} [NeZero d] (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouching simplices) (data : PerlesFacetSeparationData simplices κ)
+    (hanti : (data.toPerlesMatrix htouch).AntipodalFreeCompletions) :
+    Fintype.card ι ≤ 2 ^ d := by
+  classical
+  have hκpos : 0 < Fintype.card κ := by
+    exact Nat.lt_of_lt_of_le (Nat.zero_lt_succ d) data.dimension_le_hyperplanes
+  haveI : Nonempty κ := Fintype.card_pos_iff.mp hκpos
+  exact (data.toPerlesMatrix htouch).card_le_two_pow_of_antipodalFree hanti
 
 end ProofsInTheBook.Chapter14

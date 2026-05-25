@@ -1095,6 +1095,23 @@ sign at each coordinate.
 structure SignedPermutation (n : ℕ) where
   order : Equiv.Perm (Fin n)
   positive : Fin n → Bool
+  deriving DecidableEq
+
+def signedPermutationEquiv (n : ℕ) :
+    SignedPermutation n ≃ Equiv.Perm (Fin n) × (Fin n → Bool) where
+  toFun P := (P.order, P.positive)
+  invFun data := { order := data.1, positive := data.2 }
+  left_inv := by
+    intro P
+    cases P
+    rfl
+  right_inv := by
+    intro data
+    cases data
+    rfl
+
+noncomputable instance (n : ℕ) : Fintype (SignedPermutation n) :=
+  Fintype.ofEquiv (Equiv.Perm (Fin n) × (Fin n → Bool)) (signedPermutationEquiv n).symm
 
 namespace SignedPermutation
 
@@ -1216,6 +1233,38 @@ theorem prefix_strictMono_antipode_iff {n m : ℕ}
     (StrictMono fun i => (label (P.antipode.prefixChain i)).index) ↔
       StrictMono fun i => (label (P.prefixChain i)).index := by
   simp [label_prefixChain_antipode label hantipodal P, SignedLabel.neg]
+
+/-- Signed permutations whose prefix labels have strictly increasing indices. -/
+noncomputable def strictPrefixLabelChains {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m) : Finset (SignedPermutation n) :=
+  Finset.univ.filter fun P => StrictMono fun i => (label (P.prefixChain i)).index
+
+/--
+The exact finite parity statement still missing from Mathlib for this chapter:
+under an antipodal labeling with no complementary comparable pair, the number
+of strict prefix-label signed permutations is odd.
+-/
+def KyFanPrefixParityStatement (n m : ℕ) : Prop :=
+  ∀ label : NonzeroSignedSubset n → SignedLabel m,
+    (∀ X, label X.antipode = (label X).neg) →
+      NoComplementaryComparableLabels label →
+        Odd (strictPrefixLabelChains label).card
+
+theorem kyFanPrefixChainStatement_of_parity {n m : ℕ}
+    (hparity : KyFanPrefixParityStatement n m) :
+    KyFanPrefixChainStatement n m := by
+  intro label hantipodal hno
+  have hodd := hparity label hantipodal hno
+  have hpos : 0 < (strictPrefixLabelChains label).card := by
+    rcases hodd with ⟨r, hr⟩
+    omega
+  obtain ⟨P, hP⟩ := Finset.card_pos.mp hpos
+  exact ⟨P, by simpa [strictPrefixLabelChains] using hP⟩
+
+theorem tuckerLemmaStatement_of_kyFanPrefixParity {n : ℕ} (hn : 1 ≤ n)
+    (hparity : KyFanPrefixParityStatement n (n - 1)) :
+    TuckerLemmaStatement n :=
+  tuckerLemmaStatement_of_kyFanPrefix hn (kyFanPrefixChainStatement_of_parity hparity)
 
 theorem tuckerLemmaStatement_one : TuckerLemmaStatement 1 := by
   intro label _

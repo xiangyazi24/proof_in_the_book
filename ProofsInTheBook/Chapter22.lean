@@ -332,6 +332,14 @@ theorem vanDerWaerdenAnalyticCore_fin_two : VanDerWaerdenAnalyticCore 2 := by
   norm_num
   exact hhalf
 
+/-- The analytic-core assumption is completely discharged in dimensions `0`, `1`, and `2`. -/
+theorem vanDerWaerdenAnalyticCore_of_le_two (n : ℕ) (hn : n ≤ 2) :
+    VanDerWaerdenAnalyticCore n := by
+  interval_cases n
+  · exact vanDerWaerdenAnalyticCore_fin_zero
+  · exact vanDerWaerdenAnalyticCore_fin_one
+  · exact vanDerWaerdenAnalyticCore_fin_two
+
 theorem van_der_Waerden_permanent_conjecture_of_le_two (n : ℕ) (hn : n ≤ 2)
     (A : Matrix (Fin n) (Fin n) ℝ)
     (hA : A ∈ doublyStochastic ℝ (Fin n)) :
@@ -340,6 +348,13 @@ theorem van_der_Waerden_permanent_conjecture_of_le_two (n : ℕ) (hn : n ≤ 2)
   · simpa using van_der_Waerden_permanent_fin_zero A hA
   · simpa using van_der_Waerden_permanent_fin_one A hA
   · simpa using van_der_Waerden_permanent_fin_two A hA
+
+/-- Chapter 22 with no analytic-core assumption in the elementary low dimensions. -/
+theorem chapter22_of_le_two (n : ℕ) (hn : n ≤ 2)
+    (A : Matrix (Fin n) (Fin n) ℝ)
+    (hA : A ∈ doublyStochastic ℝ (Fin n)) :
+    (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent :=
+  van_der_Waerden_permanent_conjecture_of_le_two n hn A hA
 
 /-- The genuine Van der Waerden permanent lower-bound statement, conditional
 on the named analytic core above.  Point-17 status: ③, conditional on an

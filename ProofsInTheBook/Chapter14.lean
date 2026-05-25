@@ -37,7 +37,7 @@ matrix from a raw family of touching simplices; see
   opposite-vertex `SOppSide` condition and proves it implies
   `TouchesAlongFacets`, and
   `exists_orientedHyperplane_opposite_entries_of_touchesAcrossFacets` proves
-  the local opposite B-entries under that condition, but the
+  the local signed-distance opposite B-entries under that condition, but the
   converse/extraction from raw touching remains unproved;
 * construct a point outside all simplices and facet hyperplanes to obtain the
   missing completed sign vector.
@@ -1320,11 +1320,15 @@ lookup.  The current status of its main pieces is:
   hypothesis isolated by `TouchesAcrossFacets`; the local opposite B-entry
   theorem is now
   `exists_orientedHyperplane_opposite_entries_of_touchesAcrossFacets`, but it
-  is not yet assembled into one global finite Perles matrix.  The precise next
-  bridge is a signed-distance characterization of strict opposite sides for
-  codimension-one affine subspaces, strong enough to show that two simplices
-  satisfying the `TouchesAcrossFacets` `SOppSide` condition receive opposite
-  Boolean entries for the globally chosen `FacetHyperplanes.oriented` index;
+  is not yet assembled into one global finite Perles matrix.  This file now
+  proves the signed-distance characterization needed for a concrete oriented
+  facet: `affineSubspace_signedInfDist_neg_of_sOppSide` and
+  `OrientedHyperplane.simplexFacetSide_ofSimplexFacet_of_vertices_sOppSide`.
+  The precise remaining bridge is the global-orientation step: for the
+  arbitrary witness facet chosen by `FacetHyperplanes.oriented`, classify that
+  witness's opposite vertex as strictly same-side or opposite-side relative to
+  the two opposite vertices of a `TouchesAcrossFacets` pair, then transfer the
+  local signed-distance opposite-entry theorem to the globally chosen index;
 * choose a point avoiding the finite union of facet hyperplanes and simplex
   bodies to obtain the missing completed sign vector.
 

@@ -1417,6 +1417,24 @@ theorem extend_partialLatin_empty_row_with_card {n : ℕ}
   · exact filledCells_setRow_card_of_empty P hempty
 
 /--
+Sparse Hall row update without explicitly specifying the empty row: if a
+partial Latin square has at most `n - 1` filled cells, then some empty row can
+be filled completely, preserving the partial Latin property and adding exactly
+`n` cells.
+-/
+theorem extend_partialLatin_some_empty_row_with_card {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n)) (hP : IsPartialLatin P)
+    (hn : 0 < n) (hfilled_le : (filledCells P).card ≤ n - 1) :
+    ∃ i₀ : Fin n, ∃ Q : Fin n → Fin n → Option (Fin n),
+      IsPartialLatin Q ∧ ExtendsPartial P Q ∧
+        (∀ j, ∃ a, Q i₀ j = some a) ∧
+        (filledCells Q).card = (filledCells P).card + n := by
+  obtain ⟨i₀, hempty⟩ := exists_empty_row_of_filledCells_le_pred P hn hfilled_le
+  obtain ⟨Q, hQ, hPQ, hrow, hcard⟩ :=
+    extend_partialLatin_empty_row_with_card P hP hfilled_le hempty
+  exact ⟨i₀, Q, hQ, hPQ, hrow, hcard⟩
+
+/--
 The genuine Hall row-completion step from the sparse partial-square hypotheses.
 Hall's condition is proved internally, but this theorem is only a one-row step:
 it is not by itself an iteration proof of the full Evans/Smetaniuk theorem.

@@ -2984,6 +2984,149 @@ abbrev KyFanPathEndpointClass {n m : ℕ}
   AlternatingPuncturedPrefixChainType label ⊕
     (Bool ⊕ (PositivePrefixChainType label ⊕ NegativePrefixChainType label))
 
+theorem mem_alternatingPuncturedPrefixLabelChains_antipode {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    {data : SignedPermutation (n + 1) × Fin (n + 1)}
+    (hmem : data ∈ alternatingPuncturedPrefixLabelChains label) :
+    puncturedPrefixAntipode data ∈ alternatingPuncturedPrefixLabelChains label := by
+  classical
+  rcases data with ⟨P, gap⟩
+  rw [alternatingPuncturedPrefixLabelChains] at hmem ⊢
+  rcases Finset.mem_union.mp hmem with hpos | hneg
+  · have hposLabels : PositiveAlternatingPuncturedPrefixLabels label P gap := by
+      simpa [positiveAlternatingPuncturedPrefixLabelChains] using hpos
+    have hnegLabels : NegativeAlternatingPuncturedPrefixLabels label P.antipode gap := by
+      have hiff := positiveAlternatingPuncturedPrefixLabels_antipode_iff label hantipodal
+        P.antipode gap
+      have hpos' :
+          PositiveAlternatingPuncturedPrefixLabels label P.antipode.antipode gap := by
+        simpa [SignedPermutation.antipode_involutive P] using hposLabels
+      exact hiff.mp hpos'
+    exact Finset.mem_union_right _
+      (by simpa [negativeAlternatingPuncturedPrefixLabelChains, puncturedPrefixAntipode]
+        using hnegLabels)
+  · have hnegLabels : NegativeAlternatingPuncturedPrefixLabels label P gap := by
+      simpa [negativeAlternatingPuncturedPrefixLabelChains] using hneg
+    have hposLabels : PositiveAlternatingPuncturedPrefixLabels label P.antipode gap :=
+      (positiveAlternatingPuncturedPrefixLabels_antipode_iff label hantipodal P gap).mpr
+        hnegLabels
+    exact Finset.mem_union_left _
+      (by simpa [positiveAlternatingPuncturedPrefixLabelChains, puncturedPrefixAntipode]
+        using hposLabels)
+
+noncomputable def alternatingPuncturedPrefixChainAntipode {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    AlternatingPuncturedPrefixChainType label ≃ AlternatingPuncturedPrefixChainType label where
+  toFun data :=
+    ⟨puncturedPrefixAntipode data.1,
+      mem_alternatingPuncturedPrefixLabelChains_antipode hantipodal data.2⟩
+  invFun data :=
+    ⟨puncturedPrefixAntipode data.1,
+      mem_alternatingPuncturedPrefixLabelChains_antipode hantipodal data.2⟩
+  left_inv := by
+    rintro ⟨⟨P, gap⟩, hmem⟩
+    apply Subtype.ext
+    simp [puncturedPrefixAntipode, SignedPermutation.antipode_involutive P]
+  right_inv := by
+    rintro ⟨⟨P, gap⟩, hmem⟩
+    apply Subtype.ext
+    simp [puncturedPrefixAntipode, SignedPermutation.antipode_involutive P]
+
+theorem alternatingPuncturedPrefixChainAntipode_fixedPointFree {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (data : AlternatingPuncturedPrefixChainType label) :
+    alternatingPuncturedPrefixChainAntipode label hantipodal data ≠ data := by
+  intro h
+  rcases data with ⟨⟨P, gap⟩, hmem⟩
+  have hP := congrArg (fun data : AlternatingPuncturedPrefixChainType label => data.1.1) h
+  simp [alternatingPuncturedPrefixChainAntipode, puncturedPrefixAntipode] at hP
+  exact SignedPermutation.antipode_ne_self (by omega) P hP
+
+noncomputable def positivePrefixChainAntipode {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    PositivePrefixChainType label ≃ NegativePrefixChainType label where
+  toFun P := by
+    classical
+    refine ⟨P.1.antipode, ?_⟩
+    have hpos : PositiveAlternatingPrefixLabels label P.1 := by
+      have hmem := P.2
+      unfold positiveAlternatingPrefixLabelChains at hmem
+      exact (Finset.mem_filter.mp hmem).2
+    have hneg : NegativeAlternatingPrefixLabels label P.1.antipode := by
+      have hiff := positiveAlternatingPrefixLabels_antipode_iff label hantipodal P.1.antipode
+      have hpos' : PositiveAlternatingPrefixLabels label P.1.antipode.antipode := by
+        simpa [SignedPermutation.antipode_involutive P.1] using hpos
+      exact hiff.mp hpos'
+    simpa [negativeAlternatingPrefixLabelChains] using hneg
+  invFun N := by
+    classical
+    refine ⟨N.1.antipode, ?_⟩
+    have hneg : NegativeAlternatingPrefixLabels label N.1 := by
+      have hmem := N.2
+      unfold negativeAlternatingPrefixLabelChains at hmem
+      exact (Finset.mem_filter.mp hmem).2
+    have hpos : PositiveAlternatingPrefixLabels label N.1.antipode :=
+      (positiveAlternatingPrefixLabels_antipode_iff label hantipodal N.1).mpr hneg
+    simpa [positiveAlternatingPrefixLabelChains] using hpos
+  left_inv := by
+    intro P
+    apply Subtype.ext
+    exact SignedPermutation.antipode_involutive P.1
+  right_inv := by
+    intro N
+    apply Subtype.ext
+    exact SignedPermutation.antipode_involutive N.1
+
+noncomputable def negativePrefixChainAntipode {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    NegativePrefixChainType label ≃ PositivePrefixChainType label :=
+  (positivePrefixChainAntipode label hantipodal).symm
+
+noncomputable def topPrefixChainEndpointAntipode {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    (PositivePrefixChainType label ⊕ NegativePrefixChainType label) ≃
+      (PositivePrefixChainType label ⊕ NegativePrefixChainType label) where
+  toFun endpoint :=
+    match endpoint with
+    | Sum.inl P => Sum.inr (positivePrefixChainAntipode label hantipodal P)
+    | Sum.inr N => Sum.inl (negativePrefixChainAntipode label hantipodal N)
+  invFun endpoint :=
+    match endpoint with
+    | Sum.inl P => Sum.inr (positivePrefixChainAntipode label hantipodal P)
+    | Sum.inr N => Sum.inl (negativePrefixChainAntipode label hantipodal N)
+  left_inv := by
+    rintro (P | N) <;> simp [negativePrefixChainAntipode]
+  right_inv := by
+    rintro (P | N) <;> simp [negativePrefixChainAntipode]
+
+noncomputable def kyFanPathEndpointClassAntipode {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    KyFanPathEndpointClass label ≃ KyFanPathEndpointClass label :=
+  Equiv.sumCongr
+    (alternatingPuncturedPrefixChainAntipode label hantipodal)
+    (Equiv.sumCongr Equiv.boolNot (topPrefixChainEndpointAntipode label hantipodal))
+
+theorem kyFanPathEndpointClassAntipode_fixedPointFree {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (endpoint : KyFanPathEndpointClass label) :
+    kyFanPathEndpointClassAntipode label hantipodal endpoint ≠ endpoint := by
+  intro h
+  rcases endpoint with punctured | rest
+  · exact alternatingPuncturedPrefixChainAntipode_fixedPointFree label hantipodal punctured
+      (by simpa [kyFanPathEndpointClassAntipode] using h)
+  · rcases rest with base | top
+    · cases base <;> simp [kyFanPathEndpointClassAntipode] at h
+    · rcases top with positive | negative <;> simp [kyFanPathEndpointClassAntipode,
+        topPrefixChainEndpointAntipode] at h
+
 structure KyFanConcretePathEndpointDecomposition {n m : ℕ}
     (label : NonzeroSignedSubset (n + 1) → SignedLabel m) where
   Path : Type

@@ -1658,6 +1658,102 @@ theorem positivePuncturedPrefixChainPartner_fixedPointFree {n m : ℕ}
       simpa [positivePuncturedPrefixChainPartner, hgap, hlast] using hP
     exact SignedPermutation.flipSignAt_ne_self P (Fin.last n) hP'
 
+noncomputable def negativePuncturedPrefixChainPartner {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    NegativePuncturedPrefixChainType label ≃ NegativePuncturedPrefixChainType label where
+  toFun := fun data => by
+    rcases data with ⟨⟨P, gap⟩, hmem⟩
+    by_cases hgap : gap.val < n
+    · refine
+        ⟨(P.reindexPositions (Equiv.swap gap (SignedPermutation.gapNext gap hgap)), gap), ?_⟩
+      exact (mem_negativeAlternatingPuncturedPrefixLabelChains_reindexPositions_swap_gap_iff
+        P gap hgap).2 hmem
+    · have hlast : gap = Fin.last n := by
+        apply Fin.ext
+        have hle : gap.val ≤ n := Nat.le_of_lt_succ gap.isLt
+        simp [Fin.last]
+        omega
+      refine ⟨(P.flipSignAt (Fin.last n), Fin.last n), ?_⟩
+      have hmemlast : (P, Fin.last n) ∈
+          negativeAlternatingPuncturedPrefixLabelChains label := by
+        simpa [hlast] using hmem
+      exact (mem_negativeAlternatingPuncturedPrefixLabelChains_flipSignAt_last_iff P).2
+        hmemlast
+  invFun := fun data => by
+    rcases data with ⟨⟨P, gap⟩, hmem⟩
+    by_cases hgap : gap.val < n
+    · refine
+        ⟨(P.reindexPositions (Equiv.swap gap (SignedPermutation.gapNext gap hgap)), gap), ?_⟩
+      exact (mem_negativeAlternatingPuncturedPrefixLabelChains_reindexPositions_swap_gap_iff
+        P gap hgap).2 hmem
+    · have hlast : gap = Fin.last n := by
+        apply Fin.ext
+        have hle : gap.val ≤ n := Nat.le_of_lt_succ gap.isLt
+        simp [Fin.last]
+        omega
+      refine ⟨(P.flipSignAt (Fin.last n), Fin.last n), ?_⟩
+      have hmemlast : (P, Fin.last n) ∈
+          negativeAlternatingPuncturedPrefixLabelChains label := by
+        simpa [hlast] using hmem
+      exact (mem_negativeAlternatingPuncturedPrefixLabelChains_flipSignAt_last_iff P).2
+        hmemlast
+  left_inv := by
+    rintro ⟨⟨P, gap⟩, hmem⟩
+    by_cases hgap : gap.val < n
+    · apply Subtype.ext
+      simp [hgap,
+        SignedPermutation.reindexPositions_swap_gap_involutive P gap hgap]
+    · have hlast : gap = Fin.last n := by
+        apply Fin.ext
+        have hle : gap.val ≤ n := Nat.le_of_lt_succ gap.isLt
+        simp [Fin.last]
+        omega
+      apply Subtype.ext
+      simp [hlast,
+        SignedPermutation.flipSignAt_involutive P (Fin.last n)]
+  right_inv := by
+    rintro ⟨⟨P, gap⟩, hmem⟩
+    by_cases hgap : gap.val < n
+    · apply Subtype.ext
+      simp [hgap,
+        SignedPermutation.reindexPositions_swap_gap_involutive P gap hgap]
+    · have hlast : gap = Fin.last n := by
+        apply Fin.ext
+        have hle : gap.val ≤ n := Nat.le_of_lt_succ gap.isLt
+        simp [Fin.last]
+        omega
+      apply Subtype.ext
+      simp [hlast,
+        SignedPermutation.flipSignAt_involutive P (Fin.last n)]
+
+theorem negativePuncturedPrefixChainPartner_involutive {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Function.Involutive (negativePuncturedPrefixChainPartner label) := by
+  intro data
+  exact (negativePuncturedPrefixChainPartner label).left_inv data
+
+theorem negativePuncturedPrefixChainPartner_fixedPointFree {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (data : NegativePuncturedPrefixChainType label) :
+    negativePuncturedPrefixChainPartner label data ≠ data := by
+  intro h
+  rcases data with ⟨⟨P, gap⟩, hmem⟩
+  by_cases hgap : gap.val < n
+  · have hP := congrArg (fun data : NegativePuncturedPrefixChainType label => data.1.1) h
+    have hP' :
+        P.reindexPositions (Equiv.swap gap (SignedPermutation.gapNext gap hgap)) = P := by
+      simpa [negativePuncturedPrefixChainPartner, hgap] using hP
+    exact SignedPermutation.reindexPositions_swap_gap_ne_self P gap hgap hP'
+  · have hlast : gap = Fin.last n := by
+      apply Fin.ext
+      have hle : gap.val ≤ n := Nat.le_of_lt_succ gap.isLt
+      simp [Fin.last]
+      omega
+    have hP := congrArg (fun data : NegativePuncturedPrefixChainType label => data.1.1) h
+    have hP' : P.flipSignAt (Fin.last n) = P := by
+      simpa [negativePuncturedPrefixChainPartner, hgap, hlast] using hP
+    exact SignedPermutation.flipSignAt_ne_self P (Fin.last n) hP'
+
 theorem positiveAlternatingPuncturedPrefixLabelChains_card_eq_negative {n m : ℕ}
     (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
     (hantipodal : ∀ X, label X.antipode = (label X).neg) :
@@ -2426,6 +2522,14 @@ theorem even_card_negativeLastPuncturedPrefixChainType {n m : ℕ}
     (negativeLastPuncturedPrefixChainFlip label)
     (negativeLastPuncturedPrefixChainFlip_involutive label)
     (negativeLastPuncturedPrefixChainFlip_fixedPointFree label)
+
+theorem even_card_negativePuncturedPrefixChainType {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Even (Fintype.card (NegativePuncturedPrefixChainType label)) :=
+  even_card_of_fixedPointFree_involutive
+    (negativePuncturedPrefixChainPartner label)
+    (negativePuncturedPrefixChainPartner_involutive label)
+    (negativePuncturedPrefixChainPartner_fixedPointFree label)
 
 /--
 The numerical endpoint count used in the Ky Fan path proof.

@@ -25,10 +25,12 @@ simplicial-complex infrastructure, but no Borsuk-Ulam theorem, Tucker lemma,
 Ky Fan lemma, octahedral sphere labeling theorem, or ready-made bridge from
 too-small Kneser colorings to a forbidden antipodal/complementary labeling.
 
-The remaining upstream gap is exactly `TuckerLemmaStatement`: Tucker's lemma
-for nonzero sign vectors in `{−1,0,1}^n`.  The Matoušek construction of a
-Tucker counterexample from a hypothetical `(n - 2*k + 1)`-coloring of
-`KG(n,k)` is proved below.
+The remaining upstream gap is now the finite parity statement
+`KyFanPrefixParityStatement`: the odd count of strict signed-permutation
+prefix chains in Ky Fan's proof.  This file proves the Matoušek construction
+from a hypothetical `(n - 2*k + 1)`-coloring of `KG(n,k)` to a Tucker
+counterexample, proves low-dimensional Tucker cases, and proves
+`KyFanPrefixParityStatement → TuckerLemmaStatement → chapter39`.
 -/
 
 namespace ProofsInTheBook.Chapter39
@@ -990,12 +992,9 @@ theorem matousekTuckerLabel_no_complementary {n k : ℕ} (hk : 1 ≤ k)
         matousekLargeSupportLabel_ne_neg_of_le hk hn C hC hXlarge hYlarge hXY
 
 /--
-Tucker's lemma in the octahedral/sign-vector form needed for the
-Matoušek proof of Lovász's theorem.  Every antipodal labeling of nonzero sign
-vectors by `±1, …, ±(n-1)` has a complementary comparable pair.
-
-This is not currently present in Mathlib; it is the missing discrete
-replacement for Borsuk-Ulam.
+Tucker's lemma in the octahedral/sign-vector form needed for the Matoušek
+proof of Lovász's theorem.  The remaining proof obligation is supplied by the
+finer `KyFanPrefixParityStatement` below.
 -/
 def TuckerLemmaStatement (n : ℕ) : Prop :=
   ∀ label : NonzeroSignedSubset n → SignedLabel (n - 1),

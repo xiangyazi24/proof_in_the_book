@@ -186,10 +186,20 @@ theorem support_subset_of_le {n : ℕ} {X Y : SignedSubset n} (hXY : Le X Y) :
   · exact Finset.mem_union_left _ (hXY.1 hpos)
   · exact Finset.mem_union_right _ (hXY.2 hneg)
 
+theorem nonzero_of_le {n : ℕ} {X Y : SignedSubset n} (hXY : Le X Y)
+    (hX : X.Nonzero) : Y.Nonzero := by
+  have hxne : X.support.Nonempty := (support_nonempty_iff_nonzero X).mpr hX
+  exact (support_nonempty_iff_nonzero Y).mp (hxne.mono (support_subset_of_le hXY))
+
 theorem maxSupport_le_of_le {n : ℕ} {X Y : SignedSubset n}
     (hX : X.Nonzero) (hY : Y.Nonzero) (hXY : Le X Y) :
     X.maxSupport hX ≤ Y.maxSupport hY :=
   maxSupport_le_of_support_subset hX hY (support_subset_of_le hXY)
+
+theorem maxSupport_le_of_le' {n : ℕ} {X Y : SignedSubset n}
+    (hX : X.Nonzero) (hXY : Le X Y) :
+    X.maxSupport hX ≤ Y.maxSupport (nonzero_of_le hXY hX) :=
+  maxSupport_le_of_le hX (nonzero_of_le hXY hX) hXY
 
 theorem maxSupportPositive_eq_of_le_of_maxSupport_eq {n : ℕ} {X Y : SignedSubset n}
     (hX : X.Nonzero) (hY : Y.Nonzero) (hXY : Le X Y)

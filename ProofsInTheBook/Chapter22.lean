@@ -418,6 +418,12 @@ theorem gurvitsCoefficientFromCapacityCore_of_vanDerWaerdenAnalyticCore
   simpa [rowLinearMixedCoefficient_eq_permanent A] using
     core.coefficient_bound A hA hcap
 
+theorem squarefreeCoefficientCore_of_vanDerWaerdenAnalyticCore
+    {n : ℕ} (core : VanDerWaerdenAnalyticCore n) :
+    GurvitsSquarefreeCoefficientFromCapacityCore n :=
+  squarefreeCoefficientCore_of_gurvitsCoefficientFromCapacityCore
+    (gurvitsCoefficientFromCapacityCore_of_vanDerWaerdenAnalyticCore core)
+
 theorem permanent_nonneg_of_entrywise_nonneg {n : ℕ}
     (A : Matrix (Fin n) (Fin n) ℝ) (hA : ∀ i j, 0 ≤ A i j) :
     0 ≤ A.permanent := by
@@ -739,13 +745,29 @@ theorem van_der_Waerden_permanent_conjecture_from_large_dim_squarefreeCoefficien
     (fun m hm => vanDerWaerdenAnalyticCore_of_squarefreeCoefficientCore
       (core m hm)) n A hA
 
-theorem chapter22
+/-- Chapter 22 from the older permanent-form analytic core. -/
+theorem chapter22_from_analyticCore
     (core : ∀ m : ℕ, 3 ≤ m → VanDerWaerdenAnalyticCore m)
     (n : ℕ)
     (A : Matrix (Fin n) (Fin n) ℝ)
     (hA : A ∈ doublyStochastic ℝ (Fin n)) :
     (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent :=
   van_der_Waerden_permanent_conjecture_from_large_dim_analyticCore core n A hA
+
+/--
+Chapter 22 from the literal Gurvits/AF squarefree coefficient theorem.
+
+This is the main conditional entry point: proving
+`GurvitsSquarefreeCoefficientFromCapacityCore.squarefree_coefficient_bound` in
+all dimensions `n ≥ 3` immediately closes the advertised permanent lower bound.
+-/
+theorem chapter22
+    (core : ∀ m : ℕ, 3 ≤ m → GurvitsSquarefreeCoefficientFromCapacityCore m)
+    (n : ℕ)
+    (A : Matrix (Fin n) (Fin n) ℝ)
+    (hA : A ∈ doublyStochastic ℝ (Fin n)) :
+    (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent :=
+  van_der_Waerden_permanent_conjecture_from_large_dim_squarefreeCoefficientCore core n A hA
 
 end
 

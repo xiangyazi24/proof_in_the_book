@@ -26,18 +26,12 @@ matrix from a raw family of touching simplices; see
   this file now constructs the finite type of distinct unoriented affine facet
   hyperplanes, proves the no-accidental-containment/dimension lemma, and proves
   the exact `d+1` row-incidence count for `HasFacetIn`;
-* prove the exact row-incidence count for the chosen global oriented
-  hyperplanes: this is now `FacetHyperplanes.card_oriented_hasFacetIn`.  Under
-  the precise side-completeness condition that every incident simplex lies in
-  one of the two chosen sides, `FacetHyperplanes.rowZeroCard_of_side_complete`
-  proves the B-row zero count;
 * package affine facet hyperplanes as oriented halfspaces compatible with the
   Mathlib `WSameSide`/`SSameSide` facts proved below; this file now orients
-  each concrete simplex facet by signed distance and proves the owning simplex
-  is on its positive side.  For each distinct hyperplane,
-  `FacetHyperplanes.oriented` chooses one incident facet and orients by that
-  facet; the remaining frontier is classifying all other incident simplices as
-  positive or negative for that chosen orientation;
+  each distinct hyperplane by a chosen incident simplex facet and proves every
+  incident simplex lies in one of the two closed signed-distance sides.  Hence
+  `PerlesFacetSeparationData.ofFacetHyperplanes` now fills the B-row zero count
+  without a side-completeness hypothesis;
 * prove a touching pair has opposite signs in some shared facet hyperplane from
   the raw touching relation; `TouchesAcrossFacets` isolates the exact
   opposite-vertex `SOppSide` condition and proves it implies
@@ -231,6 +225,67 @@ lemma DSimplex.signedInfDist_nonneg_of_mem_body {d : ℕ} [NeZero d] (S : DSimpl
   rcases hp with ⟨w, hw, hw01, rfl⟩
   rw [S.signedInfDist_affineCombination i hw]
   exact mul_nonneg (hw01 i).1 (norm_nonneg _)
+
+/-- The signed distance from a facet hyperplane vanishes on that hyperplane. -/
+lemma DSimplex.signedInfDist_eq_zero_of_mem_facetHyperplane {d : ℕ} [NeZero d]
+    (S : DSimplex d) (i : Fin (d + 1)) {p : Ambient d}
+    (hp : p ∈ S.facetHyperplane i) :
+    S.signedInfDist i p = 0 := by
+  rw [Affine.Simplex.signedInfDist]
+  exact AffineSubspace.signedInfDist_apply_of_mem (S.points i) (by
+    simpa [DSimplex.facetHyperplane, Affine.Simplex.range_faceOpposite_points] using hp)
+
+/--
+If a facet of `T` lies in the signed-distance facet hyperplane of `S`, then
+the signed distance of an affine combination of the vertices of `T` is
+controlled only by the coefficient of `T`'s opposite vertex.
+-/
+lemma DSimplex.signedInfDist_affineCombination_of_commonFacet {d : ℕ} [NeZero d]
+    (S T : DSimplex d) (i j : Fin (d + 1))
+    (hfacet : T.facetHyperplane j = S.facetHyperplane i)
+    {w : Fin (d + 1) → ℝ} (hw : ∑ k, w k = 1) :
+    S.signedInfDist i (Finset.univ.affineCombination ℝ T.points w) =
+      w j * S.signedInfDist i (T.points j) := by
+  rw [← ContinuousAffineMap.coe_toAffineMap, Finset.map_affineCombination _ _ _ hw,
+    Finset.univ.affineCombination_apply_eq_lineMap_sum w
+      ((S.signedInfDist i).toAffineMap ∘ T.points) 0
+      (S.signedInfDist i (T.points j)) {j} hw]
+  · simp [AffineMap.lineMap_apply]
+  · simp
+  · simp only [Finset.mem_sdiff, Finset.mem_univ, Finset.mem_singleton, true_and,
+      Function.comp_apply]
+    intro k hk
+    apply S.signedInfDist_eq_zero_of_mem_facetHyperplane i
+    have hk_mem_T : T.points k ∈ T.facetHyperplane j := by
+      rw [DSimplex.facetHyperplane]
+      exact (T.points_mem_affineSpan_faceOpposite (i := j) (j := k)).2 hk
+    simpa [hfacet] using hk_mem_T
+
+/--
+For a common facet hyperplane oriented by `S`, the whole simplex `T` lies in
+one of the two closed signed-distance sides.
+-/
+lemma DSimplex.body_subset_signedInfDist_nonneg_or_nonpos_of_commonFacet {d : ℕ}
+    [NeZero d] (S T : DSimplex d) (i j : Fin (d + 1))
+    (hfacet : T.facetHyperplane j = S.facetHyperplane i) :
+    T.body ⊆ {p | 0 ≤ S.signedInfDist i p} ∨
+      T.body ⊆ {p | S.signedInfDist i p ≤ 0} := by
+  by_cases hsign : 0 ≤ S.signedInfDist i (T.points j)
+  · left
+    intro p hp
+    rw [DSimplex.body] at hp
+    rcases hp with ⟨w, hw, hw01, rfl⟩
+    change 0 ≤ S.signedInfDist i (Finset.univ.affineCombination ℝ T.points w)
+    rw [S.signedInfDist_affineCombination_of_commonFacet T i j hfacet hw]
+    exact mul_nonneg (hw01 j).1 hsign
+  · right
+    have hnonpos : S.signedInfDist i (T.points j) ≤ 0 := le_of_not_ge hsign
+    intro p hp
+    rw [DSimplex.body] at hp
+    rcases hp with ⟨w, hw, hw01, rfl⟩
+    change S.signedInfDist i (Finset.univ.affineCombination ℝ T.points w) ≤ 0
+    rw [S.signedInfDist_affineCombination_of_commonFacet T i j hfacet hw]
+    exact mul_nonpos_of_nonneg_of_nonpos (hw01 j).1 hnonpos
 
 /-- The opposite vertex has nonzero perpendicular displacement from its facet span. -/
 lemma DSimplex.opposite_vertex_vsub_orthogonalProjectionSpan_ne_zero {d : ℕ}
@@ -654,6 +709,33 @@ lemma simplexFacetSide_oriented_witness_self (H : FacetHyperplanes simplices) :
   rw [if_pos (oriented_hasFacetIn_witness simplices H)]
   rw [if_pos (body_subset_positiveSide_oriented_witness simplices H)]
 
+/--
+The signed-distance orientation chosen from one incident facet is side-complete
+for every other simplex incident with the same affine hyperplane.
+-/
+lemma oriented_side_complete (H : FacetHyperplanes simplices) (a : ι)
+    (hhas : (oriented simplices H).HasFacetIn (simplices a)) :
+    (simplices a).body ⊆ (oriented simplices H).positiveSide ∨
+      (simplices a).body ⊆ (oriented simplices H).negativeSide := by
+  rcases (oriented_hasFacetIn_iff simplices H (simplices a)).1 hhas with ⟨j, hj⟩
+  let x := witness simplices H
+  have hfacet :
+      (simplices a).facetHyperplane j =
+        (simplices x.1).facetHyperplane x.2 :=
+    hj.trans (witness_spec simplices H).symm
+  have hside :=
+    DSimplex.body_subset_signedInfDist_nonneg_or_nonpos_of_commonFacet
+      (simplices x.1) (simplices a) x.2 j hfacet
+  simpa [oriented, x] using hside
+
+/-- For the canonical signed-distance orientation, `none` means exactly non-incidence. -/
+lemma simplexFacetSide_oriented_eq_none_iff_not_hasFacetIn
+    (H : FacetHyperplanes simplices) (a : ι) :
+    (oriented simplices H).simplexFacetSide (simplices a) = none ↔
+      ¬ (oriented simplices H).HasFacetIn (simplices a) :=
+  OrientedHyperplane.simplexFacetSide_eq_none_iff_not_hasFacetIn_of_side_complete
+    (oriented simplices H) (simplices a) (oriented_side_complete simplices H a)
+
 lemma oriented_hasFacetIn_iff_exists_facetHyperplaneIndexOf
     (H : FacetHyperplanes simplices) (a : ι) :
     (oriented simplices H).HasFacetIn (simplices a) ↔
@@ -728,6 +810,17 @@ lemma rowZeroCard_of_side_complete [Fintype ι] (a : ι)
       (oriented simplices H).HasFacetIn (simplices a))
   rw [card_oriented_hasFacetIn simplices a, Finset.card_univ] at hsum
   omega
+
+/--
+For the canonical signed-distance orientation of the distinct facet hyperplanes,
+the Perles B-row has exactly `s-(d+1)` zeros.
+-/
+lemma rowZeroCard [Fintype ι] (a : ι) :
+    (Finset.univ.filter fun H : FacetHyperplanes simplices =>
+      (oriented simplices H).simplexFacetSide (simplices a) = none).card =
+        Fintype.card (FacetHyperplanes simplices) - (d + 1) :=
+  rowZeroCard_of_side_complete simplices a
+    (fun H hH => oriented_side_complete simplices H a hH)
 
 end FacetHyperplanes
 
@@ -1060,7 +1153,7 @@ This file now discharges the local simplex-side facts: see
 `DSimplex.relInterior_sSameSide_opposite_vertex`,
 `DSimplex.facetHyperplane_injective`, and the two common-facet side-composition
 lemmas above.  The remaining geometric construction is not a single Lean API
-lookup.  It still requires at least the following facts:
+lookup.  The current status of its main pieces is:
 
 * build the finite type of distinct facet hyperplanes from all simplex facets;
   the unoriented affine version is now `FacetHyperplanes`, with
@@ -1071,21 +1164,25 @@ lookup.  It still requires at least the following facts:
   `DSimplex.facetHyperplane_eq_of_face_points_subset` and connected to
   `HasFacetIn` by
   `FacetHyperplanes.oriented_hasFacetIn_iff_exists_facetHyperplaneIndexOf`.
-  Under side completeness, `FacetHyperplanes.rowZeroCard_of_side_complete`
-  proves the row-zero count, and `ofFacetHyperplanes` uses it to fill the
-  `rowZeroCard` field;
+  The signed-distance common-facet calculation
+  `FacetHyperplanes.oriented_side_complete` proves side completeness, so
+  `FacetHyperplanes.rowZeroCard` and `ofFacetHyperplanes` now fill the
+  `rowZeroCard` field without asking for it;
 * orient each such affine hyperplane by closed halfspaces in
   `EuclideanSpace ℝ (Fin d)` and connect those halfspaces to Mathlib's
   `WSameSide`/`SSameSide` predicates; `FacetHyperplanes.oriented` chooses one
-  incident facet for each distinct hyperplane, and
-  `simplexFacetSide_oriented_witness_self` proves that witness simplex's
-  positive B-entry, but all other incident simplices must still be classified
-  as lying in the chosen positive or negative side;
+  incident facet for each distinct hyperplane, and the common-facet signed
+  distance lemma classifies all other incident simplices as lying in the chosen
+  positive or negative side;
 * prove that the raw touching relation forces the opposite-vertex `SOppSide`
   hypothesis isolated by `TouchesAcrossFacets`; the local opposite B-entry
   theorem is now
   `exists_orientedHyperplane_opposite_entries_of_touchesAcrossFacets`, but it
-  is not yet assembled into one global finite Perles matrix;
+  is not yet assembled into one global finite Perles matrix.  The precise next
+  bridge is a signed-distance characterization of strict opposite sides for
+  codimension-one affine subspaces, strong enough to show that two simplices
+  satisfying the `TouchesAcrossFacets` `SOppSide` condition receive opposite
+  Boolean entries for the globally chosen `FacetHyperplanes.oriented` index;
 * choose a point avoiding the finite union of facet hyperplanes and simplex
   bodies to obtain the missing completed sign vector.
 
@@ -1121,14 +1218,10 @@ variable {ι κ : Type*} [Fintype ι] [Fintype κ] {d : ℕ} [NeZero d]
 /--
 Build certified Perles data using the actual finite type of distinct facet
 hyperplanes.  This discharges the hyperplane enumeration, dimension lower
-bound, and B-row zero count; the remaining inputs are exactly the side
-classification, pairwise opposite-sign, and missing-sign-vector geometry.
+bound, side completeness, and B-row zero count; the remaining inputs are
+exactly the pairwise opposite-sign and missing-sign-vector geometry.
 -/
 def ofFacetHyperplanes [Nonempty ι] (simplices : ι → DSimplex d)
-    (hside : ∀ (a : ι) (H : FacetHyperplanes simplices),
-      (FacetHyperplanes.oriented simplices H).HasFacetIn (simplices a) →
-        (simplices a).body ⊆ (FacetHyperplanes.oriented simplices H).positiveSide ∨
-          (simplices a).body ⊆ (FacetHyperplanes.oriented simplices H).negativeSide)
     (hpairwise : PairwiseTouching simplices →
       ∀ ⦃a b : ι⦄, a ≠ b → ∃ H : FacetHyperplanes simplices, ∃ sign : Bool,
         (FacetHyperplanes.oriented simplices H).simplexFacetSide (simplices a) = some sign ∧
@@ -1143,7 +1236,7 @@ def ofFacetHyperplanes [Nonempty ι] (simplices : ι → DSimplex d)
   dimension_le_hyperplanes := card_facetHyperplanes_ge simplices
   rowZeroCard := by
     intro a
-    exact FacetHyperplanes.rowZeroCard_of_side_complete simplices a (hside a)
+    exact FacetHyperplanes.rowZeroCard simplices a
   pairwiseOpposite_of_touching := hpairwise
   missingSignVector := hmissing
 

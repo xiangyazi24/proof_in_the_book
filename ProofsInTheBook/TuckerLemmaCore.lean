@@ -175,6 +175,17 @@ theorem le_antisymm {n : ℕ} {X Y : SignedSubset n} (hXY : Le X Y) (hYX : Le Y 
           subst yneg
           simp
 
+theorem ext_pos_neg {n : ℕ} {X Y : SignedSubset n}
+    (hpos : X.pos = Y.pos) (hneg : X.neg = Y.neg) : X = Y := by
+  cases X with
+  | mk xpos xneg xdisj =>
+      cases Y with
+      | mk ypos yneg ydisj =>
+          dsimp at hpos hneg
+          subst ypos
+          subst yneg
+          simp
+
 theorem antipode_le_antipode_iff {n : ℕ} {X Y : SignedSubset n} :
     Le X.antipode Y.antipode ↔ Le X Y := by
   simp [Le, antipode, and_comm]
@@ -474,6 +485,17 @@ noncomputable instance (n : ℕ) : Fintype (SignedPermutation n) :=
 
 namespace SignedPermutation
 
+theorem ext_order_positive {n : ℕ} {P Q : SignedPermutation n}
+    (horder : P.order = Q.order) (hpositive : P.positive = Q.positive) : P = Q := by
+  cases P with
+  | mk porder ppositive =>
+      cases Q with
+      | mk qorder qpositive =>
+          dsimp at horder hpositive
+          subst qorder
+          subst qpositive
+          rfl
+
 theorem card_zero : Fintype.card (SignedPermutation 0) = 1 := by
   calc
     Fintype.card (SignedPermutation 0) =
@@ -687,6 +709,59 @@ def reindexPositions {n : ℕ} (P : SignedPermutation n) (τ : Equiv.Perm (Fin n
   order := τ.trans P.order
   positive := fun i => P.positive (τ i)
 
+theorem reindexPositions_reindexPositions {n : ℕ}
+    (P : SignedPermutation n) (τ υ : Equiv.Perm (Fin n)) :
+    (P.reindexPositions τ).reindexPositions υ =
+      P.reindexPositions (υ.trans τ) := by
+  apply ext_order_positive
+  · apply Equiv.ext
+    intro i
+    rfl
+  · funext i
+    rfl
+
+theorem reindexPositions_swap_involutive {n : ℕ}
+    (P : SignedPermutation n) (a b : Fin n) :
+    (P.reindexPositions (Equiv.swap a b)).reindexPositions (Equiv.swap a b) = P := by
+  rw [reindexPositions_reindexPositions]
+  apply ext_order_positive
+  · apply Equiv.ext
+    intro i
+    simp [reindexPositions]
+  · funext i
+    simp [reindexPositions]
+
+theorem reindexPositions_swap_ne_self {n : ℕ}
+    (P : SignedPermutation n) {a b : Fin n} (hab : a ≠ b) :
+    P.reindexPositions (Equiv.swap a b) ≠ P := by
+  intro h
+  have horder := congrArg SignedPermutation.order h
+  have hfun := congrArg (fun e : Equiv.Perm (Fin n) => e a) horder
+  simp [reindexPositions] at hfun
+  exact hab hfun.symm
+
+/-- The successor of a non-last gap, as an element of the same `Fin` type. -/
+def gapNext {n : ℕ} (gap : Fin (n + 1)) (hgap : gap.val < n) : Fin (n + 1) :=
+  ⟨gap.val + 1, by omega⟩
+
+theorem gapNext_val {n : ℕ} (gap : Fin (n + 1)) (hgap : gap.val < n) :
+    (gapNext gap hgap).val = gap.val + 1 :=
+  rfl
+
+theorem reindexPositions_swap_gap_involutive {n : ℕ}
+    (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) (hgap : gap.val < n) :
+    ((P.reindexPositions (Equiv.swap gap (gapNext gap hgap))).reindexPositions
+        (Equiv.swap gap (gapNext gap hgap))) = P := by
+  exact P.reindexPositions_swap_involutive gap (gapNext gap hgap)
+
+theorem reindexPositions_swap_gap_ne_self {n : ℕ}
+    (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) (hgap : gap.val < n) :
+    P.reindexPositions (Equiv.swap gap (gapNext gap hgap)) ≠ P := by
+  apply P.reindexPositions_swap_ne_self
+  intro h
+  have hval := congrArg Fin.val h
+  simp [gapNext] at hval
+
 theorem prefixPos_reindexPositions_of_symm_le_iff {n : ℕ}
     (P : SignedPermutation n) (τ : Equiv.Perm (Fin n)) (i : Fin n)
     (hτ : ∀ k : Fin n, τ.symm k ≤ i ↔ k ≤ i) :
@@ -768,13 +843,76 @@ theorem prefixChain_reindexPositions_swap_adjacent_of_ne_left {n : ℕ}
 theorem prefixChain_reindexPositions_swap_gap_succAbove {n : ℕ}
     (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) (hgap : gap.val < n)
     (i : Fin n) :
-    (P.reindexPositions
-        (Equiv.swap gap (⟨gap.val + 1, by omega⟩ : Fin (n + 1)))).prefixChain
-        (gap.succAbove i) =
+    (P.reindexPositions (Equiv.swap gap (gapNext gap hgap))).prefixChain (gap.succAbove i) =
       P.prefixChain (gap.succAbove i) := by
   apply P.prefixChain_reindexPositions_swap_adjacent_of_ne_left
-  · rfl
+  · exact gapNext_val gap hgap
   · exact Fin.succAbove_ne gap i
+
+/-- Flip the sign of one position of a signed permutation, keeping the order. -/
+def flipSignAt {n : ℕ} (P : SignedPermutation n) (j : Fin n) : SignedPermutation n where
+  order := P.order
+  positive := fun i => if i = j then !P.positive i else P.positive i
+
+theorem flipSignAt_involutive {n : ℕ} (P : SignedPermutation n) (j : Fin n) :
+    (P.flipSignAt j).flipSignAt j = P := by
+  apply ext_order_positive
+  · rfl
+  · funext i
+    by_cases hij : i = j <;> simp [flipSignAt, hij]
+
+theorem flipSignAt_ne_self {n : ℕ} (P : SignedPermutation n) (j : Fin n) :
+    P.flipSignAt j ≠ P := by
+  intro h
+  have hpositive := congrArg SignedPermutation.positive h
+  have hj := congrFun hpositive j
+  cases hsign : P.positive j <;> simp [flipSignAt, hsign] at hj
+
+theorem prefixPos_flipSignAt_of_lt {n : ℕ}
+    (P : SignedPermutation n) {i j : Fin n} (hij : i < j) :
+    (P.flipSignAt j).prefixPos i = P.prefixPos i := by
+  ext x
+  by_cases hle : P.order.symm x ≤ i
+  · have hne : P.order.symm x ≠ j := by
+      intro hxj
+      have hji : j ≤ i := by
+        simpa [hxj] using hle
+      exact (not_le_of_gt hij) hji
+    simp [prefixPos, flipSignAt, hle, hne]
+  · simp [prefixPos, flipSignAt, hle]
+
+theorem prefixNeg_flipSignAt_of_lt {n : ℕ}
+    (P : SignedPermutation n) {i j : Fin n} (hij : i < j) :
+    (P.flipSignAt j).prefixNeg i = P.prefixNeg i := by
+  ext x
+  by_cases hle : P.order.symm x ≤ i
+  · have hne : P.order.symm x ≠ j := by
+      intro hxj
+      have hji : j ≤ i := by
+        simpa [hxj] using hle
+      exact (not_le_of_gt hij) hji
+    simp [prefixNeg, flipSignAt, hle, hne]
+  · simp [prefixNeg, flipSignAt, hle]
+
+theorem prefixSignedSubset_flipSignAt_of_lt {n : ℕ}
+    (P : SignedPermutation n) {i j : Fin n} (hij : i < j) :
+    (P.flipSignAt j).prefixSignedSubset i = P.prefixSignedSubset i := by
+  exact SignedSubset.ext_pos_neg
+    (P.prefixPos_flipSignAt_of_lt hij)
+    (P.prefixNeg_flipSignAt_of_lt hij)
+
+theorem prefixChain_flipSignAt_of_lt {n : ℕ}
+    (P : SignedPermutation n) {i j : Fin n} (hij : i < j) :
+    (P.flipSignAt j).prefixChain i = P.prefixChain i := by
+  apply Subtype.ext
+  exact P.prefixSignedSubset_flipSignAt_of_lt hij
+
+theorem prefixChain_flipSignAt_last_succAbove {n : ℕ}
+    (P : SignedPermutation (n + 1)) (i : Fin n) :
+    (P.flipSignAt (Fin.last n)).prefixChain ((Fin.last n).succAbove i) =
+      P.prefixChain ((Fin.last n).succAbove i) := by
+  simpa [Fin.succAbove_last] using
+    (P.prefixChain_flipSignAt_of_lt (j := Fin.last n) (Fin.castSucc_lt_last i))
 
 end SignedPermutation
 
@@ -901,7 +1039,7 @@ theorem positiveAlternatingPuncturedPrefixLabels_reindexPositions_swap_gap_iff {
     (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
     (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) (hgap : gap.val < n) :
     PositiveAlternatingPuncturedPrefixLabels label
-        (P.reindexPositions (Equiv.swap gap (⟨gap.val + 1, by omega⟩ : Fin (n + 1))))
+        (P.reindexPositions (Equiv.swap gap (SignedPermutation.gapNext gap hgap)))
         gap ↔
       PositiveAlternatingPuncturedPrefixLabels label P gap := by
   constructor
@@ -909,26 +1047,30 @@ theorem positiveAlternatingPuncturedPrefixLabels_reindexPositions_swap_gap_iff {
     constructor
     · intro i j hij
       have hmono := h.1 hij
-      simpa [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i,
-        P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap j] using hmono
+      rw [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i,
+        P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap j] at hmono
+      exact hmono
     · intro i
       have hsign := h.2 i
-      simpa [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i] using hsign
+      rw [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i] at hsign
+      exact hsign
   · intro h
     constructor
     · intro i j hij
       have hmono := h.1 hij
-      simpa [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i,
-        P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap j] using hmono
+      rw [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i,
+        P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap j]
+      exact hmono
     · intro i
       have hsign := h.2 i
-      simpa [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i] using hsign
+      rw [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i]
+      exact hsign
 
 theorem negativeAlternatingPuncturedPrefixLabels_reindexPositions_swap_gap_iff {n m : ℕ}
     (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
     (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) (hgap : gap.val < n) :
     NegativeAlternatingPuncturedPrefixLabels label
-        (P.reindexPositions (Equiv.swap gap (⟨gap.val + 1, by omega⟩ : Fin (n + 1))))
+        (P.reindexPositions (Equiv.swap gap (SignedPermutation.gapNext gap hgap)))
         gap ↔
       NegativeAlternatingPuncturedPrefixLabels label P gap := by
   constructor
@@ -936,20 +1078,118 @@ theorem negativeAlternatingPuncturedPrefixLabels_reindexPositions_swap_gap_iff {
     constructor
     · intro i j hij
       have hmono := h.1 hij
-      simpa [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i,
-        P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap j] using hmono
+      rw [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i,
+        P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap j] at hmono
+      exact hmono
     · intro i
       have hsign := h.2 i
-      simpa [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i] using hsign
+      rw [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i] at hsign
+      exact hsign
   · intro h
     constructor
     · intro i j hij
       have hmono := h.1 hij
-      simpa [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i,
-        P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap j] using hmono
+      rw [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i,
+        P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap j]
+      exact hmono
     · intro i
       have hsign := h.2 i
-      simpa [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i] using hsign
+      rw [P.prefixChain_reindexPositions_swap_gap_succAbove gap hgap i]
+      exact hsign
+
+theorem positiveAlternatingPuncturedPrefixLabels_flipSignAt_last_iff {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (P : SignedPermutation (n + 1)) :
+    PositiveAlternatingPuncturedPrefixLabels label (P.flipSignAt (Fin.last n)) (Fin.last n) ↔
+      PositiveAlternatingPuncturedPrefixLabels label P (Fin.last n) := by
+  constructor
+  · intro h
+    constructor
+    · intro i j hij
+      have hmono := h.1 hij
+      have hi :
+          (P.flipSignAt (Fin.last n)).prefixChain (Fin.castSucc i) =
+            P.prefixChain (Fin.castSucc i) := by
+        simpa [Fin.succAbove_last] using P.prefixChain_flipSignAt_last_succAbove i
+      have hj :
+          (P.flipSignAt (Fin.last n)).prefixChain (Fin.castSucc j) =
+            P.prefixChain (Fin.castSucc j) := by
+        simpa [Fin.succAbove_last] using P.prefixChain_flipSignAt_last_succAbove j
+      simpa [Fin.succAbove_last, hi, hj] using hmono
+    · intro i
+      have hsign := h.2 i
+      have hi :
+          (P.flipSignAt (Fin.last n)).prefixChain (Fin.castSucc i) =
+            P.prefixChain (Fin.castSucc i) := by
+        simpa [Fin.succAbove_last] using P.prefixChain_flipSignAt_last_succAbove i
+      simpa [Fin.succAbove_last, hi] using hsign
+  · intro h
+    constructor
+    · intro i j hij
+      have hmono := h.1 hij
+      have hi :
+          (P.flipSignAt (Fin.last n)).prefixChain (Fin.castSucc i) =
+            P.prefixChain (Fin.castSucc i) := by
+        simpa [Fin.succAbove_last] using P.prefixChain_flipSignAt_last_succAbove i
+      have hj :
+          (P.flipSignAt (Fin.last n)).prefixChain (Fin.castSucc j) =
+            P.prefixChain (Fin.castSucc j) := by
+        simpa [Fin.succAbove_last] using P.prefixChain_flipSignAt_last_succAbove j
+      simpa [Fin.succAbove_last, hi, hj] using hmono
+    · intro i
+      have hsign := h.2 i
+      have hi :
+          (P.flipSignAt (Fin.last n)).prefixChain (Fin.castSucc i) =
+            P.prefixChain (Fin.castSucc i) := by
+        simpa [Fin.succAbove_last] using P.prefixChain_flipSignAt_last_succAbove i
+      simpa [Fin.succAbove_last, hi] using hsign
+
+theorem negativeAlternatingPuncturedPrefixLabels_flipSignAt_last_iff {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (P : SignedPermutation (n + 1)) :
+    NegativeAlternatingPuncturedPrefixLabels label (P.flipSignAt (Fin.last n)) (Fin.last n) ↔
+      NegativeAlternatingPuncturedPrefixLabels label P (Fin.last n) := by
+  constructor
+  · intro h
+    constructor
+    · intro i j hij
+      have hmono := h.1 hij
+      have hi :
+          (P.flipSignAt (Fin.last n)).prefixChain (Fin.castSucc i) =
+            P.prefixChain (Fin.castSucc i) := by
+        simpa [Fin.succAbove_last] using P.prefixChain_flipSignAt_last_succAbove i
+      have hj :
+          (P.flipSignAt (Fin.last n)).prefixChain (Fin.castSucc j) =
+            P.prefixChain (Fin.castSucc j) := by
+        simpa [Fin.succAbove_last] using P.prefixChain_flipSignAt_last_succAbove j
+      simpa [Fin.succAbove_last, hi, hj] using hmono
+    · intro i
+      have hsign := h.2 i
+      have hi :
+          (P.flipSignAt (Fin.last n)).prefixChain (Fin.castSucc i) =
+            P.prefixChain (Fin.castSucc i) := by
+        simpa [Fin.succAbove_last] using P.prefixChain_flipSignAt_last_succAbove i
+      simpa [Fin.succAbove_last, hi] using hsign
+  · intro h
+    constructor
+    · intro i j hij
+      have hmono := h.1 hij
+      have hi :
+          (P.flipSignAt (Fin.last n)).prefixChain (Fin.castSucc i) =
+            P.prefixChain (Fin.castSucc i) := by
+        simpa [Fin.succAbove_last] using P.prefixChain_flipSignAt_last_succAbove i
+      have hj :
+          (P.flipSignAt (Fin.last n)).prefixChain (Fin.castSucc j) =
+            P.prefixChain (Fin.castSucc j) := by
+        simpa [Fin.succAbove_last] using P.prefixChain_flipSignAt_last_succAbove j
+      simpa [Fin.succAbove_last, hi, hj] using hmono
+    · intro i
+      have hsign := h.2 i
+      have hi :
+          (P.flipSignAt (Fin.last n)).prefixChain (Fin.castSucc i) =
+            P.prefixChain (Fin.castSucc i) := by
+        simpa [Fin.succAbove_last] using P.prefixChain_flipSignAt_last_succAbove i
+      simpa [Fin.succAbove_last, hi] using hsign
 
 theorem positiveAlternatingPrefixLabels_punctured_last {n m : ℕ}
     {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
@@ -1067,7 +1307,7 @@ theorem mem_negativeAlternatingPuncturedPrefixLabelChains_iff {n m : ℕ}
 theorem mem_positiveAlternatingPuncturedPrefixLabelChains_reindexPositions_swap_gap_iff
     {n m : ℕ} {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
     (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) (hgap : gap.val < n) :
-    (P.reindexPositions (Equiv.swap gap (⟨gap.val + 1, by omega⟩ : Fin (n + 1))), gap) ∈
+    (P.reindexPositions (Equiv.swap gap (SignedPermutation.gapNext gap hgap)), gap) ∈
         positiveAlternatingPuncturedPrefixLabelChains label ↔
       (P, gap) ∈ positiveAlternatingPuncturedPrefixLabelChains label := by
   rw [mem_positiveAlternatingPuncturedPrefixLabelChains_iff,
@@ -1078,13 +1318,211 @@ theorem mem_positiveAlternatingPuncturedPrefixLabelChains_reindexPositions_swap_
 theorem mem_negativeAlternatingPuncturedPrefixLabelChains_reindexPositions_swap_gap_iff
     {n m : ℕ} {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
     (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) (hgap : gap.val < n) :
-    (P.reindexPositions (Equiv.swap gap (⟨gap.val + 1, by omega⟩ : Fin (n + 1))), gap) ∈
+    (P.reindexPositions (Equiv.swap gap (SignedPermutation.gapNext gap hgap)), gap) ∈
         negativeAlternatingPuncturedPrefixLabelChains label ↔
       (P, gap) ∈ negativeAlternatingPuncturedPrefixLabelChains label := by
   rw [mem_negativeAlternatingPuncturedPrefixLabelChains_iff,
     mem_negativeAlternatingPuncturedPrefixLabelChains_iff]
   exact negativeAlternatingPuncturedPrefixLabels_reindexPositions_swap_gap_iff
     label P gap hgap
+
+theorem mem_positiveAlternatingPuncturedPrefixLabelChains_flipSignAt_last_iff
+    {n m : ℕ} {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (P : SignedPermutation (n + 1)) :
+    (P.flipSignAt (Fin.last n), Fin.last n) ∈
+        positiveAlternatingPuncturedPrefixLabelChains label ↔
+      (P, Fin.last n) ∈ positiveAlternatingPuncturedPrefixLabelChains label := by
+  rw [mem_positiveAlternatingPuncturedPrefixLabelChains_iff,
+    mem_positiveAlternatingPuncturedPrefixLabelChains_iff]
+  exact positiveAlternatingPuncturedPrefixLabels_flipSignAt_last_iff label P
+
+theorem mem_negativeAlternatingPuncturedPrefixLabelChains_flipSignAt_last_iff
+    {n m : ℕ} {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (P : SignedPermutation (n + 1)) :
+    (P.flipSignAt (Fin.last n), Fin.last n) ∈
+        negativeAlternatingPuncturedPrefixLabelChains label ↔
+      (P, Fin.last n) ∈ negativeAlternatingPuncturedPrefixLabelChains label := by
+  rw [mem_negativeAlternatingPuncturedPrefixLabelChains_iff,
+    mem_negativeAlternatingPuncturedPrefixLabelChains_iff]
+  exact negativeAlternatingPuncturedPrefixLabels_flipSignAt_last_iff label P
+
+abbrev PositiveNonlastPuncturedPrefixChainType {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :=
+  {data : SignedPermutation (n + 1) × Fin (n + 1) //
+    data ∈ positiveAlternatingPuncturedPrefixLabelChains label ∧ data.2.val < n}
+
+abbrev NegativeNonlastPuncturedPrefixChainType {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :=
+  {data : SignedPermutation (n + 1) × Fin (n + 1) //
+    data ∈ negativeAlternatingPuncturedPrefixLabelChains label ∧ data.2.val < n}
+
+noncomputable def positiveNonlastPuncturedPrefixChainSwap {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    PositiveNonlastPuncturedPrefixChainType label ≃
+      PositiveNonlastPuncturedPrefixChainType label where
+  toFun := fun data => by
+    refine
+      ⟨(data.1.1.reindexPositions
+          (Equiv.swap data.1.2 (SignedPermutation.gapNext data.1.2 data.2.2)), data.1.2), ?_⟩
+    exact ⟨(mem_positiveAlternatingPuncturedPrefixLabelChains_reindexPositions_swap_gap_iff
+      data.1.1 data.1.2 data.2.2).2 data.2.1, data.2.2⟩
+  invFun := fun data => by
+    refine
+      ⟨(data.1.1.reindexPositions
+          (Equiv.swap data.1.2 (SignedPermutation.gapNext data.1.2 data.2.2)), data.1.2), ?_⟩
+    exact ⟨(mem_positiveAlternatingPuncturedPrefixLabelChains_reindexPositions_swap_gap_iff
+      data.1.1 data.1.2 data.2.2).2 data.2.1, data.2.2⟩
+  left_inv := by
+    rintro ⟨⟨P, gap⟩, hmem, hgap⟩
+    apply Subtype.ext
+    simp only
+    rw [SignedPermutation.reindexPositions_swap_gap_involutive P gap hgap]
+  right_inv := by
+    rintro ⟨⟨P, gap⟩, hmem, hgap⟩
+    apply Subtype.ext
+    simp only
+    rw [SignedPermutation.reindexPositions_swap_gap_involutive P gap hgap]
+
+theorem positiveNonlastPuncturedPrefixChainSwap_involutive {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Function.Involutive (positiveNonlastPuncturedPrefixChainSwap label) := by
+  intro data
+  exact (positiveNonlastPuncturedPrefixChainSwap label).left_inv data
+
+theorem positiveNonlastPuncturedPrefixChainSwap_fixedPointFree {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (data : PositiveNonlastPuncturedPrefixChainType label) :
+    positiveNonlastPuncturedPrefixChainSwap label data ≠ data := by
+  intro h
+  rcases data with ⟨⟨P, gap⟩, hmem, hgap⟩
+  have hP := congrArg (fun data : PositiveNonlastPuncturedPrefixChainType label => data.1.1) h
+  have hP' :
+      P.reindexPositions (Equiv.swap gap (SignedPermutation.gapNext gap hgap)) = P := by
+    simpa [positiveNonlastPuncturedPrefixChainSwap] using hP
+  exact SignedPermutation.reindexPositions_swap_gap_ne_self P gap hgap hP'
+
+noncomputable def negativeNonlastPuncturedPrefixChainSwap {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    NegativeNonlastPuncturedPrefixChainType label ≃
+      NegativeNonlastPuncturedPrefixChainType label where
+  toFun := fun data => by
+    refine
+      ⟨(data.1.1.reindexPositions
+          (Equiv.swap data.1.2 (SignedPermutation.gapNext data.1.2 data.2.2)), data.1.2), ?_⟩
+    exact ⟨(mem_negativeAlternatingPuncturedPrefixLabelChains_reindexPositions_swap_gap_iff
+      data.1.1 data.1.2 data.2.2).2 data.2.1, data.2.2⟩
+  invFun := fun data => by
+    refine
+      ⟨(data.1.1.reindexPositions
+          (Equiv.swap data.1.2 (SignedPermutation.gapNext data.1.2 data.2.2)), data.1.2), ?_⟩
+    exact ⟨(mem_negativeAlternatingPuncturedPrefixLabelChains_reindexPositions_swap_gap_iff
+      data.1.1 data.1.2 data.2.2).2 data.2.1, data.2.2⟩
+  left_inv := by
+    rintro ⟨⟨P, gap⟩, hmem, hgap⟩
+    apply Subtype.ext
+    simp only
+    rw [SignedPermutation.reindexPositions_swap_gap_involutive P gap hgap]
+  right_inv := by
+    rintro ⟨⟨P, gap⟩, hmem, hgap⟩
+    apply Subtype.ext
+    simp only
+    rw [SignedPermutation.reindexPositions_swap_gap_involutive P gap hgap]
+
+theorem negativeNonlastPuncturedPrefixChainSwap_involutive {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Function.Involutive (negativeNonlastPuncturedPrefixChainSwap label) := by
+  intro data
+  exact (negativeNonlastPuncturedPrefixChainSwap label).left_inv data
+
+theorem negativeNonlastPuncturedPrefixChainSwap_fixedPointFree {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (data : NegativeNonlastPuncturedPrefixChainType label) :
+    negativeNonlastPuncturedPrefixChainSwap label data ≠ data := by
+  intro h
+  rcases data with ⟨⟨P, gap⟩, hmem, hgap⟩
+  have hP := congrArg (fun data : NegativeNonlastPuncturedPrefixChainType label => data.1.1) h
+  have hP' :
+      P.reindexPositions (Equiv.swap gap (SignedPermutation.gapNext gap hgap)) = P := by
+    simpa [negativeNonlastPuncturedPrefixChainSwap] using hP
+  exact SignedPermutation.reindexPositions_swap_gap_ne_self P gap hgap hP'
+
+abbrev PositiveLastPuncturedPrefixChainType {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :=
+  {P : SignedPermutation (n + 1) //
+    (P, Fin.last n) ∈ positiveAlternatingPuncturedPrefixLabelChains label}
+
+abbrev NegativeLastPuncturedPrefixChainType {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :=
+  {P : SignedPermutation (n + 1) //
+    (P, Fin.last n) ∈ negativeAlternatingPuncturedPrefixLabelChains label}
+
+noncomputable def positiveLastPuncturedPrefixChainFlip {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    PositiveLastPuncturedPrefixChainType label ≃ PositiveLastPuncturedPrefixChainType label where
+  toFun := fun data => by
+    refine ⟨data.1.flipSignAt (Fin.last n), ?_⟩
+    exact (mem_positiveAlternatingPuncturedPrefixLabelChains_flipSignAt_last_iff data.1).2 data.2
+  invFun := fun data => by
+    refine ⟨data.1.flipSignAt (Fin.last n), ?_⟩
+    exact (mem_positiveAlternatingPuncturedPrefixLabelChains_flipSignAt_last_iff data.1).2 data.2
+  left_inv := by
+    rintro ⟨P, hP⟩
+    apply Subtype.ext
+    exact SignedPermutation.flipSignAt_involutive P (Fin.last n)
+  right_inv := by
+    rintro ⟨P, hP⟩
+    apply Subtype.ext
+    exact SignedPermutation.flipSignAt_involutive P (Fin.last n)
+
+theorem positiveLastPuncturedPrefixChainFlip_involutive {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Function.Involutive (positiveLastPuncturedPrefixChainFlip label) := by
+  intro data
+  exact (positiveLastPuncturedPrefixChainFlip label).left_inv data
+
+theorem positiveLastPuncturedPrefixChainFlip_fixedPointFree {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (data : PositiveLastPuncturedPrefixChainType label) :
+    positiveLastPuncturedPrefixChainFlip label data ≠ data := by
+  intro h
+  rcases data with ⟨P, hP⟩
+  have hP' := congrArg (fun data : PositiveLastPuncturedPrefixChainType label => data.1) h
+  simp only [positiveLastPuncturedPrefixChainFlip] at hP'
+  exact SignedPermutation.flipSignAt_ne_self P (Fin.last n) hP'
+
+noncomputable def negativeLastPuncturedPrefixChainFlip {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    NegativeLastPuncturedPrefixChainType label ≃ NegativeLastPuncturedPrefixChainType label where
+  toFun := fun data => by
+    refine ⟨data.1.flipSignAt (Fin.last n), ?_⟩
+    exact (mem_negativeAlternatingPuncturedPrefixLabelChains_flipSignAt_last_iff data.1).2 data.2
+  invFun := fun data => by
+    refine ⟨data.1.flipSignAt (Fin.last n), ?_⟩
+    exact (mem_negativeAlternatingPuncturedPrefixLabelChains_flipSignAt_last_iff data.1).2 data.2
+  left_inv := by
+    rintro ⟨P, hP⟩
+    apply Subtype.ext
+    exact SignedPermutation.flipSignAt_involutive P (Fin.last n)
+  right_inv := by
+    rintro ⟨P, hP⟩
+    apply Subtype.ext
+    exact SignedPermutation.flipSignAt_involutive P (Fin.last n)
+
+theorem negativeLastPuncturedPrefixChainFlip_involutive {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Function.Involutive (negativeLastPuncturedPrefixChainFlip label) := by
+  intro data
+  exact (negativeLastPuncturedPrefixChainFlip label).left_inv data
+
+theorem negativeLastPuncturedPrefixChainFlip_fixedPointFree {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (data : NegativeLastPuncturedPrefixChainType label) :
+    negativeLastPuncturedPrefixChainFlip label data ≠ data := by
+  intro h
+  rcases data with ⟨P, hP⟩
+  have hP' := congrArg (fun data : NegativeLastPuncturedPrefixChainType label => data.1) h
+  simp only [negativeLastPuncturedPrefixChainFlip] at hP'
+  exact SignedPermutation.flipSignAt_ne_self P (Fin.last n) hP'
 
 theorem positiveAlternatingPuncturedPrefixLabelChains_card_eq_negative {n m : ℕ}
     (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
@@ -1814,6 +2252,38 @@ theorem even_card_of_fixedPointFree_involutive {α : Type*} [Fintype α]
     ext x
     exact hinv x
   exact even_card_of_fixedPointFree_involution p hp2 hfree
+
+theorem even_card_positiveNonlastPuncturedPrefixChainType {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Even (Fintype.card (PositiveNonlastPuncturedPrefixChainType label)) :=
+  even_card_of_fixedPointFree_involutive
+    (positiveNonlastPuncturedPrefixChainSwap label)
+    (positiveNonlastPuncturedPrefixChainSwap_involutive label)
+    (positiveNonlastPuncturedPrefixChainSwap_fixedPointFree label)
+
+theorem even_card_negativeNonlastPuncturedPrefixChainType {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Even (Fintype.card (NegativeNonlastPuncturedPrefixChainType label)) :=
+  even_card_of_fixedPointFree_involutive
+    (negativeNonlastPuncturedPrefixChainSwap label)
+    (negativeNonlastPuncturedPrefixChainSwap_involutive label)
+    (negativeNonlastPuncturedPrefixChainSwap_fixedPointFree label)
+
+theorem even_card_positiveLastPuncturedPrefixChainType {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Even (Fintype.card (PositiveLastPuncturedPrefixChainType label)) :=
+  even_card_of_fixedPointFree_involutive
+    (positiveLastPuncturedPrefixChainFlip label)
+    (positiveLastPuncturedPrefixChainFlip_involutive label)
+    (positiveLastPuncturedPrefixChainFlip_fixedPointFree label)
+
+theorem even_card_negativeLastPuncturedPrefixChainType {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Even (Fintype.card (NegativeLastPuncturedPrefixChainType label)) :=
+  even_card_of_fixedPointFree_involutive
+    (negativeLastPuncturedPrefixChainFlip label)
+    (negativeLastPuncturedPrefixChainFlip_involutive label)
+    (negativeLastPuncturedPrefixChainFlip_fixedPointFree label)
 
 /--
 The numerical endpoint count used in the Ky Fan path proof.

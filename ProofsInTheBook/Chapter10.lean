@@ -456,6 +456,14 @@ theorem dist_lt_dist_of_wbtw_foot {P a b Q R : EPoint}
     nlinarith [hpyth, mul_le_mul hQR hQR hQRnn hFRnn, mul_pos hPF hPF]
   exact lt_of_pow_lt_pow_left₀ 2 dist_nonneg hsq
 
+/-- **Kelly step 3c, distance drop on the cross-line.**
+If `P` is off the line `QR` and `Q` lies between the perpendicular foot from
+`P` and `R`, then the base segment `QR` is strictly shorter than `PR`. -/
+theorem kelly_step3c_dist_QR_lt_dist_PR {P Q R : EPoint}
+    (hP : P ∉ affineSpan ℝ {Q, R}) (hQ : Wbtw ℝ (foot P Q R) Q R) :
+    dist Q R < dist P R :=
+  dist_lt_dist_of_wbtw_foot hP (right_mem_affineSpan_pair ℝ Q R) hQ
+
 open scoped RealInnerProductSpace in
 /-- **Projection-length identity (Kelly step 3c core).**
 The squared inner product `⟪P -ᵥ Y, Z -ᵥ Y⟫²` equals `(dist Y F)² · (dist Y Z)²`

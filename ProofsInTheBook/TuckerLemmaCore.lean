@@ -127,6 +127,13 @@ theorem maxSupportPositive_antipode {n : ℕ} (X : SignedSubset n) (hX : X.Nonze
 def Le {n : ℕ} (X Y : SignedSubset n) : Prop :=
   X.pos ⊆ Y.pos ∧ X.neg ⊆ Y.neg
 
+theorem card_le_card_of_le {n : ℕ} {X Y : SignedSubset n} (hXY : Le X Y) :
+    X.card ≤ Y.card := by
+  have hpos_le : X.pos.card ≤ Y.pos.card := Finset.card_le_card hXY.1
+  have hneg_le : X.neg.card ≤ Y.neg.card := Finset.card_le_card hXY.2
+  simp [card]
+  omega
+
 theorem eq_of_le_card_eq {n : ℕ} {X Y : SignedSubset n}
     (hXY : Le X Y) (hcard : X.card = Y.card) : X = Y := by
   have hpos_le : X.pos.card ≤ Y.pos.card := Finset.card_le_card hXY.1
@@ -419,6 +426,11 @@ theorem prefixChain_card_lt_of_lt {n : ℕ} (P : SignedPermutation n) {i j : Fin
   rw [P.prefixChain_card i, P.prefixChain_card j]
   omega
 
+theorem prefixChain_card_strictMono {n : ℕ} (P : SignedPermutation n) :
+    StrictMono fun i : Fin n => (P.prefixChain i).1.card := by
+  intro i j hij
+  exact P.prefixChain_card_lt_of_lt hij
+
 theorem prefixChain_ne_of_lt {n : ℕ} (P : SignedPermutation n) {i j : Fin n}
     (hij : i < j) :
     P.prefixChain i ≠ P.prefixChain j := by
@@ -426,6 +438,15 @@ theorem prefixChain_ne_of_lt {n : ℕ} (P : SignedPermutation n) {i j : Fin n}
   have hcard := congrArg (fun X : NonzeroSignedSubset n => X.1.card) h
   have hlt := P.prefixChain_card_lt_of_lt hij
   exact (ne_of_lt hlt) hcard
+
+theorem prefixChain_injective {n : ℕ} (P : SignedPermutation n) :
+    Function.Injective P.prefixChain := by
+  intro i j hij
+  by_cases h : i = j
+  · exact h
+  · rcases lt_or_gt_of_ne h with hlt | hgt
+    · exact (P.prefixChain_ne_of_lt hlt hij).elim
+    · exact (P.prefixChain_ne_of_lt hgt hij.symm).elim
 
 theorem prefixChain_le {n : ℕ} (P : SignedPermutation n) {i j : Fin n} (hij : i ≤ j) :
     SignedSubset.Le (P.prefixChain i).1 (P.prefixChain j).1 := by
@@ -441,6 +462,16 @@ theorem prefixChain_strictly_ordered {n : ℕ} (P : SignedPermutation n) :
     ∀ i j, i < j → SignedSubset.Le (P.prefixChain i).1 (P.prefixChain j).1 := by
   intro i j hij
   exact P.prefixChain_le hij.le
+
+theorem prefixChain_le_iff {n : ℕ} (P : SignedPermutation n) {i j : Fin n} :
+    SignedSubset.Le (P.prefixChain i).1 (P.prefixChain j).1 ↔ i ≤ j := by
+  constructor
+  · intro hle
+    have hcard := SignedSubset.card_le_card_of_le hle
+    rw [P.prefixChain_card i, P.prefixChain_card j] at hcard
+    exact Fin.le_iff_val_le_val.mpr (by omega)
+  · intro hij
+    exact P.prefixChain_le hij
 
 end SignedPermutation
 

@@ -1298,6 +1298,20 @@ theorem chapter20_from_edge_parity {α : Type*} [Fintype α] [DecidableEq α]
   simpa using chapter20 (edgeParityMonskyCertificate triangles color hodd)
 
 /--
+Finite edge-parity form of the stronger Sperner conclusion: the number of
+trichromatic triangles is odd.
+-/
+theorem trichromatic_count_odd_from_edge_parity {α : Type*} [Fintype α] [DecidableEq α]
+    {n : ℕ} (triangles : Fin n → α × α × α) (color : α → MonskyColor)
+    (hodd : Odd (oddEdgeRedGreenCount triangles color)) :
+    Odd ((Finset.univ.filter fun i : Fin n =>
+      TrichromaticTriangle (triangleColorsOfVertices color (triangles i)).1
+        (triangleColorsOfVertices color (triangles i)).2.1
+        (triangleColorsOfVertices color (triangles i)).2.2).card) := by
+  simpa using chapter20_trichromatic_count_odd
+    (edgeParityMonskyCertificate triangles color hodd)
+
+/--
 Once a `MonskyCertificate` is realized by actual real triangles whose colors
 come from the chosen Monsky coloring and whose oriented double areas are all
 `2 / n`, odd `n` is impossible.  The only unformalized book input left before

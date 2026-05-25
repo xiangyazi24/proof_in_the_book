@@ -265,6 +265,25 @@ theorem ext {m : ℕ} {L M : SignedLabel m}
   subst hindex
   rfl
 
+theorem neg_involutive {m : ℕ} : Function.Involutive (@neg m) := by
+  intro L
+  cases L
+  simp [neg]
+
+theorem neg_ne_self {m : ℕ} (L : SignedLabel m) : L.neg ≠ L := by
+  intro h
+  have hpositive := congrArg SignedLabel.positive h
+  cases L.positive <;> simp [neg] at hpositive
+
+theorem neg_injective {m : ℕ} : Function.Injective (@neg m) := by
+  intro L M h
+  have h' := congrArg (@neg m) h
+  simpa [neg_involutive L, neg_involutive M] using h'
+
+theorem neg_eq_neg_iff {m : ℕ} {L M : SignedLabel m} :
+    L.neg = M.neg ↔ L = M :=
+  ⟨fun h => neg_injective h, fun h => by rw [h]⟩
+
 end SignedLabel
 
 /-- Octahedral Tucker's lemma in sign-vector form. -/
@@ -292,6 +311,28 @@ theorem positive_eq_of_le_of_same_index_of_no_complement {n m : ℕ}
     cases hx : (label X).positive <;> cases hy : (label Y).positive <;>
       simp [hx, hy] at hne ⊢
   exact hno X Y hXY (SignedLabel.ext hbool (by simpa [SignedLabel.neg] using hindex))
+
+theorem label_eq_of_le_of_same_index_of_no_complement {n m : ℕ}
+    {label : NonzeroSignedSubset n → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label)
+    {X Y : NonzeroSignedSubset n}
+    (hXY : SignedSubset.Le X.1 Y.1)
+    (hindex : (label X).index = (label Y).index) :
+    label X = label Y := by
+  exact SignedLabel.ext
+    (positive_eq_of_le_of_same_index_of_no_complement hno hXY hindex)
+    hindex
+
+theorem index_ne_of_le_of_positive_ne_of_no_complement {n m : ℕ}
+    {label : NonzeroSignedSubset n → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label)
+    {X Y : NonzeroSignedSubset n}
+    (hXY : SignedSubset.Le X.1 Y.1)
+    (hpositive : (label X).positive ≠ (label Y).positive) :
+    (label X).index ≠ (label Y).index := by
+  intro hindex
+  exact hpositive
+    (positive_eq_of_le_of_same_index_of_no_complement hno hXY hindex)
 
 /--
 Ky Fan's alternating-chain form for the sign-vector/cross-polytope complex.

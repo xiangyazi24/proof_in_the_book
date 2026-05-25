@@ -22,20 +22,22 @@ any valuation on a field to any field extension; in particular
 `exists_real_twoAdic_extension` extends `Rat.padicValuation 2` from `ℚ` to `ℝ`.
 Using one chosen extension, the file defines Monsky's coloring on `ℝ²`, proves
 the unit-square side color constraints, proves the odd red-green boundary
-count for any finite subdivision of the square boundary, constructs
-`MonskyCertificate` from finite unordered-edge parity, and proves the
-valuation contradiction for a trichromatic triangle of oriented rational
-double area `± 2 / n` with `n` odd.
+count for any finite subdivision of the square boundary, identifies that count
+with an explicit finite list of unit-square boundary point-edges, constructs
+`MonskyCertificate` from finite unordered-edge parity, and proves the valuation
+contradiction for a trichromatic triangle of oriented rational double area
+`± 2 / n` with `n` odd.
 
 Gap to the full book theorem: the remaining work is geometric triangulation
 infrastructure.  One needs a finite real triangulation model for the unit
 square and an extraction theorem producing:
 1. a finite vertex type `α`, a point map `vertices : α → ℝ × ℝ`, and triangles
    `triangles : Fin n → α × α × α`;
-2. four side subdivision lists `bottom right top left : List ℝ`;
-3. the boundary-incidence equality
-   `oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices) =
-    realTwoAdicSquareBoundaryRGChainCount bottom right top left`;
+2. four side subdivision lists `bottom right top left : List ℝ`, or equivalently
+   the explicit point-edge chain `realTwoAdicSquareBoundaryPointEdgeList`;
+3. the boundary-incidence theorem that the odd-multiplicity triangle edges are
+   exactly that square boundary chain after mapping boundary points to the
+   finite vertex type;
 4. the oriented equal-area fact
    `∀ i, doubleArea ... = (2 / n : ℚ) ∨ doubleArea ... = -(2 / n : ℚ)`.
 Mathlib has `Analysis.Convex.SimplicialComplex` and `Geometry.Polygon.Basic`,
@@ -918,6 +920,135 @@ noncomputable def oddEdgeRedGreenCount {α : Type*} [Fintype α] [DecidableEq α
   (Finset.univ.filter fun e : Sym2 α =>
     edgeRGIndicator color e = 1 ∧ Odd (edgeMultiplicity triangles e)).card
 
+/-- Red-green count on a finite set of unordered boundary edges. -/
+noncomputable def boundaryEdgeRedGreenCount {α : Type*} (boundary : Finset (Sym2 α))
+    (color : α → MonskyColor) : ℕ :=
+  (boundary.filter fun e => edgeRGIndicator color e = 1).card
+
+/--
+If the odd-multiplicity triangle edges are exactly a finite boundary edge set,
+then `oddEdgeRedGreenCount` is the red-green count on that boundary set.
+-/
+theorem oddEdgeRedGreenCount_eq_boundaryEdgeRedGreenCount_of_oddMultiplicity
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (triangles : Fin n → α × α × α) (color : α → MonskyColor)
+    (boundary : Finset (Sym2 α))
+    (hboundary : ∀ e : Sym2 α, Odd (edgeMultiplicity triangles e) ↔ e ∈ boundary) :
+    oddEdgeRedGreenCount triangles color = boundaryEdgeRedGreenCount boundary color := by
+  classical
+  unfold oddEdgeRedGreenCount boundaryEdgeRedGreenCount
+  congr 1
+  ext e
+  simp [hboundary e, and_comm]
+
+theorem oddEdgeRedGreenCount_odd_of_boundaryEdges
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (triangles : Fin n → α × α × α) (color : α → MonskyColor)
+    (boundary : Finset (Sym2 α))
+    (hboundary : ∀ e : Sym2 α, Odd (edgeMultiplicity triangles e) ↔ e ∈ boundary)
+    (hodd : Odd (boundaryEdgeRedGreenCount boundary color)) :
+    Odd (oddEdgeRedGreenCount triangles color) := by
+  rw [oddEdgeRedGreenCount_eq_boundaryEdgeRedGreenCount_of_oddMultiplicity
+    triangles color boundary hboundary]
+  exact hodd
+
+/-- Consecutive unordered edges in a finite vertex chain. -/
+def consecutiveEdges {α : Type*} : List α → List (Sym2 α)
+  | a :: b :: rest => s(a, b) :: consecutiveEdges (b :: rest)
+  | _ => []
+
+/-- Red-green count on a finite list of unordered edges. -/
+noncomputable def listEdgeRGCount {α : Type*} (edges : List (Sym2 α))
+    (color : α → MonskyColor) : ℕ :=
+  (edges.filter fun e => edgeRGIndicator color e = 1).length
+
+theorem consecutiveEdges_RGCount_eq_listRGTransitionCount_map {α : Type*}
+    (vertices : List α) (color : α → MonskyColor) :
+    listEdgeRGCount (consecutiveEdges vertices) color =
+      listRGTransitionCount (vertices.map color) := by
+  induction vertices with
+  | nil => simp [consecutiveEdges, listEdgeRGCount, listRGTransitionCount]
+  | cons a tail ih =>
+      cases tail with
+      | nil => simp [consecutiveEdges, listEdgeRGCount, listRGTransitionCount]
+      | cons b rest =>
+          have ih' : listEdgeRGCount (consecutiveEdges (b :: rest)) color =
+              listRGTransitionCount (color b :: List.map color rest) := by
+            simpa using ih
+          simp only [List.map_cons, consecutiveEdges, listRGTransitionCount]
+          rw [← ih']
+          by_cases h : RedGreenEdge (color a) (color b)
+          · simp [listEdgeRGCount, edgeRGIndicator_mk, h, Nat.add_comm]
+          · simp [listEdgeRGCount, edgeRGIndicator_mk, h]
+
+theorem listEdgeRGCount_append {α : Type*} (edges₁ edges₂ : List (Sym2 α))
+    (color : α → MonskyColor) :
+    listEdgeRGCount (edges₁ ++ edges₂) color =
+      listEdgeRGCount edges₁ color + listEdgeRGCount edges₂ color := by
+  simp [listEdgeRGCount, List.filter_append]
+
+theorem boundaryEdgeRedGreenCount_toFinset {α : Type*} [DecidableEq α]
+    (edges : List (Sym2 α)) (color : α → MonskyColor) (hnodup : edges.Nodup) :
+    boundaryEdgeRedGreenCount edges.toFinset color = listEdgeRGCount edges color := by
+  classical
+  unfold boundaryEdgeRedGreenCount listEdgeRGCount
+  have htf : (edges.filter fun e => edgeRGIndicator color e = 1).toFinset =
+      edges.toFinset.filter fun e => edgeRGIndicator color e = 1 := by
+    ext e
+    simp
+  rw [← htf]
+  exact List.toFinset_card_of_nodup (hnodup.filter _)
+
+/--
+Boundary edge list for a square-like contour, split into the four side chains
+and the four corner vertices.
+-/
+def squareBoundaryEdgeList {α : Type*} (bottom right top left : List α)
+    (bottomLeft bottomRight topRight topLeft : α) : List (Sym2 α) :=
+  consecutiveEdges (bottomLeft :: bottom ++ [bottomRight]) ++
+  consecutiveEdges (bottomRight :: right ++ [topRight]) ++
+  consecutiveEdges (topRight :: top ++ [topLeft]) ++
+  consecutiveEdges (topLeft :: left ++ [bottomLeft])
+
+theorem squareBoundaryEdgeList_RGCount_eq {α : Type*}
+    (bottom right top left : List α) (bottomLeft bottomRight topRight topLeft : α)
+    (color : α → MonskyColor) :
+    listEdgeRGCount
+        (squareBoundaryEdgeList bottom right top left bottomLeft bottomRight topRight topLeft)
+        color =
+      listRGTransitionCount ((bottomLeft :: bottom ++ [bottomRight]).map color) +
+      listRGTransitionCount ((bottomRight :: right ++ [topRight]).map color) +
+      listRGTransitionCount ((topRight :: top ++ [topLeft]).map color) +
+      listRGTransitionCount ((topLeft :: left ++ [bottomLeft]).map color) := by
+  simp [squareBoundaryEdgeList, listEdgeRGCount_append,
+    consecutiveEdges_RGCount_eq_listRGTransitionCount_map, List.map_append]
+  omega
+
+/-- The explicit point-edge chain on the boundary of the unit square. -/
+noncomputable def realTwoAdicSquareBoundaryPointEdgeList
+    (bottom right top left : List ℝ) : List (Sym2 (ℝ × ℝ)) :=
+  squareBoundaryEdgeList
+    (bottom.map fun x => (x, 0))
+    (right.map fun y => (1, y))
+    (top.map fun x => (x, 1))
+    (left.map fun y => (0, y))
+    (0, 0) (1, 0) (1, 1) (0, 1)
+
+theorem realTwoAdicSquareBoundaryPointEdgeList_RGCount_eq
+    (bottom right top left : List ℝ) :
+    listEdgeRGCount (realTwoAdicSquareBoundaryPointEdgeList bottom right top left)
+        realTwoAdicColor =
+      realTwoAdicSquareBoundaryRGChainCount bottom right top left := by
+  simp [realTwoAdicSquareBoundaryPointEdgeList, squareBoundaryEdgeList_RGCount_eq,
+    realTwoAdicSquareBoundaryRGChainCount, List.map_map, Function.comp_def]
+
+theorem realTwoAdicSquareBoundaryPointEdgeList_RGCount_odd
+    (bottom right top left : List ℝ) :
+    Odd (listEdgeRGCount (realTwoAdicSquareBoundaryPointEdgeList bottom right top left)
+      realTwoAdicColor) := by
+  rw [realTwoAdicSquareBoundaryPointEdgeList_RGCount_eq]
+  exact realTwoAdicSquareBoundaryRGChainCount_odd bottom right top left
+
 theorem sum_triangle_edge_indicators_eq_sum_multiplicity
     {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
     (triangles : Fin n → α × α × α) (color : α → MonskyColor) :
@@ -1110,9 +1241,10 @@ noncomputable def edgeParityMonskyCertificate {α : Type*} [Fintype α] [Decidab
 /-
 Remaining geometric interface: given a hypothetical equal-area triangulation
 of the unit square into an odd number of real triangles, one still needs to
-extract the finite list of triangle vertices, show their `realTwoAdicColor`
-values make `oddEdgeRedGreenCount` odd, and express the equal-area hypothesis
-as oriented double area `± 2 / n` for each listed triangle.
+extract the finite list of triangle vertices, identify the odd-multiplicity
+triangle edges with the explicit square boundary point-edge chain, and express
+the equal-area hypothesis as oriented double area `± 2 / n` for each listed
+triangle.
 -/
 
 /-- Chapter 20 (Monsky's theorem, Tier 1 conditional):
@@ -1124,13 +1256,12 @@ valuation incompatible with 1/(odd integer)).
 
 TODO (frontier): construct `MonskyCertificate` from an actual equal-area
 odd-triangulation of the unit square.  The exact missing extraction lemma must
-produce finite data `α`, `vertices`, `triangles`, `bottom right top left` and
-prove both
-`oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices) =
-  realTwoAdicSquareBoundaryRGChainCount bottom right top left`
-and the oriented double-area alternative `±2/n` for each triangle.  This needs
-square triangulation/boundary-chain infrastructure not currently assembled in
-Mathlib.
+produce finite data `α`, `vertices`, `triangles`, `bottom right top left`, show
+that the odd-multiplicity triangle edges are precisely the image of
+`realTwoAdicSquareBoundaryPointEdgeList bottom right top left` in `Sym2 α`, and
+prove the oriented double-area alternative `±2/n` for each triangle.  This
+needs square triangulation/boundary-chain infrastructure and oriented-area
+accounting not currently assembled in Mathlib.
 -/
 theorem chapter20 {n : ℕ} (cert : MonskyCertificate n) :
     ∃ i : Fin n,

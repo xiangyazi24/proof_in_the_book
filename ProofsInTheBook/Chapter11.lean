@@ -9976,9 +9976,7 @@ theorem sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_wrap_nonlast
           Fin ((directionsDeterminedBy points).card + 1)) =
         ⟨s.val + j.val + 1 - (directionsDeterminedBy points).card, by omega⟩ := by
       apply Fin.ext
-      change s.val + j.val - (directionsDeterminedBy points).card + 1 =
-        s.val + j.val + 1 - (directionsDeterminedBy points).card
-      omega
+      simpa [Nat.succ_eq_add_one] using (Nat.succ_sub hwrap).symm
     simpa [sweepConcreteGAS, CountedGeneralizedAllowableSequence.ofReversesBlocks,
       sweepGAS, GeneralizedAllowableSequence.ofSweepAngles, stepTo, L, l, hidx]
   change stepCrossingLabelsCard k

@@ -185,6 +185,19 @@ def DSimplex.body {d : ℕ} (S : DSimplex d) : Set (Ambient d) :=
 def DSimplex.relInterior {d : ℕ} (S : DSimplex d) : Set (Ambient d) :=
   S.interior
 
+/-- The closed opposite facet lies in the closed simplex body. -/
+lemma DSimplex.faceOpposite_closedInterior_subset_body {d : ℕ} [NeZero d]
+    (S : DSimplex d) (i : Fin (d + 1)) :
+    (S.faceOpposite i).closedInterior ⊆ S.body :=
+  S.closedInterior_faceOpposite_subset_closedInterior i
+
+/-- The relative interior of an opposite facet lies in the closed simplex body. -/
+lemma DSimplex.faceOpposite_interior_subset_body {d : ℕ} [NeZero d]
+    (S : DSimplex d) (i : Fin (d + 1)) :
+    (S.faceOpposite i).interior ⊆ S.body :=
+  (S.faceOpposite i).interior_subset_closedInterior.trans
+    (S.faceOpposite_closedInterior_subset_body i)
+
 /-- Membership in the closed simplex in terms of barycentric coordinates. -/
 lemma DSimplex.mem_body_iff_forall_affineBasis_coord_nonneg {d : ℕ}
     (S : DSimplex d) {p : Ambient d} :
@@ -234,6 +247,17 @@ lemma DSimplex.face_points_subset_facetHyperplane {d : ℕ} [NeZero d] (S : DSim
     Set.range (S.faceOpposite i).points ⊆ S.facetHyperplane i := by
   intro p hp
   exact mem_affineSpan ℝ hp
+
+/-- The relative interior of an opposite facet lies in its facet hyperplane. -/
+lemma DSimplex.faceOpposite_interior_subset_facetHyperplane {d : ℕ} [NeZero d]
+    (S : DSimplex d) (i : Fin (d + 1)) :
+    (S.faceOpposite i).interior ⊆ S.facetHyperplane i := by
+  intro p hp
+  exact Set.mem_of_mem_of_subset
+    ((S.faceOpposite i).interior_subset_closedInterior hp)
+    ((S.faceOpposite i).closedInterior_subset_affineSpan.trans
+      (show affineSpan ℝ (Set.range (S.faceOpposite i).points) ≤ S.facetHyperplane i from
+        le_rfl))
 
 /-- The vertex opposite a facet is not contained in the facet hyperplane. -/
 lemma DSimplex.opposite_vertex_notMem_facetHyperplane {d : ℕ} [NeZero d]
@@ -761,6 +785,57 @@ lemma touchesAlongFacets_comm {d : ℕ} [NeZero d] (S T : DSimplex d) :
     refine ⟨hdisj.symm, ?_, i, j, hfacet.symm⟩
     simpa [Set.inter_comm] using hmeet
 
+/-- Two specified facets overlap in their relative interiors. -/
+def FacetInteriorOverlap {d : ℕ} [NeZero d] (S T : DSimplex d)
+    (i j : Fin (d + 1)) : Prop :=
+  ((S.faceOpposite i).interior ∩ (T.faceOpposite j).interior).Nonempty
+
+/-- Facet-interior overlap is symmetric. -/
+lemma facetInteriorOverlap_comm {d : ℕ} [NeZero d] (S T : DSimplex d)
+    (i j : Fin (d + 1)) :
+    FacetInteriorOverlap S T i j ↔ FacetInteriorOverlap T S j i := by
+  constructor
+  · rintro ⟨p, hpS, hpT⟩
+    exact ⟨p, hpT, hpS⟩
+  · rintro ⟨p, hpT, hpS⟩
+    exact ⟨p, hpS, hpT⟩
+
+/-- Overlapping facet interiors give a point in the intersection of the closed bodies. -/
+lemma facetInteriorOverlap_body_inter_nonempty {d : ℕ} [NeZero d]
+    {S T : DSimplex d} {i j : Fin (d + 1)}
+    (h : FacetInteriorOverlap S T i j) :
+    (S.body ∩ T.body).Nonempty := by
+  rcases h with ⟨p, hpS, hpT⟩
+  exact ⟨p, S.faceOpposite_interior_subset_body i hpS,
+    T.faceOpposite_interior_subset_body j hpT⟩
+
+/--
+A stronger along-facet relation: the simplices have disjoint relative
+interiors and some common facet hyperplane whose two facet relative interiors
+actually overlap.  This rules out merely sharing the same supporting
+hyperplane while meeting only in a lower-dimensional set away from the facets'
+relative interiors.
+-/
+def TouchesAlongFacetInteriors {d : ℕ} [NeZero d] (S T : DSimplex d) : Prop :=
+  Disjoint S.relInterior T.relInterior ∧
+    ∃ i j, S.facetHyperplane i = T.facetHyperplane j ∧ FacetInteriorOverlap S T i j
+
+/-- The stronger facet-interior touching relation is symmetric. -/
+lemma touchesAlongFacetInteriors_comm {d : ℕ} [NeZero d] (S T : DSimplex d) :
+    TouchesAlongFacetInteriors S T ↔ TouchesAlongFacetInteriors T S := by
+  constructor
+  · rintro ⟨hdisj, i, j, hfacet, hoverlap⟩
+    exact ⟨hdisj.symm, j, i, hfacet.symm, (facetInteriorOverlap_comm S T i j).1 hoverlap⟩
+  · rintro ⟨hdisj, j, i, hfacet, hoverlap⟩
+    exact ⟨hdisj.symm, i, j, hfacet.symm, (facetInteriorOverlap_comm S T i j).2 hoverlap⟩
+
+/-- Facet-interior touching implies the current along-facets touching relation. -/
+lemma touchesAlongFacets_of_touchesAlongFacetInteriors {d : ℕ} [NeZero d]
+    {S T : DSimplex d} (h : TouchesAlongFacetInteriors S T) :
+    TouchesAlongFacets S T := by
+  rcases h with ⟨hdisj, i, j, hfacet, hoverlap⟩
+  exact ⟨hdisj, facetInteriorOverlap_body_inter_nonempty hoverlap, i, j, hfacet⟩
+
 /--
 For a touching pair with a common facet hyperplane, the opposite vertex of the
 second simplex is strictly either on the same side or on the opposite side of
@@ -816,6 +891,11 @@ def PairwiseTouching {ι : Type*} {d : ℕ} [NeZero d]
     (simplices : ι → DSimplex d) : Prop :=
   ∀ ⦃i j : ι⦄, i ≠ j → TouchesAlongFacets (simplices i) (simplices j)
 
+/-- Pairwise touching in the stronger facet-interior-overlap sense. -/
+def PairwiseTouchingAlongFacetInteriors {ι : Type*} {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d) : Prop :=
+  ∀ ⦃i j : ι⦄, i ≠ j → TouchesAlongFacetInteriors (simplices i) (simplices j)
+
 /-- Pairwise touching with the stronger explicit opposite-side facet data. -/
 def PairwiseTouchingAcrossFacets {ι : Type*} {d : ℕ} [NeZero d]
     (simplices : ι → DSimplex d) : Prop :=
@@ -840,6 +920,14 @@ lemma pairwiseTouching_of_pairwiseTouchingAcrossFacets {ι : Type*} {d : ℕ}
   intro i j hij
   exact touchesAlongFacets_of_touchesAcrossFacets (h hij)
 
+/-- Facet-interior touching implies the current pairwise touching relation. -/
+lemma pairwiseTouching_of_pairwiseTouchingAlongFacetInteriors {ι : Type*} {d : ℕ}
+    [NeZero d] {simplices : ι → DSimplex d}
+    (h : PairwiseTouchingAlongFacetInteriors simplices) :
+    PairwiseTouching simplices := by
+  intro i j hij
+  exact touchesAlongFacets_of_touchesAlongFacetInteriors (h hij)
+
 /-- Excluding the same-side alternative upgrades pairwise touching to across-facet touching. -/
 lemma pairwiseTouchingAcrossFacets_of_pairwiseTouching_of_noSameSideCommonFacet
     {ι : Type*} {d : ℕ} [NeZero d] {simplices : ι → DSimplex d}
@@ -849,6 +937,18 @@ lemma pairwiseTouchingAcrossFacets_of_pairwiseTouching_of_noSameSideCommonFacet
   intro a b hab
   exact touchesAcrossFacets_of_touchesAlongFacets_of_not_sSameSide (htouch hab)
     (fun i j hfacet => hno hab i j hfacet)
+
+/--
+Facet-interior touching plus the same-side obstruction gives across-facet
+touching.
+-/
+lemma pairwiseTouchingAcrossFacets_of_pairwiseTouchingAlongFacetInteriors_of_noSameSideCommonFacet
+    {ι : Type*} {d : ℕ} [NeZero d] {simplices : ι → DSimplex d}
+    (htouch : PairwiseTouchingAlongFacetInteriors simplices)
+    (hno : PairwiseNoSameSideCommonFacet simplices) :
+    PairwiseTouchingAcrossFacets simplices :=
+  pairwiseTouchingAcrossFacets_of_pairwiseTouching_of_noSameSideCommonFacet
+    (pairwiseTouching_of_pairwiseTouchingAlongFacetInteriors htouch) hno
 
 set_option synthInstance.maxHeartbeats 80000
 
@@ -2048,6 +2148,29 @@ def ofFacetHyperplanesAcross [Nonempty ι] (simplices : ι → DSimplex d)
         simplices (hacross (i := a) (j := b) hij))
     (FacetHyperplanes.missingSignVector simplices)
 
+/--
+Build certified Perles data from pairwise touching plus the isolated same-side
+obstruction.
+-/
+def ofFacetHyperplanesNoSameSide [Nonempty ι] (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouching simplices)
+    (hno : PairwiseNoSameSideCommonFacet simplices) :
+    PerlesFacetSeparationData simplices (FacetHyperplanes simplices) :=
+  ofFacetHyperplanesAcross simplices
+    (pairwiseTouchingAcrossFacets_of_pairwiseTouching_of_noSameSideCommonFacet htouch hno)
+
+/--
+Build certified Perles data from the stronger facet-interior touching relation
+plus the isolated same-side obstruction.
+-/
+def ofFacetHyperplanesFacetInteriorsNoSameSide [Nonempty ι]
+    (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouchingAlongFacetInteriors simplices)
+    (hno : PairwiseNoSameSideCommonFacet simplices) :
+    PerlesFacetSeparationData simplices (FacetHyperplanes simplices) :=
+  ofFacetHyperplanesNoSameSide simplices
+    (pairwiseTouching_of_pairwiseTouchingAlongFacetInteriors htouch) hno
+
 /-- Convert certified geometric facet data into the abstract Perles matrix. -/
 def toPerlesMatrix (D : PerlesFacetSeparationData simplices κ)
     (htouch : PairwiseTouching simplices) : PerlesMatrix ι κ d where
@@ -2074,8 +2197,18 @@ def noSameSideFacetMatrix (simplices : ι → DSimplex d)
     (htouch : PairwiseTouching simplices)
     (hno : PairwiseNoSameSideCommonFacet simplices) :
     PerlesMatrix ι (FacetHyperplanes simplices) d :=
-  acrossFacetMatrix simplices
-    (pairwiseTouchingAcrossFacets_of_pairwiseTouching_of_noSameSideCommonFacet htouch hno)
+  (ofFacetHyperplanesNoSameSide simplices htouch hno).toPerlesMatrix htouch
+
+/--
+The canonical Perles matrix extracted from facet-interior touching plus the
+isolated same-side obstruction.
+-/
+def facetInteriorsNoSameSideMatrix (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouchingAlongFacetInteriors simplices)
+    (hno : PairwiseNoSameSideCommonFacet simplices) :
+    PerlesMatrix ι (FacetHyperplanes simplices) d :=
+  noSameSideFacetMatrix simplices
+    (pairwiseTouching_of_pairwiseTouchingAlongFacetInteriors htouch) hno
 
 end PerlesFacetSeparationData
 

@@ -1236,29 +1236,79 @@ theorem prefix_strictMono_antipode_iff {n m : ℕ}
 /-- Signed permutations whose prefix labels have strictly increasing indices. -/
 noncomputable def strictPrefixLabelChains {n m : ℕ}
     (label : NonzeroSignedSubset n → SignedLabel m) : Finset (SignedPermutation n) :=
-  Finset.univ.filter fun P => StrictMono fun i => (label (P.prefixChain i)).index
+  by
+    classical
+    exact Finset.univ.filter fun P => StrictMono fun i => (label (P.prefixChain i)).index
+
+/--
+Positive-first alternating prefix labels: the absolute label indices strictly
+increase, and the signs alternate `+,-,+,-,...` along the prefix chain.
+-/
+def PositiveAlternatingPrefixLabels {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m) (P : SignedPermutation n) : Prop :=
+  (StrictMono fun i => (label (P.prefixChain i)).index) ∧
+    ∀ i : Fin n, (label (P.prefixChain i)).positive = decide (Even i.val)
+
+/-- Negative-first alternating prefix labels, the antipodal partner of the positive-first version. -/
+def NegativeAlternatingPrefixLabels {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m) (P : SignedPermutation n) : Prop :=
+  (StrictMono fun i => (label (P.prefixChain i)).index) ∧
+    ∀ i : Fin n, (label (P.prefixChain i)).positive = !decide (Even i.val)
+
+theorem positiveAlternatingPrefixLabels_antipode_iff {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (P : SignedPermutation n) :
+    PositiveAlternatingPrefixLabels label P.antipode ↔
+      NegativeAlternatingPrefixLabels label P := by
+  constructor
+  · intro h
+    refine ⟨(prefix_strictMono_antipode_iff label hantipodal P).mp h.1, ?_⟩
+    intro i
+    have hsign := h.2 i
+    rw [label_prefixChain_antipode label hantipodal P i] at hsign
+    simpa [NegativeAlternatingPrefixLabels, PositiveAlternatingPrefixLabels, SignedLabel.neg]
+      using hsign
+  · intro h
+    refine ⟨(prefix_strictMono_antipode_iff label hantipodal P).mpr h.1, ?_⟩
+    intro i
+    have hsign := h.2 i
+    rw [label_prefixChain_antipode label hantipodal P i]
+    simp [SignedLabel.neg, hsign]
+
+/-- Signed permutations whose prefix labels are positive-first alternating. -/
+noncomputable def positiveAlternatingPrefixLabelChains {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m) : Finset (SignedPermutation n) :=
+  by
+    classical
+    exact Finset.univ.filter fun P => PositiveAlternatingPrefixLabels label P
 
 /--
 The exact finite parity statement still missing from Mathlib for this chapter:
 under an antipodal labeling with no complementary comparable pair, the number
-of strict prefix-label signed permutations is odd.
+of positive-first alternating signed-permutation prefix chains is odd.  This is
+the standard Ky Fan odd-count statement specialized to the cross-polytope
+face-poset model.
 -/
 def KyFanPrefixParityStatement (n m : ℕ) : Prop :=
   ∀ label : NonzeroSignedSubset n → SignedLabel m,
     (∀ X, label X.antipode = (label X).neg) →
       NoComplementaryComparableLabels label →
-        Odd (strictPrefixLabelChains label).card
+        Odd (positiveAlternatingPrefixLabelChains label).card
 
 theorem kyFanPrefixChainStatement_of_parity {n m : ℕ}
     (hparity : KyFanPrefixParityStatement n m) :
     KyFanPrefixChainStatement n m := by
   intro label hantipodal hno
   have hodd := hparity label hantipodal hno
-  have hpos : 0 < (strictPrefixLabelChains label).card := by
+  have hpos : 0 < (positiveAlternatingPrefixLabelChains label).card := by
     rcases hodd with ⟨r, hr⟩
     omega
   obtain ⟨P, hP⟩ := Finset.card_pos.mp hpos
-  exact ⟨P, by simpa [strictPrefixLabelChains] using hP⟩
+  exact ⟨P, (by
+    have hP' : PositiveAlternatingPrefixLabels label P := by
+      simpa [positiveAlternatingPrefixLabelChains] using hP
+    exact hP'.1)⟩
 
 theorem tuckerLemmaStatement_of_kyFanPrefixParity {n : ℕ} (hn : 1 ≤ n)
     (hparity : KyFanPrefixParityStatement n (n - 1)) :

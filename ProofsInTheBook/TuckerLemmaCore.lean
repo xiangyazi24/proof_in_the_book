@@ -1059,6 +1059,20 @@ abbrev NegativePrefixChainType {n m : ℕ}
     (label : NonzeroSignedSubset n → SignedLabel m) :=
   {P : SignedPermutation n // P ∈ negativeAlternatingPrefixLabelChains label}
 
+theorem positivePrefixChainType_card_zero {m : ℕ}
+    (label : NonzeroSignedSubset 0 → SignedLabel m) :
+    Fintype.card (PositivePrefixChainType label) = 1 := by
+  change Fintype.card {P : SignedPermutation 0 // P ∈ positiveAlternatingPrefixLabelChains label} = 1
+  rw [positiveAlternatingPrefixLabelChains_zero_eq_univ label]
+  simp [SignedPermutation.card_zero]
+
+theorem negativePrefixChainType_card_zero {m : ℕ}
+    (label : NonzeroSignedSubset 0 → SignedLabel m) :
+    Fintype.card (NegativePrefixChainType label) = 1 := by
+  change Fintype.card {P : SignedPermutation 0 // P ∈ negativeAlternatingPrefixLabelChains label} = 1
+  rw [negativeAlternatingPrefixLabelChains_zero_eq_univ label]
+  simp [SignedPermutation.card_zero]
+
 abbrev KyFanPrefixPathEndpointDecomposition {n m : ℕ}
     (label : NonzeroSignedSubset n → SignedLabel m) :=
   PathEndpointDecomposition (PositivePrefixChainType label) (NegativePrefixChainType label)
@@ -1086,6 +1100,55 @@ def KyFanPrefixPathEndpointDecompositionStatement (n m : ℕ) : Prop :=
     (∀ X, label X.antipode = (label X).neg) →
       NoComplementaryComparableLabels label →
         Nonempty (KyFanPrefixPathEndpointDecomposition label)
+
+noncomputable def kyFanPrefixPathEndpointDecomposition_zero {m : ℕ}
+    (label : NonzeroSignedSubset 0 → SignedLabel m) :
+    KyFanPrefixPathEndpointDecomposition label where
+  Path := Bool
+  Base := Bool
+  Endpoint := fun _ => Bool
+  instPath := inferInstance
+  instBase := inferInstance
+  instEndpoint := fun _ => inferInstance
+  pathAntipode := Equiv.boolNot
+  pathAntipode_involutive := by
+    intro b
+    cases b <;> rfl
+  pathAntipode_fixedPointFree := by
+    intro b h
+    cases b <;> simp [Equiv.boolNot] at h
+  endpoint_card_two := by
+    intro _p
+    simp
+  classify := Fintype.equivOfCardEq (by
+    simp [Fintype.card_sigma, positivePrefixChainType_card_zero label,
+      negativePrefixChainType_card_zero label])
+  base_card := by
+    simp
+
+theorem kyFanPrefixPathEndpointDecompositionStatement_zero :
+    KyFanPrefixPathEndpointDecompositionStatement 0 0 := by
+  intro label _hantipodal _hno
+  exact ⟨kyFanPrefixPathEndpointDecomposition_zero label⟩
+
+theorem kyFanPrefixPathEndpointDecompositionStatement_one :
+    KyFanPrefixPathEndpointDecompositionStatement 1 0 := by
+  intro label hantipodal hno
+  obtain ⟨X, Y, hXY, hcomp⟩ := tuckerLemmaStatement_one label hantipodal
+  exact False.elim (hno X Y hXY hcomp)
+
+theorem kyFanPrefixPathEndpointDecompositionStatement_two :
+    KyFanPrefixPathEndpointDecompositionStatement 2 1 := by
+  intro label hantipodal hno
+  obtain ⟨X, Y, hXY, hcomp⟩ := tuckerLemmaStatement_two label hantipodal
+  exact False.elim (hno X Y hXY hcomp)
+
+theorem kyFanPrefixPathEndpointDecompositionStatement_sub_one_le_two {n : ℕ} (hnle : n ≤ 2) :
+    KyFanPrefixPathEndpointDecompositionStatement n (n - 1) := by
+  interval_cases n
+  · exact kyFanPrefixPathEndpointDecompositionStatement_zero
+  · exact kyFanPrefixPathEndpointDecompositionStatement_one
+  · exact kyFanPrefixPathEndpointDecompositionStatement_two
 
 theorem kyFanPrefixParityStatement_of_pathEndpointDecomposition {n m : ℕ}
     (hpaths : KyFanPrefixPathEndpointDecompositionStatement n m) :

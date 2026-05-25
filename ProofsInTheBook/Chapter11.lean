@@ -6484,7 +6484,7 @@ Ungar's rotating-calipers theorem, stated for projective directions. This is
 the coordinate-correct target: vertical lines count as one direction, so the
 book's lower bound is `2 * ⌊n / 2⌋`.
 -/
-theorem ungar_directions_lower_bound_from_level_sweep_certificate (points : Finset Point2)
+theorem ungar_directions_lower_bound_from_level_sweep_certificate_floor (points : Finset Point2)
     (hn : 3 ≤ points.card)
     (hncoll : NoncollinearSet points)
     (hcert : EvenUngarLevelSweepCertificatePremise) :
@@ -6496,7 +6496,7 @@ theorem chapter11_from_level_sweep_certificate (points : Finset Point2)
     (hncoll : NoncollinearSet points)
     (hcert : EvenUngarLevelSweepCertificatePremise) :
     2 * (points.card / 2) ≤ (directionsDeterminedBy points).card :=
-  ungar_directions_lower_bound_from_level_sweep_certificate points hn hncoll hcert
+  ungar_directions_floor_lower_bound_from_level_sweep_certificate points hn hncoll hcert
 
 /-! ## Sweep certificate construction
 
@@ -10920,14 +10920,8 @@ noncomputable def sweepConcreteGAS_cyclicEndGapWitness_of_noFull
   · have hgap :
         nextFirstB.val - lastB.val - 1 =
           firstOrd.val + ((directionsDeterminedBy points).card - 1 - lastOrd.val) := by
-      have hnext_val :
-          nextFirstB.val =
-            firstOrd.val + (directionsDeterminedBy points).card - lastOrd.val := by
-        rfl
-      have hlast_val : lastB.val = 0 := hlastB_zero
       have hlast_lt : lastOrd.val < (directionsDeterminedBy points).card := lastOrd.isLt
-      have hfirst_lt : firstOrd.val < lastOrd.val := hfirst_lt_last
-      rw [hnext_val, hlast_val]
+      dsimp [nextFirstB, lastB]
       omega
     simpa [A, AC, firstOrd, lastOrd] using hgap
 

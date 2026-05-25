@@ -13,11 +13,12 @@ The book presents the proof using the theory of mixed discriminants.
 
 Formalization status: this file now states the genuine theorem over Mathlib's
 `doublyStochastic` predicate.  The proved local part is the equality-case
-computation for the flat matrix plus the weighted-AM-GM capacity lower bound
-for row-linear products of doubly stochastic matrices.  The remaining
-arbitrary-matrix lower bound is exposed as a point-17 honest frontier: it is
-conditional on the missing Falikman-Egorychev/Gurvits coefficient-from-capacity
-inequality, not replaced by the flat-matrix special case.  The
+computation for the flat matrix, the `n ≤ 2` unconditional lower bounds, and
+the weighted-AM-GM capacity lower bound for row-linear products of doubly
+stochastic matrices.  The remaining arbitrary-dimension lower bound is exposed
+as a point-17 honest frontier: it is conditional on the missing
+Falikman-Egorychev/Gurvits coefficient-from-capacity inequality, not replaced
+by the flat-matrix special case.  The
 equality-only-if-flat strengthening belongs to the same unformalized analytic
 equality-case layer.
 
@@ -145,8 +146,9 @@ to pass from capacity to the permanent lower bound.
 
 Mathlib gap as of this formalization: there is no available real-stable
 polynomial capacity theorem, mixed-discriminant Alexandrov-Fenchel inequality,
-or specialized Gurvits coefficient bound for `rowLinearProduct`.  The exact
-missing lemma is the `coefficient_bound` field below.
+or specialized Gurvits coefficient bound for `rowLinearProduct`.  Apart from
+the elementary dimensions proved below, the exact missing lemma is the
+`coefficient_bound` field below.
 -/
 structure VanDerWaerdenAnalyticCore (n : ℕ) where
   coefficient_bound :
@@ -162,6 +164,98 @@ theorem permanent_nonneg_of_entrywise_nonneg {n : ℕ}
   unfold Matrix.permanent
   exact Finset.sum_nonneg fun σ _ =>
     Finset.prod_nonneg fun i _ => hA (σ i) i
+
+/-!
+### Elementary low-dimensional cases
+
+The full theorem is deep, but dimensions `0`, `1`, and `2` are elementary.
+These results discharge the analytic-core assumption in the small cases instead
+of hiding them behind the frontier theorem.
+-/
+
+theorem van_der_Waerden_permanent_fin_zero
+    (A : Matrix (Fin 0) (Fin 0) ℝ)
+    (_hA : A ∈ doublyStochastic ℝ (Fin 0)) :
+    ((0 : ℕ).factorial : ℝ) / (0 : ℝ) ^ 0 ≤ A.permanent := by
+  simp [Matrix.permanent]
+
+theorem van_der_Waerden_permanent_fin_one
+    (A : Matrix (Fin 1) (Fin 1) ℝ)
+    (hA : A ∈ doublyStochastic ℝ (Fin 1)) :
+    ((1 : ℕ).factorial : ℝ) / (1 : ℝ) ^ 1 ≤ A.permanent := by
+  have h00 : A 0 0 = 1 := by
+    simpa using sum_row_of_mem_doublyStochastic hA 0
+  simp [h00]
+
+private def permFinTwoEquiv : Equiv.Perm (Fin 2) ≃ Fin 2 where
+  toFun σ := σ 0
+  invFun k := if k = 0 then 1 else Equiv.swap (0 : Fin 2) 1
+  left_inv σ := by
+    by_cases h : σ 0 = 0
+    · have hσ1 : σ 1 = 1 := by
+        have hne : σ 1 ≠ 0 := by
+          intro h1
+          have : (1 : Fin 2) = 0 := σ.injective (by rw [h1, h])
+          norm_num at this
+        have hneval : (σ 1).val ≠ 0 := by
+          intro hv
+          exact hne (Fin.ext hv)
+        have hlt : (σ 1).val < 2 := (σ 1).isLt
+        apply Fin.ext
+        omega
+      ext i
+      fin_cases i <;> simp [h, hσ1]
+    · have hσ0 : σ 0 = 1 := by
+        have hneval : (σ 0).val ≠ 0 := by
+          intro hv
+          exact h (Fin.ext hv)
+        have hlt : (σ 0).val < 2 := (σ 0).isLt
+        apply Fin.ext
+        omega
+      have hσ1 : σ 1 = 0 := by
+        have hne : σ 1 ≠ 1 := by
+          intro h1
+          have : (1 : Fin 2) = 0 := σ.injective (by rw [h1, hσ0])
+          norm_num at this
+        have hneval : (σ 1).val ≠ 1 := by
+          intro hv
+          exact hne (Fin.ext hv)
+        have hlt : (σ 1).val < 2 := (σ 1).isLt
+        apply Fin.ext
+        omega
+      ext i
+      fin_cases i <;> simp [hσ0, hσ1]
+  right_inv k := by
+    fin_cases k <;> simp
+
+private theorem permanent_fin_two (A : Matrix (Fin 2) (Fin 2) ℝ) :
+    A.permanent = A 0 0 * A 1 1 + A 1 0 * A 0 1 := by
+  rw [Matrix.permanent]
+  trans ∑ k : Fin 2, ∏ i, A ((permFinTwoEquiv.symm k) i) i
+  · exact Fintype.sum_equiv permFinTwoEquiv (fun σ => ∏ i, A (σ i) i)
+      (fun k => ∏ i, A ((permFinTwoEquiv.symm k) i) i) (by
+        intro σ
+        simp)
+  · simp [permFinTwoEquiv, Fin.sum_univ_two, Fin.prod_univ_two]
+
+theorem van_der_Waerden_permanent_fin_two
+    (A : Matrix (Fin 2) (Fin 2) ℝ)
+    (hA : A ∈ doublyStochastic ℝ (Fin 2)) :
+    ((2 : ℕ).factorial : ℝ) / (2 : ℝ) ^ 2 ≤ A.permanent := by
+  have hperm := permanent_fin_two A
+  have hrow1 : A 1 0 + A 1 1 = 1 := by
+    simpa [Fin.sum_univ_two] using sum_row_of_mem_doublyStochastic hA 1
+  have hcol0 : A 0 0 + A 1 0 = 1 := by
+    simpa [Fin.sum_univ_two] using sum_col_of_mem_doublyStochastic hA 0
+  have h01_eq_10 : A 0 1 = A 1 0 := by
+    have hrow0 : A 0 0 + A 0 1 = 1 := by
+      simpa [Fin.sum_univ_two] using sum_row_of_mem_doublyStochastic hA 0
+    nlinarith
+  have h11_eq_00 : A 1 1 = A 0 0 := by
+    nlinarith
+  rw [hperm, h01_eq_10, h11_eq_00]
+  norm_num
+  nlinarith [sq_nonneg (A 0 0 - A 1 0)]
 
 /-- The genuine Van der Waerden permanent lower-bound statement, conditional
 on the named analytic core above.  Point-17 status: ③, conditional on an

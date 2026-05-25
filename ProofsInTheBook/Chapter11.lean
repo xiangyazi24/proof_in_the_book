@@ -196,6 +196,12 @@ theorem genericAngleBetween_lt' {θ₁ θ₂ : ℝ} (h : θ₁ < θ₂) :
     genericAngleBetween θ₁ θ₂ < θ₂ := by
   simp [genericAngleBetween]; linarith
 
+theorem genericAngleBetween_add_pi (θ₁ θ₂ : ℝ) :
+    genericAngleBetween (θ₁ + Real.pi) (θ₂ + Real.pi) =
+      genericAngleBetween θ₁ θ₂ + Real.pi := by
+  unfold genericAngleBetween
+  ring
+
 /-- Three points are non-collinear, expressed by a nonzero determinant. -/
 def NoncollinearTriple (p q r : Point2) : Prop :=
   ¬ (q.2 - p.2) * (r.1 - p.1) = (r.2 - p.2) * (q.1 - p.1)
@@ -9274,6 +9280,32 @@ private theorem shiftedSortedAngleAt_unwrapped {points : Finset Point2}
     simpa [r] using hmod
   simp [shiftedSortedAngleAt, hwrap, hfin]
 
+private theorem shiftedSortedAngleAt_wrapped {points : Finset Point2}
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (s j : Fin (directionsDeterminedBy points).card)
+    (hwrap : ¬ s.val + j.val < (directionsDeterminedBy points).card) :
+    shiftedSortedAngleAt points hne s j =
+      sortedAngleAt points
+        ⟨s.val + j.val - (directionsDeterminedBy points).card, by
+          omega⟩ + Real.pi := by
+  let r : ℕ := (directionsDeterminedBy points).card
+  have hge : r ≤ s.val + j.val := by
+    simpa [r] using (by omega :
+      (directionsDeterminedBy points).card ≤ s.val + j.val)
+  have hlt_sub : s.val + j.val - r < r := by omega
+  have hmod : (s.val + j.val) % r = s.val + j.val - r := by
+    rw [Nat.mod_eq_sub_mod hge]
+    exact Nat.mod_eq_of_lt hlt_sub
+  have hfin :
+      (⟨(s.val + j.val) % (directionsDeterminedBy points).card,
+        Nat.mod_lt _ (Finset.card_pos.mpr hne)⟩ :
+          Fin (directionsDeterminedBy points).card) =
+        ⟨s.val + j.val - (directionsDeterminedBy points).card, by
+          simpa [r] using hlt_sub⟩ := by
+    apply Fin.ext
+    simpa [r] using hmod
+  simp [shiftedSortedAngleAt, hwrap, hfin]
+
 private theorem interEventAngleAt_unwrapped {points : Finset Point2}
     (hne : (directionsDeterminedBy points).Nonempty)
     (s j : Fin (directionsDeterminedBy points).card)
@@ -9316,6 +9348,61 @@ private theorem interEventAngleAt_unwrapped {points : Finset Point2}
       shiftedSortedAngleAt_unwrapped (points := points) hne s j hwrap
     simp [interEventAngleAt, interEventAngle, hj0, hj_not_last,
       hsum_ne_last, jprev, hprev, hcur]
+
+private theorem interEventAngleAt_wrapped_nonzero {points : Finset Point2}
+    (hne : (directionsDeterminedBy points).Nonempty)
+    (s j : Fin (directionsDeterminedBy points).card)
+    (hwrap : (directionsDeterminedBy points).card < s.val + j.val) :
+    interEventAngleAt points hne
+        (interEventAngle points hne ⟨s.val, by omega⟩) s
+        ⟨j.val, by omega⟩ =
+      interEventAngle points hne
+        ⟨s.val + j.val - (directionsDeterminedBy points).card, by omega⟩ +
+          Real.pi := by
+  let r : ℕ := (directionsDeterminedBy points).card
+  have hr : 0 < r := by simpa [r] using Finset.card_pos.mpr hne
+  have hs : s.val < r := by simpa [r] using s.isLt
+  have hj : j.val < r := by simpa [r] using j.isLt
+  have hj0 : j.val ≠ 0 := by omega
+  have hj_not_last : j.val ≠ (directionsDeterminedBy points).card := by
+    omega
+  let jprev : Fin (directionsDeterminedBy points).card := ⟨j.val - 1, by omega⟩
+  have hwrap_prev : ¬ s.val + jprev.val < (directionsDeterminedBy points).card := by
+    dsimp [jprev]
+    omega
+  have hprev :
+      shiftedSortedAngleAt points hne s jprev =
+        sortedAngleAt points
+          ⟨s.val + j.val - (directionsDeterminedBy points).card - 1, by omega⟩ +
+            Real.pi := by
+    have hprev0 := shiftedSortedAngleAt_wrapped (points := points) hne s jprev hwrap_prev
+    have hidx :
+        (⟨s.val + jprev.val - (directionsDeterminedBy points).card, by
+          have hr' : 0 < (directionsDeterminedBy points).card := Finset.card_pos.mpr hne
+          have hs' := s.isLt
+          have hj' := jprev.isLt
+          omega⟩ : Fin (directionsDeterminedBy points).card) =
+          ⟨s.val + j.val - (directionsDeterminedBy points).card - 1, by omega⟩ := by
+      apply Fin.ext
+      dsimp [jprev]
+      omega
+    simpa [hidx] using hprev0
+  have hcur :
+      shiftedSortedAngleAt points hne s j =
+        sortedAngleAt points
+          ⟨s.val + j.val - (directionsDeterminedBy points).card, by omega⟩ +
+            Real.pi := by
+    exact shiftedSortedAngleAt_wrapped (points := points) hne s j (by omega)
+  have htarget_nonzero :
+      s.val + j.val - (directionsDeterminedBy points).card ≠ 0 := by
+    omega
+  have htarget_not_last :
+      s.val + j.val - (directionsDeterminedBy points).card ≠
+        (directionsDeterminedBy points).card := by
+    omega
+  simp [interEventAngleAt, interEventAngle, hj0, hj_not_last,
+    htarget_nonzero, htarget_not_last, jprev, hprev, hcur,
+    genericAngleBetween_add_pi]
 
 -- Starting angle θ₀ is between sortedAngleAt(s-1) and sortedAngleAt(s)
 -- (or equivalently, in the gap before event s).

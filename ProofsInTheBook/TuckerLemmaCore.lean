@@ -704,4 +704,81 @@ theorem kyFanPrefixParity_of_path_endpoint_equiv {n m : ℕ}
       Endpoint pathAntipode hinv hfree htwo classify hbase hneg
   simpa [Positive] using hodd
 
+/--
+Packaged endpoint data for the Prescott-Su/Fan path proof.  The parameters
+`Positive` and `Negative` are the two top-dimensional endpoint classes.
+-/
+structure PathEndpointDecomposition (Positive Negative : Type) [Fintype Positive]
+    [Fintype Negative] where
+  Path : Type
+  Base : Type
+  Endpoint : Path → Type
+  instPath : Fintype Path
+  instBase : Fintype Base
+  instEndpoint : ∀ p : Path, Fintype (Endpoint p)
+  pathAntipode : Path ≃ Path
+  pathAntipode_involutive : Function.Involutive pathAntipode
+  pathAntipode_fixedPointFree : ∀ p : Path, pathAntipode p ≠ p
+  endpoint_card_two : ∀ p : Path, Fintype.card (Endpoint p) = 2
+  classify : (Σ p : Path, Endpoint p) ≃ Base ⊕ (Positive ⊕ Negative)
+  base_card : Fintype.card Base = 2
+
+namespace PathEndpointDecomposition
+
+theorem positive_card_odd {Positive Negative : Type} [Fintype Positive] [Fintype Negative]
+    (D : PathEndpointDecomposition Positive Negative)
+    (hneg : Fintype.card Negative = Fintype.card Positive) :
+    Odd (Fintype.card Positive) := by
+  letI := D.instPath
+  letI := D.instBase
+  letI : ∀ p : D.Path, Fintype (D.Endpoint p) := D.instEndpoint
+  exact odd_card_positive_endpoints_of_path_endpoint_equiv
+    D.Endpoint D.pathAntipode D.pathAntipode_involutive D.pathAntipode_fixedPointFree
+    D.endpoint_card_two D.classify D.base_card hneg
+
+end PathEndpointDecomposition
+
+abbrev PositivePrefixChainType {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m) :=
+  {P : SignedPermutation n // P ∈ positiveAlternatingPrefixLabelChains label}
+
+abbrev NegativePrefixChainType {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m) :=
+  {P : SignedPermutation n // P ∈ negativeAlternatingPrefixLabelChains label}
+
+abbrev KyFanPrefixPathEndpointDecomposition {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m) :=
+  PathEndpointDecomposition (PositivePrefixChainType label) (NegativePrefixChainType label)
+
+theorem kyFanPrefixParity_of_pathEndpointDecomposition {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (D : KyFanPrefixPathEndpointDecomposition label) :
+    Odd (positiveAlternatingPrefixLabelChains label).card := by
+  classical
+  have hneg :
+      Fintype.card (NegativePrefixChainType label) =
+        Fintype.card (PositivePrefixChainType label) := by
+    simp [PositivePrefixChainType, NegativePrefixChainType,
+      positiveAlternatingPrefixLabelChains_card_eq_negative label hantipodal]
+  have hodd := D.positive_card_odd hneg
+  simpa [PositivePrefixChainType] using hodd
+
+/--
+The remaining geometric/local-combinatorial obligation for the octahedral Ky
+Fan lemma: for every admissible labeling, construct the path decomposition.
+-/
+def KyFanPrefixPathEndpointDecompositionStatement (n m : ℕ) : Prop :=
+  ∀ label : NonzeroSignedSubset n → SignedLabel m,
+    (∀ X, label X.antipode = (label X).neg) →
+      NoComplementaryComparableLabels label →
+        Nonempty (KyFanPrefixPathEndpointDecomposition label)
+
+theorem kyFanPrefixParityStatement_of_pathEndpointDecomposition {n m : ℕ}
+    (hpaths : KyFanPrefixPathEndpointDecompositionStatement n m) :
+    KyFanPrefixParityStatement n m := by
+  intro label hantipodal hno
+  rcases hpaths label hantipodal hno with ⟨D⟩
+  exact kyFanPrefixParity_of_pathEndpointDecomposition label hantipodal D
+
 end ProofsInTheBook.TuckerLemmaCore

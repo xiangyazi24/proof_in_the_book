@@ -69,6 +69,29 @@ theorem support_nonempty_iff_nonzero {n : ℕ} (X : SignedSubset n) :
     X.support.Nonempty ↔ X.Nonzero := by
   simp [support, Nonzero]
 
+theorem support_card {n : ℕ} (X : SignedSubset n) :
+    X.support.card = X.card := by
+  simp [support, card, Finset.card_union_of_disjoint X.disjoint]
+
+theorem nonzero_iff_card_pos {n : ℕ} (X : SignedSubset n) :
+    X.Nonzero ↔ 0 < X.card := by
+  constructor
+  · exact card_pos_of_nonzero
+  · intro hcard
+    have hsupp : 0 < X.support.card := by
+      simpa [support_card] using hcard
+    exact (support_nonempty_iff_nonzero X).mp (Finset.card_pos.mp hsupp)
+
+theorem card_eq_zero_iff_not_nonzero {n : ℕ} (X : SignedSubset n) :
+    X.card = 0 ↔ ¬ X.Nonzero := by
+  rw [nonzero_iff_card_pos]
+  omega
+
+theorem card_le_univ {n : ℕ} (X : SignedSubset n) :
+    X.card ≤ n := by
+  have hle : X.support.card ≤ Fintype.card (Fin n) := X.support.card_le_univ
+  rwa [support_card, Fintype.card_fin] at hle
+
 /-- The largest coordinate in the support of a nonzero sign vector. -/
 noncomputable def maxSupport {n : ℕ} (X : SignedSubset n) (hX : X.Nonzero) : Fin n :=
   X.support.max' ((support_nonempty_iff_nonzero X).mpr hX)
@@ -705,6 +728,35 @@ theorem tuckerLemmaStatement_le_two {n : ℕ} (hnpos : 1 ≤ n) (hnle : n ≤ 2)
   · exact tuckerLemmaStatement_one
   · exact tuckerLemmaStatement_two
 
+theorem kyFanPrefixParityStatement_zero : KyFanPrefixParityStatement 0 0 := by
+  intro label _hantipodal _hno
+  classical
+  have huniv :
+      positiveAlternatingPrefixLabelChains label = (Finset.univ : Finset (SignedPermutation 0)) := by
+    ext P
+    constructor
+    · intro _hP
+      simp
+    · intro _hP
+      simp only [positiveAlternatingPrefixLabelChains, Finset.mem_filter, Finset.mem_univ,
+        true_and, PositiveAlternatingPrefixLabels]
+      constructor
+      · intro i _j _hij
+        exact Fin.elim0 i
+      · intro i
+        exact Fin.elim0 i
+  rw [huniv]
+  have hcard : (Finset.univ : Finset (SignedPermutation 0)).card = 1 := by
+    calc
+      (Finset.univ : Finset (SignedPermutation 0)).card = Fintype.card (SignedPermutation 0) := by
+        simp
+      _ = Fintype.card (Equiv.Perm (Fin 0) × (Fin 0 → Bool)) :=
+        Fintype.card_congr (signedPermutationEquiv 0)
+      _ = 1 := by
+        simp
+  rw [hcard]
+  exact odd_one
+
 theorem kyFanPrefixParityStatement_one : KyFanPrefixParityStatement 1 0 := by
   intro label _hantipodal _hno
   let z : Fin 1 := ⟨0, by omega⟩
@@ -727,6 +779,13 @@ theorem tuckerLemmaStatement_one_of_kyFanPrefixParity : TuckerLemmaStatement 1 :
 
 theorem tuckerLemmaStatement_two_of_kyFanPrefixParity : TuckerLemmaStatement 2 :=
   tuckerLemmaStatement_of_kyFanPrefixParity (by omega) kyFanPrefixParityStatement_two
+
+theorem kyFanPrefixParityStatement_sub_one_le_two {n : ℕ} (hnle : n ≤ 2) :
+    KyFanPrefixParityStatement n (n - 1) := by
+  interval_cases n
+  · exact kyFanPrefixParityStatement_zero
+  · exact kyFanPrefixParityStatement_one
+  · exact kyFanPrefixParityStatement_two
 
 theorem exists_complementaryComparable_of_kyFanPrefixParity_of_lt {n m : ℕ}
     (hmn : m < n) (hparity : KyFanPrefixParityStatement n m)

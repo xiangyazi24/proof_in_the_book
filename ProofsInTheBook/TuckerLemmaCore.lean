@@ -2607,6 +2607,71 @@ theorem four_dvd_alternatingPuncturedPrefixChainType_card {n m : ℕ} (hn : 0 < 
   rw [alternatingPuncturedPrefixChainType_card label]
   exact four_dvd_alternatingPuncturedPrefixLabelChains_card hn label hantipodal
 
+noncomputable def alternatingPuncturedPrefixChainTypeEquivSum {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    AlternatingPuncturedPrefixChainType label ≃
+      PositivePuncturedPrefixChainType label ⊕ NegativePuncturedPrefixChainType label := by
+  classical
+  let p : SignedPermutation (n + 1) × Fin (n + 1) → Prop :=
+    fun data => data ∈ positiveAlternatingPuncturedPrefixLabelChains label
+  let q : SignedPermutation (n + 1) × Fin (n + 1) → Prop :=
+    fun data => data ∈ negativeAlternatingPuncturedPrefixLabelChains label
+  have hdisj : Disjoint p q := by
+    rw [disjoint_iff]
+    funext data
+    apply propext
+    constructor
+    · intro hdata
+      exact False.elim
+        ((Finset.disjoint_left.mp
+          (positive_negativeAlternatingPuncturedPrefixLabelChains_disjoint hn label))
+          hdata.1 hdata.2)
+    · intro hfalse
+      exact False.elim hfalse
+  have heq :
+      (fun data : SignedPermutation (n + 1) × Fin (n + 1) =>
+        data ∈ alternatingPuncturedPrefixLabelChains label) =
+        fun data => p data ∨ q data := by
+    funext data
+    apply propext
+    simp [alternatingPuncturedPrefixLabelChains, p, q]
+  exact (Equiv.subtypeEquivProp heq).trans (subtypeOrEquiv p q hdisj)
+
+noncomputable def alternatingPuncturedPrefixChainPartner {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    AlternatingPuncturedPrefixChainType label ≃ AlternatingPuncturedPrefixChainType label :=
+  (alternatingPuncturedPrefixChainTypeEquivSum hn label).trans
+    ((Equiv.sumCongr (positivePuncturedPrefixChainPartner label)
+      (negativePuncturedPrefixChainPartner label)).trans
+      (alternatingPuncturedPrefixChainTypeEquivSum hn label).symm)
+
+theorem alternatingPuncturedPrefixChainPartner_involutive {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
+    Function.Involutive (alternatingPuncturedPrefixChainPartner hn label) := by
+  intro data
+  apply (alternatingPuncturedPrefixChainTypeEquivSum hn label).injective
+  cases hdata : (alternatingPuncturedPrefixChainTypeEquivSum hn label) data with
+  | inl positive =>
+      simp [alternatingPuncturedPrefixChainPartner, hdata,
+        positivePuncturedPrefixChainPartner_involutive label positive]
+  | inr negative =>
+      simp [alternatingPuncturedPrefixChainPartner, hdata,
+        negativePuncturedPrefixChainPartner_involutive label negative]
+
+theorem alternatingPuncturedPrefixChainPartner_fixedPointFree {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (data : AlternatingPuncturedPrefixChainType label) :
+    alternatingPuncturedPrefixChainPartner hn label data ≠ data := by
+  intro h
+  have hsum := congrArg (alternatingPuncturedPrefixChainTypeEquivSum hn label) h
+  cases hdata : (alternatingPuncturedPrefixChainTypeEquivSum hn label) data with
+  | inl positive =>
+      exact positivePuncturedPrefixChainPartner_fixedPointFree label positive
+        (by simpa [alternatingPuncturedPrefixChainPartner, hdata] using hsum)
+  | inr negative =>
+      exact negativePuncturedPrefixChainPartner_fixedPointFree label negative
+        (by simpa [alternatingPuncturedPrefixChainPartner, hdata] using hsum)
+
 /-- Statement-level API for the codimension-one alternating facet count. -/
 def KyFanPuncturedPrefixDivisibilityStatement (n m : ℕ) : Prop :=
   ∀ label : NonzeroSignedSubset (n + 1) → SignedLabel m,

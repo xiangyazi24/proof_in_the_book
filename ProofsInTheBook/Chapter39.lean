@@ -32,7 +32,8 @@ positive-first alternating signed-permutation prefix chains are odd, while
 cardinality `2 mod 4`.  This file proves the Matoušek construction from a
 hypothetical `(n - 2*k + 1)`-coloring of `KG(n,k)` to a Tucker counterexample,
 proves low-dimensional Tucker cases, proves the one-dimensional Ky Fan
-prefix-parity count, and proves either Ky Fan parity frontier implies
+prefix-parity count and the vacuous two-dimensional Ky Fan prefix-parity case,
+and proves either Ky Fan parity frontier implies
 `TuckerLemmaStatement → chapter39`.
 -/
 
@@ -1557,6 +1558,19 @@ theorem tuckerLemmaStatement_two : TuckerLemmaStatement 2 := by
   have hself : (label P1).positive = !((label P1).positive) := by
     exact hP0P1.symm.trans (hP0N1.trans hN1neg)
   cases (label P1).positive <;> simp at hself
+
+/--
+The two-dimensional Ky Fan prefix-parity statement is discharged by the direct
+two-dimensional Tucker proof above: the `NoComplementaryComparableLabels`
+hypothesis is already impossible.
+-/
+theorem kyFanPrefixParityStatement_two : KyFanPrefixParityStatement 2 1 := by
+  intro label hantipodal hno
+  obtain ⟨X, Y, hXY, hcomp⟩ := tuckerLemmaStatement_two label hantipodal
+  exact False.elim (hno X Y hXY hcomp)
+
+theorem tuckerLemmaStatement_two_of_kyFanPrefixParity : TuckerLemmaStatement 2 :=
+  tuckerLemmaStatement_of_kyFanPrefixParity (by omega) kyFanPrefixParityStatement_two
 
 /--
 Matoušek's bridge from a too-small Kneser coloring to a Tucker counterexample:

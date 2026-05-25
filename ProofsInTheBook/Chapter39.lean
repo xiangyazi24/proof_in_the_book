@@ -1201,6 +1201,22 @@ theorem tuckerLemmaStatement_of_kyFanPrefix {n : ℕ} (hn : 1 ≤ n)
     TuckerLemmaStatement n :=
   tuckerLemmaStatement_of_kyFan hn (kyFanAlternatingChainStatement_of_prefix hprefix)
 
+theorem label_prefixChain_antipode {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (P : SignedPermutation n) (i : Fin n) :
+    label (P.antipode.prefixChain i) = (label (P.prefixChain i)).neg := by
+  rw [SignedPermutation.prefixChain_antipode]
+  exact hantipodal (P.prefixChain i)
+
+theorem prefix_strictMono_antipode_iff {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (P : SignedPermutation n) :
+    (StrictMono fun i => (label (P.antipode.prefixChain i)).index) ↔
+      StrictMono fun i => (label (P.prefixChain i)).index := by
+  simp [label_prefixChain_antipode label hantipodal P, SignedLabel.neg]
+
 theorem tuckerLemmaStatement_one : TuckerLemmaStatement 1 := by
   intro label _
   let z : Fin 1 := ⟨0, by omega⟩

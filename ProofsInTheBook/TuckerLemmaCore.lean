@@ -246,6 +246,21 @@ theorem not_strictMono_fin_pred (n : ℕ) (hn : 1 ≤ n) :
   simp [Fintype.card_fin] at hcard
   omega
 
+theorem not_strictMono_fin_of_lt {n m : ℕ} (hmn : m < n) :
+    ¬ ∃ f : Fin n → Fin m, StrictMono f := by
+  rintro ⟨f, hf⟩
+  have hinj : Function.Injective f := by
+    intro i j hij
+    by_cases hij' : i = j
+    · exact hij'
+    · have hlt_or_gt : i < j ∨ j < i := lt_or_gt_of_ne hij'
+      rcases hlt_or_gt with hlt | hgt
+      · exact (ne_of_lt (hf hlt) hij).elim
+      · exact (ne_of_gt (hf hgt) hij).elim
+  have hcard := Fintype.card_le_of_injective f hinj
+  simp [Fintype.card_fin] at hcard
+  omega
+
 theorem tuckerLemmaStatement_of_kyFan {n : ℕ} (hn : 1 ≤ n)
     (hfan : KyFanAlternatingChainStatement n (n - 1)) :
     TuckerLemmaStatement n := by
@@ -518,6 +533,20 @@ theorem tuckerLemmaStatement_of_kyFanPrefixParity {n : ℕ} (hn : 1 ≤ n)
     TuckerLemmaStatement n :=
   tuckerLemmaStatement_of_kyFanPrefix hn (kyFanPrefixChainStatement_of_parity hparity)
 
+theorem exists_complementaryComparable_of_kyFanPrefixParity_of_lt {n m : ℕ}
+    (hmn : m < n) (hparity : KyFanPrefixParityStatement n m)
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    ∃ X Y : NonzeroSignedSubset n,
+      SignedSubset.Le X.1 Y.1 ∧ label X = (label Y).neg := by
+  by_contra hnone
+  have hno : NoComplementaryComparableLabels label := by
+    intro X Y hXY hcomp
+    exact hnone ⟨X, Y, hXY, hcomp⟩
+  have hchain := kyFanPrefixChainStatement_of_parity hparity label hantipodal hno
+  obtain ⟨P, hstrict⟩ := hchain
+  exact not_strictMono_fin_of_lt hmn ⟨fun i => (label (P.prefixChain i)).index, hstrict⟩
+
 /-! ## Abstract path parity core -/
 
 theorem even_card_of_fixedPointFree_involution {α : Type*} [Fintype α]
@@ -780,5 +809,20 @@ theorem kyFanPrefixParityStatement_of_pathEndpointDecomposition {n m : ℕ}
   intro label hantipodal hno
   rcases hpaths label hantipodal hno with ⟨D⟩
   exact kyFanPrefixParity_of_pathEndpointDecomposition label hantipodal D
+
+theorem exists_complementaryComparable_of_pathEndpointDecomposition_of_lt {n m : ℕ}
+    (hmn : m < n) (hpaths : KyFanPrefixPathEndpointDecompositionStatement n m)
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    ∃ X Y : NonzeroSignedSubset n,
+      SignedSubset.Le X.1 Y.1 ∧ label X = (label Y).neg :=
+  exists_complementaryComparable_of_kyFanPrefixParity_of_lt hmn
+    (kyFanPrefixParityStatement_of_pathEndpointDecomposition hpaths) label hantipodal
+
+theorem tuckerLemmaStatement_of_pathEndpointDecomposition {n : ℕ} (hn : 1 ≤ n)
+    (hpaths : KyFanPrefixPathEndpointDecompositionStatement n (n - 1)) :
+    TuckerLemmaStatement n :=
+  tuckerLemmaStatement_of_kyFanPrefixParity hn
+    (kyFanPrefixParityStatement_of_pathEndpointDecomposition hpaths)
 
 end ProofsInTheBook.TuckerLemmaCore

@@ -16,7 +16,8 @@ distinct representatives.
 
 Point-17 status: this file now contains several genuine pieces: the
 row-completion Hall step for a sparse partial square, the state update that
-fills an empty row while preserving the partial Latin property, the standard
+fills an empty row while preserving the partial Latin property and with an
+exact filled-cell count, the standard
 extension of a Latin rectangle by one row, and the padding reduction
 `completion_from_exact_cardinality_case`, which proves that the `|P| ≤ n - 1`
 case reduces to the exact `|P| = n - 1` Evans case by adding legal entries one
@@ -409,6 +410,10 @@ def setRow {n : ℕ} (P : Fin n → Fin n → Option (Fin n))
     (i₀ : Fin n) (row : Fin n → Fin n) : Fin n → Fin n → Option (Fin n) :=
   fun i j => if i = i₀ then some (row j) else P i j
 
+/-- The cells in a fixed full row, independent of whether they are filled. -/
+def fullRowCells {n : ℕ} (i₀ : Fin n) : Finset (Fin n × Fin n) :=
+  Finset.univ.image fun j : Fin n => (i₀, j)
+
 lemma completes_of_extendsPartial {n : ℕ} {P Q : Fin n → Fin n → Option (Fin n)}
     {L : Fin n → Fin n → Fin n} (hPQ : ExtendsPartial P Q) (hQL : Completes Q L) :
     Completes P L := by
@@ -563,6 +568,48 @@ lemma filledCells_setCell_card_of_empty {n : ℕ}
   have hnotmem : (i₀, j₀) ∉ filledCells P := by
     simp [filledCells, hempty]
   rw [Finset.card_insert_of_notMem hnotmem]
+
+lemma fullRowCells_card {n : ℕ} (i₀ : Fin n) : (fullRowCells i₀).card = n := by
+  rw [fullRowCells]
+  rw [Finset.card_image_of_injective]
+  · simp
+  · intro j₁ j₂ h
+    exact congrArg Prod.snd h
+
+lemma fullRowCells_disjoint_filledCells_of_empty {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n)) {i₀ : Fin n}
+    (hempty : ∀ j, P i₀ j = none) :
+    Disjoint (fullRowCells i₀) (filledCells P) := by
+  rw [Finset.disjoint_left]
+  intro ij hijRow hijFilled
+  rcases Finset.mem_image.mp hijRow with ⟨j, _hj, hij⟩
+  subst ij
+  simp [filledCells, hempty j] at hijFilled
+
+lemma filledCells_setRow {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n)) {i₀ : Fin n} {row : Fin n → Fin n} :
+    filledCells (setRow P i₀ row) = fullRowCells i₀ ∪ filledCells P := by
+  classical
+  ext ij
+  by_cases hi : ij.1 = i₀
+  · have hijRow : ij ∈ fullRowCells i₀ := by
+      refine Finset.mem_image.mpr ⟨ij.2, by simp, ?_⟩
+      exact Prod.ext hi.symm rfl
+    simp [filledCells, setRow, hi, hijRow]
+  · have hijNotRow : ij ∉ fullRowCells i₀ := by
+      intro hijRow
+      rcases Finset.mem_image.mp hijRow with ⟨j, _hj, hij⟩
+      exact hi (congrArg Prod.fst hij).symm
+    simp [filledCells, setRow, hi, hijNotRow]
+
+lemma filledCells_setRow_card_of_empty {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n)) {i₀ : Fin n} {row : Fin n → Fin n}
+    (hempty : ∀ j, P i₀ j = none) :
+    (filledCells (setRow P i₀ row)).card = (filledCells P).card + n := by
+  rw [filledCells_setRow P]
+  rw [Finset.card_union_of_disjoint (fullRowCells_disjoint_filledCells_of_empty P hempty)]
+  rw [fullRowCells_card]
+  omega
 
 lemma rowSymbols_card_le_rowCells_card {n : ℕ} (P : Fin n → Fin n → Option (Fin n))
     (i : Fin n) :
@@ -1297,6 +1344,44 @@ theorem extend_partialLatin_empty_row {n : ℕ}
   · exact extendsPartial_setRow_of_empty P hempty
   · intro j
     exact ⟨row j, by simp [setRow]⟩
+
+/--
+The same sparse Hall state update, with the exact filled-cell count after the
+empty row is filled.  This records precisely how far the naive row iteration
+moves the state: one empty row update adds `n` filled cells.
+-/
+theorem extend_partialLatin_empty_row_with_card {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n)) (hP : IsPartialLatin P)
+    (hfilled_le : (filledCells P).card ≤ n - 1) {i₀ : Fin n}
+    (hempty : ∀ j, P i₀ j = none) :
+    ∃ Q : Fin n → Fin n → Option (Fin n),
+      IsPartialLatin Q ∧ ExtendsPartial P Q ∧
+        (∀ j, ∃ a, Q i₀ j = some a) ∧
+        (filledCells Q).card = (filledCells P).card + n := by
+  classical
+  have hnpos : 0 < n := by
+    have hi : i₀.val < n := i₀.isLt
+    omega
+  have hused : ∀ j, (colSymbols P j).card < n := by
+    intro j
+    have hcolcells : (colCells P j).card ≤ (filledCells P).card := by
+      exact Finset.card_le_card (by
+        intro ij hij
+        exact (Finset.mem_filter.mp hij).1)
+    have hle : (colSymbols P j).card ≤ n - 1 := by
+      exact le_trans (le_trans (colSymbols_card_le_colCells_card P j) hcolcells) hfilled_le
+    omega
+  have hused_witness : ∀ j a, a ∈ colSymbols P j → ∃ i, P i j = some a := by
+    intro j a ha
+    simpa [colSymbols] using ha
+  obtain ⟨row, hrow, havoid⟩ :=
+    latin_square_completion_step_from_partial P (colSymbols P) hused hused_witness hfilled_le
+  refine ⟨setRow P i₀ row, ?_, ?_, ?_, ?_⟩
+  · exact isPartialLatin_setRow_of_empty hP hempty hrow havoid
+  · exact extendsPartial_setRow_of_empty P hempty
+  · intro j
+    exact ⟨row j, by simp [setRow]⟩
+  · exact filledCells_setRow_card_of_empty P hempty
 
 /--
 The genuine Hall row-completion step from the sparse partial-square hypotheses.

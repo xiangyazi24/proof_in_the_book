@@ -1748,6 +1748,30 @@ theorem kyFanPrefixParityStatement_two : KyFanPrefixParityStatement 2 1 := by
 theorem tuckerLemmaStatement_two_of_kyFanPrefixParity : TuckerLemmaStatement 2 :=
   tuckerLemmaStatement_of_kyFanPrefixParity (by omega) kyFanPrefixParityStatement_two
 
+/-- The path-endpoint frontier is vacuous in dimension one: the
+`NoComplementaryComparableLabels` hypothesis contradicts the direct
+one-dimensional Tucker proof. -/
+theorem kyFanPrefixPathEndpointDecompositionStatement_one :
+    KyFanPrefixPathEndpointDecompositionStatement 1 0 := by
+  intro label hantipodal hno
+  obtain ⟨X, Y, hXY, hcomp⟩ := tuckerLemmaStatement_one label hantipodal
+  exact False.elim (hno X Y hXY hcomp)
+
+/-- The path-endpoint frontier is also vacuous in dimension two by the direct
+two-dimensional Tucker proof. -/
+theorem kyFanPrefixPathEndpointDecompositionStatement_two :
+    KyFanPrefixPathEndpointDecompositionStatement 2 1 := by
+  intro label hantipodal hno
+  obtain ⟨X, Y, hXY, hcomp⟩ := tuckerLemmaStatement_two label hantipodal
+  exact False.elim (hno X Y hXY hcomp)
+
+theorem kyFanPrefixPathEndpointDecompositionStatement_le_two {n : ℕ}
+    (hnpos : 1 ≤ n) (hnle : n ≤ 2) :
+    KyFanPrefixPathEndpointDecompositionStatement n (n - 1) := by
+  interval_cases n
+  · exact kyFanPrefixPathEndpointDecompositionStatement_one
+  · exact kyFanPrefixPathEndpointDecompositionStatement_two
+
 /--
 Matoušek's bridge from a too-small Kneser coloring to a Tucker counterexample:
 given a proper `(n - 2*k + 1)`-coloring, construct an antipodal sign-vector

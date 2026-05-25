@@ -1008,6 +1008,22 @@ lemma facetInteriorOverlap_relInterior_inter_nonempty_of_vertices_sSameSide
           exact mul_pos (sub_pos.mpr hδlt) (hTface.1 l hlj)) hsumT k)
 
 /--
+If two specified facet interiors overlap while the full simplex relative
+interiors are disjoint, then the opposite vertices cannot lie on the same
+strict side of the common facet hyperplane.  This packages the local geometric
+obstruction discharged by the barycentric construction above.
+-/
+lemma not_sSameSide_of_facetInteriorOverlap_of_disjoint_relInterior
+    {d : ℕ} [NeZero d] {S T : DSimplex d} {i j : Fin (d + 1)}
+    (hdisj : Disjoint S.relInterior T.relInterior)
+    (hoverlap : FacetInteriorOverlap S T i j) :
+    ¬ (S.facetHyperplane i).SSameSide (S.points i) (T.points j) := by
+  intro hsame
+  rcases facetInteriorOverlap_relInterior_inter_nonempty_of_vertices_sSameSide
+    hoverlap hsame with ⟨p, hpS, hpT⟩
+  exact Set.disjoint_left.mp hdisj hpS hpT
+
+/--
 A stronger along-facet relation: the simplices have disjoint relative
 interiors and some common facet hyperplane whose two facet relative interiors
 actually overlap.  This rules out merely sharing the same supporting
@@ -1035,6 +1051,19 @@ lemma touchesAlongFacets_of_touchesAlongFacetInteriors {d : ℕ} [NeZero d]
   exact ⟨hdisj, facetInteriorOverlap_body_inter_nonempty hoverlap, i, j, hfacet⟩
 
 /--
+Facet-interior touching supplies a specified common facet for which the
+same-side alternative is impossible.
+-/
+lemma touchesAlongFacetInteriors_exists_not_sSameSide {d : ℕ} [NeZero d]
+    {S T : DSimplex d} (h : TouchesAlongFacetInteriors S T) :
+    ∃ i j, S.facetHyperplane i = T.facetHyperplane j ∧
+      FacetInteriorOverlap S T i j ∧
+        ¬ (S.facetHyperplane i).SSameSide (S.points i) (T.points j) := by
+  rcases h with ⟨hdisj, i, j, hfacet, hoverlap⟩
+  exact ⟨i, j, hfacet, hoverlap,
+    not_sSameSide_of_facetInteriorOverlap_of_disjoint_relInterior hdisj hoverlap⟩
+
+/--
 For a touching pair with a common facet hyperplane, the opposite vertex of the
 second simplex is strictly either on the same side or on the opposite side of
 that hyperplane relative to the first simplex's opposite vertex.
@@ -1059,12 +1088,8 @@ produce a common relative-interior point.
 lemma touchesAcrossFacets_of_touchesAlongFacetInteriors {d : ℕ} [NeZero d]
     {S T : DSimplex d} (h : TouchesAlongFacetInteriors S T) :
     TouchesAcrossFacets S T := by
-  rcases h with ⟨hdisj, i, j, hfacet, hoverlap⟩
-  have hnotSame : ¬ (S.facetHyperplane i).SSameSide (S.points i) (T.points j) := by
-    intro hsame
-    rcases facetInteriorOverlap_relInterior_inter_nonempty_of_vertices_sSameSide
-      hoverlap hsame with ⟨p, hpS, hpT⟩
-    exact Set.disjoint_left.mp hdisj hpS hpT
+  rcases touchesAlongFacetInteriors_exists_not_sSameSide h with
+    ⟨i, j, hfacet, hoverlap, hnotSame⟩
   have hnot : T.points j ∉ S.facetHyperplane i := by
     intro hmem
     exact T.opposite_vertex_notMem_facetHyperplane j (by simpa [hfacet] using hmem)
@@ -1105,6 +1130,35 @@ lemma touchesAlongFacets_of_touchesAcrossFacets {d : ℕ} [NeZero d]
   intro p hpS hpT
   exact AffineSubspace.not_sOppSide_self (S.facetHyperplane i) p
     (S.relInterior_sOppSide_of_commonFacet_of_vertices_sOppSide T i j hpS hpT hfacet hopposite)
+
+/--
+For across-facet touching, every common closed-body point lies in the common
+facet hyperplane.  This is the local boundary-contact fact supplied by the
+opposite-side certificate.
+-/
+lemma touchesAcrossFacets_body_inter_subset_commonFacet {d : ℕ} [NeZero d]
+    {S T : DSimplex d} (h : TouchesAcrossFacets S T) :
+    ∃ i j, S.facetHyperplane i = T.facetHyperplane j ∧
+      S.body ∩ T.body ⊆ S.facetHyperplane i := by
+  rcases h with ⟨_hmeet, i, j, hfacet, hopposite⟩
+  refine ⟨i, j, hfacet, ?_⟩
+  intro p hp
+  exact AffineSubspace.wOppSide_self_iff.1
+    (S.body_wOppSide_of_commonFacet_of_vertices_sOppSide T i j hp.1 hp.2 hfacet hopposite)
+
+/--
+Across-facet touching has a common closed-body point on the certified common
+facet hyperplane.
+-/
+lemma touchesAcrossFacets_commonFacet_body_inter_nonempty {d : ℕ} [NeZero d]
+    {S T : DSimplex d} (h : TouchesAcrossFacets S T) :
+    ∃ i j, S.facetHyperplane i = T.facetHyperplane j ∧
+      (S.body ∩ T.body ∩ S.facetHyperplane i).Nonempty := by
+  rcases h with ⟨hmeet, i, j, hfacet, hopposite⟩
+  rcases hmeet with ⟨p, hpS, hpT⟩
+  refine ⟨i, j, hfacet, p, ⟨⟨hpS, hpT⟩, ?_⟩⟩
+  exact AffineSubspace.wOppSide_self_iff.1
+    (S.body_wOppSide_of_commonFacet_of_vertices_sOppSide T i j hpS hpT hfacet hopposite)
 
 /-- A finite family of pairwise touching `d`-simplices. -/
 def PairwiseTouching {ι : Type*} {d : ℕ} [NeZero d]
@@ -2065,6 +2119,18 @@ def complementSign (v : κ → Bool) : κ → Bool :=
 /-- The natural half-cube condition: completed rows contain no antipodal pair. -/
 def AntipodalFreeCompletions (M : PerlesMatrix ι κ d) : Prop :=
   ∀ x y : M.CompletionIndex, M.completedSign y ≠ complementSign (M.completedSign x)
+
+/--
+The fixed-coordinate half-cube condition is a concrete sufficient way to rule
+out antipodal completed rows.
+-/
+lemma antipodalFreeCompletions_of_fixedCoordinate (M : PerlesMatrix ι κ d)
+    (hfixed : M.FixedCoordinateCompletions) :
+    M.AntipodalFreeCompletions := by
+  rcases hfixed with ⟨anchor, hanchor⟩
+  intro x y hxy
+  have hcoord := congrFun hxy anchor
+  simp [complementSign, hanchor x, hanchor y] at hcoord
 
 lemma eraseCoordinate_completedSign_injective_of_fixed (M : PerlesMatrix ι κ d)
     {anchor : κ} (hfixed : ∀ x : M.CompletionIndex, M.completedSign x anchor = true) :

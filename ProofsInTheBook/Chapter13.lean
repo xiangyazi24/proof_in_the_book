@@ -23,9 +23,12 @@ Formalization status: this file closes the finite sign bookkeeping layer and
 the final counting contradiction.  It defines edge signs, strict sign changes
 around triangular faces, proves the basic parity facts, packages the abstract
 consequence of Cauchy's arm lemma, and states `chapter13` / `chapter13_rigidity`
-from two meaningful missing geometric/combinatorial facts: every surviving
-vertex has at least four sign changes, while the Euler counting step gives a
-global sign-change total strictly below `4V`.
+from meaningful missing geometric/combinatorial facts.  The remaining
+frontier is now explicit: Cauchy's arm lemma must supply at least four sign
+changes at every surviving vertex, and the Euler polyhedron formula plus the
+triangulated incidence count must be supplied by real polyhedron
+infrastructure.  Once those are given, the Euler sign-count upper bound is
+proved here.
 
 Gap to the full book theorem: the missing work is genuine three-dimensional
 Euclidean polyhedron infrastructure.  A complete proof needs a formal convex
@@ -90,6 +93,23 @@ theorem strictSignChangesAroundTriangle_eq_zero_or_two (a b c : StrictEdgeSign) 
     StrictSignChangesAroundTriangle a b c = 0 ∨
       StrictSignChangesAroundTriangle a b c = 2 := by
   cases a <;> cases b <;> cases c <;> decide
+
+theorem strictSignChangesAroundTriangle_le_two (a b c : StrictEdgeSign) :
+    StrictSignChangesAroundTriangle a b c ≤ 2 := by
+  rcases strictSignChangesAroundTriangle_eq_zero_or_two a b c with h | h <;> omega
+
+abbrev StrictTriangleSigns := StrictEdgeSign × StrictEdgeSign × StrictEdgeSign
+
+namespace StrictTriangleSigns
+
+def signChanges (t : StrictTriangleSigns) : ℕ :=
+  StrictSignChangesAroundTriangle t.1 t.2.1 t.2.2
+
+theorem signChanges_le_two (t : StrictTriangleSigns) :
+    signChanges t ≤ 2 :=
+  strictSignChangesAroundTriangle_le_two t.1 t.2.1 t.2.2
+
+end StrictTriangleSigns
 
 theorem strictSignChangesAroundTriangle_even (a b c : StrictEdgeSign) :
     Even (StrictSignChangesAroundTriangle a b c) := by
@@ -182,23 +202,79 @@ theorem cauchy_counting_contradiction {V : ℕ}
   not_lt_of_ge (four_mul_vertices_le_total_signChanges vertexSignChanges hlocal) hglobal
 
 /--
+Euler plus the fact that every face is a triangle gives `F + 4 = 2V`.
+The Euler formula is stated over `ℤ` to avoid truncated subtraction on `ℕ`.
+-/
+theorem euler_triangular_faces_eq_two_mul_vertices_sub_four {V E F : ℕ}
+    (heuler : (V : ℤ) - (E : ℤ) + (F : ℤ) = 2)
+    (htriangular : 3 * F = 2 * E) :
+    F + 4 = 2 * V := by
+  omega
+
+/--
+Euler's sign-count upper bound for the triangulated reduced sign graph.
+Each triangular face contributes at most two strict sign changes, the total
+vertex count equals the total face count by double-counting incidences, and
+Euler plus `3F = 2E` gives `F + 4 = 2V`; hence the total is strictly below
+`4V`.
+-/
+theorem euler_triangular_sign_change_bound {V E F : ℕ}
+    (vertexSignChanges : Fin V → ℕ)
+    (faceSigns : Fin F → StrictTriangleSigns)
+    (htotal :
+      (∑ v : Fin V, vertexSignChanges v) =
+        ∑ f : Fin F, StrictTriangleSigns.signChanges (faceSigns f))
+    (heuler : (V : ℤ) - (E : ℤ) + (F : ℤ) = 2)
+    (htriangular : 3 * F = 2 * E) :
+    (∑ v : Fin V, vertexSignChanges v) < 4 * V := by
+  have hF : F + 4 = 2 * V :=
+    euler_triangular_faces_eq_two_mul_vertices_sub_four heuler htriangular
+  have hsum_face :
+      (∑ f : Fin F, StrictTriangleSigns.signChanges (faceSigns f)) ≤
+        ∑ _f : Fin F, (2 : ℕ) :=
+    Finset.sum_le_sum (fun f _ => StrictTriangleSigns.signChanges_le_two (faceSigns f))
+  have hsum_face_le :
+      (∑ f : Fin F, StrictTriangleSigns.signChanges (faceSigns f)) ≤ 2 * F := by
+    simpa [Fintype.card_fin, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using hsum_face
+  rw [htotal]
+  omega
+
+/--
 Certificate for Cauchy's rigidity theorem after removing the circular
 `False` field.  The fields are the mathematically meaningful facts supplied
 by the missing geometry:
 * a nontrivial edge-sign assignment survives;
 * the arm lemma forces at least four sign changes around every surviving
   vertex;
-* the Euler/sign-graph counting step gives a strict global upper bound.
+* the face/vertex sign-change counts are linked by double-counting;
+* Euler's polyhedron formula and the triangular face-edge incidence count
+  hold for the reduced triangulated sign graph.
 -/
-structure CauchyRigidityCertificate {V E : ℕ} (edgeSigns : Fin E → EdgeSign) where
+structure CauchyRigidityCertificate {V E F : ℕ} (edgeSigns : Fin E → EdgeSign) where
   /-- A nontrivial perturbation exists (at least one edge has a nonzero sign). -/
   nontrivial : ∃ e, edgeSigns e ≠ EdgeSign.zero
   /-- Number of sign changes around each vertex of the reduced sign graph. -/
   vertexSignChanges : Fin V → ℕ
+  /-- Strict edge signs around each triangular face of the reduced sign graph. -/
+  faceSigns : Fin F → StrictTriangleSigns
   /-- Cauchy's arm lemma: every surviving vertex has at least four sign changes. -/
   arm_lemma_four_sign_changes : ∀ v, 4 ≤ vertexSignChanges v
-  /-- Euler/sign-graph counting: the total sign-change count is strictly below `4V`. -/
-  euler_sign_change_bound : (∑ v : Fin V, vertexSignChanges v) < 4 * V
+  /-- Double-counting: vertex sign changes and face sign changes count the same incidences. -/
+  total_vertex_eq_total_face :
+    (∑ v : Fin V, vertexSignChanges v) =
+      ∑ f : Fin F, StrictTriangleSigns.signChanges (faceSigns f)
+  /-- Euler's formula for the reduced triangulated sign graph. -/
+  euler_formula : (V : ℤ) - (E : ℤ) + (F : ℤ) = 2
+  /-- Every face is triangular, so counting face-edge incidences gives `3F = 2E`. -/
+  triangular_face_edge_count : 3 * F = 2 * E
+
+theorem CauchyRigidityCertificate.euler_sign_change_bound {V E F : ℕ}
+    {edgeSigns : Fin E → EdgeSign}
+    (cert : CauchyRigidityCertificate (V := V) (F := F) edgeSigns) :
+    (∑ v : Fin V, cert.vertexSignChanges v) < 4 * V :=
+  euler_triangular_sign_change_bound cert.vertexSignChanges cert.faceSigns
+    cert.total_vertex_eq_total_face
+    cert.euler_formula cert.triangular_face_edge_count
 
 /--
 Chapter 13 (Cauchy's rigidity theorem, Tier 1 conditional):
@@ -209,8 +285,8 @@ TODO (Tier 2): Construct CauchyRigidityCertificate from convex polyhedron
 geometry. Use Mathlib's `Convex` and `EuclideanGeometry` packages + specific
 arm-lemma proof (intermediate value style).
 -/
-theorem chapter13 {V E : ℕ} {edgeSigns : Fin E → EdgeSign}
-    (cert : CauchyRigidityCertificate (V := V) edgeSigns) :
+theorem chapter13 {V E F : ℕ} {edgeSigns : Fin E → EdgeSign}
+    (cert : CauchyRigidityCertificate (V := V) (F := F) edgeSigns) :
     False :=
   cauchy_counting_contradiction cert.vertexSignChanges
     cert.arm_lemma_four_sign_changes cert.euler_sign_change_bound
@@ -218,8 +294,8 @@ theorem chapter13 {V E : ℕ} {edgeSigns : Fin E → EdgeSign}
 /-- The empty edge family `Fin 0 → EdgeSign` cannot carry a Cauchy rigidity
 certificate, because the certificate demands at least one nontrivial sign — but
 `Fin 0` has no edges. -/
-theorem CauchyRigidityCertificate.isEmpty_zero {V : ℕ} (edgeSigns : Fin 0 → EdgeSign) :
-    IsEmpty (CauchyRigidityCertificate (V := V) edgeSigns) := by
+theorem CauchyRigidityCertificate.isEmpty_zero {V F : ℕ} (edgeSigns : Fin 0 → EdgeSign) :
+    IsEmpty (CauchyRigidityCertificate (V := V) (F := F) edgeSigns) := by
   constructor
   intro cert
   obtain ⟨e, _⟩ := cert.nontrivial
@@ -228,17 +304,17 @@ theorem CauchyRigidityCertificate.isEmpty_zero {V : ℕ} (edgeSigns : Fin 0 → 
 /-- An all-zero edge-sign assignment carries no Cauchy rigidity certificate:
 the certificate demands a nontrivial sign, but `edgeSigns ≡ zero` makes every
 edge trivial. -/
-theorem CauchyRigidityCertificate.isEmpty_of_allZero {V E : ℕ}
+theorem CauchyRigidityCertificate.isEmpty_of_allZero {V E F : ℕ}
     {edgeSigns : Fin E → EdgeSign} (hall : ∀ e, edgeSigns e = EdgeSign.zero) :
-    IsEmpty (CauchyRigidityCertificate (V := V) edgeSigns) := by
+    IsEmpty (CauchyRigidityCertificate (V := V) (F := F) edgeSigns) := by
   constructor
   intro cert
   obtain ⟨e, hne⟩ := cert.nontrivial
   exact hne (hall e)
 
 /-- Any such certificate is impossible by the proved counting contradiction. -/
-theorem CauchyRigidityCertificate.isEmpty {V E : ℕ} (edgeSigns : Fin E → EdgeSign) :
-    IsEmpty (CauchyRigidityCertificate (V := V) edgeSigns) := by
+theorem CauchyRigidityCertificate.isEmpty {V E F : ℕ} (edgeSigns : Fin E → EdgeSign) :
+    IsEmpty (CauchyRigidityCertificate (V := V) (F := F) edgeSigns) := by
   constructor
   intro cert
   exact chapter13 cert
@@ -246,8 +322,8 @@ theorem CauchyRigidityCertificate.isEmpty {V E : ℕ} (edgeSigns : Fin E → Edg
 /-- Contrapositive packaging of `chapter13`: the absence of any rigidity-
 violation certificate follows from the arm-lemma lower bound and Euler upper
 bound carried by the certificate. -/
-theorem chapter13_rigidity {V E : ℕ} (edgeSigns : Fin E → EdgeSign) :
-    (∃ _ : CauchyRigidityCertificate (V := V) edgeSigns, True) → False := by
+theorem chapter13_rigidity {V E F : ℕ} (edgeSigns : Fin E → EdgeSign) :
+    (∃ _ : CauchyRigidityCertificate (V := V) (F := F) edgeSigns, True) → False := by
   rintro ⟨cert, _⟩
   exact chapter13 cert
 

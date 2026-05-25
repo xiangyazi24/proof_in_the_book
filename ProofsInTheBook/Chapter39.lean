@@ -25,12 +25,14 @@ simplicial-complex infrastructure, but no Borsuk-Ulam theorem, Tucker lemma,
 Ky Fan lemma, octahedral sphere labeling theorem, or ready-made bridge from
 too-small Kneser colorings to a forbidden antipodal/complementary labeling.
 
-The remaining upstream gap is now the finite parity statement
-`KyFanPrefixParityStatement`: the odd count of strict signed-permutation
-prefix chains in Ky Fan's proof.  This file proves the Matoušek construction
-from a hypothetical `(n - 2*k + 1)`-coloring of `KG(n,k)` to a Tucker
-counterexample, proves low-dimensional Tucker cases, and proves
-`KyFanPrefixParityStatement → TuckerLemmaStatement → chapter39`.
+The remaining upstream gap is now the finite Ky Fan boundary-parity count,
+formalized in two equivalent ways: `KyFanPrefixParityStatement` says that the
+positive-first alternating signed-permutation prefix chains are odd, while
+`KyFanPrefixModFourStatement` says that both orientations together have
+cardinality `2 mod 4`.  This file proves the Matoušek construction from a
+hypothetical `(n - 2*k + 1)`-coloring of `KG(n,k)` to a Tucker counterexample,
+proves low-dimensional Tucker cases, and proves either Ky Fan parity frontier
+implies `TuckerLemmaStatement → chapter39`.
 -/
 
 namespace ProofsInTheBook.Chapter39

@@ -621,6 +621,46 @@ theorem checkerboardExchangeEndpoint_mem_doublyStochastic
       (t := 1) zero_le_one le_rfl).1
 
 omit [Fintype n] in
+theorem checkerboardExchangeEndpoint_apply_of_ne_rows
+    {M : Matrix n n ℝ} {r s c d i j : n} (hir : i ≠ r) (his : i ≠ s) :
+    checkerboardExchangeEndpoint M r s c d i j = M i j := by
+  simp [checkerboardExchangeEndpoint, twoRowPerturbation, his, hir]
+
+omit [Fintype n] in
+theorem checkerboardExchangeEndpoint_apply_add_add
+    {M : Matrix n n ℝ} {r s c d : n} (hrs : r ≠ s) (hcd : c ≠ d) :
+    checkerboardExchangeEndpoint M r s c d r c =
+      M r c + checkerboardExchangeAmount M r s c d := by
+  simp [checkerboardExchangeEndpoint, twoRowPerturbation, scaledCheckerboardDirection,
+    checkerboardDirection, hrs, hcd]
+
+omit [Fintype n] in
+theorem checkerboardExchangeEndpoint_apply_add_sub
+    {M : Matrix n n ℝ} {r s c d : n} (hrs : r ≠ s) (hcd : c ≠ d) :
+    checkerboardExchangeEndpoint M r s c d r d =
+      M r d - checkerboardExchangeAmount M r s c d := by
+  simp [checkerboardExchangeEndpoint, twoRowPerturbation, scaledCheckerboardDirection,
+    checkerboardDirection, hrs, hcd]
+  ring
+
+omit [Fintype n] in
+theorem checkerboardExchangeEndpoint_apply_sub_sub
+    {M : Matrix n n ℝ} {r s c d : n} (hcd : c ≠ d) :
+    checkerboardExchangeEndpoint M r s c d s c =
+      M s c - checkerboardExchangeAmount M r s c d := by
+  simp [checkerboardExchangeEndpoint, twoRowPerturbation, scaledCheckerboardDirection,
+    checkerboardDirection, hcd]
+  ring
+
+omit [Fintype n] in
+theorem checkerboardExchangeEndpoint_apply_sub_add
+    {M : Matrix n n ℝ} {r s c d : n} (hcd : c ≠ d) :
+    checkerboardExchangeEndpoint M r s c d s d =
+      M s d + checkerboardExchangeAmount M r s c d := by
+  simp [checkerboardExchangeEndpoint, twoRowPerturbation, scaledCheckerboardDirection,
+    checkerboardDirection, hcd]
+
+omit [Fintype n] in
 theorem checkerboardExchangeEndpoint_boundary_zero
     {M : Matrix n n ℝ} {r s c d : n} (hrs : r ≠ s) (hcd : c ≠ d) :
     checkerboardExchangeEndpoint M r s c d r d = 0 ∨

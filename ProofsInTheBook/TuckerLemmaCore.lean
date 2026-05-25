@@ -720,6 +720,14 @@ theorem reindexPositions_reindexPositions {n : ℕ}
   · funext i
     rfl
 
+theorem antipode_reindexPositions {n : ℕ}
+    (P : SignedPermutation n) (τ : Equiv.Perm (Fin n)) :
+    (P.reindexPositions τ).antipode = P.antipode.reindexPositions τ := by
+  apply ext_order_positive
+  · rfl
+  · funext i
+    rfl
+
 theorem reindexPositions_swap_involutive {n : ℕ}
     (P : SignedPermutation n) (a b : Fin n) :
     (P.reindexPositions (Equiv.swap a b)).reindexPositions (Equiv.swap a b) = P := by
@@ -860,6 +868,13 @@ theorem flipSignAt_involutive {n : ℕ} (P : SignedPermutation n) (j : Fin n) :
   · rfl
   · funext i
     by_cases hij : i = j <;> simp [flipSignAt, hij]
+
+theorem antipode_flipSignAt {n : ℕ} (P : SignedPermutation n) (j : Fin n) :
+    (P.flipSignAt j).antipode = P.antipode.flipSignAt j := by
+  apply ext_order_positive
+  · rfl
+  · funext i
+    by_cases hij : i = j <;> simp [antipode, flipSignAt, hij]
 
 theorem flipSignAt_ne_self {n : ℕ} (P : SignedPermutation n) (j : Fin n) :
     P.flipSignAt j ≠ P := by
@@ -1293,6 +1308,26 @@ def puncturedPrefixAntipode {n : ℕ} :
     cases data with
     | mk P gap =>
         simp [SignedPermutation.antipode_involutive P]
+
+def puncturedPrefixPartnerData {n : ℕ}
+    (data : SignedPermutation (n + 1) × Fin (n + 1)) :
+    SignedPermutation (n + 1) × Fin (n + 1) :=
+  if hgap : data.2.val < n then
+    (data.1.reindexPositions (Equiv.swap data.2 (SignedPermutation.gapNext data.2 hgap)),
+      data.2)
+  else
+    (data.1.flipSignAt (Fin.last n), Fin.last n)
+
+theorem puncturedPrefixPartnerData_antipode {n : ℕ}
+    (data : SignedPermutation (n + 1) × Fin (n + 1)) :
+    puncturedPrefixPartnerData (puncturedPrefixAntipode data) =
+      puncturedPrefixAntipode (puncturedPrefixPartnerData data) := by
+  rcases data with ⟨P, gap⟩
+  by_cases hgap : gap.val < n
+  · simp [puncturedPrefixPartnerData, puncturedPrefixAntipode, hgap,
+      SignedPermutation.antipode_reindexPositions]
+  · simp [puncturedPrefixPartnerData, puncturedPrefixAntipode, hgap,
+      SignedPermutation.antipode_flipSignAt]
 
 noncomputable def positiveAlternatingPuncturedPrefixLabelChains {n m : ℕ}
     (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
@@ -1753,6 +1788,36 @@ theorem negativePuncturedPrefixChainPartner_fixedPointFree {n m : ℕ}
     have hP' : P.flipSignAt (Fin.last n) = P := by
       simpa [negativePuncturedPrefixChainPartner, hgap, hlast] using hP
     exact SignedPermutation.flipSignAt_ne_self P (Fin.last n) hP'
+
+theorem positivePuncturedPrefixChainPartner_val {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (data : PositivePuncturedPrefixChainType label) :
+    (positivePuncturedPrefixChainPartner label data).1 =
+      puncturedPrefixPartnerData data.1 := by
+  rcases data with ⟨⟨P, gap⟩, hmem⟩
+  by_cases hgap : gap.val < n
+  · simp [positivePuncturedPrefixChainPartner, puncturedPrefixPartnerData, hgap]
+  · have hlast : gap = Fin.last n := by
+      apply Fin.ext
+      have hle : gap.val ≤ n := Nat.le_of_lt_succ gap.isLt
+      simp [Fin.last]
+      omega
+    simp [positivePuncturedPrefixChainPartner, puncturedPrefixPartnerData, hlast]
+
+theorem negativePuncturedPrefixChainPartner_val {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (data : NegativePuncturedPrefixChainType label) :
+    (negativePuncturedPrefixChainPartner label data).1 =
+      puncturedPrefixPartnerData data.1 := by
+  rcases data with ⟨⟨P, gap⟩, hmem⟩
+  by_cases hgap : gap.val < n
+  · simp [negativePuncturedPrefixChainPartner, puncturedPrefixPartnerData, hgap]
+  · have hlast : gap = Fin.last n := by
+      apply Fin.ext
+      have hle : gap.val ≤ n := Nat.le_of_lt_succ gap.isLt
+      simp [Fin.last]
+      omega
+    simp [negativePuncturedPrefixChainPartner, puncturedPrefixPartnerData, hlast]
 
 theorem positiveAlternatingPuncturedPrefixLabelChains_card_eq_negative {n m : ℕ}
     (label : NonzeroSignedSubset (n + 1) → SignedLabel m)

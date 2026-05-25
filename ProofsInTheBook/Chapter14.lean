@@ -1223,6 +1223,18 @@ def PairwiseHasNotSameSideCommonFacet {ι : Type*} {d : ℕ} [NeZero d]
       ¬ ((simplices a).facetHyperplane i).SSameSide
         ((simplices a).points i) ((simplices b).points j)
 
+/--
+The facet-overlap datum needed to turn the current `PairwiseTouching`
+definition into the stronger facet-interior touching relation: for each
+touching pair, some common facet hyperplane is witnessed by facets whose
+relative interiors overlap.
+-/
+def PairwiseHasFacetInteriorOverlapCommonFacet {ι : Type*} {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d) : Prop :=
+  ∀ ⦃a b : ι⦄, a ≠ b → ∃ i j,
+    (simplices a).facetHyperplane i = (simplices b).facetHyperplane j ∧
+      FacetInteriorOverlap (simplices a) (simplices b) i j
+
 lemma pairwiseTouching_of_pairwiseTouchingAcrossFacets {ι : Type*} {d : ℕ}
     [NeZero d] {simplices : ι → DSimplex d}
     (h : PairwiseTouchingAcrossFacets simplices) :
@@ -1247,6 +1259,33 @@ lemma pairwiseTouchingAcrossFacets_of_pairwiseTouchingAlongFacetInteriors
   exact touchesAcrossFacets_of_touchesAlongFacetInteriors (h hij)
 
 /--
+Pairwise touching plus an overlapping common facet for each pair is exactly
+enough to obtain the stronger facet-interior touching relation.
+-/
+lemma pairwiseTouchingAlongFacetInteriors_of_pairwiseTouching_of_hasFacetInteriorOverlap
+    {ι : Type*} {d : ℕ} [NeZero d] {simplices : ι → DSimplex d}
+    (htouch : PairwiseTouching simplices)
+    (hoverlap : PairwiseHasFacetInteriorOverlapCommonFacet simplices) :
+    PairwiseTouchingAlongFacetInteriors simplices := by
+  intro a b hab
+  rcases htouch hab with ⟨hdisj, _hmeet, _i0, _j0, _hfacet0⟩
+  rcases hoverlap hab with ⟨i, j, hfacet, hfacetOverlap⟩
+  exact ⟨hdisj, i, j, hfacet, hfacetOverlap⟩
+
+/--
+Consequently, pairwise touching with overlapping common facets supplies the
+across-facet certificates used by the Perles B-matrix.
+-/
+lemma pairwiseTouchingAcrossFacets_of_pairwiseTouching_of_hasFacetInteriorOverlap
+    {ι : Type*} {d : ℕ} [NeZero d] {simplices : ι → DSimplex d}
+    (htouch : PairwiseTouching simplices)
+    (hoverlap : PairwiseHasFacetInteriorOverlapCommonFacet simplices) :
+    PairwiseTouchingAcrossFacets simplices :=
+  pairwiseTouchingAcrossFacets_of_pairwiseTouchingAlongFacetInteriors
+    (pairwiseTouchingAlongFacetInteriors_of_pairwiseTouching_of_hasFacetInteriorOverlap
+      htouch hoverlap)
+
+/--
 Facet-interior touching supplies the weaker not-same-side witness needed for
 each pair.
 -/
@@ -1258,6 +1297,19 @@ lemma pairwiseHasNotSameSideCommonFacet_of_pairwiseTouchingAlongFacetInteriors
   rcases touchesAlongFacetInteriors_exists_not_sSameSide (htouch hab) with
     ⟨i, j, hfacet, _hoverlap, hnotSame⟩
   exact ⟨i, j, hfacet, hnotSame⟩
+
+/--
+The overlapping-facet datum also supplies the weaker not-same-side witness
+once paired with `PairwiseTouching`.
+-/
+lemma pairwiseHasNotSameSideCommonFacet_of_pairwiseTouching_of_hasFacetInteriorOverlap
+    {ι : Type*} {d : ℕ} [NeZero d] {simplices : ι → DSimplex d}
+    (htouch : PairwiseTouching simplices)
+    (hoverlap : PairwiseHasFacetInteriorOverlapCommonFacet simplices) :
+    PairwiseHasNotSameSideCommonFacet simplices :=
+  pairwiseHasNotSameSideCommonFacet_of_pairwiseTouchingAlongFacetInteriors
+    (pairwiseTouchingAlongFacetInteriors_of_pairwiseTouching_of_hasFacetInteriorOverlap
+      htouch hoverlap)
 
 /--
 The older universal same-side exclusion implies the weaker existential datum,
@@ -1303,6 +1355,30 @@ lemma pairwiseTouchingAcrossFacets_of_pairwiseTouching_of_hasNotSameSideCommonFa
   intro a b hab
   exact touchesAcrossFacets_of_touchesAlongFacets_of_exists_not_sSameSide
     (htouch hab) (hside hab)
+
+/--
+At the pairwise level, the current `PairwiseTouching` relation either already
+upgrades to across-facet touching, or one pair is blocked exactly by a common
+facet hyperplane whose two facet relative interiors do not overlap.
+-/
+lemma pairwiseTouchingAcrossFacets_or_exists_pair_commonFacet_no_facetInteriorOverlap
+    {ι : Type*} {d : ℕ} [NeZero d] {simplices : ι → DSimplex d}
+    (htouch : PairwiseTouching simplices) :
+    PairwiseTouchingAcrossFacets simplices ∨
+      ∃ a b : ι, a ≠ b ∧ ∃ i j,
+        (simplices a).facetHyperplane i = (simplices b).facetHyperplane j ∧
+          ¬ FacetInteriorOverlap (simplices a) (simplices b) i j := by
+  classical
+  by_cases hacross : PairwiseTouchingAcrossFacets simplices
+  · exact Or.inl hacross
+  · right
+    rw [PairwiseTouchingAcrossFacets] at hacross
+    push Not at hacross
+    rcases hacross with ⟨a, b, hab, hnotAcross⟩
+    rcases touchesAlongFacets_across_or_exists_commonFacet_no_facetInteriorOverlap
+        (htouch hab) with hacross_pair | hobstruction
+    · exact False.elim (hnotAcross hacross_pair)
+    · exact ⟨a, b, hab, hobstruction⟩
 
 /-- Excluding the same-side alternative upgrades pairwise touching to across-facet touching. -/
 lemma pairwiseTouchingAcrossFacets_of_pairwiseTouching_of_noSameSideCommonFacet
@@ -2438,7 +2514,13 @@ lookup.  The current status of its main pieces is:
   not-same-side common facet per touching pair,
   `PairwiseHasNotSameSideCommonFacet`; the older
   `PairwiseNoSameSideCommonFacet` is retained as a stronger compatibility
-  wrapper;
+  wrapper.  A more geometric route is
+  `PairwiseHasFacetInteriorOverlapCommonFacet`, which combines with
+  `PairwiseTouching` to give `PairwiseTouchingAlongFacetInteriors`; the
+  pairwise dichotomy
+  `pairwiseTouchingAcrossFacets_or_exists_pair_commonFacet_no_facetInteriorOverlap`
+  identifies the exact lower-dimensional obstruction when `PairwiseTouching`
+  alone does not upgrade;
 * choose a point outside the finite union of simplex bodies to obtain the
   missing completed sign vector.  The local conversion from "same sign on every
   facet of a simplex" to "the point lies in that simplex" is now
@@ -2577,6 +2659,19 @@ def ofFacetHyperplanesFacetInteriors [Nonempty ι]
     (pairwiseTouchingAcrossFacets_of_pairwiseTouchingAlongFacetInteriors htouch)
 
 /--
+Build certified Perles data from the current `PairwiseTouching` relation plus
+the geometric fact that every touching pair has an overlapping common facet.
+-/
+def ofFacetHyperplanesTouchingFacetInteriorOverlap [Nonempty ι]
+    (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouching simplices)
+    (hoverlap : PairwiseHasFacetInteriorOverlapCommonFacet simplices) :
+    PerlesFacetSeparationData simplices (FacetHyperplanes simplices) :=
+  ofFacetHyperplanesFacetInteriors simplices
+    (pairwiseTouchingAlongFacetInteriors_of_pairwiseTouching_of_hasFacetInteriorOverlap
+      htouch hoverlap)
+
+/--
 Build certified Perles data from the stronger facet-interior touching relation
 plus the isolated same-side obstruction.
 -/
@@ -2625,6 +2720,17 @@ def hasNotSameSideFacetMatrix (simplices : ι → DSimplex d)
     (hside : PairwiseHasNotSameSideCommonFacet simplices) :
     PerlesMatrix ι (FacetHyperplanes simplices) d :=
   (ofFacetHyperplanesHasNotSameSide simplices htouch hside).toPerlesMatrix htouch
+
+/--
+The canonical Perles matrix extracted from pairwise touching plus overlapping
+common facets.
+-/
+def touchingFacetInteriorOverlapMatrix (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouching simplices)
+    (hoverlap : PairwiseHasFacetInteriorOverlapCommonFacet simplices) :
+    PerlesMatrix ι (FacetHyperplanes simplices) d :=
+  (ofFacetHyperplanesTouchingFacetInteriorOverlap simplices htouch hoverlap).toPerlesMatrix
+    htouch
 
 /-- The canonical Perles matrix extracted from facet-interior touching. -/
 def facetInteriorsMatrix (simplices : ι → DSimplex d)
@@ -2693,6 +2799,22 @@ theorem chapter14_of_pairwiseTouchingAlongFacetInteriors {ι : Type*} [Fintype �
     Fintype.card ι < 2 ^ (d + 1) :=
   chapter14_of_pairwiseTouchingAcrossFacets simplices
     (pairwiseTouchingAcrossFacets_of_pairwiseTouchingAlongFacetInteriors htouch)
+
+/--
+Chapter 14 from the current `PairwiseTouching` relation plus the geometric
+condition that each touching pair has an overlapping common facet.  The
+certified Perles data are then constructed canonically from the facet
+hyperplanes in this file.
+-/
+theorem chapter14_of_pairwiseTouching_hasFacetInteriorOverlapCommonFacet
+    {ι : Type*} [Fintype ι] {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouching simplices)
+    (hoverlap : PairwiseHasFacetInteriorOverlapCommonFacet simplices) :
+    Fintype.card ι < 2 ^ (d + 1) :=
+  chapter14_of_pairwiseTouchingAlongFacetInteriors simplices
+    (pairwiseTouchingAlongFacetInteriors_of_pairwiseTouching_of_hasFacetInteriorOverlap
+      htouch hoverlap)
 
 /--
 Chapter 14 from the current raw touching relation plus the weaker existential

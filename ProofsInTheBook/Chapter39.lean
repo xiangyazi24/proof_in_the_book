@@ -31,9 +31,10 @@ positive-first alternating signed-permutation prefix chains are odd, while
 `KyFanPrefixModFourStatement` says that both orientations together have
 cardinality `2 mod 4`.  This file proves the Matoušek construction from a
 hypothetical `(n - 2*k + 1)`-coloring of `KG(n,k)` to a Tucker counterexample,
-proves low-dimensional Tucker cases, proves the one-dimensional Ky Fan
-prefix-parity count and the vacuous two-dimensional Ky Fan prefix-parity case,
-and proves either Ky Fan parity frontier implies
+proves low-dimensional Tucker cases, packages them into an unconditional
+low-dimensional Lovász theorem, proves the one-dimensional Ky Fan prefix-parity
+count and the vacuous two-dimensional Ky Fan prefix-parity case, and proves
+either Ky Fan parity frontier implies
 `TuckerLemmaStatement → chapter39`.
 -/
 
@@ -1559,6 +1560,13 @@ theorem tuckerLemmaStatement_two : TuckerLemmaStatement 2 := by
     exact hP0P1.symm.trans (hP0N1.trans hN1neg)
   cases (label P1).positive <;> simp at hself
 
+/-- Tucker's lemma is unconditional in the low dimensions already proved here. -/
+theorem tuckerLemmaStatement_le_two {n : ℕ} (hnpos : 1 ≤ n) (hnle : n ≤ 2) :
+    TuckerLemmaStatement n := by
+  interval_cases n
+  · exact tuckerLemmaStatement_one
+  · exact tuckerLemmaStatement_two
+
 /--
 The two-dimensional Ky Fan prefix-parity statement is discharged by the direct
 two-dimensional Tucker proof above: the `NoComplementaryComparableLabels`
@@ -1682,6 +1690,18 @@ theorem chapter39 {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
   refine ⟨?_, ?_⟩
   · exact kneser_chromatic_upper_bound n k hk hn
   · exact kneser_chromatic_lower_bound_from_tucker_matousek n k hk hn htucker
+
+/--
+Unconditional low-dimensional Chapter 39.  Under the theorem's ordinary
+hypotheses, `n ≤ 2` leaves only the already-proved Tucker dimensions, so the
+conditional Tucker assumption in `chapter39` is discharged here.
+-/
+theorem chapter39_low_dim {n k : ℕ} (hnle : n ≤ 2) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
+    (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
+  chapter39 hk hn (tuckerLemmaStatement_le_two (by omega) hnle)
 
 /--
 The same Chapter 39 conclusion from Ky Fan's alternating-chain form.  The

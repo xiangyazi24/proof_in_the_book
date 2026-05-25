@@ -12,9 +12,13 @@ angle, expressed by a negative inner product.
 
 Formalization status (playbook point 17): status ③. The reduction from the
 no-obtuse-angle condition to the antipodal/supporting-strip condition is
-formalized below. The remaining frontier is the Klee/Danzer-Grünbaum antipodal
-cardinality bound: a finite antipodal point set in `ℝ^d` has cardinal at most
-`2^d`, usually proved by the touching half-sized translates / volume argument.
+formalized below. The Klee packing geometry is formalized through the
+half-sized convex-hull copies: they lie inside the original convex hull, have
+volume `2^{-d}` times the hull volume, and are pairwise a.e.-disjoint. This
+proves the antipodal cardinality bound in the positive-volume case. The
+remaining formal gap is the lower-dimensional zero-volume case, i.e. reducing
+to the affine span of the point set and reapplying the argument in that smaller
+Euclidean space.
 
 This file intentionally does not contain the old sign-vector pigeonhole theorem:
 there is no assumed `sign` map and no assumed injectivity.
@@ -22,7 +26,8 @@ there is no assumed `sign` map and no assumed injectivity.
 
 namespace ProofsInTheBook.Chapter15
 
-open scoped RealInnerProductSpace
+open scoped ENNReal RealInnerProductSpace
+open MeasureTheory
 
 noncomputable section
 
@@ -55,6 +60,232 @@ Danzer-Grünbaum/Klee volume argument.
 -/
 def HasAntipodalStrips {d : ℕ} (points : Finset (Point d)) : Prop :=
   ∀ a ∈ points, ∀ b ∈ points, a ≠ b → ∀ x ∈ points, InPerpendicularStrip a b x
+
+/-- The half-sized copy of the convex hull used in Klee's packing proof. -/
+def KleeCopy {d : ℕ} (points : Finset (Point d)) (p : Point d) : Set (Point d) :=
+  (fun x => (2 : ℝ)⁻¹ • (p + x)) '' convexHull ℝ (points : Set (Point d))
+
+/-- The separating hyperplane between the two Klee copies based at `a` and `b`. -/
+def KleeMidpoint {d : ℕ} (a b : Point d) : Point d :=
+  (2 : ℝ)⁻¹ • (a + b)
+
+def SeparatingHyperplane {d : ℕ} (a b : Point d) : AffineSubspace ℝ (Point d) :=
+  AffineSubspace.mk' (KleeMidpoint a b)
+    (LinearMap.ker ((innerSL ℝ (b - a) : Point d →L[ℝ] ℝ) : Point d →ₗ[ℝ] ℝ))
+
+theorem mem_separatingHyperplane {d : ℕ} {a b y : Point d} :
+    y ∈ (SeparatingHyperplane a b : Set (Point d)) ↔
+      ⟪b - a, y - KleeMidpoint a b⟫ = 0 := by
+  rw [SeparatingHyperplane]
+  change y - KleeMidpoint a b ∈
+      LinearMap.ker ((innerSL ℝ (b - a) : Point d →L[ℝ] ℝ) : Point d →ₗ[ℝ] ℝ) ↔
+    ⟪b - a, y - KleeMidpoint a b⟫ = 0
+  rw [LinearMap.mem_ker]
+  constructor <;> intro h <;> simpa [inner_sub_left, real_inner_comm] using h
+
+theorem separatingHyperplane_ne_top {d : ℕ} {a b : Point d} (hab : a ≠ b) :
+    SeparatingHyperplane a b ≠ ⊤ := by
+  intro htop
+  have hv_mem : b - a ∈ (SeparatingHyperplane a b).direction := by
+    rw [htop]
+    simp
+  have hv_ker : b - a ∈ LinearMap.ker
+      ((innerSL ℝ (b - a) : Point d →L[ℝ] ℝ) : Point d →ₗ[ℝ] ℝ) := by
+    simpa [SeparatingHyperplane] using hv_mem
+  have hv_apply := LinearMap.mem_ker.mp hv_ker
+  have hv_inner : ⟪b - a, b - a⟫ = 0 := by
+    change (innerSL ℝ (b - a) : Point d →L[ℝ] ℝ) (b - a) = 0 at hv_apply
+    simpa only [innerSL_apply_apply, real_inner_comm] using hv_apply
+  have hv_zero : b - a = 0 := inner_self_eq_zero.mp hv_inner
+  exact hab (eq_of_sub_eq_zero hv_zero).symm
+
+theorem stripHalfspaceLeft_convex {d : ℕ} (a b : Point d) :
+    Convex ℝ {x : Point d | 0 ≤ ⟪b - a, x - a⟫} := by
+  convert convex_halfSpace_ge (E := Point d) (β := ℝ) (𝕜 := ℝ)
+    ((innerSL ℝ (b - a)).isLinear) (⟪b - a, a⟫) using 1
+  ext x
+  simp [inner_sub_right, inner_sub_left, real_inner_comm, sub_nonneg]
+
+theorem inPerpendicularStrip_convex {d : ℕ} (a b : Point d) :
+    Convex ℝ {x : Point d | InPerpendicularStrip a b x} := by
+  change Convex ℝ ({x : Point d | 0 ≤ ⟪b - a, x - a⟫} ∩
+    {x : Point d | 0 ≤ ⟪a - b, x - b⟫})
+  exact (stripHalfspaceLeft_convex a b).inter (stripHalfspaceLeft_convex b a)
+
+theorem HasAntipodalStrips.convexHull_subset_strip {d : ℕ}
+    {points : Finset (Point d)} (hanti : HasAntipodalStrips points)
+    {a b : Point d} (ha : a ∈ points) (hb : b ∈ points) (hab : a ≠ b) :
+    convexHull ℝ (points : Set (Point d)) ⊆ {x : Point d | InPerpendicularStrip a b x} := by
+  exact convexHull_min (fun x hx => hanti a ha b hb hab x hx) (inPerpendicularStrip_convex a b)
+
+theorem KleeCopy.subset_convexHull {d : ℕ} {points : Finset (Point d)} {p : Point d}
+    (hp : p ∈ points) : KleeCopy points p ⊆ convexHull ℝ (points : Set (Point d)) := by
+  rintro y ⟨x, hx, rfl⟩
+  have hp' : p ∈ convexHull ℝ (points : Set (Point d)) := _root_.subset_convexHull ℝ _ hp
+  simpa [KleeCopy, smul_add] using
+    (convex_convexHull ℝ (points : Set (Point d))) hp' hx
+      (by norm_num : 0 ≤ (2 : ℝ)⁻¹) (by norm_num : 0 ≤ (2 : ℝ)⁻¹)
+      (by norm_num : (2 : ℝ)⁻¹ + (2 : ℝ)⁻¹ = 1)
+
+theorem KleeCopy.eq_homothety {d : ℕ} (points : Finset (Point d)) (p : Point d) :
+    KleeCopy points p =
+      AffineMap.homothety p ((2 : ℝ)⁻¹) '' convexHull ℝ (points : Set (Point d)) := by
+  ext y
+  constructor
+  · rintro ⟨x, hx, rfl⟩
+    refine ⟨x, hx, ?_⟩
+    simp [AffineMap.homothety_apply]
+    module
+  · rintro ⟨x, hx, rfl⟩
+    refine ⟨x, hx, ?_⟩
+    simp [AffineMap.homothety_apply]
+    module
+
+theorem KleeCopy.convex {d : ℕ} (points : Finset (Point d)) (p : Point d) :
+    Convex ℝ (KleeCopy points p) := by
+  rw [KleeCopy.eq_homothety]
+  exact (convex_convexHull ℝ (points : Set (Point d))).affine_image _
+
+theorem KleeCopy.nullMeasurableSet {d : ℕ} (points : Finset (Point d)) (p : Point d) :
+    NullMeasurableSet (KleeCopy points p) volume :=
+  (KleeCopy.convex points p).nullMeasurableSet volume
+
+theorem KleeCopy.volume_eq {d : ℕ} (points : Finset (Point d)) (p : Point d) :
+    volume (KleeCopy points p) = ENNReal.ofReal ((2 : ℝ)⁻¹ ^ d) *
+      volume (convexHull ℝ (points : Set (Point d))) := by
+  rw [KleeCopy.eq_homothety]
+  rw [Measure.addHaar_image_homothety]
+  simp
+
+theorem KleeCopy.left_separated {d : ℕ} {points : Finset (Point d)}
+    (hanti : HasAntipodalStrips points) {a b : Point d}
+    (ha : a ∈ points) (hb : b ∈ points) (hab : a ≠ b) :
+    KleeCopy points a ⊆ {y : Point d | ⟪b - a, y - KleeMidpoint a b⟫ ≤ 0} := by
+  rintro y ⟨x, hx, rfl⟩
+  have hxstrip : InPerpendicularStrip a b x :=
+    hanti.convexHull_subset_strip ha hb hab hx
+  have hle : ⟪b - a, x - b⟫ ≤ 0 := by
+    have hneg : ⟪b - a, x - b⟫ = -⟪a - b, x - b⟫ := by
+      rw [show b - a = -(a - b) by abel, inner_neg_left]
+    rw [hneg]
+    exact neg_nonpos.2 hxstrip.2
+  rw [KleeMidpoint]
+  calc
+    ⟪b - a, (2 : ℝ)⁻¹ • (a + x) - (2 : ℝ)⁻¹ • (a + b)⟫ =
+        (2 : ℝ)⁻¹ * ⟪b - a, x - b⟫ := by
+      simp [sub_eq_add_neg, inner_add_right, inner_smul_right]
+      ring
+    _ ≤ 0 := mul_nonpos_of_nonneg_of_nonpos (by positivity) hle
+
+theorem KleeCopy.right_separated {d : ℕ} {points : Finset (Point d)}
+    (hanti : HasAntipodalStrips points) {a b : Point d}
+    (ha : a ∈ points) (hb : b ∈ points) (hab : a ≠ b) :
+    KleeCopy points b ⊆ {y : Point d | 0 ≤ ⟪b - a, y - KleeMidpoint a b⟫} := by
+  rintro y ⟨x, hx, rfl⟩
+  have hxstrip : InPerpendicularStrip a b x :=
+    hanti.convexHull_subset_strip ha hb hab hx
+  rw [KleeMidpoint]
+  calc
+    0 ≤ (2 : ℝ)⁻¹ * ⟪b - a, x - a⟫ := by
+      exact mul_nonneg (by positivity) hxstrip.1
+    _ = ⟪b - a, (2 : ℝ)⁻¹ • (b + x) - (2 : ℝ)⁻¹ • (a + b)⟫ := by
+      simp [sub_eq_add_neg, inner_add_right, inner_smul_right]
+      ring
+
+theorem KleeCopy.inter_subset_separatingHyperplane {d : ℕ}
+    {points : Finset (Point d)} (hanti : HasAntipodalStrips points)
+    {a b : Point d} (ha : a ∈ points) (hb : b ∈ points) (hab : a ≠ b) :
+    KleeCopy points a ∩ KleeCopy points b ⊆ SeparatingHyperplane a b := by
+  intro y hy
+  rw [mem_separatingHyperplane]
+  exact le_antisymm (KleeCopy.left_separated hanti ha hb hab hy.1)
+    (KleeCopy.right_separated hanti ha hb hab hy.2)
+
+theorem KleeCopy.aedisjoint {d : ℕ} {points : Finset (Point d)}
+    (hanti : HasAntipodalStrips points) {a b : Point d}
+    (ha : a ∈ points) (hb : b ∈ points) (hab : a ≠ b) :
+    AEDisjoint MeasureTheory.volume (KleeCopy points a) (KleeCopy points b) := by
+  rw [AEDisjoint]
+  exact measure_mono_null (KleeCopy.inter_subset_separatingHyperplane hanti ha hb hab)
+    (Measure.addHaar_affineSubspace MeasureTheory.volume (SeparatingHyperplane a b)
+      (separatingHyperplane_ne_top hab))
+
+theorem KleeCopy.sum_volume_le_volume_convexHull {d : ℕ} {points : Finset (Point d)}
+    (hanti : HasAntipodalStrips points) :
+    (∑ p ∈ points, MeasureTheory.volume (KleeCopy points p)) ≤
+      MeasureTheory.volume (convexHull ℝ (points : Set (Point d))) := by
+  have hpw : (points : Set (Point d)).Pairwise
+      (Function.onFun (AEDisjoint MeasureTheory.volume) fun p => KleeCopy points p) := by
+    intro a ha b hb hab
+    exact KleeCopy.aedisjoint hanti ha hb hab
+  have hm : ∀ p ∈ points, NullMeasurableSet (KleeCopy points p) MeasureTheory.volume := by
+    intro p _hp
+    exact KleeCopy.nullMeasurableSet points p
+  have hunion_subset : (⋃ p ∈ points, KleeCopy points p) ⊆
+      convexHull ℝ (points : Set (Point d)) := by
+    intro y hy
+    rcases Set.mem_iUnion.1 hy with ⟨p, hyp⟩
+    rcases Set.mem_iUnion.1 hyp with ⟨hp, hycopy⟩
+    exact KleeCopy.subset_convexHull hp hycopy
+  calc
+    (∑ p ∈ points, MeasureTheory.volume (KleeCopy points p)) =
+        MeasureTheory.volume (⋃ p ∈ points, KleeCopy points p) := by
+      exact (measure_biUnion_finset₀ hpw hm).symm
+    _ ≤ MeasureTheory.volume (convexHull ℝ (points : Set (Point d))) :=
+      measure_mono hunion_subset
+
+theorem convexHull_volume_ne_top {d : ℕ} (points : Finset (Point d)) :
+    MeasureTheory.volume (convexHull ℝ (points : Set (Point d))) ≠ ∞ := by
+  have hcompact : IsCompact (convexHull ℝ (points : Set (Point d))) := by
+    set_option synthInstance.maxHeartbeats 80000 in
+    exact Set.Finite.isCompact_convexHull ℝ (s := (points : Set (Point d))) points.finite_toSet
+  exact hcompact.measure_ne_top
+
+theorem antipodal_card_bound_of_positive_volume {d : ℕ} {points : Finset (Point d)}
+    (hanti : HasAntipodalStrips points)
+    (hvol0 : MeasureTheory.volume (convexHull ℝ (points : Set (Point d))) ≠ 0) :
+    points.card ≤ 2 ^ d := by
+  let μ : ℝ≥0∞ := MeasureTheory.volume (convexHull ℝ (points : Set (Point d)))
+  let c : ℝ≥0∞ := ENNReal.ofReal ((2 : ℝ)⁻¹ ^ d)
+  have hsum := KleeCopy.sum_volume_le_volume_convexHull hanti
+  have hsum' : (points.card : ℝ≥0∞) * (c * μ) ≤ μ := by
+    subst c
+    subst μ
+    simpa only [KleeCopy.volume_eq, Finset.sum_const, nsmul_eq_mul] using hsum
+  have hcancel : (points.card : ℝ≥0∞) * c ≤ 1 := by
+    rw [← ENNReal.mul_le_mul_iff_left hvol0 (convexHull_volume_ne_top points)]
+    simpa [μ, mul_assoc, mul_left_comm, mul_comm] using hsum'
+  have hreal : ((points.card : ℝ≥0∞) * c).toReal ≤ (1 : ℝ≥0∞).toReal :=
+    ENNReal.toReal_mono (by finiteness) hcancel
+  have hreal' : (points.card : ℝ) * ((2 : ℝ)⁻¹ ^ d) ≤ 1 := by
+    simpa [c, ENNReal.toReal_ofReal (pow_nonneg (by norm_num : 0 ≤ (2 : ℝ)⁻¹) d)] using hreal
+  have hreal_bound : (points.card : ℝ) ≤ (2 : ℝ) ^ d := by
+    calc
+      (points.card : ℝ) = (points.card : ℝ) * 1 := by ring
+      _ = (points.card : ℝ) * (((2 : ℝ)⁻¹ ^ d) * (2 : ℝ) ^ d) := by
+        rw [← mul_pow, inv_mul_cancel₀ (by norm_num : (2 : ℝ) ≠ 0), one_pow]
+      _ = ((points.card : ℝ) * ((2 : ℝ)⁻¹ ^ d)) * (2 : ℝ) ^ d := by ring
+      _ ≤ 1 * (2 : ℝ) ^ d := by
+        exact mul_le_mul_of_nonneg_right hreal' (by positivity)
+      _ = (2 : ℝ) ^ d := by ring
+  exact Nat.cast_le.mp (by
+    exact_mod_cast hreal_bound : (points.card : ℝ) ≤ ((2 ^ d : ℕ) : ℝ))
+
+/--
+The remaining frontier after the Klee packing formalization: if the convex hull
+has zero ambient `d`-dimensional volume, one should reduce to its affine span and
+apply the same theorem in lower dimension.
+-/
+theorem antipodal_card_bound_from_zero_volume_frontier {d : ℕ}
+    (zero_volume_antipodal_card_bound :
+      ∀ points : Finset (Point d), HasAntipodalStrips points →
+        MeasureTheory.volume (convexHull ℝ (points : Set (Point d))) = 0 →
+        points.card ≤ 2 ^ d)
+    (points : Finset (Point d)) (hanti : HasAntipodalStrips points) :
+    points.card ≤ 2 ^ d := by
+  by_cases hvol0 : MeasureTheory.volume (convexHull ℝ (points : Set (Point d))) ≠ 0
+  · exact antipodal_card_bound_of_positive_volume hanti hvol0
+  · exact zero_volume_antipodal_card_bound points hanti (not_not.mp hvol0)
 
 theorem noObtuseAngles_iff_not_exists_obtuse {d : ℕ} (points : Finset (Point d)) :
     NoObtuseAngles points ↔
@@ -97,9 +328,10 @@ theorem NoObtuseAngles.hasAntipodalStrips {d : ℕ} {points : Finset (Point d)}
   · simpa [AngleInner] using hno a ha x hx b hb (Ne.symm hxa) hab hxb
 
 /--
-The genuine Chapter 15 statement follows from the remaining antipodal cardinal
-bound. This is not the old sign-vector pigeonhole theorem: the hypothesis is the
-geometric supporting-strip condition obtained above from the angle assumption.
+The genuine Chapter 15 statement follows from any proof of the antipodal
+cardinality bound. This is not the old sign-vector pigeonhole theorem: the
+hypothesis is the geometric supporting-strip condition obtained above from the
+angle assumption.
 -/
 theorem chapter15_from_antipodal_card_bound {d : ℕ}
     (antipodal_card_bound :
@@ -114,19 +346,36 @@ theorem chapter15_from_antipodal_card_bound {d : ℕ}
   exact (not_lt_of_ge (antipodal_card_bound points hno.hasAntipodalStrips)) hcard
 
 /--
-Canonical Chapter 15 theorem.
-
-Status ③ in the playbook: this has the genuine Danzer-Grünbaum conclusion, but
-is conditional on the honest remaining frontier, the antipodal cardinality bound
-for the supporting-strip condition.
+Chapter 15 from the only remaining geometric frontier after the Klee packing
+work above: the zero ambient-volume case.
 -/
-theorem chapter15 {d : ℕ}
-    (danzer_grunbaum_antipodal_card_bound :
-      ∀ points : Finset (Point d), HasAntipodalStrips points → points.card ≤ 2 ^ d)
+theorem chapter15_from_zero_volume_frontier {d : ℕ}
+    (zero_volume_antipodal_card_bound :
+      ∀ points : Finset (Point d), HasAntipodalStrips points →
+        MeasureTheory.volume (convexHull ℝ (points : Set (Point d))) = 0 →
+        points.card ≤ 2 ^ d)
     (points : Finset (Point d)) (hcard : 2 ^ d < points.card) :
     ∃ x ∈ points, ∃ y ∈ points, ∃ z ∈ points,
       x ≠ y ∧ x ≠ z ∧ y ≠ z ∧ ObtuseTriple x y z :=
-  chapter15_from_antipodal_card_bound danzer_grunbaum_antipodal_card_bound points hcard
+  chapter15_from_antipodal_card_bound
+    (antipodal_card_bound_from_zero_volume_frontier zero_volume_antipodal_card_bound) points hcard
+
+/--
+Canonical Chapter 15 theorem.
+
+Status ③ in the playbook: this has the genuine Danzer-Grünbaum conclusion, but
+is conditional only on the honest remaining frontier, the zero ambient-volume
+case of the antipodal cardinality bound.
+-/
+theorem chapter15 {d : ℕ}
+    (zero_volume_antipodal_card_bound :
+      ∀ points : Finset (Point d), HasAntipodalStrips points →
+        MeasureTheory.volume (convexHull ℝ (points : Set (Point d))) = 0 →
+        points.card ≤ 2 ^ d)
+    (points : Finset (Point d)) (hcard : 2 ^ d < points.card) :
+    ∃ x ∈ points, ∃ y ∈ points, ∃ z ∈ points,
+      x ≠ y ∧ x ≠ z ∧ y ≠ z ∧ ObtuseTriple x y z :=
+  chapter15_from_zero_volume_frontier zero_volume_antipodal_card_bound points hcard
 
 end
 

@@ -2580,6 +2580,13 @@ theorem alternatingPuncturedPrefixLabelChains_card_eq_four_mul {n m : ℕ} (hn :
   rw [alternatingPuncturedPrefixLabelChains_card hn label hantipodal, hr]
   omega
 
+theorem four_dvd_alternatingPuncturedPrefixLabelChains_card {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    4 ∣ (alternatingPuncturedPrefixLabelChains label).card := by
+  rcases alternatingPuncturedPrefixLabelChains_card_eq_four_mul hn label hantipodal with ⟨r, hr⟩
+  exact ⟨r, hr⟩
+
 /--
 The numerical endpoint count used in the Ky Fan path proof.
 

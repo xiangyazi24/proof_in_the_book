@@ -354,11 +354,28 @@ theorem van_der_Waerden_permanent_conjecture_from_analyticCore (n : ℕ)
     (fun i j => nonneg_of_mem_doublyStochastic hA)
     (rowLinearCapacityAtLeastOne_of_doublyStochastic A hA)
 
-theorem chapter22 (n : ℕ) (core : VanDerWaerdenAnalyticCore n)
+/--
+The genuine Van der Waerden permanent lower-bound statement, with the analytic
+core assumption needed only in dimensions `n ≥ 3`; dimensions `0`, `1`, and
+`2` are discharged above.
+-/
+theorem van_der_Waerden_permanent_conjecture_from_large_dim_analyticCore
+    (core : ∀ m : ℕ, 3 ≤ m → VanDerWaerdenAnalyticCore m)
+    (n : ℕ) (A : Matrix (Fin n) (Fin n) ℝ)
+    (hA : A ∈ doublyStochastic ℝ (Fin n)) :
+    (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent := by
+  by_cases hn : n ≤ 2
+  · exact van_der_Waerden_permanent_conjecture_of_le_two n hn A hA
+  · have h3 : 3 ≤ n := by omega
+    exact van_der_Waerden_permanent_conjecture_from_analyticCore n (core n h3) A hA
+
+theorem chapter22
+    (core : ∀ m : ℕ, 3 ≤ m → VanDerWaerdenAnalyticCore m)
+    (n : ℕ)
     (A : Matrix (Fin n) (Fin n) ℝ)
     (hA : A ∈ doublyStochastic ℝ (Fin n)) :
     (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent :=
-  van_der_Waerden_permanent_conjecture_from_analyticCore n core A hA
+  van_der_Waerden_permanent_conjecture_from_large_dim_analyticCore core n A hA
 
 end
 

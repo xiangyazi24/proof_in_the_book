@@ -1427,6 +1427,12 @@ theorem tuckerLemmaStatement_of_kyFanPrefixParity {n : ℕ} (hn : 1 ≤ n)
     TuckerLemmaStatement n :=
   tuckerLemmaStatement_of_kyFanPrefix hn (kyFanPrefixChainStatement_of_parity hparity)
 
+theorem tuckerLemmaStatement_of_kyFanPrefixModFour {n : ℕ} (hn : 1 ≤ n)
+    (hmodFour : KyFanPrefixModFourStatement n (n - 1)) :
+    TuckerLemmaStatement n :=
+  tuckerLemmaStatement_of_kyFanPrefixParity hn
+    ((kyFanPrefixParityStatement_iff_modFour (n := n) (m := n - 1) (by omega)).mpr hmodFour)
+
 theorem tuckerLemmaStatement_one : TuckerLemmaStatement 1 := by
   intro label _
   let z : Fin 1 := ⟨0, by omega⟩
@@ -1627,5 +1633,17 @@ theorem chapter39_of_kyFanPrefixParity {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k �
     (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
   chapter39 hk hn (tuckerLemmaStatement_of_kyFanPrefixParity (by omega) hparity)
+
+/--
+The same conclusion from the equivalent mod-four Ky Fan count.  This is often
+the form produced directly by the standard boundary-parity proof.
+-/
+theorem chapter39_of_kyFanPrefixModFour {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (hmodFour : KyFanPrefixModFourStatement n (n - 1)) :
+    (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
+  chapter39 hk hn (tuckerLemmaStatement_of_kyFanPrefixModFour (by omega) hmodFour)
 
 end ProofsInTheBook.Chapter39

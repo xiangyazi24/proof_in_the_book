@@ -2979,6 +2979,23 @@ abbrev KyFanPrefixPathEndpointDecompositionWithPunctured {n m : ℕ}
     (PositivePrefixChainType label)
     (NegativePrefixChainType label)
 
+abbrev KyFanPathEndpointClass {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :=
+  AlternatingPuncturedPrefixChainType label ⊕
+    (Bool ⊕ (PositivePrefixChainType label ⊕ NegativePrefixChainType label))
+
+structure KyFanConcretePathEndpointDecomposition {n m : ℕ}
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m) where
+  Path : Type
+  Endpoint : Path → Type
+  instPath : Fintype Path
+  instEndpoint : ∀ p : Path, Fintype (Endpoint p)
+  pathAntipode : Path ≃ Path
+  pathAntipode_involutive : Function.Involutive pathAntipode
+  pathAntipode_fixedPointFree : ∀ p : Path, pathAntipode p ≠ p
+  endpoint_card_two : ∀ p : Path, Fintype.card (Endpoint p) = 2
+  classify : (Σ p : Path, Endpoint p) ≃ KyFanPathEndpointClass label
+
 theorem kyFanPrefixParity_of_pathEndpointDecomposition {n m : ℕ}
     (label : NonzeroSignedSubset n → SignedLabel m)
     (hantipodal : ∀ X, label X.antipode = (label X).neg)
@@ -3011,6 +3028,35 @@ theorem kyFanPrefixParity_of_pathEndpointDecompositionWithPunctured {n m : ℕ}
   have hodd := D.positive_card_odd hpunctured hneg
   simpa [PositivePrefixChainType] using hodd
 
+theorem kyFanPrefixParity_of_concretePathEndpointDecomposition {n m : ℕ}
+    (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (D : KyFanConcretePathEndpointDecomposition label) :
+    Odd (positiveAlternatingPrefixLabelChains label).card := by
+  classical
+  letI := D.instPath
+  letI : ∀ p : D.Path, Fintype (D.Endpoint p) := D.instEndpoint
+  have hpunctured :
+      4 ∣ Fintype.card (AlternatingPuncturedPrefixChainType label) :=
+    four_dvd_alternatingPuncturedPrefixChainType_card hn label hantipodal
+  have hneg :
+      Fintype.card (NegativePrefixChainType label) =
+        Fintype.card (PositivePrefixChainType label) := by
+    simp [PositivePrefixChainType, NegativePrefixChainType,
+      positiveAlternatingPrefixLabelChains_card_eq_negative label hantipodal]
+  have hodd :
+      Odd (Fintype.card (PositivePrefixChainType label)) :=
+    odd_card_positive_endpoints_of_path_endpoint_equiv_with_punctured
+      (Path := D.Path)
+      (Punctured := AlternatingPuncturedPrefixChainType label)
+      (Base := Bool)
+      (Positive := PositivePrefixChainType label)
+      (Negative := NegativePrefixChainType label)
+      D.Endpoint D.pathAntipode D.pathAntipode_involutive D.pathAntipode_fixedPointFree
+      D.endpoint_card_two D.classify (by simp) hpunctured hneg
+  simpa [PositivePrefixChainType] using hodd
+
 /--
 The remaining geometric/local-combinatorial obligation for the octahedral Ky
 Fan lemma: for every admissible labeling, construct the path decomposition.
@@ -3031,6 +3077,12 @@ def KyFanPrefixPathEndpointDecompositionWithPuncturedStatement (n m : ℕ) : Pro
     (∀ X, label X.antipode = (label X).neg) →
       NoComplementaryComparableLabels label →
         Nonempty (KyFanPrefixPathEndpointDecompositionWithPunctured label)
+
+def KyFanConcretePathEndpointDecompositionStatement (n m : ℕ) : Prop :=
+  ∀ label : NonzeroSignedSubset (n + 1) → SignedLabel m,
+    (∀ X, label X.antipode = (label X).neg) →
+      NoComplementaryComparableLabels label →
+        Nonempty (KyFanConcretePathEndpointDecomposition label)
 
 noncomputable def kyFanPrefixPathEndpointDecomposition_zero {m : ℕ}
     (label : NonzeroSignedSubset 0 → SignedLabel m) :
@@ -3109,6 +3161,28 @@ theorem tuckerLemmaStatement_succ_of_pathEndpointDecompositionWithPunctured
     TuckerLemmaStatement (n + 1) :=
   tuckerLemmaStatement_of_kyFanPrefixParity (by omega)
     (kyFanPrefixParityStatement_succ_of_pathEndpointDecompositionWithPunctured hn hpaths)
+
+theorem kyFanPrefixParityStatement_succ_of_concretePathEndpointDecomposition
+    {n m : ℕ} (hn : 0 < n)
+    (hpaths : KyFanConcretePathEndpointDecompositionStatement n m) :
+    KyFanPrefixParityStatement (n + 1) m := by
+  intro label hantipodal hno
+  rcases hpaths label hantipodal hno with ⟨D⟩
+  exact kyFanPrefixParity_of_concretePathEndpointDecomposition hn label hantipodal D
+
+theorem kyFanPrefixModFourStatement_succ_of_concretePathEndpointDecomposition
+    {n m : ℕ} (hn : 0 < n)
+    (hpaths : KyFanConcretePathEndpointDecompositionStatement n m) :
+    KyFanPrefixModFourStatement (n + 1) m :=
+  (kyFanPrefixParityStatement_iff_modFour (by omega)).mp
+    (kyFanPrefixParityStatement_succ_of_concretePathEndpointDecomposition hn hpaths)
+
+theorem tuckerLemmaStatement_succ_of_concretePathEndpointDecomposition
+    {n : ℕ} (hn : 0 < n)
+    (hpaths : KyFanConcretePathEndpointDecompositionStatement n n) :
+    TuckerLemmaStatement (n + 1) :=
+  tuckerLemmaStatement_of_kyFanPrefixParity (by omega)
+    (kyFanPrefixParityStatement_succ_of_concretePathEndpointDecomposition hn hpaths)
 
 theorem exists_complementaryComparable_of_pathEndpointDecomposition_of_lt {n m : ℕ}
     (hmn : m < n) (hpaths : KyFanPrefixPathEndpointDecompositionStatement n m)

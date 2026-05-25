@@ -679,6 +679,43 @@ theorem prefixChain_le_and_ne_iff_lt {n : ℕ} (P : SignedPermutation n) {i j : 
   · intro hij
     exact ⟨P.prefixChain_le hij.le, P.prefixChain_ne_of_lt hij⟩
 
+/-- Reindex the positions of a signed permutation, moving the signed atoms
+together.  If `τ` swaps two adjacent positions, this is the other maximal chain
+through the punctured flag which omits one of those two positions. -/
+def reindexPositions {n : ℕ} (P : SignedPermutation n) (τ : Equiv.Perm (Fin n)) :
+    SignedPermutation n where
+  order := τ.trans P.order
+  positive := fun i => P.positive (τ i)
+
+theorem prefixPos_reindexPositions_of_symm_le_iff {n : ℕ}
+    (P : SignedPermutation n) (τ : Equiv.Perm (Fin n)) (i : Fin n)
+    (hτ : ∀ k : Fin n, τ.symm k ≤ i ↔ k ≤ i) :
+    (P.reindexPositions τ).prefixPos i = P.prefixPos i := by
+  ext x
+  simp [prefixPos, reindexPositions, hτ (P.order.symm x)]
+
+theorem prefixNeg_reindexPositions_of_symm_le_iff {n : ℕ}
+    (P : SignedPermutation n) (τ : Equiv.Perm (Fin n)) (i : Fin n)
+    (hτ : ∀ k : Fin n, τ.symm k ≤ i ↔ k ≤ i) :
+    (P.reindexPositions τ).prefixNeg i = P.prefixNeg i := by
+  ext x
+  simp [prefixNeg, reindexPositions, hτ (P.order.symm x)]
+
+theorem prefixSignedSubset_reindexPositions_of_symm_le_iff {n : ℕ}
+    (P : SignedPermutation n) (τ : Equiv.Perm (Fin n)) (i : Fin n)
+    (hτ : ∀ k : Fin n, τ.symm k ≤ i ↔ k ≤ i) :
+    (P.reindexPositions τ).prefixSignedSubset i = P.prefixSignedSubset i := by
+  cases P with
+  | mk order positive =>
+      simp [prefixSignedSubset, prefixPos, prefixNeg, reindexPositions, hτ]
+
+theorem prefixChain_reindexPositions_of_symm_le_iff {n : ℕ}
+    (P : SignedPermutation n) (τ : Equiv.Perm (Fin n)) (i : Fin n)
+    (hτ : ∀ k : Fin n, τ.symm k ≤ i ↔ k ≤ i) :
+    (P.reindexPositions τ).prefixChain i = P.prefixChain i := by
+  apply Subtype.ext
+  exact P.prefixSignedSubset_reindexPositions_of_symm_le_iff τ i hτ
+
 end SignedPermutation
 
 /--

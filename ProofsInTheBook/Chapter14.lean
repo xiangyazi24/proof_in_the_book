@@ -2526,18 +2526,17 @@ theorem chapter14_of_pairwiseTouching_noSameSideCommonFacet {ι : Type*} [Fintyp
     (pairwiseTouchingAcrossFacets_of_pairwiseTouching_of_noSameSideCommonFacet htouch hno)
 
 /--
-Chapter 14 from the stronger facet-interior touching relation plus the same-side
-obstruction.  This is a data-free endpoint for a raw touching model that proves
-common facets meet through relative interiors.
+Backward-compatible wrapper for the previous facet-interior endpoint.  The
+`PairwiseNoSameSideCommonFacet` input is no longer needed: facet-interior
+overlap itself rules out the same-side alternative.
 -/
 theorem chapter14_of_pairwiseTouchingAlongFacetInteriors_noSameSideCommonFacet
     {ι : Type*} [Fintype ι] {d : ℕ} [NeZero d]
     (simplices : ι → DSimplex d)
     (htouch : PairwiseTouchingAlongFacetInteriors simplices)
-    (hno : PairwiseNoSameSideCommonFacet simplices) :
+    (_hno : PairwiseNoSameSideCommonFacet simplices) :
     Fintype.card ι < 2 ^ (d + 1) :=
-  chapter14_of_pairwiseTouching_noSameSideCommonFacet simplices
-    (pairwiseTouching_of_pairwiseTouchingAlongFacetInteriors htouch) hno
+  chapter14_of_pairwiseTouchingAlongFacetInteriors simplices htouch
 
 /--
 Data-free sharp conditional endpoint for across-facet touching, in the

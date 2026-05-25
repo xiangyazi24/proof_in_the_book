@@ -2737,6 +2737,69 @@ theorem alternatingPuncturedPrefixChainPartner_fixedPointFree {n m : ℕ} (hn : 
       exact negativePuncturedPrefixChainPartner_fixedPointFree label negative
         (by simpa [alternatingPuncturedPrefixChainPartner, hdata] using hsum)
 
+theorem alternatingPuncturedPrefixChainTypeEquivSum_symm_inl_val {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (positive : PositivePuncturedPrefixChainType label) :
+    ((alternatingPuncturedPrefixChainTypeEquivSum hn label).symm
+        (Sum.inl positive)).1 = positive.1 := by
+  classical
+  simp [alternatingPuncturedPrefixChainTypeEquivSum, Equiv.subtypeEquivProp]
+
+theorem alternatingPuncturedPrefixChainTypeEquivSum_symm_inr_val {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (negative : NegativePuncturedPrefixChainType label) :
+    ((alternatingPuncturedPrefixChainTypeEquivSum hn label).symm
+        (Sum.inr negative)).1 = negative.1 := by
+  classical
+  simp [alternatingPuncturedPrefixChainTypeEquivSum, Equiv.subtypeEquivProp]
+
+theorem alternatingPuncturedPrefixChainPartner_val {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (data : AlternatingPuncturedPrefixChainType label) :
+    (alternatingPuncturedPrefixChainPartner hn label data).1 =
+      puncturedPrefixPartnerData data.1 := by
+  cases hdata : (alternatingPuncturedPrefixChainTypeEquivSum hn label) data with
+  | inl positive =>
+      have hdata_val : data.1 = positive.1 := by
+        have h := congrArg
+          (fun endpoint =>
+            ((alternatingPuncturedPrefixChainTypeEquivSum hn label).symm endpoint).1)
+          hdata
+        simpa [alternatingPuncturedPrefixChainTypeEquivSum_symm_inl_val hn label positive]
+          using h
+      calc
+        ((alternatingPuncturedPrefixChainPartner hn label data).1) =
+            ((alternatingPuncturedPrefixChainTypeEquivSum hn label).symm
+              (Sum.inl ((positivePuncturedPrefixChainPartner label) positive))).1 := by
+          simp [alternatingPuncturedPrefixChainPartner, hdata]
+        _ = ((positivePuncturedPrefixChainPartner label) positive).1 := by
+          exact alternatingPuncturedPrefixChainTypeEquivSum_symm_inl_val hn label
+            ((positivePuncturedPrefixChainPartner label) positive)
+        _ = puncturedPrefixPartnerData positive.1 := by
+          exact positivePuncturedPrefixChainPartner_val label positive
+        _ = puncturedPrefixPartnerData data.1 := by
+          rw [hdata_val]
+  | inr negative =>
+      have hdata_val : data.1 = negative.1 := by
+        have h := congrArg
+          (fun endpoint =>
+            ((alternatingPuncturedPrefixChainTypeEquivSum hn label).symm endpoint).1)
+          hdata
+        simpa [alternatingPuncturedPrefixChainTypeEquivSum_symm_inr_val hn label negative]
+          using h
+      calc
+        ((alternatingPuncturedPrefixChainPartner hn label data).1) =
+            ((alternatingPuncturedPrefixChainTypeEquivSum hn label).symm
+              (Sum.inr ((negativePuncturedPrefixChainPartner label) negative))).1 := by
+          simp [alternatingPuncturedPrefixChainPartner, hdata]
+        _ = ((negativePuncturedPrefixChainPartner label) negative).1 := by
+          exact alternatingPuncturedPrefixChainTypeEquivSum_symm_inr_val hn label
+            ((negativePuncturedPrefixChainPartner label) negative)
+        _ = puncturedPrefixPartnerData negative.1 := by
+          exact negativePuncturedPrefixChainPartner_val label negative
+        _ = puncturedPrefixPartnerData data.1 := by
+          rw [hdata_val]
+
 /-- Statement-level API for the codimension-one alternating facet count. -/
 def KyFanPuncturedPrefixDivisibilityStatement (n m : ℕ) : Prop :=
   ∀ label : NonzeroSignedSubset (n + 1) → SignedLabel m,
@@ -3374,6 +3437,23 @@ theorem alternatingPuncturedPrefixChainAntipode_involutive {n m : ℕ}
     Function.Involutive (alternatingPuncturedPrefixChainAntipode label hantipodal) := by
   intro data
   exact (alternatingPuncturedPrefixChainAntipode label hantipodal).left_inv data
+
+theorem alternatingPuncturedPrefixChainPartner_antipode_comm {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (data : AlternatingPuncturedPrefixChainType label) :
+    alternatingPuncturedPrefixChainAntipode label hantipodal
+        (alternatingPuncturedPrefixChainPartner hn label data) =
+      alternatingPuncturedPrefixChainPartner hn label
+        (alternatingPuncturedPrefixChainAntipode label hantipodal data) := by
+  apply Subtype.ext
+  change puncturedPrefixAntipode ((alternatingPuncturedPrefixChainPartner hn label data).1) =
+    (alternatingPuncturedPrefixChainPartner hn label
+      (alternatingPuncturedPrefixChainAntipode label hantipodal data)).1
+  rw [alternatingPuncturedPrefixChainPartner_val hn label data,
+    alternatingPuncturedPrefixChainPartner_val hn label
+      (alternatingPuncturedPrefixChainAntipode label hantipodal data)]
+  exact (puncturedPrefixPartnerData_antipode data.1).symm
 
 noncomputable def positivePrefixChainAntipode {n m : ℕ}
     (label : NonzeroSignedSubset n → SignedLabel m)

@@ -839,6 +839,20 @@ noncomputable def negativeAlternatingPuncturedPrefixLabelChains {n m : ℕ}
     exact Finset.univ.filter fun data =>
       NegativeAlternatingPuncturedPrefixLabels label data.1 data.2
 
+theorem mem_positiveAlternatingPuncturedPrefixLabelChains_iff {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {data : SignedPermutation (n + 1) × Fin (n + 1)} :
+    data ∈ positiveAlternatingPuncturedPrefixLabelChains label ↔
+      PositiveAlternatingPuncturedPrefixLabels label data.1 data.2 := by
+  simp [positiveAlternatingPuncturedPrefixLabelChains]
+
+theorem mem_negativeAlternatingPuncturedPrefixLabelChains_iff {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {data : SignedPermutation (n + 1) × Fin (n + 1)} :
+    data ∈ negativeAlternatingPuncturedPrefixLabelChains label ↔
+      NegativeAlternatingPuncturedPrefixLabels label data.1 data.2 := by
+  simp [negativeAlternatingPuncturedPrefixLabelChains]
+
 theorem positiveAlternatingPuncturedPrefixLabelChains_card_eq_negative {n m : ℕ}
     (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
     (hantipodal : ∀ X, label X.antipode = (label X).neg) :
@@ -965,6 +979,42 @@ noncomputable def negativeAlternatingPrefixLabelChains {n m : ℕ}
   by
     classical
     exact Finset.univ.filter fun P => NegativeAlternatingPrefixLabels label P
+
+theorem mem_positiveAlternatingPuncturedPrefixLabelChains_last_of_prefix {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {P : SignedPermutation (n + 1)}
+    (hP : P ∈ positiveAlternatingPrefixLabelChains label) :
+    (P, Fin.last n) ∈ positiveAlternatingPuncturedPrefixLabelChains label := by
+  exact mem_positiveAlternatingPuncturedPrefixLabelChains_iff.mpr
+    (positiveAlternatingPrefixLabels_punctured_last
+      (by simpa [positiveAlternatingPrefixLabelChains] using hP))
+
+theorem mem_negativeAlternatingPuncturedPrefixLabelChains_last_of_prefix {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {P : SignedPermutation (n + 1)}
+    (hP : P ∈ negativeAlternatingPrefixLabelChains label) :
+    (P, Fin.last n) ∈ negativeAlternatingPuncturedPrefixLabelChains label := by
+  exact mem_negativeAlternatingPuncturedPrefixLabelChains_iff.mpr
+    (negativeAlternatingPrefixLabels_punctured_last
+      (by simpa [negativeAlternatingPrefixLabelChains] using hP))
+
+theorem mem_negativeAlternatingPuncturedPrefixLabelChains_zero_of_positive_prefix {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {P : SignedPermutation (n + 1)}
+    (hP : P ∈ positiveAlternatingPrefixLabelChains label) :
+    (P, (0 : Fin (n + 1))) ∈ negativeAlternatingPuncturedPrefixLabelChains label := by
+  exact mem_negativeAlternatingPuncturedPrefixLabelChains_iff.mpr
+    (positiveAlternatingPrefixLabels_punctured_zero
+      (by simpa [positiveAlternatingPrefixLabelChains] using hP))
+
+theorem mem_positiveAlternatingPuncturedPrefixLabelChains_zero_of_negative_prefix {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {P : SignedPermutation (n + 1)}
+    (hP : P ∈ negativeAlternatingPrefixLabelChains label) :
+    (P, (0 : Fin (n + 1))) ∈ positiveAlternatingPuncturedPrefixLabelChains label := by
+  exact mem_positiveAlternatingPuncturedPrefixLabelChains_iff.mpr
+    (negativeAlternatingPrefixLabels_punctured_zero
+      (by simpa [negativeAlternatingPrefixLabelChains] using hP))
 
 theorem positiveAlternatingPrefixLabelChains_zero_eq_univ {m : ℕ}
     (label : NonzeroSignedSubset 0 → SignedLabel m) :

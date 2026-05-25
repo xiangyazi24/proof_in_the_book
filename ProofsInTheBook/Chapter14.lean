@@ -42,7 +42,10 @@ matrix from a raw family of touching simplices; see
   `FacetHyperplanes.oriented` representative, and
   `chapter14_of_pairwiseTouchingAcrossFacets` proves the Perles bound directly
   from this stronger geometric relation.  The remaining gap is the
-  converse/extraction of `TouchesAcrossFacets` from raw touching;
+  converse/extraction of `TouchesAcrossFacets` from raw touching; this file now
+  isolates the precise side obstruction as
+  `PairwiseNoSameSideCommonFacet`, since the current `TouchesAlongFacets`
+  records only a shared facet hyperplane, not equality of the facet bodies;
 * construct a point outside all simplex bodies to obtain the missing completed
   sign vector.  The halfspace side of this step is now formalized for one
   simplex:
@@ -731,6 +734,42 @@ def TouchesAlongFacets {d : ℕ} [NeZero d] (S T : DSimplex d) : Prop :=
       ∃ i j, S.facetHyperplane i = T.facetHyperplane j
 
 /--
+For a touching pair with a common facet hyperplane, the opposite vertex of the
+second simplex is strictly either on the same side or on the opposite side of
+that hyperplane relative to the first simplex's opposite vertex.
+-/
+lemma touchesAlongFacets_commonFacet_sSameSide_or_sOppSide {d : ℕ} [NeZero d]
+    {S T : DSimplex d} (h : TouchesAlongFacets S T) :
+    ∃ i j, S.facetHyperplane i = T.facetHyperplane j ∧
+      ((S.facetHyperplane i).SSameSide (S.points i) (T.points j) ∨
+        (S.facetHyperplane i).SOppSide (S.points i) (T.points j)) := by
+  rcases h with ⟨_, _, i, j, hfacet⟩
+  have hnot : T.points j ∉ S.facetHyperplane i := by
+    intro hmem
+    exact T.opposite_vertex_notMem_facetHyperplane j (by simpa [hfacet] using hmem)
+  exact ⟨i, j, hfacet, S.sSameSide_or_sOppSide_opposite_vertex_of_notMem_facetHyperplane
+    i hnot⟩
+
+/--
+The exact extra condition needed to upgrade the current `TouchesAlongFacets`
+definition to `TouchesAcrossFacets`: rule out the case where the two opposite
+vertices are strictly on the same side of a shared facet hyperplane.
+-/
+lemma touchesAcrossFacets_of_touchesAlongFacets_of_not_sSameSide {d : ℕ}
+    [NeZero d] {S T : DSimplex d} (h : TouchesAlongFacets S T)
+    (hno : ∀ i j, S.facetHyperplane i = T.facetHyperplane j →
+      ¬ (S.facetHyperplane i).SSameSide (S.points i) (T.points j)) :
+    TouchesAcrossFacets S T := by
+  rcases h with ⟨_, hmeet, i, j, hfacet⟩
+  have hnot : T.points j ∉ S.facetHyperplane i := by
+    intro hmem
+    exact T.opposite_vertex_notMem_facetHyperplane j (by simpa [hfacet] using hmem)
+  rcases S.sSameSide_or_sOppSide_opposite_vertex_of_notMem_facetHyperplane i hnot with
+    hsame | hopp
+  · exact False.elim ((hno i j hfacet) hsame)
+  · exact ⟨hmeet, i, j, hfacet, hopp⟩
+
+/--
 The opposite-vertex side condition is strong enough to imply disjoint relative
 interiors, hence the weaker `TouchesAlongFacets` relation.
 -/
@@ -754,12 +793,34 @@ def PairwiseTouchingAcrossFacets {ι : Type*} {d : ℕ} [NeZero d]
     (simplices : ι → DSimplex d) : Prop :=
   ∀ ⦃i j : ι⦄, i ≠ j → TouchesAcrossFacets (simplices i) (simplices j)
 
+/--
+Pairwise exclusion of the same-side common-hyperplane alternative.  This is
+the precise frontier between the current `TouchesAlongFacets` relation and the
+stronger across-facet relation used by the B-matrix proof.
+-/
+def PairwiseNoSameSideCommonFacet {ι : Type*} {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d) : Prop :=
+  ∀ ⦃a b : ι⦄, a ≠ b → ∀ i j,
+    (simplices a).facetHyperplane i = (simplices b).facetHyperplane j →
+      ¬ ((simplices a).facetHyperplane i).SSameSide
+        ((simplices a).points i) ((simplices b).points j)
+
 lemma pairwiseTouching_of_pairwiseTouchingAcrossFacets {ι : Type*} {d : ℕ}
     [NeZero d] {simplices : ι → DSimplex d}
     (h : PairwiseTouchingAcrossFacets simplices) :
     PairwiseTouching simplices := by
   intro i j hij
   exact touchesAlongFacets_of_touchesAcrossFacets (h hij)
+
+/-- Excluding the same-side alternative upgrades pairwise touching to across-facet touching. -/
+lemma pairwiseTouchingAcrossFacets_of_pairwiseTouching_of_noSameSideCommonFacet
+    {ι : Type*} {d : ℕ} [NeZero d] {simplices : ι → DSimplex d}
+    (htouch : PairwiseTouching simplices)
+    (hno : PairwiseNoSameSideCommonFacet simplices) :
+    PairwiseTouchingAcrossFacets simplices := by
+  intro a b hab
+  exact touchesAcrossFacets_of_touchesAlongFacets_of_not_sSameSide (htouch hab)
+    (fun i j hfacet => hno hab i j hfacet)
 
 set_option synthInstance.maxHeartbeats 80000
 
@@ -1852,7 +1913,12 @@ lookup.  The current status of its main pieces is:
   `FacetHyperplanes.exists_oriented_opposite_entries_of_touchesAcrossFacets`
   transfers those entries to the arbitrary witness facet chosen by
   `FacetHyperplanes.oriented`.  The remaining bridge is the semantic one:
-  derive `TouchesAcrossFacets` from the raw touching definition;
+  rule out the same-side common-hyperplane alternative for raw touching, or
+  strengthen the touching definition so it records a shared facet body rather
+  than only a shared facet hyperplane.  The formal isolated condition is
+  `PairwiseNoSameSideCommonFacet`, and under it
+  `chapter14_of_pairwiseTouching_noSameSideCommonFacet` now removes the
+  across-facet hypothesis;
 * choose a point outside the finite union of simplex bodies to obtain the
   missing completed sign vector.  The local conversion from "same sign on every
   facet of a simplex" to "the point lies in that simplex" is now
@@ -2000,6 +2066,24 @@ theorem chapter14_of_pairwiseTouchingAcrossFacets {ι : Type*} [Fintype ι]
       (PerlesFacetSeparationData.ofFacetHyperplanesAcross simplices hacross)
   · haveI : IsEmpty ι := ⟨fun x => hι ⟨x⟩⟩
     simp
+
+/--
+Chapter 14 from the current raw touching relation plus the exact side
+obstruction needed to turn a shared facet hyperplane into an across-facet
+touching certificate.
+
+This is still not the full raw book theorem: the remaining geometric frontier
+is deriving `PairwiseNoSameSideCommonFacet` from a faithful raw touching
+definition, or strengthening `TouchesAlongFacets` so same-side lower-dimensional
+contacts are not admitted as facet-touching.
+-/
+theorem chapter14_of_pairwiseTouching_noSameSideCommonFacet {ι : Type*} [Fintype ι]
+    {d : ℕ} [NeZero d] (simplices : ι → DSimplex d)
+    (htouch : PairwiseTouching simplices)
+    (hno : PairwiseNoSameSideCommonFacet simplices) :
+    Fintype.card ι < 2 ^ (d + 1) :=
+  chapter14_of_pairwiseTouchingAcrossFacets simplices
+    (pairwiseTouchingAcrossFacets_of_pairwiseTouching_of_noSameSideCommonFacet htouch hno)
 
 /--
 Conditional sharp version: if the geometric Perles data also supply a

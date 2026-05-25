@@ -1092,13 +1092,27 @@ theorem evansExactCardinalityCase_of_completion {n : ℕ}
   intro P hP hcard
   exact hcomplete P hP (by omega)
 
+/--
+The proved padding reduction is sharp: for each fixed order, the full
+`≤ n - 1` Evans theorem is equivalent to the exact `= n - 1` case.
+-/
+theorem latinSquareCompletionTheorem_iff_exact (n : ℕ) :
+    LatinSquareCompletionTheorem n ↔ EvansExactCardinalityCase n :=
+  ⟨evansExactCardinalityCase_of_completion, completion_from_exact_cardinality_case⟩
+
 theorem evansExactCardinalityCase_le_three (n : ℕ) (hn : n ≤ 3) :
     EvansExactCardinalityCase n :=
   evansExactCardinalityCase_of_completion (latin_square_completion_theorem_order_le_three n hn)
 
+theorem evansExactCardinalityCase_three : EvansExactCardinalityCase 3 :=
+  evansExactCardinalityCase_le_three 3 (by omega)
+
 theorem chapter33_order_le_three (n : ℕ) (hn : n ≤ 3) :
     LatinSquareCompletionTheorem n :=
   completion_from_exact_cardinality_case (evansExactCardinalityCase_le_three n hn)
+
+theorem chapter33_three : LatinSquareCompletionTheorem 3 :=
+  chapter33_order_le_three 3 (by omega)
 
 /-- If every used symbol has a witness cell, then the pair count of common-used
 symbols times columns is bounded by the total filled cells. -/
@@ -1218,9 +1232,9 @@ theorem chapter33 {n : ℕ} (hexact : EvansExactCardinalityCase n) :
     LatinSquareCompletionTheorem n :=
   completion_from_exact_cardinality_case hexact
 
-/-- Canonical Chapter 33 is fully unconditional in orders `0`, `1`, and `2`. -/
-theorem chapter33_low_dim (n : ℕ) (hn : n ≤ 2) :
+/-- Canonical Chapter 33 is fully unconditional in orders `0`, `1`, `2`, and `3`. -/
+theorem chapter33_low_dim (n : ℕ) (hn : n ≤ 3) :
     LatinSquareCompletionTheorem n :=
-  chapter33 (evansExactCardinalityCase_le_two n hn)
+  chapter33 (evansExactCardinalityCase_le_three n hn)
 
 end ProofsInTheBook.Chapter33

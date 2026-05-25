@@ -100,6 +100,11 @@ theorem maxSupport_mem_support {n : ℕ} (X : SignedSubset n) (hX : X.Nonzero) :
     X.maxSupport hX ∈ X.support := by
   exact Finset.max'_mem _ _
 
+theorem maxSupport_le_of_support_subset {n : ℕ} {X Y : SignedSubset n}
+    (hX : X.Nonzero) (hY : Y.Nonzero) (hsub : X.support ⊆ Y.support) :
+    X.maxSupport hX ≤ Y.maxSupport hY := by
+  exact Finset.le_max' _ _ (hsub (maxSupport_mem_support X hX))
+
 theorem maxSupport_congr_proof {n : ℕ} (X : SignedSubset n)
     (h₁ h₂ : X.Nonzero) : X.maxSupport h₁ = X.maxSupport h₂ := by
   unfold maxSupport
@@ -180,6 +185,11 @@ theorem support_subset_of_le {n : ℕ} {X Y : SignedSubset n} (hXY : Le X Y) :
   rcases Finset.mem_union.mp hi with hpos | hneg
   · exact Finset.mem_union_left _ (hXY.1 hpos)
   · exact Finset.mem_union_right _ (hXY.2 hneg)
+
+theorem maxSupport_le_of_le {n : ℕ} {X Y : SignedSubset n}
+    (hX : X.Nonzero) (hY : Y.Nonzero) (hXY : Le X Y) :
+    X.maxSupport hX ≤ Y.maxSupport hY :=
+  maxSupport_le_of_support_subset hX hY (support_subset_of_le hXY)
 
 theorem card_le_card_of_le {n : ℕ} {X Y : SignedSubset n} (hXY : Le X Y) :
     X.card ≤ Y.card := by

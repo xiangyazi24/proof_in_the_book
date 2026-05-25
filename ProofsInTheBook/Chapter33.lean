@@ -14,13 +14,13 @@ The book's proof uses Hall's marriage theorem applied row by row:
 at each step, the remaining entries in each row form a system of
 distinct representatives.
 
-Point-17 status: this file now contains three genuine pieces: the
+Point-17 status: this file now contains four genuine pieces: the
 row-completion Hall step for a sparse partial square, the standard extension
 of a Latin rectangle by one row, and the padding reduction
 `completion_from_exact_cardinality_case`, which proves that the `|P| < n - 1`
 case reduces to the exact `|P| = n - 1` Evans case by adding legal entries one
-at a time.  The complete completion theorem is also discharged for orders `0`
-and `1`.  It is still not the full Evans/Smetaniuk completion theorem.  The
+at a time.  The complete completion theorem is also discharged for orders
+`0`, `1`, and `2`.  It is still not the full Evans/Smetaniuk completion theorem.  The
 remaining missing infrastructure is the exact-cardinality Smetaniuk induction:
 permuting rows/columns/symbols so a singleton symbol lies on the back diagonal
 and all other filled cells lie above it, applying the order-`n - 1` induction
@@ -733,7 +733,7 @@ theorem completion_from_exact_cardinality_case {n : ℕ}
 /-!
 ### Elementary complete orders
 
-Orders `0` and `1` do not need the Evans/Smetaniuk induction.
+Orders `0`, `1`, and `2` do not need the Evans/Smetaniuk induction.
 -/
 
 theorem latin_square_completion_order_zero (P : Fin 0 → Fin 0 → Option (Fin 0)) :
@@ -759,6 +759,71 @@ theorem latin_square_completion_order_le_one (n : ℕ) (hn : n ≤ 1)
   interval_cases n
   · simpa using latin_square_completion_order_zero P
   · simpa using latin_square_completion_order_one P
+
+private def latinSquareFinTwoWithCell (i₀ j₀ a₀ : Fin 2) : Fin 2 → Fin 2 → Fin 2 :=
+  fun i j =>
+    if i = i₀ then
+      if j = j₀ then a₀ else Equiv.swap (0 : Fin 2) 1 a₀
+    else
+      if j = j₀ then Equiv.swap (0 : Fin 2) 1 a₀ else a₀
+
+private theorem isLatinSquare_latinSquareFinTwoWithCell (i₀ j₀ a₀ : Fin 2) :
+    IsLatinSquare (latinSquareFinTwoWithCell i₀ j₀ a₀) := by
+  constructor
+  · intro i x y hxy
+    fin_cases i <;> fin_cases x <;> fin_cases y <;>
+      fin_cases i₀ <;> fin_cases j₀ <;> fin_cases a₀ <;>
+      simp [latinSquareFinTwoWithCell] at hxy ⊢
+  · intro j x y hxy
+    fin_cases j <;> fin_cases x <;> fin_cases y <;>
+      fin_cases i₀ <;> fin_cases j₀ <;> fin_cases a₀ <;>
+      simp [latinSquareFinTwoWithCell] at hxy ⊢
+
+private theorem latinSquareFinTwoWithCell_spec (i₀ j₀ a₀ : Fin 2) :
+    latinSquareFinTwoWithCell i₀ j₀ a₀ i₀ j₀ = a₀ := by
+  simp [latinSquareFinTwoWithCell]
+
+theorem latin_square_completion_order_two
+    (P : Fin 2 → Fin 2 → Option (Fin 2))
+    (hfilled_le : (filledCells P).card ≤ 1) :
+    ∃ L : Fin 2 → Fin 2 → Fin 2, Completes P L := by
+  classical
+  by_cases hfilled : ∃ i j a, P i j = some a
+  · rcases hfilled with ⟨i₀, j₀, a₀, hcell₀⟩
+    refine ⟨latinSquareFinTwoWithCell i₀ j₀ a₀, ?_⟩
+    constructor
+    · exact isLatinSquare_latinSquareFinTwoWithCell i₀ j₀ a₀
+    · intro i j a hcell
+      have hmem : (i, j) ∈ filledCells P := by
+        simp [filledCells, hcell]
+      have hmem₀ : (i₀, j₀) ∈ filledCells P := by
+        simp [filledCells, hcell₀]
+      have hp_eq : (i, j) = (i₀, j₀) :=
+        (Finset.card_le_one_iff.mp hfilled_le) hmem hmem₀
+      have hi : i = i₀ := congrArg Prod.fst hp_eq
+      have hj : j = j₀ := congrArg Prod.snd hp_eq
+      subst i
+      subst j
+      have ha : a = a₀ := by
+        have hsome : some a = some a₀ := by
+          rw [← hcell, hcell₀]
+        exact Option.some.inj hsome
+      subst a
+      exact latinSquareFinTwoWithCell_spec i₀ j₀ a₀
+  · refine ⟨latinSquareFinTwoWithCell 0 0 0, ?_⟩
+    constructor
+    · exact isLatinSquare_latinSquareFinTwoWithCell 0 0 0
+    · intro i j a hcell
+      exact False.elim (hfilled ⟨i, j, a, hcell⟩)
+
+theorem latin_square_completion_order_le_two (n : ℕ) (hn : n ≤ 2)
+    (P : Fin n → Fin n → Option (Fin n))
+    (hfilled_le : (filledCells P).card ≤ n - 1) :
+    ∃ L : Fin n → Fin n → Fin n, Completes P L := by
+  interval_cases n
+  · simpa using latin_square_completion_order_zero P
+  · simpa using latin_square_completion_order_one P
+  · simpa using latin_square_completion_order_two P hfilled_le
 
 /-- If every used symbol has a witness cell, then the pair count of common-used
 symbols times columns is bounded by the total filled cells. -/

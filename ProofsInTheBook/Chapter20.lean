@@ -25,8 +25,8 @@ the unit-square side color constraints, proves the odd red-green boundary
 count for any finite subdivision of the square boundary, identifies that count
 with an explicit finite list of unit-square boundary point-edges, constructs
 `MonskyCertificate` from finite unordered-edge parity, and proves the valuation
-contradiction for a trichromatic triangle of oriented rational double area
-`± 2 / n` with `n` odd.
+contradiction for a trichromatic triangle of ordinary real area `1 / n` with
+`n` odd.
 
 Gap to the full book theorem: the remaining work is geometric triangulation
 infrastructure.  One needs a finite real triangulation model for the unit
@@ -38,10 +38,10 @@ square and an extraction theorem producing:
 3. the boundary-incidence theorem that the odd-multiplicity triangle edges are
    exactly that square boundary chain after mapping boundary points to the
    finite vertex type;
-4. the oriented equal-area fact
-   `∀ i, doubleArea ... = (2 / n : ℚ) ∨ doubleArea ... = -(2 / n : ℚ)`.
+4. the ordinary equal-area fact
+   `∀ i, realTriangleArea ... = (1 / n : ℚ)`.
 Mathlib has `Analysis.Convex.SimplicialComplex` and `Geometry.Polygon.Basic`,
-but not this assembled theorem extracting boundary chains and oriented areas
+but not this assembled theorem extracting boundary chains and equal-area facts
 from a triangulation of the unit square.
 -/
 
@@ -274,6 +274,23 @@ theorem valuationColor_one_one {K Γ : Type*} [Field K] [LinearOrderedCommGroupW
 /-- Twice the oriented area of a triangle with coordinates in a ring. -/
 def doubleArea {K : Type*} [Ring K] (a b c : K × K) : K :=
   (b.1 - a.1) * (c.2 - a.2) - (c.1 - a.1) * (b.2 - a.2)
+
+/-- The ordinary Euclidean area of a real triangle, expressed through `doubleArea`. -/
+noncomputable def realTriangleArea (a b c : ℝ × ℝ) : ℝ :=
+  |doubleArea a b c| / 2
+
+theorem abs_doubleArea_eq_two_div_of_realTriangleArea_eq_one_div
+    {n : ℕ} (hn : n ≠ 0) {a b c : ℝ × ℝ}
+    (harea : realTriangleArea a b c = (((1 : ℚ) / n : ℚ) : ℝ)) :
+    |doubleArea a b c| = (((2 : ℚ) / n : ℚ) : ℝ) := by
+  have hareaR : realTriangleArea a b c = (1 : ℝ) / n := by
+    simpa using harea
+  have h := congrArg (fun x : ℝ => x * 2) hareaR
+  unfold realTriangleArea at h
+  have hR : |doubleArea a b c| = (2 : ℝ) / n := by
+    field_simp [Nat.cast_ne_zero.mpr hn] at h ⊢
+    linarith
+  simpa using hR
 
 /--
 A red-green-blue triangle has double area with valuation at least `1` in
@@ -571,6 +588,40 @@ theorem not_real_doubleArea_eq_abs_two_div_odd_of_trichromatic {n : ℕ} (hn : O
   rcases harea with harea | harea
   · exact not_real_doubleArea_eq_two_div_odd_of_trichromatic hn htri harea
   · exact not_real_doubleArea_eq_neg_two_div_odd_of_trichromatic hn htri harea
+
+theorem real_two_div_natCast_nonneg_of_odd {n : ℕ} (hn : Odd n) :
+    (0 : ℝ) ≤ (((2 : ℚ) / n : ℚ) : ℝ) := by
+  rcases hn with ⟨k, hk⟩
+  have hnpos : 0 < n := by omega
+  positivity
+
+/--
+Absolute double area is the usual orientation-free area input.  For odd `n`,
+the valuation contradiction only needs the two oriented alternatives obtained
+from `|doubleArea| = 2 / n`.
+-/
+theorem not_real_abs_doubleArea_eq_two_div_odd_of_trichromatic {n : ℕ} (hn : Odd n)
+    {a b c : ℝ × ℝ}
+    (htri : TrichromaticTriangle (realTwoAdicColor a) (realTwoAdicColor b)
+      (realTwoAdicColor c))
+    (harea : |doubleArea a b c| = (((2 : ℚ) / n : ℚ) : ℝ)) : False := by
+  exact not_real_doubleArea_eq_abs_two_div_odd_of_trichromatic hn htri
+    ((abs_eq (real_two_div_natCast_nonneg_of_odd hn)).mp harea)
+
+/--
+Area form of the trichromatic valuation contradiction: a trichromatic triangle
+cannot have ordinary real area `1 / n` when `n` is odd.
+-/
+theorem not_real_triangleArea_eq_one_div_odd_of_trichromatic {n : ℕ} (hn : Odd n)
+    {a b c : ℝ × ℝ}
+    (htri : TrichromaticTriangle (realTwoAdicColor a) (realTwoAdicColor b)
+      (realTwoAdicColor c))
+    (harea : realTriangleArea a b c = (((1 : ℚ) / n : ℚ) : ℝ)) : False := by
+  have hn0 : n ≠ 0 := by
+    rcases hn with ⟨k, hk⟩
+    omega
+  exact not_real_abs_doubleArea_eq_two_div_odd_of_trichromatic hn htri
+    (abs_doubleArea_eq_two_div_of_realTriangleArea_eq_one_div hn0 harea)
 
 theorem not_trichromatic_of_first_two_same {a b c : MonskyColor}
     (hab : a = b) : ¬ TrichromaticTriangle a b c := by
@@ -1454,6 +1505,72 @@ theorem trichromatic_count_odd_from_edge_parity {α : Type*} [Fintype α] [Decid
     (edgeParityMonskyCertificate triangles color hodd)
 
 /--
+Sperner conclusion for a finite real square-boundary vertex chain: the
+2-adic coloring forces an odd number of trichromatic listed triangles.
+-/
+theorem trichromatic_count_odd_of_realSquareBoundaryVertexChain
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (vertices : α → ℝ × ℝ) (triangles : Fin n → α × α × α)
+    (bottom right top left : List α) (bottomLeft bottomRight topRight topLeft : α)
+    (hboundary : ∀ e : Sym2 α,
+      Odd (edgeMultiplicity triangles e) ↔
+        e ∈ (squareBoundaryEdgeList bottom right top left
+          bottomLeft bottomRight topRight topLeft).toFinset)
+    (hnodup : (squareBoundaryEdgeList bottom right top left
+      bottomLeft bottomRight topRight topLeft).Nodup)
+    (hbottomLeft : vertices bottomLeft = (0, 0))
+    (hbottomRight : vertices bottomRight = (1, 0))
+    (htopRight : vertices topRight = (1, 1))
+    (htopLeft : vertices topLeft = (0, 1))
+    (hbottom : ∀ v ∈ bottom, ∃ x : ℝ, vertices v = (x, 0))
+    (hright : ∀ v ∈ right, ∃ y : ℝ, vertices v = (1, y))
+    (htop : ∀ v ∈ top, ∃ x : ℝ, vertices v = (x, 1))
+    (hleft : ∀ v ∈ left, ∃ y : ℝ, vertices v = (0, y)) :
+    Odd ((Finset.univ.filter fun i : Fin n =>
+      TrichromaticTriangle
+        (triangleColorsOfVertices (realTwoAdicColor ∘ vertices) (triangles i)).1
+        (triangleColorsOfVertices (realTwoAdicColor ∘ vertices) (triangles i)).2.1
+        (triangleColorsOfVertices (realTwoAdicColor ∘ vertices) (triangles i)).2.2).card) := by
+  exact trichromatic_count_odd_from_edge_parity triangles (realTwoAdicColor ∘ vertices)
+    (oddEdgeRedGreenCount_odd_of_realSquareBoundaryVertexChain vertices triangles
+      bottom right top left bottomLeft bottomRight topRight topLeft
+      hboundary hnodup hbottomLeft hbottomRight htopRight htopLeft
+      hbottom hright htop hleft)
+
+/--
+Existence form of the preceding Sperner conclusion, with the boundary oddness
+computed from the real unit-square side constraints.
+-/
+theorem exists_trichromatic_of_realSquareBoundaryVertexChain
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (vertices : α → ℝ × ℝ) (triangles : Fin n → α × α × α)
+    (bottom right top left : List α) (bottomLeft bottomRight topRight topLeft : α)
+    (hboundary : ∀ e : Sym2 α,
+      Odd (edgeMultiplicity triangles e) ↔
+        e ∈ (squareBoundaryEdgeList bottom right top left
+          bottomLeft bottomRight topRight topLeft).toFinset)
+    (hnodup : (squareBoundaryEdgeList bottom right top left
+      bottomLeft bottomRight topRight topLeft).Nodup)
+    (hbottomLeft : vertices bottomLeft = (0, 0))
+    (hbottomRight : vertices bottomRight = (1, 0))
+    (htopRight : vertices topRight = (1, 1))
+    (htopLeft : vertices topLeft = (0, 1))
+    (hbottom : ∀ v ∈ bottom, ∃ x : ℝ, vertices v = (x, 0))
+    (hright : ∀ v ∈ right, ∃ y : ℝ, vertices v = (1, y))
+    (htop : ∀ v ∈ top, ∃ x : ℝ, vertices v = (x, 1))
+    (hleft : ∀ v ∈ left, ∃ y : ℝ, vertices v = (0, y)) :
+    ∃ i : Fin n,
+      TrichromaticTriangle
+        (triangleColorsOfVertices (realTwoAdicColor ∘ vertices) (triangles i)).1
+        (triangleColorsOfVertices (realTwoAdicColor ∘ vertices) (triangles i)).2.1
+        (triangleColorsOfVertices (realTwoAdicColor ∘ vertices) (triangles i)).2.2 := by
+  exact chapter20_from_edge_parity triangles (realTwoAdicColor ∘ vertices)
+    (oddEdgeRedGreenCount_odd_of_realSquareBoundaryVertexChain vertices triangles
+      bottom right top left bottomLeft bottomRight topRight topLeft
+      hboundary hnodup hbottomLeft hbottomRight htopRight htopLeft
+      hbottom hright htop hleft)
+
+/--
 Once a `MonskyCertificate` is realized by actual real triangles whose colors
 come from the chosen Monsky coloring and whose oriented double areas are all
 `2 / n`, odd `n` is impossible.  The only unformalized book input left before
@@ -1500,6 +1617,27 @@ theorem no_odd_equalArea_realization_of_monskyCertificate_abs {n : ℕ} (hn : Od
   exact not_real_doubleArea_eq_abs_two_div_odd_of_trichromatic hn htri (harea i)
 
 /--
+Area version of `no_odd_equalArea_realization_of_monskyCertificate`: the
+geometric input is the ordinary triangle area `1 / n`, not a pre-oriented
+double-area alternative.
+-/
+theorem no_odd_equalArea_realization_of_monskyCertificate_area {n : ℕ} (hn : Odd n)
+    (triangles : Fin n → (ℝ × ℝ) × (ℝ × ℝ) × (ℝ × ℝ))
+    (cert : MonskyCertificate n)
+    (hcolors : ∀ i : Fin n, cert.triangleColors i =
+      (realTwoAdicColor (triangles i).1,
+       realTwoAdicColor (triangles i).2.1,
+       realTwoAdicColor (triangles i).2.2))
+    (harea : ∀ i : Fin n,
+      realTriangleArea (triangles i).1 (triangles i).2.1 (triangles i).2.2 =
+        (((1 : ℚ) / n : ℚ) : ℝ)) : False := by
+  obtain ⟨i, hi⟩ := chapter20 cert
+  have htri : TrichromaticTriangle (realTwoAdicColor (triangles i).1)
+      (realTwoAdicColor (triangles i).2.1) (realTwoAdicColor (triangles i).2.2) := by
+    simpa [hcolors i] using hi
+  exact not_real_triangleArea_eq_one_div_odd_of_trichromatic hn htri (harea i)
+
+/--
 Finite-vertex version of the current Monsky contradiction.  This is the target
 shape for the remaining geometric triangulation extraction: vertices are a
 finite type, triangles name three vertices, the boundary parity is computed
@@ -1540,6 +1678,28 @@ theorem no_odd_equalArea_realization_of_edgeParity_abs
   let cert : MonskyCertificate n :=
     edgeParityMonskyCertificate triangles (realTwoAdicColor ∘ vertices) hboundary
   exact no_odd_equalArea_realization_of_monskyCertificate_abs hn
+    (fun i => (vertices (triangles i).1, vertices (triangles i).2.1,
+      vertices (triangles i).2.2))
+    cert
+    (by intro i; rfl)
+    harea
+
+/--
+Finite-vertex area version: after the Sperner boundary parity is established,
+ordinary equal triangle area `1 / n` is already enough for the 2-adic
+contradiction.
+-/
+theorem no_odd_equalArea_realization_of_edgeParity_area
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ} (hn : Odd n)
+    (vertices : α → ℝ × ℝ) (triangles : Fin n → α × α × α)
+    (hboundary : Odd (oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices)))
+    (harea : ∀ i : Fin n,
+      realTriangleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+          (vertices (triangles i).2.2) =
+        (((1 : ℚ) / n : ℚ) : ℝ)) : False := by
+  let cert : MonskyCertificate n :=
+    edgeParityMonskyCertificate triangles (realTwoAdicColor ∘ vertices) hboundary
+  exact no_odd_equalArea_realization_of_monskyCertificate_area hn
     (fun i => (vertices (triangles i).1, vertices (triangles i).2.1,
       vertices (triangles i).2.2))
     cert
@@ -1604,6 +1764,26 @@ theorem no_odd_equalArea_realization_of_squareBoundaryIncidence_abs
     harea
 
 /--
+Area version of the square-boundary-incidence frontier: once the extracted
+boundary red-green count is the unit-square side-chain count, an ordinary
+equal-area realization with odd `n` is impossible.
+-/
+theorem no_odd_equalArea_realization_of_squareBoundaryIncidence_area
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ} (hn : Odd n)
+    (vertices : α → ℝ × ℝ) (triangles : Fin n → α × α × α)
+    (bottom right top left : List ℝ)
+    (hboundary : oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices) =
+      realTwoAdicSquareBoundaryRGChainCount bottom right top left)
+    (harea : ∀ i : Fin n,
+      realTriangleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+          (vertices (triangles i).2.2) =
+        (((1 : ℚ) / n : ℚ) : ℝ)) : False := by
+  exact no_odd_equalArea_realization_of_edgeParity_area hn vertices triangles
+    (oddEdgeRedGreenCount_odd_of_squareBoundaryIncidence vertices triangles bottom right top left
+      hboundary)
+    harea
+
+/--
 Same contradiction with the boundary assumption phrased using the explicit
 unit-square point-edge list rather than the already-simplified side-chain
 count.
@@ -1623,6 +1803,26 @@ theorem no_odd_equalArea_realization_of_squareBoundaryPointEdgeList_abs
           (vertices (triangles i).2.2) =
         -(((2 : ℚ) / n : ℚ) : ℝ)) : False := by
   exact no_odd_equalArea_realization_of_edgeParity_abs hn vertices triangles
+    (oddEdgeRedGreenCount_odd_of_squareBoundaryPointEdgeList vertices triangles
+      bottom right top left hboundary)
+    harea
+
+/--
+Area version with the boundary assumption phrased by the explicit unit-square
+point-edge list.
+-/
+theorem no_odd_equalArea_realization_of_squareBoundaryPointEdgeList_area
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ} (hn : Odd n)
+    (vertices : α → ℝ × ℝ) (triangles : Fin n → α × α × α)
+    (bottom right top left : List ℝ)
+    (hboundary : oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices) =
+      listEdgeRGCount (realTwoAdicSquareBoundaryPointEdgeList bottom right top left)
+        realTwoAdicColor)
+    (harea : ∀ i : Fin n,
+      realTriangleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+          (vertices (triangles i).2.2) =
+        (((1 : ℚ) / n : ℚ) : ℝ)) : False := by
+  exact no_odd_equalArea_realization_of_edgeParity_area hn vertices triangles
     (oddEdgeRedGreenCount_odd_of_squareBoundaryPointEdgeList vertices triangles
       bottom right top left hboundary)
     harea
@@ -1661,6 +1861,41 @@ theorem no_odd_equalArea_realization_of_realSquareBoundaryVertexChain_abs
           (vertices (triangles i).2.2) =
         -(((2 : ℚ) / n : ℚ) : ℝ)) : False := by
   exact no_odd_equalArea_realization_of_edgeParity_abs hn vertices triangles
+    (oddEdgeRedGreenCount_odd_of_realSquareBoundaryVertexChain vertices triangles
+      bottom right top left bottomLeft bottomRight topRight topLeft
+      hboundary hnodup hbottomLeft hbottomRight htopRight htopLeft
+      hbottom hright htop hleft)
+    harea
+
+/--
+Finite-vertex square-boundary-chain area version.  This is the current closest
+formal statement to the book argument: finite triangle data, exact
+odd-multiplicity boundary chain, unit-square side constraints, and ordinary
+equal triangle area `1 / n` contradict odd `n`.
+-/
+theorem no_odd_equalArea_realization_of_realSquareBoundaryVertexChain_area
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ} (hn : Odd n)
+    (vertices : α → ℝ × ℝ) (triangles : Fin n → α × α × α)
+    (bottom right top left : List α) (bottomLeft bottomRight topRight topLeft : α)
+    (hboundary : ∀ e : Sym2 α,
+      Odd (edgeMultiplicity triangles e) ↔
+        e ∈ (squareBoundaryEdgeList bottom right top left
+          bottomLeft bottomRight topRight topLeft).toFinset)
+    (hnodup : (squareBoundaryEdgeList bottom right top left
+      bottomLeft bottomRight topRight topLeft).Nodup)
+    (hbottomLeft : vertices bottomLeft = (0, 0))
+    (hbottomRight : vertices bottomRight = (1, 0))
+    (htopRight : vertices topRight = (1, 1))
+    (htopLeft : vertices topLeft = (0, 1))
+    (hbottom : ∀ v ∈ bottom, ∃ x : ℝ, vertices v = (x, 0))
+    (hright : ∀ v ∈ right, ∃ y : ℝ, vertices v = (1, y))
+    (htop : ∀ v ∈ top, ∃ x : ℝ, vertices v = (x, 1))
+    (hleft : ∀ v ∈ left, ∃ y : ℝ, vertices v = (0, y))
+    (harea : ∀ i : Fin n,
+      realTriangleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+          (vertices (triangles i).2.2) =
+        (((1 : ℚ) / n : ℚ) : ℝ)) : False := by
+  exact no_odd_equalArea_realization_of_edgeParity_area hn vertices triangles
     (oddEdgeRedGreenCount_odd_of_realSquareBoundaryVertexChain vertices triangles
       bottom right top left bottomLeft bottomRight topRight topLeft
       hboundary hnodup hbottomLeft hbottomRight htopRight htopLeft

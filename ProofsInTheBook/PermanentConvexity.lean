@@ -264,9 +264,21 @@ def scaledCheckerboardDirection (a : ℝ) (c d : n) : n → ℝ :=
 def checkerboardExchangeAmount (M : Matrix n n ℝ) (r s c d : n) : ℝ :=
   min (M r d) (M s c)
 
+def checkerboardExchangeEndpoint (M : Matrix n n ℝ) (r s c d : n) : Matrix n n ℝ :=
+  twoRowPerturbation M r s
+    (scaledCheckerboardDirection (n := n) (checkerboardExchangeAmount M r s c d) c d)
+    (-(scaledCheckerboardDirection (n := n) (checkerboardExchangeAmount M r s c d) c d))
+    1
+
 theorem sum_checkerboardDirection (c d : n) :
     ∑ j, checkerboardDirection c d j = 0 := by
   simp [checkerboardDirection, Finset.sum_sub_distrib]
+
+omit [Fintype n] in
+theorem checkerboardDirection_swap (c d : n) :
+    checkerboardDirection d c = -checkerboardDirection c d := by
+  ext j
+  simp [checkerboardDirection]
 
 omit [DecidableEq n] [Fintype n] in
 theorem checkerboardExchangeAmount_nonneg {M : Matrix n n ℝ} {r s c d : n}
@@ -599,6 +611,23 @@ theorem checkerboardExchangeAmount_mem_and_permanent_convex_and_endpoint_zero
   exact ⟨hmain.1, hmain.2,
     scaledCheckerboardPerturbation_exchangeAmount_endpoint_zero
       (M := M) (r := r) (s := s) (c := c) (d := d) hrs hcd⟩
+
+theorem checkerboardExchangeEndpoint_mem_doublyStochastic
+    {c d : n} (hrs : r ≠ s) (hcd : c ≠ d) (hM : M ∈ doublyStochastic ℝ n) :
+    checkerboardExchangeEndpoint M r s c d ∈ doublyStochastic ℝ n := by
+  simpa [checkerboardExchangeEndpoint] using
+    (checkerboardExchangeAmount_mem_and_permanent_convex_and_endpoint_zero
+      (M := M) (r := r) (s := s) (c := c) (d := d) hrs hcd hM
+      (t := 1) zero_le_one le_rfl).1
+
+omit [Fintype n] in
+theorem checkerboardExchangeEndpoint_boundary_zero
+    {M : Matrix n n ℝ} {r s c d : n} (hrs : r ≠ s) (hcd : c ≠ d) :
+    checkerboardExchangeEndpoint M r s c d r d = 0 ∨
+      checkerboardExchangeEndpoint M r s c d s c = 0 := by
+  simpa [checkerboardExchangeEndpoint] using
+    scaledCheckerboardPerturbation_exchangeAmount_endpoint_zero
+      (M := M) (r := r) (s := s) (c := c) (d := d) hrs hcd
 
 /-! ## Elementary `2 × 2` log-concavity model -/
 

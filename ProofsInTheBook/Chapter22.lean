@@ -13,12 +13,13 @@ The book presents the proof using the theory of mixed discriminants.
 
 Formalization status: this file now states the genuine theorem over Mathlib's
 `doublyStochastic` predicate.  The proved local part is the equality-case
-computation for the flat matrix, the `n ≤ 2` unconditional lower bounds, and
-the weighted-AM-GM capacity lower bound for row-linear products of doubly
+computation for the flat matrix, the `n ≤ 2` unconditional lower bounds, the
+`n = 0,1,2` instances of the coefficient-from-capacity analytic core, and the
+weighted-AM-GM capacity lower bound for row-linear products of doubly
 stochastic matrices.  The remaining arbitrary-dimension lower bound is exposed
 as a point-17 honest frontier: it is conditional on the missing
-Falikman-Egorychev/Gurvits coefficient-from-capacity inequality, not replaced
-by the flat-matrix special case.  The
+Falikman-Egorychev/Gurvits coefficient-from-capacity inequality for `n ≥ 3`,
+not replaced by the flat-matrix special case.  The
 equality-only-if-flat strengthening belongs to the same unformalized analytic
 equality-case layer.
 
@@ -256,6 +257,89 @@ theorem van_der_Waerden_permanent_fin_two
   rw [hperm, h01_eq_10, h11_eq_00]
   norm_num
   nlinarith [sq_nonneg (A 0 0 - A 1 0)]
+
+/-- The coefficient-from-capacity analytic core is elementary in dimension `0`. -/
+theorem vanDerWaerdenAnalyticCore_fin_zero : VanDerWaerdenAnalyticCore 0 := by
+  refine ⟨?_⟩
+  intro A _hA _hcap
+  simp [Matrix.permanent]
+
+/-- The coefficient-from-capacity analytic core is elementary in dimension `1`. -/
+theorem vanDerWaerdenAnalyticCore_fin_one : VanDerWaerdenAnalyticCore 1 := by
+  refine ⟨?_⟩
+  intro A _hA hcap
+  have hx : ∀ j : Fin 1, 0 < (fun _ : Fin 1 => (1 : ℝ)) j := by
+    simp
+  have h := hcap.le_rowLinearProduct (fun _ : Fin 1 => (1 : ℝ)) hx
+  simpa [rowLinearProduct, Matrix.permanent] using h
+
+/-- The coefficient-from-capacity analytic core is elementary in dimension `2`.
+
+Writing the row-linear product as
+`ac x₀² + (ad + bc) x₀x₁ + bd x₁²`, capacity gives nonnegativity of
+`ac t² + (ad + bc - 1)t + bd` on the positive ray.  Together with
+nonnegativity of the entries, this extends to all real `t` after the easy
+case `ad + bc ≥ 1`; the quadratic-discriminant bound then gives
+`ad + bc ≥ 1 / 2`, which is exactly the permanent lower bound for `2 × 2`
+matrices.
+-/
+theorem vanDerWaerdenAnalyticCore_fin_two : VanDerWaerdenAnalyticCore 2 := by
+  refine ⟨?_⟩
+  intro A hA hcap
+  have hhalf : (1 : ℝ) / 2 ≤ A 0 0 * A 1 1 + A 1 0 * A 0 1 := by
+    let p : ℝ := A 0 0 * A 1 1 + A 1 0 * A 0 1
+    by_cases hp : 1 ≤ p
+    · linarith
+    · have hp_le_one : p ≤ 1 := le_of_not_ge hp
+      have hnonneg_quad : ∀ t : ℝ, 0 ≤ (A 0 0 * A 1 0) * (t * t) +
+          (A 0 0 * A 1 1 + A 0 1 * A 1 0 - 1) * t + A 0 1 * A 1 1 := by
+        intro t
+        rcases lt_trichotomy t 0 with htneg | rfl | htpos
+        · have hac : 0 ≤ A 0 0 * A 1 0 := mul_nonneg (hA 0 0) (hA 1 0)
+          have hbd : 0 ≤ A 0 1 * A 1 1 := mul_nonneg (hA 0 1) (hA 1 1)
+          have hmid : 0 ≤
+              (A 0 0 * A 1 1 + A 0 1 * A 1 0 - 1) * t := by
+            have hcoef : A 0 0 * A 1 1 + A 0 1 * A 1 0 - 1 ≤ 0 := by
+              dsimp [p] at hp_le_one
+              nlinarith
+            exact mul_nonneg_of_nonpos_of_nonpos hcoef htneg.le
+          have hquad : 0 ≤ (A 0 0 * A 1 0) * (t * t) :=
+            mul_nonneg hac (mul_self_nonneg t)
+          nlinarith
+        · simpa using mul_nonneg (hA 0 1) (hA 1 1)
+        · have hx : ∀ j : Fin 2,
+              0 < (fun i : Fin 2 => if i = 0 then t else 1) j := by
+            intro j
+            fin_cases j <;> simp [htpos]
+          have h := hcap.le_rowLinearProduct
+            (fun i : Fin 2 => if i = 0 then t else 1) hx
+          simp [rowLinearProduct, Fin.sum_univ_two, Fin.prod_univ_two] at h
+          nlinarith
+      have hdisc := discrim_le_zero (a := A 0 0 * A 1 0)
+        (b := A 0 0 * A 1 1 + A 0 1 * A 1 0 - 1)
+        (c := A 0 1 * A 1 1) hnonneg_quad
+      have hq_le : 4 * ((A 0 0 * A 1 0) * (A 0 1 * A 1 1)) ≤ p ^ 2 := by
+        dsimp [p]
+        nlinarith [sq_nonneg (A 0 0 * A 1 1 - A 1 0 * A 0 1)]
+      have hdisc' : (p - 1) ^ 2 ≤
+          4 * ((A 0 0 * A 1 0) * (A 0 1 * A 1 1)) := by
+        rw [discrim] at hdisc
+        dsimp [p]
+        nlinarith
+      have hp_sq : (p - 1) ^ 2 ≤ p ^ 2 := le_trans hdisc' hq_le
+      nlinarith
+  rw [permanent_fin_two A]
+  norm_num
+  exact hhalf
+
+theorem van_der_Waerden_permanent_conjecture_of_le_two (n : ℕ) (hn : n ≤ 2)
+    (A : Matrix (Fin n) (Fin n) ℝ)
+    (hA : A ∈ doublyStochastic ℝ (Fin n)) :
+    (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent := by
+  interval_cases n
+  · simpa using van_der_Waerden_permanent_fin_zero A hA
+  · simpa using van_der_Waerden_permanent_fin_one A hA
+  · simpa using van_der_Waerden_permanent_fin_two A hA
 
 /-- The genuine Van der Waerden permanent lower-bound statement, conditional
 on the named analytic core above.  Point-17 status: ③, conditional on an

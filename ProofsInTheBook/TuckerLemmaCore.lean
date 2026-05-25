@@ -150,6 +150,37 @@ theorem maxSupportPositive_antipode {n : ℕ} (X : SignedSubset n) (hX : X.Nonze
 def Le {n : ℕ} (X Y : SignedSubset n) : Prop :=
   X.pos ⊆ Y.pos ∧ X.neg ⊆ Y.neg
 
+theorem le_refl {n : ℕ} (X : SignedSubset n) : Le X X :=
+  ⟨fun _ hi => hi, fun _ hi => hi⟩
+
+theorem le_trans {n : ℕ} {X Y Z : SignedSubset n} (hXY : Le X Y) (hYZ : Le Y Z) :
+    Le X Z :=
+  ⟨fun _ hi => hYZ.1 (hXY.1 hi), fun _ hi => hYZ.2 (hXY.2 hi)⟩
+
+theorem le_antisymm {n : ℕ} {X Y : SignedSubset n} (hXY : Le X Y) (hYX : Le Y X) :
+    X = Y := by
+  have hpos : X.pos = Y.pos := Finset.Subset.antisymm hXY.1 hYX.1
+  have hneg : X.neg = Y.neg := Finset.Subset.antisymm hXY.2 hYX.2
+  cases X with
+  | mk xpos xneg xdisj =>
+      cases Y with
+      | mk ypos yneg ydisj =>
+          dsimp at hpos hneg
+          subst ypos
+          subst yneg
+          simp
+
+theorem antipode_le_antipode_iff {n : ℕ} {X Y : SignedSubset n} :
+    Le X.antipode Y.antipode ↔ Le X Y := by
+  simp [Le, antipode, and_comm]
+
+theorem support_subset_of_le {n : ℕ} {X Y : SignedSubset n} (hXY : Le X Y) :
+    X.support ⊆ Y.support := by
+  intro i hi
+  rcases Finset.mem_union.mp hi with hpos | hneg
+  · exact Finset.mem_union_left _ (hXY.1 hpos)
+  · exact Finset.mem_union_right _ (hXY.2 hneg)
+
 theorem card_le_card_of_le {n : ℕ} {X Y : SignedSubset n} (hXY : Le X Y) :
     X.card ≤ Y.card := by
   have hpos_le : X.pos.card ≤ Y.pos.card := Finset.card_le_card hXY.1
@@ -175,6 +206,19 @@ theorem eq_of_le_card_eq {n : ℕ} {X Y : SignedSubset n}
           subst ypos
           subst yneg
           simp
+
+theorem support_ssubset_of_le_ne {n : ℕ} {X Y : SignedSubset n}
+    (hXY : Le X Y) (hne : X ≠ Y) : X.support ⊂ Y.support := by
+  refine ssubset_iff_subset_ne.mpr ⟨support_subset_of_le hXY, ?_⟩
+  intro hsupport
+  apply hne
+  apply eq_of_le_card_eq hXY
+  rw [← support_card X, hsupport, support_card Y]
+
+theorem card_lt_card_of_le_ne {n : ℕ} {X Y : SignedSubset n}
+    (hXY : Le X Y) (hne : X ≠ Y) : X.card < Y.card := by
+  have hsupp := support_ssubset_of_le_ne hXY hne
+  simpa [support_card] using Finset.card_lt_card hsupp
 
 end SignedSubset
 

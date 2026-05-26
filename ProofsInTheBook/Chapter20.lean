@@ -2049,4 +2049,85 @@ theorem realTriangleArea_cycle (a b c : ℝ × ℝ) :
     realTriangleArea b c a = realTriangleArea a b c := by
   rw [realTriangleArea, realTriangleArea, doubleArea_cycle]
 
+/-! ### Affine parametrization of the triangle by the filled 2-simplex
+
+The triangle with vertices `a, b, c` is the image, under the affine map
+`(s, t) ↦ a + s • (b - a) + t • (c - a)`, of the filled standard 2-simplex
+`{(s, t) | 0 ≤ s, 0 ≤ t, s + t ≤ 1}`.  We define the parametrization and
+prove the forward containment (image ⊆ convex hull).  Pairing this with the
+2-dimensional Lebesgue volume formula for linear-map images is the route to
+`volume (convexHull ℝ {a, b, c}) = realTriangleArea a b c`.
+-/
+
+/-- The affine parametrization of the triangle: `(s, t) ↦ a + s • (b - a) + t • (c - a)`. -/
+def triangleAffine (a b c : ℝ × ℝ) (st : ℝ × ℝ) : ℝ × ℝ :=
+  a + st.1 • (b - a) + st.2 • (c - a)
+
+@[simp] theorem triangleAffine_zero (a b c : ℝ × ℝ) :
+    triangleAffine a b c (0, 0) = a := by
+  simp [triangleAffine]
+
+@[simp] theorem triangleAffine_e1 (a b c : ℝ × ℝ) :
+    triangleAffine a b c (1, 0) = b := by
+  simp [triangleAffine]
+
+@[simp] theorem triangleAffine_e2 (a b c : ℝ × ℝ) :
+    triangleAffine a b c (0, 1) = c := by
+  simp [triangleAffine]
+
+/-- The parametrization expressed as the standard convex combination of the
+three vertices with weights `(1 - s - t, s, t)`. -/
+theorem triangleAffine_eq_combo (a b c : ℝ × ℝ) (s t : ℝ) :
+    triangleAffine a b c (s, t) = (1 - s - t) • a + s • b + t • c := by
+  show a + s • (b - a) + t • (c - a) = (1 - s - t) • a + s • b + t • c
+  rw [smul_sub, smul_sub]
+  match_scalars <;> ring
+
+/-- The set of filled standard 2-simplex parameters: `{(s, t) | 0 ≤ s, 0 ≤ t, s + t ≤ 1}`. -/
+def filled2Simplex : Set (ℝ × ℝ) :=
+  {p : ℝ × ℝ | 0 ≤ p.1 ∧ 0 ≤ p.2 ∧ p.1 + p.2 ≤ 1}
+
+theorem filled2Simplex_mem_iff (s t : ℝ) :
+    (s, t) ∈ filled2Simplex ↔ 0 ≤ s ∧ 0 ≤ t ∧ s + t ≤ 1 := by
+  simp [filled2Simplex]
+
+/-- Forward direction: every point in the affine image of the filled 2-simplex
+is a convex combination of `a, b, c` and therefore lies in their convex hull. -/
+theorem triangleAffine_mem_convexHull (a b c : ℝ × ℝ) {s t : ℝ}
+    (hs : 0 ≤ s) (ht : 0 ≤ t) (hst : s + t ≤ 1) :
+    triangleAffine a b c (s, t) ∈ convexHull ℝ ({a, b, c} : Set (ℝ × ℝ)) := by
+  rw [triangleAffine_eq_combo]
+  set S : Set (ℝ × ℝ) := {a, b, c} with hS
+  have ha : a ∈ convexHull ℝ S := subset_convexHull _ _ (by simp [hS])
+  have hb : b ∈ convexHull ℝ S := subset_convexHull _ _ (by simp [hS])
+  have hc : c ∈ convexHull ℝ S := subset_convexHull _ _ (by simp [hS])
+  have hconv : Convex ℝ (convexHull ℝ S) := convex_convexHull _ _
+  -- Apply Convex.sum_mem with Fin 3, weights (1-s-t, s, t), points (a, b, c).
+  have hsum :
+      (∑ i : Fin 3, (![(1 - s - t), s, t] : Fin 3 → ℝ) i •
+        (![a, b, c] : Fin 3 → ℝ × ℝ) i) ∈ convexHull ℝ S := by
+    refine hconv.sum_mem (w := ![(1 - s - t), s, t]) (z := ![a, b, c]) ?_ ?_ ?_
+    · intro i _; fin_cases i
+      · show (0 : ℝ) ≤ 1 - s - t; linarith
+      · show (0 : ℝ) ≤ s; exact hs
+      · show (0 : ℝ) ≤ t; exact ht
+    · rw [Fin.sum_univ_three]
+      show (1 - s - t) + s + t = 1
+      ring
+    · intro i _; fin_cases i
+      · exact ha
+      · exact hb
+      · exact hc
+  -- Reduce the Fin 3 sum to the explicit three-term form.
+  simpa [Fin.sum_univ_three, Matrix.cons_val_zero, Matrix.cons_val_one,
+    Matrix.head_cons] using hsum
+
+/-- The image of the filled 2-simplex under `triangleAffine a b c` is a subset
+of the convex hull of `{a, b, c}`. -/
+theorem triangleAffine_image_subset_convexHull (a b c : ℝ × ℝ) :
+    triangleAffine a b c '' filled2Simplex ⊆
+      convexHull ℝ ({a, b, c} : Set (ℝ × ℝ)) := by
+  rintro p ⟨⟨s, t⟩, hst, rfl⟩
+  exact triangleAffine_mem_convexHull a b c hst.1 hst.2.1 hst.2.2
+
 end ProofsInTheBook.Chapter20

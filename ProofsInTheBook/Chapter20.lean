@@ -1988,4 +1988,65 @@ theorem realTriangleArea_eq_half_abs_det (a b c : ℝ × ℝ) :
            b.2 - a.2, c.2 - a.2] : Matrix (Fin 2) (Fin 2) ℝ).det| / 2 := by
   rw [realTriangleArea, doubleArea_eq_det_fin_two]
 
+/-! ### Structural properties of `doubleArea`
+
+Translation invariance, vertex-permutation symmetries, and the collinearity
+equivalence — small structural lemmas needed for any future geometric work
+on triangle dissections of the unit square (Monsky's remaining frontier).
+-/
+
+/-- `doubleArea` is invariant under translation of all three vertices. -/
+theorem doubleArea_translate (a b c v : ℝ × ℝ) :
+    doubleArea (a + v) (b + v) (c + v) = doubleArea a b c := by
+  unfold doubleArea
+  simp only [Prod.fst_add, Prod.snd_add]
+  ring
+
+/-- `doubleArea` based at the origin reduces to the determinant of the two
+edge vectors. -/
+theorem doubleArea_zero_left (b c : ℝ × ℝ) :
+    doubleArea (0, 0) b c = b.1 * c.2 - c.1 * b.2 := by
+  unfold doubleArea
+  simp
+
+/-- Reduce `doubleArea` based at `a` to the origin by translating `-a`. -/
+theorem doubleArea_eq_zero_left_sub (a b c : ℝ × ℝ) :
+    doubleArea a b c = doubleArea (0, 0) (b - a) (c - a) := by
+  rw [show (b - a) = b + (-a) from by ring, show (c - a) = c + (-a) from by ring,
+      show ((0, 0) : ℝ × ℝ) = a + (-a) from by simp]
+  exact (doubleArea_translate a b c (-a)).symm
+
+/-- `doubleArea` is antisymmetric under swapping the last two vertices. -/
+theorem doubleArea_swap_right (a b c : ℝ × ℝ) :
+    doubleArea a c b = - doubleArea a b c := by
+  unfold doubleArea
+  ring
+
+/-- `doubleArea` is invariant under cyclic permutation of the three vertices. -/
+theorem doubleArea_cycle (a b c : ℝ × ℝ) :
+    doubleArea b c a = doubleArea a b c := by
+  unfold doubleArea
+  ring
+
+/-- A triple of points in `ℝ²` is collinear iff its signed double-area is zero. -/
+theorem doubleArea_eq_zero_iff_collinear (a b c : ℝ × ℝ) :
+    doubleArea a b c = 0 ↔
+      (b.1 - a.1) * (c.2 - a.2) = (c.1 - a.1) * (b.2 - a.2) := by
+  rw [doubleArea, sub_eq_zero]
+
+/-- `realTriangleArea` is invariant under translation. -/
+theorem realTriangleArea_translate (a b c v : ℝ × ℝ) :
+    realTriangleArea (a + v) (b + v) (c + v) = realTriangleArea a b c := by
+  rw [realTriangleArea, realTriangleArea, doubleArea_translate]
+
+/-- `realTriangleArea` is symmetric under any permutation of the three vertices
+(unlike the signed `doubleArea`, the unsigned area depends only on the set). -/
+theorem realTriangleArea_swap_right (a b c : ℝ × ℝ) :
+    realTriangleArea a c b = realTriangleArea a b c := by
+  rw [realTriangleArea, realTriangleArea, doubleArea_swap_right, abs_neg]
+
+theorem realTriangleArea_cycle (a b c : ℝ × ℝ) :
+    realTriangleArea b c a = realTriangleArea a b c := by
+  rw [realTriangleArea, realTriangleArea, doubleArea_cycle]
+
 end ProofsInTheBook.Chapter20

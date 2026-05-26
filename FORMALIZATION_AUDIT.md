@@ -30,8 +30,11 @@ fragment), each blocked on large missing Mathlib infra — precise walls:
   the rainbow-triangle valuation lemma. **Best non-live push target.**
 - **Ch22** Van der Waerden permanent: only `chapter22_of_le_two` (n≤2). General
   case = Gurvits capacity / real-stable polys. **LIVE (codex-ssem thread).**
-- **Ch25** Buffon: `buffonNeedleCrossingProbability` defined combinatorially, no
-  measure. Wall: integral-geometry probability measure.
+- **Ch25** Buffon: ~~combinatorial fragment~~ **UPGRADED 2026-05-26**: added
+  `chapter25_measure_theoretic_short`/`_long` — genuine `ℙ[N l B] = 2l/(dπ)`
+  (and long-case) for a needle uniform on `[-d/2,d/2]×[0,π]`, re-exported from
+  Mathlib Archive `Wiedijk100Theorems.BuffonsNeedle`. Faithful now. (The old
+  density-level `chapter25` is retained.)
 - **Ch35** five-color: `chapter35 (hG : FiveColorReducible G)`. Wall: planar
   graph type + Euler ⟹ degree-≤5 vertex (Mathlib lacks planarity).
 - **Ch36** art gallery: `chapter36_artgallery_combinatorial (TriangulatedPolygon)`.

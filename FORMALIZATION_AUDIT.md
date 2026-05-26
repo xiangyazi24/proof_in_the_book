@@ -1,5 +1,53 @@
 # Formalization Audit
 
+## 2026-05-26 RE-VERIFICATION (the 2026-05-24 classification below is STALE)
+
+Re-checked canonical `chapterNN` endpoints directly (0 sorry / 0 axiom whole
+repo confirmed).  Several chapters the 05-24 audit listed as open/Category-B
+are now **fully closed and unconditional** — do not spend effort re-opening
+them:
+
+- **Ch03** `chapter03` — perfect-power, unconditional (l=2 and l≥3 both internal).
+- **Ch10** `chapter10` / `euclidean_sylvester_gallai` — unconditional.
+- **Ch11** `chapter11` (line ~10972) — unconditional projective-direction bound;
+  the CyclicEndGap blocker was closed 05-25 via the shifted sweep.
+- **Ch16** `chapter16 : ∃ d, ¬BorsukConjecture d := ⟨1325, …⟩` — the Kahn-Kalai
+  certificate is **constructed** (not assumed); unconditional.
+- **Ch24** `cot_pi_partial_fraction_identity` — unconditional (Mathlib transfer).
+- **Ch29** `chapter29` — GSR distribution, unconditional.
+- **Ch37** `chapter37` — Turán incl. extremal uniqueness/iso, unconditional.
+
+**Genuinely still open** (canonical endpoint takes an escape hypothesis or is a
+fragment), each blocked on large missing Mathlib infra — precise walls:
+
+- **Ch13** Cauchy: `chapter13 (cert : CauchyRigidityCertificate …)`. Wall: 3-D
+  convex-polyhedron geometry + analytic arm lemma.
+- **Ch20** Monsky: `chapter20 (cert : MonskyCertificate n)`. 2-adic-on-ℝ +
+  coloring + Sperner parity + real-square-boundary Sperner conclusion ALL built.
+  Remaining wall is NARROW & finite/affine (no measure/topology): a "square
+  equidissection" object proving interior edges have even Sym2-multiplicity /
+  boundary odd, plus equal-area ⟹ oriented doubleArea = ±2/n contradiction with
+  the rainbow-triangle valuation lemma. **Best non-live push target.**
+- **Ch22** Van der Waerden permanent: only `chapter22_of_le_two` (n≤2). General
+  case = Gurvits capacity / real-stable polys. **LIVE (codex-ssem thread).**
+- **Ch25** Buffon: `buffonNeedleCrossingProbability` defined combinatorially, no
+  measure. Wall: integral-geometry probability measure.
+- **Ch35** five-color: `chapter35 (hG : FiveColorReducible G)`. Wall: planar
+  graph type + Euler ⟹ degree-≤5 vertex (Mathlib lacks planarity).
+- **Ch36** art gallery: `chapter36_artgallery_combinatorial (TriangulatedPolygon)`.
+  Wall: simple-polygon triangulation existence (planar geometry).
+- **Ch39** Kneser: general case takes `htucker`. **LIVE (codex Tucker thread,
+  TuckerLemmaCore.lean).** `chapter39_one` (k=1) is unconditional.
+- **Ch09** Dehn: `chapter09` states `…DehnInvariantQ ≠ …` (algebraic core, incl.
+  arccos(1/3)/π irrational) but is disconnected from geometric scissors-
+  congruence. Wall: 3-D dihedral-angle geometry + Dehn additivity over real
+  dissections.
+
+Verdict: ~31 chapters fully closed; ~8 open, all on genuine large infra.
+2 of the 8 (Ch22, Ch39) are live codex threads — stay off them to avoid collision.
+
+---
+
 This file records semantic completion status for the full-book objective.
 
 `bash scripts/goal check all` is a syntactic gate: it checks for `sorry`,

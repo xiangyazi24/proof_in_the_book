@@ -1957,4 +1957,35 @@ theorem MonskyCertificate.one_le_trichromatic_card {n : ℕ} (cert : MonskyCerti
     simp only [Finset.mem_filter, Finset.mem_univ, true_and]
     exact hi⟩
 
+/-! ### Linear-algebra bridge for `doubleArea`
+
+The signed double-area `doubleArea a b c` is the determinant of the linear map
+on `ℝ²` whose standard-basis images are the edge vectors `b - a` and `c - a`.
+This rephrasing is the foundation for connecting the chapter's combinatorial
+oriented area to Mathlib's `addHaar_image_linearMap` change-of-variables
+formula — the route by which a future geometric dissection of the unit square
+will deliver the boundary edge-parity (`hboundary`) needed to remove the
+remaining `MonskyCertificate` escape.
+-/
+
+/-- `doubleArea a b c` equals the determinant of the 2×2 matrix whose columns
+are the edge vectors `b - a` and `c - a`. -/
+theorem doubleArea_eq_det_fin_two (a b c : ℝ × ℝ) :
+    doubleArea a b c =
+      (!![b.1 - a.1, c.1 - a.1;
+          b.2 - a.2, c.2 - a.2] : Matrix (Fin 2) (Fin 2) ℝ).det := by
+  rw [Matrix.det_fin_two_of]
+  unfold doubleArea
+  ring
+
+/-- The real (unsigned) triangle area equals half the absolute value of the
+determinant of the edge-vector matrix.  This is the form that pairs directly
+with `MeasureTheory.Measure.addHaar_image_linearMap` (which computes the
+Lebesgue measure of a linear-map image as `|det| · μ(source)`). -/
+theorem realTriangleArea_eq_half_abs_det (a b c : ℝ × ℝ) :
+    realTriangleArea a b c =
+      |(!![b.1 - a.1, c.1 - a.1;
+           b.2 - a.2, c.2 - a.2] : Matrix (Fin 2) (Fin 2) ℝ).det| / 2 := by
+  rw [realTriangleArea, doubleArea_eq_det_fin_two]
+
 end ProofsInTheBook.Chapter20

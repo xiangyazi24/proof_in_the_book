@@ -1,4 +1,5 @@
 import Mathlib
+import Archive.Wiedijk100Theorems.BuffonsNeedle
 
 /-!
 # Chapter 25: Buffon's needle problem
@@ -271,5 +272,43 @@ theorem chapter25 (d length : ℝ) (hd : 0 < d) (_hlen : 0 ≤ length) (_hle : l
     buffonNeedleCrossingProbability d length = 2 * length / (Real.pi * d) := by
   rw [buffonNeedleCrossingProbability_eq_segmentExpectedCrossings d length hd]
   rfl
+
+/-!
+### Faithful measure-theoretic statement
+
+The density-level `chapter25` above evaluates an explicit angle integral but does
+not carry an actual probability measure.  The genuine measure-theoretic Buffon
+statement — the expectation `ℙ[N]` of the crossing indicator `N`, where the
+needle's joint (center-position, angle) variable `B` is uniformly distributed on
+`[-d/2, d/2] × [0, π]` — is provided by Mathlib's Archive proof of the Wiedijk
+100-theorems entry `BuffonsNeedle`.  We expose both cases here so that Chapter 25
+records the full probability statement, not just the density average.
+-/
+
+open MeasureTheory ProbabilityTheory Real in
+/-- Buffon's needle, faithful short case (`l ≤ d`).  The crossing probability
+`ℙ[N l B]` equals `2l/(dπ)`.  Here `N l B` is the `{0,1}`-valued crossing
+indicator of a needle of length `l` whose `(position, angle)` random variable
+`B` is uniform on `[-d/2, d/2] × [0, π]`.  (Mathlib Archive, Wiedijk 100.) -/
+theorem chapter25_measure_theoretic_short {Ω : Type*} [MeasureSpace Ω]
+    (d l : ℝ) (hd : 0 < d) (hl : 0 < l)
+    (B : Ω → ℝ × ℝ) (hBₘ : Measurable B)
+    (hB : MeasureTheory.pdf.IsUniform B
+      ((Set.Icc (-d / 2) (d / 2)) ×ˢ (Set.Icc 0 π)) ℙ)
+    (h : l ≤ d) :
+    ℙ[BuffonsNeedle.N l B] = (2 * l) * (d * π)⁻¹ :=
+  BuffonsNeedle.buffon_short d l hd hl B hBₘ hB h
+
+open MeasureTheory ProbabilityTheory Real in
+/-- Buffon's needle, faithful long case (`d ≤ l`).  (Mathlib Archive, Wiedijk 100.) -/
+theorem chapter25_measure_theoretic_long {Ω : Type*} [MeasureSpace Ω]
+    (d l : ℝ) (hd : 0 < d) (hl : 0 < l)
+    (B : Ω → ℝ × ℝ) (hBₘ : Measurable B)
+    (hB : MeasureTheory.pdf.IsUniform B
+      ((Set.Icc (-d / 2) (d / 2)) ×ˢ (Set.Icc 0 π)) ℙ)
+    (h : d ≤ l) :
+    ℙ[BuffonsNeedle.N l B] =
+      (2 * l) / (d * π) - 2 / (d * π) * (√(l ^ 2 - d ^ 2) + d * (d / l).arcsin) + 1 :=
+  BuffonsNeedle.buffon_long d l hd hl B hBₘ hB h
 
 end ProofsInTheBook.Chapter25

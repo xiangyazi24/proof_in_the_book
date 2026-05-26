@@ -5,18 +5,30 @@
 Full-book formalization of *Proofs from THE BOOK* (Aigner & Ziegler) in Lean 4.
 40 chapters, each formalizing one "book proof."
 
-**Current status after Ch11 reduction work (2026-05-19):**
+**CURRENT STATUS (2026-05-26 — supersedes the old Ch11-era block below).**
+Whole repo: 0 sorry / 0 axiom. ~32 chapters fully closed & unconditional
+(incl. Ch03, Ch10, Ch11 Ungar, Ch16 Borsuk-via-constructed-Kahn-Kalai, Ch24,
+Ch25 Buffon, Ch29, Ch31, Ch34, Ch37). The authoritative per-chapter status is
+the dated re-verification block at the TOP of `FORMALIZATION_AUDIT.md` —
+**read that first; the table just below here is historical.**
 
-- 40 chapters compiled before the current Ch11 push; Ch11 is currently
-  remote single-file checked with no `sorry`/`admit` and no axioms. The Ungar
-  theorem still has a geometric rotating-sweep premise, now narrowed to a
-  concrete cyclic generalized allowable-sequence certificate.
-- Ch31 Cayley upper bound has been eliminated via Joyal's endofunction injection.
-- Ch34 Dinitz/Galvin premise has been eliminated via kernel-perfect orientation
-  and stable-matching kernels.
-- Ch33 Hall's condition premise eliminated.
-- Ch03 Sylvester-Schur premise eliminated; `sylvester_general` now proves the binomial coefficient form directly from `2 * k ≤ n` and `0 < k`.
-- Next target: Ch11 rotating calipers / slopes count.
+Genuinely-open chapters (canonical endpoint still takes an escape hypothesis /
+is a fragment), each blocked on large missing Mathlib infrastructure:
+
+| Chapter | Escape / gap | Missing infra (the wall) |
+|---------|--------------|--------------------------|
+| Ch09 Dehn | `chapter09` algebraic, disconnected from geometry | 3-D dihedral geometry + scissors-congruence |
+| Ch13 Cauchy | `cert : CauchyRigidityCertificate` | 3-D convex polyhedron geometry + arm lemma |
+| Ch20 Monsky | `cert : MonskyCertificate` (2-adic+coloring+Sperner all built) | finite "square equidissection" object: interior edges even Sym2-mult / boundary odd + equal-area⟹doubleArea=±2/n. NARROW, finite/affine, no measure/topology. Best non-live target. |
+| Ch35 five-color | `hG : FiveColorReducible G` | planar graph type + Euler ⟹ degree-≤5 vertex |
+| Ch36 art gallery | `h : TriangulatedPolygon` | simple-polygon triangulation existence |
+| Ch22 VdW permanent | only n≤2 done | Gurvits capacity / real-stable polys — **LIVE codex** |
+| Ch39 Kneser | general takes `htucker` | Tucker/Borsuk-Ulam — **LIVE codex (TuckerLemmaCore.lean)** |
+
+No Mathlib/Archive shortcut exists for the non-live open chapters (checked
+2026-05-26 — Buffon was the only Wiedijk-100 match, now used).
+
+--- historical (pre-2026-05-26) ---
 
 ## Premises to eliminate (from TODO.md)
 
@@ -26,10 +38,10 @@ Full-book formalization of *Proofs from THE BOOK* (Aigner & Ziegler) in Lean 4.
 | Ch03 | Sylvester smoothness | Medium-Hard | ✅ DONE |
 | Ch31 | Joyal/Cayley upper bound | Medium | ✅ DONE |
 | Ch34 | Kernel-perfect extension | Medium-Hard | ✅ DONE |
-| Ch11 | Rotating calipers | Medium | ⬜ |
-| Ch09 | arccos(1/3) irrationality | Hard | ⬜ |
-| Ch10 | Gallai geometry | Hard | ⬜ |
-| Ch39 | Kneser lower bound | Very Hard | ⬜ |
+| Ch11 | Rotating calipers | Medium | ✅ DONE (CyclicEndGap closed 05-25) |
+| Ch09 | arccos(1/3) irrationality | Hard | ⬜ (algebraic core done) |
+| Ch10 | Gallai geometry | Hard | ✅ DONE (05-24) |
+| Ch39 | Kneser lower bound | Very Hard | ⬜ LIVE |
 
 ## Ch33 — Hall's condition (DONE)
 

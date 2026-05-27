@@ -358,4 +358,44 @@ theorem chapter36 {n : ℕ} {S : Finset (AbsTriangle n)}
         v ∈ ({T.a, T.b, T.c} : Finset (Fin n)) :=
   chapter36_artgallery_combinatorial h
 
+/-! ### Concrete combinatorial witnesses
+
+The remaining frontier in this chapter is the geometric existence of a
+`TriangulatedPolygon` for an arbitrary simple polygon (needs Mathlib planar
+geometry).  The combinatorial layer is complete, so we can exhibit concrete
+inductive witnesses on small vertex sets, validating the inductive constructors
+and giving downstream callers ready instances to test against. -/
+
+/-- The fundamental triangle as a `TriangulatedPolygon`: vertices `0, 1, 2`
+form a single triangle, the smallest non-degenerate art-gallery instance. -/
+def TriangulatedPolygon.unitTriangle : TriangulatedPolygon 3
+    ({⟨0, 1, 2, by decide, by decide, by decide⟩} : Finset (AbsTriangle 3)) :=
+  .single ⟨0, 1, 2, by decide, by decide, by decide⟩
+
+/-- The unit square split along the `0 → 2` diagonal into two triangles
+`(0, 1, 2)` and `(0, 2, 3)`, glued along their shared edge `{0, 2}`. -/
+def TriangulatedPolygon.unitQuadrilateral :
+    let T1 : AbsTriangle 4 := ⟨0, 1, 2, by decide, by decide, by decide⟩
+    let T2 : AbsTriangle 4 := ⟨0, 2, 3, by decide, by decide, by decide⟩
+    TriangulatedPolygon 4 (insert T2 ({T1} : Finset (AbsTriangle 4))) := by
+  let T1 : AbsTriangle 4 := ⟨0, 1, 2, by decide, by decide, by decide⟩
+  let T2 : AbsTriangle 4 := ⟨0, 2, 3, by decide, by decide, by decide⟩
+  refine TriangulatedPolygon.glue (h := .single T1) (T := T2) (newVertex := 3)
+    ?_ ?_ ?_
+  · -- 3 ∈ {T2.a, T2.b, T2.c} = {0, 2, 3}
+    decide
+  · -- shared edge {0, 2} between T1 and T2, with 3 ∉ {0, 2}
+    refine ⟨T1, Finset.mem_singleton.mpr rfl, Sym2.mk 0 2, ?_, ?_, ?_⟩
+    · -- s(0,2) ∈ T2.edges = {s(0,2), s(2,3), s(0,3)}
+      simp [T2, AbsTriangle.edges]
+    · -- s(0,2) ∈ T1.edges = {s(0,1), s(1,2), s(0,2)}
+      simp [T1, AbsTriangle.edges]
+    · -- 3 ∉ s(0,2)
+      decide
+  · -- 3 ∉ {T1.a, T1.b, T1.c} = {0, 1, 2}
+    intro T' hT'
+    rw [Finset.mem_singleton] at hT'
+    subst hT'
+    decide
+
 end ProofsInTheBook.Chapter36

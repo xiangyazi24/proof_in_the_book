@@ -2130,4 +2130,80 @@ theorem triangleAffine_image_subset_convexHull (a b c : ℝ × ℝ) :
   rintro p ⟨⟨s, t⟩, hst, rfl⟩
   exact triangleAffine_mem_convexHull a b c hst.1 hst.2.1 hst.2.2
 
+/-! ### Brick 1: volume of the filled 2-simplex
+
+The 2-dimensional Lebesgue measure of `filled2Simplex` equals `1/2`.
+Direct Fubini route: slice the simplex at fixed `x`, identify the slice
+with `Icc 0 (1-x)`, and integrate the linear height. -/
+
+/-- The filled 2-simplex is a closed (and hence measurable) subset of `ℝ × ℝ`. -/
+theorem isClosed_filled2Simplex : IsClosed filled2Simplex := by
+  have h1 : IsClosed {p : ℝ × ℝ | 0 ≤ p.1} :=
+    isClosed_le continuous_const continuous_fst
+  have h2 : IsClosed {p : ℝ × ℝ | 0 ≤ p.2} :=
+    isClosed_le continuous_const continuous_snd
+  have h3 : IsClosed {p : ℝ × ℝ | p.1 + p.2 ≤ 1} :=
+    isClosed_le (continuous_fst.add continuous_snd) continuous_const
+  have hclosed :
+      IsClosed ({p : ℝ × ℝ | 0 ≤ p.1} ∩
+        ({p : ℝ × ℝ | 0 ≤ p.2} ∩ {p : ℝ × ℝ | p.1 + p.2 ≤ 1})) :=
+    h1.inter (h2.inter h3)
+  exact hclosed
+
+theorem measurableSet_filled2Simplex : MeasurableSet filled2Simplex :=
+  isClosed_filled2Simplex.measurableSet
+
+/-- The volume of the slice of `filled2Simplex` at a fixed `x` coordinate
+equals `ENNReal.ofReal (1 - x)` when `x ∈ Icc 0 1`, and zero otherwise. -/
+theorem volume_filled2Simplex_slice (x : ℝ) :
+    MeasureTheory.volume (Prod.mk x ⁻¹' filled2Simplex) =
+      (Set.Icc (0 : ℝ) 1).indicator (fun x => ENNReal.ofReal (1 - x)) x := by
+  by_cases hx : x ∈ Set.Icc (0 : ℝ) 1
+  · rw [Set.indicator_of_mem hx]
+    have heq : (Prod.mk x ⁻¹' filled2Simplex : Set ℝ) = Set.Icc 0 (1 - x) := by
+      ext y
+      simp only [filled2Simplex, Set.mem_preimage, Set.mem_setOf_eq, Set.mem_Icc]
+      refine ⟨fun ⟨_, hy, hxy⟩ => ⟨hy, by linarith⟩,
+              fun ⟨hy, hyx⟩ => ⟨hx.1, hy, by linarith⟩⟩
+    rw [heq, Real.volume_Icc, sub_zero]
+  · rw [Set.indicator_of_notMem hx]
+    have hempty : (Prod.mk x ⁻¹' filled2Simplex : Set ℝ) = ∅ := by
+      ext y
+      simp only [filled2Simplex, Set.mem_preimage, Set.mem_setOf_eq,
+        Set.mem_empty_iff_false, iff_false]
+      rintro ⟨hx0, hy, hxy⟩
+      apply hx
+      exact ⟨hx0, by linarith⟩
+    rw [hempty, MeasureTheory.measure_empty]
+
+/-- The 2-D Lebesgue volume of the filled standard 2-simplex equals `1/2`. -/
+theorem volume_filled2Simplex :
+    MeasureTheory.volume filled2Simplex = ENNReal.ofReal (1 / 2) := by
+  rw [MeasureTheory.Measure.volume_eq_prod,
+      MeasureTheory.Measure.prod_apply measurableSet_filled2Simplex]
+  simp_rw [volume_filled2Simplex_slice]
+  rw [MeasureTheory.lintegral_indicator measurableSet_Icc]
+  -- ∫⁻ x in Icc 0 1, ofReal (1 - x) ∂volume = ofReal (1/2)
+  have hint : MeasureTheory.IntegrableOn (fun x : ℝ => 1 - x)
+      (Set.Icc (0 : ℝ) 1) MeasureTheory.volume :=
+    (continuous_const.sub continuous_id).continuousOn.integrableOn_Icc
+  have hnn : 0 ≤ᵐ[MeasureTheory.volume.restrict (Set.Icc (0 : ℝ) 1)]
+      (fun x : ℝ => 1 - x) := by
+    filter_upwards [MeasureTheory.ae_restrict_mem measurableSet_Icc] with x hx
+    have hx1 : x ≤ 1 := hx.2
+    show (0 : ℝ) ≤ 1 - x
+    linarith
+  rw [← MeasureTheory.ofReal_integral_eq_lintegral_ofReal hint hnn]
+  congr 1
+  -- ∫ x in Icc 0 1, (1 - x) ∂volume = 1/2
+  rw [MeasureTheory.integral_Icc_eq_integral_Ioc,
+      ← intervalIntegral.integral_of_le (by linarith : (0 : ℝ) ≤ 1)]
+  -- ∫ x in 0..1, (1 - x) = 1/2
+  rw [intervalIntegral.integral_sub
+        (intervalIntegral.intervalIntegrable_const)
+        (intervalIntegral.intervalIntegrable_id),
+      intervalIntegral.integral_const, integral_id]
+  -- (1 - 0) • 1 - (1^2 - 0^2) / 2 = 1/2
+  simp; ring
+
 end ProofsInTheBook.Chapter20

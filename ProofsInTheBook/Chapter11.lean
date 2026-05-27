@@ -7901,7 +7901,7 @@ theorem shiftedSortedAngleAt_lt_succ {points : Finset Point2}
         using hlt
     · have hsum : s.val + (j.val + 1) = r := by omega
       have hmod0 : (s.val + j.val) % r = s.val + j.val := Nat.mod_eq_of_lt h0
-      have hmod1 : (s.val + (j.val + 1)) % r = 0 := by simpa [hsum]
+      have hmod1 : (s.val + (j.val + 1)) % r = 0 := by simp [hsum]
       have hlt : sortedAngleAt points ⟨s.val + j.val, by omega⟩ < Real.pi :=
         sortedAngleAt_lt_pi points ⟨s.val + j.val, by omega⟩
       have hnonneg : 0 ≤ sortedAngleAt points (⟨0, Nat.zero_lt_of_lt hr0⟩) :=
@@ -8437,7 +8437,7 @@ private theorem interEventAngleAt_no_other_shiftedEventAngle {points : Finset Po
     exact (not_lt_of_ge h_lower) hθ
   · have hshift_eq : shiftedSortedAngleAt points hne s it =
         shiftedSortedAngleAt points hne s j := by
-      simpa [hEq]
+      simp [hEq]
     exact hshift_ne hshift_eq
   · have hnext : j < it := hgt
     let jnext : Fin r := ⟨j.val + 1, by omega⟩
@@ -8887,7 +8887,7 @@ private theorem interEventAngleAt_no_other_directionAngle {points : Finset Point
         _ < interEventAngleAt points hne θ₀ s j0 := h_lt_start
     exact (not_lt_of_ge h_lower) hθ
   · have hshift_eq : shiftedSortedAngleAt points hne s it = shiftedSortedAngleAt points hne s j := by
-      simpa [hEq]
+      simp [hEq]
     exact hshift_ne hshift_eq
   · have hnext : j < it := hgt
     let jnext : Fin r := ⟨j.val + 1, by omega⟩
@@ -9035,7 +9035,7 @@ private theorem inj_at_interEventAngleAt {points : Finset Point2} {k : ℕ}
             (interEventAngleAt points hne θ₀ s ⟨j.val, by omega⟩)
             (interEventAngleAt points hne θ₀ s ⟨j.val + 1, by omega⟩) := by
           have hθeq : interEventAngleAt points hne θ₀ s j = sortedAngleAt points idx := by
-            simpa [h_sorted]
+            simp [h_sorted]
           exact ⟨le_of_eq hθeq, hθeq ▸ le_of_lt h_lt⟩
         have hθ_ne_shift : sortedAngleAt points idx ≠ shiftedSortedAngleAt points hne s ⟨j.val, hj_lt⟩ := by
           rw [h_sorted]
@@ -9091,8 +9091,8 @@ private theorem shiftedSortedAngleAt_mod_pi_mem {points : Finset Point2}
   rcases Finset.mem_image.mp hmem with ⟨d, hd, hangle⟩
   refine ⟨d, hd, ?_⟩
   by_cases hwrap : s.val + j.val < (directionsDeterminedBy points).card
-  · left; simpa [idx, hwrap, hangle]
-  · right; simpa [idx, hwrap, hangle]
+  · left; simp [idx, hwrap, hangle]
+  · right; simp [idx, hwrap, hangle]
 
 private theorem nontrivial_blocks_at_eventAt {points : Finset Point2} {k : ℕ}
     (hcard : points.card = 2 * k)
@@ -10066,7 +10066,7 @@ theorem sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_wrap_nonlast
         ⟨s.val + j.val + 1 - (directionsDeterminedBy points).card, by omega⟩ := by
       apply Fin.ext
       simpa [Nat.succ_eq_add_one] using (Nat.succ_sub hwrap).symm
-    simpa [sweepConcreteGAS, CountedGeneralizedAllowableSequence.ofReversesBlocks,
+    simp [sweepConcreteGAS, CountedGeneralizedAllowableSequence.ofReversesBlocks,
       sweepGAS, GeneralizedAllowableSequence.ofSweepAngles, stepTo, L, l, hidx]
   change stepCrossingLabelsCard k
       ((sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).seq.π (stepFrom j))
@@ -10140,7 +10140,7 @@ theorem sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_wrap_last
       apply Fin.ext
       change s.val + j.val - (directionsDeterminedBy points).card + 1 = s.val
       omega
-    simpa [sweepConcreteGAS, CountedGeneralizedAllowableSequence.ofReversesBlocks,
+    simp [sweepConcreteGAS, CountedGeneralizedAllowableSequence.ofReversesBlocks,
       sweepGAS, GeneralizedAllowableSequence.ofSweepAngles, stepTo, L, l, θs, τ, hidx]
   change stepCrossingLabelsCard k
       ((sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).seq.π (stepFrom j))
@@ -10874,8 +10874,7 @@ noncomputable def sweepConcreteGAS_cyclicEndGapWitness_of_noFull
       cyclic_gap_eq := ?_ }
   · refine ⟨hlastB_cross, hnextFirstB_cross, ?_, ?_⟩
     · omega
-    · intro l hlast_l hl_first
-      intro hBl
+    · intro l hlast_l hl_first hBl
       have hlnext : l.val + 1 < (directionsDeterminedBy points).card := by
         omega
       let idx : Fin (directionsDeterminedBy points).card :=

@@ -2357,4 +2357,117 @@ theorem volume_convexHull_triangle (a b c : ℝ × ℝ) :
       show (|doubleArea a b c| / 2 : ℝ) = |doubleArea a b c| * (1 / 2) from by ring,
       ENNReal.ofReal_mul (abs_nonneg _)]
 
+/-! ### Packaged triangulation API
+
+A `RealEqualAreaUnitSquareTriangulation α n` bundles the finite-vertex data
+the Monsky frontier theorem
+`no_odd_equalArea_realization_of_realSquareBoundaryVertexChain_area` consumes.
+This is a refactoring layer: every hypothesis the existing theorem takes is
+folded into a single named field, so downstream callers only need to construct
+one structure instead of supplying twenty-plus arguments. -/
+
+structure RealEqualAreaUnitSquareTriangulation
+    (α : Type*) [Fintype α] [DecidableEq α] (n : ℕ) where
+  vertices : α → ℝ × ℝ
+  triangles : Fin n → α × α × α
+  bottom : List α
+  right : List α
+  top : List α
+  left : List α
+  bottomLeft : α
+  bottomRight : α
+  topRight : α
+  topLeft : α
+  hboundary : ∀ e : Sym2 α,
+    Odd (edgeMultiplicity triangles e) ↔
+      e ∈ (squareBoundaryEdgeList bottom right top left
+        bottomLeft bottomRight topRight topLeft).toFinset
+  hnodup : (squareBoundaryEdgeList bottom right top left
+    bottomLeft bottomRight topRight topLeft).Nodup
+  hbottomLeft : vertices bottomLeft = (0, 0)
+  hbottomRight : vertices bottomRight = (1, 0)
+  htopRight : vertices topRight = (1, 1)
+  htopLeft : vertices topLeft = (0, 1)
+  hbottom : ∀ v ∈ bottom, ∃ x : ℝ, vertices v = (x, 0)
+  hright : ∀ v ∈ right, ∃ y : ℝ, vertices v = (1, y)
+  htop : ∀ v ∈ top, ∃ x : ℝ, vertices v = (x, 1)
+  hleft : ∀ v ∈ left, ∃ y : ℝ, vertices v = (0, y)
+  harea : ∀ i : Fin n,
+    realTriangleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+      (vertices (triangles i).2.2) = (((1 : ℚ) / n : ℚ) : ℝ)
+
+/-- **Monsky's theorem (packaged form).** An equal-area triangulation of the
+unit square into an odd number of triangles is impossible. -/
+theorem RealEqualAreaUnitSquareTriangulation.not_odd_size
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (T : RealEqualAreaUnitSquareTriangulation α n) (hn : Odd n) : False :=
+  no_odd_equalArea_realization_of_realSquareBoundaryVertexChain_area hn
+    T.vertices T.triangles T.bottom T.right T.top T.left
+    T.bottomLeft T.bottomRight T.topRight T.topLeft
+    T.hboundary T.hnodup
+    T.hbottomLeft T.hbottomRight T.htopRight T.htopLeft
+    T.hbottom T.hright T.htop T.hleft T.harea
+
+/-! ### Concrete witness: the diagonal split
+
+The unit square can be split into two triangles of area 1/2 each by the main
+diagonal — a constructive `RealEqualAreaUnitSquareTriangulation (Fin 4) 2`.
+This is also a non-vacuity check on the packaged API: the structure can be
+inhabited, just not for odd `n`. -/
+
+namespace RealEqualAreaUnitSquareTriangulation
+
+/-- The 4-vertex, 2-triangle equal-area triangulation of the unit square obtained
+by drawing the main diagonal from `(0,0)` to `(1,1)`.
+
+Vertices are indexed `0 = (0,0)`, `1 = (1,0)`, `2 = (1,1)`, `3 = (0,1)`; the
+two triangles are `(0,1,2)` (bottom-right) and `(0,2,3)` (top-left). -/
+def diagonalSplit : RealEqualAreaUnitSquareTriangulation (Fin 4) 2 where
+  vertices := ![(0, 0), (1, 0), (1, 1), (0, 1)]
+  triangles := ![(0, 1, 2), (0, 2, 3)]
+  bottom := []
+  right := []
+  top := []
+  left := []
+  bottomLeft := 0
+  bottomRight := 1
+  topRight := 2
+  topLeft := 3
+  hboundary := by
+    classical
+    intro e
+    -- The boundary edge list reduces to [s(0,1), s(1,2), s(2,3), s(3,0)].
+    -- Triangle edges: (0,1), (1,2), (2,0) from triangle 0;
+    --                 (0,2), (2,3), (3,0) from triangle 1.
+    -- Edge s(0,2) = s(2,0) is shared (mult 2 — even);
+    -- all four boundary edges have multiplicity 1 (odd).
+    simp only [squareBoundaryEdgeList, consecutiveEdges, List.nil_append,
+      List.cons_append, List.toFinset_cons,
+      List.toFinset_nil, Finset.mem_insert]
+    -- Decide the iff by cases on `e`: the edge multiplicity is a finite sum
+    -- over (Fin 2 × Fin 3) of indicator (triangleEdge ... = e).
+    refine Sym2.inductionOn e ?_
+    intro a b
+    fin_cases a <;> fin_cases b <;> decide
+  hnodup := by decide
+  hbottomLeft := rfl
+  hbottomRight := rfl
+  htopRight := rfl
+  htopLeft := rfl
+  hbottom := by simp
+  hright := by simp
+  htop := by simp
+  hleft := by simp
+  harea := by
+    intro i
+    fin_cases i
+    · -- triangle (0, 1, 2): vertices (0,0), (1,0), (1,1)
+      show realTriangleArea (0, 0) (1, 0) (1, 1) = (((1 : ℚ) / 2 : ℚ) : ℝ)
+      simp [realTriangleArea, doubleArea]
+    · -- triangle (0, 2, 3): vertices (0,0), (1,1), (0,1)
+      show realTriangleArea (0, 0) (1, 1) (0, 1) = (((1 : ℚ) / 2 : ℚ) : ℝ)
+      simp [realTriangleArea, doubleArea]
+
+end RealEqualAreaUnitSquareTriangulation
+
 end ProofsInTheBook.Chapter20

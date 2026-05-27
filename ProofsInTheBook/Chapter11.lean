@@ -6729,8 +6729,7 @@ noncomputable def sweepReversalStep {points : Finset Point2} {k : ℕ}
     rw [hcomp]; rfl
   increasing_before := by
     set g := fun i => orientedLevel θ_e (L.point (sweepSort L θ₁ i))
-    intro i
-    intro p hp q hq hpq
+    intro i p hp q hq hpq
     simp only [PositionInterval.toSet, Set.mem_setOf_eq] at hp hq
     have htie : orientedLevel θ_e (L.point (sweepSort L θ₁ p)) =
         orientedLevel θ_e (L.point (sweepSort L θ₁ q)) :=

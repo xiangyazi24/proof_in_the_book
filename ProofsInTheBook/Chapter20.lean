@@ -2468,6 +2468,54 @@ def diagonalSplit : RealEqualAreaUnitSquareTriangulation (Fin 4) 2 where
       show realTriangleArea (0, 0) (1, 1) (0, 1) = (((1 : ℚ) / 2 : ℚ) : ℝ)
       simp [realTriangleArea, doubleArea]
 
+/-- The 5-vertex, 4-triangle equal-area triangulation of the unit square
+obtained by drawing both diagonals (the "X" pattern); they meet at the
+center `(1/2, 1/2)`.
+
+Vertices: `0 = (0,0)`, `1 = (1,0)`, `2 = (1,1)`, `3 = (0,1)`, `4 = (1/2,1/2)`.
+The center is an interior vertex, not on any side. The four triangles are
+`(0,1,4)`, `(1,2,4)`, `(2,3,4)`, `(3,0,4)` — bottom, right, top, left of center. -/
+noncomputable def centerSplit : RealEqualAreaUnitSquareTriangulation (Fin 5) 4 where
+  vertices := ![(0, 0), (1, 0), (1, 1), (0, 1), (1/2, 1/2)]
+  triangles := ![(0, 1, 4), (1, 2, 4), (2, 3, 4), (3, 0, 4)]
+  bottom := []
+  right := []
+  top := []
+  left := []
+  bottomLeft := 0
+  bottomRight := 1
+  topRight := 2
+  topLeft := 3
+  hboundary := by
+    classical
+    intro e
+    simp only [squareBoundaryEdgeList, consecutiveEdges, List.nil_append,
+      List.cons_append, List.toFinset_cons,
+      List.toFinset_nil, Finset.mem_insert]
+    refine Sym2.inductionOn e ?_
+    intro a b
+    fin_cases a <;> fin_cases b <;> decide
+  hnodup := by decide
+  hbottomLeft := rfl
+  hbottomRight := rfl
+  htopRight := rfl
+  htopLeft := rfl
+  hbottom := by simp
+  hright := by simp
+  htop := by simp
+  hleft := by simp
+  harea := by
+    intro i
+    fin_cases i
+    · show realTriangleArea (0, 0) (1, 0) (1/2, 1/2) = (((1 : ℚ) / 4 : ℚ) : ℝ)
+      simp [realTriangleArea, doubleArea]; norm_num
+    · show realTriangleArea (1, 0) (1, 1) (1/2, 1/2) = (((1 : ℚ) / 4 : ℚ) : ℝ)
+      simp [realTriangleArea, doubleArea]; norm_num
+    · show realTriangleArea (1, 1) (0, 1) (1/2, 1/2) = (((1 : ℚ) / 4 : ℚ) : ℝ)
+      simp [realTriangleArea, doubleArea]; norm_num
+    · show realTriangleArea (0, 1) (0, 0) (1/2, 1/2) = (((1 : ℚ) / 4 : ℚ) : ℝ)
+      simp [realTriangleArea, doubleArea]; norm_num
+
 end RealEqualAreaUnitSquareTriangulation
 
 end ProofsInTheBook.Chapter20

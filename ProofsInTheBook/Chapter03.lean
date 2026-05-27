@@ -4290,7 +4290,7 @@ private lemma lPowerFreePart_factorization_eq_mod_general (l m p : ℕ) :
 theorem lPowerRoot_pos {m : ℕ} (hm : m ≠ 0) :
     0 < lPowerRoot 2 m := by
   by_contra h
-  push_neg at h
+  push Not at h
   have h0 : lPowerRoot 2 m = 0 := Nat.le_zero.mp h
   have hsplit := self_eq_lPowerFreePart_mul_lPowerRoot_pow 2 m hm
   rw [h0, zero_pow (by norm_num : (2 : ℕ) ≠ 0), mul_zero] at hsplit
@@ -4311,7 +4311,7 @@ private lemma lPowerFreePart_dvd_radical (m : ℕ) :
     _ = q := pow_one q
 
 /-- The 2-power-free part of `m` is squarefree. -/
-private lemma lPowerFreePart_squarefree (m : ℕ) (hm : m ≠ 0) :
+private lemma lPowerFreePart_squarefree (m : ℕ) (_hm : m ≠ 0) :
     Squarefree (lPowerFreePart 2 m) := by
   classical
   -- The radical ∏ q ∈ supp, q is squarefree, and lPowerFreePart divides it.
@@ -5026,7 +5026,7 @@ private lemma factorization_factorial_ge_div
   by_cases hkp : k < p
   · have : k / p = 0 := Nat.div_eq_of_lt hkp
     rw [this]; exact Nat.zero_le _
-  push_neg at hkp
+  push Not at hkp
   have hlog : Nat.log p k < Nat.log p k + 1 := Nat.lt_succ_self _
   rw [padicValNat_factorial hlog]
   have h_mem : 1 ∈ Finset.Ico 1 (Nat.log p k + 1) := by
@@ -5337,7 +5337,7 @@ theorem prod_lPowerFreeParts_dvd_factorial_l2
     by_cases hp_sq : p ^ 2 ≤ k
     · have h_lower := factorization_factorial_ge_div_succ k p hp_prime hp_sq
       omega
-    · push_neg at hp_sq
+    · push Not at hp_sq
       have h_eq_k := factorization_factorial_eq_div_of_sq_lt k p hp_prime hp_sq
       omega
   · -- Non-prime p: both factorizations 0.

@@ -12,6 +12,25 @@ Ch25 Buffon, Ch29, Ch31, Ch34, Ch37). The authoritative per-chapter status is
 the dated re-verification block at the TOP of `FORMALIZATION_AUDIT.md` —
 **read that first; the table just below here is historical.**
 
+**2026-05-27 INCREMENTAL PROGRESS (frontier-side, non-codex chapters)**:
+- **Ch20 Monsky**: measure-theoretic bridge landed
+  (`volume_convexHull_triangle = ENNReal.ofReal realTriangleArea`) via
+  Brick 1 (filled-2-simplex Fubini volume), Brick 2 (convex-hull = affine
+  image), Brick 3 (`addHaar_image_linearMap` glue). Frontier-input
+  packaged as `RealEqualAreaUnitSquareTriangulation α n` + `not_odd_size`
+  wrapper; concrete witnesses `diagonalSplit` (n=2) and `centerSplit`
+  (n=4, X-pattern with interior centroid vertex).
+- **Ch35 five-color**: small `FiveColorReducible` witnesses (`bot_pempty`,
+  `bot_finZero`, `bot_finOne`) exercising both inductive constructors.
+- **Ch36 art gallery**: concrete `TriangulatedPolygon` witnesses
+  (`unitTriangle`, `unitQuadrilateral`) exercising `.single` and `.glue`.
+- **TuckerLemmaCore** (codex's territory — minor): extracted
+  `topPrefixChainEndpointAntipode_fixedPointFree` helper.
+- **Library-wide lint**: 75 warnings cleared (Ch03, Ch11, Ch31).
+None of these advance the deep math frontier — the unproven walls below
+are unchanged — but they tighten the API surface and validate the
+hypothesis shape of each frontier theorem with concrete instances.
+
 Genuinely-open chapters (canonical endpoint still takes an escape hypothesis /
 is a fragment), each blocked on large missing Mathlib infrastructure:
 

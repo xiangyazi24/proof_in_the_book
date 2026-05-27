@@ -398,4 +398,45 @@ def TriangulatedPolygon.unitQuadrilateral :
     subst hT'
     decide
 
+/-- The unit pentagon (vertices `0..4`) triangulated as a fan from vertex `0`:
+triangles `(0,1,2)`, `(0,2,3)`, `(0,3,4)`, each glued to its predecessor along
+a shared edge `{0,2}` then `{0,3}`. -/
+def TriangulatedPolygon.unitPentagonFan :
+    let T1 : AbsTriangle 5 := ⟨0, 1, 2, by decide, by decide, by decide⟩
+    let T2 : AbsTriangle 5 := ⟨0, 2, 3, by decide, by decide, by decide⟩
+    let T3 : AbsTriangle 5 := ⟨0, 3, 4, by decide, by decide, by decide⟩
+    TriangulatedPolygon 5 (insert T3 (insert T2 ({T1} : Finset (AbsTriangle 5)))) := by
+  let T1 : AbsTriangle 5 := ⟨0, 1, 2, by decide, by decide, by decide⟩
+  let T2 : AbsTriangle 5 := ⟨0, 2, 3, by decide, by decide, by decide⟩
+  let T3 : AbsTriangle 5 := ⟨0, 3, 4, by decide, by decide, by decide⟩
+  -- Start from the quadrilateral (T1, T2) and glue T3 along {0, 3}.
+  have h12 : TriangulatedPolygon 5 (insert T2 ({T1} : Finset (AbsTriangle 5))) := by
+    refine TriangulatedPolygon.glue (h := .single T1) (T := T2) (newVertex := 3)
+      ?_ ?_ ?_
+    · decide
+    · refine ⟨T1, Finset.mem_singleton.mpr rfl, Sym2.mk 0 2, ?_, ?_, ?_⟩
+      · simp [T2, AbsTriangle.edges]
+      · simp [T1, AbsTriangle.edges]
+      · decide
+    · intro T' hT'
+      rw [Finset.mem_singleton] at hT'
+      subst hT'
+      decide
+  refine TriangulatedPolygon.glue (h := h12) (T := T3) (newVertex := 4)
+    ?_ ?_ ?_
+  · decide
+  · -- shared edge {0,3} between T2 and T3, with 4 ∉ {0, 3}
+    refine ⟨T2, ?_, Sym2.mk 0 3, ?_, ?_, ?_⟩
+    · -- T2 ∈ {T1, T2}
+      simp
+    · -- s(0,3) ∈ T3.edges = {s(0,3), s(3,4), s(0,4)}
+      simp [T3, AbsTriangle.edges]
+    · -- s(0,3) ∈ T2.edges = {s(0,2), s(2,3), s(0,3)}
+      simp [T2, AbsTriangle.edges]
+    · decide
+  · -- 4 ∉ {T1.a..c} ∪ {T2.a..c} = {0, 1, 2, 3}
+    intro T' hT'
+    simp only [Finset.mem_insert, Finset.mem_singleton] at hT'
+    rcases hT' with rfl | rfl <;> decide
+
 end ProofsInTheBook.Chapter36

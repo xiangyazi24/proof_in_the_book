@@ -3597,6 +3597,16 @@ theorem topPrefixChainEndpointAntipode_involutive {n m : ℕ}
   intro endpoint
   exact (topPrefixChainEndpointAntipode label hantipodal).left_inv endpoint
 
+/-- The top prefix-chain endpoint antipode swaps the `Positive` and `Negative`
+summands and therefore has no fixed point. -/
+theorem topPrefixChainEndpointAntipode_fixedPointFree {n m : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (top : PositivePrefixChainType label ⊕ NegativePrefixChainType label) :
+    topPrefixChainEndpointAntipode label hantipodal top ≠ top := by
+  rcases top with positive | negative <;>
+    simp [topPrefixChainEndpointAntipode]
+
 noncomputable def kyFanPathEndpointClassAntipode {n m : ℕ}
     (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
     (hantipodal : ∀ X, label X.antipode = (label X).neg) :
@@ -3616,8 +3626,8 @@ theorem kyFanPathEndpointClassAntipode_fixedPointFree {n m : ℕ}
       (by simpa [kyFanPathEndpointClassAntipode] using h)
   · rcases rest with base | top
     · cases base <;> simp [kyFanPathEndpointClassAntipode] at h
-    · rcases top with positive | negative <;> simp [kyFanPathEndpointClassAntipode,
-        topPrefixChainEndpointAntipode] at h
+    · exact topPrefixChainEndpointAntipode_fixedPointFree label hantipodal top
+        (by simpa [kyFanPathEndpointClassAntipode] using h)
 
 theorem kyFanPathEndpointClassAntipode_involutive {n m : ℕ}
     (label : NonzeroSignedSubset (n + 1) → SignedLabel m)

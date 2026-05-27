@@ -160,7 +160,7 @@ theorem Direction.angle_injective : Function.Injective Direction.angle := by
     · linarith [Real.neg_pi_div_two_lt_arctan m]
   | .finite m1, .finite m2 =>
     simp only [Direction.angle] at h
-    split_ifs at h with h1 h2 h1 h2
+    split_ifs at h with h1 _h2 h1
     · exact congr_arg _ (Real.arctan_injective h)
     · linarith [Real.arctan_lt_pi_div_two m1, Real.neg_pi_div_two_lt_arctan m2]
     · linarith [Real.arctan_lt_pi_div_two m2, Real.neg_pi_div_two_lt_arctan m1]
@@ -575,7 +575,7 @@ theorem orientedLevel_order_reversed_at_event {p q : Point2} (hpq : p ≠ q)
     (h_span : θ₂ - θ₁ < Real.pi)
     (hlt : orientedLevel θ₁ p < orientedLevel θ₁ q)
     (htie : orientedLevel θ_e p = orientedLevel θ_e q)
-    (hne2 : orientedLevel θ₂ p ≠ orientedLevel θ₂ q) :
+    (_hne2 : orientedLevel θ₂ p ≠ orientedLevel θ₂ q) :
     orientedLevel θ₂ q < orientedLevel θ₂ p := by
   have hab : -(p.1 - q.1) ≠ 0 ∨ (p.2 - q.2) ≠ 0 := by
     by_contra h; push Not at h
@@ -588,9 +588,9 @@ theorem orientedLevel_order_reversed_at_event {p q : Point2} (hpq : p ≠ q)
   have hsub := orientedLevel_sub_eq θ₂ p q
   linarith
 
-theorem orientedLevel_order_preserved_across_event {p q : Point2} (hpq : p ≠ q)
+theorem orientedLevel_order_preserved_across_event {p q : Point2} (_hpq : p ≠ q)
     {θ₁ θ_e θ₂ : ℝ}
-    (hθ₁ : 0 ≤ θ₁) (hθ₂ : θ₂ < Real.pi)
+    (_hθ₁ : 0 ≤ θ₁) (_hθ₂ : θ₂ < Real.pi)
     (h1e : θ₁ < θ_e) (he2 : θ_e < θ₂)
     (hlt : orientedLevel θ₁ p < orientedLevel θ₁ q)
     (hno_tie_at_event : orientedLevel θ_e p ≠ orientedLevel θ_e q)
@@ -730,7 +730,7 @@ theorem sweepSort_event_level_monotone {points : Finset Point2} {k : ℕ}
             ne_of_lt hlt ((sweepSort L θ₁).injective h)) θ ⟨h_lt₁, h_lt_e⟩
 
 theorem levelBlockMirror_reverses_within_block {N : ℕ} {f : Fin N → ℝ}
-    (hf : Monotone f) {i j : Fin N} (hij : i < j) (hfij : f i = f j) :
+    (_hf : Monotone f) {i j : Fin N} (hij : i < j) (hfij : f i = f j) :
     levelBlockMirror f j < levelBlockMirror f i := by
   simp [levelBlockMirror]
   have hlo_i := levelBlockLo_le (f := f) (i := i)
@@ -767,7 +767,7 @@ theorem levelBlockMirror_reverses_within_block {N : ℕ} {f : Fin N → ℝ}
   omega
 
 theorem levelBlockMirror_preserves_across_blocks {N : ℕ} {f : Fin N → ℝ}
-    (hf : Monotone f) {i j : Fin N} (hij : i < j) (hfij : f i < f j) :
+    (hf : Monotone f) {i j : Fin N} (_hij : i < j) (hfij : f i < f j) :
     levelBlockMirror f i < levelBlockMirror f j := by
   have hlo_i := levelBlockLo_le (f := f) (i := i)
   have hhi_i := levelBlockHi_ge (f := f) (i := i)
@@ -894,10 +894,10 @@ theorem label_index_lt_of_orientedLevel_lt {points : Finset Point2} {k : ℕ}
 theorem sweepSort_increasing_within_block {points : Finset Point2} {k : ℕ}
     (L : PointLabeling points k) {θ₀ θ_j θ_ej : ℝ}
     (hid : sweepSort L θ₀ = Equiv.refl _)
-    (hinj₀ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₀ (L.point a)))
+    (_hinj₀ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₀ (L.point a)))
     (hinj_j : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ_j (L.point a)))
-    (hθ₀ : 0 ≤ θ₀) (hθ_ej : θ_ej < Real.pi)
-    (h0j : θ₀ ≤ θ_j) (hj_ej : θ_j < θ_ej)
+    (_hθ₀ : 0 ≤ θ₀) (_hθ_ej : θ_ej < Real.pi)
+    (h0j : θ₀ ≤ θ_j) (_hj_ej : θ_j < θ_ej)
     (hno_tie : ∀ a b : Fin (2 * k), L.point a ≠ L.point b →
       orientedLevel θ_ej (L.point a) = orientedLevel θ_ej (L.point b) →
         ∀ θ ∈ Set.Icc θ₀ θ_j, orientedLevel θ (L.point a) ≠ orientedLevel θ (L.point b))
@@ -917,7 +917,7 @@ noncomputable def blockStarts {N : ℕ} (g : Fin N → ℝ) : Finset (Fin N) :=
   Finset.univ.filter (fun p =>
     p = levelBlockLo g p ∧ (levelBlockLo g p).val < (levelBlockHi g p).val)
 
-theorem blockStarts_nonempty_of_tie {N : ℕ} {g : Fin N → ℝ} (hg : Monotone g)
+theorem blockStarts_nonempty_of_tie {N : ℕ} {g : Fin N → ℝ} (_hg : Monotone g)
     {i j : Fin N} (hij : i < j) (hgij : g i = g j) :
     (blockStarts g).Nonempty := by
   have hlo_idem : levelBlockLo g (levelBlockLo g i) = levelBlockLo g i := by
@@ -6701,7 +6701,7 @@ private theorem same_g_value_of_same_block {N : ℕ} {g : Fin N → ℝ}
 noncomputable def sweepReversalStep {points : Finset Point2} {k : ℕ}
     (L : PointLabeling points k)
     {θ₁ θ_e θ₂ θ₀ : ℝ}
-    (hinj₀ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₀ (L.point a)))
+    (_hinj₀ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₀ (L.point a)))
     (hinj₁ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₁ (L.point a)))
     (hinj₂ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₂ (L.point a)))
     (hid : sweepSort L θ₀ = Equiv.refl _)
@@ -6790,7 +6790,7 @@ theorem sortedAngleAt_lt_pi (points : Finset Point2)
   rcases Finset.mem_image.mp (sortedAngleAt_mem points j) with ⟨d, _, hangle⟩
   rw [← hangle]; exact d.angle_lt_pi
 
-theorem orientedLevel_eq_at_direction_angle {p q : Point2} (hpq : p ≠ q) :
+theorem orientedLevel_eq_at_direction_angle {p q : Point2} (_hpq : p ≠ q) :
     orientedLevel (direction p q).angle p = orientedLevel (direction p q).angle q := by
   cases hd : direction p q with
   | vertical =>
@@ -7802,14 +7802,14 @@ theorem interEventAngleAt_last (points : Finset Point2)
 
 theorem sweepLabelingAt_id {points : Finset Point2} {k : ℕ}
     (hcard : points.card = 2 * k)
-    (hne : (directionsDeterminedBy points).Nonempty)
+    (_hne : (directionsDeterminedBy points).Nonempty)
     (θ₀ : ℝ) :
     sweepSort (sweepLabelingAt (points := points) hcard θ₀) θ₀ = Equiv.refl _ :=
   sweepSort_reindex_eq_refl _ _
 
 theorem sweepLabelingAt_inj {points : Finset Point2} {k : ℕ}
     (hcard : points.card = 2 * k)
-    (hne : (directionsDeterminedBy points).Nonempty)
+    (_hne : (directionsDeterminedBy points).Nonempty)
     (θ₀ : ℝ)
     (hlow : ∀ d ∈ directionsDeterminedBy points, d.angle - Real.pi < θ₀)
     (hhigh : ∀ d ∈ directionsDeterminedBy points, θ₀ < d.angle) :
@@ -7834,7 +7834,7 @@ noncomputable def sweepGAS_at {points : Finset Point2} {k : ℕ}
     (s : Fin (directionsDeterminedBy points).card)
     (hlow : ∀ d ∈ directionsDeterminedBy points, d.angle - Real.pi < θ₀)
     (hhigh : ∀ d ∈ directionsDeterminedBy points, θ₀ < d.angle)
-    (hncoll : NoncollinearSet points) :
+    (_hncoll : NoncollinearSet points) :
     GeneralizedAllowableSequence k (directionsDeterminedBy points).card :=
   GeneralizedAllowableSequence.ofSweepAngles
     (sweepLabelingAt hcard θ₀)
@@ -8043,7 +8043,7 @@ theorem interEventAngleAt_lt_shiftedSortedAngle
     (points : Finset Point2)
     (hne : (directionsDeterminedBy points).Nonempty)
     (θ₀ : ℝ) (s : Fin (directionsDeterminedBy points).card)
-    (hlow : ∀ d ∈ directionsDeterminedBy points, d.angle - Real.pi < θ₀)
+    (_hlow : ∀ d ∈ directionsDeterminedBy points, d.angle - Real.pi < θ₀)
     (hhigh : ∀ d ∈ directionsDeterminedBy points, θ₀ < d.angle) :
     ∀ j : Fin (directionsDeterminedBy points).card,
     interEventAngleAt points hne θ₀ s ⟨j.val, by omega⟩ <
@@ -8084,7 +8084,7 @@ theorem shiftedSortedAngleAt_lt_interEventAngleAt_succ
     (hne : (directionsDeterminedBy points).Nonempty)
     (θ₀ : ℝ) (s : Fin (directionsDeterminedBy points).card)
     (hlow : ∀ d ∈ directionsDeterminedBy points, d.angle - Real.pi < θ₀)
-    (hhigh : ∀ d ∈ directionsDeterminedBy points, θ₀ < d.angle) :
+    (_hhigh : ∀ d ∈ directionsDeterminedBy points, θ₀ < d.angle) :
     (hgap : ∀ t : Fin (directionsDeterminedBy points).card,
       t.val < s.val → sortedAngleAt points t < θ₀) →
     ∀ j : Fin (directionsDeterminedBy points).card,

@@ -1060,7 +1060,7 @@ structure DecodeForestFull (n : ℕ) (state : Finset (Fin n) × Finset (Sym2 (Fi
   covers : ∀ u : Fin n, ∃ v ∈ state.1, (fromEdgeSet (state.2 : Set _)).Reachable u v
   uniq : ∀ v ∈ state.1, ∀ w ∈ state.1, v ≠ w → ¬ (fromEdgeSet (state.2 : Set _)).Reachable v w
 
-lemma decodeForest_init (n : ℕ) (hn : 2 ≤ n) :
+lemma decodeForest_init (n : ℕ) (_hn : 2 ≤ n) :
     DecodeForestFull n (Finset.univ, ∅) := by
   refine ⟨?_, ?_, ?_⟩
   · intro u p hp
@@ -1094,7 +1094,7 @@ lemma reachable_sup_edge {V : Type*} {G : SimpleGraph V} {u v x y : V}
       · exact Or.inr (Or.inl ⟨ih2u, Relation.ReflTransGen.tail ih2v hG⟩)
       · exact Or.inr (Or.inr ⟨ih3v, Relation.ReflTransGen.tail ih3u hG⟩)
     · revert hedge
-      simp [edge, Sym2.ToRel, Sym2.mk_isDiag_iff, Sym2.eq]
+      simp [edge, Sym2.eq]
       intro hedge'
       rcases hedge' with (⟨rfl, rfl⟩ | ⟨rfl, rfl⟩)
       · intro _
@@ -1145,7 +1145,7 @@ lemma decodeForest_step {n : ℕ} {state : Finset (Fin n) × Finset (Sym2 (Fin n
         exact hreach.mono le_sup_left
       have h_edge : (fromEdgeSet (↑(insert s(nextLeaf, si) state.2) : Set _)).Adj nextLeaf si := by
         rw [hsup]
-        exact Or.inr ⟨by simp [edge, Sym2.ToRel], h_not_eq⟩
+        exact Or.inr ⟨by simp [Sym2.ToRel], h_not_eq⟩
       have h_si_reach := Reachable.trans h_new_reach (Adj.reachable h_edge)
       rcases h_forest.covers si with ⟨r', hr', hreach'⟩
       have h_r'_neq : r' ≠ nextLeaf := by
@@ -1386,7 +1386,7 @@ lemma pruferDecodeIsTree {n : ℕ} (hn : 2 ≤ n) (s : pruferCodeSpace n) :
 
     have h_uv_reach : (fromEdgeSet (V := Fin n) (insert (s(u, v)) state.2 : Set (Sym2 (Fin n)))).Reachable u v := by
       rw [hsup]
-      have h_edge : (fromEdgeSet (V := Fin n) (state.2 : Set (Sym2 (Fin n))) ⊔ edge u v).Adj u v := Or.inr ⟨by simp [edge, Sym2.ToRel], huv⟩
+      have h_edge : (fromEdgeSet (V := Fin n) (state.2 : Set (Sym2 (Fin n))) ⊔ edge u v).Adj u v := Or.inr ⟨by simp [Sym2.ToRel], huv⟩
       exact h_edge.reachable
 
     have hreach_x_new : (fromEdgeSet (V := Fin n) (insert (s(u, v)) state.2 : Set (Sym2 (Fin n)))).Reachable x rx := by
@@ -1519,7 +1519,7 @@ private lemma fromEdgeSet_insert_degree_other {n : ℕ}
   unfold SimpleGraph.degree
   congr 1
   ext x
-  simp only [SimpleGraph.mem_neighborFinset, fromEdgeSet_adj, Finset.coe_insert,
+  simp only [SimpleGraph.mem_neighborFinset, fromEdgeSet_adj,
              Set.mem_insert_iff, Sym2.eq_iff]
   constructor
   · rintro ⟨hmem, hne⟩
@@ -1550,7 +1550,7 @@ private lemma fromEdgeSet_insert_degree_endpoint {n : ℕ}
   have h_eq : (fromEdgeSet (V := Fin n) (insert s(u, w) S : Set _)).neighborFinset u =
               insert w ((fromEdgeSet (V := Fin n) (S : Set _)).neighborFinset u) := by
     ext x
-    simp only [SimpleGraph.mem_neighborFinset, fromEdgeSet_adj, Finset.coe_insert,
+    simp only [SimpleGraph.mem_neighborFinset, fromEdgeSet_adj,
                Set.mem_insert_iff, Finset.mem_insert, Sym2.eq_iff]
     constructor
     · rintro ⟨hmem, hne⟩
@@ -1690,7 +1690,7 @@ private theorem pruferDecodeAux_degree (n : ℕ) (hn : 2 ≤ n) (s : pruferCodeS
     rw [pruferDecodeAux_zero_degree n hn s v hm]
     have hcount : countOccurrences s 0 v = 0 := by
       apply Finset.card_eq_zero.mpr
-      ext j; simp [countOccurrences]
+      ext j; simp
     have hmem : v ∈ (pruferDecodeAux hn s 0 hm).val.1 := by
       show v ∈ Finset.univ; exact Finset.mem_univ v
     rw [hcount, if_pos hmem]
@@ -2382,7 +2382,7 @@ lemma deleteSmallestLeafTreeSucc_val_adj {m : ℕ} (hm : 1 ≤ m) (T : LabeledTr
     (↑T : SimpleGraph (Fin (m + 1))).Adj ((finSuccAboveEquivCompl (smallestTreeLeaf (m + 1) (by omega) T)) a).1
             ((finSuccAboveEquivCompl (smallestTreeLeaf (m + 1) (by omega) T)) b).1 := by
   dsimp [deleteSmallestLeafTreeSucc]
-  simp only [SimpleGraph.comap_adj, Function.Embedding.coeFn_mk, SimpleGraph.induce_adj, Set.mem_compl_iff, Set.mem_singleton_iff]
+  simp only [SimpleGraph.comap_adj]
   have h_a : ((finSuccAboveEquivCompl (smallestTreeLeaf (m + 1) (by omega) T)) a).1 ≠ smallestTreeLeaf (m + 1) (by omega) T :=
     ((finSuccAboveEquivCompl (smallestTreeLeaf (m + 1) (by omega) T)) a).2
   have h_b : ((finSuccAboveEquivCompl (smallestTreeLeaf (m + 1) (by omega) T)) b).1 ≠ smallestTreeLeaf (m + 1) (by omega) T :=

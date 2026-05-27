@@ -2206,4 +2206,78 @@ theorem volume_filled2Simplex :
   -- (1 - 0) • 1 - (1^2 - 0^2) / 2 = 1/2
   simp; ring
 
+/-! ### Brick 2: convex hull ⊆ triangleAffine image
+
+The reverse inclusion `convexHull ℝ {a, b, c} ⊆ triangleAffine '' filled2Simplex`
+combined with `triangleAffine_image_subset_convexHull` gives set equality. -/
+
+/-- The filled standard 2-simplex is convex. -/
+theorem convex_filled2Simplex : Convex ℝ filled2Simplex := by
+  rintro ⟨s₁, t₁⟩ ⟨hs₁, ht₁, hst₁⟩ ⟨s₂, t₂⟩ ⟨hs₂, ht₂, hst₂⟩ μ ν hμ hν hμν
+  refine ⟨?_, ?_, ?_⟩
+  · show 0 ≤ μ * s₁ + ν * s₂
+    nlinarith
+  · show 0 ≤ μ * t₁ + ν * t₂
+    nlinarith
+  · show μ * s₁ + ν * s₂ + (μ * t₁ + ν * t₂) ≤ 1
+    have key : μ * (s₁ + t₁) + ν * (s₂ + t₂) ≤ μ * 1 + ν * 1 := by
+      have h1 : μ * (s₁ + t₁) ≤ μ * 1 := by nlinarith
+      have h2 : ν * (s₂ + t₂) ≤ ν * 1 := by nlinarith
+      linarith
+    nlinarith [hμν]
+
+/-- The affine parametrization `triangleAffine a b c` sends a convex combination
+of `(s, t)`-parameters to the corresponding convex combination of vertex images. -/
+theorem triangleAffine_convex_combo (a b c : ℝ × ℝ) (p q : ℝ × ℝ)
+    {μ ν : ℝ} (hμν : μ + ν = 1) :
+    triangleAffine a b c (μ • p + ν • q) =
+      μ • triangleAffine a b c p + ν • triangleAffine a b c q := by
+  obtain ⟨ps, pt⟩ := p
+  obtain ⟨qs, qt⟩ := q
+  show a + (μ • (ps, pt) + ν • (qs, qt)).1 • (b - a) +
+        (μ • (ps, pt) + ν • (qs, qt)).2 • (c - a) =
+      μ • (a + ps • (b - a) + pt • (c - a)) +
+        ν • (a + qs • (b - a) + qt • (c - a))
+  have h1 : ((μ • (ps, pt) + ν • (qs, qt)).1 : ℝ) = μ * ps + ν * qs := by
+    simp [Prod.smul_def]
+  have h2 : ((μ • (ps, pt) + ν • (qs, qt)).2 : ℝ) = μ * pt + ν * qt := by
+    simp [Prod.smul_def]
+  rw [h1, h2]
+  ext
+  · show a.1 + (μ * ps + ν * qs) * (b.1 - a.1) + (μ * pt + ν * qt) * (c.1 - a.1) =
+        μ * (a.1 + ps * (b.1 - a.1) + pt * (c.1 - a.1)) +
+        ν * (a.1 + qs * (b.1 - a.1) + qt * (c.1 - a.1))
+    linear_combination -a.1 * hμν
+  · show a.2 + (μ * ps + ν * qs) * (b.2 - a.2) + (μ * pt + ν * qt) * (c.2 - a.2) =
+        μ * (a.2 + ps * (b.2 - a.2) + pt * (c.2 - a.2)) +
+        ν * (a.2 + qs * (b.2 - a.2) + qt * (c.2 - a.2))
+    linear_combination -a.2 * hμν
+
+/-- The image of the filled 2-simplex under `triangleAffine a b c` is convex. -/
+theorem convex_triangleAffine_image (a b c : ℝ × ℝ) :
+    Convex ℝ (triangleAffine a b c '' filled2Simplex) := by
+  rintro _ ⟨p, hp, rfl⟩ _ ⟨q, hq, rfl⟩ μ ν hμ hν hμν
+  refine ⟨μ • p + ν • q, convex_filled2Simplex hp hq hμ hν hμν, ?_⟩
+  exact triangleAffine_convex_combo a b c p q hμν
+
+/-- Reverse direction: every point in the convex hull of `{a, b, c}` is of the
+form `triangleAffine a b c (s, t)` for some `(s, t)` in the filled 2-simplex. -/
+theorem convexHull_subset_triangleAffine_image (a b c : ℝ × ℝ) :
+    convexHull ℝ ({a, b, c} : Set (ℝ × ℝ)) ⊆
+      triangleAffine a b c '' filled2Simplex := by
+  apply convexHull_min ?_ (convex_triangleAffine_image a b c)
+  intro p hp
+  rcases hp with rfl | hp
+  · exact ⟨(0, 0), by simp [filled2Simplex], by simp⟩
+  rcases hp with rfl | hp
+  · exact ⟨(1, 0), by simp [filled2Simplex], by simp⟩
+  · rcases hp with rfl
+    exact ⟨(0, 1), by simp [filled2Simplex], by simp⟩
+
+/-- The convex hull of `{a, b, c}` equals the affine image of the filled 2-simplex. -/
+theorem convexHull_eq_triangleAffine_image (a b c : ℝ × ℝ) :
+    convexHull ℝ ({a, b, c} : Set (ℝ × ℝ)) = triangleAffine a b c '' filled2Simplex :=
+  le_antisymm (convexHull_subset_triangleAffine_image a b c)
+    (triangleAffine_image_subset_convexHull a b c)
+
 end ProofsInTheBook.Chapter20

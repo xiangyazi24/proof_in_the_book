@@ -345,4 +345,38 @@ theorem chapter35 {V : Type u} [Fintype V] [DecidableEq V] (G : SimpleGraph V)
 
 end FiveColorInduction
 
+/-! ### Concrete witnesses for `FiveColorReducible`
+
+The remaining frontier is the planar instantiation: every finite planar simple
+graph carries a `FiveColorReducible` certificate.  That needs Mathlib planar
+graphs + Euler ⟹ degree-≤5 vertex (currently unavailable).  Below we exhibit
+concrete certificates on small vertex types to validate the inductive
+machinery and give downstream callers ready instances. -/
+
+/-- The empty graph is trivially `FiveColorReducible` via the `empty`
+constructor. -/
+def FiveColorReducible.bot_pempty : FiveColorReducible (⊥ : SimpleGraph PEmpty) :=
+  FiveColorReducible.empty _
+
+/-- The empty graph on `Fin 0` is trivially `FiveColorReducible`. -/
+def FiveColorReducible.bot_finZero : FiveColorReducible (⊥ : SimpleGraph (Fin 0)) :=
+  FiveColorReducible.empty _
+
+/-- A single isolated vertex is `FiveColorReducible`: delete the vertex
+(yielding the empty subgraph) and use the degree-0 ≤ 4 shortcut. -/
+def FiveColorReducible.bot_finOne :
+    FiveColorReducible (⊥ : SimpleGraph (Fin 1)) := by
+  classical
+  haveI : IsEmpty ({x : Fin 1 | x ≠ 0} : Set (Fin 1)) := by
+    rw [isEmpty_subtype]
+    intro x hx
+    fin_cases x
+    exact hx rfl
+  refine FiveColorReducible.step_of_degree_le_four
+    (⊥ : SimpleGraph (Fin 1)) (v := 0) (hdeg := ?_) (hdel := ?_)
+  · -- degree of 0 in ⊥ is 0 ≤ 4
+    simp
+  · -- induced subgraph on empty subset is empty
+    exact FiveColorReducible.empty _
+
 end ProofsInTheBook.Chapter35

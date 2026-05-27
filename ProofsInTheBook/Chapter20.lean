@@ -2280,4 +2280,81 @@ theorem convexHull_eq_triangleAffine_image (a b c : ℝ × ℝ) :
   le_antisymm (convexHull_subset_triangleAffine_image a b c)
     (triangleAffine_image_subset_convexHull a b c)
 
+/-! ### Brick 3: glue to `volume_convexHull_triangle`
+
+The measure-theoretic bridge for Monsky's chapter 20:
+`volume (convexHull ℝ {a, b, c}) = ENNReal.ofReal (realTriangleArea a b c)`. -/
+
+/-- The linear part of `triangleAffine a b c`: `(s, t) ↦ s • (b - a) + t • (c - a)`. -/
+noncomputable def triangleEdgeMap (a b c : ℝ × ℝ) : (ℝ × ℝ) →ₗ[ℝ] (ℝ × ℝ) where
+  toFun st := st.1 • (b - a) + st.2 • (c - a)
+  map_add' u v := by
+    show (u + v).1 • (b - a) + (u + v).2 • (c - a) =
+        u.1 • (b - a) + u.2 • (c - a) + (v.1 • (b - a) + v.2 • (c - a))
+    ext
+    · show ((u + v).1 * (b - a).1 + (u + v).2 * (c - a).1 : ℝ) =
+          u.1 * (b - a).1 + u.2 * (c - a).1 + (v.1 * (b - a).1 + v.2 * (c - a).1)
+      simp [Prod.add_def]; ring
+    · show ((u + v).1 * (b - a).2 + (u + v).2 * (c - a).2 : ℝ) =
+          u.1 * (b - a).2 + u.2 * (c - a).2 + (v.1 * (b - a).2 + v.2 * (c - a).2)
+      simp [Prod.add_def]; ring
+  map_smul' r v := by
+    show (r • v).1 • (b - a) + (r • v).2 • (c - a) =
+        r • (v.1 • (b - a) + v.2 • (c - a))
+    ext
+    · show ((r • v).1 * (b - a).1 + (r • v).2 * (c - a).1 : ℝ) =
+          r * (v.1 * (b - a).1 + v.2 * (c - a).1)
+      simp [Prod.smul_def]; ring
+    · show ((r • v).1 * (b - a).2 + (r • v).2 * (c - a).2 : ℝ) =
+          r * (v.1 * (b - a).2 + v.2 * (c - a).2)
+      simp [Prod.smul_def]; ring
+
+theorem triangleEdgeMap_apply (a b c st : ℝ × ℝ) :
+    triangleEdgeMap a b c st = st.1 • (b - a) + st.2 • (c - a) := rfl
+
+theorem triangleAffine_eq_add_triangleEdgeMap (a b c st : ℝ × ℝ) :
+    triangleAffine a b c st = a + triangleEdgeMap a b c st := by
+  show a + st.1 • (b - a) + st.2 • (c - a) = a + (st.1 • (b - a) + st.2 • (c - a))
+  rw [add_assoc]
+
+/-- The determinant of `triangleEdgeMap a b c` equals `doubleArea a b c`. -/
+theorem det_triangleEdgeMap (a b c : ℝ × ℝ) :
+    LinearMap.det (triangleEdgeMap a b c) = doubleArea a b c := by
+  rw [← LinearMap.det_toMatrix (Module.Basis.finTwoProd ℝ), doubleArea_eq_det_fin_two]
+  congr 1
+  ext i j
+  rw [LinearMap.toMatrix_apply, Module.Basis.coe_finTwoProd_repr]
+  fin_cases j <;> fin_cases i <;>
+    simp [triangleEdgeMap_apply, Module.Basis.finTwoProd_zero,
+          Module.Basis.finTwoProd_one]
+
+/-- Translation invariance of the 2-D Lebesgue measure. -/
+theorem volume_image_add_left (a : ℝ × ℝ) (s : Set (ℝ × ℝ)) :
+    MeasureTheory.volume ((fun x : ℝ × ℝ => a + x) '' s) = MeasureTheory.volume s := by
+  simp
+
+/-- The image of the filled 2-simplex under the affine triangle map has
+2-D Lebesgue measure `|doubleArea a b c| · (1/2)`. -/
+theorem volume_triangleAffine_image_filled2Simplex (a b c : ℝ × ℝ) :
+    MeasureTheory.volume (triangleAffine a b c '' filled2Simplex) =
+      ENNReal.ofReal |doubleArea a b c| * ENNReal.ofReal (1 / 2) := by
+  have hcomp : (triangleAffine a b c : (ℝ × ℝ) → (ℝ × ℝ)) =
+      (fun x : ℝ × ℝ => a + x) ∘ (triangleEdgeMap a b c) := by
+    funext st
+    exact triangleAffine_eq_add_triangleEdgeMap a b c st
+  rw [hcomp, Set.image_comp, volume_image_add_left,
+      MeasureTheory.Measure.addHaar_image_linearMap MeasureTheory.volume
+        (triangleEdgeMap a b c) filled2Simplex,
+      det_triangleEdgeMap, volume_filled2Simplex]
+
+/-- **The Monsky measure bridge.** The 2-D Lebesgue measure of the triangle
+`convexHull ℝ {a, b, c}` equals its Euclidean area `realTriangleArea a b c`. -/
+theorem volume_convexHull_triangle (a b c : ℝ × ℝ) :
+    MeasureTheory.volume (convexHull ℝ ({a, b, c} : Set (ℝ × ℝ))) =
+      ENNReal.ofReal (realTriangleArea a b c) := by
+  rw [convexHull_eq_triangleAffine_image, volume_triangleAffine_image_filled2Simplex,
+      realTriangleArea,
+      show (|doubleArea a b c| / 2 : ℝ) = |doubleArea a b c| * (1 / 2) from by ring,
+      ENNReal.ofReal_mul (abs_nonneg _)]
+
 end ProofsInTheBook.Chapter20

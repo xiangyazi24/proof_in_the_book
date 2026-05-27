@@ -778,7 +778,7 @@ theorem levelBlockMirror_preserves_across_blocks {N : ℕ} {f : Fin N → ℝ}
     push Not at h
     linarith [hf h, levelBlockLo_val (f := f) (i := j),
               levelBlockHi_val (f := f) (i := i)]
-  simp only [levelBlockMirror, Fin.lt_def, Fin.val_mk]
+  simp only [levelBlockMirror, Fin.lt_def]
   omega
 
 theorem levelBlockLo_of_mem_block {N : ℕ} {f : Fin N → ℝ}
@@ -7753,7 +7753,7 @@ private theorem shiftedSortedAngleAt_shiftedIndexOfSortedIndex {points : Finset 
     simp [shiftedSortedAngleAt, shiftedEventAngleAtIndex, r, hidxs, hwrap, hfin]
   · have hval :
         (shiftedIndexOfSortedIndex hne s idx).val = idx.val - s.val := by
-        simp [shiftedIndexOfSortedIndex, r, hidxs]
+        simp [shiftedIndexOfSortedIndex, hidxs]
     have hsum : s.val + (shiftedIndexOfSortedIndex hne s idx).val = idx.val := by
       rw [hval]
       omega
@@ -7871,8 +7871,8 @@ private theorem shiftedSortedAngleAt_nonneg (points : Finset Point2)
     ⟨(s.val + j.val) % (directionsDeterminedBy points).card,
       Nat.mod_lt _ (Finset.card_pos.mpr hne)⟩
   by_cases hwrap : s.val + j.val < (directionsDeterminedBy points).card
-  · simp [shiftedSortedAngleAt, hwrap, idx, sortedAngleAt_nonneg]
-  · simp [shiftedSortedAngleAt, hwrap, idx]
+  · simp [hwrap, sortedAngleAt_nonneg]
+  · simp [hwrap]
     have h := sortedAngleAt_nonneg (points := points) idx
     nlinarith [h, Real.pi_pos]
 
@@ -8459,7 +8459,7 @@ private theorem interEventAngleAt_no_other_shiftedEventAngle {points : Finset Po
         simpa [j1] using (Nat.succ_ne_zero j.val)
       by_cases h : j.val + 1 = (directionsDeterminedBy points).card
       · exact (hj1_last (by simpa [r] using h)).elim
-      · simp [interEventAngleAt, j1, jnext, hj1_ne0, h]
+      · simp [interEventAngleAt, j1, jnext, h]
     have h_succ_lt : interEventAngleAt points hne θ₀ s j1 <
         shiftedSortedAngleAt points hne s jnext := by
       simpa [hrepr] using (genericAngleBetween_lt' hlt')
@@ -8906,7 +8906,7 @@ private theorem interEventAngleAt_no_other_directionAngle {points : Finset Point
         simpa [j1] using (Nat.succ_ne_zero j.val)
       by_cases h : j.val + 1 = (directionsDeterminedBy points).card
       · exact (hj1_last h).elim
-      · simp [interEventAngleAt, j1, jnext, hj1_ne0, h]
+      · simp [interEventAngleAt, j1, jnext, h]
     have h_succ_lt : interEventAngleAt points hne θ₀ s j1 < shiftedSortedAngleAt points hne s jnext := by
       simpa [hrepr] using (genericAngleBetween_lt' hlt')
     have hθ : interEventAngleAt points hne θ₀ s j1 < sortedAngleAt points idx := by

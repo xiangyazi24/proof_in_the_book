@@ -6529,7 +6529,7 @@ private theorem levelBlockLo_le_of_monotone_eq' {N : ℕ}
     (hval : g p = g rep) :
     levelBlockLo g rep ≤ p := by
   by_contra h
-  push_neg at h
+  push Not at h
   have hp_le_rep : p ≤ rep :=
     le_of_lt (lt_of_lt_of_le h levelBlockLo_le)
   have hp_in : p ∈ Finset.univ.filter fun j : Fin N => g j = g rep ∧ j ≤ rep :=
@@ -6541,7 +6541,7 @@ private theorem le_levelBlockHi_of_monotone_eq' {N : ℕ}
     (hval : g p = g rep) :
     p ≤ levelBlockHi g rep := by
   by_contra h
-  push_neg at h
+  push Not at h
   have hrep_le_p : rep ≤ p :=
     le_of_lt (lt_of_le_of_lt levelBlockHi_ge h)
   have hp_in : p ∈ Finset.univ.filter fun j : Fin N => g j = g rep ∧ rep ≤ j :=
@@ -6553,7 +6553,7 @@ theorem nontrivialLevelRep_block {N : ℕ} {g : Fin N → ℝ} (hg : Monotone g)
     (levelBlockLo g (nontrivialLevelRep g v hv)).val <
       (levelBlockHi g (nontrivialLevelRep g v hv)).val := by
   by_contra h
-  push_neg at h
+  push Not at h
   have hle := Fin.le_def.mp (levelBlockLo_le (f := g) (i := nontrivialLevelRep g v hv))
   have hge := Fin.le_def.mp (levelBlockHi_ge (f := g) (i := nontrivialLevelRep g v hv))
   have hrep := nontrivialLevelRep_val hv
@@ -6834,7 +6834,7 @@ theorem orientedLevel_ne_of_angle_between {p q : Point2} (hpq : p ≠ q)
   have hsin_neg : Real.sin (θ₀ - (direction p q).angle) < 0 :=
     Real.sin_neg_of_neg_of_neg_pi_lt (by linarith) (by linarith)
   have hpq_ne : -(p.1 - q.1) ≠ 0 ∨ (p.2 - q.2) ≠ 0 := by
-    by_contra h; push_neg at h
+    by_contra h; push Not at h
     exact hpq (Prod.ext (by linarith [h.1]) (by linarith [h.2]))
   have h_sq_pos : 0 < (-(p.1 - q.1)) ^ 2 + (p.2 - q.2) ^ 2 := by
     rcases hpq_ne with ha | hb <;> positivity
@@ -7197,7 +7197,7 @@ theorem orientedLevel_ne_of_ne_mod_pi {p q : Point2} (hpq : p ≠ q)
   have hzero₀ : -(p.1 - q.1) * Real.sin θ + (p.2 - q.2) * Real.cos θ = 0 := by
     have := orientedLevel_sub_eq θ p q; linarith
   have hpq_ne : -(p.1 - q.1) ≠ 0 ∨ (p.2 - q.2) ≠ 0 := by
-    by_contra h; push_neg at h
+    by_contra h; push Not at h
     exact hpq (Prod.ext (by linarith [h.1]) (by linarith [h.2]))
   have h_sq_pos : 0 < (-(p.1 - q.1)) ^ 2 + (p.2 - q.2) ^ 2 := by
     rcases hpq_ne with ha | hb <;> positivity

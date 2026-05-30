@@ -2159,4 +2159,17 @@ theorem hilbert_third_geometric_dehn :
   ⟨unitCube_ne_regularTetrahedron_geometricDehn,
    no_geometricDissectionEquiv_unitCube_regularTetrahedron⟩
 
+/-- **Any zero-Dehn geometric polytope is not dissection-equivalent to the regular
+tetrahedron.** This generalizes the cube case: the obstruction is purely that the
+tetrahedron's Dehn invariant is nonzero (its dihedral angle is irrational over
+`π`), so *no* right-angled / zero-Dehn solid can be dissection-equivalent to it. -/
+theorem no_geometricDissectionEquiv_zeroDehn_regularTetrahedron
+    {ιS VS PS : Type*}
+    [NormedAddCommGroup VS] [InnerProductSpace ℝ VS] [MetricSpace PS] [NormedAddTorsor VS PS]
+    (S : GeometricPolytope ιS PS) (hS : S.dehn = 0) :
+    ¬ Nonempty (GeometricDissectionEquiv S regularTetrahedronGeometricPolytope) := by
+  refine no_geometricDissectionEquiv_of_dehn_ne ?_
+  rw [hS]
+  exact (regularTetrahedronGeometricPolytope_dehn_ne_zero).symm
+
 end ProofsInTheBook.Chapter09

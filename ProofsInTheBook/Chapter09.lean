@@ -1931,4 +1931,16 @@ theorem unitCube_ne_regularTetrahedron_geometricDehn :
   rw [unitCubeGeometricPolytope_dehn, regularTetrahedronGeometricPolytope_dehn]
   exact chapter09
 
+/-- **No Dehn scissors certificate between the geometric cube and tetrahedron.**
+There is no `DehnScissorsCertificate` matching the geometric unit cube's Dehn
+invariant to the geometric regular tetrahedron's: the cube's is `0` and the
+tetrahedron's is nonzero.  This is the file's scissors-congruence obstruction
+applied to the two genuine geometric polytopes. -/
+theorem no_scissors_certificate_unitCube_regularTetrahedron_geometric {Piece : Type*} :
+    ¬ Nonempty (DehnScissorsCertificate Piece DehnPiQTarget
+      unitCubeGeometricPolytope.dehn regularTetrahedronGeometricPolytope.dehn) :=
+  no_scissors_certificate_of_dehn_ne
+    unitCubeGeometricPolytope_dehn_eq_zero
+    regularTetrahedronGeometricPolytope_dehn_ne_zero
+
 end ProofsInTheBook.Chapter09

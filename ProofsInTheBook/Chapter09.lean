@@ -1768,4 +1768,78 @@ theorem dehn_eq_of_matches (T : GeometricPolytope ι P)
 
 end GeometricPolytope
 
+/-! ### Realizing the unit cube's Dehn data as a genuine geometric polytope
+
+We connect the abstract `GeometricPolytope` to the concrete `unitCubeDehnInvariantQ`
+by exhibiting an actual `GeometricPolytope` over `EuclideanSpace ℝ (Fin 3)` whose
+Dehn invariant equals `unitCubeDehnInvariantQ`, with lengths measured by `dist`
+and dihedral angles by `EuclideanGeometry.angle`.
+
+Honest scope: every edge of the unit cube carries the *same* Dehn data — length
+`1` and dihedral angle `π/2` — and the Dehn invariant depends only on that
+per-edge `(length, dihedral)` data.  The realization records that data through
+genuine Euclidean `dist` and `∠` (the right angle between two coordinate axes),
+but it uses one canonical right-angle/unit-length witness for every edge rather
+than embedding the twelve edges at distinct cube positions.  So it faithfully
+realizes the cube's Dehn *data*, not its full spatial embedding; `chapter09` is
+unchanged. -/
+
+/-- The right angle between two distinct coordinate axes: `∠ eᵢ 0 eⱼ = π/2`. -/
+theorem angle_euclideanSingle_eq_pi_div_two {n : ℕ} {i j : Fin n} (hij : i ≠ j) :
+    EuclideanGeometry.angle
+        (EuclideanSpace.single i (1 : ℝ)) (0 : EuclideanSpace ℝ (Fin n))
+        (EuclideanSpace.single j (1 : ℝ)) = Real.pi / 2 := by
+  have hinner :
+      (inner ℝ (EuclideanSpace.single i (1 : ℝ)) (EuclideanSpace.single j (1 : ℝ))) = 0 := by
+    rw [EuclideanSpace.inner_single_left, PiLp.single_apply, if_neg hij, mul_zero]
+  have hang :
+      InnerProductGeometry.angle
+        (EuclideanSpace.single i (1 : ℝ)) (EuclideanSpace.single j (1 : ℝ)) = Real.pi / 2 :=
+    (InnerProductGeometry.inner_eq_zero_iff_angle_eq_pi_div_two _ _).mp hinner
+  rw [EuclideanGeometry.angle, vsub_eq_sub, vsub_eq_sub, sub_zero, sub_zero, hang]
+
+/-- One unit-cube edge realized geometrically: length `1` (between `0` and `e₀`)
+and dihedral `π/2` (the right angle `∠ e₀ 0 e₁`). -/
+noncomputable def unitCubeGeometricEdge : GeometricEdge (EuclideanSpace ℝ (Fin 3)) where
+  tail := 0
+  head := EuclideanSpace.single 0 1
+  armA := EuclideanSpace.single 0 1
+  apex := 0
+  armB := EuclideanSpace.single 1 1
+
+theorem unitCubeGeometricEdge_length : unitCubeGeometricEdge.length = 1 := by
+  rw [GeometricEdge.length, unitCubeGeometricEdge, dist_eq_norm, zero_sub, norm_neg,
+    PiLp.norm_single]
+  simp
+
+theorem unitCubeGeometricEdge_dihedral : unitCubeGeometricEdge.dihedral = Real.pi / 2 :=
+  angle_euclideanSingle_eq_pi_div_two (by decide : (0 : Fin 3) ≠ 1)
+
+/-- The unit cube realized as a geometric polytope over `EuclideanSpace ℝ (Fin 3)`,
+one `GeometricEdge` per `CubeEdge`, each carrying the cube's per-edge Dehn data. -/
+noncomputable def unitCubeGeometricPolytope :
+    GeometricPolytope CubeEdge (EuclideanSpace ℝ (Fin 3)) where
+  edgeFinset := Finset.univ
+  edge := fun _ => unitCubeGeometricEdge
+
+/-- **The geometric realization computes the cube's Dehn invariant.** The Dehn
+invariant of the geometric polytope above (genuine `dist` lengths and `∠`
+dihedrals) equals the chapter's `unitCubeDehnInvariantQ`. -/
+theorem unitCubeGeometricPolytope_dehn :
+    unitCubeGeometricPolytope.dehn = unitCubeDehnInvariantQ := by
+  rw [unitCubeDehnInvariantQ]
+  refine GeometricPolytope.dehn_eq_of_matches unitCubeGeometricPolytope
+    unitCubeEdgeLength (fun e => angleClassQ (cubeEdgeDihedralAngle e)) ?_ ?_
+  · intro e _
+    show unitCubeGeometricEdge.length = unitCubeEdgeLength e
+    rw [unitCubeGeometricEdge_length, unitCubeEdgeLength]
+  · intro e _
+    show angleClassQ unitCubeGeometricEdge.dihedral = angleClassQ (cubeEdgeDihedralAngle e)
+    rw [unitCubeGeometricEdge_dihedral, cubeEdgeDihedralAngle]
+
+/-- Consequently the geometric cube polytope has Dehn invariant zero. -/
+theorem unitCubeGeometricPolytope_dehn_eq_zero :
+    unitCubeGeometricPolytope.dehn = 0 := by
+  rw [unitCubeGeometricPolytope_dehn, unitCubeDehnInvariantQ_eq_zero]
+
 end ProofsInTheBook.Chapter09

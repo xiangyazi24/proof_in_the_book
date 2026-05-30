@@ -1842,4 +1842,34 @@ theorem unitCubeGeometricPolytope_dehn_eq_zero :
     unitCubeGeometricPolytope.dehn = 0 := by
   rw [unitCubeGeometricPolytope_dehn, unitCubeDehnInvariantQ_eq_zero]
 
+/-! ### Realizing the regular tetrahedron's Dehn data as a genuine geometric polytope -/
+
+/-- The file's coordinate dot product `dot3` is the real inner product on
+`Euclidean3 = EuclideanSpace ℝ (Fin 3)`. -/
+theorem inner_euclidean3_eq_dot3 (u v : Euclidean3) :
+    (inner ℝ u v : ℝ) = dot3 u v := by
+  rw [PiLp.inner_apply]
+  simp [dot3, Fin.sum_univ_three, RCLike.inner_apply, mul_comm]
+
+/-- Each tetrahedron face-normal vertex has Euclidean norm `√3`. -/
+theorem norm_regularTetrahedronVertex (i : Fin 4) :
+    ‖regularTetrahedronVertex i‖ = Real.sqrt 3 := by
+  have h : ‖regularTetrahedronVertex i‖ * ‖regularTetrahedronVertex i‖ = 3 := by
+    rw [← real_inner_self_eq_norm_mul_norm, inner_euclidean3_eq_dot3,
+      regularTetrahedronVertex_dot_self]
+  rw [← Real.sqrt_mul_self (norm_nonneg _), h]
+
+/-- The angle at the origin between a face normal `v i` and the negated adjacent
+normal `-(v j)` is the dihedral angle `arccos (1/3)`. -/
+theorem angle_regularTetrahedronVertex_eq_arccos_one_third {i j : Fin 4} (hij : i ≠ j) :
+    EuclideanGeometry.angle (regularTetrahedronVertex i) (0 : Euclidean3)
+        (-(regularTetrahedronVertex j)) = Real.arccos (1 / 3) := by
+  rw [EuclideanGeometry.angle, vsub_eq_sub, vsub_eq_sub, sub_zero, sub_zero,
+    InnerProductGeometry.angle]
+  congr 1
+  rw [inner_neg_right, inner_euclidean3_eq_dot3, regularTetrahedronVertex_dot_of_ne hij,
+    norm_neg, norm_regularTetrahedronVertex, norm_regularTetrahedronVertex,
+    Real.mul_self_sqrt (by norm_num : (0 : ℝ) ≤ 3)]
+  norm_num
+
 end ProofsInTheBook.Chapter09

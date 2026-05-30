@@ -1943,4 +1943,60 @@ theorem no_scissors_certificate_unitCube_regularTetrahedron_geometric {Piece : T
     unitCubeGeometricPolytope_dehn_eq_zero
     regularTetrahedronGeometricPolytope_dehn_ne_zero
 
+/-! ### Geometric dissection equivalence
+
+A `GeometricDissectionEquiv` between two geometric polytopes `S` and `T` records
+that the *same* finite family of pieces realizes both: each piece contributes a
+Dehn value, the piece-sum equals `S.dehn` when assembled one way and `T.dehn`
+when assembled the other, and the two assemblies share the piece-sum (the
+geometric content a real cut-and-reassemble supplies).  From such data the Dehn
+invariant is forced equal — and contrapositively, unequal Dehn invariants rule
+out any dissection equivalence.
+
+Honest scope: the equality of the two piece-sums (`assembleLeft`, `assembleRight`)
+is taken as a hypothesis — it is exactly the "same pieces, rearranged" fact that a
+literal geometric cut-and-rigid-reassembly would establish.  Producing that data
+from an actual polyhedral cut (interior-edge bookkeeping, face incidences) is the
+remaining geometric frontier; this structure is the honest interface to it. -/
+structure GeometricDissectionEquiv {ιS ιT VS PS VT PT : Type*}
+    [NormedAddCommGroup VS] [InnerProductSpace ℝ VS] [MetricSpace PS] [NormedAddTorsor VS PS]
+    [NormedAddCommGroup VT] [InnerProductSpace ℝ VT] [MetricSpace PT] [NormedAddTorsor VT PT]
+    (S : GeometricPolytope ιS PS) (T : GeometricPolytope ιT PT) where
+  /-- Common index set of pieces. -/
+  Piece : Type
+  pieces : Finset Piece
+  /-- Each piece's rational Dehn contribution. -/
+  pieceDehn : Piece → DehnPiQTarget
+  /-- Assembling the pieces reproduces `S`'s Dehn invariant. -/
+  assembleLeft : S.dehn = ∑ p ∈ pieces, pieceDehn p
+  /-- Assembling the same pieces reproduces `T`'s Dehn invariant. -/
+  assembleRight : T.dehn = ∑ p ∈ pieces, pieceDehn p
+
+/-- A geometric dissection equivalence forces the two polytopes to share a Dehn
+invariant. -/
+theorem GeometricDissectionEquiv.dehn_eq {ιS ιT VS PS VT PT : Type*}
+    [NormedAddCommGroup VS] [InnerProductSpace ℝ VS] [MetricSpace PS] [NormedAddTorsor VS PS]
+    [NormedAddCommGroup VT] [InnerProductSpace ℝ VT] [MetricSpace PT] [NormedAddTorsor VT PT]
+    {S : GeometricPolytope ιS PS} {T : GeometricPolytope ιT PT}
+    (D : GeometricDissectionEquiv S T) : S.dehn = T.dehn :=
+  D.assembleLeft.trans D.assembleRight.symm
+
+/-- **Unequal Dehn invariants rule out any geometric dissection equivalence.** In
+particular, since the geometric unit cube and regular tetrahedron have different
+Dehn invariants, no dissection of one reassembles into the other. -/
+theorem no_geometricDissectionEquiv_of_dehn_ne {ιS ιT VS PS VT PT : Type*}
+    [NormedAddCommGroup VS] [InnerProductSpace ℝ VS] [MetricSpace PS] [NormedAddTorsor VS PS]
+    [NormedAddCommGroup VT] [InnerProductSpace ℝ VT] [MetricSpace PT] [NormedAddTorsor VT PT]
+    {S : GeometricPolytope ιS PS} {T : GeometricPolytope ιT PT}
+    (h : S.dehn ≠ T.dehn) : ¬ Nonempty (GeometricDissectionEquiv S T) := by
+  rintro ⟨D⟩
+  exact h D.dehn_eq
+
+/-- No geometric dissection equivalence between the unit cube and the regular
+tetrahedron. -/
+theorem no_geometricDissectionEquiv_unitCube_regularTetrahedron :
+    ¬ Nonempty (GeometricDissectionEquiv
+      unitCubeGeometricPolytope regularTetrahedronGeometricPolytope) :=
+  no_geometricDissectionEquiv_of_dehn_ne unitCube_ne_regularTetrahedron_geometricDehn
+
 end ProofsInTheBook.Chapter09

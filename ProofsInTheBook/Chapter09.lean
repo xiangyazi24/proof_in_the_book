@@ -1913,4 +1913,22 @@ theorem regularTetrahedronGeometricPolytope_dehn :
         = angleClassQ (regularTetrahedronEdgeDihedralAngle e)
     rw [tetraGeometricEdge_dihedral, regularTetrahedronEdgeDihedralAngle_eq_arccos_one_third]
 
+/-- The geometric tetrahedron polytope has nonzero Dehn invariant. -/
+theorem regularTetrahedronGeometricPolytope_dehn_ne_zero :
+    regularTetrahedronGeometricPolytope.dehn ≠ 0 := by
+  rw [regularTetrahedronGeometricPolytope_dehn]
+  exact regularTetrahedronDehnInvariantQ_ne_zero
+
+/-- **Object-level Hilbert's third problem (Dehn-invariant form).** The geometric
+unit cube and the geometric regular tetrahedron — both genuine `GeometricPolytope`s
+over `EuclideanSpace ℝ (Fin 3)` with `dist` lengths and `∠` dihedrals — have
+different Dehn invariants, so by `GeometricPolytope.dehn_congr` no Euclidean
+congruence carries one to the other.  (Dehn-invariant obstruction at the level of
+these geometric objects; still excludes the dissection/additivity step for full
+scissors-congruence.) -/
+theorem unitCube_ne_regularTetrahedron_geometricDehn :
+    unitCubeGeometricPolytope.dehn ≠ regularTetrahedronGeometricPolytope.dehn := by
+  rw [unitCubeGeometricPolytope_dehn, regularTetrahedronGeometricPolytope_dehn]
+  exact chapter09
+
 end ProofsInTheBook.Chapter09

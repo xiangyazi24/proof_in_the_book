@@ -1741,6 +1741,31 @@ theorem dehn_congr (φ : P ≃ᵃⁱ[ℝ] P₂) (T : GeometricPolytope ι P) :
     (T.map φ.toAffineIsometry).dehn = T.dehn :=
   dehn_map φ.toAffineIsometry T
 
+/-- **Bridge to the chapter's abstract Dehn invariant.** The object-level Dehn
+invariant of a geometric polytope equals the chapter's `dehnInvariantQ` evaluated
+on the geometric length and dihedral-angle class of each edge.  This is the lemma
+a concrete realization (e.g. cube or regular tetrahedron) would use to identify
+its `GeometricPolytope.dehn` with `unitCubeDehnInvariantQ` /
+`regularTetrahedronDehnInvariantQ`. -/
+theorem dehn_eq_dehnInvariantQ (T : GeometricPolytope ι P) :
+    T.dehn = dehnInvariantQ T.edgeFinset (fun i => (T.edge i).length)
+      (fun i => angleClassQ (T.edge i).dihedral) :=
+  geometricDehnInvariant_eq_dehnInvariantQ T.edgeFinset T.edge
+
+/-- If a geometric polytope's edge lengths and dihedral angle classes match a
+given length function and angle-class function edge-for-edge, its Dehn invariant
+equals the corresponding abstract `dehnInvariantQ`.  This is the precise interface
+for proving a concrete polytope realizes a target abstract Dehn invariant. -/
+theorem dehn_eq_of_matches (T : GeometricPolytope ι P)
+    (length : ι → ℝ) (angle : ι → AngleModPiQ)
+    (hlen : ∀ i ∈ T.edgeFinset, (T.edge i).length = length i)
+    (hang : ∀ i ∈ T.edgeFinset, angleClassQ (T.edge i).dihedral = angle i) :
+    T.dehn = dehnInvariantQ T.edgeFinset length angle := by
+  rw [dehn_eq_dehnInvariantQ]
+  unfold dehnInvariantQ
+  refine Finset.sum_congr rfl (fun i hi => ?_)
+  simp only [hlen i hi, hang i hi]
+
 end GeometricPolytope
 
 end ProofsInTheBook.Chapter09

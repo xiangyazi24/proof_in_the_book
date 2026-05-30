@@ -1695,4 +1695,52 @@ theorem geometricEdgeDehn_intAngleSum_eq_zero {Incident : Type*}
     _ = dehnEdgeQ len 0 := by rw [hclass]
     _ = 0 := by simp [dehnEdgeQ]
 
+/-! ### Bundled geometric polytope and object-level Dehn invariance
+
+The lemmas above operate on loose edge families.  This bundles that data into a
+single `GeometricPolytope` object so the Dehn invariant and its rigid-motion
+invariance can be stated at the object level — the API a future literal-dissection
+proof would target.
+
+Honest scope: a `GeometricPolytope` is exactly a finite indexed family of
+`GeometricEdge`s; it carries NO constraint that the edges form a genuine closed
+polyhedron (faces, incidences, closedness).  So this is bundled edge data, not a
+validated polytope, and it is not connected to the concrete `unitCubeDehnInvariantQ`
+/ `regularTetrahedronDehnInvariantQ`; `chapter09` is unchanged. -/
+
+/-- A geometric polytope, presented as a finite family of geometric edges (indexed
+by `ι`) in a real inner-product torsor `P`. -/
+structure GeometricPolytope (ι P : Type*) where
+  edgeFinset : Finset ι
+  edge : ι → GeometricEdge P
+
+namespace GeometricPolytope
+
+variable {ι V P V₂ P₂ : Type*}
+  [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+  [NormedAddCommGroup V₂] [InnerProductSpace ℝ V₂] [MetricSpace P₂] [NormedAddTorsor V₂ P₂]
+
+/-- The rational Dehn invariant of a geometric polytope. -/
+noncomputable def dehn (T : GeometricPolytope ι P) : DehnPiQTarget :=
+  geometricDehnInvariant T.edgeFinset T.edge
+
+/-- Push a geometric polytope forward through an affine map of the ambient space. -/
+noncomputable def map (φ : P →ᵃⁱ[ℝ] P₂) (T : GeometricPolytope ι P) : GeometricPolytope ι P₂ where
+  edgeFinset := T.edgeFinset
+  edge := fun i => (T.edge i).map φ
+
+/-- **Object-level rigid-motion invariance.** Moving a geometric polytope by an
+affine isometry leaves its Dehn invariant unchanged. -/
+@[simp] theorem dehn_map (φ : P →ᵃⁱ[ℝ] P₂) (T : GeometricPolytope ι P) :
+    (T.map φ).dehn = T.dehn := by
+  simp only [dehn, map, geometricDehnInvariant_map]
+
+/-- **Congruent polytopes have equal Dehn invariant.** Two geometric polytopes
+related by a Euclidean congruence (`≃ᵃⁱ[ℝ]`) share the same Dehn invariant. -/
+theorem dehn_congr (φ : P ≃ᵃⁱ[ℝ] P₂) (T : GeometricPolytope ι P) :
+    (T.map φ.toAffineIsometry).dehn = T.dehn :=
+  dehn_map φ.toAffineIsometry T
+
+end GeometricPolytope
+
 end ProofsInTheBook.Chapter09

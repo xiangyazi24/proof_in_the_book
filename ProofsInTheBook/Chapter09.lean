@@ -2137,4 +2137,26 @@ theorem no_geometricAdditivity_pieceSum_eq_unitCube_regularTetrahedron
   exact unitCube_ne_regularTetrahedron_geometricDehn
     (dehn_eq_of_geometricAdditivity_pieceSum_eq AC AT h)
 
+/-- **Hilbert's third problem, geometric Dehn form (this file's strongest endpoint).**
+For the unit cube and regular tetrahedron realized as genuine geometric polytopes
+over `EuclideanSpace ℝ (Fin 3)` (edge length = `dist`, dihedral angle = `∠`):
+
+* their Dehn invariants differ, and
+* consequently no Euclidean congruence carries one to the other, no Dehn scissors
+  certificate matches them, no geometric dissection equivalence relates them, and
+  no pair of additive dissections shares a piece-Dehn-sum.
+
+This packages the geometric layer's conclusions in one place.  It is the
+Dehn-invariant obstruction at the level of actual Euclidean geometry; the step
+from "no dissection equivalence (with the piece-sum equality given)" to "no
+scissors congruence of literal solids" needs the polyhedral-cut infrastructure
+(faces/incidences/dissection existence) that Mathlib lacks, which is why the
+chapter's headline `chapter09` remains the algebraic-obstruction statement. -/
+theorem hilbert_third_geometric_dehn :
+    unitCubeGeometricPolytope.dehn ≠ regularTetrahedronGeometricPolytope.dehn ∧
+    ¬ Nonempty (GeometricDissectionEquiv
+        unitCubeGeometricPolytope regularTetrahedronGeometricPolytope) :=
+  ⟨unitCube_ne_regularTetrahedron_geometricDehn,
+   no_geometricDissectionEquiv_unitCube_regularTetrahedron⟩
+
 end ProofsInTheBook.Chapter09

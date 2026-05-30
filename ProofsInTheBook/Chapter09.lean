@@ -1891,4 +1891,26 @@ theorem tetraGeometricEdge_length : tetraGeometricEdge.length = Real.sqrt 8 := b
     Real.sq_sqrt (by norm_num : (0 : ℝ) ≤ 8),
     regularTetrahedronVertex_dist_sq_of_ne (by decide)]
 
+/-- The regular tetrahedron realized as a geometric polytope over
+`EuclideanSpace ℝ (Fin 3)`. -/
+noncomputable def regularTetrahedronGeometricPolytope :
+    GeometricPolytope RegularTetrahedronEdge (EuclideanSpace ℝ (Fin 3)) where
+  edgeFinset := Finset.univ
+  edge := fun _ => tetraGeometricEdge
+
+/-- **The geometric realization computes the tetrahedron's Dehn invariant.** -/
+theorem regularTetrahedronGeometricPolytope_dehn :
+    regularTetrahedronGeometricPolytope.dehn = regularTetrahedronDehnInvariantQ := by
+  rw [regularTetrahedronDehnInvariantQ]
+  refine GeometricPolytope.dehn_eq_of_matches regularTetrahedronGeometricPolytope
+    regularTetrahedronEdgeLength
+    (fun e => angleClassQ (regularTetrahedronEdgeDihedralAngle e)) ?_ ?_
+  · intro e _
+    show tetraGeometricEdge.length = regularTetrahedronEdgeLength e
+    rw [tetraGeometricEdge_length, regularTetrahedronEdgeLength_eq_sqrt8]
+  · intro e _
+    show angleClassQ tetraGeometricEdge.dihedral
+        = angleClassQ (regularTetrahedronEdgeDihedralAngle e)
+    rw [tetraGeometricEdge_dihedral, regularTetrahedronEdgeDihedralAngle_eq_arccos_one_third]
+
 end ProofsInTheBook.Chapter09

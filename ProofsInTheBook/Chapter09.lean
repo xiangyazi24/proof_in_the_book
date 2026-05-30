@@ -1669,4 +1669,30 @@ theorem geometricDehnInvariant_congruent_reassemblies {Piece ι V P : Type*}
   rw [geometricDehnInvariant_reassembly pieces edges edge place₁,
     geometricDehnInvariant_reassembly pieces edges edge place₂]
 
+/-- **Interior-edge cancellation, general integer-multiple case.** Around an
+interior edge of a dissection the dihedral angles of the incident pieces sum to an
+integer multiple of `π` (`n·π`: `2π` for an edge interior to the body, `π` for one
+on a flat boundary face).  Whenever the equal-length contributions at one edge
+have dihedral angles summing to `n·π`, the total Dehn contribution there vanishes,
+since that angle sum is `0` in `ℝ/πℚ`.
+
+This generalizes `geometricEdgeDehn_flatCut_sum_eq_zero` (the `n = 1` / `π` case)
+to the genuine interior `n = 2` / `2π` case, deriving the cancellation from a
+geometric angle-sum hypothesis via `angleClassQ_int_mul_pi`.  Stated honestly: the
+`n·π` angle sum is supplied as a hypothesis; obtaining it from a literal
+polyhedral configuration — especially the `2π` interior case, which the unoriented
+`∠ ∈ [0,π]` cannot express as a single angle — remains the frontier. -/
+theorem geometricEdgeDehn_intAngleSum_eq_zero {Incident : Type*}
+    (incident : Finset Incident) (len : ℝ) (angle : Incident → ℝ) (n : ℤ)
+    (hsum : (∑ i ∈ incident, angle i) = (n : ℝ) * Real.pi) :
+    (∑ i ∈ incident, dehnEdgeQ len (angleClassQ (angle i))) = 0 := by
+  have hclass : (∑ i ∈ incident, angleClassQ (angle i)) = 0 := by
+    rw [← angleClassQ_sum, hsum, angleClassQ_int_mul_pi]
+  calc
+    (∑ i ∈ incident, dehnEdgeQ len (angleClassQ (angle i)))
+        = dehnEdgeQ len (∑ i ∈ incident, angleClassQ (angle i)) :=
+          (dehnEdgeQ_angle_sum incident len (fun i => angleClassQ (angle i))).symm
+    _ = dehnEdgeQ len 0 := by rw [hclass]
+    _ = 0 := by simp [dehnEdgeQ]
+
 end ProofsInTheBook.Chapter09

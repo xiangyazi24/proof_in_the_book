@@ -2079,4 +2079,31 @@ theorem dehn_eq_of_geometricAdditivity_pieceSum_eq {ιS ιT VS PS VT PT : Type*}
     S.dehn = T.dehn :=
   (GeometricDissectionEquiv.ofAdditivity AS AT h).dehn_eq
 
+/-- The trivial geometric additivity: a polytope `S` "dissected" into a single
+piece (itself), with no interior edges.  Witnesses `GeometricAdditivity S` is
+inhabited, so the interface is not vacuous. -/
+noncomputable def GeometricAdditivity.trivial {ιS VS PS : Type*}
+    [NormedAddCommGroup VS] [InnerProductSpace ℝ VS] [MetricSpace PS] [NormedAddTorsor VS PS]
+    (S : GeometricPolytope ιS PS) : GeometricAdditivity S where
+  Piece := Unit
+  pieces := {()}
+  pieceDehn := fun _ => S.dehn
+  Interior := Empty
+  Incident := Empty
+  interiorEdges := ∅
+  incident := fun _ => ∅
+  interiorLength := fun _ => 0
+  interiorAngle := fun _ _ => 0
+  interiorMultiple := fun _ => 0
+  decomposition := by simp
+  interior_angle_sum := by simp
+
+/-- Every geometric polytope is dissection-equivalent to itself (via the trivial
+additivity). -/
+noncomputable def GeometricDissectionEquiv.refl {ιS VS PS : Type*}
+    [NormedAddCommGroup VS] [InnerProductSpace ℝ VS] [MetricSpace PS] [NormedAddTorsor VS PS]
+    (S : GeometricPolytope ιS PS) : GeometricDissectionEquiv S S :=
+  GeometricDissectionEquiv.ofAdditivity
+    (GeometricAdditivity.trivial S) (GeometricAdditivity.trivial S) rfl
+
 end ProofsInTheBook.Chapter09

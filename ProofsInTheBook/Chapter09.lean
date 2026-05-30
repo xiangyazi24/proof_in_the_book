@@ -2118,4 +2118,23 @@ def GeometricDissectionEquiv.symm {ιS ιT VS PS VT PT : Type*}
   assembleLeft := D.assembleRight
   assembleRight := D.assembleLeft
 
+/-- **Additivity-level Hilbert's third problem.** No two geometric additivities —
+one of the unit cube, one of the regular tetrahedron — can have equal
+piece-Dehn-sums.  Equivalently: no genuine dissection of the cube and dissection
+of the tetrahedron use the "same pieces" (in the Dehn-sum sense), since that would
+force their Dehn invariants equal, contradicting `arccos(1/3)` being irrational
+over `π`.
+
+This is the deepest geometric form proved here: it rules out scissors congruence
+between cube and tetrahedron at the level of actual additive dissections, with the
+only remaining geometric input being the piece-sum equality a literal cut would
+produce. -/
+theorem no_geometricAdditivity_pieceSum_eq_unitCube_regularTetrahedron
+    (AC : GeometricAdditivity unitCubeGeometricPolytope)
+    (AT : GeometricAdditivity regularTetrahedronGeometricPolytope) :
+    (∑ p ∈ AC.pieces, AC.pieceDehn p) ≠ ∑ p ∈ AT.pieces, AT.pieceDehn p := by
+  intro h
+  exact unitCube_ne_regularTetrahedron_geometricDehn
+    (dehn_eq_of_geometricAdditivity_pieceSum_eq AC AT h)
+
 end ProofsInTheBook.Chapter09

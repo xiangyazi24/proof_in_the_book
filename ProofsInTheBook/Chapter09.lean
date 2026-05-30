@@ -1999,4 +1999,55 @@ theorem no_geometricDissectionEquiv_unitCube_regularTetrahedron :
       unitCubeGeometricPolytope regularTetrahedronGeometricPolytope) :=
   no_geometricDissectionEquiv_of_dehn_ne unitCube_ne_regularTetrahedron_geometricDehn
 
+/-! ### Geometric additivity: piece-sum equals the polytope's Dehn invariant
+
+`GeometricAdditivity S` records a dissection of one geometric polytope `S` into
+pieces, together with the *geometric* decomposition of the total piece-Dehn-sum
+into `S.dehn` plus interior-edge contributions, and the geometric fact that the
+dihedral angles incident to each interior edge sum to an integer multiple of `π`
+(`2π` for an edge interior to the body, `π` for one on a flat face).  From this
+the interior contributions are **derived** to cancel (via
+`geometricEdgeDehn_intAngleSum_eq_zero`), so the piece-sum equals `S.dehn` —
+the additivity half of Dehn's argument.
+
+Honest scope: the decomposition equation and the interior angle-sum equations are
+geometric givens (what a real polyhedral cut supplies); the cancellation is *not*
+assumed — it is proved.  Producing the decomposition/angle-sums from a literal
+cut (face incidences, edge bookkeeping) remains the geometric frontier. -/
+structure GeometricAdditivity {ιS VS PS : Type*}
+    [NormedAddCommGroup VS] [InnerProductSpace ℝ VS] [MetricSpace PS] [NormedAddTorsor VS PS]
+    (S : GeometricPolytope ιS PS) where
+  Piece : Type
+  pieces : Finset Piece
+  pieceDehn : Piece → DehnPiQTarget
+  Interior : Type
+  Incident : Type
+  interiorEdges : Finset Interior
+  incident : Interior → Finset Incident
+  interiorLength : Interior → ℝ
+  interiorAngle : Interior → Incident → ℝ
+  interiorMultiple : Interior → ℤ
+  decomposition :
+    (∑ p ∈ pieces, pieceDehn p) =
+      S.dehn + ∑ e ∈ interiorEdges, ∑ i ∈ incident e,
+        dehnEdgeQ (interiorLength e) (angleClassQ (interiorAngle e i))
+  interior_angle_sum : ∀ e ∈ interiorEdges,
+    (∑ i ∈ incident e, interiorAngle e i) = (interiorMultiple e : ℝ) * Real.pi
+
+/-- The piece-Dehn-sum of a geometric additivity equals the polytope's Dehn
+invariant: the interior-edge contributions cancel because each interior edge's
+incident dihedral angles sum to an integer multiple of `π`. -/
+theorem GeometricAdditivity.piece_sum_eq_dehn {ιS VS PS : Type*}
+    [NormedAddCommGroup VS] [InnerProductSpace ℝ VS] [MetricSpace PS] [NormedAddTorsor VS PS]
+    {S : GeometricPolytope ιS PS} (A : GeometricAdditivity S) :
+    (∑ p ∈ A.pieces, A.pieceDehn p) = S.dehn := by
+  have hzero :
+      (∑ e ∈ A.interiorEdges, ∑ i ∈ A.incident e,
+        dehnEdgeQ (A.interiorLength e) (angleClassQ (A.interiorAngle e i))) = 0 := by
+    apply Finset.sum_eq_zero
+    intro e he
+    exact geometricEdgeDehn_intAngleSum_eq_zero (A.incident e) (A.interiorLength e)
+      (A.interiorAngle e) (A.interiorMultiple e) (A.interior_angle_sum e he)
+  rw [A.decomposition, hzero, add_zero]
+
 end ProofsInTheBook.Chapter09

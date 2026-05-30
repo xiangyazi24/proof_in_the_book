@@ -2050,4 +2050,33 @@ theorem GeometricAdditivity.piece_sum_eq_dehn {ιS VS PS : Type*}
       (A.interiorAngle e) (A.interiorMultiple e) (A.interior_angle_sum e he)
   rw [A.decomposition, hzero, add_zero]
 
+/-- Build a `GeometricDissectionEquiv` from two geometric additivities whose
+piece-Dehn-sums agree.  This is the bridge from additivity (each polytope's Dehn
+invariant equals its piece-sum) to dissection equivalence: if the two dissections
+have equal total piece-sums — the "same pieces, rearranged" fact — the two
+polytopes are dissection-equivalent and hence share a Dehn invariant. -/
+def GeometricDissectionEquiv.ofAdditivity {ιS ιT VS PS VT PT : Type*}
+    [NormedAddCommGroup VS] [InnerProductSpace ℝ VS] [MetricSpace PS] [NormedAddTorsor VS PS]
+    [NormedAddCommGroup VT] [InnerProductSpace ℝ VT] [MetricSpace PT] [NormedAddTorsor VT PT]
+    {S : GeometricPolytope ιS PS} {T : GeometricPolytope ιT PT}
+    (AS : GeometricAdditivity S) (AT : GeometricAdditivity T)
+    (h : (∑ p ∈ AS.pieces, AS.pieceDehn p) = (∑ p ∈ AT.pieces, AT.pieceDehn p)) :
+    GeometricDissectionEquiv S T where
+  Piece := AS.Piece
+  pieces := AS.pieces
+  pieceDehn := AS.pieceDehn
+  assembleLeft := AS.piece_sum_eq_dehn.symm
+  assembleRight := (AT.piece_sum_eq_dehn.symm).trans h.symm
+
+/-- Two polytopes that admit geometric additivities with equal piece-Dehn-sums
+have equal Dehn invariants. -/
+theorem dehn_eq_of_geometricAdditivity_pieceSum_eq {ιS ιT VS PS VT PT : Type*}
+    [NormedAddCommGroup VS] [InnerProductSpace ℝ VS] [MetricSpace PS] [NormedAddTorsor VS PS]
+    [NormedAddCommGroup VT] [InnerProductSpace ℝ VT] [MetricSpace PT] [NormedAddTorsor VT PT]
+    {S : GeometricPolytope ιS PS} {T : GeometricPolytope ιT PT}
+    (AS : GeometricAdditivity S) (AT : GeometricAdditivity T)
+    (h : (∑ p ∈ AS.pieces, AS.pieceDehn p) = (∑ p ∈ AT.pieces, AT.pieceDehn p)) :
+    S.dehn = T.dehn :=
+  (GeometricDissectionEquiv.ofAdditivity AS AT h).dehn_eq
+
 end ProofsInTheBook.Chapter09

@@ -1473,4 +1473,200 @@ It has no `cube = 0` or `tetra ≠ 0` hypotheses.
 theorem chapter09 : unitCubeDehnInvariantQ ≠ regularTetrahedronDehnInvariantQ :=
   hilbert_third_problem
 
+/-! ### Geometric rigid-motion (isometry) invariance of the Dehn invariant
+
+`dehnInvariantQ_univ_eq_of_edge_equiv` above shows that a bijection of edge sets
+preserving lengths and angle classes preserves the rational Dehn invariant.
+What it does not supply is the geometric fact that an actual Euclidean rigid
+motion *induces* such a length- and angle-preserving correspondence.  This
+section closes that gap for genuine geometric edge data: edge length is `dist`,
+the dihedral angle is `EuclideanGeometry.angle` (`∠`), and invariance holds under
+any affine isometry (`→ᵃⁱ[ℝ]`) — in particular every rigid motion (`≃ᵃⁱ[ℝ]`) of
+`EuclideanSpace ℝ (Fin 3)`.
+
+This is one of the two pillars of "the Dehn invariant is a scissors-congruence
+invariant".  The other (additivity under dissection) is handled abstractly by
+`DehnGeometricAdditivitySkeletonQ`; turning a literal polyhedral dissection into
+such a skeleton remains the geometric frontier. -/
+
+/-- Geometric data attached to one edge of a polytope sitting in a real
+inner-product torsor `P`: endpoints `tail`, `head` whose `dist` is the edge
+length, and three points `armA`, `apex`, `armB` whose `EuclideanGeometry.angle`
+is the dihedral angle. -/
+structure GeometricEdge (P : Type*) where
+  tail : P
+  head : P
+  armA : P
+  apex : P
+  armB : P
+
+namespace GeometricEdge
+
+variable {V P V₂ P₂ : Type*}
+  [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+  [NormedAddCommGroup V₂] [InnerProductSpace ℝ V₂] [MetricSpace P₂] [NormedAddTorsor V₂ P₂]
+
+/-- The Euclidean length of the edge. -/
+noncomputable def length (e : GeometricEdge P) : ℝ := dist e.tail e.head
+
+/-- The dihedral angle at the edge, measured by `∠`. -/
+noncomputable def dihedral (e : GeometricEdge P) : ℝ :=
+  EuclideanGeometry.angle e.armA e.apex e.armB
+
+/-- Push a geometric edge forward through an affine map, applied to every point. -/
+noncomputable def map (φ : P →ᵃⁱ[ℝ] P₂) (e : GeometricEdge P) : GeometricEdge P₂ :=
+  ⟨φ e.tail, φ e.head, φ e.armA, φ e.apex, φ e.armB⟩
+
+@[simp] theorem length_map (φ : P →ᵃⁱ[ℝ] P₂) (e : GeometricEdge P) :
+    (e.map φ).length = e.length := by
+  simp [length, map, AffineIsometry.dist_map]
+
+@[simp] theorem dihedral_map (φ : P →ᵃⁱ[ℝ] P₂) (e : GeometricEdge P) :
+    (e.map φ).dihedral = e.dihedral := by
+  simp [dihedral, map, AffineIsometry.angle_map]
+
+end GeometricEdge
+
+/-- Rational Dehn contribution of a single geometric edge. -/
+noncomputable def geometricEdgeDehn {V P : Type*}
+    [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    (e : GeometricEdge P) : DehnPiQTarget :=
+  dehnEdgeQ e.length (angleClassQ e.dihedral)
+
+/-- Rational Dehn invariant of a polytope presented as a finite family of
+geometric edges. -/
+noncomputable def geometricDehnInvariant {ι V P : Type*}
+    [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    (edges : Finset ι) (edge : ι → GeometricEdge P) : DehnPiQTarget :=
+  ∑ i ∈ edges, geometricEdgeDehn (edge i)
+
+/-- The geometric Dehn invariant is exactly the abstract `dehnInvariantQ`
+evaluated on the geometric length and dihedral-angle class of each edge. -/
+theorem geometricDehnInvariant_eq_dehnInvariantQ {ι V P : Type*}
+    [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    (edges : Finset ι) (edge : ι → GeometricEdge P) :
+    geometricDehnInvariant edges edge =
+      dehnInvariantQ edges (fun i => (edge i).length)
+        (fun i => angleClassQ (edge i).dihedral) := by
+  unfold geometricDehnInvariant dehnInvariantQ
+  exact Finset.sum_congr rfl (fun i _ => rfl)
+
+theorem geometricEdgeDehn_map {V P V₂ P₂ : Type*}
+    [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    [NormedAddCommGroup V₂] [InnerProductSpace ℝ V₂] [MetricSpace P₂] [NormedAddTorsor V₂ P₂]
+    (φ : P →ᵃⁱ[ℝ] P₂) (e : GeometricEdge P) :
+    geometricEdgeDehn (e.map φ) = geometricEdgeDehn e := by
+  simp [geometricEdgeDehn]
+
+/-- **Rigid-motion invariance of the geometric Dehn formula.** Pushing every edge
+of an edge-data family through an affine isometry — in particular any rigid motion
+of Euclidean space — leaves the rational Dehn sum unchanged.
+
+This is the rigid-motion half of "the Dehn invariant is a scissors-congruence
+invariant", at the level of geometric edge data (`dist` lengths, `∠` dihedrals).
+It is NOT yet phrased over a bundled polyhedron type — `GeometricEdge` carries no
+polytope-validity constraints — and it is not wired into `chapter09`; supplying a
+real polyhedron type and connecting it remains the geometric frontier. -/
+theorem geometricDehnInvariant_map {ι V P V₂ P₂ : Type*}
+    [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    [NormedAddCommGroup V₂] [InnerProductSpace ℝ V₂] [MetricSpace P₂] [NormedAddTorsor V₂ P₂]
+    (φ : P →ᵃⁱ[ℝ] P₂) (edges : Finset ι) (edge : ι → GeometricEdge P) :
+    geometricDehnInvariant edges (fun i => (edge i).map φ) =
+      geometricDehnInvariant edges edge := by
+  unfold geometricDehnInvariant
+  exact Finset.sum_congr rfl (fun i _ => geometricEdgeDehn_map φ (edge i))
+
+/-- The same invariance for a rigid motion packaged as an affine isometry
+*equivalence* (`≃ᵃⁱ[ℝ]`), i.e. a Euclidean congruence. -/
+theorem geometricDehnInvariant_congr {ι V P V₂ P₂ : Type*}
+    [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    [NormedAddCommGroup V₂] [InnerProductSpace ℝ V₂] [MetricSpace P₂] [NormedAddTorsor V₂ P₂]
+    (φ : P ≃ᵃⁱ[ℝ] P₂) (edges : Finset ι) (edge : ι → GeometricEdge P) :
+    geometricDehnInvariant edges (fun i => (edge i).map φ.toAffineIsometry) =
+      geometricDehnInvariant edges edge :=
+  geometricDehnInvariant_map φ.toAffineIsometry edges edge
+
+/-- **Geometric face-interior cancellation (the flat / straight-angle case).**
+A cut introducing a new edge through the interior of a flat dihedral region
+(ambient angle `∠ a p b = π`) splits it into two complementary dihedral angles
+`∠ a p c`, `∠ c p b` that sum to `π`; the two new geometric Dehn contributions of
+equal length therefore cancel.  This *derives*, from Mathlib's
+`angle_add_angle_eq_pi_of_angle_eq_pi`, the angle-sum equation that
+`internalDehnContributionQ_eq_zero` / the `internal_angle_sum` field of
+`DehnGeometricAdditivitySkeletonQ` otherwise take as a hypothesis.
+
+Scope, stated honestly: this covers ONLY the boundary/straight-angle case (sum
+`= π`, i.e. an integer multiple with multiplier 1).  The genuinely
+three-dimensional interior case — several pieces meeting around an interior edge
+with dihedral angles summing to `2π` — is NOT handled here and needs the
+oriented/`2π`-periodic angle that `∠ ∈ [0,π]` cannot express.  So this is one
+sub-case of the dissection pillar, not the pillar. -/
+theorem geometricEdgeDehn_flatCut_sum_eq_zero {V P : Type*}
+    [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    (len : ℝ) (a p b c : P)
+    (h : EuclideanGeometry.angle a p b = Real.pi) :
+    dehnEdgeQ len (angleClassQ (EuclideanGeometry.angle a p c)) +
+      dehnEdgeQ len (angleClassQ (EuclideanGeometry.angle c p b)) = 0 := by
+  have hsum : EuclideanGeometry.angle a p c + EuclideanGeometry.angle c p b = Real.pi := by
+    have hcpa := EuclideanGeometry.angle_add_angle_eq_pi_of_angle_eq_pi (p₁ := c) h
+    rwa [EuclideanGeometry.angle_comm c p a] at hcpa
+  simp only [dehnEdgeQ]
+  rw [← TensorProduct.tmul_add, ← angleClassQ_add, hsum, angleClassQ_pi,
+    TensorProduct.tmul_zero]
+
+/-- Geometric internal cancellation over a whole family of boundary-cut edges:
+if every internal edge `i` lies in a flat region (`∠ (a i) (p i) (b i) = π`) cut
+by `c i`, the total internal geometric Dehn contribution vanishes. -/
+theorem geometricInternalDehn_flatCuts_eq_zero {ι V P : Type*}
+    [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    (edges : Finset ι) (len : ι → ℝ) (a p b c : ι → P)
+    (h : ∀ i ∈ edges, EuclideanGeometry.angle (a i) (p i) (b i) = Real.pi) :
+    (∑ i ∈ edges,
+        (dehnEdgeQ (len i) (angleClassQ (EuclideanGeometry.angle (a i) (p i) (c i))) +
+          dehnEdgeQ (len i) (angleClassQ (EuclideanGeometry.angle (c i) (p i) (b i))))) = 0 := by
+  apply Finset.sum_eq_zero
+  intro i hi
+  exact geometricEdgeDehn_flatCut_sum_eq_zero (len i) (a i) (p i) (b i) (c i) (h i hi)
+
+/-- **Reassembly invariance (the rigid-reassembly half of scissors-congruence).**
+A dissection is reassembled by moving each piece `p` by its own rigid motion
+`φ p`.  Summing the per-piece geometric Dehn invariants, the total over all pieces
+after reassembly equals the total before: the loose collection of pieces has a
+well-defined total geometric Dehn invariant, unaffected by how the pieces are
+rigidly placed.
+
+This is the piece-level reassembly statement of "the Dehn invariant is a
+scissors-congruence invariant".  Stated honestly, it is exactly that and no more:
+it does NOT assert that this piece-sum equals a whole-body Dehn invariant — that
+is the separate additivity/internal-cancellation step
+(`DehnGeometricAdditivitySkeletonQ`, partially supplied geometrically by
+`geometricInternalDehn_flatCuts_eq_zero` above) — and it is not yet over a bundled
+polyhedron type. -/
+theorem geometricDehnInvariant_reassembly {Piece ι V P : Type*}
+    [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    (pieces : Finset Piece) (edges : Piece → Finset ι)
+    (edge : Piece → ι → GeometricEdge P) (φ : Piece → (P ≃ᵃⁱ[ℝ] P)) :
+    (∑ p ∈ pieces,
+        geometricDehnInvariant (edges p) (fun i => (edge p i).map (φ p).toAffineIsometry)) =
+      ∑ p ∈ pieces, geometricDehnInvariant (edges p) (edge p) :=
+  Finset.sum_congr rfl
+    (fun p _ => geometricDehnInvariant_congr (φ p) (edges p) (edge p))
+
+/-- **Equal total geometric Dehn invariant for two reassemblies of one
+dissection.** If a left assembly and a right assembly use the *same* finite set of
+pieces, the same per-piece edge data, and place each piece by a (possibly
+different) rigid motion on each side, the two assemblies have equal total
+geometric Dehn invariant.  This is the symmetric "scissors-congruent ⟹ equal Dehn
+sum" statement at the piece level (still piece-sum, not whole-body). -/
+theorem geometricDehnInvariant_congruent_reassemblies {Piece ι V P : Type*}
+    [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    (pieces : Finset Piece) (edges : Piece → Finset ι)
+    (edge : Piece → ι → GeometricEdge P) (place₁ place₂ : Piece → (P ≃ᵃⁱ[ℝ] P)) :
+    (∑ p ∈ pieces,
+        geometricDehnInvariant (edges p) (fun i => (edge p i).map (place₁ p).toAffineIsometry)) =
+      ∑ p ∈ pieces,
+        geometricDehnInvariant (edges p) (fun i => (edge p i).map (place₂ p).toAffineIsometry) := by
+  rw [geometricDehnInvariant_reassembly pieces edges edge place₁,
+    geometricDehnInvariant_reassembly pieces edges edge place₂]
+
 end ProofsInTheBook.Chapter09

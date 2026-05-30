@@ -2106,4 +2106,16 @@ noncomputable def GeometricDissectionEquiv.refl {ιS VS PS : Type*}
   GeometricDissectionEquiv.ofAdditivity
     (GeometricAdditivity.trivial S) (GeometricAdditivity.trivial S) rfl
 
+/-- A geometric dissection equivalence is symmetric: swap the two assemblies. -/
+def GeometricDissectionEquiv.symm {ιS ιT VS PS VT PT : Type*}
+    [NormedAddCommGroup VS] [InnerProductSpace ℝ VS] [MetricSpace PS] [NormedAddTorsor VS PS]
+    [NormedAddCommGroup VT] [InnerProductSpace ℝ VT] [MetricSpace PT] [NormedAddTorsor VT PT]
+    {S : GeometricPolytope ιS PS} {T : GeometricPolytope ιT PT}
+    (D : GeometricDissectionEquiv S T) : GeometricDissectionEquiv T S where
+  Piece := D.Piece
+  pieces := D.pieces
+  pieceDehn := D.pieceDehn
+  assembleLeft := D.assembleRight
+  assembleRight := D.assembleLeft
+
 end ProofsInTheBook.Chapter09

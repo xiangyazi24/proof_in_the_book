@@ -1872,4 +1872,23 @@ theorem angle_regularTetrahedronVertex_eq_arccos_one_third {i j : Fin 4} (hij : 
     Real.mul_self_sqrt (by norm_num : (0 : ℝ) ≤ 3)]
   norm_num
 
+/-- One regular-tetrahedron edge realized geometrically: length `√8` and dihedral
+`arccos (1/3)` (the angle at the origin between `v 0` and `-(v 1)`). -/
+noncomputable def tetraGeometricEdge : GeometricEdge (EuclideanSpace ℝ (Fin 3)) where
+  tail := regularTetrahedronVertex 0
+  head := regularTetrahedronVertex 1
+  armA := regularTetrahedronVertex 0
+  apex := 0
+  armB := -(regularTetrahedronVertex 1)
+
+theorem tetraGeometricEdge_dihedral : tetraGeometricEdge.dihedral = Real.arccos (1 / 3) := by
+  rw [GeometricEdge.dihedral, tetraGeometricEdge]
+  exact angle_regularTetrahedronVertex_eq_arccos_one_third (by decide : (0 : Fin 4) ≠ 1)
+
+theorem tetraGeometricEdge_length : tetraGeometricEdge.length = Real.sqrt 8 := by
+  show dist (regularTetrahedronVertex 0) (regularTetrahedronVertex 1) = Real.sqrt 8
+  rw [← sq_eq_sq₀ dist_nonneg (Real.sqrt_nonneg 8),
+    Real.sq_sqrt (by norm_num : (0 : ℝ) ≤ 8),
+    regularTetrahedronVertex_dist_sq_of_ne (by decide)]
+
 end ProofsInTheBook.Chapter09

@@ -256,6 +256,73 @@ lemma deleteVertexEdge_proof_irrel {n : ℕ} (v : Fin (n + 1))
     deleteVertexEdge v e he = deleteVertexEdge v e he' := by
   rw [show he = he' from Subsingleton.elim _ _]
 
+/-- Insert a deleted vertex back into a triangle by reindexing all vertices
+with `v.succAbove`. -/
+def insertVertex {n : ℕ} (v : Fin (n + 1)) (T : AbsTriangle n) :
+    AbsTriangle (n + 1) where
+  a := v.succAbove T.a
+  b := v.succAbove T.b
+  c := v.succAbove T.c
+  hab := by
+    intro h
+    exact T.hab (Fin.succAbove_right_injective h)
+  hbc := by
+    intro h
+    exact T.hbc (Fin.succAbove_right_injective h)
+  hac := by
+    intro h
+    exact T.hac (Fin.succAbove_right_injective h)
+
+@[simp]
+lemma insertVertex_a {n : ℕ} (v : Fin (n + 1)) (T : AbsTriangle n) :
+    (T.insertVertex v).a = v.succAbove T.a := rfl
+
+@[simp]
+lemma insertVertex_b {n : ℕ} (v : Fin (n + 1)) (T : AbsTriangle n) :
+    (T.insertVertex v).b = v.succAbove T.b := rfl
+
+@[simp]
+lemma insertVertex_c {n : ℕ} (v : Fin (n + 1)) (T : AbsTriangle n) :
+    (T.insertVertex v).c = v.succAbove T.c := rfl
+
+lemma insertVertex_deleteVertex {n : ℕ} {v : Fin (n + 1)}
+    (T : AbsTriangle (n + 1)) (hT : v ∉ T.vertices) :
+    (T.deleteVertex v hT).insertVertex v = T := by
+  cases T
+  simp [AbsTriangle.insertVertex]
+
+lemma succAbove_mem_insertVertex_vertices_iff {n : ℕ} {v : Fin (n + 1)}
+    {T : AbsTriangle n} {x : Fin n} :
+    v.succAbove x ∈ (T.insertVertex v).vertices ↔ x ∈ T.vertices := by
+  simp [AbsTriangle.vertices, AbsTriangle.insertVertex]
+
+lemma vertex_not_mem_insertVertex_vertices {n : ℕ} (v : Fin (n + 1))
+    (T : AbsTriangle n) :
+    v ∉ (T.insertVertex v).vertices := by
+  simp [AbsTriangle.vertices, AbsTriangle.insertVertex]
+
+/-- Insert a deleted vertex back into an edge by reindexing both endpoints
+with `v.succAbove`. -/
+def insertVertexEdge {n : ℕ} (v : Fin (n + 1))
+    (e : Sym2 (Fin n)) : Sym2 (Fin (n + 1)) :=
+  Sym2.map v.succAbove e
+
+lemma insertVertexEdge_mem_of_mem {n : ℕ} {v : Fin (n + 1)}
+    {T : AbsTriangle n} {e : Sym2 (Fin n)}
+    (he : e ∈ T.edges) :
+    insertVertexEdge v e ∈ (T.insertVertex v).edges := by
+  simp only [AbsTriangle.edges, Finset.mem_insert, Finset.mem_singleton] at he ⊢
+  rcases he with rfl | rfl | rfl <;>
+    simp [insertVertexEdge, AbsTriangle.insertVertex, Sym2.map_mk]
+
+lemma insertVertexEdge_not_mem {n : ℕ} {v : Fin (n + 1)}
+    {x : Fin n} {e : Sym2 (Fin n)} (hxnot : x ∉ e) :
+    v.succAbove x ∉ insertVertexEdge v e := by
+  induction e using Sym2.inductionOn with
+  | hf a b =>
+      simpa [insertVertexEdge, Sym2.map_mk, Sym2.mem_iff,
+        Fin.succAbove_right_inj] using hxnot
+
 end AbsTriangle
 
 lemma valid_coloring_edge {n : ℕ} {T : AbsTriangle n} {c : Fin n → GuardColor}
@@ -400,6 +467,36 @@ lemma deleteVertexTriangles_card {n : ℕ} (v : Fin (n + 1))
       (f := fun T : {T : AbsTriangle (n + 1) // T ∈ S} =>
         T.1.deleteVertex v (hS T.1 T.2)) hinj)
 
+/-- Reindex a finset of triangles into the larger vertex type after inserting
+one vertex. -/
+def insertVertexTriangles {n : ℕ} (v : Fin (n + 1))
+    (S : Finset (AbsTriangle n)) : Finset (AbsTriangle (n + 1)) :=
+  S.image fun T => T.insertVertex v
+
+lemma insertVertexTriangles_deleteVertexTriangles {n : ℕ} (v : Fin (n + 1))
+    (S : Finset (AbsTriangle (n + 1))) (hS : ∀ T ∈ S, v ∉ T.vertices) :
+    insertVertexTriangles v (deleteVertexTriangles v S hS) = S := by
+  classical
+  ext T
+  constructor
+  · intro hT
+    rw [insertVertexTriangles] at hT
+    rcases Finset.mem_image.mp hT with ⟨U, hU, hUT⟩
+    rw [deleteVertexTriangles] at hU
+    rcases Finset.mem_image.mp hU with ⟨W, _hWatt, hWU⟩
+    have hT_eq : T = W.1 := by
+      rw [← hUT, ← hWU]
+      exact AbsTriangle.insertVertex_deleteVertex W.1 (hS W.1 W.2)
+    rw [hT_eq]
+    exact W.2
+  · intro hT
+    rw [insertVertexTriangles]
+    refine Finset.mem_image.mpr
+      ⟨T.deleteVertex v (hS T hT), ?_, ?_⟩
+    · rw [deleteVertexTriangles]
+      exact Finset.mem_image.mpr ⟨⟨T, hT⟩, by simp, rfl⟩
+    · exact AbsTriangle.insertVertex_deleteVertex T (hS T hT)
+
 noncomputable def TriangulatedPolygon.deleteVertex {n : ℕ}
     {S : Finset (AbsTriangle (n + 1))} (h : TriangulatedPolygon (n + 1) S)
     (v : Fin (n + 1)) (hS : ∀ T ∈ S, v ∉ T.vertices) :
@@ -453,6 +550,47 @@ noncomputable def TriangulatedPolygon.deleteVertex {n : ℕ}
         TriangulatedPolygon.glue (ih v hS0) T' newV' hT_new' hShared' hFresh'
       rw [deleteVertexTriangles_insert]
       exact hglue
+
+/-- Reindex a triangulation into the larger vertex type after inserting one
+vertex. -/
+noncomputable def TriangulatedPolygon.insertVertex {n : ℕ} {S : Finset (AbsTriangle n)}
+    (h : TriangulatedPolygon n S) (v : Fin (n + 1)) :
+    TriangulatedPolygon (n + 1) (insertVertexTriangles v S) := by
+  induction h with
+  | single T =>
+      simpa [insertVertexTriangles] using
+        (TriangulatedPolygon.single (T.insertVertex v))
+  | glue h_ind T newV hT_new hShared hFresh ih =>
+      rename_i S0
+      have hT_new' : v.succAbove newV ∈ (T.insertVertex v).vertices := by
+        simpa [AbsTriangle.vertices, AbsTriangle.insertVertex] using hT_new
+      have hShared' :
+          ∃ T_s ∈ insertVertexTriangles v S0,
+            ∃ e ∈ (T.insertVertex v).edges,
+              e ∈ T_s.edges ∧ v.succAbove newV ∉ e := by
+        rcases hShared with ⟨T_s, hT_s, e, heT, heTs, hnew_not_e⟩
+        refine ⟨T_s.insertVertex v, ?_, AbsTriangle.insertVertexEdge v e, ?_, ?_, ?_⟩
+        · rw [insertVertexTriangles]
+          exact Finset.mem_image.mpr ⟨T_s, hT_s, rfl⟩
+        · exact AbsTriangle.insertVertexEdge_mem_of_mem heT
+        · exact AbsTriangle.insertVertexEdge_mem_of_mem heTs
+        · exact AbsTriangle.insertVertexEdge_not_mem hnew_not_e
+      have hFresh' :
+          ∀ T_s ∈ insertVertexTriangles v S0,
+            v.succAbove newV ∉ T_s.vertices := by
+        intro T_s hT_s hmem
+        rw [insertVertexTriangles] at hT_s
+        rcases Finset.mem_image.mp hT_s with ⟨U, hU, hUeq⟩
+        subst hUeq
+        have hmem_old : newV ∈ U.vertices :=
+          AbsTriangle.succAbove_mem_insertVertex_vertices_iff.mp hmem
+        exact hFresh U hU (by simpa [AbsTriangle.vertices] using hmem_old)
+      have hglue :
+          TriangulatedPolygon (n + 1)
+            (insert (T.insertVertex v) (insertVertexTriangles v S0)) :=
+        TriangulatedPolygon.glue ih (T.insertVertex v) (v.succAbove newV)
+          hT_new' hShared' hFresh'
+      simpa [insertVertexTriangles] using hglue
 
 theorem TriangulatedPolygon.exists_3coloring {n : ℕ} {S : Finset (AbsTriangle n)}
     (h : TriangulatedPolygon n S) :
@@ -576,8 +714,19 @@ structure TriangulatedPolygon.EarRemoval {n : ℕ} {S : Finset (AbsTriangle n)}
   remainder_triangulated : TriangulatedPolygon n remainder
   erase_eq : S.erase ear = remainder
   remainder_card_add_one : remainder.card + 1 = S.card
+  shared_edge :
+    ∃ T' ∈ remainder, ∃ e ∈ ear.edges, e ∈ T'.edges ∧ vertex ∉ e
   free_vertex :
     ∀ T' ∈ S, T' ≠ ear → vertex ∉ T'.vertices
+
+theorem TriangulatedPolygon.EarRemoval.vertex_not_mem_remainder {n : ℕ}
+    {S : Finset (AbsTriangle n)} {h : TriangulatedPolygon n S}
+    (R : h.EarRemoval) :
+    ∀ T ∈ R.remainder, R.vertex ∉ T.vertices := by
+  intro T hT
+  have hErase : T ∈ S.erase R.ear := by
+    rwa [R.erase_eq]
+  exact R.free_vertex T (Finset.mem_of_mem_erase hErase) (Finset.mem_erase.mp hErase).1
 
 def TriangulatedPolygon.exists_earRemoval {n : ℕ} {S : Finset (AbsTriangle n)}
     (h : TriangulatedPolygon n S) (hS : S.card ≥ 2) :
@@ -602,6 +751,7 @@ def TriangulatedPolygon.exists_earRemoval {n : ℕ} {S : Finset (AbsTriangle n)}
           erase_eq := by simp [hT_not_mem]
           remainder_card_add_one := by
             rw [Finset.card_insert_of_notMem hT_not_mem]
+          shared_edge := hShared
           free_vertex := ?_ }
       intro T' hT' hne
       have h_eq := Finset.mem_insert.mp hT'
@@ -837,17 +987,12 @@ certified simple polygon.  The vertex list is `P` with `R.vertex` deleted, and
 the remaining triangulation is reindexed along `R.vertex.succAbove`. -/
 noncomputable def clipEar {n : ℕ} (P : SimplePolygon (n + 1))
     (R : P.triangulated.EarRemoval) : SimplePolygon n :=
-  let hAvoid : ∀ T ∈ R.remainder, R.vertex ∉ T.vertices := by
-    intro T hT
-    have hErase : T ∈ P.triangles.erase R.ear := by
-      rwa [R.erase_eq]
-    exact R.free_vertex T (Finset.mem_of_mem_erase hErase) (Finset.mem_erase.mp hErase).1
   { toPolygon := P.removeVertexPolygon R.vertex
     vertices_injective := P.removeVertexPolygon_vertices_injective R.vertex
-    triangles := deleteVertexTriangles R.vertex R.remainder hAvoid
-    triangulated := R.remainder_triangulated.deleteVertex R.vertex hAvoid
+    triangles := deleteVertexTriangles R.vertex R.remainder R.vertex_not_mem_remainder
+    triangulated := R.remainder_triangulated.deleteVertex R.vertex R.vertex_not_mem_remainder
     triangle_count := by
-      have hcard := deleteVertexTriangles_card R.vertex R.remainder hAvoid
+      have hcard := deleteVertexTriangles_card R.vertex R.remainder R.vertex_not_mem_remainder
       have hrem := R.remainder_card_add_one
       have hcount := P.triangle_count
       rw [hcard]
@@ -857,17 +1002,6 @@ noncomputable def clipEar {n : ℕ} (P : SimplePolygon (n + 1))
 theorem clipEar_toPolygon {n : ℕ} (P : SimplePolygon (n + 1))
     (R : P.triangulated.EarRemoval) :
     (P.clipEar R).toPolygon = P.removeVertexPolygon R.vertex := rfl
-
-/-- Extract the certified triangulation of a simple polygon as data. -/
-def triangulatedPolygon {n : ℕ} (P : SimplePolygon n) :
-    Σ S : Finset (AbsTriangle n), TriangulatedPolygon n S :=
-  ⟨P.triangles, P.triangulated⟩
-
-/-- Extract the certified triangulation of a simple polygon as an existential
-proposition. -/
-theorem exists_triangulatedPolygon {n : ℕ} (P : SimplePolygon n) :
-    ∃ S : Finset (AbsTriangle n), Nonempty (TriangulatedPolygon n S) :=
-  ⟨P.triangles, ⟨P.triangulated⟩⟩
 
 /-- The certified ear-removal decomposition of a simple polygon with at least
 four vertices. -/
@@ -892,23 +1026,77 @@ theorem removeEar_triangle_count {n : ℕ} (P : SimplePolygon (n + 1)) (hn : 4 �
 
 The base case is `n = 3`; the step receives the polygon with one certified ear
 removed, whose vertex type is one smaller. -/
-theorem induction_on_vertices
-    {motive : (n : ℕ) → SimplePolygon n → Prop}
+noncomputable def induction_on_vertices
+    {motive : (n : ℕ) → SimplePolygon n → Sort u}
     (hbase : ∀ P : SimplePolygon 3, motive 3 P)
     (hstep : ∀ n (P : SimplePolygon (n + 1)) (hn : 4 ≤ n + 1),
       motive n (P.removeEar hn) → motive (n + 1) P)
     {n : ℕ} (P : SimplePolygon n) : motive n P := by
-  induction n using Nat.strong_induction_on with
-  | h n ih =>
-      have hn3 : 3 ≤ n := P.vertex_count_ge_three
-      rcases Nat.eq_or_lt_of_le hn3 with hn_eq | hn_gt
-      · subst n
-        exact hbase P
-      · cases n with
-        | zero => omega
-        | succ k =>
-            have hn : 4 ≤ k + 1 := by omega
-            exact hstep k P hn (ih k (by omega) (P.removeEar hn))
+  exact
+    Nat.strongRecOn (motive := fun n => (P : SimplePolygon n) → motive n P)
+      n
+      (fun n ih P => by
+        by_cases hn_eq : n = 3
+        · subst n
+          exact hbase P
+        · have hn3 : 3 ≤ n := P.vertex_count_ge_three
+          cases n with
+          | zero => exact False.elim (by omega)
+          | succ k =>
+              have hn : 4 ≤ k + 1 := by omega
+              exact hstep k P hn (ih k (by omega) (P.removeEar hn)))
+      P
+
+/-- Reconstruct the certified triangulation by ear clipping: the triangle case
+is the singleton triangulation, and the induction step removes one certified
+ear, recursively triangulates the smaller polygon, lifts that triangulation
+back along `succAbove`, and glues the ear triangle back. -/
+noncomputable def triangulatedByEarClipping {n : ℕ} (P : SimplePolygon n) :
+    TriangulatedPolygon n P.triangles :=
+  induction_on_vertices
+    (motive := fun n P => TriangulatedPolygon n P.triangles)
+    (fun P => by
+      let T := Classical.choose P.exists_single_triangle_of_three
+      have hT : P.triangles = {T} := Classical.choose_spec P.exists_single_triangle_of_three
+      change TriangulatedPolygon 3 P.triangles
+      rw [hT]
+      exact TriangulatedPolygon.single T)
+    (fun n P hn ih => by
+      let R := P.earRemoval hn
+      have hLift0 :
+          TriangulatedPolygon (n + 1)
+            (insertVertexTriangles R.vertex (P.removeEar hn).triangles) :=
+        ih.insertVertex R.vertex
+      have hLift : TriangulatedPolygon (n + 1) R.remainder := by
+        simpa [removeEar, clipEar, R, insertVertexTriangles_deleteVertexTriangles]
+          using hLift0
+      have hT_new :
+          R.vertex ∈ ({R.ear.a, R.ear.b, R.ear.c} : Finset (Fin (n + 1))) := by
+        simpa [AbsTriangle.vertices] using R.vertex_mem
+      have hFresh :
+          ∀ T' ∈ R.remainder,
+            R.vertex ∉ ({T'.a, T'.b, T'.c} : Finset (Fin (n + 1))) := by
+        intro T' hT'
+        simpa [AbsTriangle.vertices] using R.vertex_not_mem_remainder T' hT'
+      have hGlue :
+          TriangulatedPolygon (n + 1) (insert R.ear R.remainder) :=
+        TriangulatedPolygon.glue hLift R.ear R.vertex hT_new R.shared_edge hFresh
+      have hInsert : insert R.ear R.remainder = P.triangles := by
+        rw [← R.erase_eq]
+        exact Finset.insert_erase R.ear_mem
+      simpa [hInsert] using hGlue)
+    P
+
+/-- Extract the ear-clipping triangulation of a simple polygon as data. -/
+noncomputable def triangulatedPolygon {n : ℕ} (P : SimplePolygon n) :
+    Σ S : Finset (AbsTriangle n), TriangulatedPolygon n S :=
+  ⟨P.triangles, P.triangulatedByEarClipping⟩
+
+/-- Extract the ear-clipping triangulation of a simple polygon as an
+existential proposition. -/
+theorem exists_triangulatedPolygon {n : ℕ} (P : SimplePolygon n) :
+    ∃ S : Finset (AbsTriangle n), Nonempty (TriangulatedPolygon n S) :=
+  ⟨P.triangles, ⟨P.triangulatedByEarClipping⟩⟩
 
 theorem erase_ear_reduces_triangle_count {n : ℕ} (P : SimplePolygon n) (hn : 4 ≤ n) :
     ∃ T ∈ P.triangles, (P.triangles.erase T).card + 1 = P.triangles.card := by
@@ -1072,7 +1260,7 @@ theorem chapter36_simplePolygon {n : ℕ} (P : SimplePolygon n) :
     ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
       ∀ T ∈ P.triangles, ∃ v ∈ guards,
         v ∈ ({T.a, T.b, T.c} : Finset (Fin n)) :=
-  chapter36 P.triangulated
+  chapter36 P.triangulatedByEarClipping
 
 /-- Carrier-level art-gallery statement for a certified simple polygon: every
 point in the certified polygonal region is visible from one of the selected

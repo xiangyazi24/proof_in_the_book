@@ -441,6 +441,84 @@ theorem index_ne_of_positive_ne {len m : ℕ} (C : AlternatingWordContext len m)
   intro hindex
   exact hpositive (C.same_index_same_sign i j hij hindex)
 
+theorem punctured_strictMono_of_strictMono {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m}
+    (hstrict : StrictMono fun i : Fin (n + 1) => (C.word i).index)
+    (gap : Fin (n + 1)) :
+    StrictMono fun i : Fin n => (C.word (gap.succAbove i)).index := by
+  intro i j hij
+  exact hstrict (Fin.strictMono_succAbove gap hij)
+
+theorem positive_negativePunctured_same_false {n m : ℕ} (hn : 0 < n)
+    {C : AlternatingWordContext (n + 1) m} {gap : Fin (n + 1)}
+    (hpositive : C.PositivePunctured gap) (hnegative : C.NegativePunctured gap) :
+    False := by
+  let i : Fin n := ⟨0, hn⟩
+  have hpos := hpositive.2 i
+  have hneg := hnegative.2 i
+  rw [hpos] at hneg
+  simp [i] at hneg
+
+/-- Flip every sign in a word.  This exchanges positive- and negative-first
+alternating deletion gaps while preserving absolute labels. -/
+def negate {len m : ℕ} (C : AlternatingWordContext len m) :
+    AlternatingWordContext len m where
+  word := fun i => (C.word i).neg
+  same_index_same_sign := by
+    intro i j hij hindex
+    have hindex' : (C.word i).index = (C.word j).index := by
+      simpa [SignedLabel.neg] using hindex
+    have hsign := C.same_index_same_sign i j hij hindex'
+    cases hi : (C.word i).positive <;> cases hj : (C.word j).positive <;>
+      simp [SignedLabel.neg, hi, hj] at hsign ⊢
+
+theorem negate_strictMono_iff {len m : ℕ} {C : AlternatingWordContext len m} :
+    (StrictMono fun i : Fin len => (C.negate.word i).index) ↔
+      StrictMono fun i : Fin len => (C.word i).index := by
+  simp [negate, SignedLabel.neg]
+
+theorem negate_positivePunctured_iff {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} {gap : Fin (n + 1)} :
+    C.negate.PositivePunctured gap ↔ C.NegativePunctured gap := by
+  constructor
+  · rintro ⟨hmono, hsign⟩
+    constructor
+    · simpa [negate, SignedLabel.neg] using hmono
+    · intro i
+      have h := hsign i
+      cases hp : (C.word (gap.succAbove i)).positive <;>
+        cases he : decide (Even i.val) <;>
+          simp [negate, SignedLabel.neg, hp, he] at h ⊢
+  · rintro ⟨hmono, hsign⟩
+    constructor
+    · simpa [negate, SignedLabel.neg] using hmono
+    · intro i
+      have h := hsign i
+      cases hp : (C.word (gap.succAbove i)).positive <;>
+        cases he : decide (Even i.val) <;>
+          simp [negate, SignedLabel.neg, hp, he] at h ⊢
+
+theorem negate_negativePunctured_iff {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} {gap : Fin (n + 1)} :
+    C.negate.NegativePunctured gap ↔ C.PositivePunctured gap := by
+  constructor
+  · rintro ⟨hmono, hsign⟩
+    constructor
+    · simpa [negate, SignedLabel.neg] using hmono
+    · intro i
+      have h := hsign i
+      cases hp : (C.word (gap.succAbove i)).positive <;>
+        cases he : decide (Even i.val) <;>
+          simp [negate, SignedLabel.neg, hp, he] at h ⊢
+  · rintro ⟨hmono, hsign⟩
+    constructor
+    · simpa [negate, SignedLabel.neg] using hmono
+    · intro i
+      have h := hsign i
+      cases hp : (C.word (gap.succAbove i)).positive <;>
+        cases he : decide (Even i.val) <;>
+          simp [negate, SignedLabel.neg, hp, he] at h ⊢
+
 private theorem decide_even_pred_eq_not (k : ℕ) (hk : 0 < k) :
     decide (Even (k - 1)) = !decide (Even k) := by
   have hk' : k = (k - 1) + 1 := by omega
@@ -451,6 +529,17 @@ private theorem not_decide_even_pred_eq (k : ℕ) (hk : 0 < k) :
     (!decide (Even (k - 1))) = decide (Even k) := by
   rw [decide_even_pred_eq_not k hk]
   cases decide (Even k) <;> rfl
+
+private theorem Bool.eq_not_of_ne {a b : Bool} (h : a ≠ b) : a = !b := by
+  cases a <;> cases b <;> simp at h ⊢
+
+private def nextGap {n : ℕ} (gap : Fin (n + 1)) (hgap : gap.val < n) :
+    Fin (n + 1) :=
+  ⟨gap.val + 1, by omega⟩
+
+private def prevGap {n : ℕ} (gap : Fin (n + 1)) (hgap : 0 < gap.val) :
+    Fin (n + 1) :=
+  ⟨gap.val - 1, by omega⟩
 
 theorem positivePunctured_sign_of_lt {n m : ℕ}
     {C : AlternatingWordContext (n + 1) m} {gap i : Fin (n + 1)}
@@ -563,6 +652,170 @@ theorem negativePunctured_sign_of_ne {n m : ℕ}
   · simp [hlt, negativePunctured_sign_of_lt hgap hlt]
   · have hgt : gap < i := lt_of_le_of_ne (le_of_not_gt hlt) hi.symm
     simp [hlt, negativePunctured_sign_of_gt hgap hgt]
+
+private theorem positivePunctured_next_of_expected {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m}
+    (hstrict : StrictMono fun i : Fin (n + 1) => (C.word i).index)
+    {gap : Fin (n + 1)} (hgap : C.PositivePunctured gap)
+    (hgaplt : gap.val < n)
+    (hsign : (C.word gap).positive = decide (Even gap.val)) :
+    C.PositivePunctured (nextGap gap hgaplt) := by
+  constructor
+  · exact punctured_strictMono_of_strictMono hstrict (nextGap gap hgaplt)
+  · intro i
+    by_cases hlt : i.val < gap.val
+    · have hcast : (Fin.castSucc i : Fin (n + 1)) < nextGap gap hgaplt := by
+        rw [Fin.lt_def]
+        simp [nextGap]
+        omega
+      have hsucc : (nextGap gap hgaplt).succAbove i = Fin.castSucc i :=
+        Fin.succAbove_of_castSucc_lt (nextGap gap hgaplt) i hcast
+      have hi_old : (Fin.castSucc i : Fin (n + 1)) < gap := by
+        rw [Fin.lt_def]
+        simpa using hlt
+      have hsign_old := positivePunctured_sign_of_lt hgap hi_old
+      rw [hsucc]
+      simpa using hsign_old
+    · by_cases heq : i.val = gap.val
+      · have hcast : (Fin.castSucc i : Fin (n + 1)) < nextGap gap hgaplt := by
+          rw [Fin.lt_def]
+          simp [nextGap, heq]
+        have hsucc : (nextGap gap hgaplt).succAbove i = Fin.castSucc i :=
+          Fin.succAbove_of_castSucc_lt (nextGap gap hgaplt) i hcast
+        have hcast_eq : (Fin.castSucc i : Fin (n + 1)) = gap := by
+          apply Fin.ext
+          simpa using heq
+        rw [hsucc, hcast_eq]
+        simpa [heq] using hsign
+      · have hgt : gap.val < i.val := by omega
+        have hle_cast : nextGap gap hgaplt ≤ (Fin.castSucc i : Fin (n + 1)) := by
+          rw [Fin.le_def]
+          simp [nextGap]
+          omega
+        have hsucc : (nextGap gap hgaplt).succAbove i = Fin.succ i :=
+          Fin.succAbove_of_le_castSucc (nextGap gap hgaplt) i hle_cast
+        have hgap_lt_succ : gap < (Fin.succ i : Fin (n + 1)) := by
+          rw [Fin.lt_def]
+          simp [Fin.val_succ]
+          omega
+        have hsign_old := positivePunctured_sign_of_gt hgap hgap_lt_succ
+        rw [hsucc]
+        calc
+          (C.word (Fin.succ i : Fin (n + 1))).positive =
+              !decide (Even (Fin.succ i : Fin (n + 1)).val) := hsign_old
+          _ = decide (Even i.val) := by
+            by_cases heven : Even i.val <;> simp [Fin.val_succ, Nat.even_add_one, heven]
+
+private theorem positivePunctured_prev_of_unexpected {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m}
+    (hstrict : StrictMono fun i : Fin (n + 1) => (C.word i).index)
+    {gap : Fin (n + 1)} (hgap : C.PositivePunctured gap)
+    (hgappos : 0 < gap.val)
+    (hsign : (C.word gap).positive ≠ decide (Even gap.val)) :
+    C.PositivePunctured (prevGap gap hgappos) := by
+  have hgap_sign_not : (C.word gap).positive = !decide (Even gap.val) :=
+    Bool.eq_not_of_ne hsign
+  have hgap_sign_pred : (C.word gap).positive = decide (Even (gap.val - 1)) := by
+    rw [decide_even_pred_eq_not gap.val hgappos]
+    exact hgap_sign_not
+  constructor
+  · exact punctured_strictMono_of_strictMono hstrict (prevGap gap hgappos)
+  · intro i
+    by_cases hlt : i.val < gap.val - 1
+    · have hcast : (Fin.castSucc i : Fin (n + 1)) < prevGap gap hgappos := by
+        rw [Fin.lt_def]
+        simp [prevGap]
+        exact hlt
+      have hsucc : (prevGap gap hgappos).succAbove i = Fin.castSucc i :=
+        Fin.succAbove_of_castSucc_lt (prevGap gap hgappos) i hcast
+      have hi_old : (Fin.castSucc i : Fin (n + 1)) < gap := by
+        rw [Fin.lt_def]
+        simp
+        omega
+      have hsign_old := positivePunctured_sign_of_lt hgap hi_old
+      rw [hsucc]
+      simpa using hsign_old
+    · by_cases heq : i.val = gap.val - 1
+      · have hle_cast : prevGap gap hgappos ≤ (Fin.castSucc i : Fin (n + 1)) := by
+          rw [Fin.le_def]
+          simp [prevGap, heq]
+        have hsucc : (prevGap gap hgappos).succAbove i = Fin.succ i :=
+          Fin.succAbove_of_le_castSucc (prevGap gap hgappos) i hle_cast
+        have hsucc_eq : (Fin.succ i : Fin (n + 1)) = gap := by
+          apply Fin.ext
+          simp [Fin.val_succ, heq]
+          omega
+        rw [hsucc, hsucc_eq]
+        simpa [heq] using hgap_sign_pred
+      · have hgt : gap.val - 1 < i.val := by omega
+        have hle_cast : prevGap gap hgappos ≤ (Fin.castSucc i : Fin (n + 1)) := by
+          rw [Fin.le_def]
+          simp [prevGap]
+          omega
+        have hsucc : (prevGap gap hgappos).succAbove i = Fin.succ i :=
+          Fin.succAbove_of_le_castSucc (prevGap gap hgappos) i hle_cast
+        have hgap_lt_succ : gap < (Fin.succ i : Fin (n + 1)) := by
+          rw [Fin.lt_def]
+          simp [Fin.val_succ]
+          omega
+        have hsign_old := positivePunctured_sign_of_gt hgap hgap_lt_succ
+        rw [hsucc]
+        calc
+          (C.word (Fin.succ i : Fin (n + 1))).positive =
+              !decide (Even (Fin.succ i : Fin (n + 1)).val) := hsign_old
+          _ = decide (Even i.val) := by
+            by_cases heven : Even i.val <;> simp [Fin.val_succ, Nat.even_add_one, heven]
+
+private theorem positiveAlternating_of_positivePunctured_last_expected {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m}
+    (hstrict : StrictMono fun i : Fin (n + 1) => (C.word i).index)
+    {gap : Fin (n + 1)} (hgap : C.PositivePunctured gap)
+    (hgaplast : gap.val = n)
+    (hsign : (C.word gap).positive = decide (Even gap.val)) :
+    C.PositiveAlternating := by
+  have hlast : gap = Fin.last n := by
+    apply Fin.ext
+    simpa [Fin.last] using hgaplast
+  subst gap
+  constructor
+  · exact hstrict
+  · intro i
+    by_cases hi : i = Fin.last n
+    · subst i
+      simpa [Fin.last] using hsign
+    · have hlt : i < Fin.last n := by
+        rw [Fin.lt_def]
+        have hle : i.val ≤ n := Nat.le_of_lt_succ i.isLt
+        simp [Fin.last]
+        omega
+      exact positivePunctured_sign_of_lt hgap hlt
+
+private theorem negativeAlternating_of_positivePunctured_zero_unexpected {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m}
+    (hstrict : StrictMono fun i : Fin (n + 1) => (C.word i).index)
+    {gap : Fin (n + 1)} (hgap : C.PositivePunctured gap)
+    (hgapzero : gap.val = 0)
+    (hsign : (C.word gap).positive ≠ decide (Even gap.val)) :
+    C.NegativeAlternating := by
+  have hgap_sign_not : (C.word gap).positive = !decide (Even gap.val) :=
+    Bool.eq_not_of_ne hsign
+  have hzero : gap = 0 := by
+    apply Fin.ext
+    simpa using hgapzero
+  subst gap
+  constructor
+  · exact hstrict
+  · intro i
+    by_cases hi : i = (0 : Fin (n + 1))
+    · subst i
+      simpa using hgap_sign_not
+    · have hgt : (0 : Fin (n + 1)) < i := by
+        rw [Fin.lt_def]
+        have hne : i.val ≠ 0 := by
+          intro hval
+          exact hi (Fin.ext hval)
+        omega
+      exact positivePunctured_sign_of_gt hgap hgt
 
 theorem positivePunctured_gaps_val_close {n m : ℕ}
     {C : AlternatingWordContext (n + 1) m} {gap gap' : Fin (n + 1)}
@@ -864,6 +1117,14 @@ theorem mem_alternatingDeletionGaps_iff {n m : ℕ}
   classical
   simp [alternatingDeletionGaps]
 
+theorem alternatingDeletionGaps_negate {n m : ℕ}
+    (C : AlternatingWordContext (n + 1) m) :
+    C.negate.alternatingDeletionGaps = C.alternatingDeletionGaps := by
+  classical
+  ext gap
+  rw [mem_alternatingDeletionGaps_iff, mem_alternatingDeletionGaps_iff]
+  simp [negate_positivePunctured_iff, negate_negativePunctured_iff, or_comm]
+
 theorem alternatingDeletionGaps_eq_endpoints_of_positiveAlternating {n m : ℕ}
     {C : AlternatingWordContext (n + 1) m} (hC : C.PositiveAlternating) :
     C.alternatingDeletionGaps = {0, Fin.last n} := by
@@ -905,6 +1166,154 @@ theorem alternatingDeletionGaps_card_eq_two_of_negativeAlternating {n m : ℕ}
     simp [Fin.last] at hval
     omega
   simp [hne]
+
+private theorem alternatingDeletionGaps_eq_pair_of_positivePunctured_next {n m : ℕ}
+    (hn : 0 < n) {C : AlternatingWordContext (n + 1) m}
+    (hstrict : StrictMono fun i : Fin (n + 1) => (C.word i).index)
+    {gap : Fin (n + 1)} (hgap : C.PositivePunctured gap)
+    (hgaplt : gap.val < n)
+    (hsign : (C.word gap).positive = decide (Even gap.val)) :
+    C.alternatingDeletionGaps = {gap, nextGap gap hgaplt} := by
+  classical
+  have hnext : C.PositivePunctured (nextGap gap hgaplt) :=
+    positivePunctured_next_of_expected hstrict hgap hgaplt hsign
+  ext x
+  rw [mem_alternatingDeletionGaps_iff]
+  constructor
+  · intro hx
+    rw [Finset.mem_insert, Finset.mem_singleton]
+    rcases hx with hxpos | hxneg
+    · have hclose := positivePunctured_gaps_val_close hgap hxpos
+      have hnot_prev : ¬ x.val + 1 = gap.val := by
+        intro hprev
+        have hx_lt_gap : x < gap := by
+          rw [Fin.lt_def]
+          omega
+        have hsign_x := positivePunctured_sign_of_gt hxpos hx_lt_gap
+        rw [hsign] at hsign_x
+        cases decide (Even gap.val) <;> simp at hsign_x
+      have hxval : x.val = gap.val ∨ x.val = gap.val + 1 := by omega
+      rcases hxval with hxval | hxval
+      · exact Or.inl (Fin.ext hxval)
+      · exact Or.inr (Fin.ext (by simpa [nextGap] using hxval))
+    · have hxne : x ≠ gap := by
+        intro hxeq
+        subst x
+        exact positive_negativePunctured_same_false hn hgap hxneg
+      by_cases hlt : gap < x
+      · have hsign_x := negativePunctured_sign_of_lt hxneg hlt
+        rw [hsign] at hsign_x
+        cases decide (Even gap.val) <;> simp at hsign_x
+      · have hx_lt_gap : x < gap := lt_of_le_of_ne (le_of_not_gt hlt) hxne
+        have hend := negative_positivePunctured_endpoints_of_lt hxneg hgap hx_lt_gap
+        have hlast := congrArg Fin.val hend.2
+        simp [Fin.last] at hlast
+        omega
+  · intro hx
+    rw [Finset.mem_insert, Finset.mem_singleton] at hx
+    rcases hx with hx | hx
+    · exact Or.inl (by simpa [hx] using hgap)
+    · exact Or.inl (by simpa [hx] using hnext)
+
+private theorem alternatingDeletionGaps_eq_pair_of_positivePunctured_prev {n m : ℕ}
+    (hn : 0 < n) {C : AlternatingWordContext (n + 1) m}
+    (hstrict : StrictMono fun i : Fin (n + 1) => (C.word i).index)
+    {gap : Fin (n + 1)} (hgap : C.PositivePunctured gap)
+    (hgappos : 0 < gap.val)
+    (hsign : (C.word gap).positive ≠ decide (Even gap.val)) :
+    C.alternatingDeletionGaps = {prevGap gap hgappos, gap} := by
+  classical
+  have hprev : C.PositivePunctured (prevGap gap hgappos) :=
+    positivePunctured_prev_of_unexpected hstrict hgap hgappos hsign
+  ext x
+  rw [mem_alternatingDeletionGaps_iff]
+  constructor
+  · intro hx
+    rw [Finset.mem_insert, Finset.mem_singleton]
+    rcases hx with hxpos | hxneg
+    · have hclose := positivePunctured_gaps_val_close hgap hxpos
+      have hnot_next : ¬ x.val = gap.val + 1 := by
+        intro hnext
+        have hgap_lt_x : gap < x := by
+          rw [Fin.lt_def]
+          omega
+        have hsign_x := positivePunctured_sign_of_lt hxpos hgap_lt_x
+        exact hsign hsign_x
+      have hxval : x.val = gap.val - 1 ∨ x.val = gap.val := by omega
+      rcases hxval with hxval | hxval
+      · exact Or.inl (Fin.ext (by simpa [prevGap] using hxval))
+      · exact Or.inr (Fin.ext hxval)
+    · have hxne : x ≠ gap := by
+        intro hxeq
+        subst x
+        exact positive_negativePunctured_same_false hn hgap hxneg
+      by_cases hlt : x < gap
+      · have hsign_x := negativePunctured_sign_of_gt hxneg hlt
+        exact False.elim (hsign hsign_x)
+      · have hgap_lt_x : gap < x := lt_of_le_of_ne (le_of_not_gt hlt) hxne.symm
+        have hend := positive_negativePunctured_endpoints_of_lt hgap hxneg hgap_lt_x
+        have hzero : gap.val = 0 := by
+          simpa using congrArg Fin.val hend.1
+        omega
+  · intro hx
+    rw [Finset.mem_insert, Finset.mem_singleton] at hx
+    rcases hx with hx | hx
+    · exact Or.inl (by simpa [hx] using hprev)
+    · exact Or.inl (by simpa [hx] using hgap)
+
+private theorem alternatingDeletionGaps_card_eq_two_of_positivePunctured {n m : ℕ}
+    (hn : 0 < n) {C : AlternatingWordContext (n + 1) m}
+    (hstrict : StrictMono fun i : Fin (n + 1) => (C.word i).index)
+    {gap : Fin (n + 1)} (hgap : C.PositivePunctured gap) :
+    C.alternatingDeletionGaps.card = 2 := by
+  classical
+  by_cases hsign : (C.word gap).positive = decide (Even gap.val)
+  · by_cases hlast : gap.val = n
+    · exact alternatingDeletionGaps_card_eq_two_of_positiveAlternating hn
+        (positiveAlternating_of_positivePunctured_last_expected
+          hstrict hgap hlast hsign)
+    · have hgaplt : gap.val < n := by
+        have hle : gap.val ≤ n := Nat.le_of_lt_succ gap.isLt
+        omega
+      rw [alternatingDeletionGaps_eq_pair_of_positivePunctured_next
+        hn hstrict hgap hgaplt hsign]
+      have hne : gap ≠ nextGap gap hgaplt := by
+        intro h
+        have hval := congrArg Fin.val h
+        simp [nextGap] at hval
+      simp [hne]
+  · by_cases hzero : gap.val = 0
+    · exact alternatingDeletionGaps_card_eq_two_of_negativeAlternating hn
+        (negativeAlternating_of_positivePunctured_zero_unexpected
+          hstrict hgap hzero hsign)
+    · have hgappos : 0 < gap.val := by omega
+      rw [alternatingDeletionGaps_eq_pair_of_positivePunctured_prev
+        hn hstrict hgap hgappos hsign]
+      have hne : prevGap gap hgappos ≠ gap := by
+        intro h
+        have hval := congrArg Fin.val h
+        simp [prevGap] at hval
+        omega
+      simp [hne]
+
+theorem alternatingDeletionGaps_card_eq_two {n m : ℕ}
+    (hn : 0 < n) {C : AlternatingWordContext (n + 1) m}
+    (hstrict : StrictMono fun i : Fin (n + 1) => (C.word i).index)
+    (hactive : C.alternatingDeletionGaps.Nonempty) :
+    C.alternatingDeletionGaps.card = 2 := by
+  rcases hactive with ⟨gap, hgapmem⟩
+  rw [mem_alternatingDeletionGaps_iff] at hgapmem
+  rcases hgapmem with hpositive | hnegative
+  · exact alternatingDeletionGaps_card_eq_two_of_positivePunctured hn hstrict hpositive
+  · have hstrict_neg :
+        StrictMono fun i : Fin (n + 1) => (C.negate.word i).index :=
+      negate_strictMono_iff.mpr hstrict
+    have hpositive_neg : C.negate.PositivePunctured gap :=
+      negate_positivePunctured_iff.mpr hnegative
+    have hcard :=
+      alternatingDeletionGaps_card_eq_two_of_positivePunctured
+        (C := C.negate) hn hstrict_neg hpositive_neg
+    rwa [alternatingDeletionGaps_negate C] at hcard
 
 end AlternatingWordContext
 

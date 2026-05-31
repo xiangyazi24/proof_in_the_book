@@ -279,6 +279,19 @@ def doubleArea {K : Type*} [Ring K] (a b c : K × K) : K :=
 noncomputable def realTriangleArea (a b c : ℝ × ℝ) : ℝ :=
   |doubleArea a b c| / 2
 
+/-- The closed unit square in the coordinate model used by this chapter. -/
+def unitSquare : Set (ℝ × ℝ) :=
+  {p | 0 ≤ p.1 ∧ p.1 ≤ 1 ∧ 0 ≤ p.2 ∧ p.2 ≤ 1}
+
+/-- The closed geometric triangle spanned by three real plane points. -/
+noncomputable def realTriangleHull (a b c : ℝ × ℝ) : Set (ℝ × ℝ) :=
+  convexHull ℝ ({a, b, c} : Set (ℝ × ℝ))
+
+/-- The closed geometric triangle named by three vertices in a finite vertex model. -/
+noncomputable def triangleHullOfVertices {α : Type*} (vertices : α → ℝ × ℝ)
+    (t : α × α × α) : Set (ℝ × ℝ) :=
+  realTriangleHull (vertices t.1) (vertices t.2.1) (vertices t.2.2)
+
 theorem abs_doubleArea_eq_two_div_of_realTriangleArea_eq_one_div
     {n : ℕ} (hn : n ≠ 0) {a b c : ℝ × ℝ}
     (harea : realTriangleArea a b c = (((1 : ℚ) / n : ℚ) : ℝ)) :
@@ -469,6 +482,30 @@ theorem realTwoAdicColor_left_red_or_blue (y : ℝ) :
   simpa [realTwoAdicColor, valuationColor] using
     colorOfValues_zero_left_red_or_blue (realTwoAdicValuation y)
 
+@[simp]
+theorem realTwoAdicColor_vertex_bottomLeft {α : Type*} (vertices : α → ℝ × ℝ)
+    {v : α} (hv : vertices v = (0, 0)) :
+    (realTwoAdicColor ∘ vertices) v = red := by
+  simp [hv]
+
+@[simp]
+theorem realTwoAdicColor_vertex_bottomRight {α : Type*} (vertices : α → ℝ × ℝ)
+    {v : α} (hv : vertices v = (1, 0)) :
+    (realTwoAdicColor ∘ vertices) v = green := by
+  simp [hv]
+
+@[simp]
+theorem realTwoAdicColor_vertex_topRight {α : Type*} (vertices : α → ℝ × ℝ)
+    {v : α} (hv : vertices v = (1, 1)) :
+    (realTwoAdicColor ∘ vertices) v = green := by
+  simp [hv]
+
+@[simp]
+theorem realTwoAdicColor_vertex_topLeft {α : Type*} (vertices : α → ℝ × ℝ)
+    {v : α} (hv : vertices v = (0, 1)) :
+    (realTwoAdicColor ∘ vertices) v = blue := by
+  simp [hv]
+
 /-- A triangle is trichromatic when its three vertex colors are pairwise different. -/
 def TrichromaticTriangle (a b c : MonskyColor) : Prop :=
   a ≠ b ∧ b ≠ c ∧ c ≠ a
@@ -658,6 +695,30 @@ def colorIsGreenBlue (c : MonskyColor) : Prop := c = green ∨ c = blue
 
 /-- Predicate for colors lying on the red-blue side of the Monsky boundary argument. -/
 def colorIsRedBlue (c : MonskyColor) : Prop := c = red ∨ c = blue
+
+theorem realTwoAdicColor_vertex_on_bottom_redGreen {α : Type*}
+    (vertices : α → ℝ × ℝ) {v : α} (hv : ∃ x : ℝ, vertices v = (x, 0)) :
+    colorIsRedGreen ((realTwoAdicColor ∘ vertices) v) := by
+  rcases hv with ⟨x, hx⟩
+  simpa [Function.comp_def, hx, colorIsRedGreen] using realTwoAdicColor_bottom_red_or_green x
+
+theorem realTwoAdicColor_vertex_on_right_greenBlue {α : Type*}
+    (vertices : α → ℝ × ℝ) {v : α} (hv : ∃ y : ℝ, vertices v = (1, y)) :
+    colorIsGreenBlue ((realTwoAdicColor ∘ vertices) v) := by
+  rcases hv with ⟨y, hy⟩
+  simpa [Function.comp_def, hy, colorIsGreenBlue] using realTwoAdicColor_right_green_or_blue y
+
+theorem realTwoAdicColor_vertex_on_top_greenBlue {α : Type*}
+    (vertices : α → ℝ × ℝ) {v : α} (hv : ∃ x : ℝ, vertices v = (x, 1)) :
+    colorIsGreenBlue ((realTwoAdicColor ∘ vertices) v) := by
+  rcases hv with ⟨x, hx⟩
+  simpa [Function.comp_def, hx, colorIsGreenBlue] using realTwoAdicColor_top_green_or_blue x
+
+theorem realTwoAdicColor_vertex_on_left_redBlue {α : Type*}
+    (vertices : α → ℝ × ℝ) {v : α} (hv : ∃ y : ℝ, vertices v = (0, y)) :
+    colorIsRedBlue ((realTwoAdicColor ∘ vertices) v) := by
+  rcases hv with ⟨y, hy⟩
+  simpa [Function.comp_def, hy, colorIsRedBlue] using realTwoAdicColor_left_red_or_blue y
 
 /-- Encode red/green colors in `ZMod 2`; blue is unused when the red-green invariant applies. -/
 def colorRGParityBit : MonskyColor → ZMod 2
@@ -1002,6 +1063,45 @@ theorem oddEdgeRedGreenCount_odd_of_boundaryEdges
   rw [oddEdgeRedGreenCount_eq_boundaryEdgeRedGreenCount_of_oddMultiplicity
     triangles color boundary hboundary]
   exact hodd
+
+/--
+Convert the stronger incidence data usually obtained from a conforming
+triangulation into the exact odd-multiplicity boundary statement: boundary
+edges are odd, and every non-boundary edge has even multiplicity.
+-/
+theorem edgeMultiplicity_odd_iff_mem_boundary_of_odd_on_boundary_even_off
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (triangles : Fin n → α × α × α)
+    (boundary : Finset (Sym2 α))
+    (hboundaryOdd : ∀ e : Sym2 α, e ∈ boundary → Odd (edgeMultiplicity triangles e))
+    (hoffBoundaryEven : ∀ e : Sym2 α, e ∉ boundary → Even (edgeMultiplicity triangles e)) :
+    ∀ e : Sym2 α, Odd (edgeMultiplicity triangles e) ↔ e ∈ boundary := by
+  intro e
+  constructor
+  · intro hodd
+    by_contra hnot
+    rcases hodd with ⟨k, hk⟩
+    rcases hoffBoundaryEven e hnot with ⟨l, hl⟩
+    omega
+  · intro hmem
+    exact hboundaryOdd e hmem
+
+/--
+Common geometric incidence form: boundary chain edges appear once, while every
+other unordered edge appears an even number of times.
+-/
+theorem edgeMultiplicity_odd_iff_mem_boundary_of_one_on_boundary_even_off
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (triangles : Fin n → α × α × α)
+    (boundary : Finset (Sym2 α))
+    (hboundaryOne : ∀ e : Sym2 α, e ∈ boundary → edgeMultiplicity triangles e = 1)
+    (hoffBoundaryEven : ∀ e : Sym2 α, e ∉ boundary → Even (edgeMultiplicity triangles e)) :
+    ∀ e : Sym2 α, Odd (edgeMultiplicity triangles e) ↔ e ∈ boundary := by
+  refine edgeMultiplicity_odd_iff_mem_boundary_of_odd_on_boundary_even_off
+    triangles boundary ?_ hoffBoundaryEven
+  intro e hmem
+  rw [hboundaryOne e hmem]
+  exact ⟨0, by omega⟩
 
 /-- Consecutive unordered edges in a finite vertex chain. -/
 def consecutiveEdges {α : Type*} : List α → List (Sym2 α)
@@ -2020,6 +2120,80 @@ theorem toMonskyCertificate_triangleColors {n : ℕ}
       triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i) := by
   rfl
 
+/-- The Monsky color assigned to each extracted geometric vertex. -/
+noncomputable def color {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
+    T.Vertex → MonskyColor :=
+  realTwoAdicColor ∘ T.vertices
+
+@[simp]
+theorem color_bottomLeft {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
+    T.color T.bottomLeft = red := by
+  simpa [color] using realTwoAdicColor_vertex_bottomLeft T.vertices T.hbottomLeft
+
+@[simp]
+theorem color_bottomRight {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
+    T.color T.bottomRight = green := by
+  simpa [color] using realTwoAdicColor_vertex_bottomRight T.vertices T.hbottomRight
+
+@[simp]
+theorem color_topRight {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
+    T.color T.topRight = green := by
+  simpa [color] using realTwoAdicColor_vertex_topRight T.vertices T.htopRight
+
+@[simp]
+theorem color_topLeft {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
+    T.color T.topLeft = blue := by
+  simpa [color] using realTwoAdicColor_vertex_topLeft T.vertices T.htopLeft
+
+theorem bottom_colorIsRedGreen {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
+    ∀ v ∈ T.bottom, colorIsRedGreen (T.color v) := by
+  intro v hv
+  simpa [color] using realTwoAdicColor_vertex_on_bottom_redGreen T.vertices (T.hbottom v hv)
+
+theorem right_colorIsGreenBlue {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
+    ∀ v ∈ T.right, colorIsGreenBlue (T.color v) := by
+  intro v hv
+  simpa [color] using realTwoAdicColor_vertex_on_right_greenBlue T.vertices (T.hright v hv)
+
+theorem top_colorIsGreenBlue {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
+    ∀ v ∈ T.top, colorIsGreenBlue (T.color v) := by
+  intro v hv
+  simpa [color] using realTwoAdicColor_vertex_on_top_greenBlue T.vertices (T.htop v hv)
+
+theorem left_colorIsRedBlue {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
+    ∀ v ∈ T.left, colorIsRedBlue (T.color v) := by
+  intro v hv
+  simpa [color] using realTwoAdicColor_vertex_on_left_redBlue T.vertices (T.hleft v hv)
+
+/-- Boundary red-green edge count induced by the extracted triangle incidence data. -/
+noncomputable def boundaryRedGreenCount {n : ℕ}
+    (T : ExtractedEqualAreaSquareTriangulation n) : ℕ := by
+  letI := T.instFintype
+  letI := T.instDecidableEq
+  exact oddEdgeRedGreenCount T.triangles T.color
+
+theorem boundaryRedGreenCount_odd {n : ℕ}
+    (T : ExtractedEqualAreaSquareTriangulation n) :
+    Odd T.boundaryRedGreenCount := by
+  letI := T.instFintype
+  letI := T.instDecidableEq
+  simpa [boundaryRedGreenCount, color] using
+    oddEdgeRedGreenCount_odd_of_realSquareBoundaryVertexChain
+      T.vertices T.triangles T.bottom T.right T.top T.left
+      T.bottomLeft T.bottomRight T.topRight T.topLeft
+      T.hboundary T.hnodup T.hbottomLeft T.hbottomRight T.htopRight T.htopLeft
+      T.hbottom T.hright T.htop T.hleft
+
+theorem boundaryRedGreenCount_odd_of_odd {n : ℕ} (_hn : Odd n)
+    (T : ExtractedEqualAreaSquareTriangulation n) :
+    Odd T.boundaryRedGreenCount :=
+  T.boundaryRedGreenCount_odd
+
+theorem toMonskyCertificate_boundaryRGCount_odd {n : ℕ}
+    (T : ExtractedEqualAreaSquareTriangulation n) :
+    Odd T.toMonskyCertificate.boundaryRGCount := by
+  simpa using T.toMonskyCertificate.hodd
+
 /--
 The extracted data already give the `chapter20` Sperner conclusion through
 the constructed certificate.
@@ -2057,6 +2231,187 @@ theorem isEmpty_of_odd {n : ℕ} (hn : Odd n) :
   exact false_of_odd hn T
 
 end ExtractedEqualAreaSquareTriangulation
+
+/--
+Conservative interface for a genuine equal-area triangulation of the unit
+square.  Besides the finite vertex and triangle data, it records the geometric
+cover of the square and the local edge-incidence facts from which the extracted
+`Odd (edgeMultiplicity ...) ↔ boundary` field follows.
+-/
+structure ActualEqualAreaSquareTriangulation (n : ℕ) where
+  Vertex : Type*
+  [instFintype : Fintype Vertex]
+  [instDecidableEq : DecidableEq Vertex]
+  vertices : Vertex → ℝ × ℝ
+  triangles : Fin n → Vertex × Vertex × Vertex
+  hcover : unitSquare = ⋃ i : Fin n, triangleHullOfVertices vertices (triangles i)
+  bottom : List Vertex
+  right : List Vertex
+  top : List Vertex
+  left : List Vertex
+  bottomLeft : Vertex
+  bottomRight : Vertex
+  topRight : Vertex
+  topLeft : Vertex
+  hboundary_one : ∀ e : Sym2 Vertex,
+    e ∈ (squareBoundaryEdgeList bottom right top left
+      bottomLeft bottomRight topRight topLeft).toFinset →
+      edgeMultiplicity triangles e = 1
+  hoffBoundary_even : ∀ e : Sym2 Vertex,
+    e ∉ (squareBoundaryEdgeList bottom right top left
+      bottomLeft bottomRight topRight topLeft).toFinset →
+      Even (edgeMultiplicity triangles e)
+  hnodup : (squareBoundaryEdgeList bottom right top left
+    bottomLeft bottomRight topRight topLeft).Nodup
+  hbottomLeft : vertices bottomLeft = (0, 0)
+  hbottomRight : vertices bottomRight = (1, 0)
+  htopRight : vertices topRight = (1, 1)
+  htopLeft : vertices topLeft = (0, 1)
+  hbottom : ∀ v ∈ bottom, ∃ x : ℝ, vertices v = (x, 0)
+  hright : ∀ v ∈ right, ∃ y : ℝ, vertices v = (1, y)
+  htop : ∀ v ∈ top, ∃ x : ℝ, vertices v = (x, 1)
+  hleft : ∀ v ∈ left, ∃ y : ℝ, vertices v = (0, y)
+  harea : ∀ i : Fin n,
+    realTriangleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+        (vertices (triangles i).2.2) =
+      (((1 : ℚ) / n : ℚ) : ℝ)
+
+namespace ActualEqualAreaSquareTriangulation
+
+/-- The boundary edge list carried by the actual triangulation interface. -/
+def boundaryEdgeList {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
+    List (Sym2 T.Vertex) :=
+  squareBoundaryEdgeList T.bottom T.right T.top T.left
+    T.bottomLeft T.bottomRight T.topRight T.topLeft
+
+/-- The finite odd-multiplicity boundary statement needed by the extracted layer. -/
+theorem hboundary {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
+    letI := T.instFintype
+    letI := T.instDecidableEq
+    ∀ e : Sym2 T.Vertex,
+      Odd (edgeMultiplicity T.triangles e) ↔ e ∈ T.boundaryEdgeList.toFinset := by
+  letI := T.instFintype
+  letI := T.instDecidableEq
+  simpa [boundaryEdgeList] using
+    edgeMultiplicity_odd_iff_mem_boundary_of_one_on_boundary_even_off
+      T.triangles
+      (squareBoundaryEdgeList T.bottom T.right T.top T.left
+        T.bottomLeft T.bottomRight T.topRight T.topLeft).toFinset
+      T.hboundary_one T.hoffBoundary_even
+
+/-- The Monsky color assigned to each vertex of the actual triangulation. -/
+noncomputable def color {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
+    T.Vertex → MonskyColor :=
+  realTwoAdicColor ∘ T.vertices
+
+@[simp]
+theorem color_bottomLeft {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
+    T.color T.bottomLeft = red := by
+  simpa [color] using realTwoAdicColor_vertex_bottomLeft T.vertices T.hbottomLeft
+
+@[simp]
+theorem color_bottomRight {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
+    T.color T.bottomRight = green := by
+  simpa [color] using realTwoAdicColor_vertex_bottomRight T.vertices T.hbottomRight
+
+@[simp]
+theorem color_topRight {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
+    T.color T.topRight = green := by
+  simpa [color] using realTwoAdicColor_vertex_topRight T.vertices T.htopRight
+
+@[simp]
+theorem color_topLeft {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
+    T.color T.topLeft = blue := by
+  simpa [color] using realTwoAdicColor_vertex_topLeft T.vertices T.htopLeft
+
+theorem bottom_colorIsRedGreen {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
+    ∀ v ∈ T.bottom, colorIsRedGreen (T.color v) := by
+  intro v hv
+  simpa [color] using realTwoAdicColor_vertex_on_bottom_redGreen T.vertices (T.hbottom v hv)
+
+theorem right_colorIsGreenBlue {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
+    ∀ v ∈ T.right, colorIsGreenBlue (T.color v) := by
+  intro v hv
+  simpa [color] using realTwoAdicColor_vertex_on_right_greenBlue T.vertices (T.hright v hv)
+
+theorem top_colorIsGreenBlue {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
+    ∀ v ∈ T.top, colorIsGreenBlue (T.color v) := by
+  intro v hv
+  simpa [color] using realTwoAdicColor_vertex_on_top_greenBlue T.vertices (T.htop v hv)
+
+theorem left_colorIsRedBlue {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
+    ∀ v ∈ T.left, colorIsRedBlue (T.color v) := by
+  intro v hv
+  simpa [color] using realTwoAdicColor_vertex_on_left_redBlue T.vertices (T.hleft v hv)
+
+/-- Extract the finite payload consumed by the existing Monsky endpoint. -/
+noncomputable def toExtracted {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
+    ExtractedEqualAreaSquareTriangulation n where
+  Vertex := T.Vertex
+  instFintype := T.instFintype
+  instDecidableEq := T.instDecidableEq
+  vertices := T.vertices
+  triangles := T.triangles
+  bottom := T.bottom
+  right := T.right
+  top := T.top
+  left := T.left
+  bottomLeft := T.bottomLeft
+  bottomRight := T.bottomRight
+  topRight := T.topRight
+  topLeft := T.topLeft
+  hboundary := by
+    letI := T.instFintype
+    letI := T.instDecidableEq
+    simpa [boundaryEdgeList] using T.hboundary
+  hnodup := T.hnodup
+  hbottomLeft := T.hbottomLeft
+  hbottomRight := T.hbottomRight
+  htopRight := T.htopRight
+  htopLeft := T.htopLeft
+  hbottom := T.hbottom
+  hright := T.hright
+  htop := T.htop
+  hleft := T.hleft
+  harea := T.harea
+
+/-- The boundary red-green edge count forced by an actual square triangulation. -/
+noncomputable def boundaryRedGreenCount {n : ℕ}
+    (T : ActualEqualAreaSquareTriangulation n) : ℕ :=
+  T.toExtracted.boundaryRedGreenCount
+
+theorem boundaryRedGreenCount_odd {n : ℕ}
+    (T : ActualEqualAreaSquareTriangulation n) :
+    Odd T.boundaryRedGreenCount := by
+  simpa [boundaryRedGreenCount] using T.toExtracted.boundaryRedGreenCount_odd
+
+theorem boundaryRedGreenCount_odd_of_odd {n : ℕ} (_hn : Odd n)
+    (T : ActualEqualAreaSquareTriangulation n) :
+    Odd T.boundaryRedGreenCount :=
+  T.boundaryRedGreenCount_odd
+
+/-- The Monsky certificate extracted from an actual square triangulation. -/
+noncomputable def toMonskyCertificate {n : ℕ}
+    (T : ActualEqualAreaSquareTriangulation n) : MonskyCertificate n :=
+  T.toExtracted.toMonskyCertificate
+
+theorem toMonskyCertificate_triangleColors {n : ℕ}
+    (T : ActualEqualAreaSquareTriangulation n) (i : Fin n) :
+    (T.toMonskyCertificate.triangleColors i) =
+      triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i) := by
+  rfl
+
+theorem false_of_odd {n : ℕ} (hn : Odd n)
+    (T : ActualEqualAreaSquareTriangulation n) : False :=
+  T.toExtracted.false_of_odd hn
+
+theorem isEmpty_of_odd {n : ℕ} (hn : Odd n) :
+    IsEmpty (ActualEqualAreaSquareTriangulation n) := by
+  constructor
+  intro T
+  exact false_of_odd hn T
+
+end ActualEqualAreaSquareTriangulation
 
 /-- The empty triangulation cannot carry a Monsky certificate: with 0 triangles,
 the local RG sum is 0 (even), but the certificate demands an odd boundary RG

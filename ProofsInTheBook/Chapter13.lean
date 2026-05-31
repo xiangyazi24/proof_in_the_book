@@ -749,6 +749,77 @@ structure CauchyArm (n : ℕ) where
 
 namespace CauchyArm
 
+/-- The actual endpoint chord of an arm, computed from its embedded vertices. -/
+noncomputable def closingChord {n : ℕ} (A : CauchyArm n) : ℝ :=
+  dist (A.vertex (firstVertex n)) (A.vertex (lastVertex n))
+
+@[simp]
+theorem closingChord_eq_dist {n : ℕ} (A : CauchyArm n) :
+    A.closingChord = dist (A.vertex (firstVertex n)) (A.vertex (lastVertex n)) := rfl
+
+/-- The stored chord field agrees with the vertex-defined closing chord. -/
+theorem chord_eq_closingChord {n : ℕ} (A : CauchyArm n) :
+    A.chord = A.closingChord := by
+  rw [closingChord, A.chord_eq_dist]
+
+/-- The last edge index of an `n + 1`-edge arm. -/
+def lastEdgeIndex (n : ℕ) : Fin (n + 1) :=
+  ⟨n, by omega⟩
+
+/-- The last joint index of an `n + 2`-edge arm. -/
+def lastJointIndex (n : ℕ) : Fin ((n + 2) - 1) :=
+  ⟨n, by omega⟩
+
+/-- The arm obtained by deleting the last edge. -/
+noncomputable def initialSubarm {n : ℕ} (A : CauchyArm (n + 1)) : CauchyArm n where
+  vertex i := A.vertex ⟨i.1, by omega⟩
+  edgeLength i := A.edgeLength ⟨i.1, by omega⟩
+  jointAngle i := A.jointAngle ⟨i.1, by omega⟩
+  chord := dist (A.vertex ⟨0, by omega⟩) (A.vertex ⟨n, by omega⟩)
+  edgeLength_eq_dist := by
+    intro i
+    simpa [CauchyArm.edgeStart, CauchyArm.edgeEnd] using
+      A.edgeLength_eq_dist ⟨i.1, by omega⟩
+  jointAngle_eq_geometric := by
+    intro i
+    simpa [CauchyArm.geometricJointAngle, CauchyArm.edgeVector, CauchyArm.edgeStart,
+      CauchyArm.edgeEnd, CauchyArm.jointPrevEdge, CauchyArm.jointNextEdge] using
+      A.jointAngle_eq_geometric ⟨i.1, by omega⟩
+  edgeLength_pos := by
+    intro i
+    exact A.edgeLength_pos ⟨i.1, by omega⟩
+  jointAngle_nonneg := by
+    intro i
+    exact A.jointAngle_nonneg ⟨i.1, by omega⟩
+  jointAngle_le_pi := by
+    intro i
+    exact A.jointAngle_le_pi ⟨i.1, by omega⟩
+  chord_eq_dist := by
+    simp [CauchyArm.firstVertex, CauchyArm.lastVertex]
+
+@[simp]
+theorem initialSubarm_closingChord {n : ℕ} (A : CauchyArm (n + 1)) :
+    A.initialSubarm.closingChord =
+      dist (A.vertex ⟨0, by omega⟩) (A.vertex ⟨n, by omega⟩) := by
+  rfl
+
+/--
+The angle at the prefix endpoint in the closing triangle formed by the prefix
+chord, the last edge, and the full closing chord.
+-/
+noncomputable def appendAngle {n : ℕ} (A : CauchyArm (n + 1)) : ℝ :=
+  InnerProductGeometry.angle
+    (-(A.vertex ⟨n, by omega⟩ - A.vertex ⟨0, by omega⟩))
+    (A.vertex ⟨n + 1, by omega⟩ - A.vertex ⟨n, by omega⟩)
+
+theorem appendAngle_nonneg {n : ℕ} (A : CauchyArm (n + 1)) :
+    0 ≤ A.appendAngle :=
+  InnerProductGeometry.angle_nonneg _ _
+
+theorem appendAngle_le_pi {n : ℕ} (A : CauchyArm (n + 1)) :
+    A.appendAngle ≤ Real.pi :=
+  InnerProductGeometry.angle_le_pi _ _
+
 /--
 The law-of-cosines radicand for a two-edge arm with side lengths `a`, `b` and
 included angle `theta`.
@@ -759,6 +830,22 @@ noncomputable def twoEdgeChordRadicand (a b theta : ℝ) : ℝ :=
 /-- The chord length given by the law of cosines for a two-edge arm. -/
 noncomputable def twoEdgeChord (a b theta : ℝ) : ℝ :=
   Real.sqrt (twoEdgeChordRadicand a b theta)
+
+/--
+The law-of-cosines statement for the closing triangle obtained by replacing
+the initial subarm with its endpoint chord and keeping the last edge.
+-/
+def AppendLawOfCosines {n : ℕ} (A : CauchyArm (n + 1)) : Prop :=
+  A.closingChord =
+    twoEdgeChord A.initialSubarm.closingChord
+      (A.edgeLength (lastEdgeIndex n)) A.appendAngle
+
+/--
+The projection condition under which increasing the initial subarm's closing
+chord cannot shorten the final law-of-cosines chord.
+-/
+def AppendProjectionCondition {n : ℕ} (A : CauchyArm (n + 1)) : Prop :=
+  A.edgeLength (lastEdgeIndex n) * Real.cos A.appendAngle ≤ A.initialSubarm.closingChord
 
 /--
 The specialized law-of-cosines statement for a two-edge `CauchyArm`.  This is
@@ -792,12 +879,60 @@ theorem twoEdgeChordRadicand_mono {a b theta phi : ℝ}
   unfold twoEdgeChordRadicand
   nlinarith
 
+/--
+For a fixed second side and included angle, the law-of-cosines radicand is
+monotone in the first side once the first side is at least the projection of
+the second side onto it.  This is the extra algebraic condition needed when
+the first side is itself the closing chord of a shorter arm.
+-/
+theorem twoEdgeChordRadicand_mono_left {a a' b theta : ℝ}
+    (hside : a ≤ a') (hproj : b * Real.cos theta ≤ a) :
+    twoEdgeChordRadicand a b theta ≤ twoEdgeChordRadicand a' b theta := by
+  have hfactor_nonneg : 0 ≤ a' + a - 2 * b * Real.cos theta := by
+    nlinarith
+  have hmul_nonneg :
+      0 ≤ (a' - a) * (a' + a - 2 * b * Real.cos theta) := by
+    exact mul_nonneg (sub_nonneg.mpr hside) hfactor_nonneg
+  unfold twoEdgeChordRadicand
+  nlinarith
+
+theorem twoEdgeChordRadicand_strict_mono_left {a a' b theta : ℝ}
+    (hside : a < a') (hproj : b * Real.cos theta ≤ a) :
+    twoEdgeChordRadicand a b theta < twoEdgeChordRadicand a' b theta := by
+  have hfactor_pos : 0 < a' + a - 2 * b * Real.cos theta := by
+    nlinarith
+  have hmul_pos :
+      0 < (a' - a) * (a' + a - 2 * b * Real.cos theta) := by
+    exact mul_pos (sub_pos.mpr hside) hfactor_pos
+  unfold twoEdgeChordRadicand
+  nlinarith
+
+theorem twoEdgeChordRadicand_mono_left_and_angle {a a' b theta phi : ℝ}
+    (ha : 0 ≤ a) (hb : 0 ≤ b)
+    (htheta_nonneg : 0 ≤ theta) (hphi_le_pi : phi ≤ Real.pi)
+    (hside : a ≤ a') (hangle : theta ≤ phi)
+    (hproj : b * Real.cos theta ≤ a) :
+    twoEdgeChordRadicand a b theta ≤ twoEdgeChordRadicand a' b phi := by
+  have ha' : 0 ≤ a' := le_trans ha hside
+  exact le_trans (twoEdgeChordRadicand_mono_left hside hproj)
+    (twoEdgeChordRadicand_mono ha' hb htheta_nonneg hphi_le_pi hangle)
+
 theorem twoEdgeChord_mono {a b theta phi : ℝ}
     (ha : 0 ≤ a) (hb : 0 ≤ b)
     (htheta_nonneg : 0 ≤ theta) (hphi_le_pi : phi ≤ Real.pi)
     (hangle : theta ≤ phi) :
     twoEdgeChord a b theta ≤ twoEdgeChord a b phi :=
   Real.sqrt_le_sqrt (twoEdgeChordRadicand_mono ha hb htheta_nonneg hphi_le_pi hangle)
+
+theorem twoEdgeChord_mono_left_and_angle {a a' b theta phi : ℝ}
+    (ha : 0 ≤ a) (hb : 0 ≤ b)
+    (htheta_nonneg : 0 ≤ theta) (hphi_le_pi : phi ≤ Real.pi)
+    (hside : a ≤ a') (hangle : theta ≤ phi)
+    (hproj : b * Real.cos theta ≤ a) :
+    twoEdgeChord a b theta ≤ twoEdgeChord a' b phi :=
+  Real.sqrt_le_sqrt
+    (twoEdgeChordRadicand_mono_left_and_angle ha hb htheta_nonneg hphi_le_pi
+      hside hangle hproj)
 
 theorem twoEdgeChordRadicand_strict_mono {a b theta phi : ℝ}
     (ha : 0 < a) (hb : 0 < b)
@@ -812,6 +947,23 @@ theorem twoEdgeChordRadicand_strict_mono {a b theta phi : ℝ}
   unfold twoEdgeChordRadicand
   nlinarith
 
+theorem twoEdgeChordRadicand_strict_mono_left_or_angle {a a' b theta phi : ℝ}
+    (ha : 0 < a) (hb : 0 < b)
+    (htheta_nonneg : 0 ≤ theta) (hphi_le_pi : phi ≤ Real.pi)
+    (hside : a ≤ a') (hangle : theta ≤ phi)
+    (hproj : b * Real.cos theta ≤ a)
+    (hstrict : a < a' ∨ theta < phi) :
+    twoEdgeChordRadicand a b theta < twoEdgeChordRadicand a' b phi := by
+  rcases hstrict with hside_strict | hangle_strict
+  · have ha' : 0 ≤ a' := le_of_lt (lt_trans ha hside_strict)
+    exact lt_of_lt_of_le
+      (twoEdgeChordRadicand_strict_mono_left hside_strict hproj)
+      (twoEdgeChordRadicand_mono ha' (le_of_lt hb) htheta_nonneg hphi_le_pi hangle)
+  · have ha' : 0 < a' := lt_of_lt_of_le ha hside
+    exact lt_of_le_of_lt
+      (twoEdgeChordRadicand_mono_left hside hproj)
+      (twoEdgeChordRadicand_strict_mono ha' hb htheta_nonneg hphi_le_pi hangle_strict)
+
 theorem twoEdgeChord_strict_mono {a b theta phi : ℝ}
     (ha : 0 < a) (hb : 0 < b)
     (htheta_nonneg : 0 ≤ theta) (hphi_le_pi : phi ≤ Real.pi)
@@ -820,6 +972,19 @@ theorem twoEdgeChord_strict_mono {a b theta phi : ℝ}
   apply Real.sqrt_lt_sqrt
   · exact twoEdgeChordRadicand_nonneg (le_of_lt ha) (le_of_lt hb)
   · exact twoEdgeChordRadicand_strict_mono ha hb htheta_nonneg hphi_le_pi hangle
+
+theorem twoEdgeChord_strict_mono_left_or_angle {a a' b theta phi : ℝ}
+    (ha : 0 < a) (hb : 0 < b)
+    (htheta_nonneg : 0 ≤ theta) (hphi_le_pi : phi ≤ Real.pi)
+    (hside : a ≤ a') (hangle : theta ≤ phi)
+    (hproj : b * Real.cos theta ≤ a)
+    (hstrict : a < a' ∨ theta < phi) :
+    twoEdgeChord a b theta < twoEdgeChord a' b phi := by
+  apply Real.sqrt_lt_sqrt
+  · exact twoEdgeChordRadicand_nonneg (le_of_lt ha) (le_of_lt hb)
+  · exact twoEdgeChordRadicand_strict_mono_left_or_angle ha hb htheta_nonneg
+      hphi_le_pi hside hangle hproj hstrict
+
 
 /--
 Two-edge Cauchy arm monotonicity.  If the two edge lengths are fixed and the
@@ -844,6 +1009,296 @@ theorem arm_chord_monotone (A B : CauchyArm 2)
       omega
     rw [hi]
     exact le_antisymm (hangle 0) (le_of_not_gt hstrict)
+
+/-- The two-edge monotonicity theorem, stated for the vertex-defined chord. -/
+theorem closingChord_mono_two (A B : CauchyArm 2)
+    (hA : A.TwoEdgeLawOfCosines) (hB : B.TwoEdgeLawOfCosines)
+    (hlength : ∀ i : Fin 2, A.edgeLength i = B.edgeLength i)
+    (hangle : ∀ i : Fin (2 - 1), A.jointAngle i ≤ B.jointAngle i) :
+    A.closingChord < B.closingChord ∨
+      ∀ i : Fin (2 - 1), A.jointAngle i = B.jointAngle i := by
+  have h := arm_chord_monotone A B hA hB hlength hangle
+  rcases h with hlt | heq
+  · left
+    rwa [A.chord_eq_closingChord, B.chord_eq_closingChord] at hlt
+  · exact Or.inr heq
+
+/-- Equal side lengths and equal included angle give equal two-edge closing chords. -/
+theorem closingChord_eq_of_eq_two (A B : CauchyArm 2)
+    (hA : A.TwoEdgeLawOfCosines) (hB : B.TwoEdgeLawOfCosines)
+    (hlength : ∀ i : Fin 2, A.edgeLength i = B.edgeLength i)
+    (hangle : ∀ i : Fin (2 - 1), A.jointAngle i = B.jointAngle i) :
+    A.closingChord = B.closingChord := by
+  rw [← A.chord_eq_closingChord, ← B.chord_eq_closingChord, hA, hB]
+  rw [← hlength 0, ← hlength 1, ← hangle 0]
+
+/--
+Induction step for the arm chord: assume the initial `n + 1`-edge subarms have
+already produced the expected monotonicity alternative, then use the final
+closing triangle to extend it across the last edge.
+
+The hypotheses after `hprefix_eq_of_angles` are exactly the missing geometric
+bridges for the closing triangle: its law-of-cosines formula, monotonicity of
+the triangle angle under opening the last joint, and the projection condition
+needed because the prefix chord is not a fixed side.
+-/
+theorem closingChord_mono_succ_of_prefix {n : ℕ} (A B : CauchyArm (n + 2))
+    (hprefix_mono :
+      A.initialSubarm.closingChord < B.initialSubarm.closingChord ∨
+        ∀ i : Fin ((n + 1) - 1),
+          A.initialSubarm.jointAngle i = B.initialSubarm.jointAngle i)
+    (hprefix_eq_of_angles :
+      (∀ i : Fin ((n + 1) - 1),
+          A.initialSubarm.jointAngle i = B.initialSubarm.jointAngle i) →
+        A.initialSubarm.closingChord = B.initialSubarm.closingChord)
+    (hprefix_pos : 0 < A.initialSubarm.closingChord)
+    (hA_append : A.AppendLawOfCosines)
+    (hB_append : B.AppendLawOfCosines)
+    (happendAngle : A.appendAngle ≤ B.appendAngle)
+    (happendAngle_strict :
+      A.initialSubarm.closingChord = B.initialSubarm.closingChord →
+        A.jointAngle (lastJointIndex n) < B.jointAngle (lastJointIndex n) →
+          A.appendAngle < B.appendAngle)
+    (hproj : A.AppendProjectionCondition)
+    (hlastLength :
+      A.edgeLength (lastEdgeIndex (n + 1)) = B.edgeLength (lastEdgeIndex (n + 1)))
+    (hangle : ∀ i : Fin ((n + 2) - 1), A.jointAngle i ≤ B.jointAngle i) :
+    A.closingChord < B.closingChord ∨
+      ∀ i : Fin ((n + 2) - 1), A.jointAngle i = B.jointAngle i := by
+  rcases hprefix_mono with hprefix_strict | hprefix_angles
+  · left
+    rw [hA_append, hB_append, ← hlastLength]
+    exact twoEdgeChord_strict_mono_left_or_angle hprefix_pos
+      (A.edgeLength_pos (lastEdgeIndex (n + 1)))
+      (A.appendAngle_nonneg) (B.appendAngle_le_pi)
+      (le_of_lt hprefix_strict) happendAngle hproj (Or.inl hprefix_strict)
+  · have hprefix_chord :
+        A.initialSubarm.closingChord = B.initialSubarm.closingChord :=
+      hprefix_eq_of_angles hprefix_angles
+    by_cases hlast_strict :
+        A.jointAngle (lastJointIndex n) < B.jointAngle (lastJointIndex n)
+    · left
+      rw [hA_append, hB_append, ← hlastLength]
+      exact twoEdgeChord_strict_mono_left_or_angle hprefix_pos
+        (A.edgeLength_pos (lastEdgeIndex (n + 1)))
+        (A.appendAngle_nonneg) (B.appendAngle_le_pi)
+        (le_of_eq hprefix_chord) happendAngle hproj
+        (Or.inr (happendAngle_strict hprefix_chord hlast_strict))
+    · right
+      have hlast :
+          A.jointAngle (lastJointIndex n) = B.jointAngle (lastJointIndex n) :=
+        le_antisymm (hangle (lastJointIndex n)) (le_of_not_gt hlast_strict)
+      intro i
+      by_cases hi : i.1 < n
+      · have hprefix_i :=
+          hprefix_angles ⟨i.1, by omega⟩
+        simpa [initialSubarm] using hprefix_i
+      · have hi_last : i = lastJointIndex n := by
+          ext
+          simp [lastJointIndex]
+          omega
+        simpa [hi_last] using hlast
+
+/-- The same induction step, with the initial-subarm alternative obtained from an IH. -/
+theorem closingChord_mono_succ {n : ℕ}
+    (hIH_mono :
+      ∀ A' B' : CauchyArm (n + 1),
+        (∀ i : Fin (n + 1), A'.edgeLength i = B'.edgeLength i) →
+        (∀ i : Fin ((n + 1) - 1), A'.jointAngle i ≤ B'.jointAngle i) →
+          A'.closingChord < B'.closingChord ∨
+            ∀ i : Fin ((n + 1) - 1), A'.jointAngle i = B'.jointAngle i)
+    (hIH_eq :
+      ∀ A' B' : CauchyArm (n + 1),
+        (∀ i : Fin (n + 1), A'.edgeLength i = B'.edgeLength i) →
+        (∀ i : Fin ((n + 1) - 1), A'.jointAngle i = B'.jointAngle i) →
+          A'.closingChord = B'.closingChord)
+    (A B : CauchyArm (n + 2))
+    (hprefix_pos : 0 < A.initialSubarm.closingChord)
+    (hA_append : A.AppendLawOfCosines)
+    (hB_append : B.AppendLawOfCosines)
+    (happendAngle : A.appendAngle ≤ B.appendAngle)
+    (happendAngle_strict :
+      A.initialSubarm.closingChord = B.initialSubarm.closingChord →
+        A.jointAngle (lastJointIndex n) < B.jointAngle (lastJointIndex n) →
+          A.appendAngle < B.appendAngle)
+    (hproj : A.AppendProjectionCondition)
+    (hlength : ∀ i : Fin (n + 2), A.edgeLength i = B.edgeLength i)
+    (hangle : ∀ i : Fin ((n + 2) - 1), A.jointAngle i ≤ B.jointAngle i) :
+    A.closingChord < B.closingChord ∨
+      ∀ i : Fin ((n + 2) - 1), A.jointAngle i = B.jointAngle i := by
+  have hlength_prefix :
+      ∀ i : Fin (n + 1),
+        A.initialSubarm.edgeLength i = B.initialSubarm.edgeLength i := by
+    intro i
+    simpa [initialSubarm] using hlength ⟨i.1, by omega⟩
+  have hangle_prefix :
+      ∀ i : Fin ((n + 1) - 1),
+        A.initialSubarm.jointAngle i ≤ B.initialSubarm.jointAngle i := by
+    intro i
+    simpa [initialSubarm] using hangle ⟨i.1, by omega⟩
+  refine closingChord_mono_succ_of_prefix A B
+    (hIH_mono A.initialSubarm B.initialSubarm hlength_prefix hangle_prefix) ?_
+    hprefix_pos hA_append hB_append happendAngle happendAngle_strict hproj
+    (hlength (lastEdgeIndex (n + 1))) hangle
+  intro hprefix_angles
+  exact hIH_eq A.initialSubarm B.initialSubarm hlength_prefix hprefix_angles
+
+/--
+Concrete three-edge instance of the induction step, using the proved two-edge
+law-of-cosines base case on the initial subarms.
+-/
+theorem closingChord_mono_three (A B : CauchyArm 3)
+    (hA_prefix : A.initialSubarm.TwoEdgeLawOfCosines)
+    (hB_prefix : B.initialSubarm.TwoEdgeLawOfCosines)
+    (hprefix_pos : 0 < A.initialSubarm.closingChord)
+    (hA_append : A.AppendLawOfCosines)
+    (hB_append : B.AppendLawOfCosines)
+    (happendAngle : A.appendAngle ≤ B.appendAngle)
+    (happendAngle_strict :
+      A.initialSubarm.closingChord = B.initialSubarm.closingChord →
+        A.jointAngle (lastJointIndex 1) < B.jointAngle (lastJointIndex 1) →
+          A.appendAngle < B.appendAngle)
+    (hproj : A.AppendProjectionCondition)
+    (hlength : ∀ i : Fin 3, A.edgeLength i = B.edgeLength i)
+    (hangle : ∀ i : Fin (3 - 1), A.jointAngle i ≤ B.jointAngle i) :
+    A.closingChord < B.closingChord ∨
+      ∀ i : Fin (3 - 1), A.jointAngle i = B.jointAngle i := by
+  refine closingChord_mono_succ_of_prefix (n := 1) A B ?_ ?_
+    hprefix_pos hA_append hB_append happendAngle happendAngle_strict hproj
+    (hlength (lastEdgeIndex 2)) hangle
+  · apply closingChord_mono_two A.initialSubarm B.initialSubarm hA_prefix hB_prefix
+    · intro i
+      simpa [initialSubarm] using hlength ⟨i.1, by omega⟩
+    · intro i
+      simpa [initialSubarm] using hangle ⟨i.1, by omega⟩
+  · intro hprefix_angles
+    apply closingChord_eq_of_eq_two A.initialSubarm B.initialSubarm hA_prefix hB_prefix
+    · intro i
+      simpa [initialSubarm] using hlength ⟨i.1, by omega⟩
+    · exact hprefix_angles
+
+/--
+Recursive evidence that a pair of arms has the law-of-cosines data needed by
+the induction proof.  The `succ` constructor is deliberately explicit about
+the geometric facts not yet derived from the bare `CauchyArm` fields.
+-/
+inductive ArmChordMonotoneCertificate : {n : ℕ} → CauchyArm n → CauchyArm n → Prop
+  | zero (A B : CauchyArm 0) : ArmChordMonotoneCertificate A B
+  | one (A B : CauchyArm 1) : ArmChordMonotoneCertificate A B
+  | two {A B : CauchyArm 2}
+      (hA : A.TwoEdgeLawOfCosines) (hB : B.TwoEdgeLawOfCosines) :
+      ArmChordMonotoneCertificate A B
+  | succ {n : ℕ} {A B : CauchyArm (n + 2)}
+      (prefixCert : ArmChordMonotoneCertificate A.initialSubarm B.initialSubarm)
+      (hprefix_pos : 0 < A.initialSubarm.closingChord)
+      (hA_append : A.AppendLawOfCosines)
+      (hB_append : B.AppendLawOfCosines)
+      (happendAngle : A.appendAngle ≤ B.appendAngle)
+      (happendAngle_strict :
+        A.initialSubarm.closingChord = B.initialSubarm.closingChord →
+          A.jointAngle (lastJointIndex n) < B.jointAngle (lastJointIndex n) →
+            A.appendAngle < B.appendAngle)
+      (happendAngle_eq :
+        A.initialSubarm.closingChord = B.initialSubarm.closingChord →
+          A.jointAngle (lastJointIndex n) = B.jointAngle (lastJointIndex n) →
+            A.appendAngle = B.appendAngle)
+      (hproj : A.AppendProjectionCondition) :
+      ArmChordMonotoneCertificate A B
+
+/--
+Under the same recursive law-of-cosines certificate, equal edge lengths and
+equal joint angles determine the closing chord.
+-/
+theorem closingChord_eq_of_eq_general {n : ℕ} {A B : CauchyArm n}
+    (cert : ArmChordMonotoneCertificate A B)
+    (hlength : ∀ i : Fin n, A.edgeLength i = B.edgeLength i)
+    (hangle : ∀ i : Fin (n - 1), A.jointAngle i = B.jointAngle i) :
+    A.closingChord = B.closingChord := by
+  induction cert with
+  | zero A B =>
+      simp [closingChord, CauchyArm.firstVertex, CauchyArm.lastVertex]
+  | one A B =>
+      rw [closingChord, closingChord]
+      have hAedge :
+          A.edgeLength 0 =
+            dist (A.vertex (CauchyArm.firstVertex 1)) (A.vertex (CauchyArm.lastVertex 1)) := by
+        simpa [CauchyArm.firstVertex, CauchyArm.lastVertex, CauchyArm.edgeStart,
+          CauchyArm.edgeEnd] using A.edgeLength_eq_dist 0
+      have hBedge :
+          B.edgeLength 0 =
+            dist (B.vertex (CauchyArm.firstVertex 1)) (B.vertex (CauchyArm.lastVertex 1)) := by
+        simpa [CauchyArm.firstVertex, CauchyArm.lastVertex, CauchyArm.edgeStart,
+          CauchyArm.edgeEnd] using B.edgeLength_eq_dist 0
+      rw [← hAedge, ← hBedge, hlength 0]
+  | two hA hB =>
+      exact closingChord_eq_of_eq_two _ _ hA hB hlength hangle
+  | succ prefixCert hprefix_pos hA_append hB_append happendAngle happendAngle_strict
+      happendAngle_eq hproj ih =>
+      rename_i m A' B'
+      have hlength_prefix :
+          ∀ i : Fin (m + 1),
+            A'.initialSubarm.edgeLength i = B'.initialSubarm.edgeLength i := by
+        intro i
+        simpa [initialSubarm] using hlength ⟨i.1, by omega⟩
+      have hangle_prefix :
+          ∀ i : Fin ((m + 1) - 1),
+            A'.initialSubarm.jointAngle i = B'.initialSubarm.jointAngle i := by
+        intro i
+        simpa [initialSubarm] using hangle ⟨i.1, by omega⟩
+      have hprefix_chord :
+          A'.initialSubarm.closingChord = B'.initialSubarm.closingChord :=
+        ih hlength_prefix hangle_prefix
+      have hlastLength :
+          A'.edgeLength (lastEdgeIndex (m + 1)) =
+            B'.edgeLength (lastEdgeIndex (m + 1)) :=
+        hlength (lastEdgeIndex (m + 1))
+      have hlastAngle :
+          A'.jointAngle (lastJointIndex m) = B'.jointAngle (lastJointIndex m) :=
+        hangle (lastJointIndex m)
+      have happend_eq : A'.appendAngle = B'.appendAngle :=
+        happendAngle_eq hprefix_chord hlastAngle
+      rw [hA_append, hB_append, ← hprefix_chord, ← hlastLength, ← happend_eq]
+
+/--
+General Cauchy-arm chord monotonicity, assembled by induction from the two-edge
+law-of-cosines base case plus explicit closing-triangle certificates at each
+successor step.
+-/
+theorem arm_chord_monotone_general {n : ℕ} {A B : CauchyArm n}
+    (cert : ArmChordMonotoneCertificate A B)
+    (hlength : ∀ i : Fin n, A.edgeLength i = B.edgeLength i)
+    (hangle : ∀ i : Fin (n - 1), A.jointAngle i ≤ B.jointAngle i) :
+    A.closingChord < B.closingChord ∨
+      ∀ i : Fin (n - 1), A.jointAngle i = B.jointAngle i := by
+  induction cert with
+  | zero A B =>
+      right
+      intro i
+      exact Fin.elim0 i
+  | one A B =>
+      right
+      intro i
+      exact Fin.elim0 i
+  | two hA hB =>
+      exact closingChord_mono_two _ _ hA hB hlength hangle
+  | succ prefixCert hprefix_pos hA_append hB_append happendAngle happendAngle_strict
+      happendAngle_eq hproj ih =>
+      rename_i m A' B'
+      have hlength_prefix :
+          ∀ i : Fin (m + 1),
+            A'.initialSubarm.edgeLength i = B'.initialSubarm.edgeLength i := by
+        intro i
+        simpa [initialSubarm] using hlength ⟨i.1, by omega⟩
+      have hangle_prefix :
+          ∀ i : Fin ((m + 1) - 1),
+            A'.initialSubarm.jointAngle i ≤ B'.initialSubarm.jointAngle i := by
+        intro i
+        simpa [initialSubarm] using hangle ⟨i.1, by omega⟩
+      refine closingChord_mono_succ_of_prefix A' B'
+        (ih hlength_prefix hangle_prefix) ?_ hprefix_pos hA_append hB_append
+        happendAngle happendAngle_strict hproj (hlength (lastEdgeIndex (m + 1))) hangle
+      intro hprefix_angles
+      exact closingChord_eq_of_eq_general prefixCert hlength_prefix hprefix_angles
 
 end CauchyArm
 

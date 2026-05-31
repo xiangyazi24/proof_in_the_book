@@ -87,15 +87,6 @@ the normalized placement measure. -/
 noncomputable def buffonNeedleCrossingProbability (d length : ℝ) : ℝ :=
   (buffonPlacementMeasure d (buffonCrossingSet length)).toReal
 
-/-- The conditional probability is exactly the center-distance threshold divided
-by the length `d/2` of the uniform center-distance interval. -/
-theorem buffonConditionalCrossingProbability_eq_center_average
-    (d length θ : ℝ) :
-    buffonConditionalCrossingProbability d length θ =
-      (2 / d) * buffonCenterThreshold length θ := by
-  unfold buffonConditionalCrossingProbability buffonCenterThreshold
-  ring
-
 /-- In the short-needle range, the crossing threshold lies inside the possible
 center-distance interval. -/
 theorem buffonCenterThreshold_mem_Icc {d length θ : ℝ}
@@ -315,7 +306,7 @@ theorem buffon_needle {d length : ℝ} (hd : 0 < d) (hlen : 0 ≤ length) (hle :
 /-- Buffon's noodle formula for a finite polygonal curve: the expected crossing
 count depends only on total length, not on the shape of the curve. -/
 theorem buffon_noodle_expected_crossings {ι : Type*} (segments : Finset ι)
-    (length : ι → ℝ) (d : ℝ) (_hd : 0 < d) :
+    (length : ι → ℝ) (d : ℝ) :
     curveExpectedCrossings segments length d =
       2 * (∑ i ∈ segments, length i) / (Real.pi * d) := by
   rw [curveExpectedCrossings_eq_total_length]
@@ -326,10 +317,10 @@ with total length `L` has expected crossing count `2L/(πd)`, independent of
 how the length is distributed among the segments. -/
 theorem curveExpectedCrossings_eq_of_total_arc_length
     {ι : Type*} (segments : Finset ι) (length : ι → ℝ) {d L : ℝ}
-    (hd : 0 < d) (hL : (∑ i ∈ segments, length i) = L) :
+    (hL : (∑ i ∈ segments, length i) = L) :
     curveExpectedCrossings segments length d =
       2 * L / (Real.pi * d) := by
-  rw [buffon_noodle_expected_crossings segments length d hd, hL]
+  rw [buffon_noodle_expected_crossings segments length d, hL]
 
 /--
 The book's proof of Buffon's formula proceeds in three steps:
@@ -624,7 +615,7 @@ theorem buffon_noodle_expected_crossings_measure
       2 * (∑ i ∈ segments, length i) / (Real.pi * d) := by
   rw [sum_buffonNeedleCrossingProbability_eq_curveExpectedCrossings
     segments length hd hlen hle]
-  exact buffon_noodle_expected_crossings segments length d hd
+  exact buffon_noodle_expected_crossings segments length d
 
 /-- Measure-theoretic total-arc-length form of Buffon's noodle formula: summing
 the actual short-piece crossing probabilities for any finite polygonal curve
@@ -699,6 +690,34 @@ theorem exists_subdivision_buffon_expected_crossings
   rcases exists_short_subdivision (d := d) (length := length) hd with ⟨n, hn, hle⟩
   exact ⟨n, hn, equal_subdivision_piece_le_spacing hn hle,
     buffon_expected_crossings_arbitrary_length hd hlen hn hle⟩
+
+/-- Buffon's noodle theorem for a curve with arbitrary nonnegative arc length
+`L`.  Subdivide the arc length into equal pieces short enough for the
+measure-theoretic needle theorem; then the sum of the actual short-piece
+crossing probabilities is exactly `curveExpectedCrossings`, and hence the
+expected number of line crossings is `2L/(πd)`. -/
+theorem buffon_noodle_expected_crossings_general_curve
+    {d L : ℝ} (hd : 0 < d) (hL : 0 ≤ L) :
+    ∃ n : ℕ, 0 < n ∧ L / (n : ℝ) ≤ d ∧
+      (∑ _i ∈ Finset.range n,
+          buffonNeedleCrossingProbability d (L / (n : ℝ))) =
+        curveExpectedCrossings (Finset.range n) (fun _i : ℕ => L / (n : ℝ)) d ∧
+      curveExpectedCrossings (Finset.range n) (fun _i : ℕ => L / (n : ℝ)) d =
+        2 * L / (Real.pi * d) := by
+  rcases exists_short_subdivision (d := d) (length := L) hd with ⟨n, hn, hle⟩
+  have hpiece_nonneg : 0 ≤ L / (n : ℝ) :=
+    div_nonneg hL (Nat.cast_nonneg n)
+  have hpiece_le : L / (n : ℝ) ≤ d :=
+    equal_subdivision_piece_le_spacing hn hle
+  have hmeasure :
+      (∑ _i ∈ Finset.range n,
+          buffonNeedleCrossingProbability d (L / (n : ℝ))) =
+        curveExpectedCrossings (Finset.range n) (fun _i : ℕ => L / (n : ℝ)) d :=
+    sum_buffonNeedleCrossingProbability_eq_curveExpectedCrossings
+      (Finset.range n) (fun _i : ℕ => L / (n : ℝ)) hd
+      (fun _i _hi => hpiece_nonneg) (fun _i _hi => hpiece_le)
+  refine ⟨n, hn, hpiece_le, hmeasure, ?_⟩
+  exact hmeasure.symm.trans (buffon_expected_crossings_arbitrary_length hd hL hn hle)
 
 /-- Endpoint case of the measure theorem: when the needle length equals the
 line spacing, the crossing probability is `2/π`. -/

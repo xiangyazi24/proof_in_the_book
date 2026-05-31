@@ -441,6 +441,202 @@ theorem index_ne_of_positive_ne {len m : ℕ} (C : AlternatingWordContext len m)
   intro hindex
   exact hpositive (C.same_index_same_sign i j hij hindex)
 
+theorem positiveAlternating_positivePunctured_iff {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} (hC : C.PositiveAlternating)
+    (gap : Fin (n + 1)) :
+    C.PositivePunctured gap ↔ gap = Fin.last n := by
+  constructor
+  · intro hgapP
+    by_cases hgap : gap.val < n
+    · let i : Fin n := ⟨gap.val, hgap⟩
+      have hp := hgapP.2 i
+      have hf := hC.2 (gap.succAbove i)
+      have hle : gap ≤ i.castSucc := by
+        rw [Fin.le_def]
+        simp [i]
+      have hval : (gap.succAbove i).val = gap.val + 1 := by
+        rw [Fin.succAbove_of_le_castSucc gap i hle]
+        simp [i]
+      rw [hf] at hp
+      have hpar : decide (Even (gap.val + 1)) = !decide (Even gap.val) := by
+        by_cases he : Even gap.val <;> simp [Nat.even_add_one, he]
+      simp [i, hval, hpar] at hp
+    · apply Fin.ext
+      have hle : gap.val ≤ n := Nat.le_of_lt_succ gap.isLt
+      simp [Fin.last]
+      omega
+  · intro hlast
+    subst gap
+    constructor
+    · intro i j hij
+      have hcast : (Fin.castSucc i : Fin (n + 1)) < Fin.castSucc j :=
+        Fin.castSucc_lt_castSucc_iff.mpr hij
+      simpa [Fin.succAbove_last] using hC.1 hcast
+    · intro i
+      simpa [Fin.succAbove_last] using hC.2 (Fin.castSucc i)
+
+theorem positiveAlternating_negativePunctured_iff {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} (hC : C.PositiveAlternating)
+    (gap : Fin (n + 1)) :
+    C.NegativePunctured gap ↔ gap = 0 := by
+  constructor
+  · intro hgapP
+    by_cases hzero : gap.val = 0
+    · apply Fin.ext
+      simpa using hzero
+    · let i : Fin n := ⟨gap.val - 1, by omega⟩
+      have hp := hgapP.2 i
+      have hf := hC.2 (gap.succAbove i)
+      have hlt : i.castSucc < gap := by
+        rw [Fin.lt_def]
+        change gap.val - 1 < gap.val
+        omega
+      have hval : (gap.succAbove i).val = gap.val - 1 := by
+        rw [Fin.succAbove_of_castSucc_lt gap i hlt]
+        simp [i]
+      rw [hf] at hp
+      simp [i, hval] at hp
+  · intro hzero
+    subst gap
+    constructor
+    · intro i j hij
+      have hsucc : (Fin.succ i : Fin (n + 1)) < Fin.succ j :=
+        Fin.succ_lt_succ_iff.mpr hij
+      simpa [Fin.succAbove_zero] using hC.1 hsucc
+    · intro i
+      have hf := hC.2 (Fin.succ i : Fin (n + 1))
+      calc
+        (C.word ((0 : Fin (n + 1)).succAbove i)).positive =
+            decide (Even (Fin.succ i).val) := by
+          simpa [Fin.succAbove_zero] using hf
+        _ = !decide (Even i.val) := by
+          by_cases hi : Even i.val <;> simp [Fin.val_succ, Nat.even_add_one, hi]
+
+theorem negativeAlternating_positivePunctured_iff {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} (hC : C.NegativeAlternating)
+    (gap : Fin (n + 1)) :
+    C.PositivePunctured gap ↔ gap = 0 := by
+  constructor
+  · intro hgapP
+    by_cases hzero : gap.val = 0
+    · apply Fin.ext
+      simpa using hzero
+    · let i : Fin n := ⟨gap.val - 1, by omega⟩
+      have hp := hgapP.2 i
+      have hf := hC.2 (gap.succAbove i)
+      have hlt : i.castSucc < gap := by
+        rw [Fin.lt_def]
+        change gap.val - 1 < gap.val
+        omega
+      have hval : (gap.succAbove i).val = gap.val - 1 := by
+        rw [Fin.succAbove_of_castSucc_lt gap i hlt]
+        simp [i]
+      rw [hf] at hp
+      simp [i, hval] at hp
+  · intro hzero
+    subst gap
+    constructor
+    · intro i j hij
+      have hsucc : (Fin.succ i : Fin (n + 1)) < Fin.succ j :=
+        Fin.succ_lt_succ_iff.mpr hij
+      simpa [Fin.succAbove_zero] using hC.1 hsucc
+    · intro i
+      have hf := hC.2 (Fin.succ i : Fin (n + 1))
+      calc
+        (C.word ((0 : Fin (n + 1)).succAbove i)).positive =
+            !decide (Even (Fin.succ i).val) := by
+          simpa [Fin.succAbove_zero] using hf
+        _ = decide (Even i.val) := by
+          by_cases hi : Even i.val <;> simp [Fin.val_succ, Nat.even_add_one, hi]
+
+theorem negativeAlternating_negativePunctured_iff {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} (hC : C.NegativeAlternating)
+    (gap : Fin (n + 1)) :
+    C.NegativePunctured gap ↔ gap = Fin.last n := by
+  constructor
+  · intro hgapP
+    by_cases hgap : gap.val < n
+    · let i : Fin n := ⟨gap.val, hgap⟩
+      have hp := hgapP.2 i
+      have hf := hC.2 (gap.succAbove i)
+      have hle : gap ≤ i.castSucc := by
+        rw [Fin.le_def]
+        simp [i]
+      have hval : (gap.succAbove i).val = gap.val + 1 := by
+        rw [Fin.succAbove_of_le_castSucc gap i hle]
+        simp [i]
+      rw [hf] at hp
+      have hpar : decide (Even (gap.val + 1)) = !decide (Even gap.val) := by
+        by_cases he : Even gap.val <;> simp [Nat.even_add_one, he]
+      simp [i, hval, hpar] at hp
+    · apply Fin.ext
+      have hle : gap.val ≤ n := Nat.le_of_lt_succ gap.isLt
+      simp [Fin.last]
+      omega
+  · intro hlast
+    subst gap
+    constructor
+    · intro i j hij
+      have hcast : (Fin.castSucc i : Fin (n + 1)) < Fin.castSucc j :=
+        Fin.castSucc_lt_castSucc_iff.mpr hij
+      simpa [Fin.succAbove_last] using hC.1 hcast
+    · intro i
+      simpa [Fin.succAbove_last] using hC.2 (Fin.castSucc i)
+
+noncomputable def alternatingDeletionGaps {n m : ℕ}
+    (C : AlternatingWordContext (n + 1) m) : Finset (Fin (n + 1)) :=
+  by
+    classical
+    exact Finset.univ.filter fun gap => C.PositivePunctured gap ∨ C.NegativePunctured gap
+
+theorem mem_alternatingDeletionGaps_iff {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} {gap : Fin (n + 1)} :
+    gap ∈ C.alternatingDeletionGaps ↔ C.PositivePunctured gap ∨ C.NegativePunctured gap := by
+  classical
+  simp [alternatingDeletionGaps]
+
+theorem alternatingDeletionGaps_eq_endpoints_of_positiveAlternating {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} (hC : C.PositiveAlternating) :
+    C.alternatingDeletionGaps = {0, Fin.last n} := by
+  classical
+  ext gap
+  rw [mem_alternatingDeletionGaps_iff]
+  simp [positiveAlternating_positivePunctured_iff hC gap,
+    positiveAlternating_negativePunctured_iff hC gap, or_comm]
+
+theorem alternatingDeletionGaps_eq_endpoints_of_negativeAlternating {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} (hC : C.NegativeAlternating) :
+    C.alternatingDeletionGaps = {0, Fin.last n} := by
+  classical
+  ext gap
+  rw [mem_alternatingDeletionGaps_iff]
+  simp [negativeAlternating_positivePunctured_iff hC gap,
+    negativeAlternating_negativePunctured_iff hC gap, or_comm]
+
+theorem alternatingDeletionGaps_card_eq_two_of_positiveAlternating {n m : ℕ}
+    (hn : 0 < n) {C : AlternatingWordContext (n + 1) m} (hC : C.PositiveAlternating) :
+    C.alternatingDeletionGaps.card = 2 := by
+  classical
+  rw [alternatingDeletionGaps_eq_endpoints_of_positiveAlternating hC]
+  have hne : (0 : Fin (n + 1)) ≠ Fin.last n := by
+    intro h
+    have hval := congrArg Fin.val h
+    simp [Fin.last] at hval
+    omega
+  simp [hne]
+
+theorem alternatingDeletionGaps_card_eq_two_of_negativeAlternating {n m : ℕ}
+    (hn : 0 < n) {C : AlternatingWordContext (n + 1) m} (hC : C.NegativeAlternating) :
+    C.alternatingDeletionGaps.card = 2 := by
+  classical
+  rw [alternatingDeletionGaps_eq_endpoints_of_negativeAlternating hC]
+  have hne : (0 : Fin (n + 1)) ≠ Fin.last n := by
+    intro h
+    have hval := congrArg Fin.val h
+    simp [Fin.last] at hval
+    omega
+  simp [hne]
+
 end AlternatingWordContext
 
 /--

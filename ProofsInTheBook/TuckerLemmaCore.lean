@@ -5101,6 +5101,34 @@ theorem mem_kyFanDeletionGapGraphNeighborFinset_iff {n m : ℕ}
   classical
   simp [kyFanDeletionGapGraphNeighborFinset]
 
+theorem kyFanDeletionGapGraph_base_neighborFinset {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hno : NoComplementaryComparableLabels label}
+    (base : Bool) :
+    kyFanDeletionGapGraphNeighborFinset hno (kyFanBaseEndpoint base) =
+      (by
+        classical
+        exact Finset.univ.filter fun endpoint : KyFanPathEndpointClass label =>
+          ∃ punctured : AlternatingPuncturedPrefixChainType label,
+            endpoint = Sum.inl punctured ∧
+              kyFanBaseEndpointIncidentPunctured base punctured) := by
+  classical
+  ext endpoint
+  rw [mem_kyFanDeletionGapGraphNeighborFinset_iff]
+  constructor
+  · intro hadj
+    rcases (kyFanDeletionGapGraph_adj_iff.mp hadj) with ⟨_hne, hlink⟩
+    rw [Finset.mem_filter]
+    refine ⟨Finset.mem_univ endpoint, ?_⟩
+    rcases endpoint with punctured | rest
+    · exact ⟨punctured, rfl, hlink⟩
+    · rcases rest with base' | top
+      · cases hlink
+      · rcases top with positive | negative <;> cases hlink
+  · intro hmem
+    rcases (Finset.mem_filter.mp hmem).2 with ⟨punctured, rfl, hincident⟩
+    exact kyFanDeletionGapGraph_adj_base_of_incident hincident
+
 theorem kyFanDeletionGapGraph_positiveTop_neighborFinset {n m : ℕ}
     {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
     {hno : NoComplementaryComparableLabels label}

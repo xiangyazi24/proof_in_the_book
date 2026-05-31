@@ -321,6 +321,13 @@ private theorem kneserColor_proper {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
         _ = n - 2 * k + 1 := Fintype.card_fin _
     omega
 
+/--
+Lovász upper bound for Kneser graphs, with an explicit coloring.  The color is
+the minimum element of the `k`-subset until the first `n - 2*k + 1` positions
+are exhausted, and one final color is used for all remaining subsets.  If two
+disjoint `k`-sets both received the final color, they would have to fit inside
+only `2*k - 1` remaining coordinates, contradicting disjointness.
+-/
 theorem kneser_chromatic_upper_bound (n k : ℕ) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
     ∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
       ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b :=
@@ -2136,6 +2143,11 @@ theorem kneser_chromatic_lower_bound_from_tucker (n k : ℕ)
   obtain ⟨X, Y, hXY, hcomp⟩ := htucker label hantipodal
   exact hno_complementary X Y hXY hcomp
 
+/--
+Hard lower bound through the fully formalized Matoušek finite reduction: a
+proper `(n - 2*k + 1)`-coloring would produce an antipodal sign-vector labeling
+with no complementary comparable pair, contradicting `TuckerLemmaStatement n`.
+-/
 theorem kneser_chromatic_lower_bound_from_tucker_matousek (n k : ℕ)
     (hk : 1 ≤ k) (hn : 2 * k ≤ n)
     (htucker : TuckerLemmaStatement n) :
@@ -2173,6 +2185,19 @@ theorem kneser_chromatic_lower_bound_two_mul (k : ℕ) (hk : 1 ≤ k) :
 
 /-! ### Chromatic-number API and unconditional small cases -/
 
+/--
+Compact reusable form of Chapter 39's graph-coloring conclusion.  This keeps
+the theorem statement readable while preserving the explicit upper-bound
+coloring and the lower-bound nonexistence statement.
+-/
+def KneserColoringBounds (n k : ℕ) : Prop :=
+  (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
+      ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
+      ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b)
+
+/-- `SimpleGraph.Colorable` is equivalent to the explicit coloring function
+API used in this chapter. -/
 theorem kneser_colorable_iff_exists_coloring {n k q : ℕ} :
     (kneserGraph n k).Colorable q ↔
       ∃ C : KneserVertex n k → Fin q,
@@ -2190,6 +2215,29 @@ theorem kneser_colorable_upper_bound (n k : ℕ) (hk : 1 ≤ k) (hn : 2 * k ≤ 
     (kneserGraph n k).Colorable (n - 2 * k + 2) :=
   kneser_colorable_iff_exists_coloring.mpr (kneser_chromatic_upper_bound n k hk hn)
 
+/-- `SimpleGraph.Colorable` form of the Tucker/Matoušek lower bound. -/
+theorem kneser_not_colorable_lower_bound_from_tucker_matousek (n k : ℕ)
+    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (htucker : TuckerLemmaStatement n) :
+    ¬ (kneserGraph n k).Colorable (n - 2 * k + 1) := by
+  intro hcolorable
+  exact kneser_chromatic_lower_bound_from_tucker_matousek n k hk hn htucker
+    (kneser_colorable_iff_exists_coloring.mp hcolorable)
+
+/-- `SimpleGraph.Colorable` form of the elementary singleton lower bound. -/
+theorem kneser_not_colorable_one (n : ℕ) (hn : 2 ≤ n) :
+    ¬ (kneserGraph n 1).Colorable (n - 2 * 1 + 1) := by
+  intro hcolorable
+  exact kneser_chromatic_lower_bound_one n hn
+    (kneser_colorable_iff_exists_coloring.mp hcolorable)
+
+/-- `SimpleGraph.Colorable` form of the elementary boundary lower bound. -/
+theorem kneser_not_colorable_two_mul (k : ℕ) (hk : 1 ≤ k) :
+    ¬ (kneserGraph (2 * k) k).Colorable (2 * k - 2 * k + 1) := by
+  intro hcolorable
+  exact kneser_chromatic_lower_bound_two_mul k hk
+    (kneser_colorable_iff_exists_coloring.mp hcolorable)
+
 /-- Convert Chapter 39's pair of coloring bounds into Mathlib's chromatic
 number API. -/
 theorem kneser_chromaticNumber_eq_of_bounds {n k : ℕ}
@@ -2206,6 +2254,22 @@ theorem kneser_chromaticNumber_eq_of_bounds {n k : ℕ}
     exact ⟨kneser_colorable_iff_exists_coloring.mpr hupper,
       fun hcolorable => hlower (kneser_colorable_iff_exists_coloring.mp hcolorable)⟩
   simpa [Nat.cast_add] using hbounds
+
+/-- Upper `SimpleGraph.Colorable` corollary extracted from the compact bounds. -/
+theorem KneserColoringBounds.colorable {n k : ℕ} (h : KneserColoringBounds n k) :
+    (kneserGraph n k).Colorable (n - 2 * k + 2) :=
+  kneser_colorable_iff_exists_coloring.mpr h.1
+
+/-- Lower `SimpleGraph.Colorable` corollary extracted from the compact bounds. -/
+theorem KneserColoringBounds.not_colorable {n k : ℕ} (h : KneserColoringBounds n k) :
+    ¬ (kneserGraph n k).Colorable (n - 2 * k + 1) := by
+  intro hcolorable
+  exact h.2 (kneser_colorable_iff_exists_coloring.mp hcolorable)
+
+/-- Chromatic-number corollary extracted from the compact bounds. -/
+theorem KneserColoringBounds.chromaticNumber {n k : ℕ} (h : KneserColoringBounds n k) :
+    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
+  kneser_chromaticNumber_eq_of_bounds h.1 h.2
 
 /-- Unconditional Chapter 39 for singleton vertices: `KG(n,1)` is the complete
 graph on `n` vertices, so it has the expected lower and upper coloring bounds. -/
@@ -2263,6 +2327,22 @@ theorem chapter39_of_two_mul_eq {n k : ℕ} (hk : 1 ≤ k) (hn_eq : n = 2 * k) :
   subst n
   exact chapter39_two_mul k hk
 
+/-- Chromatic-number form of `chapter39_of_k_eq_one`, keeping the original
+parameters rather than first rewriting to `chapter39_one`. -/
+theorem chapter39_of_k_eq_one_chromaticNumber {n k : ℕ}
+    (hk_eq : k = 1) (hn : 2 * k ≤ n) :
+    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) := by
+  have h := chapter39_of_k_eq_one hk_eq (by omega) hn
+  exact KneserColoringBounds.chromaticNumber h
+
+/-- Chromatic-number form of `chapter39_of_two_mul_eq`, keeping the original
+parameters rather than first rewriting to `chapter39_two_mul`. -/
+theorem chapter39_of_two_mul_eq_chromaticNumber {n k : ℕ}
+    (hk : 1 ≤ k) (hn_eq : n = 2 * k) :
+    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) := by
+  have h := chapter39_of_two_mul_eq hk hn_eq
+  exact KneserColoringBounds.chromaticNumber h
+
 /--
 Chapter 39 (Lovász's theorem on Kneser graph chromatic number, conditional on
 the discrete Tucker lemma): the upper bound is explicit, and the lower bound
@@ -2282,6 +2362,12 @@ theorem chapter39 {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
   refine ⟨?_, ?_⟩
   · exact kneser_chromatic_upper_bound n k hk hn
   · exact kneser_chromatic_lower_bound_from_tucker_matousek n k hk hn htucker
+
+/-- Compact proposition-valued wrapper for the conditional Chapter 39 theorem. -/
+theorem chapter39_bounds {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (htucker : TuckerLemmaStatement n) :
+    KneserColoringBounds n k :=
+  chapter39 hk hn htucker
 
 /-- Chromatic-number form of the conditional Chapter 39 theorem. -/
 theorem chapter39_chromaticNumber {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
@@ -2305,6 +2391,12 @@ theorem chapter39_low_dim {n k : ℕ} (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * 
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
   chapter39 hk hn (tuckerLemmaStatement_le_four (by omega) hnle)
 
+/-- Compact proposition-valued wrapper for the low-dimensional theorem. -/
+theorem chapter39_low_dim_bounds {n k : ℕ}
+    (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
+    KneserColoringBounds n k :=
+  chapter39_low_dim hnle hk hn
+
 /-- Chromatic-number form of the unconditional low-dimensional theorem. -/
 theorem chapter39_low_dim_chromaticNumber {n k : ℕ}
     (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
@@ -2319,6 +2411,12 @@ theorem chapter39_le_four {n k : ℕ} (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * 
     (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
   chapter39_low_dim hnle hk hn
+
+/-- Chromatic-number alias matching the `chapter39_le_four` theorem name. -/
+theorem chapter39_le_four_chromaticNumber {n k : ℕ}
+    (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
+    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
+  chapter39_low_dim_chromaticNumber hnle hk hn
 
 /-- `KG(2,1)` is the complete graph on its two singleton vertices. -/
 theorem kneserGraph_two_one_eq_completeGraph :
@@ -2394,6 +2492,50 @@ theorem chapter39_four_two :
 theorem kneser_chromaticNumber_four_two :
     (kneserGraph 4 2).chromaticNumber = ((2 : ℕ) : ℕ∞) := by
   exact kneser_chromaticNumber_eq_of_bounds chapter39_four_two.1 chapter39_four_two.2
+
+/-- `KG(2,1)` is 2-colorable. -/
+theorem kneserGraph_two_one_colorable :
+    (kneserGraph 2 1).Colorable 2 :=
+  kneser_colorable_iff_exists_coloring.mpr chapter39_two_one.1
+
+/-- `KG(2,1)` is not 1-colorable. -/
+theorem kneserGraph_two_one_not_colorable_one :
+    ¬ (kneserGraph 2 1).Colorable 1 := by
+  intro hcolorable
+  exact chapter39_two_one.2 (kneser_colorable_iff_exists_coloring.mp hcolorable)
+
+/-- `KG(3,1)` is 3-colorable. -/
+theorem kneserGraph_three_one_colorable :
+    (kneserGraph 3 1).Colorable 3 :=
+  kneser_colorable_iff_exists_coloring.mpr chapter39_three_one.1
+
+/-- `KG(3,1)` is not 2-colorable. -/
+theorem kneserGraph_three_one_not_colorable_two :
+    ¬ (kneserGraph 3 1).Colorable 2 := by
+  intro hcolorable
+  exact chapter39_three_one.2 (kneser_colorable_iff_exists_coloring.mp hcolorable)
+
+/-- `KG(4,1)` is 4-colorable. -/
+theorem kneserGraph_four_one_colorable :
+    (kneserGraph 4 1).Colorable 4 :=
+  kneser_colorable_iff_exists_coloring.mpr chapter39_four_one.1
+
+/-- `KG(4,1)` is not 3-colorable. -/
+theorem kneserGraph_four_one_not_colorable_three :
+    ¬ (kneserGraph 4 1).Colorable 3 := by
+  intro hcolorable
+  exact chapter39_four_one.2 (kneser_colorable_iff_exists_coloring.mp hcolorable)
+
+/-- `KG(4,2)` is 2-colorable. -/
+theorem kneserGraph_four_two_colorable :
+    (kneserGraph 4 2).Colorable 2 :=
+  kneser_colorable_iff_exists_coloring.mpr chapter39_four_two.1
+
+/-- `KG(4,2)` is not 1-colorable. -/
+theorem kneserGraph_four_two_not_colorable_one :
+    ¬ (kneserGraph 4 2).Colorable 1 := by
+  intro hcolorable
+  exact chapter39_four_two.2 (kneser_colorable_iff_exists_coloring.mp hcolorable)
 
 /--
 The same Chapter 39 conclusion from Ky Fan's alternating-chain form.  The

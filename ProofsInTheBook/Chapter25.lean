@@ -12,23 +12,17 @@ The book's proof uses the linearity of expectation: any curve of
 length L crosses E[crossings] = 2L/(πd) lines, proved by decomposing
 into infinitesimal segments and using rotational symmetry.
 
-Formalization status: this file now removes the previous escape hatch where a
-structure field asserted the expected-value identity.  The public `chapter25`
-states the short-needle theorem as an explicit density-level probability
-calculation: the center distance from the nearest line is averaged uniformly on
-`[0,d/2]`, the angle is averaged uniformly on `[0,π]`, and the resulting
-one-dimensional angle integral is evaluated.
-
-Remaining gap to the full measure-theoretic book statement: replace the
-density-level average with an actual product probability measure on
-`[0,d/2] × [0,π]`, prove measurability of the crossing event, identify the
-event integral with the conditional center-distance average used here, and
-then derive the expectation/probability equality from the Bernoulli crossing
-count.  No field below assumes this identity.
+Formalization status: the short-needle theorem is proved from an actual
+probability measure on needle placements.  A placement is `(θ, x)`, with
+angle `θ ∈ [0,π]` and center distance `x ∈ [0,d/2]`; the measure is normalized
+Lebesgue measure on this rectangle.  The crossing probability is the measure of
+the crossing set, and the proof computes this measure by reducing the planar
+area to the integral `∫₀^π sin θ dθ = 2`.
 -/
 
 namespace ProofsInTheBook.Chapter25
 
+open MeasureTheory
 open scoped BigOperators
 
 /-- Expected crossings for a single segment in Buffon's needle model. -/
@@ -46,16 +40,49 @@ unoriented angle against the parallel lines. -/
 def buffonCrossingEvent (length x θ : ℝ) : Prop :=
   x ≤ buffonCenterThreshold length θ
 
+/-- A placement is `(θ, x)`: the angle against the parallel lines and the
+center distance from the nearest line. -/
+abbrev BuffonPlacement := ℝ × ℝ
+
+/-- The rectangle of admissible short-needle placements. -/
+noncomputable def buffonPlacementSet (d : ℝ) : Set BuffonPlacement :=
+  Set.Icc (0 : ℝ) Real.pi ×ˢ Set.Icc (0 : ℝ) (d / 2)
+
+/-- Normalized Lebesgue measure on the placement rectangle.  For `0 < d`,
+`buffonPlacementMeasure_isProbabilityMeasure` proves this is a probability
+measure. -/
+noncomputable def buffonPlacementMeasure (d : ℝ) : Measure BuffonPlacement :=
+  ENNReal.ofReal (2 / (Real.pi * d)) • volume.restrict (buffonPlacementSet d)
+
+/-- The closed crossing set for the placement model. -/
+def buffonCrossingSet (length : ℝ) : Set BuffonPlacement :=
+  {p : BuffonPlacement |
+    p.1 ∈ Set.Icc (0 : ℝ) Real.pi ∧
+      p.2 ∈ Set.Icc (0 : ℝ) (buffonCenterThreshold length p.1)}
+
+/-- The same crossing set with boundary removed.  It has the same planar
+Lebesgue measure as `buffonCrossingSet`, and Mathlib's `regionBetween` theorem
+computes its area directly. -/
+def buffonCrossingRegion (length : ℝ) : Set BuffonPlacement :=
+  regionBetween (fun _ : ℝ => 0) (fun θ : ℝ => buffonCenterThreshold length θ)
+    (Set.Icc (0 : ℝ) Real.pi)
+
 /-- Conditional crossing probability after averaging the center distance
 uniformly over `[0,d/2]`, before averaging over the angle. -/
 noncomputable def buffonConditionalCrossingProbability (d length θ : ℝ) : ℝ :=
   (2 / d) * buffonCenterThreshold length θ
 
-/-- The short-needle Buffon probability obtained by uniform angle averaging on
-`[0,π]` after the center-distance average. -/
-noncomputable def buffonNeedleCrossingProbability (d length : ℝ) : ℝ :=
+/-- The density-level average obtained by first averaging the center distance
+and then averaging the angle.  The measure-theoretic probability below proves
+that this equals the event probability. -/
+noncomputable def buffonNeedleCrossingDensityAverage (d length : ℝ) : ℝ :=
   (1 / Real.pi) *
     ∫ θ in (0 : ℝ)..Real.pi, buffonConditionalCrossingProbability d length θ
+
+/-- The actual crossing probability: the real mass of the crossing set under
+the normalized placement measure. -/
+noncomputable def buffonNeedleCrossingProbability (d length : ℝ) : ℝ :=
+  (buffonPlacementMeasure d (buffonCrossingSet length)).toReal
 
 /-- The conditional probability is exactly the center-distance threshold divided
 by the length `d/2` of the uniform center-distance interval. -/
@@ -80,6 +107,82 @@ theorem buffonCenterThreshold_mem_Icc {d length θ : ℝ}
     have hmul : length * Real.sin θ ≤ length * 1 :=
       mul_le_mul_of_nonneg_left hsin1 hlen
     nlinarith
+
+/-- The crossing set really represents the original crossing predicate on the
+placement rectangle. -/
+theorem mem_buffonCrossingSet_iff {length : ℝ} {p : BuffonPlacement} :
+    p ∈ buffonCrossingSet length ↔
+      p.1 ∈ Set.Icc (0 : ℝ) Real.pi ∧ 0 ≤ p.2 ∧
+        buffonCrossingEvent length p.2 p.1 := by
+  simp [buffonCrossingSet, buffonCrossingEvent, Set.mem_Icc]
+
+/-- In the short-needle range, every crossing placement lies in the placement
+rectangle. -/
+theorem buffonCrossingSet_subset_placementSet {d length : ℝ}
+    (hlen : 0 ≤ length) (hle : length ≤ d) :
+    buffonCrossingSet length ⊆ buffonPlacementSet d := by
+  intro p hp
+  rcases hp with ⟨hθ, hx⟩
+  have hthreshold := buffonCenterThreshold_mem_Icc hlen hle hθ.1 hθ.2
+  exact ⟨hθ, ⟨hx.1, le_trans hx.2 hthreshold.2⟩⟩
+
+/-- The open crossing region used for area computation is contained in the
+placement rectangle in the short-needle range. -/
+theorem buffonCrossingRegion_subset_placementSet {d length : ℝ}
+    (hlen : 0 ≤ length) (hle : length ≤ d) :
+    buffonCrossingRegion length ⊆ buffonPlacementSet d := by
+  intro p hp
+  rcases hp with ⟨hθ, hx⟩
+  have hthreshold := buffonCenterThreshold_mem_Icc hlen hle hθ.1 hθ.2
+  exact ⟨hθ, ⟨le_of_lt hx.1, le_trans (le_of_lt hx.2) hthreshold.2⟩⟩
+
+/-- The geometric crossing event is measurable. -/
+theorem measurableSet_buffonCrossingSet (length : ℝ) :
+    MeasurableSet (buffonCrossingSet length) := by
+  unfold buffonCrossingSet
+  have hcont : Continuous fun p : BuffonPlacement => buffonCenterThreshold length p.1 := by
+    unfold buffonCenterThreshold
+    fun_prop
+  simp only [Set.mem_Icc, Set.setOf_and]
+  exact (measurableSet_Ici.inter measurableSet_Iic).preimage measurable_fst |>.inter
+    ((measurableSet_le measurable_const measurable_snd).inter
+      (measurableSet_le measurable_snd hcont.measurable))
+
+/-- The open crossing region used for the area computation is measurable. -/
+theorem measurableSet_buffonCrossingRegion (length : ℝ) :
+    MeasurableSet (buffonCrossingRegion length) := by
+  unfold buffonCrossingRegion
+  refine measurableSet_regionBetween ?_ ?_ measurableSet_Icc
+  · fun_prop
+  · unfold buffonCenterThreshold
+    fun_prop
+
+/-- The placement rectangle has area `πd/2`. -/
+theorem volume_buffonPlacementSet (d : ℝ) :
+    volume (buffonPlacementSet d) = ENNReal.ofReal (Real.pi * d / 2) := by
+  unfold buffonPlacementSet
+  rw [Measure.volume_eq_prod ℝ ℝ, Measure.prod_prod]
+  rw [Real.volume_Icc, Real.volume_Icc]
+  simp only [sub_zero]
+  rw [← ENNReal.ofReal_mul Real.pi_pos.le]
+  ring_nf
+
+/-- The normalized placement measure has total mass one. -/
+theorem buffonPlacementMeasure_univ {d : ℝ} (hd : 0 < d) :
+    buffonPlacementMeasure d Set.univ = 1 := by
+  unfold buffonPlacementMeasure
+  rw [Measure.smul_apply, Measure.restrict_apply_univ, volume_buffonPlacementSet d]
+  rw [smul_eq_mul]
+  rw [← ENNReal.ofReal_mul]
+  · rw [← ENNReal.ofReal_one]
+    congr 1
+    field_simp [Real.pi_ne_zero, hd.ne']
+  · positivity
+
+/-- For positive spacing, `buffonPlacementMeasure` is a probability measure. -/
+theorem buffonPlacementMeasure_isProbabilityMeasure {d : ℝ} (hd : 0 < d) :
+    IsProbabilityMeasure (buffonPlacementMeasure d) :=
+  ⟨buffonPlacementMeasure_univ hd⟩
 
 /-- The conditional center-distance crossing probability is a genuine
 probability for every short-needle angle. -/
@@ -244,32 +347,116 @@ theorem buffon_half_range_sine_integral :
   rw [integral_sin]
   simp [Real.cos_pi_div_two, Real.cos_zero]
 
-/-- The honest core integral computation for Buffon's short-needle model. -/
-theorem buffonNeedleCrossingProbability_eq_segmentExpectedCrossings
+/-- The integral of the center-distance threshold over the angle range. -/
+theorem buffonCenterThreshold_integral_Icc (length : ℝ) :
+    ∫ θ in Set.Icc (0 : ℝ) Real.pi, buffonCenterThreshold length θ = length := by
+  rw [MeasureTheory.integral_Icc_eq_integral_Ioc]
+  rw [← intervalIntegral.integral_of_le Real.pi_pos.le]
+  unfold buffonCenterThreshold
+  rw [intervalIntegral.integral_div, intervalIntegral.integral_const_mul,
+    buffon_rotational_symmetry_integral]
+  ring
+
+/-- The open crossing region has area `length`. -/
+theorem volume_buffonCrossingRegion {length : ℝ} (hlen : 0 ≤ length) :
+    volume (buffonCrossingRegion length) = ENNReal.ofReal length := by
+  unfold buffonCrossingRegion
+  rw [Measure.volume_eq_prod ℝ ℝ]
+  rw [volume_regionBetween_eq_integral]
+  · simp only [Pi.sub_apply, sub_zero]
+    rw [buffonCenterThreshold_integral_Icc]
+  · exact continuous_const.integrableOn_Icc
+  · have hcont : Continuous fun θ : ℝ => buffonCenterThreshold length θ := by
+      unfold buffonCenterThreshold
+      fun_prop
+    exact hcont.integrableOn_Icc
+  · exact measurableSet_Icc
+  · intro θ hθ
+    exact (buffonCenterThreshold_mem_Icc (d := length) hlen le_rfl hθ.1 hθ.2).1
+
+/-- The boundary of the crossing set has zero planar measure, so the closed
+crossing set and the open region have the same area. -/
+theorem volume_buffonCrossingSet_eq_region (length : ℝ) :
+    volume (buffonCrossingSet length) = volume (buffonCrossingRegion length) := by
+  rw [Measure.volume_eq_prod ℝ ℝ]
+  rw [Measure.prod_apply (measurableSet_buffonCrossingSet length),
+    Measure.prod_apply (measurableSet_buffonCrossingRegion length)]
+  apply lintegral_congr
+  intro θ
+  by_cases hθ : θ ∈ Set.Icc (0 : ℝ) Real.pi
+  · have hclosed :
+        (Prod.mk θ ⁻¹' buffonCrossingSet length) =
+          Set.Icc (0 : ℝ) (buffonCenterThreshold length θ) := by
+      ext x
+      simp [buffonCrossingSet, hθ.1, hθ.2]
+    have hopen :
+        (Prod.mk θ ⁻¹' buffonCrossingRegion length) =
+          Set.Ioo (0 : ℝ) (buffonCenterThreshold length θ) := by
+      ext x
+      simp [buffonCrossingRegion, regionBetween, hθ.1, hθ.2]
+    rw [hclosed, hopen, Real.volume_Icc, Real.volume_Ioo]
+  · have hclosed : (Prod.mk θ ⁻¹' buffonCrossingSet length) = ∅ := by
+      have hθ' : ¬ (0 ≤ θ ∧ θ ≤ Real.pi) := by
+        simpa [Set.mem_Icc] using hθ
+      ext x
+      simp [buffonCrossingSet, hθ']
+    have hopen : (Prod.mk θ ⁻¹' buffonCrossingRegion length) = ∅ := by
+      have hθ' : ¬ (0 ≤ θ ∧ θ ≤ Real.pi) := by
+        simpa [Set.mem_Icc] using hθ
+      ext x
+      simp [buffonCrossingRegion, regionBetween, hθ']
+    rw [hclosed, hopen]
+
+/-- The placement measure of the actual crossing set is the Buffon formula. -/
+theorem buffonPlacementMeasure_crossingSet {d length : ℝ}
+    (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
+    buffonPlacementMeasure d (buffonCrossingSet length) =
+      ENNReal.ofReal (2 * length / (Real.pi * d)) := by
+  unfold buffonPlacementMeasure
+  rw [Measure.smul_apply]
+  rw [Measure.restrict_eq_self volume (buffonCrossingSet_subset_placementSet hlen hle)]
+  rw [volume_buffonCrossingSet_eq_region, volume_buffonCrossingRegion hlen]
+  rw [smul_eq_mul]
+  rw [← ENNReal.ofReal_mul]
+  · congr 1
+    ring
+  · positivity
+
+/-- The old density-level average equals the segment formula. -/
+theorem buffonNeedleCrossingDensityAverage_eq_segmentExpectedCrossings
     (d length : ℝ) (_hd : 0 < d) :
-    buffonNeedleCrossingProbability d length = segmentExpectedCrossings d length := by
-  unfold buffonNeedleCrossingProbability buffonConditionalCrossingProbability
+    buffonNeedleCrossingDensityAverage d length = segmentExpectedCrossings d length := by
+  unfold buffonNeedleCrossingDensityAverage buffonConditionalCrossingProbability
     buffonCenterThreshold segmentExpectedCrossings
   rw [intervalIntegral.integral_const_mul, intervalIntegral.integral_div,
     intervalIntegral.integral_const_mul, buffon_rotational_symmetry_integral]
   ring_nf
 
+/-- The actual measure-theoretic crossing probability equals the segment formula. -/
+theorem buffonNeedleCrossingProbability_eq_segmentExpectedCrossings
+    (d length : ℝ) (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
+    buffonNeedleCrossingProbability d length = segmentExpectedCrossings d length := by
+  unfold buffonNeedleCrossingProbability segmentExpectedCrossings
+  rw [buffonPlacementMeasure_crossingSet hd hlen hle]
+  rw [ENNReal.toReal_ofReal (show 0 ≤ 2 * length / (Real.pi * d) by positivity)]
+
+/-- The measure-theoretic probability agrees with the older density-level
+average. -/
+theorem buffonNeedleCrossingProbability_eq_densityAverage
+    (d length : ℝ) (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
+    buffonNeedleCrossingProbability d length =
+      buffonNeedleCrossingDensityAverage d length := by
+  rw [buffonNeedleCrossingProbability_eq_segmentExpectedCrossings d length hd hlen hle,
+    buffonNeedleCrossingDensityAverage_eq_segmentExpectedCrossings d length hd]
+
 /--
 Chapter 25 (Buffon's needle, short-needle density model):
-For `0 ≤ ℓ ≤ d`, averaging the explicit crossing event over the uniform
-center distance on `[0,d/2]` and the uniform angle on `[0,π]` gives crossing
-probability `2ℓ/(πd)`.
-
-This theorem deliberately has no probability-space structure parameter and no
-field asserting the expected-value identity.  The remaining measure-theoretic
-upgrade is to prove that the density-level average used in
-`buffonNeedleCrossingProbability` is equal to the integral of the indicator of
-`buffonCrossingEvent` over the normalized product measure on
-`[0,d/2] × [0,π]`.
+For `0 ≤ ℓ ≤ d`, the normalized placement measure on
+`[0,π] × [0,d/2]` assigns the crossing set probability `2ℓ/(πd)`.
 -/
-theorem chapter25 (d length : ℝ) (hd : 0 < d) (_hlen : 0 ≤ length) (_hle : length ≤ d) :
+theorem chapter25 (d length : ℝ) (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
     buffonNeedleCrossingProbability d length = 2 * length / (Real.pi * d) := by
-  rw [buffonNeedleCrossingProbability_eq_segmentExpectedCrossings d length hd]
+  rw [buffonNeedleCrossingProbability_eq_segmentExpectedCrossings d length hd hlen hle]
   rfl
 
 end ProofsInTheBook.Chapter25

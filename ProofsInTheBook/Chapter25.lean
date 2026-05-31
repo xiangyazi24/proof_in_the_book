@@ -512,6 +512,16 @@ theorem buffonThresholdIndicator_integral_normalized {d length : ℝ}
   rw [buffonThresholdIndicator_integral hlen hle]
   ring
 
+/-- Integrating the normalized placement density over the geometric crossing
+region gives the Buffon short-needle probability formula. -/
+theorem buffonCrossingRegion_density_integral {d length : ℝ}
+    (_hd : 0 < d) (hlen : 0 ≤ length) :
+    ∫ _ in buffonCrossingRegion length, (2 / (Real.pi * d) : ℝ) ∂volume =
+      2 * length / (Real.pi * d) := by
+  rw [setIntegral_const, measureReal_def]
+  rw [volume_buffonCrossingRegion hlen, ENNReal.toReal_ofReal hlen]
+  ring
+
 /-- The placement measure of the actual crossing set is the Buffon formula. -/
 theorem buffonPlacementMeasure_crossingSet {d length : ℝ}
     (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
@@ -526,6 +536,19 @@ theorem buffonPlacementMeasure_crossingSet {d length : ℝ}
   · congr 1
     ring
   · positivity
+
+/-- The measure-theoretic crossing probability is the integral of the constant
+placement density over the geometric crossing region. -/
+theorem buffonNeedleCrossingProbability_eq_crossingRegion_densityIntegral
+    {d length : ℝ} (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
+    buffonNeedleCrossingProbability d length =
+      ∫ _ in buffonCrossingRegion length, (2 / (Real.pi * d) : ℝ) ∂volume := by
+  rw [buffonNeedleCrossingProbability_eq_volume_ratio hd hlen hle]
+  rw [volume_buffonCrossingSet_eq_region, volume_buffonCrossingRegion hlen,
+    volume_buffonPlacementSet d, ENNReal.toReal_ofReal hlen,
+    ENNReal.toReal_ofReal (by positivity)]
+  rw [buffonCrossingRegion_density_integral hd hlen]
+  field_simp [Real.pi_ne_zero, hd.ne']
 
 /-- The old density-level average equals the segment formula. -/
 theorem buffonNeedleCrossingDensityAverage_eq_segmentExpectedCrossings
@@ -561,7 +584,7 @@ For `0 ≤ ℓ ≤ d`, the normalized placement measure on
 -/
 theorem chapter25 (d length : ℝ) (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
     buffonNeedleCrossingProbability d length = 2 * length / (Real.pi * d) := by
-  rw [buffonNeedleCrossingProbability_eq_segmentExpectedCrossings d length hd hlen hle]
-  rfl
+  rw [buffonNeedleCrossingProbability_eq_crossingRegion_densityIntegral hd hlen hle,
+    buffonCrossingRegion_density_integral hd hlen]
 
 end ProofsInTheBook.Chapter25

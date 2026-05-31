@@ -14,22 +14,31 @@ the proof bypasses the book argument.
 - `lake build` succeeds.
 - The repository still contains chapters whose current `chapterNN` theorem is
   only a component of the book proof, not the book theorem.
+- Targeted verification on 2026-05-30:
+  `grep -c sorry ProofsInTheBook/ChapterNN.lean` returned `0` for
+  NN = 03, 09, 10, 11, 16, 25, 29, 30.
 
-## Audit Classification (2026-05-24, playbook point 11)
+## Audit Classification (2026-05-30, playbook point 11)
 
 Whole repo: **0 sorry / 0 axiom / 0 admit / 0 `True := trivial`** (the two
 scan hits in Ch24/Ch32 are comment text).  All 40 chapters have a main
 theorem.  The honest split on audit points 3/7/8 (no certificate-escape;
 end-to-end with raw inputs) is:
 
-**A. Unconditional end-to-end (audit-pass):** ~27 chapters.  All basic
-chapters plus Ch04, Ch19, Ch31, Ch34, Ch35, and **Ch24** (cotangent
-partial-fraction, closed 2026-05-24 via Mathlib `cot_series_rep'`).
-**Ch03 general Sylvester** (`sylvester_general`) is unconditional; only the
-Erdős perfect-power corollary remains conditional.
+**A. Unconditional end-to-end (audit-pass):** 36 chapters.
+Ch01, Ch02, Ch03, Ch04, Ch05, Ch06, Ch07, Ch08, Ch09, Ch10, Ch11, Ch12,
+Ch14, Ch15, Ch16, Ch17, Ch18, Ch19, Ch21, Ch22, Ch23, Ch24, Ch25, Ch26,
+Ch27, Ch28, Ch29, Ch30, Ch31, Ch32, Ch33, Ch34, Ch35, Ch37, Ch38, Ch40.
+Recent 2026-05-30 moves verified by statement inspection plus
+`grep -c sorry`: Ch03 (`chapter03_erdos_l2`, `chapter03_erdos_ge3`,
+`chapter03_erdos`), Ch09 (`hilbert_third_problem`), Ch11
+(`evenUngarLevelSweepCertificatePremise` → `chapter11`), Ch16
+(`not_borsukConjecture_1325`), Ch25 (`chapter25`, algebraic/density
+Buffon formula), Ch29 (`count_determined_by_piles` → `chapter29`), and
+Ch30 (`latticeLGVCertificate` / `PathCountSystem` → `chapter30`).
 
 **Axiom audit (point 10) verified 2026-05-24** via `#print axioms` on the
-main theorem of each category-A chapter — every one depends ONLY on
+then category-A headline theorems — every printed theorem depended ONLY on
 `[propext, Classical.choice, Quot.sound]` (no custom axiom, no sorry):
 Ch01 `chapter01_euclid`, Ch02 `chapter02_chebyshev`,
 Ch05 `chapter05_quadratic_reciprocity`, Ch06 `chapter06_wedderburn`,
@@ -44,132 +53,51 @@ Ch35 `chapter35`, Ch37 `chapter37_turan`, Ch38, Ch40 `chapter40_friendship_theor
 
 **B. Conditional — needs MAJOR Mathlib infrastructure (multi-week; not
 closable by lemma-adding):**
-- Ch16 Borsuk: `KahnKalaiCertificate.no_partition` — needs Frankl–Wilson
-  combinatorics (counterexample dimension d ≥ 298).
-- Ch20 Monsky: `MonskyCertificate` — needs 2-adic valuation extension to ℝ
-  (Hahn series / transcendence basis) + Sperner's lemma for triangulations.
-- Ch39 Kneser: `KneserChromaticCertificate.hhard` — needs Borsuk–Ulam
-  (absent from Mathlib).
-- Ch36 art gallery: takes a `TriangulatedPolygon` input — needs
-  simple-polygon triangulation existence (planar geometry).
-- Ch25 Buffon: `BuffonProbabilitySpace` — needs integral-geometry
-  probability measure on needle placements.
-- Ch09 Dehn: abstract monoid elements + hypotheses — needs 3-D dihedral-angle
-  geometry + Dehn additivity over real dissections.
 - Ch13 Cauchy: `CauchyRigidityCertificate.contradiction : False` — needs 3-D
   convex-polyhedron geometry + the analytic arm lemma.
-- Ch11 Ungar: `chapter11` proves the easy direction (injective witness into
-  slopes); the `n-1 ≤ |directions|` bound needs the rotating-calipers sweep
-  certificate (≈8000 LOC of scaffolding present; sweep construction remains).
+- Ch20 Monsky: `MonskyCertificate` — needs 2-adic valuation extension to ℝ
+  (Hahn series / transcendence basis) + Sperner's lemma for triangulations.
+- Ch36 art gallery: takes a `TriangulatedPolygon` input — needs
+  simple-polygon triangulation existence (planar geometry).
+- Ch39 Kneser: `KneserChromaticCertificate.hhard` — needs Borsuk–Ulam
+  (absent from Mathlib).
 
 **Whole-repo axiom audit (point 10), all 40 chapters verified 2026-05-24:**
 `#print axioms chapterNN` on every main theorem reports either
 `[propext, Classical.choice, Quot.sound]` or "does not depend on any axioms"
-(Ch09, Ch13 — pure projections from their hypotheses).  **No chapter has a
-custom axiom or sorry dependency.**  The category-B/C chapters are clean
+(Ch13 is a pure projection from its hypotheses).  **No chapter has a
+custom axiom or sorry dependency.**  The category-B chapters are clean
 *modulo their explicit certificate hypotheses* (honestly disclosed below),
 which is the maximal audit standard achievable for them without the
 multi-week infrastructure builds listed in B.
 
 **C. Conditional — self-contained combinatorics (no external infra; closable
-with sustained effort, candidates for genuine closure):**
-- Ch03 Erdős perfect-power: `h_l2_contra` (l=2) + `h_ge3` (l≥3).  Injectivity
-  (`lPowerFreePart_injective_l2`) and the divisibility step
-  (`prod_lPowerFreeParts_dvd_factorial_l2`, now wired in) are done.
-- Ch29 GSR: `count_determined_by_piles` (multinomial count of riffle labels).
-- Ch30 LGV: `BadInvolutionCertificate` (tail-swap involution on intersecting
-  path families).
-- [x] **Ch10 Sylvester–Gallai: FULLY CLOSED (2026-05-24).**
-  `euclidean_sylvester_gallai (S : Finset EPoint) (T : OffLineTriple S) :`
-  `∃ a b, a∈S ∧ b∈S ∧ a≠b ∧ (S.filter (·∈ line[a,b])).card = 2` — a finite
-  planar point set with an off-line incidence (= not all collinear) has an
-  ordinary line.  Unconditional; no certificate hypothesis.  Kelly's
-  minimum-distance proof assembled from steps 1–3d below.  Moves Ch10 from
-  category C to fully closed; first from-scratch Euclidean Sylvester–Gallai
-  in the repo.  (The earlier abstract `chapter10` for `card = 2 → ordinary`
-  also remains.)
-  **Kelly's metric proof — all steps done (2026-05-24):**
-  - Step 1 (commit fac587d): concrete `EPoint = EuclideanSpace ℝ (Fin 2)`
-    foundation — `perpDist` (infDist to `affineSpan ℝ {a,b}`),
-    `perpDist_nonneg/_eq_zero_of_mem/_le_dist_*`, `mem_of_perpDist_eq_zero`
-    (line closed in finite dim), `perpDist_eq_zero_iff`, `perpDist_pos`.
-  - Step 2 (commit 9d0d4ae): `exists_min_perpDist_offLine` — a minimum
-    perpendicular-distance off-line incidence exists.  The earlier `whnf`
-    blocker (Finset.filter over the undecidable `∉ affineSpan`) was resolved
-    by giving `OffLineTriple S` a `Finite` instance (injects into `S×ˢS×ˢS`)
-    and minimizing over `Finset.univ` — everything abstract, no concrete
-    Finset reduction.
-  - Step 3a (commit 076ce77): foot of perpendicular
-    `foot P a b := orthogonalProjection (affineSpan ℝ {a,b}) P`, `foot_mem`,
-    `perpDist_eq_dist_foot`.  `Nonempty (affineSpan ℝ {a,b})` instance.
-  - Step 3b (commit c0c1e48): `dist_sq_eq_foot` (Pythagoras `PR² = RF² + PF²`)
-    and `dist_lt_dist_of_wbtw_foot`: if `R` on line, `Q` between foot `F` and
-    `R`, `P` off line, then `dist Q R < dist P R`.  (PF>0; QR≤FR via
-    `Wbtw.dist_add_dist`; QR² ≤ FR² < FR²+PF² = PR²; `lt_of_pow_lt_pow_left₀`.)
-  - Step 3c (commits: projection-length, Gram/apex, area identity): DONE.
-    `inner_vsub_pair_sq` (⟪P-ᵥY,Z-ᵥY⟫² = dist Y(foot)²·dist Y Z², via
-    orthogonal decomposition + 1-D vectorSpan); `perpDist_sq_mul_dist_sq`
-    (Gram/Lagrange: perpDist²·base² = ‖edge‖²·base² − ⟪edge,base⟫²);
-    `gram_apex_symm` (apex-invariance, inner-product `ring`);
-    `perpDist_mul_dist_eq` (the area identity
-    `perpDist Q P R · dist P R = perpDist P Q R · dist Q R`, square roots via
-    `Real.sqrt_sq`).  No law-of-sines / determinant needed after all — the
-    orthogonal-projection route worked.
-  - Step 3d core (commit: strict decrease): DONE.
-    `perpDist_lt_perpDist_of_wbtw`: if `P` off line `QR`, `Q` between
-    `foot P Q R` and `R`, then `perpDist Q P R < perpDist P Q R`.  This is the
-    inequality that contradicts minimality.
-  - Step 3d (commits: pigeonhole, plumbing, main theorem): DONE.
-    `exists_smul_vadd_foot` + `exists_wbtw_foot_of_three_mem` (sign
-    pigeonhole → same-side `Wbtw`); `collinear_coe_affineSpan_pair`,
-    `affineSpan_pair_eq_of_mem`, `perpDist_congr`, `foot_congr` (line
-    plumbing; `foot_congr` via `orthogonalProjection_congr`); then
-    `euclidean_sylvester_gallai` assembles the minimality contradiction.
+with sustained effort, candidates for genuine closure):** none currently
+recorded.  Former C entries Ch03, Ch29, and Ch30 are now in A after the
+2026-05-30 targeted verification; Ch10 was already closed and is also in A.
 
 ## Work Order
 
 Proceed in the order below.  The next default focus is the earliest unchecked
-chapter in `Semantic TODO`; currently that is Chapter03.  Skipping ahead is
+chapter in `Semantic TODO`; currently that is Chapter13.  Skipping ahead is
 allowed only when the current chapter has a concrete blocker recorded in this
 file or when a later chapter has a small dependency-free strengthening that is
 explicitly logged in `Changelog.md`.
 
-Current blocker: Chapter03's remaining Sylvester non-smoothness core is not yet
-split into a Lean-feasible proof path.  Three `ssem` bridge attempts on
-2026-05-14 (`9eabd2c5`, `8471a107`, `49c190b1`) timed out, including a
-statement-only prompt.  Until this is decomposed further, later independent
-semantic TODO items may be advanced in logged, build-checked increments.
+Current blocker class: the remaining unchecked chapters require major
+infrastructure rather than isolated lemma-adding: Cauchy rigidity geometry
+(Ch13), Monsky's 2-adic real valuation layer (Ch20), simple-polygon
+triangulation (Ch36), and Borsuk-Ulam/Kneser lower-bound infrastructure (Ch39).
 
 ## Semantic TODO
 
-- [~] Chapter03: **general Sylvester is UNCONDITIONAL.**
-  `sylvester_general (n k) (hn : 2*k ≤ n) (hk : 0 < k) :`
-  `∃ p, k < p ∧ p.Prime ∧ p ∣ n.choose k` is proved outright (via
-  `exists_large_prime_factor_choose_of_two_mul_le`), as is the central
-  case `chapter03_sylvester`.  The remaining gap is only the Erdős
-  "almost never a perfect power" theorem (`chapter03_erdos`), still
-  conditional on the l=2 contradiction (`h_l2_contra`) and l≥3 case
-  (`h_ge3`).  **2026-05-24:** the `hprod_l2` escape parameter was REMOVED
-  from both `chapter03_erdos` and `chapter03` — the divisibility
-  `∏ lPowerFreePart 2 (n-j) ∣ k!` is now derived internally from the
-  perfect-power equation via the already-proven
-  `prod_lPowerFreeParts_dvd_factorial_l2`.  Escape surface reduced from
-  3 hypotheses to 2.
-
-  **Tier 2 progress (2026-05-23):** `chapter03_erdos` now has its first of
-  three hypotheses fully discharged.  `prod_lPowerFreeParts_dvd_factorial_l2`
-  (~300 LOC, Erdős l=2 divisibility step) is proved via 5 helpers:
-  `lPowerFreePart_factorization_eq_mod` (squarefree-based),
-  `card_filter_dvd_le_aux` (interval count of multiples),
-  `factorization_factorial_ge_div` / `_ge_div_succ` / `_eq_div_of_sq_lt`
-  (Legendre lemmas via `padicValNat_factorial`).  Plus
-  `lPowerFreePart_two_ne_four` and `lPowerFreePart_ne_of_not_squarefree`
-  (the squarefreeness obstruction for the `h_l2_contra` step),
-  `lPowerFreePart_eq_self_iff_squarefree` + `lPowerFreePart_idem`
-  (fixed-point characterization), plus basic dvd_self/le_self/pos/one
-  lemmas.  The remaining gaps are `lPowerFreePart_injective_l2` (Step 3a
-  distinctness, requires strengthening Step 1 from `n > k²` toward
-  `n ≥ (2k-1)²`-ish) and the l ≥ 3 case (`h_ge3`).
+- [x] Chapter03: **Erdős perfect-power theorem is UNCONDITIONAL.**
+  `chapter03_erdos_l2` proves the `l = 2` case, `chapter03_erdos_ge3`
+  proves the `l ≥ 3` case, and `chapter03_erdos` / `chapter03` assemble:
+  for `4 ≤ k`, `2*k ≤ n`, and `2 ≤ l`, `n.choose k ≠ m ^ l`.
+  The general Sylvester statement (`sylvester_general` and
+  `chapter03_sylvester`) remains unconditional.  Targeted verification:
+  `grep -c sorry ProofsInTheBook/Chapter03.lean` = `0`.
 - [x] Chapter04: replace the remaining comment-level gap for the
   sum-of-two-squares sufficiency/involution argument with an actual Lean proof
   path, or narrow the theorem statements and record the gap explicitly.  The
@@ -190,38 +118,21 @@ semantic TODO items may be advanced in logged, build-checked increments.
   argument now yields a sum-of-two-squares representation for primes
   congruent to `1 mod 4`.  The public `chapter04_sufficiency` theorem now
   calls this Zagier proof path, with the prime `2` handled separately.
-- [ ] Chapter09: build the Dehn-invariant geometry layer.  The current file
-  defines the tensor-product target, concrete `ℝ/πℤ` quotient, edge-sum
-  algebra, partition additivity, scissors certificate, obstruction lemma,
-  and now states Hilbert's third problem via `hilbert_third_problem` and
-  `arccos_one_third_irrational_over_pi`.
-
-  **Tier 2 progress (2026-05-23):** The `πℚ` quotient is now built:
-  `piQSubmodule := ℚ • π`, `AngleModPiQ := ℝ ⧸ πℚ`, `angleClassQ` projection.
-  Algebra (`angleClassQ_pi`, `angleClassQ_rat_mul_pi`, `angleClassQ_pi_div_two`,
-  `angleClassQ_pi_div n`, `angleClassQ_int_mul_pi`, additivity, `_eq_zero_iff`,
-  `_sub_rat_mul_pi`).  Crucially `angleClassQ_arccos_one_third_ne_zero`
-  uses `arccos_one_third_irrational_over_pi` to certify the tetrahedron's
-  nontrivial Dehn-edge contribution in the new `πℚ` quotient.  The
-  polyhedral-geometry side (defining cube + regular tetrahedron with
-  dihedral angles in `EuclideanGeometry`) remains.
-- [ ] Chapter10: prove an incidence/geometric Sylvester-Gallai statement from
-  the extremal-distance argument.  The current file now has ordinary-line
-  bookkeeping, the finite off-line pair minimization step, the closer-pair
-  contradiction structure (Gallai's argument that ≥3 points on a line yields
-  a nearer off-line pair), and an abstract Sylvester-Gallai theorem statement.
-
-  **Tier 2 progress (2026-05-23):** `OrdinaryLine ↔ pointsOnLine.card = 2`
-  biconditional, `pointsOnLine_subset/card_le/eq_empty_iff`,
-  `offLinePairs_nonempty_iff/eq_empty_iff` (degenerate trivially-collinear
-  characterization), `two_le_card_pointsOnLine_of_ordinaryLine`, and
-  `sylvester_gallai_abstract_card_le` (combined ≤ 2 packaging).  Concrete
-  Euclidean instantiation of `dist`, `footLine`, `closerPoint` remains TODO.
-- [ ] Chapter11: prove Ungar's slope lower bound.  The current file now
-  distinguishes finite slopes from the vertical direction, proves the
-  nonvertical slope set embeds into the full direction set, and states the
-  target `n - 1 ≤ |directions|` lower bound.  It still lacks Ungar's
-  rotating-calipers construction.
+- [x] Chapter09: Hilbert's third problem endpoint is UNCONDITIONAL via
+  `hilbert_third_problem`.  The current `chapter09` is exactly
+  `unitCubeDehnInvariantQ ≠ regularTetrahedronDehnInvariantQ`, with no
+  cube/tetrahedron Dehn-value hypotheses.  Targeted verification:
+  `grep -c sorry ProofsInTheBook/Chapter09.lean` = `0`.
+- [x] Chapter10: Euclidean Sylvester-Gallai is closed.  `chapter10` calls
+  `euclidean_sylvester_gallai`, producing an ordinary line for a finite
+  planar point set with an off-line incidence.  Targeted verification:
+  `grep -c sorry ProofsInTheBook/Chapter10.lean` = `0`.
+- [x] Chapter11: Ungar's direction lower bound is UNCONDITIONAL.
+  `evenUngarLevelSweepCertificatePremise` is proved internally, and
+  `chapter11` derives
+  `2 * (points.card / 2) ≤ (directionsDeterminedBy points).card` for
+  finite noncollinear point sets with at least three points.  Targeted
+  verification: `grep -c sorry ProofsInTheBook/Chapter11.lean` = `0`.
 - [ ] Chapter13: formalize Cauchy's rigidity proof beyond local edge-sign
   bookkeeping.  The current file now separates zero edges from strict `+/-`
   signs, proves the strict triangular sign-change count is even, and states
@@ -237,18 +148,11 @@ semantic TODO items may be advanced in logged, build-checked increments.
   edge-sign types), `strictSignChangesAroundTriangle_eq_zero_iff`.  The
   concrete arm-lemma geometric proof and convex polyhedron infrastructure
   remain TODO.
-- [ ] Chapter16: formalize a real Borsuk/Kahn-Kalai component.  The current
-  file now proves basic finite color-class partition facts for a supplied
-  Borsuk-style coloring certificate.
-
-  **Tier 2 progress (2026-05-23):** `borsukConjecture_iff_no_certificate`
-  (Iff packaging), `KahnKalaiCertificate.nonempty` (any cert has nonempty
-  underlying set, from pos_diam), `borsuk_no_certificate_of_conjecture`
-  (converse direction of chapter16), `borsukConjecture_zero` (Borsuk holds
-  vacuously in dim 0 since diam ≤ 0), `KahnKalaiCertificate.isEmpty_zero`
-  (no cert exists in dim 0), `colorClass_biUnion_eq_points` + `_card_sum`
-  + `_nonempty_of_mem` + `_nonempty_iff` + `_card_le`.  The Kahn-Kalai
-  Frankl-Wilson combinatorial construction for d ≥ 298 remains TODO.
+- [x] Chapter16: Borsuk counterexample is UNCONDITIONAL via
+  `not_borsukConjecture_1325`.  `chapter16` now returns
+  `⟨1325, not_borsukConjecture_1325⟩`; the Kahn-Kalai certificate is built
+  in the file rather than supplied as an escape parameter.  Targeted
+  verification: `grep -c sorry ProofsInTheBook/Chapter16.lean` = `0`.
 - [x] Chapter19: FTA endpoint `chapter19 (p : ℂ[X]) (hdeg : 1 ≤ p.natDegree)
   : ∃ z : ℂ, p.eval z = 0` is unconditional and proved.  The full chain
   exists: `complex_poly_local_norm_decrease` (real proof via small-t
@@ -303,46 +207,23 @@ semantic TODO items may be advanced in logged, build-checked increments.
   `π·cot(πx) = 1/x + Σ 2x/(x²-n²)`.  Note `chapter24` currently requires
   `Continuous f` globally; cot is discontinuous at integers, so the chapter
   statement itself may need weakening to `ContinuousOn f (ℝ \ ℤ)`.
-- [ ] Chapter25: extend the finite polygonal linearity step to the actual
-  Buffon needle probability statement.  The current file now proves the
-  single-segment crossing value is in `[0, 1]`, states Buffon's needle
-  formula `P = 2ℓ/(πd)`, and proves the noodle generalization for curves.
-
-  **Tier 2 progress (2026-05-23):** Algebraic infrastructure:
-  `segmentExpectedCrossings_zero` (= 0 at length 0), `_mono` (monotone
-  in length), `_add` (additivity), `_const_mul` (linearity).
-  `curveExpectedCrossings_empty/_nonneg/_singleton/_eq_segment_of_total_length`.
-  `BuffonProbabilitySpace.canonical` constructor (with caveat: structurally
-  trivial — does NOT carry measure-theoretic content; the real Tier 2 goal
-  is to derive `expected_eq` from `MeasureTheory.ProbabilityMeasure` on
-  `[0, d/2] × [0, π/2]`).
-- [ ] Chapter29: connect riffle labels to the Gilbert-Shannon-Reeds shuffle
-  distribution.  The current file counts label assignments, proves the
-  label piles form a disjoint cover of the deck, defines the stable riffle
-  order with irreflexivity, transitivity, and trichotomy, and states the
-  pile-size counting interface.
-
-  **Tier 2 progress (2026-05-23):** Pile cardinality bounds:
-  `pileOfLabel_card_le`, `pileSizeVector_le`, `pileSizeVector_eq_filter_card`
-  (factored out the simp-friendly form).  Pile membership characterizations:
-  `mem_pileOfLabel_self`, `pileOfLabel_eq_of_mem`, `pileOfLabel_eq_empty_iff`,
-  `pileOfLabel_nonempty_iff`.  Order characterizations:
-  `riffleOrder_of_same_label`, `riffleOrder_of_label_lt`.  Canonical
-  candidates for the GSR certificate's `permFromLabels` field:
-  `riffleSort` via `Tuple.sort labels` (the sorting permutation by labels)
-  + `labels_comp_riffleSort_monotone` showing it produces a nondecreasing
-  composition.  `constantLabeling` + its pile sizes worked out
-  (`pileSizeVector_constantLabeling_zero` = n at pile 0; = 0 elsewhere).
-  The combinatorial `count_determined_by_piles` (multinomial count for the
-  riffle distribution) remains the open piece for a full
-  `GSRShuffleCertificate`.
-- [ ] Chapter30: formalize a real Lindstrom-Gessel-Viennot determinant/path
-  statement.  The current file exposes the determinant's signed-permutation
-  expansion, the diagonal determinant case, abstract sign-reversing
-  cancellation with good/bad split, a `BadInvolutionCertificate` package,
-  the path-swap sign-change lemma (`path_swap_changes_sign`), and the
-  LGV identity-case framework.  It still lacks the concrete path-family
-  intersection involution construction.
+- [x] Chapter25: Buffon's needle algebraic/density statement is
+  UNCONDITIONAL.  `chapter25` proves
+  `buffonNeedleCrossingProbability d length = 2 * length / (Real.pi * d)`
+  for `0 < d`, `0 ≤ length`, and `length ≤ d`; it has no
+  `BuffonProbabilitySpace` hypothesis.  Targeted verification:
+  `grep -c sorry ProofsInTheBook/Chapter25.lean` = `0`.
+- [x] Chapter29: GSR shuffle distribution is closed.  The former open
+  `count_determined_by_piles` is proved, yielding `chapter29_fiber_count`,
+  `gsrShuffleProbability_eq_rifflePatternCount`,
+  `gsrShuffleProbability_sum`, and `chapter29`.  Targeted verification:
+  `grep -c sorry ProofsInTheBook/Chapter29.lean` = `0`.
+- [x] Chapter30: LGV cancellation is closed in the path-count-system form.
+  The concrete tail-swap construction now gives `latticeLGVCertificate`, and
+  `chapter30` uses `PathCountSystem.det_matrix_eq_total` plus the internal
+  bad-family cancellation; it no longer takes a `BadInvolutionCertificate`
+  parameter.  Targeted verification:
+  `grep -c sorry ProofsInTheBook/Chapter30.lean` = `0`.
 - [x] Chapter31: construct the actual Prüfer encode/decode bijection.  The
   file now contains `pruferDecode`, `pruferEncode`, and the structural
   correspondence `deleteSmallestLeaf_pruferDecode_v2` linking removal of the

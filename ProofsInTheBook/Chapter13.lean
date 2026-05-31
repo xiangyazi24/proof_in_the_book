@@ -98,9 +98,47 @@ theorem vertices_mem_vertexSet (f : PolyhedronFace V) (i : Fin f.vertexCount) :
     f.vertices i ∈ f.vertexSet := by
   simp [vertexSet]
 
-/-- A face contains an edge when it contains both endpoint vertices. -/
-def ContainsEdge (f : PolyhedronFace V) (e : PolyhedronEdge V) : Prop :=
+/-- A face has a positive number of vertices. -/
+theorem vertexCount_pos (f : PolyhedronFace V) : 0 < f.vertexCount := by
+  exact Nat.lt_of_lt_of_le (by decide : 0 < 3) f.three_le
+
+/-- The next vertex in the cyclic order around the face. -/
+def next (f : PolyhedronFace V) (i : Fin f.vertexCount) : Fin f.vertexCount :=
+  ⟨(i.1 + 1) % f.vertexCount, Nat.mod_lt _ f.vertexCount_pos⟩
+
+/-- The unordered endpoint set of the `i`-th boundary edge in the cyclic face order. -/
+def boundaryEdgeEndpoints (f : PolyhedronFace V) (i : Fin f.vertexCount) : Finset (Fin V) :=
+  {f.vertices i, f.vertices (f.next i)}
+
+/-- Weak membership predicate: both endpoints of the edge occur among the face vertices. -/
+def ContainsEdgeEndpoints (f : PolyhedronFace V) (e : PolyhedronEdge V) : Prop :=
   e.tail ∈ f.vertexSet ∧ e.head ∈ f.vertexSet
+
+/-- A face contains an edge when the edge is one of its cyclic boundary edges. -/
+def ContainsEdge (f : PolyhedronFace V) (e : PolyhedronEdge V) : Prop :=
+  ∃ i : Fin f.vertexCount, e.endpoints = f.boundaryEdgeEndpoints i
+
+theorem containsEdgeEndpoints_of_containsEdge (f : PolyhedronFace V) (e : PolyhedronEdge V)
+    (h : f.ContainsEdge e) :
+    f.ContainsEdgeEndpoints e := by
+  rcases h with ⟨i, hi⟩
+  constructor
+  · have htail : e.tail ∈ e.endpoints := by simp
+    rw [hi] at htail
+    simp [boundaryEdgeEndpoints] at htail
+    rcases htail with htail | htail
+    · rw [vertexSet]
+      exact Finset.mem_image.mpr ⟨i, by simp, htail.symm⟩
+    · rw [vertexSet]
+      exact Finset.mem_image.mpr ⟨f.next i, by simp, htail.symm⟩
+  · have hhead : e.head ∈ e.endpoints := by simp
+    rw [hi] at hhead
+    simp [boundaryEdgeEndpoints] at hhead
+    rcases hhead with hhead | hhead
+    · rw [vertexSet]
+      exact Finset.mem_image.mpr ⟨i, by simp, hhead.symm⟩
+    · rw [vertexSet]
+      exact Finset.mem_image.mpr ⟨f.next i, by simp, hhead.symm⟩
 
 end PolyhedronFace
 
@@ -126,9 +164,26 @@ structure ConvexPolyhedron (V E F : ℕ) where
   vertex_injective : Function.Injective vertex
   edge : Fin E → PolyhedronEdge V
   face : Fin F → PolyhedronFace V
+  /-- The global edge occupying each cyclic boundary edge of each face. -/
+  faceEdge : (f : Fin F) → Fin (face f).vertexCount → Fin E
+  faceEdge_endpoints :
+    ∀ f i, (edge (faceEdge f i)).endpoints = (face f).boundaryEdgeEndpoints i
   edgeFaces : Fin E → Fin 2 → Fin F
   edgeFaces_injective : ∀ e, Function.Injective (edgeFaces e)
   edge_mem_incident_faces : ∀ e i, (face (edgeFaces e i)).ContainsEdge (edge e)
+  /--
+  Oriented boundary-edge incidences are exactly two slots over every global edge.
+  The domain is "a local cyclic boundary edge of a face"; the codomain is
+  "one of the two face orientations incident to a global edge".
+  -/
+  boundaryIncidence :
+    (Σ f : Fin F, Fin (face f).vertexCount) ≃ (Σ _e : Fin E, Fin 2)
+  boundaryIncidence_edge :
+    ∀ x, (boundaryIncidence x).1 = faceEdge x.1 x.2
+  boundaryIncidence_face :
+    ∀ x, edgeFaces (boundaryIncidence x).1 (boundaryIncidence x).2 = x.1
+  /-- Euler characteristic of the boundary sphere. -/
+  euler_characteristic : (V : ℤ) - (E : ℤ) + (F : ℤ) = 2
   faceNormal : Fin F → Euclidean3
   faceOffset : Fin F → ℝ
   faceNormal_ne_zero : ∀ f, faceNormal f ≠ 0
@@ -185,15 +240,125 @@ theorem facePoint_mem_supportingPlane (P : ConvexPolyhedron V E F) (f : Fin F)
     P.facePoint f i ∈ supportingPlane (P.faceNormal f) (P.faceOffset f) := by
   exact P.face_vertices_on_plane f i
 
+/-- The `faceEdge` map really names the cyclic boundary edge at that face slot. -/
+theorem faceEdge_containsEdge (P : ConvexPolyhedron V E F) (f : Fin F)
+    (i : Fin (P.face f).vertexCount) :
+    (P.face f).ContainsEdge (P.edge (P.faceEdge f i)) :=
+  ⟨i, P.faceEdge_endpoints f i⟩
+
+/-- The two recorded incident faces of an edge are distinct. -/
+theorem edgeFaces_ne (P : ConvexPolyhedron V E F) (e : Fin E) :
+    P.edgeFaces e 0 ≠ P.edgeFaces e 1 := by
+  intro h
+  exact Fin.zero_ne_one ((P.edgeFaces_injective e) h)
+
+/-- The set of faces incident to a global edge has cardinality two. -/
+theorem incidentFaces_card (P : ConvexPolyhedron V E F) (e : Fin E) :
+    (Finset.univ.image (P.edgeFaces e)).card = 2 := by
+  rw [Finset.card_image_of_injective _ (P.edgeFaces_injective e)]
+  simp
+
+/-- Every face-local boundary edge is assigned one of the two orientations of its global edge. -/
+theorem boundaryIncidence_global_edge (P : ConvexPolyhedron V E F)
+    (x : Σ f : Fin F, Fin (P.face f).vertexCount) :
+    (P.boundaryIncidence x).1 = P.faceEdge x.1 x.2 :=
+  P.boundaryIncidence_edge x
+
+/-- Every face-local boundary edge lands in the corresponding incident face slot. -/
+theorem boundaryIncidence_incident_face (P : ConvexPolyhedron V E F)
+    (x : Σ f : Fin F, Fin (P.face f).vertexCount) :
+    P.edgeFaces (P.boundaryIncidence x).1 (P.boundaryIncidence x).2 = x.1 :=
+  P.boundaryIncidence_face x
+
+/-- Each of the two edge-orientation slots has a unique face-local boundary edge. -/
+theorem exists_unique_boundaryIncidence_of_edgeSide (P : ConvexPolyhedron V E F)
+    (e : Fin E) (i : Fin 2) :
+    ∃! x : Σ f : Fin F, Fin (P.face f).vertexCount,
+      P.boundaryIncidence x = ⟨e, i⟩ := by
+  refine ⟨P.boundaryIncidence.symm ⟨e, i⟩, by simp, ?_⟩
+  intro y hy
+  exact P.boundaryIncidence.injective (by simp [hy])
+
+/-- The boundary occurrence corresponding to an edge side maps back to that global edge. -/
+theorem faceEdge_boundaryIncidence_symm (P : ConvexPolyhedron V E F)
+    (e : Fin E) (i : Fin 2) :
+    P.faceEdge (P.boundaryIncidence.symm ⟨e, i⟩).1
+      (P.boundaryIncidence.symm ⟨e, i⟩).2 = e := by
+  let x := P.boundaryIncidence.symm ⟨e, i⟩
+  have hx : P.boundaryIncidence x = ⟨e, i⟩ := by
+    simp [x]
+  have hedge := P.boundaryIncidence_edge x
+  have hfirst : (P.boundaryIncidence x).1 = e := by
+    simp [hx]
+  exact hedge.symm.trans hfirst
+
+/-- The boundary occurrence corresponding to an edge side lies on that side's incident face. -/
+theorem edgeFaces_boundaryIncidence_symm (P : ConvexPolyhedron V E F)
+    (e : Fin E) (i : Fin 2) :
+    P.edgeFaces e i = (P.boundaryIncidence.symm ⟨e, i⟩).1 := by
+  let x := P.boundaryIncidence.symm ⟨e, i⟩
+  have hx : P.boundaryIncidence x = ⟨e, i⟩ := by
+    simp [x]
+  have hface := P.boundaryIncidence_face x
+  simpa [hx] using hface
+
+/--
+Counting oriented boundary-edge incidences: summing the cyclic boundary lengths
+of all faces gives two incidences for every global edge.
+-/
+theorem boundary_incidence_card (P : ConvexPolyhedron V E F) :
+    (∑ f : Fin F, (P.face f).vertexCount) = 2 * E := by
+  have hcard :
+      Fintype.card (Σ f : Fin F, Fin (P.face f).vertexCount) =
+        Fintype.card (Σ _e : Fin E, Fin 2) :=
+    Fintype.card_congr P.boundaryIncidence
+  simpa [Fintype.card_sigma, Fintype.card_fin, Nat.mul_comm, Nat.mul_left_comm,
+    Nat.mul_assoc] using hcard
+
+/-- Euler's formula, supplied by the boundary topology carried by the polyhedron. -/
+theorem euler_formula (P : ConvexPolyhedron V E F) :
+    (V : ℤ) - (E : ℤ) + (F : ℤ) = 2 :=
+  P.euler_characteristic
+
+/-- A polyhedron is triangulated when every cyclic face boundary has length three. -/
+def IsTriangulated (P : ConvexPolyhedron V E F) : Prop :=
+  ∀ f : Fin F, (P.face f).vertexCount = 3
+
+/-- In a triangulated polyhedron, the total number of face-boundary slots is `3F`. -/
+theorem face_boundary_count_of_triangulated (P : ConvexPolyhedron V E F)
+    (htri : P.IsTriangulated) :
+    (∑ f : Fin F, (P.face f).vertexCount) = 3 * F := by
+  calc
+    (∑ f : Fin F, (P.face f).vertexCount) = ∑ _f : Fin F, 3 := by
+      exact Finset.sum_congr rfl (fun f _ => htri f)
+    _ = 3 * F := by
+      simp [Fintype.card_fin, Nat.mul_comm]
+
+/-- For triangulated polyhedra, counting face-edge incidences gives `3F = 2E`. -/
+theorem triangular_face_edge_count (P : ConvexPolyhedron V E F)
+    (htri : P.IsTriangulated) :
+    3 * F = 2 * E := by
+  calc
+    3 * F = ∑ f : Fin F, (P.face f).vertexCount :=
+      (P.face_boundary_count_of_triangulated htri).symm
+    _ = 2 * E := P.boundary_incidence_card
+
 /-- Corresponding vertices are related by one ambient Euclidean motion. -/
 def Congruent (P Q : ConvexPolyhedron V E F) : Prop :=
   ∃ φ : Euclidean3 ≃ᵃⁱ[ℝ] Euclidean3, ∀ v, φ (P.vertex v) = Q.vertex v
 
-/-- The two polyhedra use the same indexed edges and face vertex sets. -/
+/-- The two polyhedra use the same indexed edges and cyclic face boundaries. -/
 structure SameCombinatorics (P Q : ConvexPolyhedron V E F) : Prop where
   edge_tail : ∀ e, (P.edge e).tail = (Q.edge e).tail
   edge_head : ∀ e, (P.edge e).head = (Q.edge e).head
+  face_vertexCount : ∀ f, (P.face f).vertexCount = (Q.face f).vertexCount
+  face_vertices :
+    ∀ f (i : Fin (P.face f).vertexCount),
+      (Q.face f).vertices (Fin.cast (face_vertexCount f) i) = (P.face f).vertices i
   face_vertexSet : ∀ f, (P.face f).vertexSet = (Q.face f).vertexSet
+  faceEdge :
+    ∀ f (i : Fin (P.face f).vertexCount),
+      P.faceEdge f i = Q.faceEdge f (Fin.cast (face_vertexCount f) i)
   edgeFaces : ∀ e i, P.edgeFaces e i = Q.edgeFaces e i
 
 /-- Corresponding faces are isometric, expressed by all pairwise vertex distances. -/

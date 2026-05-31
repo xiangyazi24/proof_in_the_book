@@ -20,15 +20,15 @@ The proof proceeds by:
 3. Apply the arm lemma to derive a contradiction if any signs are non-zero.
 
 Formalization status: this file closes the finite sign bookkeeping layer and
-the final counting contradiction.  It defines edge signs, strict sign changes
-around triangular faces, proves the basic parity facts, packages the abstract
-consequence of Cauchy's arm lemma, and states `chapter13` / `chapter13_rigidity`
-from meaningful missing geometric/combinatorial facts.  The remaining
-frontier is now explicit: vertex-link geometry must turn the low sign-change
-cases into fixed-chord Cauchy-arm obstructions, and the Euler polyhedron
-formula plus the triangulated incidence count must be supplied by real
-polyhedron infrastructure.  Once those are given, the arm-lemma lower bound
-and Euler sign-count upper bound are proved here.
+the final counting contradiction.  It defines edge signs from dihedral-angle
+comparisons, strict sign changes around triangular faces, proves the basic
+parity facts, packages the abstract consequence of Cauchy's arm lemma, and
+states `chapter13` / `chapter13_rigidity` from meaningful missing
+geometric/combinatorial facts.  The remaining frontier is now explicit:
+vertex-link geometry must turn the low sign-change cases into fixed-chord
+Cauchy-arm obstructions.  The Euler polyhedron formula is carried as boundary
+topology in `ConvexPolyhedron`, and the triangulated incidence count is proved
+from the boundary-edge equivalence.
 
 Gap to the full book theorem: the missing work is genuine three-dimensional
 Euclidean polyhedron infrastructure.  A complete proof needs a formal convex
@@ -385,6 +385,116 @@ inductive EdgeSign where
 
 open EdgeSign
 
+namespace EdgeSign
+
+/--
+The sign of the change from an old angle to a new angle: `plus` means the
+angle increased, `minus` means it decreased, and `zero` means it stayed fixed.
+-/
+noncomputable def ofAngleDifference (oldAngle newAngle : ℝ) : EdgeSign :=
+  if oldAngle < newAngle then plus
+  else if newAngle < oldAngle then minus
+  else zero
+
+@[simp]
+theorem ofAngleDifference_eq_plus_of_lt {oldAngle newAngle : ℝ}
+    (h : oldAngle < newAngle) :
+    ofAngleDifference oldAngle newAngle = plus := by
+  simp [ofAngleDifference, h]
+
+@[simp]
+theorem ofAngleDifference_eq_minus_of_lt {oldAngle newAngle : ℝ}
+    (h : newAngle < oldAngle) :
+    ofAngleDifference oldAngle newAngle = minus := by
+  simp [ofAngleDifference, h, not_lt_of_gt h]
+
+@[simp]
+theorem ofAngleDifference_eq_zero_of_eq {oldAngle newAngle : ℝ}
+    (h : oldAngle = newAngle) :
+    ofAngleDifference oldAngle newAngle = zero := by
+  subst newAngle
+  simp [ofAngleDifference]
+
+@[simp]
+theorem ofAngleDifference_eq_zero_iff {oldAngle newAngle : ℝ} :
+    ofAngleDifference oldAngle newAngle = zero ↔ oldAngle = newAngle := by
+  unfold ofAngleDifference
+  by_cases hlt : oldAngle < newAngle
+  · have hne : oldAngle ≠ newAngle := ne_of_lt hlt
+    simp [hlt, hne]
+  · by_cases hgt : newAngle < oldAngle
+    · have hne : oldAngle ≠ newAngle := (ne_of_lt hgt).symm
+      simp [hlt, hgt, hne]
+    · have hle_forward : oldAngle ≤ newAngle := le_of_not_gt hgt
+      have hle_backward : newAngle ≤ oldAngle := le_of_not_gt hlt
+      have heq : oldAngle = newAngle := le_antisymm hle_forward hle_backward
+      simp [heq]
+
+end EdgeSign
+
+namespace ConvexPolyhedron
+
+variable {V E F : ℕ}
+
+/-- The angle between the two recorded face normals incident to an edge. -/
+noncomputable def normalAngle (P : ConvexPolyhedron V E F) (e : Fin E) : ℝ :=
+  InnerProductGeometry.angle (P.faceNormal (P.edgeFaces e 0))
+    (P.faceNormal (P.edgeFaces e 1))
+
+/--
+The internal dihedral-angle proxy extracted from the two incident face normals.
+For a convex polyhedron with consistently outward supporting normals this is
+`π` minus the angle between the normals.
+-/
+noncomputable def dihedralAngle (P : ConvexPolyhedron V E F) (e : Fin E) : ℝ :=
+  Real.pi - P.normalAngle e
+
+theorem normalAngle_nonneg (P : ConvexPolyhedron V E F) (e : Fin E) :
+    0 ≤ P.normalAngle e :=
+  InnerProductGeometry.angle_nonneg _ _
+
+theorem normalAngle_le_pi (P : ConvexPolyhedron V E F) (e : Fin E) :
+    P.normalAngle e ≤ Real.pi :=
+  InnerProductGeometry.angle_le_pi _ _
+
+theorem dihedralAngle_nonneg (P : ConvexPolyhedron V E F) (e : Fin E) :
+    0 ≤ P.dihedralAngle e := by
+  unfold dihedralAngle
+  linarith [P.normalAngle_le_pi e]
+
+theorem dihedralAngle_le_pi (P : ConvexPolyhedron V E F) (e : Fin E) :
+    P.dihedralAngle e ≤ Real.pi := by
+  unfold dihedralAngle
+  linarith [P.normalAngle_nonneg e]
+
+/--
+Edge signs for two polyhedra with the same indexed combinatorics, read as the
+sign of the change in corresponding dihedral angles from `P` to `Q`.
+-/
+noncomputable def edgeSigns (P Q : ConvexPolyhedron V E F)
+    (_hcomb : SameCombinatorics P Q) : Fin E → EdgeSign :=
+  fun e => EdgeSign.ofAngleDifference (P.dihedralAngle e) (Q.dihedralAngle e)
+
+@[simp]
+theorem edgeSigns_eq_zero_iff (P Q : ConvexPolyhedron V E F)
+    (hcomb : SameCombinatorics P Q) (e : Fin E) :
+    P.edgeSigns Q hcomb e = EdgeSign.zero ↔ P.dihedralAngle e = Q.dihedralAngle e := by
+  simp [edgeSigns]
+
+theorem edgeSigns_ne_zero_iff (P Q : ConvexPolyhedron V E F)
+    (hcomb : SameCombinatorics P Q) (e : Fin E) :
+    P.edgeSigns Q hcomb e ≠ EdgeSign.zero ↔ P.dihedralAngle e ≠ Q.dihedralAngle e :=
+  not_congr (P.edgeSigns_eq_zero_iff Q hcomb e)
+
+theorem edgeSigns_nontrivial_of_exists_dihedralAngle_ne (P Q : ConvexPolyhedron V E F)
+    (hcomb : SameCombinatorics P Q)
+    (hdiff : ∃ e, P.dihedralAngle e ≠ Q.dihedralAngle e) :
+    ∃ e, P.edgeSigns Q hcomb e ≠ EdgeSign.zero := by
+  rcases hdiff with ⟨e, he⟩
+  exact ⟨e, (P.edgeSigns_ne_zero_iff Q hcomb e).2 he⟩
+
+end ConvexPolyhedron
+
 /-- The nonzero signs left after Cauchy's proof discards unchanged edges. -/
 inductive StrictEdgeSign where
   | plus | minus
@@ -734,6 +844,10 @@ by the missing geometry:
   hold for the reduced triangulated sign graph.
 -/
 structure CauchyRigidityCertificate {V E F : ℕ} (edgeSigns : Fin E → EdgeSign) where
+  /-- Euler's formula for the reduced triangulated sign graph. -/
+  euler_formula : (V : ℤ) - (E : ℤ) + (F : ℤ) = 2
+  /-- Every face is triangular, so counting face-edge incidences gives `3F = 2E`. -/
+  triangular_face_edge_count : 3 * F = 2 * E
   /-- A nontrivial perturbation exists (at least one edge has a nonzero sign). -/
   nontrivial : ∃ e, edgeSigns e ≠ EdgeSign.zero
   /-- Arm-lemma local data around each vertex of the reduced sign graph. -/
@@ -744,10 +858,6 @@ structure CauchyRigidityCertificate {V E F : ℕ} (edgeSigns : Fin E → EdgeSig
   total_vertex_eq_total_face :
     (∑ v : Fin V, (vertexArmData v).signChanges) =
       ∑ f : Fin F, StrictTriangleSigns.signChanges (faceSigns f)
-  /-- Euler's formula for the reduced triangulated sign graph. -/
-  euler_formula : (V : ℤ) - (E : ℤ) + (F : ℤ) = 2
-  /-- Every face is triangular, so counting face-edge incidences gives `3F = 2E`. -/
-  triangular_face_edge_count : 3 * F = 2 * E
 
 namespace CauchyRigidityCertificate
 
@@ -772,6 +882,52 @@ theorem euler_sign_change_bound {V E F : ℕ}
       simpa [CauchyRigidityCertificate.vertexSignChanges] using
         cert.total_vertex_eq_total_face)
     cert.euler_formula cert.triangular_face_edge_count
+
+end CauchyRigidityCertificate
+
+/--
+The remaining data needed to construct the finite Cauchy rigidity certificate
+from a concrete pair of convex polyhedra.  The Euler field and triangular
+face-edge count are derived from `P`; the nontrivial sign field is derived
+from a genuine dihedral-angle difference.
+-/
+structure CauchyRigidityConstructionData {V E F : ℕ}
+    (P Q : ConvexPolyhedron V E F) where
+  combinatorics : ConvexPolyhedron.SameCombinatorics P Q
+  triangulated : P.IsTriangulated
+  dihedralAngles_differ : ∃ e, P.dihedralAngle e ≠ Q.dihedralAngle e
+  vertexArmData : Fin V → CauchyArmVertex
+  faceSigns : Fin F → StrictTriangleSigns
+  total_vertex_eq_total_face :
+    (∑ v : Fin V, (vertexArmData v).signChanges) =
+      ∑ f : Fin F, StrictTriangleSigns.signChanges (faceSigns f)
+
+namespace CauchyRigidityConstructionData
+
+noncomputable def edgeSigns {V E F : ℕ} {P Q : ConvexPolyhedron V E F}
+    (data : CauchyRigidityConstructionData P Q) : Fin E → EdgeSign :=
+  P.edgeSigns Q data.combinatorics
+
+end CauchyRigidityConstructionData
+
+namespace CauchyRigidityCertificate
+
+/--
+Construct the finite Cauchy certificate from the currently available
+polyhedron fields plus the still-external vertex-link and face-sign data.
+-/
+noncomputable def ofConstructionData {V E F : ℕ} {P Q : ConvexPolyhedron V E F}
+    (data : CauchyRigidityConstructionData P Q) :
+    CauchyRigidityCertificate (V := V) (E := E) (F := F) data.edgeSigns where
+  euler_formula := P.euler_formula
+  triangular_face_edge_count := P.triangular_face_edge_count data.triangulated
+  nontrivial := by
+    simpa [CauchyRigidityConstructionData.edgeSigns] using
+      P.edgeSigns_nontrivial_of_exists_dihedralAngle_ne Q data.combinatorics
+        data.dihedralAngles_differ
+  vertexArmData := data.vertexArmData
+  faceSigns := data.faceSigns
+  total_vertex_eq_total_face := data.total_vertex_eq_total_face
 
 end CauchyRigidityCertificate
 

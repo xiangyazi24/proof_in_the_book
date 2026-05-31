@@ -37,8 +37,7 @@ low-dimensional Lovász theorem, proves the one-dimensional Ky Fan prefix-parity
 count and the vacuous two-dimensional Ky Fan prefix-parity case, and proves
 either Ky Fan parity frontier implies
 `TuckerLemmaStatement → chapter39`.  It also records chromatic-number
-corollaries for the fully proved low-dimensional cases and for the Petersen
-graph presentation `KG(5,2)`.
+corollaries for the fully proved low-dimensional cases.
 -/
 
 namespace ProofsInTheBook.Chapter39
@@ -1806,10 +1805,25 @@ theorem tuckerLemmaStatement_two : TuckerLemmaStatement 2 := by
 
 /-! ### Bridging the independent Tucker core -/
 
+/-
+`ProofsInTheBook.TuckerLemmaCore` is deliberately independent of this file:
+it contains the finite Tucker/Ky Fan parity layer without importing the Kneser
+graph development.  Chapter 39 predates that split and still has local copies
+of the sign-vector and signed-label structures because Matoušek's Kneser
+labeling is written against them.
+
+The definitions in `TuckerLemmaCoreBridge` are the only conversion layer
+between those two copies.  They are fieldwise identity maps, and the lemmas
+below record the facts needed for transport: nonzero witnesses, antipodes,
+face-order comparisons, label negation, and equality all commute with the
+conversions.  This keeps the duplicated structures local while allowing the
+proved core Tucker statements to discharge Chapter 39's local statement.
+-/
+
 namespace TuckerLemmaCoreBridge
 
 /-- Interpret a sign vector from the independent Tucker core in Chapter 39's
-duplicated sign-vector type. -/
+local sign-vector type. -/
 def ofCoreSignedSubset {n : ℕ}
     (X : ProofsInTheBook.TuckerLemmaCore.SignedSubset n) : SignedSubset n where
   pos := X.pos
@@ -1823,6 +1837,7 @@ def toCoreSignedSubset {n : ℕ}
   neg := X.neg
   disjoint := X.disjoint
 
+/-- Interpret a nonzero core sign vector in Chapter 39's local type. -/
 def ofCoreNonzeroSignedSubset {n : ℕ}
     (X : ProofsInTheBook.TuckerLemmaCore.NonzeroSignedSubset n) :
     NonzeroSignedSubset n :=
@@ -1838,11 +1853,13 @@ def toCoreNonzeroSignedSubset {n : ℕ}
     simpa [toCoreSignedSubset, SignedSubset.Nonzero,
       ProofsInTheBook.TuckerLemmaCore.SignedSubset.Nonzero] using X.2⟩
 
+/-- Interpret a Chapter 39 signed label in the independent Tucker core. -/
 def toCoreSignedLabel {m : ℕ} (L : SignedLabel m) :
     ProofsInTheBook.TuckerLemmaCore.SignedLabel m where
   positive := L.positive
   index := L.index
 
+/-- Interpret a core signed label in Chapter 39's local type. -/
 def ofCoreSignedLabel {m : ℕ}
     (L : ProofsInTheBook.TuckerLemmaCore.SignedLabel m) : SignedLabel m where
   positive := L.positive
@@ -1986,53 +2003,40 @@ theorem ofCoreSignedLabel_eq_iff {m : ℕ}
   · intro h
     simp [h]
 
+/-- Transport a Tucker statement proved in the independent core namespace to
+Chapter 39's local copy of the sign-vector and signed-label API. -/
+theorem tuckerLemmaStatement_of_core {n : ℕ}
+    (hcore : ProofsInTheBook.TuckerLemmaCore.TuckerLemmaStatement n) :
+    TuckerLemmaStatement n := by
+  intro label hantipodal
+  let coreLabel :
+      ProofsInTheBook.TuckerLemmaCore.NonzeroSignedSubset n →
+        ProofsInTheBook.TuckerLemmaCore.SignedLabel (n - 1) :=
+    fun X => toCoreSignedLabel (label (ofCoreNonzeroSignedSubset X))
+  have hcoreAntipodal :
+      ∀ X, coreLabel X.antipode = (coreLabel X).neg := by
+    intro X
+    have h := congrArg toCoreSignedLabel
+      (hantipodal (ofCoreNonzeroSignedSubset X))
+    simpa [coreLabel] using h
+  obtain ⟨X, Y, hXY, hcomp⟩ := hcore coreLabel hcoreAntipodal
+  refine ⟨ofCoreNonzeroSignedSubset X, ofCoreNonzeroSignedSubset Y, ?_, ?_⟩
+  · simpa [ofCoreNonzeroSignedSubset, ofCoreSignedSubset, SignedSubset.Le,
+      ProofsInTheBook.TuckerLemmaCore.SignedSubset.Le] using hXY
+  · have h := congrArg ofCoreSignedLabel hcomp
+    simpa [coreLabel] using h
+
 end TuckerLemmaCoreBridge
 
-theorem tuckerLemmaStatement_three : TuckerLemmaStatement 3 := by
-  intro label hantipodal
-  let coreLabel :
-      ProofsInTheBook.TuckerLemmaCore.NonzeroSignedSubset 3 →
-        ProofsInTheBook.TuckerLemmaCore.SignedLabel (3 - 1) :=
-    fun X => TuckerLemmaCoreBridge.toCoreSignedLabel
-      (label (TuckerLemmaCoreBridge.ofCoreNonzeroSignedSubset X))
-  have hcoreAntipodal :
-      ∀ X, coreLabel X.antipode = (coreLabel X).neg := by
-    intro X
-    have h := congrArg TuckerLemmaCoreBridge.toCoreSignedLabel
-      (hantipodal (TuckerLemmaCoreBridge.ofCoreNonzeroSignedSubset X))
-    simpa [coreLabel] using h
-  obtain ⟨X, Y, hXY, hcomp⟩ :=
-    ProofsInTheBook.TuckerLemmaCore.tuckerLemmaStatement_three coreLabel hcoreAntipodal
-  refine ⟨TuckerLemmaCoreBridge.ofCoreNonzeroSignedSubset X,
-    TuckerLemmaCoreBridge.ofCoreNonzeroSignedSubset Y, ?_, ?_⟩
-  · simpa [TuckerLemmaCoreBridge.ofCoreNonzeroSignedSubset,
-      TuckerLemmaCoreBridge.ofCoreSignedSubset, SignedSubset.Le,
-      ProofsInTheBook.TuckerLemmaCore.SignedSubset.Le] using hXY
-  · have h := congrArg TuckerLemmaCoreBridge.ofCoreSignedLabel hcomp
-    simpa [coreLabel] using h
+/-- Tucker's lemma in dimension three, transported from the independent core. -/
+theorem tuckerLemmaStatement_three : TuckerLemmaStatement 3 :=
+  TuckerLemmaCoreBridge.tuckerLemmaStatement_of_core
+    ProofsInTheBook.TuckerLemmaCore.tuckerLemmaStatement_three
 
-theorem tuckerLemmaStatement_four : TuckerLemmaStatement 4 := by
-  intro label hantipodal
-  let coreLabel :
-      ProofsInTheBook.TuckerLemmaCore.NonzeroSignedSubset 4 →
-        ProofsInTheBook.TuckerLemmaCore.SignedLabel (4 - 1) :=
-    fun X => TuckerLemmaCoreBridge.toCoreSignedLabel
-      (label (TuckerLemmaCoreBridge.ofCoreNonzeroSignedSubset X))
-  have hcoreAntipodal :
-      ∀ X, coreLabel X.antipode = (coreLabel X).neg := by
-    intro X
-    have h := congrArg TuckerLemmaCoreBridge.toCoreSignedLabel
-      (hantipodal (TuckerLemmaCoreBridge.ofCoreNonzeroSignedSubset X))
-    simpa [coreLabel] using h
-  obtain ⟨X, Y, hXY, hcomp⟩ :=
-    ProofsInTheBook.TuckerLemmaCore.tuckerLemmaStatement_four coreLabel hcoreAntipodal
-  refine ⟨TuckerLemmaCoreBridge.ofCoreNonzeroSignedSubset X,
-    TuckerLemmaCoreBridge.ofCoreNonzeroSignedSubset Y, ?_, ?_⟩
-  · simpa [TuckerLemmaCoreBridge.ofCoreNonzeroSignedSubset,
-      TuckerLemmaCoreBridge.ofCoreSignedSubset, SignedSubset.Le,
-      ProofsInTheBook.TuckerLemmaCore.SignedSubset.Le] using hXY
-  · have h := congrArg TuckerLemmaCoreBridge.ofCoreSignedLabel hcomp
-    simpa [coreLabel] using h
+/-- Tucker's lemma in dimension four, transported from the independent core. -/
+theorem tuckerLemmaStatement_four : TuckerLemmaStatement 4 :=
+  TuckerLemmaCoreBridge.tuckerLemmaStatement_of_core
+    ProofsInTheBook.TuckerLemmaCore.tuckerLemmaStatement_four
 
 /-- Tucker's lemma is unconditional in dimensions one through three. -/
 theorem tuckerLemmaStatement_le_three {n : ℕ} (hnpos : 1 ≤ n) (hnle : n ≤ 3) :
@@ -2316,90 +2320,80 @@ theorem chapter39_le_four {n k : ℕ} (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * 
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
   chapter39_low_dim hnle hk hn
 
+/-- `KG(2,1)` is the complete graph on its two singleton vertices. -/
+theorem kneserGraph_two_one_eq_completeGraph :
+    kneserGraph 2 1 = SimpleGraph.completeGraph (KneserVertex 2 1) := by
+  simpa using kneserGraph_one_eq_completeGraph 2
+
+/-- `KG(2,1)` satisfies the Chapter 39 coloring bounds:
+it is 2-colorable and not 1-colorable. -/
+theorem chapter39_two_one :
+    (∃ C : KneserVertex 2 1 → Fin 2,
+        ∀ a b, (kneserGraph 2 1).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex 2 1 → Fin 1,
+        ∀ a b, (kneserGraph 2 1).Adj a b → C a ≠ C b) := by
+  simpa using chapter39_low_dim (n := 2) (k := 1)
+    (by omega) (by omega) (by omega)
+
 /-- `KG(2,1)` has chromatic number `2`. -/
 theorem kneser_chromaticNumber_two_one :
     (kneserGraph 2 1).chromaticNumber = ((2 : ℕ) : ℕ∞) := by
-  simpa using chapter39_low_dim_chromaticNumber (n := 2) (k := 1)
+  exact kneser_chromaticNumber_eq_of_bounds chapter39_two_one.1 chapter39_two_one.2
+
+/-- `KG(3,1)` is the complete graph on its three singleton vertices. -/
+theorem kneserGraph_three_one_eq_completeGraph :
+    kneserGraph 3 1 = SimpleGraph.completeGraph (KneserVertex 3 1) := by
+  simpa using kneserGraph_one_eq_completeGraph 3
+
+/-- `KG(3,1)` satisfies the Chapter 39 coloring bounds:
+it is 3-colorable and not 2-colorable. -/
+theorem chapter39_three_one :
+    (∃ C : KneserVertex 3 1 → Fin 3,
+        ∀ a b, (kneserGraph 3 1).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex 3 1 → Fin 2,
+        ∀ a b, (kneserGraph 3 1).Adj a b → C a ≠ C b) := by
+  simpa using chapter39_low_dim (n := 3) (k := 1)
     (by omega) (by omega) (by omega)
 
 /-- `KG(3,1)` has chromatic number `3`. -/
 theorem kneser_chromaticNumber_three_one :
     (kneserGraph 3 1).chromaticNumber = ((3 : ℕ) : ℕ∞) := by
-  simpa using chapter39_low_dim_chromaticNumber (n := 3) (k := 1)
+  exact kneser_chromaticNumber_eq_of_bounds chapter39_three_one.1 chapter39_three_one.2
+
+/-- `KG(4,1)` is the complete graph on its four singleton vertices. -/
+theorem kneserGraph_four_one_eq_completeGraph :
+    kneserGraph 4 1 = SimpleGraph.completeGraph (KneserVertex 4 1) := by
+  simpa using kneserGraph_one_eq_completeGraph 4
+
+/-- `KG(4,1)` satisfies the Chapter 39 coloring bounds:
+it is 4-colorable and not 3-colorable. -/
+theorem chapter39_four_one :
+    (∃ C : KneserVertex 4 1 → Fin 4,
+        ∀ a b, (kneserGraph 4 1).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex 4 1 → Fin 3,
+        ∀ a b, (kneserGraph 4 1).Adj a b → C a ≠ C b) := by
+  simpa using chapter39_low_dim (n := 4) (k := 1)
     (by omega) (by omega) (by omega)
 
 /-- `KG(4,1)` has chromatic number `4`. -/
 theorem kneser_chromaticNumber_four_one :
     (kneserGraph 4 1).chromaticNumber = ((4 : ℕ) : ℕ∞) := by
-  simpa using chapter39_low_dim_chromaticNumber (n := 4) (k := 1)
+  exact kneser_chromaticNumber_eq_of_bounds chapter39_four_one.1 chapter39_four_one.2
+
+/-- `KG(4,2)` satisfies the Chapter 39 coloring bounds:
+it is 2-colorable and not 1-colorable. -/
+theorem chapter39_four_two :
+    (∃ C : KneserVertex 4 2 → Fin 2,
+        ∀ a b, (kneserGraph 4 2).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex 4 2 → Fin 1,
+        ∀ a b, (kneserGraph 4 2).Adj a b → C a ≠ C b) := by
+  simpa using chapter39_low_dim (n := 4) (k := 2)
     (by omega) (by omega) (by omega)
 
 /-- `KG(4,2)` has chromatic number `2`. -/
 theorem kneser_chromaticNumber_four_two :
     (kneserGraph 4 2).chromaticNumber = ((2 : ℕ) : ℕ∞) := by
-  simpa using chapter39_low_dim_chromaticNumber (n := 4) (k := 2)
-    (by omega) (by omega) (by omega)
-
-/-- The Petersen graph presentation `KG(5,2)` is not bipartite.  The proof
-uses the explicit odd cycle
-`{0,1}`, `{2,3}`, `{4,0}`, `{1,2}`, `{3,4}`. -/
-theorem petersen_kneser_not_colorable_two :
-    ¬ (kneserGraph 5 2).Colorable 2 := by
-  rintro ⟨C⟩
-  let A0 : KneserVertex 5 2 := ⟨({0, 1} : Finset (Fin 5)), by decide⟩
-  let A1 : KneserVertex 5 2 := ⟨({2, 3} : Finset (Fin 5)), by decide⟩
-  let A2 : KneserVertex 5 2 := ⟨({4, 0} : Finset (Fin 5)), by decide⟩
-  let A3 : KneserVertex 5 2 := ⟨({1, 2} : Finset (Fin 5)), by decide⟩
-  let A4 : KneserVertex 5 2 := ⟨({3, 4} : Finset (Fin 5)), by decide⟩
-  set c0 : Fin 2 := C A0 with hc0
-  set c1 : Fin 2 := C A1 with hc1
-  set c2 : Fin 2 := C A2 with hc2
-  set c3 : Fin 2 := C A3 with hc3
-  set c4 : Fin 2 := C A4 with hc4
-  have h01 : c0 ≠ c1 := by
-    rw [hc0, hc1]
-    exact C.valid (by
-      rw [kneserGraph_adj_iff]
-      native_decide)
-  have h12 : c1 ≠ c2 := by
-    rw [hc1, hc2]
-    exact C.valid (by
-      rw [kneserGraph_adj_iff]
-      native_decide)
-  have h23 : c2 ≠ c3 := by
-    rw [hc2, hc3]
-    exact C.valid (by
-      rw [kneserGraph_adj_iff]
-      native_decide)
-  have h34 : c3 ≠ c4 := by
-    rw [hc3, hc4]
-    exact C.valid (by
-      rw [kneserGraph_adj_iff]
-      native_decide)
-  have h40 : c4 ≠ c0 := by
-    rw [hc4, hc0]
-    exact C.valid (by
-      rw [kneserGraph_adj_iff]
-      native_decide)
-  have h01v : c0.val ≠ c1.val := fun h => h01 (Fin.ext h)
-  have h12v : c1.val ≠ c2.val := fun h => h12 (Fin.ext h)
-  have h23v : c2.val ≠ c3.val := fun h => h23 (Fin.ext h)
-  have h34v : c3.val ≠ c4.val := fun h => h34 (Fin.ext h)
-  have h40v : c4.val ≠ c0.val := fun h => h40 (Fin.ext h)
-  have hc0 : c0.val < 2 := c0.isLt
-  have hc1 : c1.val < 2 := c1.isLt
-  have hc2 : c2.val < 2 := c2.isLt
-  have hc3 : c3.val < 2 := c3.isLt
-  have hc4 : c4.val < 2 := c4.isLt
-  omega
-
-/-- The Petersen graph presentation `KG(5,2)` has chromatic number `3`. -/
-theorem petersen_kneser_chromaticNumber :
-    (kneserGraph 5 2).chromaticNumber = ((3 : ℕ) : ℕ∞) := by
-  change (kneserGraph 5 2).chromaticNumber = ((2 : ℕ) : ℕ∞) + 1
-  rw [SimpleGraph.chromaticNumber_eq_iff_colorable_not_colorable]
-  exact ⟨kneser_colorable_upper_bound 5 2 (by omega) (by omega),
-    petersen_kneser_not_colorable_two⟩
+  exact kneser_chromaticNumber_eq_of_bounds chapter39_four_two.1 chapter39_four_two.2
 
 /--
 The same Chapter 39 conclusion from Ky Fan's alternating-chain form.  The

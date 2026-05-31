@@ -229,6 +229,10 @@ theorem edgeLength_pos (P : ConvexPolyhedron V E F) (e : Fin E) :
   dist_pos.mpr fun h =>
     (P.edge e).nondegenerate (P.vertex_injective h)
 
+/-- Corresponding indexed edges have the same Euclidean length. -/
+def SameEdgeLengths (P Q : ConvexPolyhedron V E F) : Prop :=
+  ∀ e : Fin E, P.edgeLength e = Q.edgeLength e
+
 /-- The embedded point corresponding to one vertex in one face polygon. -/
 noncomputable def facePoint (P : ConvexPolyhedron V E F) (f : Fin F)
     (i : Fin (P.face f).vertexCount) : Euclidean3 :=
@@ -366,10 +370,25 @@ def FacewiseIsometric (P Q : ConvexPolyhedron V E F) : Prop :=
   ∀ f v w, v ∈ (P.face f).vertexSet → w ∈ (P.face f).vertexSet →
     dist (P.vertex v) (P.vertex w) = dist (Q.vertex v) (Q.vertex w)
 
+/-- Facewise isometry implies equality of corresponding edge lengths. -/
+theorem sameEdgeLengths_of_facewiseIsometric (P Q : ConvexPolyhedron V E F)
+    (hcomb : SameCombinatorics P Q) (hface : FacewiseIsometric P Q) :
+    SameEdgeLengths P Q := by
+  intro e
+  let f := P.edgeFaces e 0
+  have hcontains : (P.face f).ContainsEdge (P.edge e) := by
+    simpa [f] using P.edge_mem_incident_faces e 0
+  have hendpoints :=
+    (P.face f).containsEdgeEndpoints_of_containsEdge (P.edge e) hcontains
+  unfold edgeLength
+  rw [← hcomb.edge_tail e, ← hcomb.edge_head e]
+  exact hface f (P.edge e).tail (P.edge e).head hendpoints.1 hendpoints.2
+
 /-- The Cauchy input: same combinatorics and congruent corresponding faces. -/
 structure IsometricPair (P Q : ConvexPolyhedron V E F) : Prop where
   combinatorics : SameCombinatorics P Q
   facewise_isometric : FacewiseIsometric P Q
+  same_edge_lengths : SameEdgeLengths P Q
 
 /-- The contradiction-producing input for the next construction stage. -/
 structure RigidityCounterexample (P Q : ConvexPolyhedron V E F) : Prop where
@@ -432,9 +451,90 @@ theorem ofAngleDifference_eq_zero_iff {oldAngle newAngle : ℝ} :
 
 end EdgeSign
 
+/-- The next index in a finite cyclic order. -/
+def cyclicNext {n : ℕ} (i : Fin n) : Fin n :=
+  finRotate n i
+
+/-- Count sign changes in a cyclic sequence of edge signs. -/
+def CyclicSignChanges {n : ℕ} (signs : Fin n → EdgeSign) : ℕ :=
+  ∑ i : Fin n, if signs i ≠ signs (cyclicNext i) then 1 else 0
+
+/--
+Abstract cyclic edge-star data for a finite signed graph.  The order of
+`starEdge v : Fin (edgeCount v) → Fin E` is the cyclic order around `v`.
+-/
+structure VertexStarSignData {V E : ℕ} (edgeSigns : Fin E → EdgeSign) where
+  edgeCount : Fin V → ℕ
+  starEdge : ∀ v : Fin V, Fin (edgeCount v) → Fin E
+
+namespace VertexStarSignData
+
+/-- The edge signs read in the supplied cyclic order around a vertex. -/
+def signSequence {V E : ℕ} {edgeSigns : Fin E → EdgeSign}
+    (data : VertexStarSignData (V := V) edgeSigns) (v : Fin V) :
+    Fin (data.edgeCount v) → EdgeSign :=
+  fun i => edgeSigns (data.starEdge v i)
+
+/-- Sign changes in the cyclic sequence around each vertex star. -/
+def vertexSignChanges {V E : ℕ} {edgeSigns : Fin E → EdgeSign}
+    (data : VertexStarSignData (V := V) edgeSigns) : Fin V → ℕ :=
+  fun v => CyclicSignChanges (data.signSequence v)
+
+end VertexStarSignData
+
 namespace ConvexPolyhedron
 
 variable {V E F : ℕ}
+
+/-- An edge is incident to a vertex when the vertex is one of its endpoints. -/
+def EdgeIncidentToVertex (P : ConvexPolyhedron V E F) (v : Fin V) (e : Fin E) : Prop :=
+  v ∈ (P.edge e).endpoints
+
+/--
+A cyclic listing of all edges incident to one vertex of a polyhedron.  The
+`Fin edgeCount` order is the vertex-star cyclic order supplied by the boundary
+combinatorics layer.
+-/
+structure VertexStar (P : ConvexPolyhedron V E F) (v : Fin V) where
+  edgeCount : ℕ
+  edge : Fin edgeCount → Fin E
+  edge_injective : Function.Injective edge
+  edge_incident : ∀ i, P.EdgeIncidentToVertex v (edge i)
+  complete : ∀ e, P.EdgeIncidentToVertex v e → ∃ i, edge i = e
+
+namespace VertexStar
+
+/-- The edge signs around this vertex star, read in cyclic order. -/
+def signSequence {P : ConvexPolyhedron V E F} {v : Fin V} (star : VertexStar P v)
+    (edgeSigns : Fin E → EdgeSign) : Fin star.edgeCount → EdgeSign :=
+  fun i => edgeSigns (star.edge i)
+
+/-- The number of sign changes around this cyclic vertex star. -/
+def signChanges {P : ConvexPolyhedron V E F} {v : Fin V} (star : VertexStar P v)
+    (edgeSigns : Fin E → EdgeSign) : ℕ :=
+  CyclicSignChanges (star.signSequence edgeSigns)
+
+end VertexStar
+
+/-- Count sign changes around every vertex star of a polyhedron. -/
+def vertexSignChanges (P : ConvexPolyhedron V E F)
+    (vertexStars : ∀ v : Fin V, VertexStar P v) (edgeSigns : Fin E → EdgeSign) :
+    Fin V → ℕ :=
+  fun v => (vertexStars v).signChanges edgeSigns
+
+/-- Forget the geometric incidence checks and keep only the cyclic signed stars. -/
+def vertexStarSignData (P : ConvexPolyhedron V E F)
+    (vertexStars : ∀ v : Fin V, VertexStar P v) (edgeSigns : Fin E → EdgeSign) :
+    VertexStarSignData (V := V) edgeSigns where
+  edgeCount := fun v => (vertexStars v).edgeCount
+  starEdge := fun v i => (vertexStars v).edge i
+
+@[simp]
+theorem vertexStarSignData_vertexSignChanges (P : ConvexPolyhedron V E F)
+    (vertexStars : ∀ v : Fin V, VertexStar P v) (edgeSigns : Fin E → EdgeSign) :
+    (P.vertexStarSignData vertexStars edgeSigns).vertexSignChanges =
+      P.vertexSignChanges vertexStars edgeSigns := by
+  rfl
 
 /-- The angle between the two recorded face normals incident to an edge. -/
 noncomputable def normalAngle (P : ConvexPolyhedron V E F) (e : Fin E) : ℝ :=
@@ -448,6 +548,10 @@ For a convex polyhedron with consistently outward supporting normals this is
 -/
 noncomputable def dihedralAngle (P : ConvexPolyhedron V E F) (e : Fin E) : ℝ :=
   Real.pi - P.normalAngle e
+
+/-- The dihedral angle at an indexed edge. -/
+noncomputable abbrev DihedralAngle (P : ConvexPolyhedron V E F) (e : Fin E) : ℝ :=
+  P.dihedralAngle e
 
 theorem normalAngle_nonneg (P : ConvexPolyhedron V E F) (e : Fin E) :
     0 ≤ P.normalAngle e :=
@@ -472,26 +576,29 @@ Edge signs for two polyhedra with the same indexed combinatorics, read as the
 sign of the change in corresponding dihedral angles from `P` to `Q`.
 -/
 noncomputable def edgeSigns (P Q : ConvexPolyhedron V E F)
-    (_hcomb : SameCombinatorics P Q) : Fin E → EdgeSign :=
+    (_hcomb : SameCombinatorics P Q) (_hlengths : SameEdgeLengths P Q) :
+    Fin E → EdgeSign :=
   fun e => EdgeSign.ofAngleDifference (P.dihedralAngle e) (Q.dihedralAngle e)
 
 @[simp]
 theorem edgeSigns_eq_zero_iff (P Q : ConvexPolyhedron V E F)
-    (hcomb : SameCombinatorics P Q) (e : Fin E) :
-    P.edgeSigns Q hcomb e = EdgeSign.zero ↔ P.dihedralAngle e = Q.dihedralAngle e := by
+    (hcomb : SameCombinatorics P Q) (hlengths : SameEdgeLengths P Q) (e : Fin E) :
+    P.edgeSigns Q hcomb hlengths e = EdgeSign.zero ↔
+      P.dihedralAngle e = Q.dihedralAngle e := by
   simp [edgeSigns]
 
 theorem edgeSigns_ne_zero_iff (P Q : ConvexPolyhedron V E F)
-    (hcomb : SameCombinatorics P Q) (e : Fin E) :
-    P.edgeSigns Q hcomb e ≠ EdgeSign.zero ↔ P.dihedralAngle e ≠ Q.dihedralAngle e :=
-  not_congr (P.edgeSigns_eq_zero_iff Q hcomb e)
+    (hcomb : SameCombinatorics P Q) (hlengths : SameEdgeLengths P Q) (e : Fin E) :
+    P.edgeSigns Q hcomb hlengths e ≠ EdgeSign.zero ↔
+      P.dihedralAngle e ≠ Q.dihedralAngle e :=
+  not_congr (P.edgeSigns_eq_zero_iff Q hcomb hlengths e)
 
 theorem edgeSigns_nontrivial_of_exists_dihedralAngle_ne (P Q : ConvexPolyhedron V E F)
-    (hcomb : SameCombinatorics P Q)
+    (hcomb : SameCombinatorics P Q) (hlengths : SameEdgeLengths P Q)
     (hdiff : ∃ e, P.dihedralAngle e ≠ Q.dihedralAngle e) :
-    ∃ e, P.edgeSigns Q hcomb e ≠ EdgeSign.zero := by
+    ∃ e, P.edgeSigns Q hcomb hlengths e ≠ EdgeSign.zero := by
   rcases hdiff with ⟨e, he⟩
-  exact ⟨e, (P.edgeSigns_ne_zero_iff Q hcomb e).2 he⟩
+  exact ⟨e, (P.edgeSigns_ne_zero_iff Q hcomb hlengths e).2 he⟩
 
 end ConvexPolyhedron
 
@@ -843,7 +950,16 @@ by the missing geometry:
 * Euler's polyhedron formula and the triangular face-edge incidence count
   hold for the reduced triangulated sign graph.
 -/
-structure CauchyRigidityCertificate {V E F : ℕ} (edgeSigns : Fin E → EdgeSign) where
+structure CauchyRigidityCertificate {V E F : ℕ} where
+  /-- Edge signs obtained by comparing corresponding dihedral angles. -/
+  edgeSigns : Fin E → EdgeSign
+  /-- Cyclic edge sequences around all vertex stars. -/
+  vertexStarSigns : VertexStarSignData (V := V) edgeSigns
+  /-- Sign changes around each vertex star. -/
+  vertexSignChanges : Fin V → ℕ
+  /-- The vertex counts are computed from the supplied cyclic vertex stars. -/
+  vertexSignChanges_eq_star :
+    ∀ v, vertexSignChanges v = vertexStarSigns.vertexSignChanges v
   /-- Euler's formula for the reduced triangulated sign graph. -/
   euler_formula : (V : ℤ) - (E : ℤ) + (F : ℤ) = 2
   /-- Every face is triangular, so counting face-edge incidences gives `3F = 2E`. -/
@@ -852,35 +968,35 @@ structure CauchyRigidityCertificate {V E F : ℕ} (edgeSigns : Fin E → EdgeSig
   nontrivial : ∃ e, edgeSigns e ≠ EdgeSign.zero
   /-- Arm-lemma local data around each vertex of the reduced sign graph. -/
   vertexArmData : Fin V → CauchyArmVertex
+  /-- The arm-lemma vertex data uses the same sign-change counts as the vertex stars. -/
+  vertexArmData_signChanges : ∀ v, (vertexArmData v).signChanges = vertexSignChanges v
   /-- Strict edge signs around each triangular face of the reduced sign graph. -/
   faceSigns : Fin F → StrictTriangleSigns
   /-- Double-counting: vertex sign changes and face sign changes count the same incidences. -/
   total_vertex_eq_total_face :
-    (∑ v : Fin V, (vertexArmData v).signChanges) =
+    (∑ v : Fin V, vertexSignChanges v) =
       ∑ f : Fin F, StrictTriangleSigns.signChanges (faceSigns f)
 
 namespace CauchyRigidityCertificate
 
-def vertexSignChanges {V E F : ℕ} {edgeSigns : Fin E → EdgeSign}
-    (cert : CauchyRigidityCertificate (V := V) (F := F) edgeSigns) :
-    Fin V → ℕ :=
-  fun v => (cert.vertexArmData v).signChanges
+theorem vertexSignChanges_eq_cyclic {V E F : ℕ}
+    (cert : CauchyRigidityCertificate (V := V) (E := E) (F := F)) :
+    cert.vertexSignChanges = cert.vertexStarSigns.vertexSignChanges := by
+  funext v
+  exact cert.vertexSignChanges_eq_star v
 
 theorem arm_lemma_four_sign_changes {V E F : ℕ}
-    {edgeSigns : Fin E → EdgeSign}
-    (cert : CauchyRigidityCertificate (V := V) (F := F) edgeSigns) :
+    (cert : CauchyRigidityCertificate (V := V) (E := E) (F := F)) :
     ∀ v, 4 ≤ cert.vertexSignChanges v := by
   intro v
-  exact CauchyArmVertex.four_le_signChanges (cert.vertexArmData v)
+  have h := CauchyArmVertex.four_le_signChanges (cert.vertexArmData v)
+  rwa [cert.vertexArmData_signChanges v] at h
 
 theorem euler_sign_change_bound {V E F : ℕ}
-    {edgeSigns : Fin E → EdgeSign}
-    (cert : CauchyRigidityCertificate (V := V) (F := F) edgeSigns) :
+    (cert : CauchyRigidityCertificate (V := V) (E := E) (F := F)) :
     (∑ v : Fin V, cert.vertexSignChanges v) < 4 * V :=
   euler_triangular_sign_change_bound cert.vertexSignChanges cert.faceSigns
-    (by
-      simpa [CauchyRigidityCertificate.vertexSignChanges] using
-        cert.total_vertex_eq_total_face)
+    cert.total_vertex_eq_total_face
     cert.euler_formula cert.triangular_face_edge_count
 
 end CauchyRigidityCertificate
@@ -894,19 +1010,34 @@ from a genuine dihedral-angle difference.
 structure CauchyRigidityConstructionData {V E F : ℕ}
     (P Q : ConvexPolyhedron V E F) where
   combinatorics : ConvexPolyhedron.SameCombinatorics P Q
+  same_edge_lengths : ConvexPolyhedron.SameEdgeLengths P Q
   triangulated : P.IsTriangulated
   dihedralAngles_differ : ∃ e, P.dihedralAngle e ≠ Q.dihedralAngle e
+  vertexStars : ∀ v : Fin V, ConvexPolyhedron.VertexStar P v
   vertexArmData : Fin V → CauchyArmVertex
+  vertexArmData_signChanges :
+    ∀ v, (vertexArmData v).signChanges =
+      P.vertexSignChanges vertexStars (P.edgeSigns Q combinatorics same_edge_lengths) v
   faceSigns : Fin F → StrictTriangleSigns
   total_vertex_eq_total_face :
-    (∑ v : Fin V, (vertexArmData v).signChanges) =
+    (∑ v : Fin V,
+      P.vertexSignChanges vertexStars (P.edgeSigns Q combinatorics same_edge_lengths) v) =
       ∑ f : Fin F, StrictTriangleSigns.signChanges (faceSigns f)
 
 namespace CauchyRigidityConstructionData
 
 noncomputable def edgeSigns {V E F : ℕ} {P Q : ConvexPolyhedron V E F}
     (data : CauchyRigidityConstructionData P Q) : Fin E → EdgeSign :=
-  P.edgeSigns Q data.combinatorics
+  P.edgeSigns Q data.combinatorics data.same_edge_lengths
+
+noncomputable def vertexStarSigns {V E F : ℕ} {P Q : ConvexPolyhedron V E F}
+    (data : CauchyRigidityConstructionData P Q) :
+    VertexStarSignData (V := V) data.edgeSigns :=
+  P.vertexStarSignData data.vertexStars data.edgeSigns
+
+noncomputable def vertexSignChanges {V E F : ℕ} {P Q : ConvexPolyhedron V E F}
+    (data : CauchyRigidityConstructionData P Q) : Fin V → ℕ :=
+  P.vertexSignChanges data.vertexStars data.edgeSigns
 
 end CauchyRigidityConstructionData
 
@@ -918,16 +1049,34 @@ polyhedron fields plus the still-external vertex-link and face-sign data.
 -/
 noncomputable def ofConstructionData {V E F : ℕ} {P Q : ConvexPolyhedron V E F}
     (data : CauchyRigidityConstructionData P Q) :
-    CauchyRigidityCertificate (V := V) (E := E) (F := F) data.edgeSigns where
+    CauchyRigidityCertificate (V := V) (E := E) (F := F) where
+  edgeSigns := data.edgeSigns
+  vertexStarSigns := data.vertexStarSigns
+  vertexSignChanges := data.vertexSignChanges
+  vertexSignChanges_eq_star := by
+    intro v
+    unfold CauchyRigidityConstructionData.vertexSignChanges
+      CauchyRigidityConstructionData.vertexStarSigns
+      ConvexPolyhedron.vertexSignChanges ConvexPolyhedron.vertexStarSignData
+      ConvexPolyhedron.VertexStar.signChanges VertexStarSignData.vertexSignChanges
+    apply congrArg CyclicSignChanges
+    funext i
+    rfl
   euler_formula := P.euler_formula
   triangular_face_edge_count := P.triangular_face_edge_count data.triangulated
   nontrivial := by
     simpa [CauchyRigidityConstructionData.edgeSigns] using
       P.edgeSigns_nontrivial_of_exists_dihedralAngle_ne Q data.combinatorics
-        data.dihedralAngles_differ
+        data.same_edge_lengths data.dihedralAngles_differ
   vertexArmData := data.vertexArmData
+  vertexArmData_signChanges := by
+    intro v
+    simpa [CauchyRigidityConstructionData.vertexSignChanges,
+      CauchyRigidityConstructionData.edgeSigns] using data.vertexArmData_signChanges v
   faceSigns := data.faceSigns
-  total_vertex_eq_total_face := data.total_vertex_eq_total_face
+  total_vertex_eq_total_face := by
+    simpa [CauchyRigidityConstructionData.vertexSignChanges,
+      CauchyRigidityConstructionData.edgeSigns] using data.total_vertex_eq_total_face
 
 end CauchyRigidityCertificate
 
@@ -940,8 +1089,8 @@ TODO (Tier 2): Construct CauchyRigidityCertificate from convex polyhedron
 geometry. Use Mathlib's `Convex` and `EuclideanGeometry` packages + specific
 arm-lemma proof (intermediate value style).
 -/
-theorem chapter13 {V E F : ℕ} {edgeSigns : Fin E → EdgeSign}
-    (cert : CauchyRigidityCertificate (V := V) (F := F) edgeSigns) :
+theorem chapter13 {V E F : ℕ}
+    (cert : CauchyRigidityCertificate (V := V) (E := E) (F := F)) :
     False :=
   cauchy_counting_contradiction cert.vertexSignChanges
     cert.arm_lemma_four_sign_changes cert.euler_sign_change_bound
@@ -949,27 +1098,24 @@ theorem chapter13 {V E F : ℕ} {edgeSigns : Fin E → EdgeSign}
 /-- The empty edge family `Fin 0 → EdgeSign` cannot carry a Cauchy rigidity
 certificate, because the certificate demands at least one nontrivial sign — but
 `Fin 0` has no edges. -/
-theorem CauchyRigidityCertificate.isEmpty_zero {V F : ℕ} (edgeSigns : Fin 0 → EdgeSign) :
-    IsEmpty (CauchyRigidityCertificate (V := V) (F := F) edgeSigns) := by
+theorem CauchyRigidityCertificate.isEmpty_zero {V F : ℕ} :
+    IsEmpty (CauchyRigidityCertificate (V := V) (E := 0) (F := F)) := by
   constructor
   intro cert
   obtain ⟨e, _⟩ := cert.nontrivial
   exact e.elim0
 
-/-- An all-zero edge-sign assignment carries no Cauchy rigidity certificate:
-the certificate demands a nontrivial sign, but `edgeSigns ≡ zero` makes every
-edge trivial. -/
-theorem CauchyRigidityCertificate.isEmpty_of_allZero {V E F : ℕ}
-    {edgeSigns : Fin E → EdgeSign} (hall : ∀ e, edgeSigns e = EdgeSign.zero) :
-    IsEmpty (CauchyRigidityCertificate (V := V) (F := F) edgeSigns) := by
-  constructor
-  intro cert
+/-- A Cauchy rigidity certificate cannot carry an all-zero edge-sign field. -/
+theorem CauchyRigidityCertificate.not_allZero {V E F : ℕ}
+    (cert : CauchyRigidityCertificate (V := V) (E := E) (F := F)) :
+    ¬ ∀ e, cert.edgeSigns e = EdgeSign.zero := by
+  intro hall
   obtain ⟨e, hne⟩ := cert.nontrivial
   exact hne (hall e)
 
 /-- Any such certificate is impossible by the proved counting contradiction. -/
-theorem CauchyRigidityCertificate.isEmpty {V E F : ℕ} (edgeSigns : Fin E → EdgeSign) :
-    IsEmpty (CauchyRigidityCertificate (V := V) (F := F) edgeSigns) := by
+theorem CauchyRigidityCertificate.isEmpty {V E F : ℕ} :
+    IsEmpty (CauchyRigidityCertificate (V := V) (E := E) (F := F)) := by
   constructor
   intro cert
   exact chapter13 cert
@@ -977,8 +1123,8 @@ theorem CauchyRigidityCertificate.isEmpty {V E F : ℕ} (edgeSigns : Fin E → E
 /-- Contrapositive packaging of `chapter13`: the absence of any rigidity-
 violation certificate follows from the arm-lemma lower bound and Euler upper
 bound carried by the certificate. -/
-theorem chapter13_rigidity {V E F : ℕ} (edgeSigns : Fin E → EdgeSign) :
-    (∃ _ : CauchyRigidityCertificate (V := V) (F := F) edgeSigns, True) → False := by
+theorem chapter13_rigidity {V E F : ℕ} :
+    (∃ _ : CauchyRigidityCertificate (V := V) (E := E) (F := F), True) → False := by
   rintro ⟨cert, _⟩
   exact chapter13 cert
 

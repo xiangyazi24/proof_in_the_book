@@ -405,6 +405,44 @@ theorem index_ne_of_le_of_positive_ne_of_no_complement {n m : ℕ}
   exact hpositive
     (positive_eq_of_le_of_same_index_of_no_complement hno hXY hindex)
 
+/-- A signed-label word with the local rigidity forced by the no-complement
+hypothesis along one chain: if two comparable positions carry the same absolute
+label, then they carry the same sign. -/
+structure AlternatingWordContext (len m : ℕ) where
+  word : Fin len → SignedLabel m
+  same_index_same_sign :
+    ∀ i j : Fin len, i ≤ j → (word i).index = (word j).index →
+      (word i).positive = (word j).positive
+
+namespace AlternatingWordContext
+
+def PositiveAlternating {len m : ℕ} (C : AlternatingWordContext len m) : Prop :=
+  (StrictMono fun i : Fin len => (C.word i).index) ∧
+    ∀ i : Fin len, (C.word i).positive = decide (Even i.val)
+
+def NegativeAlternating {len m : ℕ} (C : AlternatingWordContext len m) : Prop :=
+  (StrictMono fun i : Fin len => (C.word i).index) ∧
+    ∀ i : Fin len, (C.word i).positive = !decide (Even i.val)
+
+def PositivePunctured {n m : ℕ}
+    (C : AlternatingWordContext (n + 1) m) (gap : Fin (n + 1)) : Prop :=
+  (StrictMono fun i : Fin n => (C.word (gap.succAbove i)).index) ∧
+    ∀ i : Fin n, (C.word (gap.succAbove i)).positive = decide (Even i.val)
+
+def NegativePunctured {n m : ℕ}
+    (C : AlternatingWordContext (n + 1) m) (gap : Fin (n + 1)) : Prop :=
+  (StrictMono fun i : Fin n => (C.word (gap.succAbove i)).index) ∧
+    ∀ i : Fin n, (C.word (gap.succAbove i)).positive = !decide (Even i.val)
+
+theorem index_ne_of_positive_ne {len m : ℕ} (C : AlternatingWordContext len m)
+    {i j : Fin len} (hij : i ≤ j)
+    (hpositive : (C.word i).positive ≠ (C.word j).positive) :
+    (C.word i).index ≠ (C.word j).index := by
+  intro hindex
+  exact hpositive (C.same_index_same_sign i j hij hindex)
+
+end AlternatingWordContext
+
 /--
 Ky Fan's alternating-chain form for the sign-vector/cross-polytope complex.
 The chain order is the face-inclusion order.
@@ -701,6 +739,17 @@ theorem prefixChain_le_and_ne_iff_lt {n : ℕ} (P : SignedPermutation n) {i j : 
   · intro hij
     exact ⟨P.prefixChain_le hij.le, P.prefixChain_ne_of_lt hij⟩
 
+theorem prefixChain_same_index_same_sign_of_no_complement {n m : ℕ}
+    {label : NonzeroSignedSubset n → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label)
+    (P : SignedPermutation n) {i j : Fin n} (hij : i ≤ j)
+    (hindex : (label (P.prefixChain i)).index =
+      (label (P.prefixChain j)).index) :
+    (label (P.prefixChain i)).positive =
+      (label (P.prefixChain j)).positive := by
+  exact positive_eq_of_le_of_same_index_of_no_complement
+    hno (P.prefixChain_le hij) hindex
+
 /-- Reindex the positions of a signed permutation, moving the signed atoms
 together.  If `τ` swaps two adjacent positions, this is the other maximal chain
 through the punctured flag which omits one of those two positions. -/
@@ -955,6 +1004,18 @@ theorem prefixChain_flipSignAt_last_succAbove {n : ℕ}
 
 end SignedPermutation
 
+/-- The dimension-free label word carried by a signed-permutation prefix
+chain under the no-complement hypothesis. -/
+def prefixChainWordContext {n m : ℕ}
+    {label : NonzeroSignedSubset n → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label)
+    (P : SignedPermutation n) : AlternatingWordContext n m where
+  word := fun i => label (P.prefixChain i)
+  same_index_same_sign := by
+    intro i j hij hindex
+    exact SignedPermutation.prefixChain_same_index_same_sign_of_no_complement
+      hno P hij hindex
+
 /--
 Positive-first alternating prefix labels: the absolute label indices strictly
 increase along the signed-permutation prefix chain, and the signs alternate
@@ -1043,6 +1104,38 @@ def NegativeAlternatingPuncturedPrefixLabels {n m : ℕ}
     (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) : Prop :=
   (StrictMono fun i : Fin n => (label (P.prefixChain (gap.succAbove i))).index) ∧
     ∀ i : Fin n, (label (P.prefixChain (gap.succAbove i))).positive = !decide (Even i.val)
+
+theorem prefixChainWordContext_positiveAlternating_iff {n m : ℕ}
+    {label : NonzeroSignedSubset n → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label)
+    (P : SignedPermutation n) :
+    (prefixChainWordContext hno P).PositiveAlternating ↔
+      PositiveAlternatingPrefixLabels label P := by
+  rfl
+
+theorem prefixChainWordContext_negativeAlternating_iff {n m : ℕ}
+    {label : NonzeroSignedSubset n → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label)
+    (P : SignedPermutation n) :
+    (prefixChainWordContext hno P).NegativeAlternating ↔
+      NegativeAlternatingPrefixLabels label P := by
+  rfl
+
+theorem prefixChainWordContext_positivePunctured_iff {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label)
+    (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) :
+    (prefixChainWordContext hno P).PositivePunctured gap ↔
+      PositiveAlternatingPuncturedPrefixLabels label P gap := by
+  rfl
+
+theorem prefixChainWordContext_negativePunctured_iff {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label)
+    (P : SignedPermutation (n + 1)) (gap : Fin (n + 1)) :
+    (prefixChainWordContext hno P).NegativePunctured gap ↔
+      NegativeAlternatingPuncturedPrefixLabels label P gap := by
+  rfl
 
 theorem punctured_prefix_strictMono_antipode_iff {n m : ℕ}
     (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
@@ -6439,5 +6532,14 @@ theorem kyFanEndpointPairingStatement_three_three : KyFanEndpointPairingStatemen
 theorem tuckerLemmaStatement_four : TuckerLemmaStatement 4 :=
   tuckerLemmaStatement_succ_of_endpointPairing (by omega)
     kyFanEndpointPairingStatement_three_three
+
+/-- Tucker's lemma is now available unconditionally in dimensions one through four. -/
+theorem tuckerLemmaStatement_le_four {n : ℕ} (hnpos : 1 ≤ n) (hnle : n ≤ 4) :
+    TuckerLemmaStatement n := by
+  interval_cases n
+  · exact tuckerLemmaStatement_one
+  · exact tuckerLemmaStatement_two
+  · exact tuckerLemmaStatement_three
+  · exact tuckerLemmaStatement_four
 
 end ProofsInTheBook.TuckerLemmaCore

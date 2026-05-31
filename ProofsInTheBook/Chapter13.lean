@@ -390,6 +390,26 @@ structure IsometricPair (P Q : ConvexPolyhedron V E F) : Prop where
   facewise_isometric : FacewiseIsometric P Q
   same_edge_lengths : SameEdgeLengths P Q
 
+namespace IsometricPair
+
+/--
+Build the standard Cauchy input from the actual facewise isometry assumption:
+edge-length equality is then a theorem, not an independent geometric premise.
+-/
+def ofFacewiseIsometric {P Q : ConvexPolyhedron V E F}
+    (hcomb : SameCombinatorics P Q) (hface : FacewiseIsometric P Q) :
+    IsometricPair P Q where
+  combinatorics := hcomb
+  facewise_isometric := hface
+  same_edge_lengths := sameEdgeLengths_of_facewiseIsometric P Q hcomb hface
+
+theorem edgeLength_eq {P Q : ConvexPolyhedron V E F}
+    (pair : IsometricPair P Q) (e : Fin E) :
+    P.edgeLength e = Q.edgeLength e :=
+  pair.same_edge_lengths e
+
+end IsometricPair
+
 /-- The contradiction-producing input for the next construction stage. -/
 structure RigidityCounterexample (P Q : ConvexPolyhedron V E F) : Prop where
   isometric : IsometricPair P Q
@@ -599,6 +619,41 @@ theorem edgeSigns_nontrivial_of_exists_dihedralAngle_ne (P Q : ConvexPolyhedron 
     ∃ e, P.edgeSigns Q hcomb hlengths e ≠ EdgeSign.zero := by
   rcases hdiff with ⟨e, he⟩
   exact ⟨e, (P.edgeSigns_ne_zero_iff Q hcomb hlengths e).2 he⟩
+
+namespace RigidityCounterexample
+
+/--
+If equality of all corresponding dihedral angles would force congruence, then
+a noncongruent isometric pair must differ at some dihedral angle.
+-/
+theorem dihedralAngles_differ_of_congruent_of_dihedralAngles_eq
+    {P Q : ConvexPolyhedron V E F} (counter : RigidityCounterexample P Q)
+    (hcomplete :
+      (∀ e : Fin E, P.dihedralAngle e = Q.dihedralAngle e) → Congruent P Q) :
+    ∃ e : Fin E, P.dihedralAngle e ≠ Q.dihedralAngle e := by
+  by_contra hnone
+  have hall : ∀ e : Fin E, P.dihedralAngle e = Q.dihedralAngle e := by
+    intro e
+    by_contra hne
+    exact hnone ⟨e, hne⟩
+  exact counter.not_congruent (hcomplete hall)
+
+/--
+The edge-sign field attached to a noncongruent isometric pair is nontrivial,
+provided all-dihedral-angle equality is known to imply congruence.
+-/
+theorem edgeSigns_nontrivial_of_congruent_of_dihedralAngles_eq
+    {P Q : ConvexPolyhedron V E F} (counter : RigidityCounterexample P Q)
+    (hcomplete :
+      (∀ e : Fin E, P.dihedralAngle e = Q.dihedralAngle e) → Congruent P Q) :
+    ∃ e : Fin E,
+      P.edgeSigns Q counter.isometric.combinatorics counter.isometric.same_edge_lengths e ≠
+        EdgeSign.zero := by
+  exact P.edgeSigns_nontrivial_of_exists_dihedralAngle_ne Q
+    counter.isometric.combinatorics counter.isometric.same_edge_lengths
+    (counter.dihedralAngles_differ_of_congruent_of_dihedralAngles_eq hcomplete)
+
+end RigidityCounterexample
 
 end ConvexPolyhedron
 
@@ -1497,6 +1552,30 @@ theorem contradiction (obs : CauchyArmOpeningObstruction) : False :=
     obs.chord obs.newChord obs.fixed_chord obs.opened
     obs.some_angle_strictly_opened obs.convex_new_angles obs.arm_conclusion
 
+/--
+Package a concrete pair of Cauchy arms as an opening obstruction.  The arm
+alternative is supplied by `arm_chord_monotone_induction` through
+`arm_chord_strict_or_eq_general`.
+-/
+noncomputable def ofCauchyArms {n : ℕ} (A B : CauchyArm n)
+    (cert : CauchyArm.ArmChordMonotoneCertificate A B)
+    (hlength : ∀ i : Fin n, A.edgeLength i = B.edgeLength i)
+    (hopened : ∀ i : Fin (n - 1), A.jointAngle i ≤ B.jointAngle i)
+    (hstrict : ∃ i : Fin (n - 1), A.jointAngle i < B.jointAngle i)
+    (hfixed : B.closingChord = A.closingChord)
+    (hconvex_new : ∀ i : Fin (n - 1), B.jointAngle i < Real.pi) :
+    CauchyArmOpeningObstruction where
+  n := n - 1
+  angles := A.jointAngle
+  newAngles := B.jointAngle
+  chord := A.closingChord
+  newChord := B.closingChord
+  fixed_chord := hfixed
+  opened := hopened
+  some_angle_strictly_opened := hstrict
+  convex_new_angles := hconvex_new
+  arm_conclusion := CauchyArm.arm_chord_strict_or_eq_general cert hlength hopened
+
 end CauchyArmOpeningObstruction
 
 /--
@@ -1521,6 +1600,30 @@ theorem contradiction (obs : CauchyArmClosingObstruction) : False :=
   arm_lemma_forbids_strict_closing_with_fixed_chord obs.angles obs.newAngles
     obs.chord obs.newChord obs.fixed_chord obs.closed
     obs.some_angle_strictly_closed obs.convex_old_angles obs.arm_conclusion
+
+/--
+Package a concrete pair of Cauchy arms as a closing obstruction.  This applies
+the same arm induction with the new arm as the monotone source and the old arm
+as the target.
+-/
+noncomputable def ofCauchyArms {n : ℕ} (oldArm newArm : CauchyArm n)
+    (cert : CauchyArm.ArmChordMonotoneCertificate newArm oldArm)
+    (hlength : ∀ i : Fin n, newArm.edgeLength i = oldArm.edgeLength i)
+    (hclosed : ∀ i : Fin (n - 1), newArm.jointAngle i ≤ oldArm.jointAngle i)
+    (hstrict : ∃ i : Fin (n - 1), newArm.jointAngle i < oldArm.jointAngle i)
+    (hfixed : newArm.closingChord = oldArm.closingChord)
+    (hconvex_old : ∀ i : Fin (n - 1), oldArm.jointAngle i < Real.pi) :
+    CauchyArmClosingObstruction where
+  n := n - 1
+  angles := oldArm.jointAngle
+  newAngles := newArm.jointAngle
+  chord := oldArm.closingChord
+  newChord := newArm.closingChord
+  fixed_chord := hfixed
+  closed := hclosed
+  some_angle_strictly_closed := hstrict
+  convex_old_angles := hconvex_old
+  arm_conclusion := CauchyArm.arm_chord_strict_or_eq_general cert hlength hclosed
 
 end CauchyArmClosingObstruction
 
@@ -1793,6 +1896,70 @@ noncomputable def vertexSignChanges {V E F : ℕ} {P Q : ConvexPolyhedron V E F}
 
 end CauchyRigidityConstructionData
 
+/--
+A noncongruent isometric polyhedron pair together with the remaining
+geometric/combinatorial bridges needed to build the finite Cauchy certificate.
+
+The field `congruent_of_dihedralAngles_eq` is the exact place where the
+three-dimensional rigidity frontier still sits: once facewise isometry and all
+dihedral angles agree, the two embedded polyhedra must be related by one
+ambient Euclidean isometry.
+-/
+structure CauchyRigidityCounterexampleData {V E F : ℕ}
+    (P Q : ConvexPolyhedron V E F) where
+  counterexample : ConvexPolyhedron.RigidityCounterexample P Q
+  triangulated : P.IsTriangulated
+  congruent_of_dihedralAngles_eq :
+    (∀ e : Fin E, P.dihedralAngle e = Q.dihedralAngle e) →
+      ConvexPolyhedron.Congruent P Q
+  vertexStars : ∀ v : Fin V, ConvexPolyhedron.VertexStar P v
+  vertexArmData : Fin V → CauchyArmVertex
+  vertexArmData_signChanges :
+    ∀ v, (vertexArmData v).signChanges =
+      P.vertexSignChanges vertexStars
+        (P.edgeSigns Q counterexample.isometric.combinatorics
+          counterexample.isometric.same_edge_lengths) v
+  faceSigns : Fin F → StrictTriangleSigns
+  total_vertex_eq_total_face :
+    (∑ v : Fin V,
+      P.vertexSignChanges vertexStars
+        (P.edgeSigns Q counterexample.isometric.combinatorics
+          counterexample.isometric.same_edge_lengths) v) =
+      ∑ f : Fin F, StrictTriangleSigns.signChanges (faceSigns f)
+
+namespace CauchyRigidityCounterexampleData
+
+noncomputable def edgeSigns {V E F : ℕ} {P Q : ConvexPolyhedron V E F}
+    (data : CauchyRigidityCounterexampleData P Q) : Fin E → EdgeSign :=
+  P.edgeSigns Q data.counterexample.isometric.combinatorics
+    data.counterexample.isometric.same_edge_lengths
+
+/--
+Turn a noncongruent isometric pair plus the remaining vertex-link and face
+counting data into the construction data expected by the certificate builder.
+-/
+noncomputable def constructionData {V E F : ℕ} {P Q : ConvexPolyhedron V E F}
+    (data : CauchyRigidityCounterexampleData P Q) :
+    CauchyRigidityConstructionData P Q where
+  combinatorics := data.counterexample.isometric.combinatorics
+  same_edge_lengths := data.counterexample.isometric.same_edge_lengths
+  triangulated := data.triangulated
+  dihedralAngles_differ :=
+    data.counterexample.dihedralAngles_differ_of_congruent_of_dihedralAngles_eq
+      data.congruent_of_dihedralAngles_eq
+  vertexStars := data.vertexStars
+  vertexArmData := data.vertexArmData
+  vertexArmData_signChanges := by
+    intro v
+    simpa [CauchyRigidityCounterexampleData.edgeSigns] using
+      data.vertexArmData_signChanges v
+  faceSigns := data.faceSigns
+  total_vertex_eq_total_face := by
+    simpa [CauchyRigidityCounterexampleData.edgeSigns] using
+      data.total_vertex_eq_total_face
+
+end CauchyRigidityCounterexampleData
+
 namespace CauchyRigidityCertificate
 
 /--
@@ -1832,6 +1999,26 @@ noncomputable def ofConstructionData {V E F : ℕ} {P Q : ConvexPolyhedron V E F
 
 end CauchyRigidityCertificate
 
+namespace CauchyRigidityConstructionData
+
+/-- The certificate canonically associated to construction data. -/
+noncomputable def certificate {V E F : ℕ} {P Q : ConvexPolyhedron V E F}
+    (data : CauchyRigidityConstructionData P Q) :
+    CauchyRigidityCertificate (V := V) (E := E) (F := F) :=
+  CauchyRigidityCertificate.ofConstructionData data
+
+end CauchyRigidityConstructionData
+
+namespace CauchyRigidityCounterexampleData
+
+/-- The certificate canonically associated to a noncongruent isometric pair. -/
+noncomputable def certificate {V E F : ℕ} {P Q : ConvexPolyhedron V E F}
+    (data : CauchyRigidityCounterexampleData P Q) :
+    CauchyRigidityCertificate (V := V) (E := E) (F := F) :=
+  data.constructionData.certificate
+
+end CauchyRigidityCounterexampleData
+
 /--
 Chapter 13 (Cauchy's rigidity theorem, Tier 1 conditional):
 Given a CauchyRigidityCertificate, no nontrivial edge-sign perturbation can
@@ -1846,6 +2033,22 @@ theorem chapter13 {V E F : ℕ}
     False :=
   cauchy_counting_contradiction cert.vertexSignChanges
     cert.arm_lemma_four_sign_changes cert.euler_sign_change_bound
+
+/-- Construction data already contains enough information to produce the
+certificate, hence it is inconsistent by the counting contradiction. -/
+theorem CauchyRigidityConstructionData.contradiction {V E F : ℕ}
+    {P Q : ConvexPolyhedron V E F} (data : CauchyRigidityConstructionData P Q) :
+    False :=
+  chapter13 data.certificate
+
+/--
+A noncongruent isometric pair with the remaining vertex-link and face-counting
+bridges yields a Cauchy rigidity certificate, and therefore a contradiction.
+-/
+theorem CauchyRigidityCounterexampleData.contradiction {V E F : ℕ}
+    {P Q : ConvexPolyhedron V E F} (data : CauchyRigidityCounterexampleData P Q) :
+    False :=
+  chapter13 data.certificate
 
 /-- The empty edge family `Fin 0 → EdgeSign` cannot carry a Cauchy rigidity
 certificate, because the certificate demands at least one nontrivial sign — but

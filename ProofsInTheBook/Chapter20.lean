@@ -15,8 +15,9 @@ Sperner's lemma to show the triangulation must have an even count.
 Formalization status: this file closes the finite coloring and parity layer.
 It defines Monsky's three colors, red-green boundary edges, trichromatic
 triangles, proves the local parity identity, proves an abstract Sperner
-parity theorem, and derives `chapter20`: a `MonskyCertificate n` yields a
-trichromatic triangle.  It also packages Mathlib's local-subring/Zorn
+parity theorem, and derives `chapter20_from_monskyCertificate`: a
+`MonskyCertificate n` yields a trichromatic triangle.  It also packages
+Mathlib's local-subring/Zorn
 infrastructure into `exists_valuation_extension`, which gives an extension of
 any valuation on a field to any field extension; in particular
 `exists_real_twoAdic_extension` extends `Rat.padicValuation 2` from `ℚ` to `ℝ`.
@@ -34,8 +35,8 @@ listed triangles, a unit-square boundary chain, the odd-multiplicity boundary
 incidence theorem, side constraints, and ordinary equal area `1 / n`.
 `EqualAreaSquareTriangulation` records the usual geometric square-tiling cover
 together with the incidence facts from which the extracted payload is built.
-Both interfaces prove `false_of_odd`, and the geometric interface gives
-`¬ Odd n`.
+Both interfaces prove `false_of_odd`, and the top-level `chapter20` theorem
+states the final contradiction for the named geometric interface.
 
 Remaining outside this file: prove that a preferred Mathlib/topological notion
 of a real triangulation of `[0,1]^2` supplies the fields of
@@ -1594,7 +1595,7 @@ Sperner/coloring layer only needs a finite vertex model, square side chains,
 odd-multiplicity boundary incidence, and the equal-area facts.
 -/
 
-/-- Chapter 20 (Monsky's theorem, Tier 1 conditional):
+/-- Monsky certificate endpoint (Tier 1 conditional):
 Given a Monsky 2-adic coloring certificate (which packages the 2-adic
 extension construction + the double-counting parity result + the odd-boundary
 witness), there exists a trichromatic triangle — corresponding to the
@@ -1610,7 +1611,7 @@ prove the oriented double-area alternative `±2/n` for each triangle.  This
 needs square triangulation/boundary-chain infrastructure and oriented-area
 accounting not currently assembled in Mathlib.
 -/
-theorem chapter20 {n : ℕ} (cert : MonskyCertificate n) :
+theorem chapter20_from_monskyCertificate {n : ℕ} (cert : MonskyCertificate n) :
     ∃ i : Fin n,
       TrichromaticTriangle (cert.triangleColors i).1
         (cert.triangleColors i).2.1 (cert.triangleColors i).2.2 :=
@@ -1642,7 +1643,8 @@ theorem chapter20_from_edge_parity {α : Type*} [Fintype α] [DecidableEq α]
       TrichromaticTriangle (triangleColorsOfVertices color (triangles i)).1
         (triangleColorsOfVertices color (triangles i)).2.1
         (triangleColorsOfVertices color (triangles i)).2.2 := by
-  simpa using chapter20 (edgeParityMonskyCertificate triangles color hodd)
+  simpa using chapter20_from_monskyCertificate
+    (edgeParityMonskyCertificate triangles color hodd)
 
 /--
 Finite edge-parity form of the stronger Sperner conclusion: the number of
@@ -1741,7 +1743,7 @@ theorem no_odd_equalArea_realization_of_monskyCertificate {n : ℕ} (hn : Odd n)
     (harea : ∀ i : Fin n,
       doubleArea (triangles i).1 (triangles i).2.1 (triangles i).2.2 =
         (((2 : ℚ) / n : ℚ) : ℝ)) : False := by
-  obtain ⟨i, hi⟩ := chapter20 cert
+  obtain ⟨i, hi⟩ := chapter20_from_monskyCertificate cert
   have htri : TrichromaticTriangle (realTwoAdicColor (triangles i).1)
       (realTwoAdicColor (triangles i).2.1) (realTwoAdicColor (triangles i).2.2) := by
     simpa [hcolors i] using hi
@@ -1764,7 +1766,7 @@ theorem no_odd_equalArea_realization_of_monskyCertificate_abs {n : ℕ} (hn : Od
         (((2 : ℚ) / n : ℚ) : ℝ) ∨
       doubleArea (triangles i).1 (triangles i).2.1 (triangles i).2.2 =
         -(((2 : ℚ) / n : ℚ) : ℝ)) : False := by
-  obtain ⟨i, hi⟩ := chapter20 cert
+  obtain ⟨i, hi⟩ := chapter20_from_monskyCertificate cert
   have htri : TrichromaticTriangle (realTwoAdicColor (triangles i).1)
       (realTwoAdicColor (triangles i).2.1) (realTwoAdicColor (triangles i).2.2) := by
     simpa [hcolors i] using hi
@@ -1785,7 +1787,7 @@ theorem no_odd_equalArea_realization_of_monskyCertificate_area {n : ℕ} (hn : O
     (harea : ∀ i : Fin n,
       realTriangleArea (triangles i).1 (triangles i).2.1 (triangles i).2.2 =
         (((1 : ℚ) / n : ℚ) : ℝ)) : False := by
-  obtain ⟨i, hi⟩ := chapter20 cert
+  obtain ⟨i, hi⟩ := chapter20_from_monskyCertificate cert
   have htri : TrichromaticTriangle (realTwoAdicColor (triangles i).1)
       (realTwoAdicColor (triangles i).2.1) (realTwoAdicColor (triangles i).2.2) := by
     simpa [hcolors i] using hi
@@ -2202,8 +2204,8 @@ theorem toMonskyCertificate_boundaryRGCount_odd {n : ℕ}
   simpa using T.toMonskyCertificate.hodd
 
 /--
-The extracted data already give the `chapter20` Sperner conclusion through
-the constructed certificate.
+The extracted data already give the Sperner conclusion through the constructed
+certificate.
 -/
 theorem exists_trichromatic {n : ℕ}
     (T : ExtractedEqualAreaSquareTriangulation n) :
@@ -2214,7 +2216,7 @@ theorem exists_trichromatic {n : ℕ}
         (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).2.2 := by
   letI := T.instFintype
   letI := T.instDecidableEq
-  simpa using chapter20 T.toMonskyCertificate
+  simpa using chapter20_from_monskyCertificate T.toMonskyCertificate
 
 /--
 An extracted equal-area square triangulation cannot have odd cardinality.
@@ -2528,9 +2530,13 @@ Top-level endpoint for the named geometric square-tiling interface: an odd
 number of equal-area triangles cannot tile the unit square with the recorded
 boundary incidence.
 -/
-theorem no_odd_equalArea_square_triangulation {n : ℕ} (hn : Odd n)
+theorem chapter20 {n : ℕ} (hn : Odd n)
     (T : EqualAreaSquareTriangulation n) : False :=
   EqualAreaSquareTriangulation.false_of_odd hn T
+
+theorem no_odd_equalArea_square_triangulation {n : ℕ} (hn : Odd n)
+    (T : EqualAreaSquareTriangulation n) : False :=
+  chapter20 hn T
 
 theorem not_odd_of_equalArea_square_triangulation {n : ℕ}
     (T : EqualAreaSquareTriangulation n) : ¬ Odd n :=
@@ -2597,13 +2603,14 @@ theorem MonskyCertificate.totalRG_odd {n : ℕ} (cert : MonskyCertificate n) :
   exact Nat.odd_iff.mpr hpar
 
 /-- Any Monsky certificate has at least one trichromatic triangle — packaging
-of `chapter20` plus the cardinality lower bound.  This is the "≥ 1 trichromatic
-triangle exists" form used by the contradiction step in Monsky's argument. -/
+of `chapter20_from_monskyCertificate` plus the cardinality lower bound.  This
+is the "≥ 1 trichromatic triangle exists" form used by the contradiction step
+in Monsky's argument. -/
 theorem MonskyCertificate.one_le_trichromatic_card {n : ℕ} (cert : MonskyCertificate n) :
     1 ≤ (Finset.univ.filter fun i : Fin n =>
         TrichromaticTriangle (cert.triangleColors i).1
           (cert.triangleColors i).2.1 (cert.triangleColors i).2.2).card := by
-  obtain ⟨i, hi⟩ := chapter20 cert
+  obtain ⟨i, hi⟩ := chapter20_from_monskyCertificate cert
   exact Finset.card_pos.mpr ⟨i, by
     simp only [Finset.mem_filter, Finset.mem_univ, true_and]
     exact hi⟩

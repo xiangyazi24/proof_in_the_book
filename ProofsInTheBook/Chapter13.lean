@@ -757,6 +757,10 @@ noncomputable def closingChord {n : ℕ} (A : CauchyArm n) : ℝ :=
 theorem closingChord_eq_dist {n : ℕ} (A : CauchyArm n) :
     A.closingChord = dist (A.vertex (firstVertex n)) (A.vertex (lastVertex n)) := rfl
 
+theorem closingChord_nonneg {n : ℕ} (A : CauchyArm n) :
+    0 ≤ A.closingChord := by
+  exact dist_nonneg
+
 /-- The stored chord field agrees with the vertex-defined closing chord. -/
 theorem chord_eq_closingChord {n : ℕ} (A : CauchyArm n) :
     A.chord = A.closingChord := by
@@ -1023,6 +1027,18 @@ theorem closingChord_mono_two (A B : CauchyArm 2)
     rwa [A.chord_eq_closingChord, B.chord_eq_closingChord] at hlt
   · exact Or.inr heq
 
+/-- The non-strict two-edge monotonicity theorem. -/
+theorem closingChord_le_two (A B : CauchyArm 2)
+    (hA : A.TwoEdgeLawOfCosines) (hB : B.TwoEdgeLawOfCosines)
+    (hlength : ∀ i : Fin 2, A.edgeLength i = B.edgeLength i)
+    (hangle : ∀ i : Fin (2 - 1), A.jointAngle i ≤ B.jointAngle i) :
+    A.closingChord ≤ B.closingChord := by
+  rw [← A.chord_eq_closingChord, ← B.chord_eq_closingChord, hA, hB]
+  rw [← hlength 0, ← hlength 1]
+  exact twoEdgeChord_mono (le_of_lt (A.edgeLength_pos 0))
+    (le_of_lt (A.edgeLength_pos 1)) (A.jointAngle_nonneg 0)
+    (B.jointAngle_le_pi 0) (hangle 0)
+
 /-- Equal side lengths and equal included angle give equal two-edge closing chords. -/
 theorem closingChord_eq_of_eq_two (A B : CauchyArm 2)
     (hA : A.TwoEdgeLawOfCosines) (hB : B.TwoEdgeLawOfCosines)
@@ -1144,6 +1160,26 @@ theorem closingChord_mono_succ {n : ℕ}
   exact hIH_eq A.initialSubarm B.initialSubarm hlength_prefix hprefix_angles
 
 /--
+Non-strict induction step for the arm chord.  If the initial subarm chord is
+monotone, then the append law of cosines and monotonicity in both the left side
+and the append angle give monotonicity of the full closing chord.
+-/
+theorem closingChord_le_succ_of_prefix {n : ℕ} (A B : CauchyArm (n + 2))
+    (hprefix_le : A.initialSubarm.closingChord ≤ B.initialSubarm.closingChord)
+    (hA_append : A.AppendLawOfCosines)
+    (hB_append : B.AppendLawOfCosines)
+    (happendAngle : A.appendAngle ≤ B.appendAngle)
+    (hproj : A.AppendProjectionCondition)
+    (hlastLength :
+      A.edgeLength (lastEdgeIndex (n + 1)) = B.edgeLength (lastEdgeIndex (n + 1))) :
+    A.closingChord ≤ B.closingChord := by
+  rw [hA_append, hB_append, ← hlastLength]
+  exact twoEdgeChord_mono_left_and_angle
+    (closingChord_nonneg A.initialSubarm)
+    (le_of_lt (A.edgeLength_pos (lastEdgeIndex (n + 1))))
+    A.appendAngle_nonneg B.appendAngle_le_pi hprefix_le happendAngle hproj
+
+/--
 Concrete three-edge instance of the induction step, using the proved two-edge
 law-of-cosines base case on the initial subarms.
 -/
@@ -1260,11 +1296,63 @@ theorem closingChord_eq_of_eq_general {n : ℕ} {A B : CauchyArm n}
       rw [hA_append, hB_append, ← hprefix_chord, ← hlastLength, ← happend_eq]
 
 /--
-General Cauchy-arm chord monotonicity, assembled by induction from the two-edge
-law-of-cosines base case plus explicit closing-triangle certificates at each
-successor step.
+General non-strict Cauchy-arm chord monotonicity, assembled by induction from
+the two-edge law-of-cosines base case plus explicit closing-triangle
+certificates at each successor step.
 -/
+theorem arm_chord_monotone_induction {n : ℕ} {A B : CauchyArm n}
+    (cert : ArmChordMonotoneCertificate A B)
+    (hlength : ∀ i : Fin n, A.edgeLength i = B.edgeLength i)
+    (hangle : ∀ i : Fin (n - 1), A.jointAngle i ≤ B.jointAngle i) :
+    A.closingChord ≤ B.closingChord := by
+  induction cert with
+  | zero A B =>
+      simp [closingChord, CauchyArm.firstVertex, CauchyArm.lastVertex]
+  | one A B =>
+      rw [closingChord, closingChord]
+      have hAedge :
+          A.edgeLength 0 =
+            dist (A.vertex (CauchyArm.firstVertex 1)) (A.vertex (CauchyArm.lastVertex 1)) := by
+        simpa [CauchyArm.firstVertex, CauchyArm.lastVertex, CauchyArm.edgeStart,
+          CauchyArm.edgeEnd] using A.edgeLength_eq_dist 0
+      have hBedge :
+          B.edgeLength 0 =
+            dist (B.vertex (CauchyArm.firstVertex 1)) (B.vertex (CauchyArm.lastVertex 1)) := by
+        simpa [CauchyArm.firstVertex, CauchyArm.lastVertex, CauchyArm.edgeStart,
+          CauchyArm.edgeEnd] using B.edgeLength_eq_dist 0
+      rw [← hAedge, ← hBedge, hlength 0]
+  | two hA hB =>
+      exact closingChord_le_two _ _ hA hB hlength hangle
+  | succ prefixCert hprefix_pos hA_append hB_append happendAngle happendAngle_strict
+      happendAngle_eq hproj ih =>
+      rename_i m A' B'
+      have hlength_prefix :
+          ∀ i : Fin (m + 1),
+            A'.initialSubarm.edgeLength i = B'.initialSubarm.edgeLength i := by
+        intro i
+        simpa [initialSubarm] using hlength ⟨i.1, by omega⟩
+      have hangle_prefix :
+          ∀ i : Fin ((m + 1) - 1),
+            A'.initialSubarm.jointAngle i ≤ B'.initialSubarm.jointAngle i := by
+        intro i
+        simpa [initialSubarm] using hangle ⟨i.1, by omega⟩
+      exact closingChord_le_succ_of_prefix A' B'
+        (ih hlength_prefix hangle_prefix) hA_append hB_append happendAngle hproj
+        (hlength (lastEdgeIndex (m + 1)))
+
+/-- Clean general Cauchy-arm chord monotonicity statement. -/
 theorem arm_chord_monotone_general {n : ℕ} {A B : CauchyArm n}
+    (cert : ArmChordMonotoneCertificate A B)
+    (hlength : ∀ i : Fin n, A.edgeLength i = B.edgeLength i)
+    (hangle : ∀ i : Fin (n - 1), A.jointAngle i ≤ B.jointAngle i) :
+    A.closingChord ≤ B.closingChord :=
+  arm_chord_monotone_induction cert hlength hangle
+
+/--
+Strict-or-equality form of the general arm lemma, useful for fixed-chord
+obstructions when at least one angle is known to change strictly.
+-/
+theorem arm_chord_strict_or_eq_general {n : ℕ} {A B : CauchyArm n}
     (cert : ArmChordMonotoneCertificate A B)
     (hlength : ∀ i : Fin n, A.edgeLength i = B.edgeLength i)
     (hangle : ∀ i : Fin (n - 1), A.jointAngle i ≤ B.jointAngle i) :
@@ -1299,6 +1387,30 @@ theorem arm_chord_monotone_general {n : ℕ} {A B : CauchyArm n}
         happendAngle happendAngle_strict hproj (hlength (lastEdgeIndex (m + 1))) hangle
       intro hprefix_angles
       exact closingChord_eq_of_eq_general prefixCert hlength_prefix hprefix_angles
+
+theorem arm_chord_strict_of_some_angle {n : ℕ} {A B : CauchyArm n}
+    (cert : ArmChordMonotoneCertificate A B)
+    (hlength : ∀ i : Fin n, A.edgeLength i = B.edgeLength i)
+    (hangle : ∀ i : Fin (n - 1), A.jointAngle i ≤ B.jointAngle i)
+    (hstrict : ∃ i : Fin (n - 1), A.jointAngle i < B.jointAngle i) :
+    A.closingChord < B.closingChord := by
+  rcases arm_chord_strict_or_eq_general cert hlength hangle with hlt | heq
+  · exact hlt
+  · obtain ⟨i, hi⟩ := hstrict
+    exact False.elim ((ne_of_lt hi) (heq i))
+
+theorem arm_chord_forbids_strict_opening_with_fixed_closingChord {n : ℕ}
+    {A B : CauchyArm n}
+    (cert : ArmChordMonotoneCertificate A B)
+    (hlength : ∀ i : Fin n, A.edgeLength i = B.edgeLength i)
+    (hangle : ∀ i : Fin (n - 1), A.jointAngle i ≤ B.jointAngle i)
+    (hstrict : ∃ i : Fin (n - 1), A.jointAngle i < B.jointAngle i)
+    (hfixed : B.closingChord = A.closingChord) :
+    False := by
+  have hlt : A.closingChord < B.closingChord :=
+    arm_chord_strict_of_some_angle cert hlength hangle hstrict
+  rw [hfixed] at hlt
+  exact (lt_irrefl A.closingChord) hlt
 
 end CauchyArm
 
@@ -1604,6 +1716,26 @@ theorem vertexSignChanges_eq_cyclic {V E F : ℕ}
     cert.vertexSignChanges = cert.vertexStarSigns.vertexSignChanges := by
   funext v
   exact cert.vertexSignChanges_eq_star v
+
+theorem vertexSignChanges_ne_zero {V E F : ℕ}
+    (cert : CauchyRigidityCertificate (V := V) (E := E) (F := F))
+    (v : Fin V) :
+    cert.vertexSignChanges v ≠ 0 := by
+  have h := CauchyArmVertex.arm_lemma_no_zero_sign_changes (cert.vertexArmData v)
+  rwa [cert.vertexArmData_signChanges v] at h
+
+theorem vertexSignChanges_ne_two {V E F : ℕ}
+    (cert : CauchyRigidityCertificate (V := V) (E := E) (F := F))
+    (v : Fin V) :
+    cert.vertexSignChanges v ≠ 2 := by
+  have h := CauchyArmVertex.arm_lemma_no_two_sign_changes (cert.vertexArmData v)
+  rwa [cert.vertexArmData_signChanges v] at h
+
+theorem vertexSignChanges_not_low {V E F : ℕ}
+    (cert : CauchyRigidityCertificate (V := V) (E := E) (F := F))
+    (v : Fin V) :
+    cert.vertexSignChanges v ≠ 0 ∧ cert.vertexSignChanges v ≠ 2 :=
+  ⟨cert.vertexSignChanges_ne_zero v, cert.vertexSignChanges_ne_two v⟩
 
 theorem arm_lemma_four_sign_changes {V E F : ℕ}
     (cert : CauchyRigidityCertificate (V := V) (E := E) (F := F)) :

@@ -28,21 +28,17 @@ with an explicit finite list of unit-square boundary point-edges, constructs
 contradiction for a trichromatic triangle of ordinary real area `1 / n` with
 `n` odd.
 
-Gap to the full book theorem: the remaining work is geometric triangulation
-infrastructure.  One needs a finite real triangulation model for the unit
-square and an extraction theorem producing:
-1. a finite vertex type `α`, a point map `vertices : α → ℝ × ℝ`, and triangles
-   `triangles : Fin n → α × α × α`;
-2. four side subdivision lists `bottom right top left : List ℝ`, or equivalently
-   the explicit point-edge chain `realTwoAdicSquareBoundaryPointEdgeList`;
-3. the boundary-incidence theorem that the odd-multiplicity triangle edges are
-   exactly that square boundary chain after mapping boundary points to the
-   finite vertex type;
-4. the ordinary equal-area fact
-   `∀ i, realTriangleArea ... = (1 / n : ℚ)`.
-Mathlib has `Analysis.Convex.SimplicialComplex` and `Geometry.Polygon.Basic`,
-but not this assembled theorem extracting boundary chains and equal-area facts
-from a triangulation of the unit square.
+The endpoint is packaged in two finite interfaces.  `ExtractedEqualAreaSquareTriangulation`
+is the exact payload consumed by the Monsky contradiction: finite vertices,
+listed triangles, a unit-square boundary chain, the odd-multiplicity boundary
+incidence theorem, side constraints, and ordinary equal area `1 / n`.  The
+slightly richer `ActualEqualAreaSquareTriangulation` records the usual
+geometric square-tiling cover together with the incidence facts from which the
+extracted payload is built.  Both interfaces prove `false_of_odd`.
+
+Remaining outside this file: prove that a preferred Mathlib/topological notion
+of a real triangulation of `[0,1]^2` supplies the fields of
+`ActualEqualAreaSquareTriangulation`.
 -/
 
 namespace ProofsInTheBook.Chapter20
@@ -1592,12 +1588,9 @@ noncomputable def realSquareBoundaryVertexChainMonskyCertificate
       hbottom hright htop hleft)
 
 /-
-Remaining geometric interface: given a hypothetical equal-area triangulation
-of the unit square into an odd number of real triangles, one still needs to
-extract the finite list of triangle vertices, identify the odd-multiplicity
-triangle edges with the explicit square boundary point-edge chain, and express
-the equal-area hypothesis as oriented double area `± 2 / n` for each listed
-triangle.
+Finite geometric interfaces below isolate the extraction boundary.  The
+Sperner/coloring layer only needs a finite vertex model, square side chains,
+odd-multiplicity boundary incidence, and the equal-area facts.
 -/
 
 /-- Chapter 20 (Monsky's theorem, Tier 1 conditional):
@@ -2120,6 +2113,19 @@ theorem toMonskyCertificate_triangleColors {n : ℕ}
       triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i) := by
   rfl
 
+/--
+The certificate colors are exactly the 2-adic colors of the three real
+vertices of each extracted triangle.
+-/
+theorem toMonskyCertificate_triangleColors_apply {n : ℕ}
+    (T : ExtractedEqualAreaSquareTriangulation n) (i : Fin n) :
+    (T.toMonskyCertificate.triangleColors i) =
+      (realTwoAdicColor (T.vertices (T.triangles i).1),
+       realTwoAdicColor (T.vertices (T.triangles i).2.1),
+       realTwoAdicColor (T.vertices (T.triangles i).2.2)) := by
+  rw [toMonskyCertificate_triangleColors]
+  rfl
+
 /-- The Monsky color assigned to each extracted geometric vertex. -/
 noncomputable def color {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
     T.Vertex → MonskyColor :=
@@ -2401,6 +2407,39 @@ theorem toMonskyCertificate_triangleColors {n : ℕ}
       triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i) := by
   rfl
 
+/--
+The certificate extracted from the geometric interface uses no extra coloring
+data: its triangle colors are the 2-adic colors of the listed triangle
+vertices.
+-/
+theorem toMonskyCertificate_triangleColors_apply {n : ℕ}
+    (T : ActualEqualAreaSquareTriangulation n) (i : Fin n) :
+    (T.toMonskyCertificate.triangleColors i) =
+      (realTwoAdicColor (T.vertices (T.triangles i).1),
+       realTwoAdicColor (T.vertices (T.triangles i).2.1),
+       realTwoAdicColor (T.vertices (T.triangles i).2.2)) := by
+  rw [toMonskyCertificate_triangleColors]
+  rfl
+
+theorem toMonskyCertificate_boundaryRGCount_odd {n : ℕ}
+    (T : ActualEqualAreaSquareTriangulation n) :
+    Odd T.toMonskyCertificate.boundaryRGCount := by
+  simpa [toMonskyCertificate] using T.toExtracted.toMonskyCertificate_boundaryRGCount_odd
+
+/--
+Sperner conclusion for the geometric interface, before invoking equal area:
+the extracted Monsky coloring makes at least one listed triangle
+trichromatic.
+-/
+theorem exists_trichromatic {n : ℕ}
+    (T : ActualEqualAreaSquareTriangulation n) :
+    ∃ i : Fin n,
+      TrichromaticTriangle
+        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).1
+        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).2.1
+        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).2.2 := by
+  simpa [toExtracted] using T.toExtracted.exists_trichromatic
+
 theorem false_of_odd {n : ℕ} (hn : Odd n)
     (T : ActualEqualAreaSquareTriangulation n) : False :=
   T.toExtracted.false_of_odd hn
@@ -2412,6 +2451,19 @@ theorem isEmpty_of_odd {n : ℕ} (hn : Odd n) :
   exact false_of_odd hn T
 
 end ActualEqualAreaSquareTriangulation
+
+/--
+Top-level endpoint for the finite geometric square-tiling interface: an odd
+number of equal-area triangles cannot satisfy the recorded unit-square
+triangulation hypotheses.
+-/
+theorem no_odd_actual_equalArea_square_triangulation {n : ℕ} (hn : Odd n)
+    (T : ActualEqualAreaSquareTriangulation n) : False :=
+  ActualEqualAreaSquareTriangulation.false_of_odd hn T
+
+theorem actual_equalArea_square_triangulation_isEmpty_of_odd {n : ℕ} (hn : Odd n) :
+    IsEmpty (ActualEqualAreaSquareTriangulation n) :=
+  ActualEqualAreaSquareTriangulation.isEmpty_of_odd hn
 
 /-- The empty triangulation cannot carry a Monsky certificate: with 0 triangles,
 the local RG sum is 0 (even), but the certificate demands an odd boundary RG

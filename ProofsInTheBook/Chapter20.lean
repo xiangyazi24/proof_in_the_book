@@ -28,17 +28,18 @@ with an explicit finite list of unit-square boundary point-edges, constructs
 contradiction for a trichromatic triangle of ordinary real area `1 / n` with
 `n` odd.
 
-The endpoint is packaged in two finite interfaces.  `ExtractedEqualAreaSquareTriangulation`
+The endpoint is packaged in finite interfaces.  `ExtractedEqualAreaSquareTriangulation`
 is the exact payload consumed by the Monsky contradiction: finite vertices,
 listed triangles, a unit-square boundary chain, the odd-multiplicity boundary
-incidence theorem, side constraints, and ordinary equal area `1 / n`.  The
-slightly richer `ActualEqualAreaSquareTriangulation` records the usual
-geometric square-tiling cover together with the incidence facts from which the
-extracted payload is built.  Both interfaces prove `false_of_odd`.
+incidence theorem, side constraints, and ordinary equal area `1 / n`.
+`EqualAreaSquareTriangulation` records the usual geometric square-tiling cover
+together with the incidence facts from which the extracted payload is built.
+Both interfaces prove `false_of_odd`, and the geometric interface gives
+`¬ Odd n`.
 
 Remaining outside this file: prove that a preferred Mathlib/topological notion
 of a real triangulation of `[0,1]^2` supplies the fields of
-`ActualEqualAreaSquareTriangulation`.
+`EqualAreaSquareTriangulation`.
 -/
 
 namespace ProofsInTheBook.Chapter20
@@ -2451,6 +2452,93 @@ theorem isEmpty_of_odd {n : ℕ} (hn : Odd n) :
   exact false_of_odd hn T
 
 end ActualEqualAreaSquareTriangulation
+
+/--
+Named geometric interface for an equal-area triangulation of the unit square.
+It records `n` listed triangles covering `[0,1]^2`, each of ordinary area
+`1 / n`, together with the finite square-boundary incidence data needed to
+extract the Monsky certificate.
+-/
+structure EqualAreaSquareTriangulation (n : ℕ)
+    extends ActualEqualAreaSquareTriangulation n
+
+namespace EqualAreaSquareTriangulation
+
+/-- Forget the geometric cover and keep exactly the finite data consumed by Monsky's proof. -/
+noncomputable def toExtracted {n : ℕ} (T : EqualAreaSquareTriangulation n) :
+    ExtractedEqualAreaSquareTriangulation n :=
+  T.toActualEqualAreaSquareTriangulation.toExtracted
+
+/-- The Monsky certificate canonically extracted from the geometric interface. -/
+noncomputable def toMonskyCertificate {n : ℕ}
+    (T : EqualAreaSquareTriangulation n) : MonskyCertificate n :=
+  T.toExtracted.toMonskyCertificate
+
+@[simp]
+theorem toMonskyCertificate_triangleColors {n : ℕ}
+    (T : EqualAreaSquareTriangulation n) (i : Fin n) :
+    (T.toMonskyCertificate.triangleColors i) =
+      triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i) := by
+  simpa [toMonskyCertificate, toExtracted] using
+    ActualEqualAreaSquareTriangulation.toMonskyCertificate_triangleColors
+      T.toActualEqualAreaSquareTriangulation i
+
+/--
+The certificate uses exactly the `realTwoAdicColor` colors of the three
+vertices of each geometric triangle.
+-/
+theorem toMonskyCertificate_triangleColors_apply {n : ℕ}
+    (T : EqualAreaSquareTriangulation n) (i : Fin n) :
+    (T.toMonskyCertificate.triangleColors i) =
+      (realTwoAdicColor (T.vertices (T.triangles i).1),
+       realTwoAdicColor (T.vertices (T.triangles i).2.1),
+       realTwoAdicColor (T.vertices (T.triangles i).2.2)) := by
+  rw [toMonskyCertificate_triangleColors]
+  rfl
+
+/-- The geometric interface inherits the Sperner trichromatic triangle conclusion. -/
+theorem exists_trichromatic {n : ℕ}
+    (T : EqualAreaSquareTriangulation n) :
+    ∃ i : Fin n,
+      TrichromaticTriangle
+        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).1
+        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).2.1
+        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).2.2 := by
+  simpa [toExtracted] using T.toExtracted.exists_trichromatic
+
+theorem false_of_odd {n : ℕ} (hn : Odd n)
+    (T : EqualAreaSquareTriangulation n) : False :=
+  T.toExtracted.false_of_odd hn
+
+/-- Monsky's contradiction for the named geometric interface: `n` cannot be odd. -/
+theorem not_odd {n : ℕ} (T : EqualAreaSquareTriangulation n) : ¬ Odd n := by
+  intro hn
+  exact false_of_odd hn T
+
+theorem isEmpty_of_odd {n : ℕ} (hn : Odd n) :
+    IsEmpty (EqualAreaSquareTriangulation n) := by
+  constructor
+  intro T
+  exact false_of_odd hn T
+
+end EqualAreaSquareTriangulation
+
+/--
+Top-level endpoint for the named geometric square-tiling interface: an odd
+number of equal-area triangles cannot tile the unit square with the recorded
+boundary incidence.
+-/
+theorem no_odd_equalArea_square_triangulation {n : ℕ} (hn : Odd n)
+    (T : EqualAreaSquareTriangulation n) : False :=
+  EqualAreaSquareTriangulation.false_of_odd hn T
+
+theorem not_odd_of_equalArea_square_triangulation {n : ℕ}
+    (T : EqualAreaSquareTriangulation n) : ¬ Odd n :=
+  EqualAreaSquareTriangulation.not_odd T
+
+theorem equalArea_square_triangulation_isEmpty_of_odd {n : ℕ} (hn : Odd n) :
+    IsEmpty (EqualAreaSquareTriangulation n) :=
+  EqualAreaSquareTriangulation.isEmpty_of_odd hn
 
 /--
 Top-level endpoint for the finite geometric square-tiling interface: an odd

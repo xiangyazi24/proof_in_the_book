@@ -441,6 +441,275 @@ theorem index_ne_of_positive_ne {len m : ℕ} (C : AlternatingWordContext len m)
   intro hindex
   exact hpositive (C.same_index_same_sign i j hij hindex)
 
+private theorem decide_even_pred_eq_not (k : ℕ) (hk : 0 < k) :
+    decide (Even (k - 1)) = !decide (Even k) := by
+  have hk' : k = (k - 1) + 1 := by omega
+  rw [hk']
+  by_cases h : Even (k - 1) <;> simp [Nat.even_add_one, h]
+
+private theorem not_decide_even_pred_eq (k : ℕ) (hk : 0 < k) :
+    (!decide (Even (k - 1))) = decide (Even k) := by
+  rw [decide_even_pred_eq_not k hk]
+  cases decide (Even k) <;> rfl
+
+theorem positivePunctured_sign_of_lt {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} {gap i : Fin (n + 1)}
+    (hgap : C.PositivePunctured gap) (hi : i < gap) :
+    (C.word i).positive = decide (Even i.val) := by
+  let j : Fin n := ⟨i.val, by
+    have hi' : i.val < gap.val := Fin.lt_def.mp hi
+    have hle : gap.val ≤ n := Nat.le_of_lt_succ gap.isLt
+    omega⟩
+  have hcast : (Fin.castSucc j : Fin (n + 1)) < gap := by
+    rw [Fin.lt_def]
+    simp [j]
+    exact Fin.lt_def.mp hi
+  have hsucc : gap.succAbove j = i := by
+    rw [Fin.succAbove_of_castSucc_lt gap j hcast]
+    apply Fin.ext
+    simp [j]
+  have hsign := hgap.2 j
+  rw [hsucc] at hsign
+  simpa [j] using hsign
+
+theorem positivePunctured_sign_of_gt {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} {gap i : Fin (n + 1)}
+    (hgap : C.PositivePunctured gap) (hi : gap < i) :
+    (C.word i).positive = !decide (Even i.val) := by
+  have hival_pos : 0 < i.val := by
+    have hi' : gap.val < i.val := Fin.lt_def.mp hi
+    omega
+  let j : Fin n := ⟨i.val - 1, by
+    have hle : i.val ≤ n := Nat.le_of_lt_succ i.isLt
+    omega⟩
+  have hle_cast : gap ≤ (Fin.castSucc j : Fin (n + 1)) := by
+    rw [Fin.le_def]
+    simp [j]
+    exact Nat.le_sub_one_of_lt (Fin.lt_def.mp hi)
+  have hsucc : gap.succAbove j = i := by
+    rw [Fin.succAbove_of_le_castSucc gap j hle_cast]
+    apply Fin.ext
+    simp [j]
+    omega
+  have hsign := hgap.2 j
+  rw [hsucc] at hsign
+  calc
+    (C.word i).positive = decide (Even (i.val - 1)) := by
+      simpa [j] using hsign
+    _ = !decide (Even i.val) := decide_even_pred_eq_not i.val hival_pos
+
+theorem negativePunctured_sign_of_lt {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} {gap i : Fin (n + 1)}
+    (hgap : C.NegativePunctured gap) (hi : i < gap) :
+    (C.word i).positive = !decide (Even i.val) := by
+  let j : Fin n := ⟨i.val, by
+    have hi' : i.val < gap.val := Fin.lt_def.mp hi
+    have hle : gap.val ≤ n := Nat.le_of_lt_succ gap.isLt
+    omega⟩
+  have hcast : (Fin.castSucc j : Fin (n + 1)) < gap := by
+    rw [Fin.lt_def]
+    simp [j]
+    exact Fin.lt_def.mp hi
+  have hsucc : gap.succAbove j = i := by
+    rw [Fin.succAbove_of_castSucc_lt gap j hcast]
+    apply Fin.ext
+    simp [j]
+  have hsign := hgap.2 j
+  rw [hsucc] at hsign
+  simpa [j] using hsign
+
+theorem negativePunctured_sign_of_gt {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} {gap i : Fin (n + 1)}
+    (hgap : C.NegativePunctured gap) (hi : gap < i) :
+    (C.word i).positive = decide (Even i.val) := by
+  have hival_pos : 0 < i.val := by
+    have hi' : gap.val < i.val := Fin.lt_def.mp hi
+    omega
+  let j : Fin n := ⟨i.val - 1, by
+    have hle : i.val ≤ n := Nat.le_of_lt_succ i.isLt
+    omega⟩
+  have hle_cast : gap ≤ (Fin.castSucc j : Fin (n + 1)) := by
+    rw [Fin.le_def]
+    simp [j]
+    exact Nat.le_sub_one_of_lt (Fin.lt_def.mp hi)
+  have hsucc : gap.succAbove j = i := by
+    rw [Fin.succAbove_of_le_castSucc gap j hle_cast]
+    apply Fin.ext
+    simp [j]
+    omega
+  have hsign := hgap.2 j
+  rw [hsucc] at hsign
+  calc
+    (C.word i).positive = (!decide (Even (i.val - 1))) := by
+      simpa [j] using hsign
+    _ = decide (Even i.val) := not_decide_even_pred_eq i.val hival_pos
+
+theorem positivePunctured_sign_of_ne {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} {gap i : Fin (n + 1)}
+    (hgap : C.PositivePunctured gap) (hi : i ≠ gap) :
+    (C.word i).positive =
+      if i < gap then decide (Even i.val) else !decide (Even i.val) := by
+  by_cases hlt : i < gap
+  · simp [hlt, positivePunctured_sign_of_lt hgap hlt]
+  · have hgt : gap < i := lt_of_le_of_ne (le_of_not_gt hlt) hi.symm
+    simp [hlt, positivePunctured_sign_of_gt hgap hgt]
+
+theorem negativePunctured_sign_of_ne {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} {gap i : Fin (n + 1)}
+    (hgap : C.NegativePunctured gap) (hi : i ≠ gap) :
+    (C.word i).positive =
+      if i < gap then !decide (Even i.val) else decide (Even i.val) := by
+  by_cases hlt : i < gap
+  · simp [hlt, negativePunctured_sign_of_lt hgap hlt]
+  · have hgt : gap < i := lt_of_le_of_ne (le_of_not_gt hlt) hi.symm
+    simp [hlt, negativePunctured_sign_of_gt hgap hgt]
+
+theorem positivePunctured_gaps_val_close {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} {gap gap' : Fin (n + 1)}
+    (hgap : C.PositivePunctured gap) (hgap' : C.PositivePunctured gap') :
+    gap.val ≤ gap'.val + 1 ∧ gap'.val ≤ gap.val + 1 := by
+  constructor
+  · by_contra hle
+    have hlt : gap'.val + 1 < gap.val := by omega
+    let i : Fin (n + 1) := ⟨gap'.val + 1, by omega⟩
+    have hgap'_lt_i : gap' < i := by
+      rw [Fin.lt_def]
+      simp [i]
+    have hi_lt_gap : i < gap := by
+      rw [Fin.lt_def]
+      simp [i]
+      omega
+    have hleft := positivePunctured_sign_of_gt hgap' hgap'_lt_i
+    have hright := positivePunctured_sign_of_lt hgap hi_lt_gap
+    rw [hleft] at hright
+    cases decide (Even i.val) <;> simp at hright
+  · by_contra hle
+    have hlt : gap.val + 1 < gap'.val := by omega
+    let i : Fin (n + 1) := ⟨gap.val + 1, by omega⟩
+    have hgap_lt_i : gap < i := by
+      rw [Fin.lt_def]
+      simp [i]
+    have hi_lt_gap' : i < gap' := by
+      rw [Fin.lt_def]
+      simp [i]
+      omega
+    have hleft := positivePunctured_sign_of_gt hgap hgap_lt_i
+    have hright := positivePunctured_sign_of_lt hgap' hi_lt_gap'
+    rw [hleft] at hright
+    cases decide (Even i.val) <;> simp at hright
+
+theorem negativePunctured_gaps_val_close {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} {gap gap' : Fin (n + 1)}
+    (hgap : C.NegativePunctured gap) (hgap' : C.NegativePunctured gap') :
+    gap.val ≤ gap'.val + 1 ∧ gap'.val ≤ gap.val + 1 := by
+  constructor
+  · by_contra hle
+    have hlt : gap'.val + 1 < gap.val := by omega
+    let i : Fin (n + 1) := ⟨gap'.val + 1, by omega⟩
+    have hgap'_lt_i : gap' < i := by
+      rw [Fin.lt_def]
+      simp [i]
+    have hi_lt_gap : i < gap := by
+      rw [Fin.lt_def]
+      simp [i]
+      omega
+    have hleft := negativePunctured_sign_of_gt hgap' hgap'_lt_i
+    have hright := negativePunctured_sign_of_lt hgap hi_lt_gap
+    rw [hleft] at hright
+    cases decide (Even i.val) <;> simp at hright
+  · by_contra hle
+    have hlt : gap.val + 1 < gap'.val := by omega
+    let i : Fin (n + 1) := ⟨gap.val + 1, by omega⟩
+    have hgap_lt_i : gap < i := by
+      rw [Fin.lt_def]
+      simp [i]
+    have hi_lt_gap' : i < gap' := by
+      rw [Fin.lt_def]
+      simp [i]
+      omega
+    have hleft := negativePunctured_sign_of_gt hgap hgap_lt_i
+    have hright := negativePunctured_sign_of_lt hgap' hi_lt_gap'
+    rw [hleft] at hright
+    cases decide (Even i.val) <;> simp at hright
+
+theorem positive_negativePunctured_endpoints_of_lt {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} {positive negative : Fin (n + 1)}
+    (hpositive : C.PositivePunctured positive) (hnegative : C.NegativePunctured negative)
+    (hgap : positive < negative) :
+    positive = 0 ∧ negative = Fin.last n := by
+  have hpos_zero : positive.val = 0 := by
+    by_contra hpos
+    have hpos_pos : 0 < positive.val := by omega
+    let i : Fin (n + 1) := ⟨positive.val - 1, by omega⟩
+    have hi_lt_positive : i < positive := by
+      rw [Fin.lt_def]
+      change positive.val - 1 < positive.val
+      omega
+    have hi_lt_negative : i < negative := lt_trans hi_lt_positive hgap
+    have hleft := positivePunctured_sign_of_lt hpositive hi_lt_positive
+    have hright := negativePunctured_sign_of_lt hnegative hi_lt_negative
+    rw [hleft] at hright
+    cases decide (Even i.val) <;> simp at hright
+  have hneg_last : negative.val = n := by
+    by_contra hneg
+    have hneg_lt : negative.val < n := by
+      have hle : negative.val ≤ n := Nat.le_of_lt_succ negative.isLt
+      omega
+    let i : Fin (n + 1) := ⟨negative.val + 1, by omega⟩
+    have hpositive_lt_i : positive < i := lt_trans hgap (by
+      rw [Fin.lt_def]
+      simp [i])
+    have hnegative_lt_i : negative < i := by
+      rw [Fin.lt_def]
+      simp [i]
+    have hleft := positivePunctured_sign_of_gt hpositive hpositive_lt_i
+    have hright := negativePunctured_sign_of_gt hnegative hnegative_lt_i
+    rw [hleft] at hright
+    cases decide (Even i.val) <;> simp at hright
+  constructor
+  · exact Fin.ext hpos_zero
+  · apply Fin.ext
+    simpa [Fin.last] using hneg_last
+
+theorem negative_positivePunctured_endpoints_of_lt {n m : ℕ}
+    {C : AlternatingWordContext (n + 1) m} {negative positive : Fin (n + 1)}
+    (hnegative : C.NegativePunctured negative) (hpositive : C.PositivePunctured positive)
+    (hgap : negative < positive) :
+    negative = 0 ∧ positive = Fin.last n := by
+  have hneg_zero : negative.val = 0 := by
+    by_contra hneg
+    have hneg_pos : 0 < negative.val := by omega
+    let i : Fin (n + 1) := ⟨negative.val - 1, by omega⟩
+    have hi_lt_negative : i < negative := by
+      rw [Fin.lt_def]
+      change negative.val - 1 < negative.val
+      omega
+    have hi_lt_positive : i < positive := lt_trans hi_lt_negative hgap
+    have hleft := negativePunctured_sign_of_lt hnegative hi_lt_negative
+    have hright := positivePunctured_sign_of_lt hpositive hi_lt_positive
+    rw [hleft] at hright
+    cases decide (Even i.val) <;> simp at hright
+  have hpos_last : positive.val = n := by
+    by_contra hpos
+    have hpos_lt : positive.val < n := by
+      have hle : positive.val ≤ n := Nat.le_of_lt_succ positive.isLt
+      omega
+    let i : Fin (n + 1) := ⟨positive.val + 1, by omega⟩
+    have hnegative_lt_i : negative < i := lt_trans hgap (by
+      rw [Fin.lt_def]
+      simp [i])
+    have hpositive_lt_i : positive < i := by
+      rw [Fin.lt_def]
+      simp [i]
+    have hleft := negativePunctured_sign_of_gt hnegative hnegative_lt_i
+    have hright := positivePunctured_sign_of_gt hpositive hpositive_lt_i
+    rw [hleft] at hright
+    cases decide (Even i.val) <;> simp at hright
+  constructor
+  · exact Fin.ext hneg_zero
+  · apply Fin.ext
+    simpa [Fin.last] using hpos_last
+
 theorem positiveAlternating_positivePunctured_iff {n m : ℕ}
     {C : AlternatingWordContext (n + 1) m} (hC : C.PositiveAlternating)
     (gap : Fin (n + 1)) :

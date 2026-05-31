@@ -12,20 +12,25 @@ by the matrix with all entries 1/n, giving perm ≥ n!/nⁿ.
 
 The book presents the proof using the theory of mixed discriminants.
 
-Formalization status: this file now states the genuine theorem over Mathlib's
-`doublyStochastic` predicate.  The proved local part is the equality-case
-computation for the flat matrix, the `n ≤ 2` unconditional lower bounds, the
-`n = 0,1,2` instances of the coefficient-from-capacity analytic core, and the
-weighted-AM-GM capacity lower bound for row-linear products of doubly
-stochastic matrices.  It identifies the squarefree coefficient of the
-row-linear `MvPolynomial` with the row-linear mixed coefficient and hence with
-the permanent, and packages the checkerboard boundary-convexity step for
-opposite exchange endpoints.  The remaining arbitrary-dimension lower bound is
-exposed as a point-17 honest frontier: it is conditional on the missing
-Falikman-Egorychev/Gurvits coefficient-from-capacity inequality for `n ≥ 3`,
-now stated on the actual squarefree coefficient of the row-linear polynomial
-rather than replaced by the flat-matrix special case.  The equality-only-if-flat
-strengthening belongs to the same unformalized analytic equality-case layer.
+Formalization status: this file states the genuine theorem over Mathlib's
+`doublyStochastic` predicate, but the arbitrary-dimensional endpoint is still
+conditional.  The proved local part is the equality-case computation for the
+flat matrix, the `n ≤ 2` unconditional lower bounds, the `n = 0,1,2` instances
+of the coefficient-from-capacity analytic core, and the weighted-AM-GM capacity
+lower bound for row-linear products of doubly stochastic matrices.  It
+identifies the squarefree coefficient of the row-linear `MvPolynomial` with
+the row-linear mixed coefficient and hence with the permanent, and packages the
+checkerboard boundary-convexity step for opposite exchange endpoints.
+
+The remaining arbitrary-dimension lower bound is exposed as a point-17 honest
+frontier: it is conditional on the missing Falikman-Egorychev/Gurvits
+coefficient-from-capacity inequality for `n ≥ 3`, now stated on the actual
+squarefree coefficient of the row-linear polynomial rather than replaced by
+the flat-matrix special case.  In particular, the final theorem named
+`chapter22` below still takes this large-dimensional analytic core as an
+explicit argument; it is not the unconditional Van der Waerden theorem.  The
+equality-only-if-flat strengthening belongs to the same unformalized analytic
+equality-case layer.
 
 The exact intended unconditional Lean endpoint is:
 
@@ -47,8 +52,8 @@ noncomputable section
 /-!
 ### The equality case and the honest analytic frontier
 
-The van der Waerden theorem says every doubly stochastic matrix has permanent
-at least `n! / n^n`, with equality at the flat matrix.
+The target Van der Waerden theorem says every doubly stochastic matrix has
+permanent at least `n! / n^n`, with equality at the flat matrix.
 -/
 
 def flatDoublyStochasticMatrix (n : ℕ) : Matrix (Fin n) (Fin n) ℝ :=
@@ -331,6 +336,10 @@ Gurvits's coefficient-from-capacity step, expressed on the actual mixed
 coefficient of the row-linear polynomial.  This is the analytic theorem still
 needed in arbitrary dimension: capacity at least one implies the squarefree
 mixed coefficient is at least `n! / n^n`.
+
+A term of this structure is a proof package.  This file constructs it in
+dimensions `0`, `1`, and `2` below; for `n ≥ 3` it remains an external
+assumption.
 -/
 structure GurvitsCoefficientFromCapacityCore (n : ℕ) where
   mixed_coefficient_bound :
@@ -342,6 +351,10 @@ structure GurvitsCoefficientFromCapacityCore (n : ℕ) where
 /--
 The same Gurvits coefficient-from-capacity frontier, stated literally on the
 squarefree coefficient of the row-linear `MvPolynomial`.
+
+The theorem `rowLinearSquarefreeCoefficient_eq_mixedCoefficient` below makes
+this equivalent to `GurvitsCoefficientFromCapacityCore`; it does not by itself
+prove the deep coefficient lower bound in dimensions `n ≥ 3`.
 -/
 structure GurvitsSquarefreeCoefficientFromCapacityCore (n : ℕ) where
   squarefree_coefficient_bound :
@@ -642,8 +655,9 @@ the permanent at the original matrix is bounded by the corresponding convex
 combination of the two endpoint permanents.
 
 This is not yet the Van der Waerden lower bound by itself: a convexity upper
-bound is the input needed for the minimizer/equality-case analysis or for the
-stronger AF/Gurvits coefficient inequality.
+bound for the original matrix does not produce a lower bound.  Closing the
+chapter still requires the stronger AF/Gurvits coefficient inequality isolated
+above, or an equivalent mixed-discriminant theorem with equality cases.
 -/
 theorem checkerboardEndpointPair_boundaryConvexity {n : ℕ}
     {A : Matrix (Fin n) (Fin n) ℝ} {r s c d : Fin n}
@@ -760,6 +774,16 @@ Chapter 22 from the literal Gurvits/AF squarefree coefficient theorem.
 This is the main conditional entry point: proving
 `GurvitsSquarefreeCoefficientFromCapacityCore.squarefree_coefficient_bound` in
 all dimensions `n ≥ 3` immediately closes the advertised permanent lower bound.
+
+Concrete remaining work:
+
+* formalize a stable-polynomial capacity theorem strong enough for
+  `rowLinearMvPolynomial`, or formalize the mixed-discriminant
+  Alexandrov-Fenchel route;
+* specialize it to produce
+  `∀ m, 3 ≤ m → GurvitsSquarefreeCoefficientFromCapacityCore m`;
+* add the equality-case analysis if the final statement should also say that
+  equality forces the flat matrix.
 -/
 theorem chapter22
     (core : ∀ m : ℕ, 3 ≤ m → GurvitsSquarefreeCoefficientFromCapacityCore m)

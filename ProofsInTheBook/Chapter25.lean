@@ -17,7 +17,9 @@ probability measure on needle placements.  A placement is `(θ, x)`, with
 angle `θ ∈ [0,π]` and center distance `x ∈ [0,d/2]`; the measure is normalized
 Lebesgue measure on this rectangle.  The crossing probability is the measure of
 the crossing set, and the proof computes this measure by reducing the planar
-area to the integral `∫₀^π sin θ dθ = 2`.
+area to the integral `∫₀^π sin θ dθ = 2`.  The finite polygonal "noodle"
+statement is then connected back to the measure theorem by summing the
+short-segment crossing probabilities.
 -/
 
 namespace ProofsInTheBook.Chapter25
@@ -212,7 +214,7 @@ theorem buffonConditionalCrossingProbability_mem_Icc {d length θ : ℝ}
 
 /--
 Expected crossings for a polygonal curve, defined by summing the segment
-contributions. This is the finite version of the linearity-of-expectation
+contributions.  This is the finite version of the linearity-of-expectation
 step used in the book before passing from polygonal approximations to curves.
 -/
 noncomputable def curveExpectedCrossings {ι : Type*} (segments : Finset ι) (length : ι → ℝ)
@@ -279,8 +281,8 @@ theorem curveExpectedCrossings_singleton {ι : Type*} [DecidableEq ι]
   unfold curveExpectedCrossings
   rw [Finset.sum_singleton]
 
-/-- Buffon's noodle additivity: total expected crossings of a curve equals
-the expected crossings of a single equivalent-length segment (provided d > 0). -/
+/-- Buffon's noodle additivity: total expected crossings of a finite polygonal
+curve equals the expected crossings of one segment with the same total length. -/
 theorem curveExpectedCrossings_eq_segment_of_total_length
     {ι : Type*} (segments : Finset ι) (length : ι → ℝ) (d L : ℝ)
     (hL : (∑ i ∈ segments, length i) = L) :
@@ -295,31 +297,23 @@ theorem segmentExpectedCrossings_le_one {d length : ℝ} (hd : 0 < d) (hle : len
   have h2pi : (2 : ℝ) ≤ Real.pi := Real.two_le_pi
   nlinarith
 
-/--
-Buffon's needle probability for a single needle: when `0 < d` and `0 ≤ ℓ ≤ d`,
-the crossing probability `2ℓ/(πd)` lies in `[0, 1]`. Since a needle of length
-at most `d` crosses at most one line, the expected crossing count IS the
-crossing probability.
--/
+/-- For a short needle, the expression `2ℓ/(πd)` lies in `[0, 1]`. -/
 theorem buffon_needle_prob_in_unit_interval {d length : ℝ}
     (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
     segmentExpectedCrossings d length ∈ Set.Icc (0 : ℝ) 1 :=
   ⟨segmentExpectedCrossings_nonneg hd hlen, segmentExpectedCrossings_le_one hd hle⟩
 
 /--
-The Buffon needle formula: for a straight needle of length `ℓ` dropped on
-parallel lines spaced `d` apart, the crossing probability is `2ℓ/(πd)`.
-This packages the formula along with its validity as a probability.
+The density-level Buffon needle formula, packaged with its validity as a
+probability.  The later theorem `buffonNeedleCrossingProbability_eq_formula`
+identifies this number with the actual placement-measure probability.
 -/
 theorem buffon_needle {d length : ℝ} (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
     ∃ P : ℝ, P = 2 * length / (Real.pi * d) ∧ P ∈ Set.Icc (0 : ℝ) 1 :=
   ⟨segmentExpectedCrossings d length, rfl, buffon_needle_prob_in_unit_interval hd hlen hle⟩
 
-/--
-Buffon's noodle generalization: a convex curve of total arc length `L`
-dropped on parallel lines spaced `d` apart has expected crossing count
-`2L/(πd)`, regardless of the curve's shape.
--/
+/-- Buffon's noodle formula for a finite polygonal curve: the expected crossing
+count depends only on total length, not on the shape of the curve. -/
 theorem buffon_noodle_expected_crossings {ι : Type*} (segments : Finset ι)
     (length : ι → ℝ) (d : ℝ) (_hd : 0 < d) :
     curveExpectedCrossings segments length d =
@@ -537,6 +531,24 @@ theorem buffonPlacementMeasure_crossingSet {d length : ℝ}
     ring
   · positivity
 
+/-- Direct measure-theoretic form of Buffon's short-needle formula. -/
+theorem buffonNeedleCrossingProbability_eq_formula {d length : ℝ}
+    (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
+    buffonNeedleCrossingProbability d length = 2 * length / (Real.pi * d) := by
+  have hformula_nonneg : 0 ≤ 2 * length / (Real.pi * d) := by
+    exact div_nonneg (mul_nonneg (by norm_num) hlen) (mul_pos Real.pi_pos hd).le
+  unfold buffonNeedleCrossingProbability
+  rw [buffonPlacementMeasure_crossingSet hd hlen hle,
+    ENNReal.toReal_ofReal hformula_nonneg]
+
+/-- The measure-theoretic short-needle probability is a genuine real
+probability. -/
+theorem buffonNeedleCrossingProbability_mem_Icc {d length : ℝ}
+    (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
+    buffonNeedleCrossingProbability d length ∈ Set.Icc (0 : ℝ) 1 := by
+  rw [buffonNeedleCrossingProbability_eq_formula hd hlen hle]
+  exact buffon_needle_prob_in_unit_interval hd hlen hle
+
 /-- The measure-theoretic crossing probability is the integral of the constant
 placement density over the geometric crossing region. -/
 theorem buffonNeedleCrossingProbability_eq_crossingRegion_densityIntegral
@@ -577,6 +589,95 @@ theorem buffonNeedleCrossingProbability_eq_densityAverage
   rw [buffonNeedleCrossingProbability_eq_segmentExpectedCrossings d length hd hlen hle,
     buffonNeedleCrossingDensityAverage_eq_segmentExpectedCrossings d length hd]
 
+/-- For a finite polygonal curve whose pieces are all short enough, the
+algebraic expected-crossing sum is the sum of the actual measure-theoretic
+crossing probabilities of its pieces. -/
+theorem sum_buffonNeedleCrossingProbability_eq_curveExpectedCrossings
+    {ι : Type*} (segments : Finset ι) (length : ι → ℝ) {d : ℝ}
+    (hd : 0 < d) (hlen : ∀ i ∈ segments, 0 ≤ length i)
+    (hle : ∀ i ∈ segments, length i ≤ d) :
+    (∑ i ∈ segments, buffonNeedleCrossingProbability d (length i)) =
+      curveExpectedCrossings segments length d := by
+  unfold curveExpectedCrossings
+  apply Finset.sum_congr rfl
+  intro i hi
+  rw [buffonNeedleCrossingProbability_eq_segmentExpectedCrossings d (length i)
+    hd (hlen i hi) (hle i hi)]
+
+/-- Measure-theoretic Buffon noodle formula for a finite polygonal curve:
+sum the short-piece crossing probabilities and obtain `2L/(πd)`. -/
+theorem buffon_noodle_expected_crossings_measure
+    {ι : Type*} (segments : Finset ι) (length : ι → ℝ) {d : ℝ}
+    (hd : 0 < d) (hlen : ∀ i ∈ segments, 0 ≤ length i)
+    (hle : ∀ i ∈ segments, length i ≤ d) :
+    (∑ i ∈ segments, buffonNeedleCrossingProbability d (length i)) =
+      2 * (∑ i ∈ segments, length i) / (Real.pi * d) := by
+  rw [sum_buffonNeedleCrossingProbability_eq_curveExpectedCrossings
+    segments length hd hlen hle]
+  exact buffon_noodle_expected_crossings segments length d hd
+
+/-- There is always a positive number of equal pieces making a segment short
+enough for the short-needle measure theorem. -/
+theorem exists_short_subdivision {d length : ℝ} (hd : 0 < d) :
+    ∃ n : ℕ, 0 < n ∧ length ≤ (n : ℝ) * d := by
+  rcases exists_nat_gt (max (0 : ℝ) (length / d)) with ⟨n, hn⟩
+  have hn_pos_real : (0 : ℝ) < n :=
+    lt_of_le_of_lt (le_max_left (0 : ℝ) (length / d)) hn
+  have hratio : length / d < (n : ℝ) :=
+    lt_of_le_of_lt (le_max_right (0 : ℝ) (length / d)) hn
+  refine ⟨n, Nat.cast_pos.mp hn_pos_real, ?_⟩
+  exact (div_lt_iff₀ hd).mp hratio |>.le
+
+/-- In a subdivision satisfying `length ≤ n d`, each equal piece is short. -/
+theorem equal_subdivision_piece_le_spacing {d length : ℝ} {n : ℕ}
+    (hn : 0 < n) (hle : length ≤ (n : ℝ) * d) :
+    length / (n : ℝ) ≤ d := by
+  rw [div_le_iff₀ (Nat.cast_pos.mpr hn)]
+  simpa [mul_comm] using hle
+
+/-- Expected crossings for any nonnegative segment length, obtained by
+subdividing into equal short pieces and summing the measure-theoretic crossing
+probabilities of the pieces.  For `length > d`, this is the long-needle
+formula for the expected number of crossings, not the probability of at least
+one crossing. -/
+theorem buffon_expected_crossings_arbitrary_length
+    {d length : ℝ} {n : ℕ} (hd : 0 < d) (hlen : 0 ≤ length)
+    (hn : 0 < n) (hle : length ≤ (n : ℝ) * d) :
+    (∑ _i ∈ Finset.range n,
+        buffonNeedleCrossingProbability d (length / (n : ℝ))) =
+      2 * length / (Real.pi * d) := by
+  have hn_ne : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.ne_of_gt hn)
+  have hpiece_nonneg : 0 ≤ length / (n : ℝ) :=
+    div_nonneg hlen (Nat.cast_nonneg n)
+  have hpiece_le : length / (n : ℝ) ≤ d :=
+    equal_subdivision_piece_le_spacing hn hle
+  calc
+    (∑ _i ∈ Finset.range n,
+        buffonNeedleCrossingProbability d (length / (n : ℝ))) =
+        ∑ _i ∈ Finset.range n, segmentExpectedCrossings d (length / (n : ℝ)) := by
+          apply Finset.sum_congr rfl
+          intro i hi
+          rw [buffonNeedleCrossingProbability_eq_segmentExpectedCrossings
+            d (length / (n : ℝ)) hd hpiece_nonneg hpiece_le]
+    _ = (n : ℝ) * segmentExpectedCrossings d (length / (n : ℝ)) := by
+          simp [Finset.sum_const, nsmul_eq_mul]
+    _ = 2 * length / (Real.pi * d) := by
+          unfold segmentExpectedCrossings
+          field_simp [Real.pi_ne_zero, hd.ne', hn_ne]
+
+/-- Every nonnegative segment can be subdivided into short pieces, so the
+arbitrary-length expected crossing formula is available without specifying the
+subdivision count. -/
+theorem exists_subdivision_buffon_expected_crossings
+    {d length : ℝ} (hd : 0 < d) (hlen : 0 ≤ length) :
+    ∃ n : ℕ, 0 < n ∧ length / (n : ℝ) ≤ d ∧
+      (∑ _i ∈ Finset.range n,
+          buffonNeedleCrossingProbability d (length / (n : ℝ))) =
+        2 * length / (Real.pi * d) := by
+  rcases exists_short_subdivision (d := d) (length := length) hd with ⟨n, hn, hle⟩
+  exact ⟨n, hn, equal_subdivision_piece_le_spacing hn hle,
+    buffon_expected_crossings_arbitrary_length hd hlen hn hle⟩
+
 /--
 Chapter 25 (Buffon's needle, short-needle density model):
 For `0 ≤ ℓ ≤ d`, the normalized placement measure on
@@ -584,7 +685,6 @@ For `0 ≤ ℓ ≤ d`, the normalized placement measure on
 -/
 theorem chapter25 (d length : ℝ) (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
     buffonNeedleCrossingProbability d length = 2 * length / (Real.pi * d) := by
-  rw [buffonNeedleCrossingProbability_eq_crossingRegion_densityIntegral hd hlen hle,
-    buffonCrossingRegion_density_integral hd hlen]
+  exact buffonNeedleCrossingProbability_eq_formula hd hlen hle
 
 end ProofsInTheBook.Chapter25

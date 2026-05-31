@@ -3671,6 +3671,79 @@ structure KyFanEndpointPairing {n m : ℕ}
     ∀ endpoint,
       kyFanPathEndpointClassAntipode label hantipodal endpoint ≠ endpointPartner endpoint
 
+theorem four_dvd_card_of_commuting_endpoint_pairing
+    {α : Type*} [Fintype α] [DecidableEq α]
+    {endpointPartner endpointAntipode : α ≃ α}
+    (hpartner_involutive : Function.Involutive endpointPartner)
+    (hpartner_fixedPointFree : ∀ endpoint, endpointPartner endpoint ≠ endpoint)
+    (hantipode_involutive : Function.Involutive endpointAntipode)
+    (hantipode_fixedPointFree : ∀ endpoint, endpointAntipode endpoint ≠ endpoint)
+    (hcomm :
+      ∀ endpoint, endpointAntipode (endpointPartner endpoint) =
+        endpointPartner (endpointAntipode endpoint))
+    (hnot_antipodal : ∀ endpoint, endpointAntipode endpoint ≠ endpointPartner endpoint) :
+    4 ∣ Fintype.card α := by
+  classical
+  have hpath_even : Even (Fintype.card (TwoCyclePath endpointPartner)) :=
+    even_card_of_fixedPointFree_involutive
+      (twoCyclePathAntipode
+        (partner := endpointPartner) (endpointAntipode := endpointAntipode)
+        hantipode_involutive hcomm)
+      (twoCyclePathAntipode_involutive
+        (partner := endpointPartner) (endpointAntipode := endpointAntipode)
+        hantipode_involutive hcomm)
+      (twoCyclePathAntipode_fixedPointFree
+        (partner := endpointPartner) (endpointAntipode := endpointAntipode)
+        hantipode_involutive hcomm
+        hantipode_fixedPointFree hnot_antipodal)
+  rcases hpath_even with ⟨r, hr⟩
+  have htwice :
+      Fintype.card (Σ path : TwoCyclePath endpointPartner, TwoCycleEndpoint path) =
+        2 * Fintype.card (TwoCyclePath endpointPartner) :=
+    sigma_endpoint_card_eq_two_mul_paths
+      (fun path : TwoCyclePath endpointPartner => TwoCycleEndpoint path)
+      (twoCycleEndpoint_card hpartner_fixedPointFree)
+  have hclass :
+      Fintype.card (Σ path : TwoCyclePath endpointPartner, TwoCycleEndpoint path) =
+        Fintype.card α :=
+    Fintype.card_congr (twoCycleEndpointClassify hpartner_involutive)
+  refine ⟨r, ?_⟩
+  omega
+
+theorem four_dvd_kyFanPathEndpointClass_card_of_endpointPairing
+    {n m : ℕ} {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hantipodal : ∀ X, label X.antipode = (label X).neg}
+    (pairing : KyFanEndpointPairing label hantipodal) :
+    4 ∣ Fintype.card (KyFanPathEndpointClass label) :=
+  four_dvd_card_of_commuting_endpoint_pairing
+    pairing.endpointPartner_involutive
+    pairing.endpointPartner_fixedPointFree
+    (kyFanPathEndpointClassAntipode_involutive label hantipodal)
+    (kyFanPathEndpointClassAntipode_fixedPointFree label hantipodal)
+    pairing.endpointPartner_comm
+    pairing.endpointPartner_not_antipodal
+
+theorem kyFanPrefixParity_of_endpointPairing_direct {n m : ℕ}
+    (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (pairing : KyFanEndpointPairing label hantipodal) :
+    Odd (positiveAlternatingPrefixLabelChains label).card := by
+  classical
+  rcases four_dvd_kyFanPathEndpointClass_card_of_endpointPairing pairing with ⟨r, hr⟩
+  rcases four_dvd_alternatingPuncturedPrefixChainType_card hn label hantipodal with ⟨s, hs⟩
+  have hneg :
+      Fintype.card (NegativePrefixChainType label) =
+        Fintype.card (PositivePrefixChainType label) := by
+    simp [PositivePrefixChainType, NegativePrefixChainType,
+      positiveAlternatingPrefixLabelChains_card_eq_negative label hantipodal]
+  have hodd :
+      Odd (Fintype.card (PositivePrefixChainType label)) := by
+    rw [Nat.odd_iff]
+    rw [kyFanPathEndpointClass_card label, hs, hneg] at hr
+    omega
+  simpa [PositivePrefixChainType] using hodd
+
 noncomputable def kyFanConcretePathEndpointDecomposition_of_endpointPairing
     {n m : ℕ} {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
     {hantipodal : ∀ X, label X.antipode = (label X).neg}
@@ -3951,5 +4024,487 @@ theorem tuckerLemmaStatement_of_pathEndpointDecomposition {n : ℕ} (hn : 1 ≤ 
     TuckerLemmaStatement n :=
   tuckerLemmaStatement_of_kyFanPrefixParity hn
     (kyFanPrefixParityStatement_of_pathEndpointDecomposition hpaths)
+
+/--
+If Tucker's lemma is already known in dimension `n`, then every antipodal
+labeling with fewer than `n` absolute labels has a complementary comparable
+pair.  This isolates the reason the `n = 1, 2` path-decomposition statements
+above are vacuous: their `NoComplementaryComparableLabels` hypothesis is
+inconsistent.
+-/
+theorem exists_complementaryComparable_of_tuckerLemmaStatement_of_lt {n m : ℕ}
+    (htucker : TuckerLemmaStatement n) (hmn : m < n)
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    ∃ X Y : NonzeroSignedSubset n,
+      SignedSubset.Le X.1 Y.1 ∧ label X = (label Y).neg := by
+  let liftIndex : Fin m → Fin (n - 1) := fun i => ⟨i.val, by omega⟩
+  let lifted : NonzeroSignedSubset n → SignedLabel (n - 1) :=
+    fun X => { positive := (label X).positive, index := liftIndex (label X).index }
+  have hlifted :
+      ∀ X, lifted X.antipode = (lifted X).neg := by
+    intro X
+    apply SignedLabel.ext
+    · have hpositive := congrArg SignedLabel.positive (hantipodal X)
+      simpa [lifted, SignedLabel.neg] using hpositive
+    · apply Fin.ext
+      have hindex := congrArg SignedLabel.index (hantipodal X)
+      have hindex_val := congrArg Fin.val hindex
+      simpa [lifted, liftIndex, SignedLabel.neg] using hindex_val
+  obtain ⟨X, Y, hXY, hcomp⟩ := htucker lifted hlifted
+  refine ⟨X, Y, hXY, ?_⟩
+  apply SignedLabel.ext
+  · have hpositive := congrArg SignedLabel.positive hcomp
+    simpa [lifted, SignedLabel.neg] using hpositive
+  · apply Fin.ext
+    have hindex := congrArg SignedLabel.index hcomp
+    have hindex_val := congrArg Fin.val hindex
+    simpa [lifted, liftIndex, SignedLabel.neg] using hindex_val
+
+theorem not_noComplementaryComparableLabels_of_tuckerLemmaStatement_of_lt {n m : ℕ}
+    (htucker : TuckerLemmaStatement n) (hmn : m < n)
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    ¬ NoComplementaryComparableLabels label := by
+  intro hno
+  obtain ⟨X, Y, hXY, hcomp⟩ :=
+    exists_complementaryComparable_of_tuckerLemmaStatement_of_lt htucker hmn label hantipodal
+  exact hno X Y hXY hcomp
+
+theorem kyFanPrefixPathEndpointDecompositionStatement_of_tuckerLemmaStatement_of_lt
+    {n m : ℕ} (htucker : TuckerLemmaStatement n) (hmn : m < n) :
+    KyFanPrefixPathEndpointDecompositionStatement n m := by
+  intro label hantipodal hno
+  exact False.elim
+    ((not_noComplementaryComparableLabels_of_tuckerLemmaStatement_of_lt
+      htucker hmn label hantipodal) hno)
+
+theorem kyFanPrefixParityStatement_of_tuckerLemmaStatement_of_lt {n m : ℕ}
+    (htucker : TuckerLemmaStatement n) (hmn : m < n) :
+    KyFanPrefixParityStatement n m := by
+  intro label hantipodal hno
+  exact False.elim
+    ((not_noComplementaryComparableLabels_of_tuckerLemmaStatement_of_lt
+      htucker hmn label hantipodal) hno)
+
+theorem kyFanPrefixModFourStatement_of_tuckerLemmaStatement_of_lt {n m : ℕ}
+    (htucker : TuckerLemmaStatement n) (hmn : m < n) :
+    KyFanPrefixModFourStatement n m :=
+  (kyFanPrefixParityStatement_iff_modFour (Nat.zero_lt_of_lt hmn)).mp
+    (kyFanPrefixParityStatement_of_tuckerLemmaStatement_of_lt htucker hmn)
+
+/--
+If Tucker's lemma is already known in the ambient dimension `n + 1`, then the
+endpoint-pairing obligation in that ambient dimension is vacuous for every
+label range `m < n + 1`.
+-/
+theorem kyFanEndpointPairingStatement_of_tuckerLemmaStatement_succ_of_lt
+    {n m : ℕ} (htucker : TuckerLemmaStatement (n + 1)) (hmn : m < n + 1) :
+    KyFanEndpointPairingStatement n m := by
+  intro label hantipodal hno
+  exact False.elim
+    ((not_noComplementaryComparableLabels_of_tuckerLemmaStatement_of_lt
+      htucker hmn label hantipodal) hno)
+
+/--
+The endpoint-pairing frontier in the Tucker-critical range is exactly Tucker's
+lemma in the next dimension.  The forward direction is the path-count pipeline;
+the reverse direction is vacuity from Tucker's lemma itself.
+-/
+theorem kyFanEndpointPairingStatement_iff_tuckerLemmaStatement_succ (n : ℕ) :
+    KyFanEndpointPairingStatement n n ↔ TuckerLemmaStatement (n + 1) := by
+  constructor
+  · intro hpairing
+    by_cases hn : 0 < n
+    · exact tuckerLemmaStatement_succ_of_endpointPairing hn hpairing
+    · have hzero : n = 0 := by omega
+      subst n
+      exact tuckerLemmaStatement_one
+  · intro htucker
+    exact kyFanEndpointPairingStatement_of_tuckerLemmaStatement_succ_of_lt
+      htucker (by omega)
+
+/-- Same equivalence, indexed by the ambient Tucker dimension. -/
+theorem tuckerLemmaStatement_iff_kyFanEndpointPairingStatement_pred
+    {n : ℕ} (hn : 1 ≤ n) :
+    TuckerLemmaStatement n ↔ KyFanEndpointPairingStatement (n - 1) (n - 1) := by
+  have hsucc : n - 1 + 1 = n := by omega
+  rw [← hsucc]
+  exact (kyFanEndpointPairingStatement_iff_tuckerLemmaStatement_succ (n - 1)).symm
+
+/--
+For the Tucker-critical label range `m = n - 1`, the abstract path-endpoint
+obligation is equivalent to Tucker's lemma itself.  The forward direction is
+the parity chain; the reverse direction is the vacuity observed in dimensions
+one and two.
+-/
+theorem kyFanPrefixPathEndpointDecompositionStatement_iff_tuckerLemmaStatement
+    {n : ℕ} (hn : 1 ≤ n) :
+    KyFanPrefixPathEndpointDecompositionStatement n (n - 1) ↔ TuckerLemmaStatement n := by
+  constructor
+  · intro hpaths
+    exact tuckerLemmaStatement_of_pathEndpointDecomposition hn hpaths
+  · intro htucker
+    exact kyFanPrefixPathEndpointDecompositionStatement_of_tuckerLemmaStatement_of_lt
+      htucker (by omega)
+
+theorem kyFanPrefixParityStatement_iff_tuckerLemmaStatement {n : ℕ} (hn : 1 ≤ n) :
+    KyFanPrefixParityStatement n (n - 1) ↔ TuckerLemmaStatement n := by
+  constructor
+  · intro hparity
+    exact tuckerLemmaStatement_of_kyFanPrefixParity hn hparity
+  · intro htucker
+    exact kyFanPrefixParityStatement_of_tuckerLemmaStatement_of_lt htucker (by omega)
+
+theorem kyFanPrefixModFourStatement_iff_tuckerLemmaStatement {n : ℕ} (hn : 1 ≤ n) :
+    KyFanPrefixModFourStatement n (n - 1) ↔ TuckerLemmaStatement n := by
+  constructor
+  · intro hmodFour
+    exact tuckerLemmaStatement_of_kyFanPrefixModFour hn hmodFour
+  · intro htucker
+    exact kyFanPrefixModFourStatement_of_tuckerLemmaStatement_of_lt htucker (by omega)
+
+/-- Encode the four labels `±0, ±1` as two-bit words:
+low bit is sign, high bit is index. -/
+private def signedLabelTwoCode (L : SignedLabel 2) : BitVec 2 :=
+  BitVec.ofNat 2 (2 * L.index.val + if L.positive then 1 else 0)
+
+private theorem signedLabelTwoCode_neg (L : SignedLabel 2) :
+    signedLabelTwoCode L.neg = signedLabelTwoCode L ^^^ (1#2) := by
+  cases L with
+  | mk positive index =>
+      cases positive <;> fin_cases index <;> native_decide
+
+@[simp] private theorem signedLabelTwoCode_neg_mk (L : SignedLabel 2) :
+    signedLabelTwoCode { positive := !L.positive, index := L.index } =
+      signedLabelTwoCode L ^^^ (1#2) := by
+  simpa [SignedLabel.neg] using signedLabelTwoCode_neg L
+
+private theorem signedLabelTwoCode_injective : Function.Injective signedLabelTwoCode := by
+  intro L M h
+  cases L with
+  | mk lp li =>
+      cases M with
+      | mk mp mi =>
+          cases lp <;> cases mp <;> fin_cases li <;> fin_cases mi <;>
+            simp [signedLabelTwoCode] at h ⊢
+
+private theorem signedLabelTwoCode_noComplement
+    {label : NonzeroSignedSubset 3 → SignedLabel 2}
+    (hno : NoComplementaryComparableLabels label)
+    {X Y : NonzeroSignedSubset 3} (hXY : SignedSubset.Le X.1 Y.1) :
+    signedLabelTwoCode (label X) ≠ signedLabelTwoCode (label Y).neg := by
+  intro hcode
+  exact hno X Y hXY (signedLabelTwoCode_injective hcode)
+
+/-- The finite unsatisfiable core for the three-dimensional Tucker step. -/
+private theorem tuckerLemmaStatement_three_core_unsat
+    (L0 L1 L2 L3 L4 L5 L6 L7 L8 L9 L10 L11 L12 : BitVec 2) :
+    ¬ (
+      L0 ≠ L10 ∧
+      L0 ≠ L7 ∧
+      L0 ≠ L4 ∧
+      L0 ≠ L1 ∧
+      L0 ≠ (L3 ^^^ (1#2)) ∧
+      L0 ≠ (L6 ^^^ (1#2)) ∧
+      L0 ≠ (L9 ^^^ (1#2)) ∧
+      L0 ≠ (L12 ^^^ (1#2)) ∧
+      L1 ≠ L6 ∧
+      L1 ≠ (L10 ^^^ (1#2)) ∧
+      L2 ≠ L6 ∧
+      L2 ≠ L5 ∧
+      L2 ≠ L4 ∧
+      L2 ≠ (L1 ^^^ (1#2)) ∧
+      L2 ≠ (L3 ^^^ (1#2)) ∧
+      L2 ≠ (L10 ^^^ (1#2)) ∧
+      L2 ≠ (L11 ^^^ (1#2)) ∧
+      L2 ≠ (L12 ^^^ (1#2)) ∧
+      L3 ≠ L4 ∧
+      L3 ≠ (L12 ^^^ (1#2)) ∧
+      L5 ≠ (L4 ^^^ (1#2)) ∧
+      L5 ≠ (L6 ^^^ (1#2)) ∧
+      L7 ≠ (L4 ^^^ (1#2)) ∧
+      L7 ≠ (L10 ^^^ (1#2)) ∧
+      L8 ≠ (L4 ^^^ (1#2)) ∧
+      L8 ≠ (L5 ^^^ (1#2)) ∧
+      L8 ≠ (L6 ^^^ (1#2)) ∧
+      L8 ≠ (L7 ^^^ (1#2)) ∧
+      L8 ≠ (L9 ^^^ (1#2)) ∧
+      L8 ≠ (L10 ^^^ (1#2)) ∧
+      L8 ≠ (L11 ^^^ (1#2)) ∧
+      L8 ≠ (L12 ^^^ (1#2)) ∧
+      L9 ≠ (L6 ^^^ (1#2)) ∧
+      L9 ≠ (L12 ^^^ (1#2)) ∧
+      L11 ≠ (L10 ^^^ (1#2)) ∧
+      L11 ≠ (L12 ^^^ (1#2))) := by
+  bv_decide
+
+set_option linter.unusedSimpArgs false in
+private theorem not_noComplementaryComparableLabels_three
+    (label : NonzeroSignedSubset 3 → SignedLabel 2)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (hno : NoComplementaryComparableLabels label) : False := by
+  classical
+  let z : Fin 3 := ⟨0, by omega⟩
+  let o : Fin 3 := ⟨1, by omega⟩
+  let t : Fin 3 := ⟨2, by omega⟩
+  let R0 : NonzeroSignedSubset 3 :=
+    ⟨{ pos := {t}, neg := ∅, disjoint := by
+        simp [z, o, t] },
+      by simp [SignedSubset.Nonzero]⟩
+  let R1 : NonzeroSignedSubset 3 :=
+    ⟨{ pos := {o}, neg := {t}, disjoint := by
+        simp [z, o, t] },
+      by simp [SignedSubset.Nonzero]⟩
+  let R2 : NonzeroSignedSubset 3 :=
+    ⟨{ pos := {o}, neg := ∅, disjoint := by
+        simp [z, o, t] },
+      by simp [SignedSubset.Nonzero]⟩
+  let R3 : NonzeroSignedSubset 3 :=
+    ⟨{ pos := {o, t}, neg := ∅, disjoint := by
+        simp [z, o, t] },
+      by simp [SignedSubset.Nonzero]⟩
+  let R4 : NonzeroSignedSubset 3 :=
+    ⟨{ pos := {z}, neg := {o, t}, disjoint := by
+        simp [z, o, t] },
+      by simp [SignedSubset.Nonzero]⟩
+  let R5 : NonzeroSignedSubset 3 :=
+    ⟨{ pos := {z}, neg := {o}, disjoint := by
+        simp [z, o, t] },
+      by simp [SignedSubset.Nonzero]⟩
+  let R6 : NonzeroSignedSubset 3 :=
+    ⟨{ pos := {z, t}, neg := {o}, disjoint := by
+        simp [z, o, t] },
+      by simp [SignedSubset.Nonzero]⟩
+  let R7 : NonzeroSignedSubset 3 :=
+    ⟨{ pos := {z}, neg := {t}, disjoint := by
+        simp [z, o, t] },
+      by simp [SignedSubset.Nonzero]⟩
+  let R8 : NonzeroSignedSubset 3 :=
+    ⟨{ pos := {z}, neg := ∅, disjoint := by
+        simp [z, o, t] },
+      by simp [SignedSubset.Nonzero]⟩
+  let R9 : NonzeroSignedSubset 3 :=
+    ⟨{ pos := {z, t}, neg := ∅, disjoint := by
+        simp [z, o, t] },
+      by simp [SignedSubset.Nonzero]⟩
+  let R10 : NonzeroSignedSubset 3 :=
+    ⟨{ pos := {z, o}, neg := {t}, disjoint := by
+        simp [z, o, t] },
+      by simp [SignedSubset.Nonzero]⟩
+  let R11 : NonzeroSignedSubset 3 :=
+    ⟨{ pos := {z, o}, neg := ∅, disjoint := by
+        simp [z, o, t] },
+      by simp [SignedSubset.Nonzero]⟩
+  let R12 : NonzeroSignedSubset 3 :=
+    ⟨{ pos := {z, o, t}, neg := ∅, disjoint := by
+        simp [z, o, t] },
+      by simp [SignedSubset.Nonzero]⟩
+  let B0 : BitVec 2 := signedLabelTwoCode (label R0)
+  let B1 : BitVec 2 := signedLabelTwoCode (label R1)
+  let B2 : BitVec 2 := signedLabelTwoCode (label R2)
+  let B3 : BitVec 2 := signedLabelTwoCode (label R3)
+  let B4 : BitVec 2 := signedLabelTwoCode (label R4)
+  let B5 : BitVec 2 := signedLabelTwoCode (label R5)
+  let B6 : BitVec 2 := signedLabelTwoCode (label R6)
+  let B7 : BitVec 2 := signedLabelTwoCode (label R7)
+  let B8 : BitVec 2 := signedLabelTwoCode (label R8)
+  let B9 : BitVec 2 := signedLabelTwoCode (label R9)
+  let B10 : BitVec 2 := signedLabelTwoCode (label R10)
+  let B11 : BitVec 2 := signedLabelTwoCode (label R11)
+  let B12 : BitVec 2 := signedLabelTwoCode (label R12)
+  have h49 : B0 ≠ B10 := by
+    have h := signedLabelTwoCode_noComplement hno (X := R0) (Y := R10.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R10,
+        z, o, t])
+    simpa [B0, B10, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h50 : B0 ≠ B7 := by
+    have h := signedLabelTwoCode_noComplement hno (X := R0) (Y := R7.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R7,
+        z, o, t])
+    simpa [B0, B7, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h51 : B0 ≠ B4 := by
+    have h := signedLabelTwoCode_noComplement hno (X := R0) (Y := R4.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R4,
+        z, o, t])
+    simpa [B0, B4, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h52 : B0 ≠ B1 := by
+    have h := signedLabelTwoCode_noComplement hno (X := R0) (Y := R1.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R1,
+        z, o, t])
+    simpa [B0, B1, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h54 : B0 ≠ (B3 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R0) (Y := R3) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R3,
+        z, o, t])
+    simpa [B0, B3, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h55 : B0 ≠ (B6 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R0) (Y := R6) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R6,
+        z, o, t])
+    simpa [B0, B6, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h56 : B0 ≠ (B9 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R0) (Y := R9) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R9,
+        z, o, t])
+    simpa [B0, B9, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h57 : B0 ≠ (B12 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R0) (Y := R12) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R12,
+        z, o, t])
+    simpa [B0, B12, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h58 : B1 ≠ B6 := by
+    have h := signedLabelTwoCode_noComplement hno (X := R1) (Y := R6.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R1, R6,
+        z, o, t])
+    simpa [B1, B6, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h60 : B1 ≠ (B10 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R1) (Y := R10) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R1, R10,
+        z, o, t])
+    simpa [B1, B10, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h61 : B2 ≠ B6 := by
+    have h := signedLabelTwoCode_noComplement hno (X := R2) (Y := R6.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R6,
+        z, o, t])
+    simpa [B2, B6, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h62 : B2 ≠ B5 := by
+    have h := signedLabelTwoCode_noComplement hno (X := R2) (Y := R5.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R5,
+        z, o, t])
+    simpa [B2, B5, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h63 : B2 ≠ B4 := by
+    have h := signedLabelTwoCode_noComplement hno (X := R2) (Y := R4.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R4,
+        z, o, t])
+    simpa [B2, B4, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h64 : B2 ≠ (B1 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R2) (Y := R1) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R1,
+        z, o, t])
+    simpa [B2, B1, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h66 : B2 ≠ (B3 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R2) (Y := R3) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R3,
+        z, o, t])
+    simpa [B2, B3, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h67 : B2 ≠ (B10 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R2) (Y := R10) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R10,
+        z, o, t])
+    simpa [B2, B10, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h68 : B2 ≠ (B11 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R2) (Y := R11) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R11,
+        z, o, t])
+    simpa [B2, B11, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h69 : B2 ≠ (B12 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R2) (Y := R12) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R12,
+        z, o, t])
+    simpa [B2, B12, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h70 : B3 ≠ B4 := by
+    have h := signedLabelTwoCode_noComplement hno (X := R3) (Y := R4.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R3, R4,
+        z, o, t])
+    simpa [B3, B4, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h72 : B3 ≠ (B12 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R3) (Y := R12) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R3, R12,
+        z, o, t])
+    simpa [B3, B12, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h74 : B5 ≠ (B4 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R5) (Y := R4) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R5, R4,
+        z, o, t])
+    simpa [B5, B4, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h76 : B5 ≠ (B6 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R5) (Y := R6) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R5, R6,
+        z, o, t])
+    simpa [B5, B6, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h78 : B7 ≠ (B4 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R7) (Y := R4) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R7, R4,
+        z, o, t])
+    simpa [B7, B4, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h80 : B7 ≠ (B10 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R7) (Y := R10) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R7, R10,
+        z, o, t])
+    simpa [B7, B10, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h81 : B8 ≠ (B4 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R8) (Y := R4) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R4,
+        z, o, t])
+    simpa [B8, B4, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h82 : B8 ≠ (B5 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R8) (Y := R5) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R5,
+        z, o, t])
+    simpa [B8, B5, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h83 : B8 ≠ (B6 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R8) (Y := R6) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R6,
+        z, o, t])
+    simpa [B8, B6, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h84 : B8 ≠ (B7 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R8) (Y := R7) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R7,
+        z, o, t])
+    simpa [B8, B7, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h86 : B8 ≠ (B9 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R8) (Y := R9) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R9,
+        z, o, t])
+    simpa [B8, B9, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h87 : B8 ≠ (B10 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R8) (Y := R10) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R10,
+        z, o, t])
+    simpa [B8, B10, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h88 : B8 ≠ (B11 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R8) (Y := R11) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R11,
+        z, o, t])
+    simpa [B8, B11, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h89 : B8 ≠ (B12 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R8) (Y := R12) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R12,
+        z, o, t])
+    simpa [B8, B12, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h90 : B9 ≠ (B6 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R9) (Y := R6) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R9, R6,
+        z, o, t])
+    simpa [B9, B6, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h92 : B9 ≠ (B12 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R9) (Y := R12) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R9, R12,
+        z, o, t])
+    simpa [B9, B12, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h94 : B11 ≠ (B10 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R11) (Y := R10) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R11, R10,
+        z, o, t])
+    simpa [B11, B10, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  have h96 : B11 ≠ (B12 ^^^ (1#2)) := by
+    have h := signedLabelTwoCode_noComplement hno (X := R11) (Y := R12) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R11, R12,
+        z, o, t])
+    simpa [B11, B12, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
+  exact tuckerLemmaStatement_three_core_unsat
+    B0 B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 B11 B12
+    ⟨h49, h50, h51, h52, h54, h55, h56, h57, h58, h60, h61, h62, h63, h64,
+      h66, h67, h68, h69, h70, h72, h74, h76, h78, h80, h81, h82, h83, h84,
+      h86, h87, h88, h89, h90, h92, h94, h96⟩
+
+theorem kyFanEndpointPairingStatement_two_two : KyFanEndpointPairingStatement 2 2 := by
+  intro label hantipodal hno
+  exact False.elim (not_noComplementaryComparableLabels_three label hantipodal hno)
+
+theorem tuckerLemmaStatement_three : TuckerLemmaStatement 3 :=
+  tuckerLemmaStatement_succ_of_endpointPairing (by omega)
+    kyFanEndpointPairingStatement_two_two
 
 end ProofsInTheBook.TuckerLemmaCore

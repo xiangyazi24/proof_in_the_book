@@ -4822,6 +4822,117 @@ theorem kyFanDeletionGapEndpointSet_card_eq_two_of_strict {n m : ℕ} (hn : 0 < 
   exact kyFanDeletionGaps_card_eq_two_of_strict hn hno hstrict
     ((kyFanDeletionGaps_nonempty_iff hno P).mpr hactive)
 
+def kyFanBaseEndpoint {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (base : Bool) : KyFanPathEndpointClass label :=
+  Sum.inr (Sum.inl base)
+
+def kyFanPositiveTopEndpoint {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (positive : PositivePrefixChainType label) : KyFanPathEndpointClass label :=
+  Sum.inr (Sum.inr (Sum.inl positive))
+
+def kyFanNegativeTopEndpoint {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (negative : NegativePrefixChainType label) : KyFanPathEndpointClass label :=
+  Sum.inr (Sum.inr (Sum.inr negative))
+
+/-- The punctured endpoint obtained from a positive full alternating chain by deleting the top. -/
+noncomputable def kyFanPositiveTopPuncturedEndpoint {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (positive : PositivePrefixChainType label) :
+    AlternatingPuncturedPrefixChainType label :=
+  ⟨(positive.1, Fin.last n), by
+    rw [alternatingPuncturedPrefixLabelChains]
+    exact Finset.mem_union_left _
+      (mem_positiveAlternatingPuncturedPrefixLabelChains_last_of_prefix positive.2)⟩
+
+/-- The punctured endpoint obtained from a negative full alternating chain by deleting the top. -/
+noncomputable def kyFanNegativeTopPuncturedEndpoint {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (negative : NegativePrefixChainType label) :
+    AlternatingPuncturedPrefixChainType label :=
+  ⟨(negative.1, Fin.last n), by
+    rw [alternatingPuncturedPrefixLabelChains]
+    exact Finset.mem_union_right _
+      (mem_negativeAlternatingPuncturedPrefixLabelChains_last_of_prefix negative.2)⟩
+
+/--
+The bottom boundary relation.  The base endpoint records the sign of the
+deleted artificial bottom entry, so deleting position `0` leaves the opposite
+punctured alternation.
+-/
+def kyFanBaseEndpointIncidentPunctured {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (base : Bool) (punctured : AlternatingPuncturedPrefixChainType label) : Prop :=
+  punctured.1.2 = (0 : Fin (n + 1)) ∧
+    ((base = true ∧
+        NegativeAlternatingPuncturedPrefixLabels label punctured.1.1 (0 : Fin (n + 1))) ∨
+      (base = false ∧
+        PositiveAlternatingPuncturedPrefixLabels label punctured.1.1 (0 : Fin (n + 1))))
+
+def kyFanPositiveTopEndpointIncidentPunctured {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (positive : PositivePrefixChainType label)
+    (punctured : AlternatingPuncturedPrefixChainType label) : Prop :=
+  punctured.1 = (positive.1, Fin.last n)
+
+def kyFanNegativeTopEndpointIncidentPunctured {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (negative : NegativePrefixChainType label)
+    (punctured : AlternatingPuncturedPrefixChainType label) : Prop :=
+  punctured.1 = (negative.1, Fin.last n)
+
+def kyFanEndpointGraphLinked {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label) :
+    KyFanPathEndpointClass label → KyFanPathEndpointClass label → Prop
+  | Sum.inl punctured, Sum.inl punctured' =>
+      ∃ P : SignedPermutation (n + 1),
+        kyFanDeletionGapEndpointSet hno P = {Sum.inl punctured, Sum.inl punctured'}
+  | Sum.inr (Sum.inl base), Sum.inl punctured =>
+      kyFanBaseEndpointIncidentPunctured base punctured
+  | Sum.inl punctured, Sum.inr (Sum.inl base) =>
+      kyFanBaseEndpointIncidentPunctured base punctured
+  | Sum.inr (Sum.inr (Sum.inl positive)), Sum.inl punctured =>
+      kyFanPositiveTopEndpointIncidentPunctured positive punctured
+  | Sum.inl punctured, Sum.inr (Sum.inr (Sum.inl positive)) =>
+      kyFanPositiveTopEndpointIncidentPunctured positive punctured
+  | Sum.inr (Sum.inr (Sum.inr negative)), Sum.inl punctured =>
+      kyFanNegativeTopEndpointIncidentPunctured negative punctured
+  | Sum.inl punctured, Sum.inr (Sum.inr (Sum.inr negative)) =>
+      kyFanNegativeTopEndpointIncidentPunctured negative punctured
+  | _, _ => False
+
+theorem kyFanEndpointGraphLinked_symm {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label) :
+    Symmetric (kyFanEndpointGraphLinked hno) := by
+  intro endpoint endpoint' h
+  rcases endpoint with punctured | rest
+  · rcases endpoint' with punctured' | rest'
+    · rcases h with ⟨P, hP⟩
+      refine ⟨P, ?_⟩
+      rw [hP]
+      ext x
+      simp [or_comm]
+    · rcases rest' with base | top
+      · exact h
+      · rcases top with positive | negative
+        · exact h
+        · exact h
+  · rcases rest with base | top
+    · rcases endpoint' with punctured | rest'
+      · exact h
+      · rcases rest' with base' | top' <;> cases h
+    · rcases top with positive | negative
+      · rcases endpoint' with punctured | rest'
+        · exact h
+        · rcases rest' with base | top' <;> cases h
+      · rcases endpoint' with punctured | rest'
+        · exact h
+        · rcases rest' with base | top' <;> cases h
+
 private theorem finset_eq_pair_of_card_eq_two_of_mem {α : Type*} [DecidableEq α]
     {s : Finset α} {a b : α} (hcard : s.card = 2)
     (ha : a ∈ s) (hb : b ∈ s) (hne : a ≠ b) :
@@ -4840,8 +4951,9 @@ private theorem finset_eq_pair_of_card_eq_two_of_mem {α : Type*} [DecidableEq �
   exact (Finset.eq_of_subset_of_card_le hpair_subset hle).symm
 
 /--
-Flag-side Ky Fan adjacency: two endpoint vertices are adjacent when they are
-exactly the two alternating deletion-gap endpoints of one signed permutation.
+Ky Fan endpoint adjacency.  Punctured-punctured edges keep the deletion-gap
+adjacency of a shared signed permutation.  Boundary edges attach base endpoints
+to gap `0` punctures and full alternating top endpoints to gap `n` punctures.
 -/
 noncomputable def KyFanDeletionGapGraph {n m : ℕ}
     {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
@@ -4849,16 +4961,11 @@ noncomputable def KyFanDeletionGapGraph {n m : ℕ}
     SimpleGraph (KyFanPathEndpointClass label) where
   Adj endpoint endpoint' :=
     endpoint ≠ endpoint' ∧
-      ∃ P : SignedPermutation (n + 1),
-        kyFanDeletionGapEndpointSet hno P = {endpoint, endpoint'}
+      kyFanEndpointGraphLinked hno endpoint endpoint'
   symm := by
     intro endpoint endpoint' h
     refine ⟨h.1.symm, ?_⟩
-    rcases h.2 with ⟨P, hP⟩
-    refine ⟨P, ?_⟩
-    rw [hP]
-    ext x
-    simp [or_comm]
+    exact kyFanEndpointGraphLinked_symm hno h.2
   loopless := ⟨fun endpoint h => h.1 rfl⟩
 
 theorem kyFanDeletionGapGraph_adj_iff {n m : ℕ}
@@ -4867,8 +4974,7 @@ theorem kyFanDeletionGapGraph_adj_iff {n m : ℕ}
     {endpoint endpoint' : KyFanPathEndpointClass label} :
     (KyFanDeletionGapGraph hno).Adj endpoint endpoint' ↔
       endpoint ≠ endpoint' ∧
-        ∃ P : SignedPermutation (n + 1),
-          kyFanDeletionGapEndpointSet hno P = {endpoint, endpoint'} := by
+        kyFanEndpointGraphLinked hno endpoint endpoint' := by
   rfl
 
 theorem kyFanDeletionGapGraph_adj_of_mem_of_card_eq_two {n m : ℕ}
@@ -4881,6 +4987,10 @@ theorem kyFanDeletionGapGraph_adj_of_mem_of_card_eq_two {n m : ℕ}
     (hendpoint' : endpoint' ∈ kyFanDeletionGapEndpointSet hno P)
     (hne : endpoint ≠ endpoint') :
     (KyFanDeletionGapGraph hno).Adj endpoint endpoint' := by
+  rcases (mem_kyFanDeletionGapEndpointSet_iff hno P endpoint).mp hendpoint with
+    ⟨gap, hgap, rfl⟩
+  rcases (mem_kyFanDeletionGapEndpointSet_iff hno P endpoint').mp hendpoint' with
+    ⟨gap', hgap', rfl⟩
   exact
     ⟨hne, P,
       finset_eq_pair_of_card_eq_two_of_mem hcard hendpoint hendpoint' hne⟩
@@ -4900,6 +5010,168 @@ theorem kyFanDeletionGapGraph_adj_of_strict {n m : ℕ} (hn : 0 < n)
   exact kyFanDeletionGapGraph_adj_of_mem_of_card_eq_two
     (kyFanDeletionGapEndpointSet_card_eq_two_of_strict hn hno hstrict hactive)
     hendpoint hendpoint' hne
+
+theorem kyFanDeletionGapGraph_adj_base_of_incident {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hno : NoComplementaryComparableLabels label}
+    {base : Bool} {punctured : AlternatingPuncturedPrefixChainType label}
+    (hincident : kyFanBaseEndpointIncidentPunctured base punctured) :
+    (KyFanDeletionGapGraph hno).Adj
+      (kyFanBaseEndpoint base) (Sum.inl punctured : KyFanPathEndpointClass label) := by
+  exact ⟨by simp [kyFanBaseEndpoint], hincident⟩
+
+theorem kyFanDeletionGapGraph_adj_punctured_base_of_incident {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hno : NoComplementaryComparableLabels label}
+    {base : Bool} {punctured : AlternatingPuncturedPrefixChainType label}
+    (hincident : kyFanBaseEndpointIncidentPunctured base punctured) :
+    (KyFanDeletionGapGraph hno).Adj
+      (Sum.inl punctured : KyFanPathEndpointClass label) (kyFanBaseEndpoint base) := by
+  exact (KyFanDeletionGapGraph hno).symm
+    (kyFanDeletionGapGraph_adj_base_of_incident hincident)
+
+theorem kyFanDeletionGapGraph_adj_positiveTop {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hno : NoComplementaryComparableLabels label}
+    (positive : PositivePrefixChainType label) :
+    (KyFanDeletionGapGraph hno).Adj
+      (kyFanPositiveTopEndpoint positive)
+      (Sum.inl (kyFanPositiveTopPuncturedEndpoint positive) :
+        KyFanPathEndpointClass label) := by
+  exact ⟨by simp [kyFanPositiveTopEndpoint],
+    by
+      change kyFanPositiveTopEndpointIncidentPunctured positive
+        (kyFanPositiveTopPuncturedEndpoint positive)
+      simp [kyFanPositiveTopEndpointIncidentPunctured,
+        kyFanPositiveTopPuncturedEndpoint]⟩
+
+theorem kyFanDeletionGapGraph_adj_negativeTop {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hno : NoComplementaryComparableLabels label}
+    (negative : NegativePrefixChainType label) :
+    (KyFanDeletionGapGraph hno).Adj
+      (kyFanNegativeTopEndpoint negative)
+      (Sum.inl (kyFanNegativeTopPuncturedEndpoint negative) :
+        KyFanPathEndpointClass label) := by
+  exact ⟨by simp [kyFanNegativeTopEndpoint],
+    by
+      change kyFanNegativeTopEndpointIncidentPunctured negative
+        (kyFanNegativeTopPuncturedEndpoint negative)
+      simp [kyFanNegativeTopEndpointIncidentPunctured,
+        kyFanNegativeTopPuncturedEndpoint]⟩
+
+theorem kyFanDeletionGapGraph_adj_punctured_positiveTop {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hno : NoComplementaryComparableLabels label}
+    (positive : PositivePrefixChainType label) :
+    (KyFanDeletionGapGraph hno).Adj
+      (Sum.inl (kyFanPositiveTopPuncturedEndpoint positive) :
+        KyFanPathEndpointClass label)
+      (kyFanPositiveTopEndpoint positive) :=
+  (KyFanDeletionGapGraph hno).symm
+    (kyFanDeletionGapGraph_adj_positiveTop positive)
+
+theorem kyFanDeletionGapGraph_adj_punctured_negativeTop {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hno : NoComplementaryComparableLabels label}
+    (negative : NegativePrefixChainType label) :
+    (KyFanDeletionGapGraph hno).Adj
+      (Sum.inl (kyFanNegativeTopPuncturedEndpoint negative) :
+        KyFanPathEndpointClass label)
+      (kyFanNegativeTopEndpoint negative) :=
+  (KyFanDeletionGapGraph hno).symm
+    (kyFanDeletionGapGraph_adj_negativeTop negative)
+
+noncomputable def kyFanDeletionGapGraphNeighborFinset {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label)
+    (endpoint : KyFanPathEndpointClass label) :
+    Finset (KyFanPathEndpointClass label) :=
+  by
+    classical
+    exact Finset.univ.filter fun endpoint' =>
+      (KyFanDeletionGapGraph hno).Adj endpoint endpoint'
+
+theorem mem_kyFanDeletionGapGraphNeighborFinset_iff {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hno : NoComplementaryComparableLabels label}
+    {endpoint endpoint' : KyFanPathEndpointClass label} :
+    endpoint' ∈ kyFanDeletionGapGraphNeighborFinset hno endpoint ↔
+      (KyFanDeletionGapGraph hno).Adj endpoint endpoint' := by
+  classical
+  simp [kyFanDeletionGapGraphNeighborFinset]
+
+theorem kyFanDeletionGapGraph_positiveTop_neighborFinset {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hno : NoComplementaryComparableLabels label}
+    (positive : PositivePrefixChainType label) :
+    kyFanDeletionGapGraphNeighborFinset hno (kyFanPositiveTopEndpoint positive) =
+      ({(Sum.inl (kyFanPositiveTopPuncturedEndpoint positive) :
+        KyFanPathEndpointClass label)} : Finset (KyFanPathEndpointClass label)) := by
+  classical
+  ext endpoint
+  rw [mem_kyFanDeletionGapGraphNeighborFinset_iff]
+  constructor
+  · intro hadj
+    rcases (kyFanDeletionGapGraph_adj_iff.mp hadj) with ⟨_hne, hlink⟩
+    rcases endpoint with punctured | rest
+    · change kyFanPositiveTopEndpointIncidentPunctured positive punctured at hlink
+      have hpunctured : punctured = kyFanPositiveTopPuncturedEndpoint positive := by
+        apply Subtype.ext
+        simpa [kyFanPositiveTopEndpointIncidentPunctured,
+          kyFanPositiveTopPuncturedEndpoint] using hlink
+      simp [hpunctured]
+    · rcases rest with base | top
+      · cases hlink
+      · rcases top with positive' | negative <;> cases hlink
+  · intro hmem
+    rw [Finset.mem_singleton] at hmem
+    subst endpoint
+    exact kyFanDeletionGapGraph_adj_positiveTop positive
+
+theorem kyFanDeletionGapGraph_negativeTop_neighborFinset {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hno : NoComplementaryComparableLabels label}
+    (negative : NegativePrefixChainType label) :
+    kyFanDeletionGapGraphNeighborFinset hno (kyFanNegativeTopEndpoint negative) =
+      ({(Sum.inl (kyFanNegativeTopPuncturedEndpoint negative) :
+        KyFanPathEndpointClass label)} : Finset (KyFanPathEndpointClass label)) := by
+  classical
+  ext endpoint
+  rw [mem_kyFanDeletionGapGraphNeighborFinset_iff]
+  constructor
+  · intro hadj
+    rcases (kyFanDeletionGapGraph_adj_iff.mp hadj) with ⟨_hne, hlink⟩
+    rcases endpoint with punctured | rest
+    · change kyFanNegativeTopEndpointIncidentPunctured negative punctured at hlink
+      have hpunctured : punctured = kyFanNegativeTopPuncturedEndpoint negative := by
+        apply Subtype.ext
+        simpa [kyFanNegativeTopEndpointIncidentPunctured,
+          kyFanNegativeTopPuncturedEndpoint] using hlink
+      simp [hpunctured]
+    · rcases rest with base | top
+      · cases hlink
+      · rcases top with positive | negative' <;> cases hlink
+  · intro hmem
+    rw [Finset.mem_singleton] at hmem
+    subst endpoint
+    exact kyFanDeletionGapGraph_adj_negativeTop negative
+
+theorem kyFanDeletionGapGraph_positiveTop_degree {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hno : NoComplementaryComparableLabels label}
+    (positive : PositivePrefixChainType label) :
+    (kyFanDeletionGapGraphNeighborFinset hno (kyFanPositiveTopEndpoint positive)).card = 1 := by
+  rw [kyFanDeletionGapGraph_positiveTop_neighborFinset positive]
+  simp
+
+theorem kyFanDeletionGapGraph_negativeTop_degree {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hno : NoComplementaryComparableLabels label}
+    (negative : NegativePrefixChainType label) :
+    (kyFanDeletionGapGraphNeighborFinset hno (kyFanNegativeTopEndpoint negative)).card = 1 := by
+  rw [kyFanDeletionGapGraph_negativeTop_neighborFinset negative]
+  simp
 
 /--
 In the Tucker-critical range `m = n`, no signed-permutation prefix word of

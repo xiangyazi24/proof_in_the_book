@@ -25,17 +25,18 @@ comparisons, strict sign changes around triangular faces, proves the basic
 parity facts, proves the two-edge Cauchy-arm base case from the law of cosines,
 packages the abstract consequence of Cauchy's arm lemma, and states `chapter13`
 / `chapter13_rigidity` from meaningful missing geometric/combinatorial facts.
-The remaining frontier is now explicit: vertex-link geometry must turn the low
-sign-change cases into fixed-chord Cauchy-arm obstructions.  The Euler
-polyhedron formula is carried as boundary topology in `ConvexPolyhedron`, and
-the triangulated incidence count is proved from the boundary-edge equivalence.
+The remaining frontier is now explicit: the geometric reduction must supply a
+triangulated reduced sign graph, prove that equality of all corresponding
+dihedral angles gives one ambient isometry, turn vertex links into the
+fixed-chord Cauchy-arm obstructions, and double-count the resulting strict
+face/vertex sign changes.  The Euler polyhedron formula is carried as boundary
+topology in `ConvexPolyhedron`, and the triangulated incidence count is proved
+from the boundary-edge equivalence.
 
 Gap to the full book theorem: the missing work is genuine three-dimensional
-Euclidean polyhedron infrastructure.  A complete proof needs a formal convex
-polyhedron type with face and edge incidence, corresponding congruent faces,
-dihedral angles and their comparison signs, the reduced sign-change graph and
-Euler characteristic edge-counting bound for it, and a proved Cauchy arm lemma
-for convex planar polygonal chains tied to the vertex links.  Mathlib has
+Euclidean polyhedron infrastructure.  A complete proof needs the reduced
+sign-change graph and triangulation construction, plus the vertex-link geometry
+connecting dihedral comparisons to the proved Cauchy arm lemma.  Mathlib has
 convex and Euclidean geometry foundations, but not this integrated
 convex-polyhedron rigidity layer.
 -/
@@ -388,20 +389,20 @@ theorem sameEdgeLengths_of_facewiseIsometric (P Q : ConvexPolyhedron V E F)
 structure IsometricPair (P Q : ConvexPolyhedron V E F) : Prop where
   combinatorics : SameCombinatorics P Q
   facewise_isometric : FacewiseIsometric P Q
-  same_edge_lengths : SameEdgeLengths P Q
 
 namespace IsometricPair
 
-/--
-Build the standard Cauchy input from the actual facewise isometry assumption:
-edge-length equality is then a theorem, not an independent geometric premise.
--/
 def ofFacewiseIsometric {P Q : ConvexPolyhedron V E F}
     (hcomb : SameCombinatorics P Q) (hface : FacewiseIsometric P Q) :
     IsometricPair P Q where
   combinatorics := hcomb
   facewise_isometric := hface
-  same_edge_lengths := sameEdgeLengths_of_facewiseIsometric P Q hcomb hface
+
+/-- Edge-length equality is a consequence of the facewise isometry assumption. -/
+theorem same_edge_lengths {P Q : ConvexPolyhedron V E F}
+    (pair : IsometricPair P Q) :
+    SameEdgeLengths P Q :=
+  sameEdgeLengths_of_facewiseIsometric P Q pair.combinatorics pair.facewise_isometric
 
 theorem edgeLength_eq {P Q : ConvexPolyhedron V E F}
     (pair : IsometricPair P Q) (e : Fin E) :
@@ -535,6 +536,58 @@ def signChanges {P : ConvexPolyhedron V E F} {v : Fin V} (star : VertexStar P v)
   CyclicSignChanges (star.signSequence edgeSigns)
 
 end VertexStar
+
+/-- The finite set of global edges incident to one vertex. -/
+noncomputable def incidentEdgeFinset (P : ConvexPolyhedron V E F) (v : Fin V) :
+    Finset (Fin E) := by
+  classical
+  exact Finset.univ.filter fun e => P.EdgeIncidentToVertex v e
+
+/--
+An arbitrary finite listing of the edges incident to a vertex.
+
+This removes only the finite-enumeration burden from later data.  The
+geometric fact that the chosen order is the vertex-link cyclic order is still
+encoded by the arm-lemma and double-counting bridge hypotheses below.
+-/
+noncomputable def vertexStarOfIncidentEdges (P : ConvexPolyhedron V E F) (v : Fin V) :
+    VertexStar P v := by
+  classical
+  exact
+    { edgeCount := (P.incidentEdgeFinset v).card
+      edge := fun i => ((Finset.equivFin (P.incidentEdgeFinset v)).symm i).1
+      edge_injective := by
+        intro i j h
+        let eqv := Finset.equivFin (P.incidentEdgeFinset v)
+        have hsub : eqv.symm i = eqv.symm j := by
+          apply Subtype.ext
+          exact h
+        have := congrArg eqv hsub
+        simpa using this
+      edge_incident := by
+        intro i
+        have hm :
+            ((Finset.equivFin (P.incidentEdgeFinset v)).symm i).1 ∈
+              P.incidentEdgeFinset v :=
+          ((Finset.equivFin (P.incidentEdgeFinset v)).symm i).2
+        have hmfilter :
+            ((Finset.equivFin (P.incidentEdgeFinset v)).symm i).1 ∈
+              (Finset.univ.filter fun e => P.EdgeIncidentToVertex v e) := by
+          simp [incidentEdgeFinset] at hm ⊢
+        exact (Finset.mem_filter.mp hmfilter).2
+      complete := by
+        intro e he
+        have hmem : e ∈ P.incidentEdgeFinset v := by
+          simpa [incidentEdgeFinset] using
+            (Finset.mem_filter.mpr ⟨by simp, he⟩ :
+              e ∈ (Finset.univ.filter fun e => P.EdgeIncidentToVertex v e))
+        refine ⟨Finset.equivFin (P.incidentEdgeFinset v) ⟨e, hmem⟩, ?_⟩
+        simp }
+
+/-- The canonical finite incident-edge listing used by the current reduction layer. -/
+noncomputable def vertexStarsOfIncidentEdges (P : ConvexPolyhedron V E F) :
+    ∀ v : Fin V, VertexStar P v :=
+  fun v => P.vertexStarOfIncidentEdges v
 
 /-- Count sign changes around every vertex star of a polyhedron. -/
 def vertexSignChanges (P : ConvexPolyhedron V E F)
@@ -1860,7 +1913,8 @@ end CauchyRigidityCertificate
 The remaining data needed to construct the finite Cauchy rigidity certificate
 from a concrete pair of convex polyhedra.  The Euler field and triangular
 face-edge count are derived from `P`; the nontrivial sign field is derived
-from a genuine dihedral-angle difference.
+from a genuine dihedral-angle difference; the incident-edge vertex stars are
+enumerated from `P`.
 -/
 structure CauchyRigidityConstructionData {V E F : ℕ}
     (P Q : ConvexPolyhedron V E F) where
@@ -1868,15 +1922,16 @@ structure CauchyRigidityConstructionData {V E F : ℕ}
   same_edge_lengths : ConvexPolyhedron.SameEdgeLengths P Q
   triangulated : P.IsTriangulated
   dihedralAngles_differ : ∃ e, P.dihedralAngle e ≠ Q.dihedralAngle e
-  vertexStars : ∀ v : Fin V, ConvexPolyhedron.VertexStar P v
   vertexArmData : Fin V → CauchyArmVertex
   vertexArmData_signChanges :
     ∀ v, (vertexArmData v).signChanges =
-      P.vertexSignChanges vertexStars (P.edgeSigns Q combinatorics same_edge_lengths) v
+      P.vertexSignChanges P.vertexStarsOfIncidentEdges
+        (P.edgeSigns Q combinatorics same_edge_lengths) v
   faceSigns : Fin F → StrictTriangleSigns
   total_vertex_eq_total_face :
     (∑ v : Fin V,
-      P.vertexSignChanges vertexStars (P.edgeSigns Q combinatorics same_edge_lengths) v) =
+      P.vertexSignChanges P.vertexStarsOfIncidentEdges
+        (P.edgeSigns Q combinatorics same_edge_lengths) v) =
       ∑ f : Fin F, StrictTriangleSigns.signChanges (faceSigns f)
 
 namespace CauchyRigidityConstructionData
@@ -1888,11 +1943,11 @@ noncomputable def edgeSigns {V E F : ℕ} {P Q : ConvexPolyhedron V E F}
 noncomputable def vertexStarSigns {V E F : ℕ} {P Q : ConvexPolyhedron V E F}
     (data : CauchyRigidityConstructionData P Q) :
     VertexStarSignData (V := V) data.edgeSigns :=
-  P.vertexStarSignData data.vertexStars data.edgeSigns
+  P.vertexStarSignData P.vertexStarsOfIncidentEdges data.edgeSigns
 
 noncomputable def vertexSignChanges {V E F : ℕ} {P Q : ConvexPolyhedron V E F}
     (data : CauchyRigidityConstructionData P Q) : Fin V → ℕ :=
-  P.vertexSignChanges data.vertexStars data.edgeSigns
+  P.vertexSignChanges P.vertexStarsOfIncidentEdges data.edgeSigns
 
 end CauchyRigidityConstructionData
 
@@ -1900,10 +1955,10 @@ end CauchyRigidityConstructionData
 A noncongruent isometric polyhedron pair together with the remaining
 geometric/combinatorial bridges needed to build the finite Cauchy certificate.
 
-The field `congruent_of_dihedralAngles_eq` is the exact place where the
-three-dimensional rigidity frontier still sits: once facewise isometry and all
-dihedral angles agree, the two embedded polyhedra must be related by one
-ambient Euclidean isometry.
+The fields beyond `counterexample` are exactly what is still conditional:
+triangulation of the reduction, completion of the all-dihedral-equality case,
+vertex-link arm-obstruction data, and the strict face/vertex sign-change
+double-counting identity.
 -/
 structure CauchyRigidityCounterexampleData {V E F : ℕ}
     (P Q : ConvexPolyhedron V E F) where
@@ -1912,17 +1967,16 @@ structure CauchyRigidityCounterexampleData {V E F : ℕ}
   congruent_of_dihedralAngles_eq :
     (∀ e : Fin E, P.dihedralAngle e = Q.dihedralAngle e) →
       ConvexPolyhedron.Congruent P Q
-  vertexStars : ∀ v : Fin V, ConvexPolyhedron.VertexStar P v
   vertexArmData : Fin V → CauchyArmVertex
   vertexArmData_signChanges :
     ∀ v, (vertexArmData v).signChanges =
-      P.vertexSignChanges vertexStars
+      P.vertexSignChanges P.vertexStarsOfIncidentEdges
         (P.edgeSigns Q counterexample.isometric.combinatorics
           counterexample.isometric.same_edge_lengths) v
   faceSigns : Fin F → StrictTriangleSigns
   total_vertex_eq_total_face :
     (∑ v : Fin V,
-      P.vertexSignChanges vertexStars
+      P.vertexSignChanges P.vertexStarsOfIncidentEdges
         (P.edgeSigns Q counterexample.isometric.combinatorics
           counterexample.isometric.same_edge_lengths) v) =
       ∑ f : Fin F, StrictTriangleSigns.signChanges (faceSigns f)
@@ -1947,7 +2001,6 @@ noncomputable def constructionData {V E F : ℕ} {P Q : ConvexPolyhedron V E F}
   dihedralAngles_differ :=
     data.counterexample.dihedralAngles_differ_of_congruent_of_dihedralAngles_eq
       data.congruent_of_dihedralAngles_eq
-  vertexStars := data.vertexStars
   vertexArmData := data.vertexArmData
   vertexArmData_signChanges := by
     intro v
@@ -2020,15 +2073,10 @@ noncomputable def certificate {V E F : ℕ} {P Q : ConvexPolyhedron V E F}
 end CauchyRigidityCounterexampleData
 
 /--
-Chapter 13 (Cauchy's rigidity theorem, Tier 1 conditional):
-Given a CauchyRigidityCertificate, no nontrivial edge-sign perturbation can
-exist — the convex polyhedron is rigid.
-
-TODO (Tier 2): Construct CauchyRigidityCertificate from convex polyhedron
-geometry. Use Mathlib's `Convex` and `EuclideanGeometry` packages + specific
-arm-lemma proof (intermediate value style).
+The finite certificate contradiction: no reduced triangulated strict sign graph
+can satisfy both the arm-lemma lower bound and Euler's upper bound.
 -/
-theorem chapter13 {V E F : ℕ}
+theorem CauchyRigidityCertificate.contradiction {V E F : ℕ}
     (cert : CauchyRigidityCertificate (V := V) (E := E) (F := F)) :
     False :=
   cauchy_counting_contradiction cert.vertexSignChanges
@@ -2039,7 +2087,7 @@ certificate, hence it is inconsistent by the counting contradiction. -/
 theorem CauchyRigidityConstructionData.contradiction {V E F : ℕ}
     {P Q : ConvexPolyhedron V E F} (data : CauchyRigidityConstructionData P Q) :
     False :=
-  chapter13 data.certificate
+  data.certificate.contradiction
 
 /--
 A noncongruent isometric pair with the remaining vertex-link and face-counting
@@ -2048,7 +2096,19 @@ bridges yields a Cauchy rigidity certificate, and therefore a contradiction.
 theorem CauchyRigidityCounterexampleData.contradiction {V E F : ℕ}
     {P Q : ConvexPolyhedron V E F} (data : CauchyRigidityCounterexampleData P Q) :
     False :=
-  chapter13 data.certificate
+  data.certificate.contradiction
+
+/--
+Chapter 13, current geometric-bridge form: a noncongruent isometric pair
+equipped with the remaining reduction data is impossible.
+
+This is not yet the unconditional book theorem.  The remaining hypotheses are
+the fields of `CauchyRigidityCounterexampleData` beyond `counterexample`.
+-/
+theorem chapter13 {V E F : ℕ} {P Q : ConvexPolyhedron V E F}
+    (data : CauchyRigidityCounterexampleData P Q) :
+    False :=
+  data.contradiction
 
 /-- The empty edge family `Fin 0 → EdgeSign` cannot carry a Cauchy rigidity
 certificate, because the certificate demands at least one nontrivial sign — but
@@ -2073,15 +2133,22 @@ theorem CauchyRigidityCertificate.isEmpty {V E F : ℕ} :
     IsEmpty (CauchyRigidityCertificate (V := V) (E := E) (F := F)) := by
   constructor
   intro cert
-  exact chapter13 cert
+  exact cert.contradiction
 
-/-- Contrapositive packaging of `chapter13`: the absence of any rigidity-
-violation certificate follows from the arm-lemma lower bound and Euler upper
-bound carried by the certificate. -/
-theorem chapter13_rigidity {V E F : ℕ} :
+/-- Contrapositive packaging of the finite certificate contradiction. -/
+theorem chapter13_certificate_rigidity {V E F : ℕ} :
     (∃ _ : CauchyRigidityCertificate (V := V) (E := E) (F := F), True) → False := by
   rintro ⟨cert, _⟩
-  exact chapter13 cert
+  exact cert.contradiction
+
+/--
+Contrapositive packaging of `chapter13`: there is no rigidity-violation
+counterexample once the remaining reduction data has been supplied.
+-/
+theorem chapter13_rigidity {V E F : ℕ} {P Q : ConvexPolyhedron V E F} :
+    (∃ _ : CauchyRigidityCounterexampleData P Q, True) → False := by
+  rintro ⟨data, _⟩
+  exact chapter13 data
 
 /-
 The following finite layer records the Euler sign-change lower bounds for a

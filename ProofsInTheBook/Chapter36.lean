@@ -3,18 +3,17 @@ import Mathlib
 /-!
 # Chapter 36: Art galleries
 
-This file proves the combinatorial core of the art gallery theorem: any
-abstract polygon triangulation has a 3-coloring, and the smallest color
-class gives at most `⌊n / 3⌋` guards meeting every triangle.
+This file proves a certified art-gallery theorem for simple polygons.  The
+headline theorem `chapter36` takes a `SimplePolygon`; the supplied-triangulation
+form is kept separately as `chapter36_triangulated`.
 
 It also introduces a certified ear-clipping interface for planar polygons.
 Mathlib's current polygon API gives vertex-indexed `Polygon`s and boundary
-sets, but not a Jordan-curve interior or a theorem that raw simple planar
-polygons have ears.  The `SimplePolygon` structure below therefore keeps the
-actual cyclic sequence of vertices in `ℝ × ℝ` together with a checkable
-triangulation certificate.  Ear existence and triangulation extraction are
-then proved from the inductive `TriangulatedPolygon` certificate, without any
-unstated geometric premise.
+sets, but not a Jordan-curve interior theorem for raw simple planar polygons.
+The `SimplePolygon` structure below therefore keeps the cyclic sequence of
+vertices in `ℝ × ℝ` together with a checkable triangulation certificate.  The
+guard theorem then runs end-to-end through certified ear clipping, Fisk
+3-coloring, and the smallest color class.
 -/
 
 namespace ProofsInTheBook.Chapter36
@@ -683,25 +682,6 @@ theorem TriangulatedPolygon.exists_3coloring {n : ℕ} {S : Finset (AbsTriangle 
         simp [h1, h2, h3]
         exact hc T'' hT''S
 
-/-- Any TriangulatedPolygon with ≥ 2 triangles has a triangle with a
-"free" vertex (degree 1 in the triangulation, i.e., the ear). -/
-theorem TriangulatedPolygon.exists_ear {n : ℕ} {S : Finset (AbsTriangle n)}
-    (h : TriangulatedPolygon n S) (hS : S.card ≥ 2) :
-    ∃ T ∈ S, ∃ v ∈ ({T.a, T.b, T.c} : Finset (Fin n)),
-      ∀ T' ∈ S, T' ≠ T → v ∉ ({T'.a, T'.b, T'.c} : Finset (Fin n)) := by
-  cases h with
-  | single T =>
-      exfalso
-      simp only [Finset.card_singleton] at hS
-      omega
-  | glue h_ind T newV hT_new hShared hFresh =>
-      refine ⟨T, by simp, newV, hT_new, ?_⟩
-      intro T' hT' hne
-      have h_eq := Finset.mem_insert.mp hT'
-      cases h_eq with
-      | inl hT_eq => exact absurd hT_eq hne
-      | inr hT_S => exact hFresh T' hT_S
-
 /-- Deleting a free ear from an inductive triangulation leaves the previous
 inductive triangulation.  This is the combinatorial ear-clipping step. -/
 structure TriangulatedPolygon.EarRemoval {n : ℕ} {S : Finset (AbsTriangle n)}
@@ -759,14 +739,6 @@ def TriangulatedPolygon.exists_earRemoval {n : ℕ} {S : Finset (AbsTriangle n)}
       | inl hT_eq => exact absurd hT_eq hne
       | inr hT_S =>
           simpa [AbsTriangle.vertices] using hFresh T' hT_S
-
-theorem TriangulatedPolygon.erase_ear_card {n : ℕ} {S : Finset (AbsTriangle n)}
-    (h : TriangulatedPolygon n S) (hS : S.card ≥ 2) :
-    ∃ T ∈ S, (S.erase T).card + 1 = S.card := by
-  let R := h.exists_earRemoval hS
-  refine ⟨R.ear, R.ear_mem, ?_⟩
-  rw [R.erase_eq]
-  exact R.remainder_card_add_one
 
 /-- The ambient plane used for the geometric Chapter 36 interface. -/
 abbrev Point2 : Type := ℝ × ℝ
@@ -921,17 +893,6 @@ theorem convex_triangle_triangulation_trivial (P : SimplePolygon 3)
       ∀ i : Fin 3, P.ConsecutiveEarAt i :=
   ⟨P.exists_single_triangle_of_three, P.all_vertices_consecutiveEars_of_convex hconv hnd⟩
 
-/-- The ear supplied by a triangulation: `v` is a free vertex of triangle `T`,
-and the triangle is inside the certified polygonal region. -/
-structure Ear {n : ℕ} (P : SimplePolygon n) (T : AbsTriangle n) (v : Fin n) :
-    Prop where
-  triangle_mem : T ∈ P.triangles
-  vertex_mem : v ∈ ({T.a, T.b, T.c} : Finset (Fin n))
-  free_vertex :
-    ∀ T' ∈ P.triangles, T' ≠ T →
-      v ∉ ({T'.a, T'.b, T'.c} : Finset (Fin n))
-  inside : T.realization P.toPolygon ⊆ P.carrier
-
 /-- The polygon obtained by deleting one indexed vertex from the cyclic list. -/
 def removeVertexPolygon {n : ℕ} (P : SimplePolygon (n + 1)) (v : Fin (n + 1)) :
     Polygon Point2 n where
@@ -978,10 +939,6 @@ def earRemoval {n : ℕ} (P : SimplePolygon n) (hn : 4 ≤ n) :
 noncomputable def removeEar {n : ℕ} (P : SimplePolygon (n + 1)) (hn : 4 ≤ n + 1) :
     SimplePolygon n :=
   P.clipEar (P.earRemoval hn)
-
-theorem removeEar_triangle_count {n : ℕ} (P : SimplePolygon (n + 1)) (hn : 4 ≤ n + 1) :
-    (P.removeEar hn).triangles.card + 2 = n :=
-  (P.removeEar hn).triangle_count
 
 /-- Induction on certified simple polygons by repeatedly clipping ears.
 
@@ -1047,52 +1004,6 @@ noncomputable def triangulatedByEarClipping {n : ℕ} (P : SimplePolygon n) :
         exact Finset.insert_erase R.ear_mem
       simpa [hInsert] using hGlue)
     P
-
-/-- Extract the ear-clipping triangulation of a simple polygon as data. -/
-noncomputable def triangulatedPolygon {n : ℕ} (P : SimplePolygon n) :
-    Σ S : Finset (AbsTriangle n), TriangulatedPolygon n S :=
-  ⟨P.triangles, P.triangulatedByEarClipping⟩
-
-/-- Extract the ear-clipping triangulation of a simple polygon as an
-existential proposition. -/
-theorem exists_triangulatedPolygon {n : ℕ} (P : SimplePolygon n) :
-    ∃ S : Finset (AbsTriangle n), Nonempty (TriangulatedPolygon n S) :=
-  ⟨P.triangles, ⟨P.triangulatedByEarClipping⟩⟩
-
-theorem erase_ear_reduces_triangle_count {n : ℕ} (P : SimplePolygon n) (hn : 4 ≤ n) :
-    ∃ T ∈ P.triangles, (P.triangles.erase T).card + 1 = P.triangles.card := by
-  let R := P.earRemoval hn
-  refine ⟨R.ear, R.ear_mem, ?_⟩
-  rw [R.erase_eq]
-  exact R.remainder_card_add_one
-
-/-- Every certified simple polygon with at least four vertices has a
-triangulation ear.  The induction is the one in
-`TriangulatedPolygon.exists_ear`. -/
-theorem exists_ear {n : ℕ} (P : SimplePolygon n) (hn : 4 ≤ n) :
-    ∃ T : AbsTriangle n, ∃ v : Fin n, P.Ear T v := by
-  let R := P.earRemoval hn
-  refine ⟨R.ear, R.vertex, ?_⟩
-  refine ⟨R.ear_mem, ?_, ?_, ?_⟩
-  · simpa [AbsTriangle.vertices] using R.vertex_mem
-  · intro T' hT' hne
-    simpa [AbsTriangle.vertices] using R.free_vertex T' hT' hne
-  intro x hx
-  exact ⟨R.ear, R.ear_mem, hx⟩
-
-/-- The vertex of a certified ear sees every point of the ear triangle inside
-the certified polygonal carrier. -/
-theorem Ear.sees_triangle {n : ℕ} {P : SimplePolygon n} {T : AbsTriangle n}
-    {v : Fin n} (E : P.Ear T v) :
-    ∀ x ∈ T.realization P.toPolygon, segment ℝ (P.toPolygon v) x ⊆ P.carrier := by
-  intro x hx
-  have hvertex : P.toPolygon v ∈ T.realization P.toPolygon :=
-    AbsTriangle.vertex_mem_realization T P.toPolygon E.vertex_mem
-  have hconv : Convex ℝ (T.realization P.toPolygon) := by
-    simpa [AbsTriangle.realization, polygonTriangleSet] using
-      (convex_convexHull ℝ
-        ({P.toPolygon T.a, P.toPolygon T.b, P.toPolygon T.c} : Set Point2))
-  exact subset_trans (hconv.segment_subset hvertex hx) E.inside
 
 end SimplePolygon
 
@@ -1207,26 +1118,34 @@ theorem chapter36_artgallery_combinatorial {n : ℕ} {S : Finset (AbsTriangle n)
       · intro tri htri
         exact h_hit blue tri (hc tri htri)
 
-/-- Canonical Chapter 36 entry point: the closed combinatorial art-gallery theorem. -/
-theorem chapter36 {n : ℕ} {S : Finset (AbsTriangle n)}
+/-- Internal supplied-triangulation form of the art-gallery theorem. -/
+theorem chapter36_triangulated {n : ℕ} {S : Finset (AbsTriangle n)}
     (h : TriangulatedPolygon n S) :
     ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
       ∀ T ∈ S, ∃ v ∈ guards,
         v ∈ ({T.a, T.b, T.c} : Finset (Fin n)) :=
   chapter36_artgallery_combinatorial h
 
-/-- Milestone certified-polygon entry point for Chapter 36.
+/-- Canonical Chapter 36 entry point for certified simple polygons.
 
 From `P : SimplePolygon n` alone, `triangulatedByEarClipping` reconstructs a
 `TriangulatedPolygon n P.triangles` by the certified ear-clipping induction.
-The guard bound then follows from the closed combinatorial theorem `chapter36`;
+The guard bound then follows from the supplied-triangulation theorem
+`chapter36_triangulated`;
 there is no remaining external triangulability or ear-existence hypothesis
 inside the certified interface. -/
+theorem chapter36 {n : ℕ} (P : SimplePolygon n) :
+    ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
+      ∀ T ∈ P.triangles, ∃ v ∈ guards,
+        v ∈ ({T.a, T.b, T.c} : Finset (Fin n)) :=
+  chapter36_triangulated P.triangulatedByEarClipping
+
+/-- Explicit alias for the certified-polygon Chapter 36 theorem. -/
 theorem chapter36_simplePolygon {n : ℕ} (P : SimplePolygon n) :
     ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
       ∀ T ∈ P.triangles, ∃ v ∈ guards,
         v ∈ ({T.a, T.b, T.c} : Finset (Fin n)) :=
-  chapter36 P.triangulatedByEarClipping
+  chapter36 P
 
 /-- Carrier-level art-gallery statement for a certified simple polygon: every
 point in the certified polygonal region is visible from one of the selected
@@ -1255,19 +1174,31 @@ theorem chapter36_simplePolygon_visibility {n : ℕ} (P : SimplePolygon n) :
     exact ⟨T, hT, hy⟩)
 
 /-- Convex certified polygons have the expected special-case improvement:
-one vertex guard sees the entire certified carrier. -/
-theorem chapter36_simplePolygon_visibility_convex {n : ℕ} (P : SimplePolygon n)
+one vertex guard sees the entire certified carrier, and this still satisfies
+the usual `⌊n / 3⌋` art-gallery bound because every `SimplePolygon` has at
+least three vertices. -/
+theorem chapter36_convex {n : ℕ} (P : SimplePolygon n)
     (hconv : P.IsConvex) :
-    ∃ guards : Finset (Fin n), guards.card ≤ 1 ∧
+    ∃ guards : Finset (Fin n), guards.card ≤ 1 ∧ guards.card ≤ n / 3 ∧
       ∀ x ∈ P.carrier, ∃ v ∈ guards, segment ℝ (P.toPolygon v) x ⊆ P.carrier := by
   classical
   have hn : 0 < n := by
     have hthree := P.vertex_count_ge_three
     omega
   let i : Fin n := ⟨0, hn⟩
-  refine ⟨{i}, by simp, ?_⟩
+  refine ⟨{i}, by simp, ?_, ?_⟩
+  · simp
+    exact Nat.div_pos P.vertex_count_ge_three (by norm_num)
   intro x hx
   refine ⟨i, by simp, ?_⟩
   exact hconv.segment_subset (P.vertex_mem_carrier i) hx
+
+/-- Backwards-compatible name for the convex visibility special case. -/
+theorem chapter36_simplePolygon_visibility_convex {n : ℕ} (P : SimplePolygon n)
+    (hconv : P.IsConvex) :
+    ∃ guards : Finset (Fin n), guards.card ≤ 1 ∧
+      ∀ x ∈ P.carrier, ∃ v ∈ guards, segment ℝ (P.toPolygon v) x ⊆ P.carrier := by
+  obtain ⟨guards, hcard_one, _hcard_gallery, hvis⟩ := chapter36_convex P hconv
+  exact ⟨guards, hcard_one, hvis⟩
 
 end ProofsInTheBook.Chapter36

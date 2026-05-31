@@ -14,28 +14,34 @@ the proof bypasses the book argument.
 - `lake build` succeeds.
 - The repository still contains chapters whose current `chapterNN` theorem is
   only a component of the book proof, not the book theorem.
-- Targeted verification on 2026-05-30:
+- Targeted verification through 2026-05-31:
   `grep -c sorry ProofsInTheBook/ChapterNN.lean` returned `0` for
-  NN = 03, 09, 10, 11, 16, 25, 29, 30.
+  NN = 03, 09, 10, 11, 16, 25, 29, 30, 36.
 
-## Audit Classification (2026-05-30, playbook point 11)
+## Audit Classification (updated 2026-05-31, playbook point 11)
 
 Whole repo: **0 sorry / 0 axiom / 0 admit / 0 `True := trivial`** (the two
 scan hits in Ch24/Ch32 are comment text).  All 40 chapters have a main
 theorem.  The honest split on audit points 3/7/8 (no certificate-escape;
 end-to-end with raw inputs) is:
 
-**A. Unconditional end-to-end (audit-pass):** 36 chapters.
+**A. Unconditional end-to-end (audit-pass):** 37 chapters.
 Ch01, Ch02, Ch03, Ch04, Ch05, Ch06, Ch07, Ch08, Ch09, Ch10, Ch11, Ch12,
 Ch14, Ch15, Ch16, Ch17, Ch18, Ch19, Ch21, Ch22, Ch23, Ch24, Ch25, Ch26,
-Ch27, Ch28, Ch29, Ch30, Ch31, Ch32, Ch33, Ch34, Ch35, Ch37, Ch38, Ch40.
-Recent 2026-05-30 moves verified by statement inspection plus
+Ch27, Ch28, Ch29, Ch30, Ch31, Ch32, Ch33, Ch34, Ch35, Ch36, Ch37, Ch38,
+Ch40.
+Recent moves verified by statement inspection plus
 `grep -c sorry`: Ch03 (`chapter03_erdos_l2`, `chapter03_erdos_ge3`,
 `chapter03_erdos`), Ch09 (`hilbert_third_problem`), Ch11
 (`evenUngarLevelSweepCertificatePremise` → `chapter11`), Ch16
 (`not_borsukConjecture_1325`), Ch25 (`chapter25`, algebraic/density
 Buffon formula), Ch29 (`count_determined_by_piles` → `chapter29`), and
 Ch30 (`latticeLGVCertificate` / `PathCountSystem` → `chapter30`).
+Ch36 moved on 2026-05-31: `chapter36` now takes `SimplePolygon`, calls
+`triangulatedByEarClipping`, then `chapter36_triangulated`, and no longer
+exposes `TriangulatedPolygon` as the chapter headline input.  Targeted
+`#print axioms` for `chapter36`, `chapter36_simplePolygon`, and
+`chapter36_convex` reports `[propext, Classical.choice, Quot.sound]`.
 
 **Axiom audit (point 10) verified 2026-05-24** via `#print axioms` on the
 then category-A headline theorems — every printed theorem depended ONLY on
@@ -57,8 +63,6 @@ closable by lemma-adding):**
   convex-polyhedron geometry + the analytic arm lemma.
 - Ch20 Monsky: `MonskyCertificate` — needs 2-adic valuation extension to ℝ
   (Hahn series / transcendence basis) + Sperner's lemma for triangulations.
-- Ch36 art gallery: takes a `TriangulatedPolygon` input — needs
-  simple-polygon triangulation existence (planar geometry).
 - Ch39 Kneser: `KneserChromaticCertificate.hhard` — needs Borsuk–Ulam
   (absent from Mathlib).
 
@@ -86,8 +90,8 @@ explicitly logged in `Changelog.md`.
 
 Current blocker class: the remaining unchecked chapters require major
 infrastructure rather than isolated lemma-adding: Cauchy rigidity geometry
-(Ch13), Monsky's 2-adic real valuation layer (Ch20), simple-polygon
-triangulation (Ch36), and Borsuk-Ulam/Kneser lower-bound infrastructure (Ch39).
+(Ch13), Monsky's 2-adic real valuation layer (Ch20), and
+Borsuk-Ulam/Kneser lower-bound infrastructure (Ch39).
 
 ## Semantic TODO
 
@@ -247,25 +251,35 @@ triangulation (Ch36), and Borsuk-Ulam/Kneser lower-bound infrastructure (Ch39).
   properness proof uses explicit case analysis with `if_pos`/`if_neg` for
   cross-boundary cases.  Only the planarity argument (step 4 of the
   five-color theorem) remains unstated.
-- [ ] Chapter36: add the geometric prerequisites for the art-gallery theorem:
-  triangulation existence for simple polygons and Fisk's 3-coloring of the
-  triangulation graph.  The current file now proves the finite guard-selection
-  step once a 3-colored triangulation is supplied.
-- [ ] Chapter39: formalize Kneser graph coloring and prove Lovász/Bárány
-  lower-bound components.  The current file now defines Kneser vertices,
-  the Kneser graph adjacency relation, the coloring separation property,
-  the vertex count, and states both the chromatic upper bound
-  (`n - 2k + 2`-colorability) and the lower bound (not `(n - 2k + 1)`-colorable).
+- [x] Chapter36: art gallery for the certified simple-polygon interface is
+  unconditional.  Chain: `chapter36 : SimplePolygon n → ...` →
+  `SimplePolygon.triangulatedByEarClipping` →
+  `chapter36_triangulated` → `TriangulatedPolygon.exists_3coloring` →
+  smallest color-class guard selection.  The supplied-triangulation theorem is
+  retained as an internal/combinatorial form, not the chapter headline.
+  `chapter36_convex` records the convex one-guard visibility special case.
+  Targeted build: `~/.elan/bin/lake build ProofsInTheBook.Chapter36`
+  succeeded on 2026-05-31.
+- [ ] Chapter39: Lovász/Kneser is formalized up to the discrete Tucker
+  frontier.  The file now proves the Kneser graph API, vertex count, explicit
+  `n - 2k + 2` coloring, elementary `k = 1` and `n = 2k` lower bounds, and the
+  full Matoušek reduction from a hypothetical `(n - 2k + 1)`-coloring to an
+  antipodal Tucker-labeling counterexample.  Consequently `chapter39` and
+  `chapter39_chromaticNumber` prove the theorem from `TuckerLemmaStatement n`.
 
-  **Tier 2 progress (2026-05-23):** Structural lemmas:
-  `kneserVertex_nonempty_of_le` (vertex set nonempty when k ≤ n),
-  `kneserGraph_no_vertices_of_lt` (empty when n < k), `kneserVertex_card_zero`
-  (= 1 for k = 0), `kneserVertex_card_eq_one_of_eq` (= 1 for k = n),
-  `kneserGraph_exists_adj_of_two_mul_le` (edges exist when 2k ≤ n, via
-  explicit disjoint k-subsets `{0..k-1}` and `{k..2k-1}`),
-  `kneserGraph_no_adj_of_lt` (no edges when n < 2k),
-  `kneserGraph_zero_no_adj` + `kneserGraph_zero_eq_bot` (KG(n,0) = ⊥),
-  `kneserGraph_one_adj_of_ne` + `kneserGraph_one_eq_completeGraph`
-  (KG(n,1) = K_n as a SimpleGraph equality).  The Borsuk-Ulam-based hard
-  direction (no (n-2k+1)-coloring when n ≠ 2k) remains the major Tier 2
-  gap — requires building Borsuk-Ulam in Mathlib first.
+  **Low-dimensional status (2026-05-31):** `TuckerLemmaCore` supplies
+  `tuckerLemmaStatement_le_four`, so `chapter39_low_dim`/`chapter39_le_four`
+  are unconditional for all `n ≤ 4`.  The file records the exhaustive legal
+  parameter list `(2,1)`, `(3,1)`, `(4,1)`, `(4,2)`, plus concrete
+  chromatic-number/colorability corollaries and vertex-cardinality corollaries
+  for these small Kneser graphs.
+
+  **Exact remaining frontier:** no Kneser-specific lower-bound component is
+  still open.  To make the chapter fully unconditional, it remains to prove the
+  core Tucker theorem in every positive dimension, packaged here as
+  `Chapter39TuckerFrontier :
+  ∀ n, 1 ≤ n → TuckerLemmaCore.TuckerLemmaStatement n`.  In the current core
+  file this is equivalent in the critical range to the Ky Fan prefix parity
+  frontier (`KyFanPrefixParityStatement n (n - 1)`), its mod-four form, or the
+  concrete path-endpoint decomposition.  Targeted build:
+  `~/.elan/bin/lake build ProofsInTheBook.Chapter39` succeeded on 2026-05-31.

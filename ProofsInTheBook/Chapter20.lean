@@ -1431,6 +1431,66 @@ noncomputable def edgeParityMonskyCertificate {α : Type*} [Fintype α] [Decidab
   hparity := sum_triangleLocalRGCount_mod_two_eq_oddEdgeRedGreenCount triangles color
   hodd := hodd
 
+/--
+Construct the certificate directly from a finite square boundary vertex chain.
+This is the combinatorial bridge needed after a geometric triangulation
+extraction has identified the odd-multiplicity edges with the boundary chain.
+-/
+noncomputable def squareBoundaryVertexChainMonskyCertificate
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (triangles : Fin n → α × α × α) (color : α → MonskyColor)
+    (bottom right top left : List α) (bottomLeft bottomRight topRight topLeft : α)
+    (hboundary : ∀ e : Sym2 α,
+      Odd (edgeMultiplicity triangles e) ↔
+        e ∈ (squareBoundaryEdgeList bottom right top left
+          bottomLeft bottomRight topRight topLeft).toFinset)
+    (hnodup : (squareBoundaryEdgeList bottom right top left
+      bottomLeft bottomRight topRight topLeft).Nodup)
+    (hbottomLeft : color bottomLeft = red)
+    (hbottomRight : color bottomRight = green)
+    (htopRight : color topRight = green)
+    (htopLeft : color topLeft = blue)
+    (hbottom : ∀ v ∈ bottom, colorIsRedGreen (color v))
+    (hright : ∀ v ∈ right, colorIsGreenBlue (color v))
+    (htop : ∀ v ∈ top, colorIsGreenBlue (color v))
+    (hleft : ∀ v ∈ left, colorIsRedBlue (color v)) :
+    MonskyCertificate n :=
+  edgeParityMonskyCertificate triangles color
+    (oddEdgeRedGreenCount_odd_of_squareBoundaryVertexChain triangles color
+      bottom right top left bottomLeft bottomRight topRight topLeft
+      hboundary hnodup hbottomLeft hbottomRight htopRight htopLeft
+      hbottom hright htop hleft)
+
+/--
+The real Monsky-coloring certificate obtained from finite vertex data on the
+unit-square boundary.  The remaining geometric task is to extract these finite
+data and their incidence theorem from an actual triangulation object.
+-/
+noncomputable def realSquareBoundaryVertexChainMonskyCertificate
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (vertices : α → ℝ × ℝ) (triangles : Fin n → α × α × α)
+    (bottom right top left : List α) (bottomLeft bottomRight topRight topLeft : α)
+    (hboundary : ∀ e : Sym2 α,
+      Odd (edgeMultiplicity triangles e) ↔
+        e ∈ (squareBoundaryEdgeList bottom right top left
+          bottomLeft bottomRight topRight topLeft).toFinset)
+    (hnodup : (squareBoundaryEdgeList bottom right top left
+      bottomLeft bottomRight topRight topLeft).Nodup)
+    (hbottomLeft : vertices bottomLeft = (0, 0))
+    (hbottomRight : vertices bottomRight = (1, 0))
+    (htopRight : vertices topRight = (1, 1))
+    (htopLeft : vertices topLeft = (0, 1))
+    (hbottom : ∀ v ∈ bottom, ∃ x : ℝ, vertices v = (x, 0))
+    (hright : ∀ v ∈ right, ∃ y : ℝ, vertices v = (1, y))
+    (htop : ∀ v ∈ top, ∃ x : ℝ, vertices v = (x, 1))
+    (hleft : ∀ v ∈ left, ∃ y : ℝ, vertices v = (0, y)) :
+    MonskyCertificate n :=
+  edgeParityMonskyCertificate triangles (realTwoAdicColor ∘ vertices)
+    (oddEdgeRedGreenCount_odd_of_realSquareBoundaryVertexChain vertices triangles
+      bottom right top left bottomLeft bottomRight topRight topLeft
+      hboundary hnodup hbottomLeft hbottomRight htopRight htopLeft
+      hbottom hright htop hleft)
+
 /-
 Remaining geometric interface: given a hypothetical equal-area triangulation
 of the unit square into an odd number of real triangles, one still needs to
@@ -1901,6 +1961,102 @@ theorem no_odd_equalArea_realization_of_realSquareBoundaryVertexChain_area
       hboundary hnodup hbottomLeft hbottomRight htopRight htopLeft
       hbottom hright htop hleft)
     harea
+
+/--
+Finite data extracted from an equal-area triangulation of the unit square.
+This structure is intentionally not a new geometric definition of
+triangulation; it records the finite output that a future Mathlib-facing
+geometric extraction theorem should produce.
+-/
+structure ExtractedEqualAreaSquareTriangulation (n : ℕ) where
+  Vertex : Type*
+  [instFintype : Fintype Vertex]
+  [instDecidableEq : DecidableEq Vertex]
+  vertices : Vertex → ℝ × ℝ
+  triangles : Fin n → Vertex × Vertex × Vertex
+  bottom : List Vertex
+  right : List Vertex
+  top : List Vertex
+  left : List Vertex
+  bottomLeft : Vertex
+  bottomRight : Vertex
+  topRight : Vertex
+  topLeft : Vertex
+  hboundary : ∀ e : Sym2 Vertex,
+    Odd (edgeMultiplicity triangles e) ↔
+      e ∈ (squareBoundaryEdgeList bottom right top left
+        bottomLeft bottomRight topRight topLeft).toFinset
+  hnodup : (squareBoundaryEdgeList bottom right top left
+    bottomLeft bottomRight topRight topLeft).Nodup
+  hbottomLeft : vertices bottomLeft = (0, 0)
+  hbottomRight : vertices bottomRight = (1, 0)
+  htopRight : vertices topRight = (1, 1)
+  htopLeft : vertices topLeft = (0, 1)
+  hbottom : ∀ v ∈ bottom, ∃ x : ℝ, vertices v = (x, 0)
+  hright : ∀ v ∈ right, ∃ y : ℝ, vertices v = (1, y)
+  htop : ∀ v ∈ top, ∃ x : ℝ, vertices v = (x, 1)
+  hleft : ∀ v ∈ left, ∃ y : ℝ, vertices v = (0, y)
+  harea : ∀ i : Fin n,
+    realTriangleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+        (vertices (triangles i).2.2) =
+      (((1 : ℚ) / n : ℚ) : ℝ)
+
+namespace ExtractedEqualAreaSquareTriangulation
+
+/-- The Monsky certificate canonically associated to extracted finite data. -/
+noncomputable def toMonskyCertificate {n : ℕ}
+    (T : ExtractedEqualAreaSquareTriangulation n) : MonskyCertificate n := by
+  letI := T.instFintype
+  letI := T.instDecidableEq
+  exact realSquareBoundaryVertexChainMonskyCertificate T.vertices T.triangles
+    T.bottom T.right T.top T.left T.bottomLeft T.bottomRight T.topRight T.topLeft
+    T.hboundary T.hnodup T.hbottomLeft T.hbottomRight T.htopRight T.htopLeft
+    T.hbottom T.hright T.htop T.hleft
+
+@[simp]
+theorem toMonskyCertificate_triangleColors {n : ℕ}
+    (T : ExtractedEqualAreaSquareTriangulation n) (i : Fin n) :
+    (T.toMonskyCertificate.triangleColors i) =
+      triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i) := by
+  rfl
+
+/--
+The extracted data already give the `chapter20` Sperner conclusion through
+the constructed certificate.
+-/
+theorem exists_trichromatic {n : ℕ}
+    (T : ExtractedEqualAreaSquareTriangulation n) :
+    ∃ i : Fin n,
+      TrichromaticTriangle
+        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).1
+        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).2.1
+        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).2.2 := by
+  letI := T.instFintype
+  letI := T.instDecidableEq
+  simpa using chapter20 T.toMonskyCertificate
+
+/--
+An extracted equal-area square triangulation cannot have odd cardinality.
+The only remaining step toward the unconditional book theorem is to obtain an
+object of this structure from a concrete geometric triangulation hypothesis.
+-/
+theorem false_of_odd {n : ℕ} (hn : Odd n)
+    (T : ExtractedEqualAreaSquareTriangulation n) : False := by
+  letI := T.instFintype
+  letI := T.instDecidableEq
+  exact no_odd_equalArea_realization_of_realSquareBoundaryVertexChain_area hn
+    T.vertices T.triangles T.bottom T.right T.top T.left
+    T.bottomLeft T.bottomRight T.topRight T.topLeft T.hboundary T.hnodup
+    T.hbottomLeft T.hbottomRight T.htopRight T.htopLeft
+    T.hbottom T.hright T.htop T.hleft T.harea
+
+theorem isEmpty_of_odd {n : ℕ} (hn : Odd n) :
+    IsEmpty (ExtractedEqualAreaSquareTriangulation n) := by
+  constructor
+  intro T
+  exact false_of_odd hn T
+
+end ExtractedEqualAreaSquareTriangulation
 
 /-- The empty triangulation cannot carry a Monsky certificate: with 0 triangles,
 the local RG sum is 0 (even), but the certificate demands an odd boundary RG

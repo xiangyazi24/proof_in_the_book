@@ -1705,8 +1705,8 @@ proof would target.
 Honest scope: a `GeometricPolytope` is exactly a finite indexed family of
 `GeometricEdge`s; it carries NO constraint that the edges form a genuine closed
 polyhedron (faces, incidences, closedness).  So this is bundled edge data, not a
-validated polytope, and it is not connected to the concrete `unitCubeDehnInvariantQ`
-/ `regularTetrahedronDehnInvariantQ`; `chapter09` is unchanged. -/
+validated polytope.  The concrete objects below connect this bundled edge data
+to the chapter's computed Dehn sums, but not to a literal solid/dissection API. -/
 
 /-- A geometric polytope, presented as a finite family of geometric edges (indexed
 by `ι`) in a real inner-product torsor `P`. -/
@@ -1768,7 +1768,7 @@ theorem dehn_eq_of_matches (T : GeometricPolytope ι P)
 
 end GeometricPolytope
 
-/-! ### Realizing the unit cube's Dehn data as a genuine geometric polytope
+/-! ### Realizing the unit cube's Dehn data as geometric edge data
 
 We connect the abstract `GeometricPolytope` to the concrete `unitCubeDehnInvariantQ`
 by exhibiting an actual `GeometricPolytope` over `EuclideanSpace ℝ (Fin 3)` whose
@@ -1822,6 +1822,17 @@ noncomputable def unitCubeGeometricPolytope :
   edgeFinset := Finset.univ
   edge := fun _ => unitCubeGeometricEdge
 
+/-- Every indexed cube edge is represented by the same Euclidean edge witness.
+This is intentional Dehn-data realization, not a spatial embedding of the twelve
+distinct cube edges. -/
+@[simp] theorem unitCubeGeometricPolytope_edge_eq (e : CubeEdge) :
+    unitCubeGeometricPolytope.edge e = unitCubeGeometricEdge := rfl
+
+/-- The bundled cube object has a constant edge family.  This lemma records the
+simplifying assumption that weakens the object from a literal cube to edge data. -/
+theorem unitCubeGeometricPolytope_edges_constant (e f : CubeEdge) :
+    unitCubeGeometricPolytope.edge e = unitCubeGeometricPolytope.edge f := rfl
+
 /-- **The geometric realization computes the cube's Dehn invariant.** The Dehn
 invariant of the geometric polytope above (genuine `dist` lengths and `∠`
 dihedrals) equals the chapter's `unitCubeDehnInvariantQ`. -/
@@ -1842,7 +1853,7 @@ theorem unitCubeGeometricPolytope_dehn_eq_zero :
     unitCubeGeometricPolytope.dehn = 0 := by
   rw [unitCubeGeometricPolytope_dehn, unitCubeDehnInvariantQ_eq_zero]
 
-/-! ### Realizing the regular tetrahedron's Dehn data as a genuine geometric polytope -/
+/-! ### Realizing the regular tetrahedron's Dehn data as geometric edge data -/
 
 /-- The file's coordinate dot product `dot3` is the real inner product on
 `Euclidean3 = EuclideanSpace ℝ (Fin 3)`. -/
@@ -1892,11 +1903,27 @@ theorem tetraGeometricEdge_length : tetraGeometricEdge.length = Real.sqrt 8 := b
     regularTetrahedronVertex_dist_sq_of_ne (by decide)]
 
 /-- The regular tetrahedron realized as a geometric polytope over
-`EuclideanSpace ℝ (Fin 3)`. -/
+`EuclideanSpace ℝ (Fin 3)`.  As with the cube object, this realizes the
+per-edge Dehn data through one canonical Euclidean edge witness, not the whole
+six-edge spatial embedding. -/
 noncomputable def regularTetrahedronGeometricPolytope :
     GeometricPolytope RegularTetrahedronEdge (EuclideanSpace ℝ (Fin 3)) where
   edgeFinset := Finset.univ
   edge := fun _ => tetraGeometricEdge
+
+/-- Every indexed tetrahedron edge is represented by the same Euclidean edge
+witness.  The concrete tetrahedron edge lengths and dihedral angles are proved
+elsewhere, but this bundled object itself is constant edge data. -/
+@[simp] theorem regularTetrahedronGeometricPolytope_edge_eq
+    (e : RegularTetrahedronEdge) :
+    regularTetrahedronGeometricPolytope.edge e = tetraGeometricEdge := rfl
+
+/-- The bundled tetrahedron object has a constant edge family.  This records the
+simplifying assumption separating it from a literal embedded tetrahedron. -/
+theorem regularTetrahedronGeometricPolytope_edges_constant
+    (e f : RegularTetrahedronEdge) :
+    regularTetrahedronGeometricPolytope.edge e =
+      regularTetrahedronGeometricPolytope.edge f := rfl
 
 /-- **The geometric realization computes the tetrahedron's Dehn invariant.** -/
 theorem regularTetrahedronGeometricPolytope_dehn :
@@ -1920,12 +1947,12 @@ theorem regularTetrahedronGeometricPolytope_dehn_ne_zero :
   exact regularTetrahedronDehnInvariantQ_ne_zero
 
 /-- **Object-level Hilbert's third problem (Dehn-invariant form).** The geometric
-unit cube and the geometric regular tetrahedron — both genuine `GeometricPolytope`s
-over `EuclideanSpace ℝ (Fin 3)` with `dist` lengths and `∠` dihedrals — have
+unit cube and the geometric regular tetrahedron edge-data objects over
+`EuclideanSpace ℝ (Fin 3)` with `dist` lengths and `∠` dihedrals have
 different Dehn invariants, so by `GeometricPolytope.dehn_congr` no Euclidean
 congruence carries one to the other.  (Dehn-invariant obstruction at the level of
-these geometric objects; still excludes the dissection/additivity step for full
-scissors-congruence.) -/
+these edge-data objects; still excludes the literal solid/dissection step for
+full scissors-congruence.) -/
 theorem unitCube_ne_regularTetrahedron_geometricDehn :
     unitCubeGeometricPolytope.dehn ≠ regularTetrahedronGeometricPolytope.dehn := by
   rw [unitCubeGeometricPolytope_dehn, regularTetrahedronGeometricPolytope_dehn]
@@ -1982,8 +2009,9 @@ theorem GeometricDissectionEquiv.dehn_eq {ιS ιT VS PS VT PT : Type*}
   D.assembleLeft.trans D.assembleRight.symm
 
 /-- **Unequal Dehn invariants rule out any geometric dissection equivalence.** In
-particular, since the geometric unit cube and regular tetrahedron have different
-Dehn invariants, no dissection of one reassembles into the other. -/
+particular, since the geometric unit cube and regular tetrahedron edge-data
+objects have different Dehn invariants, no certificate of this form can relate
+them. -/
 theorem no_geometricDissectionEquiv_of_dehn_ne {ιS ιT VS PS VT PT : Type*}
     [NormedAddCommGroup VS] [InnerProductSpace ℝ VS] [MetricSpace PS] [NormedAddTorsor VS PS]
     [NormedAddCommGroup VT] [InnerProductSpace ℝ VT] [MetricSpace PT] [NormedAddTorsor VT PT]
@@ -2068,7 +2096,7 @@ def GeometricDissectionEquiv.ofAdditivity {ιS ιT VS PS VT PT : Type*}
   assembleLeft := AS.piece_sum_eq_dehn.symm
   assembleRight := (AT.piece_sum_eq_dehn.symm).trans h.symm
 
-/-- Two polytopes that admit geometric additivities with equal piece-Dehn-sums
+/-- Two polytopes carrying geometric additivities with equal piece-Dehn-sums
 have equal Dehn invariants. -/
 theorem dehn_eq_of_geometricAdditivity_pieceSum_eq {ιS ιT VS PS VT PT : Type*}
     [NormedAddCommGroup VS] [InnerProductSpace ℝ VS] [MetricSpace PS] [NormedAddTorsor VS PS]
@@ -2125,10 +2153,10 @@ of the tetrahedron use the "same pieces" (in the Dehn-sum sense), since that wou
 force their Dehn invariants equal, contradicting `arccos(1/3)` being irrational
 over `π`.
 
-This is the deepest geometric form proved here: it rules out scissors congruence
-between cube and tetrahedron at the level of actual additive dissections, with the
-only remaining geometric input being the piece-sum equality a literal cut would
-produce. -/
+This is the deepest additivity form proved here: it rules out equality of the
+aggregate Dehn piece-sums once each side has supplied a `GeometricAdditivity`
+certificate.  A literal scissors-congruence theorem would still need a bridge
+from actual solid dissections to these certificates. -/
 theorem no_geometricAdditivity_pieceSum_eq_unitCube_regularTetrahedron
     (AC : GeometricAdditivity unitCubeGeometricPolytope)
     (AT : GeometricAdditivity regularTetrahedronGeometricPolytope) :
@@ -2138,8 +2166,9 @@ theorem no_geometricAdditivity_pieceSum_eq_unitCube_regularTetrahedron
     (dehn_eq_of_geometricAdditivity_pieceSum_eq AC AT h)
 
 /-- **Hilbert's third problem, geometric Dehn form (this file's strongest endpoint).**
-For the unit cube and regular tetrahedron realized as genuine geometric polytopes
-over `EuclideanSpace ℝ (Fin 3)` (edge length = `dist`, dihedral angle = `∠`):
+For the unit cube and regular tetrahedron realized as Euclidean edge-data
+polytopes over `EuclideanSpace ℝ (Fin 3)` (edge length = `dist`, dihedral angle
+= `∠`):
 
 * their Dehn invariants differ, and
 * consequently no Euclidean congruence carries one to the other, no Dehn scissors
@@ -2155,9 +2184,41 @@ chapter's headline `chapter09` remains the algebraic-obstruction statement. -/
 theorem hilbert_third_geometric_dehn :
     unitCubeGeometricPolytope.dehn ≠ regularTetrahedronGeometricPolytope.dehn ∧
     ¬ Nonempty (GeometricDissectionEquiv
-        unitCubeGeometricPolytope regularTetrahedronGeometricPolytope) :=
+        unitCubeGeometricPolytope regularTetrahedronGeometricPolytope) ∧
+    (∀ (AC : GeometricAdditivity unitCubeGeometricPolytope)
+        (AT : GeometricAdditivity regularTetrahedronGeometricPolytope),
+      (∑ p ∈ AC.pieces, AC.pieceDehn p) ≠
+        ∑ p ∈ AT.pieces, AT.pieceDehn p) :=
   ⟨unitCube_ne_regularTetrahedron_geometricDehn,
-   no_geometricDissectionEquiv_unitCube_regularTetrahedron⟩
+   no_geometricDissectionEquiv_unitCube_regularTetrahedron,
+   no_geometricAdditivity_pieceSum_eq_unitCube_regularTetrahedron⟩
+
+/-- This is the explicit missing bridge to physical scissors congruence: any
+future literal scissors relation that produces a `GeometricDissectionEquiv`
+between the two Euclidean edge-data objects is impossible.  The bridge itself is
+not supplied by this file. -/
+theorem no_physical_scissors_of_geometricDissection_bridge {PhysicalScissors : Prop}
+    (hbridge : PhysicalScissors →
+      Nonempty (GeometricDissectionEquiv
+        unitCubeGeometricPolytope regularTetrahedronGeometricPolytope)) :
+    ¬ PhysicalScissors := by
+  intro h
+  exact no_geometricDissectionEquiv_unitCube_regularTetrahedron (hbridge h)
+
+/-- Additivity-level bridge form of the same gap: if a future literal scissors
+relation supplies geometric additivity certificates whose total piece-Dehn-sums
+agree, then the relation is impossible.  This file proves the obstruction after
+such certificates are supplied; it does not construct them from literal cuts. -/
+theorem no_physical_scissors_of_geometricAdditivity_bridge {PhysicalScissors : Prop}
+    (hbridge : PhysicalScissors →
+      ∃ AC : GeometricAdditivity unitCubeGeometricPolytope,
+        ∃ AT : GeometricAdditivity regularTetrahedronGeometricPolytope,
+          (∑ p ∈ AC.pieces, AC.pieceDehn p) =
+            ∑ p ∈ AT.pieces, AT.pieceDehn p) :
+    ¬ PhysicalScissors := by
+  intro h
+  rcases hbridge h with ⟨AC, AT, hsum⟩
+  exact no_geometricAdditivity_pieceSum_eq_unitCube_regularTetrahedron AC AT hsum
 
 /-- **Any zero-Dehn geometric polytope is not dissection-equivalent to the regular
 tetrahedron.** This generalizes the cube case: the obstruction is purely that the

@@ -24,7 +24,8 @@ the final counting contradiction.  It defines edge signs from dihedral-angle
 comparisons, strict sign changes around triangular faces, proves the basic
 parity facts, proves the two-edge Cauchy-arm base case from the law of cosines,
 packages the abstract consequence of Cauchy's arm lemma, and states `chapter13`
-/ `chapter13_rigidity` from meaningful missing geometric/combinatorial facts.
+/ `chapter13_rigidity` / `cauchy_rigidity_with_geometric_bridges` from
+meaningful missing geometric/combinatorial facts.
 The remaining frontier is now explicit: the geometric reduction must supply a
 triangulated reduced sign graph, prove that equality of all corresponding
 dihedral angles gives one ambient isometry, turn vertex links into the
@@ -2149,6 +2150,99 @@ theorem chapter13_rigidity {V E F : ℕ} {P Q : ConvexPolyhedron V E F} :
     (∃ _ : CauchyRigidityCounterexampleData P Q, True) → False := by
   rintro ⟨data, _⟩
   exact chapter13 data
+
+/--
+Exact remaining geometric bridge package for a raw isometric pair.
+
+This is the current frontier.  It does not assert that `P` and `Q` are
+noncongruent; instead, it records the data that must be constructed uniformly
+from the concrete pair before this file can expose an unconditional Cauchy
+rigidity theorem.  The fields are exactly:
+* the triangulated/reduced sign graph;
+* completion of the all-dihedral-equality case;
+* vertex-link Cauchy-arm obstructions with sign changes computed in the true
+  cyclic vertex-star order;
+* strict triangular face signs and the face/vertex double-count.
+
+The weaker statement with only corresponding edge lengths is not a closed
+frontier here: for nontriangular faces, edge lengths alone do not encode
+facewise congruence.  The current geometric input is `IsometricPair`, i.e.
+same combinatorics plus all facewise vertex distances.
+-/
+structure CauchyRigidityGeometricBridges {V E F : ℕ}
+    {P Q : ConvexPolyhedron V E F} (pair : ConvexPolyhedron.IsometricPair P Q) where
+  triangulated : P.IsTriangulated
+  congruent_of_dihedralAngles_eq :
+    (∀ e : Fin E, P.dihedralAngle e = Q.dihedralAngle e) →
+      ConvexPolyhedron.Congruent P Q
+  vertexArmData : Fin V → CauchyArmVertex
+  vertexArmData_signChanges :
+    ∀ v, (vertexArmData v).signChanges =
+      P.vertexSignChanges P.vertexStarsOfIncidentEdges
+        (P.edgeSigns Q pair.combinatorics pair.same_edge_lengths) v
+  faceSigns : Fin F → StrictTriangleSigns
+  total_vertex_eq_total_face :
+    (∑ v : Fin V,
+      P.vertexSignChanges P.vertexStarsOfIncidentEdges
+        (P.edgeSigns Q pair.combinatorics pair.same_edge_lengths) v) =
+      ∑ f : Fin F, StrictTriangleSigns.signChanges (faceSigns f)
+
+namespace CauchyRigidityGeometricBridges
+
+/-- Add a noncongruence assumption to the geometric bridges, producing exactly
+the counterexample data contradicted above. -/
+noncomputable def counterexampleData {V E F : ℕ}
+    {P Q : ConvexPolyhedron V E F} {pair : ConvexPolyhedron.IsometricPair P Q}
+    (bridges : CauchyRigidityGeometricBridges pair)
+    (hnot : ¬ ConvexPolyhedron.Congruent P Q) :
+    CauchyRigidityCounterexampleData P Q where
+  counterexample :=
+    { isometric := pair
+      not_congruent := hnot }
+  triangulated := bridges.triangulated
+  congruent_of_dihedralAngles_eq := bridges.congruent_of_dihedralAngles_eq
+  vertexArmData := bridges.vertexArmData
+  vertexArmData_signChanges := by
+    intro v
+    simpa using bridges.vertexArmData_signChanges v
+  faceSigns := bridges.faceSigns
+  total_vertex_eq_total_face := by
+    simpa using bridges.total_vertex_eq_total_face
+
+/-- The bridge package is incompatible with a noncongruent isometric pair. -/
+theorem contradiction_of_not_congruent {V E F : ℕ}
+    {P Q : ConvexPolyhedron V E F} {pair : ConvexPolyhedron.IsometricPair P Q}
+    (bridges : CauchyRigidityGeometricBridges pair)
+    (hnot : ¬ ConvexPolyhedron.Congruent P Q) :
+    False :=
+  (bridges.counterexampleData hnot).contradiction
+
+end CauchyRigidityGeometricBridges
+
+/--
+Conditional Cauchy rigidity at the current frontier: an isometric pair is
+congruent once the geometric bridge package has been supplied.  Removing the
+`bridges` argument is precisely the remaining gap to the unconditional book
+theorem in this file's current API.
+-/
+theorem cauchy_rigidity_with_geometric_bridges {V E F : ℕ}
+    {P Q : ConvexPolyhedron V E F} (pair : ConvexPolyhedron.IsometricPair P Q)
+    (bridges : CauchyRigidityGeometricBridges pair) :
+    ConvexPolyhedron.Congruent P Q := by
+  classical
+  by_contra hnot
+  exact bridges.contradiction_of_not_congruent hnot
+
+/-- If the remaining geometric bridges can be produced for every isometric pair,
+then the unconditional Cauchy rigidity statement follows. -/
+theorem cauchy_rigidity_from_bridge_provider {V E F : ℕ}
+    (bridgeProvider :
+      ∀ {P Q : ConvexPolyhedron V E F}
+        (pair : ConvexPolyhedron.IsometricPair P Q),
+        CauchyRigidityGeometricBridges pair)
+    {P Q : ConvexPolyhedron V E F} (pair : ConvexPolyhedron.IsometricPair P Q) :
+    ConvexPolyhedron.Congruent P Q :=
+  cauchy_rigidity_with_geometric_bridges pair (bridgeProvider pair)
 
 /-
 The following finite layer records the Euler sign-change lower bounds for a

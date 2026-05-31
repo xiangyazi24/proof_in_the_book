@@ -1863,6 +1863,97 @@ theorem no_odd_equalArea_realization_of_edgeParity_area
     harea
 
 /--
+Minimal geometric hypothesis `H` for closing the Monsky gap.
+
+This is the smallest finite payload consumed by the completed coloring,
+Sperner-parity, and valuation argument: finite real vertex data, `n` listed
+triangles, the single odd boundary-count conclusion for the induced Monsky
+coloring, and ordinary equal area `1 / n` for every listed triangle.
+
+A future extraction theorem from an honest triangulation of `[0,1]^2` should
+produce exactly this structure.  The hard geometric work is hidden only in
+`hboundaryOdd`: for a genuine square triangulation it follows from the
+odd-multiplicity boundary-edge theorem and the four unit-square side color
+constraints.
+-/
+structure MinimalMonskyHypothesis (n : ℕ) where
+  Vertex : Type*
+  [instFintype : Fintype Vertex]
+  [instDecidableEq : DecidableEq Vertex]
+  vertices : Vertex → ℝ × ℝ
+  triangles : Fin n → Vertex × Vertex × Vertex
+  hboundaryOdd : Odd (oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices))
+  harea : ∀ i : Fin n,
+    realTriangleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+        (vertices (triangles i).2.2) =
+      (((1 : ℚ) / n : ℚ) : ℝ)
+
+namespace MinimalMonskyHypothesis
+
+/-- The Monsky color assigned to each vertex in the minimal hypothesis. -/
+noncomputable def color {n : ℕ} (H : MinimalMonskyHypothesis n) :
+    H.Vertex → MonskyColor :=
+  realTwoAdicColor ∘ H.vertices
+
+/-- The Monsky certificate extracted from the minimal hypothesis. -/
+noncomputable def toMonskyCertificate {n : ℕ}
+    (H : MinimalMonskyHypothesis n) : MonskyCertificate n := by
+  letI := H.instFintype
+  letI := H.instDecidableEq
+  exact edgeParityMonskyCertificate H.triangles (realTwoAdicColor ∘ H.vertices)
+    H.hboundaryOdd
+
+@[simp]
+theorem toMonskyCertificate_triangleColors {n : ℕ}
+    (H : MinimalMonskyHypothesis n) (i : Fin n) :
+    (H.toMonskyCertificate.triangleColors i) =
+      triangleColorsOfVertices (realTwoAdicColor ∘ H.vertices) (H.triangles i) := by
+  rfl
+
+/--
+Clean `H → False` endpoint: any finite real triangle data satisfying the
+minimal Monsky boundary-count and equal-area hypotheses cannot have odd size.
+-/
+theorem false_of_odd {n : ℕ} (hn : Odd n)
+    (H : MinimalMonskyHypothesis n) : False := by
+  letI := H.instFintype
+  letI := H.instDecidableEq
+  exact no_odd_equalArea_realization_of_edgeParity_area hn H.vertices H.triangles
+    H.hboundaryOdd H.harea
+
+theorem not_odd {n : ℕ} (H : MinimalMonskyHypothesis n) : ¬ Odd n := by
+  intro hn
+  exact H.false_of_odd hn
+
+theorem isEmpty_of_odd {n : ℕ} (hn : Odd n) :
+    IsEmpty (MinimalMonskyHypothesis n) := by
+  constructor
+  intro H
+  exact H.false_of_odd hn
+
+end MinimalMonskyHypothesis
+
+/--
+Top-level spelling of the clean minimal endpoint.  This is the statement to
+target when proving that an arbitrary real equal-area triangulation of the
+unit square supplies the Monsky extraction data.
+-/
+theorem no_odd_minimal_monsky_hypothesis {n : ℕ} (hn : Odd n)
+    (H : MinimalMonskyHypothesis n) : False :=
+  MinimalMonskyHypothesis.false_of_odd hn H
+
+/--
+Generic extraction endpoint: for any chosen formal type of real square
+triangulations, it is enough to construct a map into
+`MinimalMonskyHypothesis`.  Odd `n` then contradicts Monsky's coloring and
+valuation argument immediately.
+-/
+theorem no_odd_of_minimal_monsky_extraction {Geom : ℕ → Type*}
+    (extract : ∀ {n : ℕ}, Geom n → MinimalMonskyHypothesis n)
+    {n : ℕ} (hn : Odd n) (T : Geom n) : False :=
+  no_odd_minimal_monsky_hypothesis hn (extract T)
+
+/--
 Turn the exact geometric boundary-incidence statement into the odd boundary
 hypothesis needed by the finite edge-parity form.  This isolates the remaining
 frontier lemma: for a real triangulation of the square, the red-green
@@ -2193,6 +2284,23 @@ theorem boundaryRedGreenCount_odd {n : ℕ}
       T.hboundary T.hnodup T.hbottomLeft T.hbottomRight T.htopRight T.htopLeft
       T.hbottom T.hright T.htop T.hleft
 
+/--
+Forget the square side-chain witnesses and retain the minimal Monsky
+hypothesis needed by the final contradiction.
+-/
+noncomputable def toMinimalMonskyHypothesis {n : ℕ}
+    (T : ExtractedEqualAreaSquareTriangulation n) : MinimalMonskyHypothesis n where
+  Vertex := T.Vertex
+  instFintype := T.instFintype
+  instDecidableEq := T.instDecidableEq
+  vertices := T.vertices
+  triangles := T.triangles
+  hboundaryOdd := by
+    letI := T.instFintype
+    letI := T.instDecidableEq
+    simpa [boundaryRedGreenCount, color] using T.boundaryRedGreenCount_odd
+  harea := T.harea
+
 theorem boundaryRedGreenCount_odd_of_odd {n : ℕ} (_hn : Odd n)
     (T : ExtractedEqualAreaSquareTriangulation n) :
     Odd T.boundaryRedGreenCount :=
@@ -2225,13 +2333,7 @@ object of this structure from a concrete geometric triangulation hypothesis.
 -/
 theorem false_of_odd {n : ℕ} (hn : Odd n)
     (T : ExtractedEqualAreaSquareTriangulation n) : False := by
-  letI := T.instFintype
-  letI := T.instDecidableEq
-  exact no_odd_equalArea_realization_of_realSquareBoundaryVertexChain_area hn
-    T.vertices T.triangles T.bottom T.right T.top T.left
-    T.bottomLeft T.bottomRight T.topRight T.topLeft T.hboundary T.hnodup
-    T.hbottomLeft T.hbottomRight T.htopRight T.htopLeft
-    T.hbottom T.hright T.htop T.hleft T.harea
+  exact T.toMinimalMonskyHypothesis.false_of_odd hn
 
 theorem isEmpty_of_odd {n : ℕ} (hn : Odd n) :
     IsEmpty (ExtractedEqualAreaSquareTriangulation n) := by
@@ -2384,6 +2486,11 @@ noncomputable def toExtracted {n : ℕ} (T : ActualEqualAreaSquareTriangulation 
   hleft := T.hleft
   harea := T.harea
 
+/-- The minimal Monsky hypothesis extracted from the actual triangulation interface. -/
+noncomputable def toMinimalMonskyHypothesis {n : ℕ}
+    (T : ActualEqualAreaSquareTriangulation n) : MinimalMonskyHypothesis n :=
+  T.toExtracted.toMinimalMonskyHypothesis
+
 /-- The boundary red-green edge count forced by an actual square triangulation. -/
 noncomputable def boundaryRedGreenCount {n : ℕ}
     (T : ActualEqualAreaSquareTriangulation n) : ℕ :=
@@ -2470,6 +2577,11 @@ namespace EqualAreaSquareTriangulation
 noncomputable def toExtracted {n : ℕ} (T : EqualAreaSquareTriangulation n) :
     ExtractedEqualAreaSquareTriangulation n :=
   T.toActualEqualAreaSquareTriangulation.toExtracted
+
+/-- The minimal Monsky hypothesis extracted from the named geometric interface. -/
+noncomputable def toMinimalMonskyHypothesis {n : ℕ}
+    (T : EqualAreaSquareTriangulation n) : MinimalMonskyHypothesis n :=
+  T.toExtracted.toMinimalMonskyHypothesis
 
 /-- The Monsky certificate canonically extracted from the geometric interface. -/
 noncomputable def toMonskyCertificate {n : ℕ}

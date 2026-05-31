@@ -42,6 +42,177 @@ convex-polyhedron rigidity layer.
 
 namespace ProofsInTheBook.Chapter13
 
+/-! ### Euclidean convex polyhedron data -/
+
+/-- The ambient space for Cauchy's theorem. -/
+abbrev Euclidean3 :=
+  EuclideanSpace ℝ (Fin 3)
+
+/-- A combinatorial edge, stored by its two endpoint vertex indices. -/
+structure PolyhedronEdge (V : ℕ) where
+  tail : Fin V
+  head : Fin V
+  nondegenerate : tail ≠ head
+
+namespace PolyhedronEdge
+
+variable {V : ℕ}
+
+/-- The unordered endpoint set of an edge. -/
+def endpoints (e : PolyhedronEdge V) : Finset (Fin V) :=
+  {e.tail, e.head}
+
+@[simp]
+theorem tail_mem_endpoints (e : PolyhedronEdge V) :
+    e.tail ∈ e.endpoints := by
+  simp [endpoints]
+
+@[simp]
+theorem head_mem_endpoints (e : PolyhedronEdge V) :
+    e.head ∈ e.endpoints := by
+  simp [endpoints]
+
+@[simp]
+theorem endpoints_card (e : PolyhedronEdge V) : e.endpoints.card = 2 := by
+  simp [endpoints, e.nondegenerate]
+
+end PolyhedronEdge
+
+/-- One polygonal face, as a cyclically ordered list of vertex indices. -/
+structure PolyhedronFace (V : ℕ) where
+  vertexCount : ℕ
+  vertices : Fin vertexCount → Fin V
+  three_le : 3 ≤ vertexCount
+  simple : Function.Injective vertices
+
+namespace PolyhedronFace
+
+variable {V : ℕ}
+
+/-- The unordered vertex set of a face. -/
+def vertexSet (f : PolyhedronFace V) : Finset (Fin V) :=
+  Finset.univ.image f.vertices
+
+@[simp]
+theorem vertices_mem_vertexSet (f : PolyhedronFace V) (i : Fin f.vertexCount) :
+    f.vertices i ∈ f.vertexSet := by
+  simp [vertexSet]
+
+/-- A face contains an edge when it contains both endpoint vertices. -/
+def ContainsEdge (f : PolyhedronFace V) (e : PolyhedronEdge V) : Prop :=
+  e.tail ∈ f.vertexSet ∧ e.head ∈ f.vertexSet
+
+end PolyhedronFace
+
+/-- The supporting plane with equation `inner normal p = offset`. -/
+def supportingPlane (normal : Euclidean3) (offset : ℝ) : Set Euclidean3 :=
+  {p | inner ℝ normal p = offset}
+
+/-- The closed supporting halfspace with equation `inner normal p ≤ offset`. -/
+def supportingHalfspace (normal : Euclidean3) (offset : ℝ) : Set Euclidean3 :=
+  {p | inner ℝ normal p ≤ offset}
+
+/--
+A convex polyhedron in `ℝ^3`, with explicit finite vertex, edge, and face
+indices. The body is the convex hull of the listed vertices, and the face data
+records supporting halfspaces whose intersection is that body.
+
+The incidence fields are deliberately concrete: every edge has its two incident
+faces, every listed face is a simple polygon with at least three vertices, and
+the face vertex set is exactly the set of vertices lying on its supporting plane.
+-/
+structure ConvexPolyhedron (V E F : ℕ) where
+  vertex : Fin V → Euclidean3
+  vertex_injective : Function.Injective vertex
+  edge : Fin E → PolyhedronEdge V
+  face : Fin F → PolyhedronFace V
+  edgeFaces : Fin E → Fin 2 → Fin F
+  edgeFaces_injective : ∀ e, Function.Injective (edgeFaces e)
+  edge_mem_incident_faces : ∀ e i, (face (edgeFaces e i)).ContainsEdge (edge e)
+  faceNormal : Fin F → Euclidean3
+  faceOffset : Fin F → ℝ
+  faceNormal_ne_zero : ∀ f, faceNormal f ≠ 0
+  face_vertices_on_plane :
+    ∀ f i, vertex ((face f).vertices i) ∈ supportingPlane (faceNormal f) (faceOffset f)
+  vertices_in_supporting_halfspace :
+    ∀ f v, vertex v ∈ supportingHalfspace (faceNormal f) (faceOffset f)
+  vertex_on_face_plane_iff :
+    ∀ f v, vertex v ∈ supportingPlane (faceNormal f) (faceOffset f) ↔
+      v ∈ (face f).vertexSet
+  body_eq_iInter_supportingHalfspaces :
+    convexHull ℝ (Set.range vertex) =
+      ⋂ f, supportingHalfspace (faceNormal f) (faceOffset f)
+
+namespace ConvexPolyhedron
+
+variable {V E F : ℕ}
+
+/-- The solid body of a convex polyhedron. -/
+noncomputable def body (P : ConvexPolyhedron V E F) : Set Euclidean3 :=
+  convexHull ℝ (Set.range P.vertex)
+
+theorem convex_body (P : ConvexPolyhedron V E F) :
+    Convex ℝ P.body := by
+  simpa [body] using convex_convexHull ℝ (Set.range P.vertex)
+
+theorem vertex_mem_body (P : ConvexPolyhedron V E F) (v : Fin V) :
+    P.vertex v ∈ P.body := by
+  exact subset_convexHull ℝ (Set.range P.vertex) ⟨v, rfl⟩
+
+theorem body_subset_supportingHalfspace (P : ConvexPolyhedron V E F) (f : Fin F) :
+    P.body ⊆ supportingHalfspace (P.faceNormal f) (P.faceOffset f) := by
+  intro p hp
+  rw [body, P.body_eq_iInter_supportingHalfspaces] at hp
+  exact Set.mem_iInter.mp hp f
+
+/-- The Euclidean endpoint length of an edge. -/
+noncomputable def edgeLength (P : ConvexPolyhedron V E F) (e : Fin E) : ℝ :=
+  dist (P.vertex ((P.edge e).tail)) (P.vertex ((P.edge e).head))
+
+theorem edgeLength_pos (P : ConvexPolyhedron V E F) (e : Fin E) :
+    0 < P.edgeLength e :=
+  dist_pos.mpr fun h =>
+    (P.edge e).nondegenerate (P.vertex_injective h)
+
+/-- The embedded point corresponding to one vertex in one face polygon. -/
+noncomputable def facePoint (P : ConvexPolyhedron V E F) (f : Fin F)
+    (i : Fin (P.face f).vertexCount) : Euclidean3 :=
+  P.vertex ((P.face f).vertices i)
+
+@[simp]
+theorem facePoint_mem_supportingPlane (P : ConvexPolyhedron V E F) (f : Fin F)
+    (i : Fin (P.face f).vertexCount) :
+    P.facePoint f i ∈ supportingPlane (P.faceNormal f) (P.faceOffset f) := by
+  exact P.face_vertices_on_plane f i
+
+/-- Corresponding vertices are related by one ambient Euclidean motion. -/
+def Congruent (P Q : ConvexPolyhedron V E F) : Prop :=
+  ∃ φ : Euclidean3 ≃ᵃⁱ[ℝ] Euclidean3, ∀ v, φ (P.vertex v) = Q.vertex v
+
+/-- The two polyhedra use the same indexed edges and face vertex sets. -/
+structure SameCombinatorics (P Q : ConvexPolyhedron V E F) : Prop where
+  edge_tail : ∀ e, (P.edge e).tail = (Q.edge e).tail
+  edge_head : ∀ e, (P.edge e).head = (Q.edge e).head
+  face_vertexSet : ∀ f, (P.face f).vertexSet = (Q.face f).vertexSet
+  edgeFaces : ∀ e i, P.edgeFaces e i = Q.edgeFaces e i
+
+/-- Corresponding faces are isometric, expressed by all pairwise vertex distances. -/
+def FacewiseIsometric (P Q : ConvexPolyhedron V E F) : Prop :=
+  ∀ f v w, v ∈ (P.face f).vertexSet → w ∈ (P.face f).vertexSet →
+    dist (P.vertex v) (P.vertex w) = dist (Q.vertex v) (Q.vertex w)
+
+/-- The Cauchy input: same combinatorics and congruent corresponding faces. -/
+structure IsometricPair (P Q : ConvexPolyhedron V E F) : Prop where
+  combinatorics : SameCombinatorics P Q
+  facewise_isometric : FacewiseIsometric P Q
+
+/-- The contradiction-producing input for the next construction stage. -/
+structure RigidityCounterexample (P Q : ConvexPolyhedron V E F) : Prop where
+  isometric : IsometricPair P Q
+  not_congruent : ¬ Congruent P Q
+
+end ConvexPolyhedron
+
 /-- Edge signs in Cauchy's rigidity proof. -/
 inductive EdgeSign where
   | plus | minus | zero
@@ -489,5 +660,154 @@ theorem chapter13_rigidity {V E F : ℕ} (edgeSigns : Fin E → EdgeSign) :
     (∃ _ : CauchyRigidityCertificate (V := V) (F := F) edgeSigns, True) → False := by
   rintro ⟨cert, _⟩
   exact chapter13 cert
+
+/-
+The following finite layer records the Euler sign-change lower bounds for a
+convex polyhedron directly.  It is deliberately combinatorial: Mathlib does
+not yet provide a bundled Euclidean convex-polyhedron type with face
+incidence, so the graph, face signs, and the 3-connected strict face bound are
+passed as finite data.
+-/
+
+/--
+A convex polyhedron together with Euler's formula.  The underlying geometric
+polyhedron is the `ConvexPolyhedron` defined above; this wrapper adds the
+Euler characteristic needed for the finite sign-counting layer.
+-/
+structure ConvexPolyhedronWithEuler (V E F : ℕ) where
+  polyhedron : ConvexPolyhedron V E F
+  /-- Euler's formula, stated over `ℤ` to avoid truncated subtraction. -/
+  euler_formula : (V : ℤ) - (E : ℤ) + (F : ℤ) = 2
+
+namespace ConvexPolyhedron
+
+/-- The simple graph determined by the listed polyhedron edges. -/
+def combinatorialGraph {V E F : ℕ} (P : ConvexPolyhedron V E F) :
+    SimpleGraph (Fin V) where
+  Adj u v :=
+    ∃ e : Fin E,
+      ((P.edge e).tail = u ∧ (P.edge e).head = v) ∨
+        ((P.edge e).tail = v ∧ (P.edge e).head = u)
+  symm := by
+    intro u v h
+    rcases h with ⟨e, h | h⟩
+    · exact ⟨e, Or.inr ⟨h.1, h.2⟩⟩
+    · exact ⟨e, Or.inl ⟨h.1, h.2⟩⟩
+  loopless := ⟨by
+    intro u h
+    rcases h with ⟨e, h | h⟩
+    · exact (P.edge e).nondegenerate (h.1.trans h.2.symm)
+    · exact (P.edge e).nondegenerate (h.1.trans h.2.symm)⟩
+
+end ConvexPolyhedron
+
+/--
+Graph-theoretic 3-connectedness: deleting fewer than three vertices leaves the
+remaining induced graph connected.
+-/
+def IsThreeConnectedGraph {α : Type*} (G : SimpleGraph α) : Prop :=
+  ∀ s : Finset α, s.card < 3 → (G.induce {v | v ∉ (s : Set α)}).Connected
+
+/-- Edge signs around one triangular face. -/
+abbrev TriangleSigns := EdgeSign × EdgeSign × EdgeSign
+
+namespace TriangleSigns
+
+def signChanges (t : TriangleSigns) : ℕ :=
+  SignChangesAroundTriangle t.1 t.2.1 t.2.2
+
+def Monochromatic (t : TriangleSigns) : Prop :=
+  ∃ s, t.1 = s ∧ t.2.1 = s ∧ t.2.2 = s
+
+theorem signChanges_ge_two_of_not_monochromatic (t : TriangleSigns)
+    (hmono : ¬ Monochromatic t) :
+    2 ≤ signChanges t := by
+  rcases t with ⟨a, b, c⟩
+  cases a <;> cases b <;> cases c <;>
+    simp [signChanges, Monochromatic, SignChangesAroundTriangle] at hmono ⊢
+
+end TriangleSigns
+
+/-- A convex polyhedron equipped with triangular face sign data. -/
+structure SignedConvexPolyhedron (V E F : ℕ) extends ConvexPolyhedron V E F where
+  faceSigns : Fin F → TriangleSigns
+
+namespace SignedConvexPolyhedron
+
+def totalFaceSignChanges {V E F : ℕ} (P : SignedConvexPolyhedron V E F) : ℕ :=
+  ∑ f : Fin F, TriangleSigns.signChanges (P.faceSigns f)
+
+theorem face_signChanges_ge_two_of_not_monochromatic {V E F : ℕ}
+    (P : SignedConvexPolyhedron V E F) (f : Fin F)
+    (hface : ¬ TriangleSigns.Monochromatic (P.faceSigns f)) :
+    2 ≤ TriangleSigns.signChanges (P.faceSigns f) :=
+  TriangleSigns.signChanges_ge_two_of_not_monochromatic (P.faceSigns f) hface
+
+/--
+If no face is monochromatic, every triangular face contributes at least two
+sign changes, hence the total face contribution is at least `2F`.
+-/
+theorem total_face_signChanges_ge_two_mul_faces {V E F : ℕ}
+    (P : SignedConvexPolyhedron V E F)
+    (hfaces : ∀ f, ¬ TriangleSigns.Monochromatic (P.faceSigns f)) :
+    2 * F ≤ P.totalFaceSignChanges := by
+  have hsum : (∑ _f : Fin F, (2 : ℕ)) ≤
+      ∑ f : Fin F, TriangleSigns.signChanges (P.faceSigns f) :=
+    Finset.sum_le_sum (fun f _ => P.face_signChanges_ge_two_of_not_monochromatic f (hfaces f))
+  simpa [totalFaceSignChanges, Fintype.card_fin, Nat.mul_comm, Nat.mul_left_comm,
+    Nat.mul_assoc] using hsum
+
+end SignedConvexPolyhedron
+
+/--
+Strict face sign-change data supplied by the 3-connected convex-polyhedron
+layer.  The field states the local strengthening that 3-connectedness gives
+each face at least four strict sign changes.
+-/
+structure StrictFaceSignChangeData {V E F : ℕ} (P : ConvexPolyhedron V E F) where
+  strictFaceSignChanges : Fin F → ℕ
+  four_le_strict_face_signChanges_of_three_connected :
+    IsThreeConnectedGraph P.combinatorialGraph → ∀ f, 4 ≤ strictFaceSignChanges f
+
+namespace StrictFaceSignChangeData
+
+def totalStrictFaceSignChanges {V E F : ℕ} {P : ConvexPolyhedron V E F}
+    (data : StrictFaceSignChangeData P) : ℕ :=
+  ∑ f : Fin F, data.strictFaceSignChanges f
+
+/--
+For a 3-connected convex polyhedron, the strict face sign-change total is at
+least `4F`.
+-/
+theorem total_strict_face_signChanges_ge_four_mul_faces {V E F : ℕ}
+    (P : ConvexPolyhedron V E F) (data : StrictFaceSignChangeData P)
+    (h3 : IsThreeConnectedGraph P.combinatorialGraph) :
+    4 * F ≤ data.totalStrictFaceSignChanges := by
+  have hsum : (∑ _f : Fin F, (4 : ℕ)) ≤
+      ∑ f : Fin F, data.strictFaceSignChanges f :=
+    Finset.sum_le_sum
+      (fun f _ => data.four_le_strict_face_signChanges_of_three_connected h3 f)
+  simpa [totalStrictFaceSignChanges, Fintype.card_fin, Nat.mul_comm, Nat.mul_left_comm,
+    Nat.mul_assoc] using hsum
+
+end StrictFaceSignChangeData
+
+namespace ConvexPolyhedronWithEuler
+
+/-- Euler sign-change bound for the strict 3-connected face count. -/
+theorem euler_sign_change_bound {V E F : ℕ}
+    (P : ConvexPolyhedronWithEuler V E F) (data : StrictFaceSignChangeData P.polyhedron)
+    (h3 : IsThreeConnectedGraph P.polyhedron.combinatorialGraph) :
+    4 * F ≤ data.totalStrictFaceSignChanges :=
+  data.total_strict_face_signChanges_ge_four_mul_faces P.polyhedron h3
+
+end ConvexPolyhedronWithEuler
+
+/-- Euler sign-change bound for the strict 3-connected face count. -/
+theorem convex_polyhedron_euler_sign_change_bound {V E F : ℕ}
+    (P : ConvexPolyhedronWithEuler V E F) (data : StrictFaceSignChangeData P.polyhedron)
+    (h3 : IsThreeConnectedGraph P.polyhedron.combinatorialGraph) :
+    4 * F ≤ data.totalStrictFaceSignChanges :=
+  P.euler_sign_change_bound data h3
 
 end ProofsInTheBook.Chapter13

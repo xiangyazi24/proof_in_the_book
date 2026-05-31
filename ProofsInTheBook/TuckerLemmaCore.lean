@@ -5527,6 +5527,81 @@ structure KyFanEndpointPairing {n m : ℕ}
     ∀ endpoint,
       kyFanPathEndpointClassAntipode label hantipodal endpoint ≠ endpointPartner endpoint
 
+noncomputable def kyFanEndpointPairing_of_deletionGapGraph_reachableCardTwo
+    {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hantipodal : ∀ X, label X.antipode = (label X).neg}
+    {hno : NoComplementaryComparableLabels label}
+    [DecidableRel fun endpoint endpoint' : KyFanPathEndpointClass label =>
+      (KyFanDeletionGapGraph hno).Reachable endpoint endpoint']
+    (hcard :
+      ∀ endpoint : KyFanPathEndpointClass label,
+        Fintype.card
+          {endpoint' : KyFanPathEndpointClass label //
+            (KyFanDeletionGapGraph hno).Reachable endpoint endpoint'} = 2)
+    (hreachable_antipode :
+      ∀ endpoint endpoint' : KyFanPathEndpointClass label,
+        (KyFanDeletionGapGraph hno).Reachable
+            (kyFanPathEndpointClassAntipode label hantipodal endpoint)
+            (kyFanPathEndpointClassAntipode label hantipodal endpoint') ↔
+          (KyFanDeletionGapGraph hno).Reachable endpoint endpoint')
+    (hnot_antipodal :
+      ∀ endpoint : KyFanPathEndpointClass label,
+        ¬ (KyFanDeletionGapGraph hno).Reachable endpoint
+          (kyFanPathEndpointClassAntipode label hantipodal endpoint)) :
+    KyFanEndpointPairing label hantipodal := by
+  classical
+  let endpointVertex :
+      KyFanPathEndpointClass label ↪ KyFanPathEndpointClass label :=
+    Function.Embedding.refl _
+  let partner :=
+    endpointPartnerOfReachableCardTwo
+      (KyFanDeletionGapGraph hno) endpointVertex (by
+        intro endpoint
+        simpa [endpointVertex] using hcard endpoint)
+  exact
+    { endpointPartner := partner
+      endpointPartner_involutive := by
+        intro endpoint
+        exact endpointPartnerOfReachableCardTwo_involutive
+          (KyFanDeletionGapGraph hno) endpointVertex
+          (by
+            intro endpoint
+            simpa [endpointVertex] using hcard endpoint)
+          endpoint
+      endpointPartner_fixedPointFree := by
+        intro endpoint
+        exact endpointPartnerOfReachableCardTwo_fixedPointFree
+          (KyFanDeletionGapGraph hno) endpointVertex
+          (by
+            intro endpoint
+            simpa [endpointVertex] using hcard endpoint)
+          endpoint
+      endpointPartner_comm := by
+        intro endpoint
+        exact endpointPartnerOfReachableCardTwo_comm
+          (KyFanDeletionGapGraph hno) endpointVertex
+          (by
+            intro endpoint
+            simpa [endpointVertex] using hcard endpoint)
+          (kyFanPathEndpointClassAntipode label hantipodal)
+          (by
+            intro endpoint endpoint'
+            simpa [endpointVertex] using hreachable_antipode endpoint endpoint')
+          endpoint
+      endpointPartner_not_antipodal := by
+        intro endpoint
+        exact endpointPartnerOfReachableCardTwo_not_antipodal
+          (KyFanDeletionGapGraph hno) endpointVertex
+          (by
+            intro endpoint
+            simpa [endpointVertex] using hcard endpoint)
+          (kyFanPathEndpointClassAntipode label hantipodal)
+          (by
+            intro endpoint
+            simpa [endpointVertex] using hnot_antipodal endpoint)
+          endpoint }
+
 theorem four_dvd_card_of_commuting_endpoint_pairing
     {α : Type*} [Fintype α] [DecidableEq α]
     {endpointPartner endpointAntipode : α ≃ α}

@@ -292,6 +292,15 @@ def TriangulatedPolygon.vertices {n : ℕ} {S : Finset (AbsTriangle n)} :
   | .single T => {T.a, T.b, T.c}
   | .glue h _ v _ _ _ => insert v h.vertices
 
+/-- An inductive triangulation always contains at least one triangle. -/
+theorem TriangulatedPolygon.card_pos {n : ℕ} {S : Finset (AbsTriangle n)}
+    (h : TriangulatedPolygon n S) : 0 < S.card := by
+  induction h with
+  | single T =>
+      simp
+  | glue h_ind T newV hT_new hShared hFresh ih =>
+      exact lt_of_lt_of_le ih (Finset.card_le_card (by intro U hU; simp [hU]))
+
 /-- Reindex a finset of triangles after deleting a vertex avoided by all of
 them. -/
 noncomputable def deleteVertexTriangles {n : ℕ} (v : Fin (n + 1))
@@ -585,6 +594,15 @@ def AbsTriangle.realization {n : ℕ} (T : AbsTriangle n) (poly : Polygon Point2
     Set Point2 :=
   polygonTriangleSet poly T.a T.b T.c
 
+/-- Every abstract vertex of a triangle realizes to a point of its closed
+geometric triangle. -/
+lemma AbsTriangle.vertex_mem_realization {n : ℕ} (T : AbsTriangle n)
+    (poly : Polygon Point2 n) {v : Fin n} (hv : v ∈ T.vertices) :
+    poly v ∈ T.realization poly := by
+  apply subset_convexHull ℝ ({poly T.a, poly T.b, poly T.c} : Set Point2)
+  simp only [AbsTriangle.vertices, Finset.mem_insert, Finset.mem_singleton] at hv
+  rcases hv with rfl | rfl | rfl <;> simp
+
 /-- The previous index in the cyclic order. -/
 def cyclicPrev {n : ℕ} (i : Fin n) : Fin n :=
   (finRotate n).symm i
@@ -608,6 +626,28 @@ structure SimplePolygon (n : ℕ) where
   triangle_count : triangles.card + 2 = n
 
 namespace SimplePolygon
+
+/-- The certified triangulation of a simple polygon is nonempty. -/
+theorem triangles_card_pos {n : ℕ} (P : SimplePolygon n) : 0 < P.triangles.card :=
+  P.triangulated.card_pos
+
+/-- A certified simple polygon has at least three vertices. -/
+theorem vertex_count_ge_three {n : ℕ} (P : SimplePolygon n) : 3 ≤ n := by
+  have hpos := P.triangles_card_pos
+  have hcount := P.triangle_count
+  omega
+
+/-- A certified simple polygon on three vertices has exactly one certified
+triangle. -/
+theorem triangles_card_eq_one_of_three (P : SimplePolygon 3) : P.triangles.card = 1 := by
+  have hcount := P.triangle_count
+  omega
+
+/-- Base case for ear-clipping induction: a certified simple triangle has a
+singleton triangulation. -/
+theorem exists_single_triangle_of_three (P : SimplePolygon 3) :
+    ∃ T : AbsTriangle 3, P.triangles = {T} :=
+  Finset.card_eq_one.mp P.triangles_card_eq_one_of_three
 
 /-- The polygonal region covered by the certified triangulation. -/
 def carrier {n : ℕ} (P : SimplePolygon n) : Set Point2 :=
@@ -743,6 +783,28 @@ theorem removeEar_triangle_count {n : ℕ} (P : SimplePolygon (n + 1)) (hn : 4 �
     (P.removeEar hn).triangles.card + 2 = n :=
   (P.removeEar hn).triangle_count
 
+/-- Induction on certified simple polygons by repeatedly clipping ears.
+
+The base case is `n = 3`; the step receives the polygon with one certified ear
+removed, whose vertex type is one smaller. -/
+theorem induction_on_vertices
+    {motive : (n : ℕ) → SimplePolygon n → Prop}
+    (hbase : ∀ P : SimplePolygon 3, motive 3 P)
+    (hstep : ∀ n (P : SimplePolygon (n + 1)) (hn : 4 ≤ n + 1),
+      motive n (P.removeEar hn) → motive (n + 1) P)
+    {n : ℕ} (P : SimplePolygon n) : motive n P := by
+  induction n using Nat.strong_induction_on with
+  | h n ih =>
+      have hn3 : 3 ≤ n := P.vertex_count_ge_three
+      rcases Nat.eq_or_lt_of_le hn3 with hn_eq | hn_gt
+      · subst n
+        exact hbase P
+      · cases n with
+        | zero => omega
+        | succ k =>
+            have hn : 4 ≤ k + 1 := by omega
+            exact hstep k P hn (ih k (by omega) (P.removeEar hn))
+
 theorem erase_ear_reduces_triangle_count {n : ℕ} (P : SimplePolygon n) (hn : 4 ≤ n) :
     ∃ T ∈ P.triangles, (P.triangles.erase T).card + 1 = P.triangles.card := by
   let R := P.earRemoval hn
@@ -763,6 +825,20 @@ theorem exists_ear {n : ℕ} (P : SimplePolygon n) (hn : 4 ≤ n) :
     simpa [AbsTriangle.vertices] using R.free_vertex T' hT' hne
   intro x hx
   exact ⟨R.ear, R.ear_mem, hx⟩
+
+/-- The vertex of a certified ear sees every point of the ear triangle inside
+the certified polygonal carrier. -/
+theorem Ear.sees_triangle {n : ℕ} {P : SimplePolygon n} {T : AbsTriangle n}
+    {v : Fin n} (E : P.Ear T v) :
+    ∀ x ∈ T.realization P.toPolygon, segment ℝ (P.toPolygon v) x ⊆ P.carrier := by
+  intro x hx
+  have hvertex : P.toPolygon v ∈ T.realization P.toPolygon :=
+    AbsTriangle.vertex_mem_realization T P.toPolygon E.vertex_mem
+  have hconv : Convex ℝ (T.realization P.toPolygon) := by
+    simpa [AbsTriangle.realization, polygonTriangleSet] using
+      (convex_convexHull ℝ
+        ({P.toPolygon T.a, P.toPolygon T.b, P.toPolygon T.c} : Set Point2))
+  exact subset_trans (hconv.segment_subset hvertex hx) E.inside
 
 end SimplePolygon
 
@@ -892,5 +968,31 @@ theorem chapter36_simplePolygon {n : ℕ} (P : SimplePolygon n) :
       ∀ T ∈ P.triangles, ∃ v ∈ guards,
         v ∈ ({T.a, T.b, T.c} : Finset (Fin n)) :=
   chapter36 P.triangulated
+
+/-- Carrier-level art-gallery statement for a certified simple polygon: every
+point in the certified polygonal region is visible from one of the selected
+guard vertices. -/
+theorem chapter36_simplePolygon_visibility {n : ℕ} (P : SimplePolygon n) :
+    ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
+      ∀ x ∈ P.carrier, ∃ v ∈ guards, segment ℝ (P.toPolygon v) x ⊆ P.carrier := by
+  obtain ⟨guards, hcard, hhit⟩ := chapter36_simplePolygon P
+  refine ⟨guards, hcard, ?_⟩
+  intro x hx
+  rcases hx with ⟨T, hT, hxT⟩
+  rcases hhit T hT with ⟨v, hvG, hvT⟩
+  refine ⟨v, hvG, ?_⟩
+  have hvT' : v ∈ T.vertices := by
+    simpa [AbsTriangle.vertices] using hvT
+  have hvertex : P.toPolygon v ∈ T.realization P.toPolygon :=
+    AbsTriangle.vertex_mem_realization T P.toPolygon hvT'
+  have hconv : Convex ℝ (T.realization P.toPolygon) := by
+    simpa [AbsTriangle.realization, polygonTriangleSet] using
+      (convex_convexHull ℝ
+        ({P.toPolygon T.a, P.toPolygon T.b, P.toPolygon T.c} : Set Point2))
+  have hseg : segment ℝ (P.toPolygon v) x ⊆ T.realization P.toPolygon :=
+    hconv.segment_subset hvertex hxT
+  exact subset_trans hseg (by
+    intro y hy
+    exact ⟨T, hT, hy⟩)
 
 end ProofsInTheBook.Chapter36

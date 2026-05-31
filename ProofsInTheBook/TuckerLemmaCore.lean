@@ -4039,6 +4039,58 @@ theorem alternatingPuncturedPrefixChainPartner_val {n m : ℕ} (hn : 0 < n)
         _ = puncturedPrefixPartnerData data.1 := by
           rw [hdata_val]
 
+theorem alternatingPuncturedPrefixChainPartner_gap {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (data : AlternatingPuncturedPrefixChainType label) :
+    (alternatingPuncturedPrefixChainPartner hn label data).1.2 = data.1.2 := by
+  rw [alternatingPuncturedPrefixChainPartner_val hn label data]
+  rcases data with ⟨⟨P, gap⟩, hmem⟩
+  by_cases hgap : gap.val < n
+  · simp [puncturedPrefixPartnerData, hgap]
+  · have hlast : gap = Fin.last n := by
+      apply Fin.ext
+      have hle : gap.val ≤ n := Nat.le_of_lt_succ gap.isLt
+      simp [Fin.last]
+      omega
+    simp [puncturedPrefixPartnerData, hlast]
+
+theorem alternatingPuncturedPrefixChainPartner_perm_ne {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (data : AlternatingPuncturedPrefixChainType label) :
+    (alternatingPuncturedPrefixChainPartner hn label data).1.1 ≠ data.1.1 := by
+  intro hperm
+  have hgap := alternatingPuncturedPrefixChainPartner_gap hn label data
+  have hval : (alternatingPuncturedPrefixChainPartner hn label data).1 = data.1 := by
+    exact Prod.ext hperm hgap
+  exact alternatingPuncturedPrefixChainPartner_fixedPointFree hn label data
+    (Subtype.ext hval)
+
+/-- The two maximal flags containing the punctured flag represented by `data`. -/
+noncomputable def kyFanPuncturedIncidentPermSet {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (data : AlternatingPuncturedPrefixChainType label) :
+    Finset (SignedPermutation (n + 1)) :=
+  {data.1.1, (alternatingPuncturedPrefixChainPartner hn label data).1.1}
+
+theorem mem_kyFanPuncturedIncidentPermSet_iff {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (data : AlternatingPuncturedPrefixChainType label)
+    (P : SignedPermutation (n + 1)) :
+    P ∈ kyFanPuncturedIncidentPermSet hn label data ↔
+      P = data.1.1 ∨
+        P = (alternatingPuncturedPrefixChainPartner hn label data).1.1 := by
+  simp [kyFanPuncturedIncidentPermSet]
+
+theorem kyFanPuncturedIncidentPermSet_card {n m : ℕ} (hn : 0 < n)
+    (label : NonzeroSignedSubset (n + 1) → SignedLabel m)
+    (data : AlternatingPuncturedPrefixChainType label) :
+    (kyFanPuncturedIncidentPermSet hn label data).card = 2 := by
+  have hne :
+      data.1.1 ≠ (alternatingPuncturedPrefixChainPartner hn label data).1.1 := by
+    intro h
+    exact alternatingPuncturedPrefixChainPartner_perm_ne hn label data h.symm
+  simp [kyFanPuncturedIncidentPermSet, hne]
+
 /-- Statement-level API for the codimension-one alternating facet count. -/
 def KyFanPuncturedPrefixDivisibilityStatement (n m : ℕ) : Prop :=
   ∀ label : NonzeroSignedSubset (n + 1) → SignedLabel m,
@@ -4693,6 +4745,161 @@ theorem kyFan_flag_punctured_incidence_card_eq_two_of_strict {n m : ℕ} (hn : 0
   rw [kyFan_flag_punctured_incidence_card_eq_deletionGaps hno P]
   exact kyFanDeletionGaps_card_eq_two_of_strict hn hno hstrict
     ((kyFanDeletionGaps_nonempty_iff hno P).mpr hactive)
+
+/-- The endpoint represented by a concrete alternating deletion gap of `P`. -/
+noncomputable def kyFanDeletionGapEndpoint {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label)
+    (P : SignedPermutation (n + 1)) (gap : Fin (n + 1))
+    (hgap : gap ∈ kyFanDeletionGaps hno P) :
+    KyFanPathEndpointClass label :=
+  Sum.inl
+    ⟨(P, gap), (mem_kyFanDeletionGaps_iff hno P gap).mp hgap⟩
+
+theorem kyFanDeletionGapEndpoint_injective {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label)
+    (P : SignedPermutation (n + 1)) :
+    Function.Injective
+      (fun gap : {gap : Fin (n + 1) // gap ∈ kyFanDeletionGaps hno P} =>
+        kyFanDeletionGapEndpoint hno P gap.1 gap.2) := by
+  intro gap gap' h
+  apply Subtype.ext
+  have hgap := congrArg
+    (fun endpoint : KyFanPathEndpointClass label =>
+      match endpoint with
+      | Sum.inl data => data.1.2
+      | Sum.inr _ => (0 : Fin (n + 1))) h
+  simpa [kyFanDeletionGapEndpoint] using hgap
+
+/--
+The two endpoint vertices cut out by the alternating deletion gaps of a signed
+permutation.  This is the flag-side adjacency datum; each element is the
+punctured endpoint `(P, gap)` for one alternating deletion gap.
+-/
+noncomputable def kyFanDeletionGapEndpointSet {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label)
+    (P : SignedPermutation (n + 1)) :
+    Finset (KyFanPathEndpointClass label) :=
+  (kyFanDeletionGaps hno P).attach.image fun gap =>
+    kyFanDeletionGapEndpoint hno P gap.1 gap.2
+
+theorem mem_kyFanDeletionGapEndpointSet_iff {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label)
+    (P : SignedPermutation (n + 1)) (endpoint : KyFanPathEndpointClass label) :
+    endpoint ∈ kyFanDeletionGapEndpointSet hno P ↔
+      ∃ (gap : Fin (n + 1)) (hgap : gap ∈ kyFanDeletionGaps hno P),
+        endpoint = kyFanDeletionGapEndpoint hno P gap hgap := by
+  classical
+  constructor
+  · intro hendpoint
+    rcases Finset.mem_image.mp hendpoint with ⟨gap, _hgapmem, hgap⟩
+    exact ⟨gap.1, gap.2, hgap.symm⟩
+  · rintro ⟨gap, hgap, rfl⟩
+    exact Finset.mem_image.mpr ⟨⟨gap, hgap⟩, by simp, rfl⟩
+
+theorem kyFanDeletionGapEndpointSet_card {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label)
+    (P : SignedPermutation (n + 1)) :
+    (kyFanDeletionGapEndpointSet hno P).card = (kyFanDeletionGaps hno P).card := by
+  classical
+  rw [kyFanDeletionGapEndpointSet,
+    Finset.card_image_of_injective _ (kyFanDeletionGapEndpoint_injective hno P),
+    Finset.card_attach]
+
+theorem kyFanDeletionGapEndpointSet_card_eq_two_of_strict {n m : ℕ} (hn : 0 < n)
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label)
+    {P : SignedPermutation (n + 1)}
+    (hstrict : StrictMono fun i : Fin (n + 1) => (label (P.prefixChain i)).index)
+    (hactive : ∃ gap : Fin (n + 1),
+      (P, gap) ∈ alternatingPuncturedPrefixLabelChains label) :
+    (kyFanDeletionGapEndpointSet hno P).card = 2 := by
+  rw [kyFanDeletionGapEndpointSet_card hno P]
+  exact kyFanDeletionGaps_card_eq_two_of_strict hn hno hstrict
+    ((kyFanDeletionGaps_nonempty_iff hno P).mpr hactive)
+
+private theorem finset_eq_pair_of_card_eq_two_of_mem {α : Type*} [DecidableEq α]
+    {s : Finset α} {a b : α} (hcard : s.card = 2)
+    (ha : a ∈ s) (hb : b ∈ s) (hne : a ≠ b) :
+    s = {a, b} := by
+  classical
+  have hpair_subset : ({a, b} : Finset α) ⊆ s := by
+    intro x hx
+    rw [Finset.mem_insert, Finset.mem_singleton] at hx
+    rcases hx with rfl | rfl
+    · exact ha
+    · exact hb
+  have hpair_card : ({a, b} : Finset α).card = 2 := by
+    simp [hne]
+  have hle : s.card ≤ ({a, b} : Finset α).card := by
+    rw [hcard, hpair_card]
+  exact (Finset.eq_of_subset_of_card_le hpair_subset hle).symm
+
+/--
+Flag-side Ky Fan adjacency: two endpoint vertices are adjacent when they are
+exactly the two alternating deletion-gap endpoints of one signed permutation.
+-/
+noncomputable def KyFanDeletionGapGraph {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label) :
+    SimpleGraph (KyFanPathEndpointClass label) where
+  Adj endpoint endpoint' :=
+    endpoint ≠ endpoint' ∧
+      ∃ P : SignedPermutation (n + 1),
+        kyFanDeletionGapEndpointSet hno P = {endpoint, endpoint'}
+  symm := by
+    intro endpoint endpoint' h
+    refine ⟨h.1.symm, ?_⟩
+    rcases h.2 with ⟨P, hP⟩
+    refine ⟨P, ?_⟩
+    rw [hP]
+    ext x
+    simp [or_comm]
+  loopless := ⟨fun endpoint h => h.1 rfl⟩
+
+theorem kyFanDeletionGapGraph_adj_iff {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hno : NoComplementaryComparableLabels label}
+    {endpoint endpoint' : KyFanPathEndpointClass label} :
+    (KyFanDeletionGapGraph hno).Adj endpoint endpoint' ↔
+      endpoint ≠ endpoint' ∧
+        ∃ P : SignedPermutation (n + 1),
+          kyFanDeletionGapEndpointSet hno P = {endpoint, endpoint'} := by
+  rfl
+
+theorem kyFanDeletionGapGraph_adj_of_mem_of_card_eq_two {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hno : NoComplementaryComparableLabels label}
+    {P : SignedPermutation (n + 1)}
+    {endpoint endpoint' : KyFanPathEndpointClass label}
+    (hcard : (kyFanDeletionGapEndpointSet hno P).card = 2)
+    (hendpoint : endpoint ∈ kyFanDeletionGapEndpointSet hno P)
+    (hendpoint' : endpoint' ∈ kyFanDeletionGapEndpointSet hno P)
+    (hne : endpoint ≠ endpoint') :
+    (KyFanDeletionGapGraph hno).Adj endpoint endpoint' := by
+  exact
+    ⟨hne, P,
+      finset_eq_pair_of_card_eq_two_of_mem hcard hendpoint hendpoint' hne⟩
+
+theorem kyFanDeletionGapGraph_adj_of_strict {n m : ℕ} (hn : 0 < n)
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    {hno : NoComplementaryComparableLabels label}
+    {P : SignedPermutation (n + 1)}
+    (hstrict : StrictMono fun i : Fin (n + 1) => (label (P.prefixChain i)).index)
+    (hactive : ∃ gap : Fin (n + 1),
+      (P, gap) ∈ alternatingPuncturedPrefixLabelChains label)
+    {endpoint endpoint' : KyFanPathEndpointClass label}
+    (hendpoint : endpoint ∈ kyFanDeletionGapEndpointSet hno P)
+    (hendpoint' : endpoint' ∈ kyFanDeletionGapEndpointSet hno P)
+    (hne : endpoint ≠ endpoint') :
+    (KyFanDeletionGapGraph hno).Adj endpoint endpoint' := by
+  exact kyFanDeletionGapGraph_adj_of_mem_of_card_eq_two
+    (kyFanDeletionGapEndpointSet_card_eq_two_of_strict hn hno hstrict hactive)
+    hendpoint hendpoint' hne
 
 /--
 In the Tucker-critical range `m = n`, no signed-permutation prefix word of

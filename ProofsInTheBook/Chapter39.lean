@@ -2426,12 +2426,20 @@ theorem chapter39_of_tucker_frontier (hfrontier : Chapter39TuckerFrontier)
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
   chapter39_of_core_tucker hk hn (hfrontier n (by omega))
 
+/-- Compact bounds form of the full theorem from the exact core Tucker frontier. -/
+theorem chapter39_bounds_of_tucker_frontier
+    (hfrontier : Chapter39TuckerFrontier) {n k : ℕ}
+    (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
+    KneserColoringBounds n k :=
+  chapter39_of_tucker_frontier hfrontier hk hn
+
 /-- Chromatic-number form of the full theorem from the exact core Tucker frontier. -/
 theorem chapter39_chromaticNumber_of_tucker_frontier
     (hfrontier : Chapter39TuckerFrontier) {n k : ℕ}
     (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
     (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
-  chapter39_chromaticNumber_of_core_tucker hk hn (hfrontier n (by omega))
+  KneserColoringBounds.chromaticNumber
+    (chapter39_bounds_of_tucker_frontier hfrontier hk hn)
 
 /-- The ordinary hypotheses and `n ≤ 4` leave exactly four parameter pairs. -/
 theorem chapter39_low_dim_parameter_cases {n k : ℕ}
@@ -2683,6 +2691,19 @@ theorem chapter39_of_kyFan {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
   chapter39 hk hn (tuckerLemmaStatement_of_kyFan (by omega) hfan)
 
+/-- Compact bounds form of `chapter39_of_kyFan`. -/
+theorem chapter39_bounds_of_kyFan {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (hfan : KyFanAlternatingChainStatement n (n - 1)) :
+    KneserColoringBounds n k :=
+  chapter39_of_kyFan hk hn hfan
+
+/-- Chromatic-number form of `chapter39_of_kyFan`. -/
+theorem chapter39_chromaticNumber_of_kyFan {n k : ℕ}
+    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (hfan : KyFanAlternatingChainStatement n (n - 1)) :
+    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
+  KneserColoringBounds.chromaticNumber (chapter39_bounds_of_kyFan hk hn hfan)
+
 /--
 Chapter 39 from the exact signed-permutation parity count.  This is the
 smallest remaining combinatorial frontier in this file.
@@ -2695,6 +2716,21 @@ theorem chapter39_of_kyFanPrefixParity {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k �
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
   chapter39 hk hn (tuckerLemmaStatement_of_kyFanPrefixParity (by omega) hparity)
 
+/-- Compact bounds form of `chapter39_of_kyFanPrefixParity`. -/
+theorem chapter39_bounds_of_kyFanPrefixParity {n k : ℕ}
+    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (hparity : KyFanPrefixParityStatement n (n - 1)) :
+    KneserColoringBounds n k :=
+  chapter39_of_kyFanPrefixParity hk hn hparity
+
+/-- Chromatic-number form of `chapter39_of_kyFanPrefixParity`. -/
+theorem chapter39_chromaticNumber_of_kyFanPrefixParity {n k : ℕ}
+    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (hparity : KyFanPrefixParityStatement n (n - 1)) :
+    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
+  KneserColoringBounds.chromaticNumber
+    (chapter39_bounds_of_kyFanPrefixParity hk hn hparity)
+
 /--
 The same conclusion from the equivalent mod-four Ky Fan count.  This is often
 the form produced directly by the standard boundary-parity proof.
@@ -2706,6 +2742,21 @@ theorem chapter39_of_kyFanPrefixModFour {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k �
     (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
   chapter39 hk hn (tuckerLemmaStatement_of_kyFanPrefixModFour (by omega) hmodFour)
+
+/-- Compact bounds form of `chapter39_of_kyFanPrefixModFour`. -/
+theorem chapter39_bounds_of_kyFanPrefixModFour {n k : ℕ}
+    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (hmodFour : KyFanPrefixModFourStatement n (n - 1)) :
+    KneserColoringBounds n k :=
+  chapter39_of_kyFanPrefixModFour hk hn hmodFour
+
+/-- Chromatic-number form of `chapter39_of_kyFanPrefixModFour`. -/
+theorem chapter39_chromaticNumber_of_kyFanPrefixModFour {n k : ℕ}
+    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (hmodFour : KyFanPrefixModFourStatement n (n - 1)) :
+    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
+  KneserColoringBounds.chromaticNumber
+    (chapter39_bounds_of_kyFanPrefixModFour hk hn hmodFour)
 
 /--
 Chapter 39 from the concrete Prescott-Su/Fan path endpoint decomposition.
@@ -2721,5 +2772,20 @@ theorem chapter39_of_kyFanPrefixPathEndpointDecomposition {n k : ℕ}
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
   chapter39_of_kyFanPrefixParity hk hn
     (kyFanPrefixParityStatement_of_pathEndpointDecomposition hpaths)
+
+/-- Compact bounds form of `chapter39_of_kyFanPrefixPathEndpointDecomposition`. -/
+theorem chapter39_bounds_of_kyFanPrefixPathEndpointDecomposition {n k : ℕ}
+    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (hpaths : KyFanPrefixPathEndpointDecompositionStatement n (n - 1)) :
+    KneserColoringBounds n k :=
+  chapter39_of_kyFanPrefixPathEndpointDecomposition hk hn hpaths
+
+/-- Chromatic-number form of `chapter39_of_kyFanPrefixPathEndpointDecomposition`. -/
+theorem chapter39_chromaticNumber_of_kyFanPrefixPathEndpointDecomposition {n k : ℕ}
+    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (hpaths : KyFanPrefixPathEndpointDecompositionStatement n (n - 1)) :
+    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
+  KneserColoringBounds.chromaticNumber
+    (chapter39_bounds_of_kyFanPrefixPathEndpointDecomposition hk hn hpaths)
 
 end ProofsInTheBook.Chapter39

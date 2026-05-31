@@ -1878,6 +1878,29 @@ theorem tuckerLemmaStatement_three : TuckerLemmaStatement 3 := by
   · have h := congrArg TuckerLemmaCoreBridge.ofCoreSignedLabel hcomp
     simpa [coreLabel] using h
 
+theorem tuckerLemmaStatement_four : TuckerLemmaStatement 4 := by
+  intro label hantipodal
+  let coreLabel :
+      ProofsInTheBook.TuckerLemmaCore.NonzeroSignedSubset 4 →
+        ProofsInTheBook.TuckerLemmaCore.SignedLabel (4 - 1) :=
+    fun X => TuckerLemmaCoreBridge.toCoreSignedLabel
+      (label (TuckerLemmaCoreBridge.ofCoreNonzeroSignedSubset X))
+  have hcoreAntipodal :
+      ∀ X, coreLabel X.antipode = (coreLabel X).neg := by
+    intro X
+    have h := congrArg TuckerLemmaCoreBridge.toCoreSignedLabel
+      (hantipodal (TuckerLemmaCoreBridge.ofCoreNonzeroSignedSubset X))
+    simpa [coreLabel] using h
+  obtain ⟨X, Y, hXY, hcomp⟩ :=
+    ProofsInTheBook.TuckerLemmaCore.tuckerLemmaStatement_four coreLabel hcoreAntipodal
+  refine ⟨TuckerLemmaCoreBridge.ofCoreNonzeroSignedSubset X,
+    TuckerLemmaCoreBridge.ofCoreNonzeroSignedSubset Y, ?_, ?_⟩
+  · simpa [TuckerLemmaCoreBridge.ofCoreNonzeroSignedSubset,
+      TuckerLemmaCoreBridge.ofCoreSignedSubset, SignedSubset.Le,
+      ProofsInTheBook.TuckerLemmaCore.SignedSubset.Le] using hXY
+  · have h := congrArg TuckerLemmaCoreBridge.ofCoreSignedLabel hcomp
+    simpa [coreLabel] using h
+
 /-- Tucker's lemma is unconditional in dimensions one through three. -/
 theorem tuckerLemmaStatement_le_three {n : ℕ} (hnpos : 1 ≤ n) (hnle : n ≤ 3) :
     TuckerLemmaStatement n := by
@@ -1886,10 +1909,19 @@ theorem tuckerLemmaStatement_le_three {n : ℕ} (hnpos : 1 ≤ n) (hnle : n ≤ 
   · exact tuckerLemmaStatement_two
   · exact tuckerLemmaStatement_three
 
+/-- Tucker's lemma is unconditional in dimensions one through four. -/
+theorem tuckerLemmaStatement_le_four {n : ℕ} (hnpos : 1 ≤ n) (hnle : n ≤ 4) :
+    TuckerLemmaStatement n := by
+  interval_cases n
+  · exact tuckerLemmaStatement_one
+  · exact tuckerLemmaStatement_two
+  · exact tuckerLemmaStatement_three
+  · exact tuckerLemmaStatement_four
+
 /-- Tucker's lemma is unconditional in dimensions one and two. -/
 theorem tuckerLemmaStatement_le_two {n : ℕ} (hnpos : 1 ≤ n) (hnle : n ≤ 2) :
     TuckerLemmaStatement n :=
-  tuckerLemmaStatement_le_three hnpos (by omega)
+  tuckerLemmaStatement_le_four hnpos (by omega)
 
 /--
 The two-dimensional Ky Fan prefix-parity statement is discharged by the direct
@@ -2060,15 +2092,23 @@ theorem chapter39 {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
 
 /--
 Unconditional low-dimensional Chapter 39.  Under the theorem's ordinary
-hypotheses, `n ≤ 3` leaves only the already-proved Tucker dimensions, so the
+hypotheses, `n ≤ 4` leaves only the already-proved Tucker dimensions, so the
 conditional Tucker assumption in `chapter39` is discharged here.
 -/
-theorem chapter39_low_dim {n k : ℕ} (hnle : n ≤ 3) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
+theorem chapter39_low_dim {n k : ℕ} (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
     (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
     (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
-  chapter39 hk hn (tuckerLemmaStatement_le_three (by omega) hnle)
+  chapter39 hk hn (tuckerLemmaStatement_le_four (by omega) hnle)
+
+/-- Unconditional Chapter 39 in dimensions at most four. -/
+theorem chapter39_le_four {n k : ℕ} (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
+    (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
+  chapter39_low_dim hnle hk hn
 
 /--
 The same Chapter 39 conclusion from Ky Fan's alternating-chain form.  The

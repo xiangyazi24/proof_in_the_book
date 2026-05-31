@@ -26,16 +26,18 @@ simplicial-complex infrastructure, but no Borsuk-Ulam theorem, Tucker lemma,
 Ky Fan lemma, octahedral sphere labeling theorem, or ready-made bridge from
 too-small Kneser colorings to a forbidden antipodal/complementary labeling.
 
-The remaining upstream gap is now the finite Ky Fan boundary-parity count,
-formalized in two equivalent ways: `KyFanPrefixParityStatement` says that the
-positive-first alternating signed-permutation prefix chains are odd, while
-`KyFanPrefixModFourStatement` says that both orientations together have
-cardinality `2 mod 4`.  This file proves the Matoušek construction from a
-hypothetical `(n - 2*k + 1)`-coloring of `KG(n,k)` to a Tucker counterexample,
-proves low-dimensional Tucker cases, packages them into an unconditional
-low-dimensional Lovász theorem, proves the one-dimensional Ky Fan prefix-parity
-count and the vacuous two-dimensional Ky Fan prefix-parity case, and proves
-either Ky Fan parity frontier implies
+The remaining upstream gap is now the finite Ky Fan boundary-parity count, or
+equivalently the core Tucker statement for every positive ambient dimension.
+`KyFanPrefixParityStatement` says that the positive-first alternating
+signed-permutation prefix chains are odd, while `KyFanPrefixModFourStatement`
+says that both orientations together have cardinality `2 mod 4`.
+
+This file proves the Matoušek construction from a hypothetical
+`(n - 2*k + 1)`-coloring of `KG(n,k)` to a Tucker counterexample, imports the
+core low-dimensional Tucker results through dimension four, packages them into
+an unconditional low-dimensional Lovász theorem, proves the one-dimensional
+Ky Fan prefix-parity count and the vacuous two-dimensional Ky Fan prefix-parity
+case, and proves either Ky Fan parity frontier implies
 `TuckerLemmaStatement → chapter39`.  It also records chromatic-number
 corollaries for the fully proved low-dimensional cases.
 -/
@@ -2266,6 +2268,14 @@ theorem KneserColoringBounds.not_colorable {n k : ℕ} (h : KneserColoringBounds
   intro hcolorable
   exact h.2 (kneser_colorable_iff_exists_coloring.mp hcolorable)
 
+/-- No smaller palette can color a Kneser graph once the Chapter 39 bounds are
+available. -/
+theorem KneserColoringBounds.not_colorable_of_le {n k q : ℕ}
+    (h : KneserColoringBounds n k) (hq : q ≤ n - 2 * k + 1) :
+    ¬ (kneserGraph n k).Colorable q := by
+  intro hcolorable
+  exact h.not_colorable (SimpleGraph.Colorable.mono hq hcolorable)
+
 /-- Chromatic-number corollary extracted from the compact bounds. -/
 theorem KneserColoringBounds.chromaticNumber {n k : ℕ} (h : KneserColoringBounds n k) :
     (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
@@ -2377,6 +2387,60 @@ theorem chapter39_chromaticNumber {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
   exact kneser_chromaticNumber_eq_of_bounds h.1 h.2
 
 /--
+The pointwise upstream theorem that would make Chapter 39 fully
+unconditional.  This is the exact remaining frontier for this file: the Kneser
+graph arguments and Matoušek reduction are formalized, so a core Tucker lemma
+in each positive dimension immediately yields the full theorem below.
+-/
+def Chapter39TuckerFrontier : Prop :=
+  ∀ n : ℕ, 1 ≤ n → ProofsInTheBook.TuckerLemmaCore.TuckerLemmaStatement n
+
+/-- Chapter 39 using the independent core Tucker statement directly. -/
+theorem chapter39_of_core_tucker {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (hcore : ProofsInTheBook.TuckerLemmaCore.TuckerLemmaStatement n) :
+    (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
+  chapter39 hk hn (TuckerLemmaCoreBridge.tuckerLemmaStatement_of_core hcore)
+
+/-- Compact bounds form of `chapter39_of_core_tucker`. -/
+theorem chapter39_bounds_of_core_tucker {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (hcore : ProofsInTheBook.TuckerLemmaCore.TuckerLemmaStatement n) :
+    KneserColoringBounds n k :=
+  chapter39_of_core_tucker hk hn hcore
+
+/-- Chromatic-number form of `chapter39_of_core_tucker`. -/
+theorem chapter39_chromaticNumber_of_core_tucker {n k : ℕ}
+    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
+    (hcore : ProofsInTheBook.TuckerLemmaCore.TuckerLemmaStatement n) :
+    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
+  KneserColoringBounds.chromaticNumber (chapter39_bounds_of_core_tucker hk hn hcore)
+
+/-- Full Chapter 39 from the exact core Tucker frontier. -/
+theorem chapter39_of_tucker_frontier (hfrontier : Chapter39TuckerFrontier)
+    {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
+    (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
+  chapter39_of_core_tucker hk hn (hfrontier n (by omega))
+
+/-- Chromatic-number form of the full theorem from the exact core Tucker frontier. -/
+theorem chapter39_chromaticNumber_of_tucker_frontier
+    (hfrontier : Chapter39TuckerFrontier) {n k : ℕ}
+    (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
+    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
+  chapter39_chromaticNumber_of_core_tucker hk hn (hfrontier n (by omega))
+
+/-- The ordinary hypotheses and `n ≤ 4` leave exactly four parameter pairs. -/
+theorem chapter39_low_dim_parameter_cases {n k : ℕ}
+    (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
+    (n = 2 ∧ k = 1) ∨ (n = 3 ∧ k = 1) ∨
+      (n = 4 ∧ k = 1) ∨ (n = 4 ∧ k = 2) := by
+  omega
+
+/--
 Unconditional low-dimensional Chapter 39.  Under the theorem's ordinary
 hypotheses, `n ≤ 4` leaves only the already-proved Tucker dimensions, so the
 conditional Tucker assumption in `chapter39` is discharged here.  The only
@@ -2396,6 +2460,14 @@ theorem chapter39_low_dim_bounds {n k : ℕ}
     (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
     KneserColoringBounds n k :=
   chapter39_low_dim hnle hk hn
+
+/-- Low-dimensional Chapter 39 together with the exhaustive parameter list. -/
+theorem chapter39_low_dim_bounds_and_cases {n k : ℕ}
+    (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
+    KneserColoringBounds n k ∧
+      ((n = 2 ∧ k = 1) ∨ (n = 3 ∧ k = 1) ∨
+        (n = 4 ∧ k = 1) ∨ (n = 4 ∧ k = 2)) :=
+  ⟨chapter39_low_dim_bounds hnle hk hn, chapter39_low_dim_parameter_cases hnle hk hn⟩
 
 /-- Chromatic-number form of the unconditional low-dimensional theorem. -/
 theorem chapter39_low_dim_chromaticNumber {n k : ℕ}
@@ -2418,6 +2490,11 @@ theorem chapter39_le_four_chromaticNumber {n k : ℕ}
     (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
   chapter39_low_dim_chromaticNumber hnle hk hn
 
+/-- `KG(2,1)` has two vertices. -/
+theorem kneserVertex_card_two_one :
+    Fintype.card (KneserVertex 2 1) = 2 := by
+  rw [kneserVertex_card, Nat.choose_one_right]
+
 /-- `KG(2,1)` is the complete graph on its two singleton vertices. -/
 theorem kneserGraph_two_one_eq_completeGraph :
     kneserGraph 2 1 = SimpleGraph.completeGraph (KneserVertex 2 1) := by
@@ -2433,10 +2510,19 @@ theorem chapter39_two_one :
   simpa using chapter39_low_dim (n := 2) (k := 1)
     (by omega) (by omega) (by omega)
 
+/-- Compact bounds form of `chapter39_two_one`. -/
+theorem chapter39_two_one_bounds : KneserColoringBounds 2 1 :=
+  chapter39_two_one
+
 /-- `KG(2,1)` has chromatic number `2`. -/
 theorem kneser_chromaticNumber_two_one :
     (kneserGraph 2 1).chromaticNumber = ((2 : ℕ) : ℕ∞) := by
   exact kneser_chromaticNumber_eq_of_bounds chapter39_two_one.1 chapter39_two_one.2
+
+/-- `KG(3,1)` has three vertices. -/
+theorem kneserVertex_card_three_one :
+    Fintype.card (KneserVertex 3 1) = 3 := by
+  rw [kneserVertex_card, Nat.choose_one_right]
 
 /-- `KG(3,1)` is the complete graph on its three singleton vertices. -/
 theorem kneserGraph_three_one_eq_completeGraph :
@@ -2453,10 +2539,19 @@ theorem chapter39_three_one :
   simpa using chapter39_low_dim (n := 3) (k := 1)
     (by omega) (by omega) (by omega)
 
+/-- Compact bounds form of `chapter39_three_one`. -/
+theorem chapter39_three_one_bounds : KneserColoringBounds 3 1 :=
+  chapter39_three_one
+
 /-- `KG(3,1)` has chromatic number `3`. -/
 theorem kneser_chromaticNumber_three_one :
     (kneserGraph 3 1).chromaticNumber = ((3 : ℕ) : ℕ∞) := by
   exact kneser_chromaticNumber_eq_of_bounds chapter39_three_one.1 chapter39_three_one.2
+
+/-- `KG(4,1)` has four vertices. -/
+theorem kneserVertex_card_four_one :
+    Fintype.card (KneserVertex 4 1) = 4 := by
+  rw [kneserVertex_card, Nat.choose_one_right]
 
 /-- `KG(4,1)` is the complete graph on its four singleton vertices. -/
 theorem kneserGraph_four_one_eq_completeGraph :
@@ -2473,10 +2568,24 @@ theorem chapter39_four_one :
   simpa using chapter39_low_dim (n := 4) (k := 1)
     (by omega) (by omega) (by omega)
 
+/-- Compact bounds form of `chapter39_four_one`. -/
+theorem chapter39_four_one_bounds : KneserColoringBounds 4 1 :=
+  chapter39_four_one
+
 /-- `KG(4,1)` has chromatic number `4`. -/
 theorem kneser_chromaticNumber_four_one :
     (kneserGraph 4 1).chromaticNumber = ((4 : ℕ) : ℕ∞) := by
   exact kneser_chromaticNumber_eq_of_bounds chapter39_four_one.1 chapter39_four_one.2
+
+/-- `KG(4,2)` has six vertices. -/
+theorem kneserVertex_card_four_two :
+    Fintype.card (KneserVertex 4 2) = 6 := by
+  rw [kneserVertex_card, Nat.choose_two_right]
+
+/-- `KG(4,2)` has an edge. -/
+theorem kneserGraph_four_two_exists_adj :
+    ∃ a b : KneserVertex 4 2, (kneserGraph 4 2).Adj a b :=
+  kneserGraph_exists_adj_of_two_mul_le (n := 4) (k := 2) (by omega) (by omega)
 
 /-- `KG(4,2)` satisfies the Chapter 39 coloring bounds:
 it is 2-colorable and not 1-colorable. -/
@@ -2487,6 +2596,10 @@ theorem chapter39_four_two :
         ∀ a b, (kneserGraph 4 2).Adj a b → C a ≠ C b) := by
   simpa using chapter39_low_dim (n := 4) (k := 2)
     (by omega) (by omega) (by omega)
+
+/-- Compact bounds form of `chapter39_four_two`. -/
+theorem chapter39_four_two_bounds : KneserColoringBounds 4 2 :=
+  chapter39_four_two
 
 /-- `KG(4,2)` has chromatic number `2`. -/
 theorem kneser_chromaticNumber_four_two :
@@ -2504,6 +2617,11 @@ theorem kneserGraph_two_one_not_colorable_one :
   intro hcolorable
   exact chapter39_two_one.2 (kneser_colorable_iff_exists_coloring.mp hcolorable)
 
+/-- `KG(2,1)` is not colorable with any palette of size at most one. -/
+theorem kneserGraph_two_one_not_colorable_of_le {q : ℕ} (hq : q ≤ 1) :
+    ¬ (kneserGraph 2 1).Colorable q :=
+  chapter39_two_one_bounds.not_colorable_of_le (by simpa using hq)
+
 /-- `KG(3,1)` is 3-colorable. -/
 theorem kneserGraph_three_one_colorable :
     (kneserGraph 3 1).Colorable 3 :=
@@ -2514,6 +2632,11 @@ theorem kneserGraph_three_one_not_colorable_two :
     ¬ (kneserGraph 3 1).Colorable 2 := by
   intro hcolorable
   exact chapter39_three_one.2 (kneser_colorable_iff_exists_coloring.mp hcolorable)
+
+/-- `KG(3,1)` is not colorable with any palette of size at most two. -/
+theorem kneserGraph_three_one_not_colorable_of_le {q : ℕ} (hq : q ≤ 2) :
+    ¬ (kneserGraph 3 1).Colorable q :=
+  chapter39_three_one_bounds.not_colorable_of_le (by simpa using hq)
 
 /-- `KG(4,1)` is 4-colorable. -/
 theorem kneserGraph_four_one_colorable :
@@ -2526,6 +2649,11 @@ theorem kneserGraph_four_one_not_colorable_three :
   intro hcolorable
   exact chapter39_four_one.2 (kneser_colorable_iff_exists_coloring.mp hcolorable)
 
+/-- `KG(4,1)` is not colorable with any palette of size at most three. -/
+theorem kneserGraph_four_one_not_colorable_of_le {q : ℕ} (hq : q ≤ 3) :
+    ¬ (kneserGraph 4 1).Colorable q :=
+  chapter39_four_one_bounds.not_colorable_of_le (by simpa using hq)
+
 /-- `KG(4,2)` is 2-colorable. -/
 theorem kneserGraph_four_two_colorable :
     (kneserGraph 4 2).Colorable 2 :=
@@ -2536,6 +2664,11 @@ theorem kneserGraph_four_two_not_colorable_one :
     ¬ (kneserGraph 4 2).Colorable 1 := by
   intro hcolorable
   exact chapter39_four_two.2 (kneser_colorable_iff_exists_coloring.mp hcolorable)
+
+/-- `KG(4,2)` is not colorable with any palette of size at most one. -/
+theorem kneserGraph_four_two_not_colorable_of_le {q : ℕ} (hq : q ≤ 1) :
+    ¬ (kneserGraph 4 2).Colorable q :=
+  chapter39_four_two_bounds.not_colorable_of_le (by simpa using hq)
 
 /--
 The same Chapter 39 conclusion from Ky Fan's alternating-chain form.  The

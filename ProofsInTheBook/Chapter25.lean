@@ -321,6 +321,16 @@ theorem buffon_noodle_expected_crossings {ι : Type*} (segments : Finset ι)
   rw [curveExpectedCrossings_eq_total_length]
   rfl
 
+/-- Buffon's noodle formula in total-arc-length form: a finite polygonal curve
+with total length `L` has expected crossing count `2L/(πd)`, independent of
+how the length is distributed among the segments. -/
+theorem curveExpectedCrossings_eq_of_total_arc_length
+    {ι : Type*} (segments : Finset ι) (length : ι → ℝ) {d L : ℝ}
+    (hd : 0 < d) (hL : (∑ i ∈ segments, length i) = L) :
+    curveExpectedCrossings segments length d =
+      2 * L / (Real.pi * d) := by
+  rw [buffon_noodle_expected_crossings segments length d hd, hL]
+
 /--
 The book's proof of Buffon's formula proceeds in three steps:
 1. For a single segment of length ℓ, average the center-distance crossing
@@ -616,6 +626,18 @@ theorem buffon_noodle_expected_crossings_measure
     segments length hd hlen hle]
   exact buffon_noodle_expected_crossings segments length d hd
 
+/-- Measure-theoretic total-arc-length form of Buffon's noodle formula: summing
+the actual short-piece crossing probabilities for any finite polygonal curve
+depends only on the curve's total arc length `L`. -/
+theorem buffon_noodle_expected_crossings_measure_of_total_arc_length
+    {ι : Type*} (segments : Finset ι) (length : ι → ℝ) {d L : ℝ}
+    (hd : 0 < d) (hlen : ∀ i ∈ segments, 0 ≤ length i)
+    (hle : ∀ i ∈ segments, length i ≤ d)
+    (hL : (∑ i ∈ segments, length i) = L) :
+    (∑ i ∈ segments, buffonNeedleCrossingProbability d (length i)) =
+      2 * L / (Real.pi * d) := by
+  rw [buffon_noodle_expected_crossings_measure segments length hd hlen hle, hL]
+
 /-- There is always a positive number of equal pieces making a segment short
 enough for the short-needle measure theorem. -/
 theorem exists_short_subdivision {d length : ℝ} (hd : 0 < d) :
@@ -677,6 +699,14 @@ theorem exists_subdivision_buffon_expected_crossings
   rcases exists_short_subdivision (d := d) (length := length) hd with ⟨n, hn, hle⟩
   exact ⟨n, hn, equal_subdivision_piece_le_spacing hn hle,
     buffon_expected_crossings_arbitrary_length hd hlen hn hle⟩
+
+/-- Endpoint case of the measure theorem: when the needle length equals the
+line spacing, the crossing probability is `2/π`. -/
+theorem buffonNeedleCrossingProbability_eq_two_div_pi_of_length_eq_spacing
+    {d : ℝ} (hd : 0 < d) :
+    buffonNeedleCrossingProbability d d = 2 / Real.pi := by
+  rw [buffonNeedleCrossingProbability_eq_formula hd hd.le le_rfl]
+  field_simp [Real.pi_ne_zero, hd.ne']
 
 /--
 Chapter 25 (Buffon's needle, short-needle density model):

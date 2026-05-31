@@ -22,13 +22,13 @@ The proof proceeds by:
 Formalization status: this file closes the finite sign bookkeeping layer and
 the final counting contradiction.  It defines edge signs from dihedral-angle
 comparisons, strict sign changes around triangular faces, proves the basic
-parity facts, packages the abstract consequence of Cauchy's arm lemma, and
-states `chapter13` / `chapter13_rigidity` from meaningful missing
-geometric/combinatorial facts.  The remaining frontier is now explicit:
-vertex-link geometry must turn the low sign-change cases into fixed-chord
-Cauchy-arm obstructions.  The Euler polyhedron formula is carried as boundary
-topology in `ConvexPolyhedron`, and the triangulated incidence count is proved
-from the boundary-edge equivalence.
+parity facts, proves the two-edge Cauchy-arm base case from the law of cosines,
+packages the abstract consequence of Cauchy's arm lemma, and states `chapter13`
+/ `chapter13_rigidity` from meaningful missing geometric/combinatorial facts.
+The remaining frontier is now explicit: vertex-link geometry must turn the low
+sign-change cases into fixed-chord Cauchy-arm obstructions.  The Euler
+polyhedron formula is carried as boundary topology in `ConvexPolyhedron`, and
+the triangulated incidence count is proved from the boundary-edge equivalence.
 
 Gap to the full book theorem: the missing work is genuine three-dimensional
 Euclidean polyhedron infrastructure.  A complete proof needs a formal convex
@@ -681,6 +681,171 @@ theorem strictSignChangesAroundTriangle_cycle (a b c : StrictEdgeSign) :
 theorem signChangesAroundTriangle_cycle (a b c : EdgeSign) :
     SignChangesAroundTriangle a b c = SignChangesAroundTriangle b c a := by
   cases a <;> cases b <;> cases c <;> decide
+
+/-! ### Cauchy arms -/
+
+/-- The planar ambient space for Cauchy's arm lemma. -/
+abbrev Euclidean2 :=
+  EuclideanSpace ℝ (Fin 2)
+
+namespace CauchyArm
+
+/-- The initial vertex index of the `i`-th edge in an `n`-edge arm. -/
+def edgeStart {n : ℕ} (i : Fin n) : Fin (n + 1) :=
+  ⟨i.1, by omega⟩
+
+/-- The terminal vertex index of the `i`-th edge in an `n`-edge arm. -/
+def edgeEnd {n : ℕ} (i : Fin n) : Fin (n + 1) :=
+  ⟨i.1 + 1, by omega⟩
+
+/-- The first vertex of an `n`-edge arm. -/
+def firstVertex (n : ℕ) : Fin (n + 1) :=
+  ⟨0, by omega⟩
+
+/-- The last vertex of an `n`-edge arm. -/
+def lastVertex (n : ℕ) : Fin (n + 1) :=
+  ⟨n, by omega⟩
+
+/-- The edge immediately before the `i`-th joint angle. -/
+def jointPrevEdge {n : ℕ} (i : Fin (n - 1)) : Fin n :=
+  ⟨i.1, by omega⟩
+
+/-- The edge immediately after the `i`-th joint angle. -/
+def jointNextEdge {n : ℕ} (i : Fin (n - 1)) : Fin n :=
+  ⟨i.1 + 1, by omega⟩
+
+/-- The directed vector of the `i`-th edge in an arm. -/
+noncomputable def edgeVector {n : ℕ} (vertex : Fin (n + 1) → Euclidean2) (i : Fin n) :
+    Euclidean2 :=
+  vertex (edgeEnd i) - vertex (edgeStart i)
+
+/-- The interior angle at the `i`-th joint of an arm. -/
+noncomputable def geometricJointAngle {n : ℕ} (vertex : Fin (n + 1) → Euclidean2)
+    (i : Fin (n - 1)) : ℝ :=
+  InnerProductGeometry.angle (-(edgeVector vertex (jointPrevEdge i)))
+    (edgeVector vertex (jointNextEdge i))
+
+end CauchyArm
+
+/--
+A planar Cauchy arm with `n` fixed-length edges and the `n - 1` interior
+angles between consecutive edges.  The convexity needed by the arm lemma is
+recorded as the local angle bounds `0 ≤ angle ≤ π`.
+-/
+structure CauchyArm (n : ℕ) where
+  vertex : Fin (n + 1) → Euclidean2
+  edgeLength : Fin n → ℝ
+  jointAngle : Fin (n - 1) → ℝ
+  chord : ℝ
+  edgeLength_eq_dist :
+    ∀ i, edgeLength i = dist (vertex (CauchyArm.edgeStart i)) (vertex (CauchyArm.edgeEnd i))
+  jointAngle_eq_geometric :
+    ∀ i, jointAngle i = CauchyArm.geometricJointAngle vertex i
+  edgeLength_pos : ∀ i, 0 < edgeLength i
+  jointAngle_nonneg : ∀ i, 0 ≤ jointAngle i
+  jointAngle_le_pi : ∀ i, jointAngle i ≤ Real.pi
+  chord_eq_dist :
+    chord = dist (vertex (CauchyArm.firstVertex n)) (vertex (CauchyArm.lastVertex n))
+
+namespace CauchyArm
+
+/--
+The law-of-cosines radicand for a two-edge arm with side lengths `a`, `b` and
+included angle `theta`.
+-/
+noncomputable def twoEdgeChordRadicand (a b theta : ℝ) : ℝ :=
+  a ^ 2 + b ^ 2 - 2 * a * b * Real.cos theta
+
+/-- The chord length given by the law of cosines for a two-edge arm. -/
+noncomputable def twoEdgeChord (a b theta : ℝ) : ℝ :=
+  Real.sqrt (twoEdgeChordRadicand a b theta)
+
+/--
+The specialized law-of-cosines statement for a two-edge `CauchyArm`.  This is
+kept as a predicate so the two-edge monotonicity proof can be reused before the
+full vector law-of-cosines bridge is connected to `geometricJointAngle`.
+-/
+def TwoEdgeLawOfCosines (A : CauchyArm 2) : Prop :=
+  A.chord = twoEdgeChord (A.edgeLength 0) (A.edgeLength 1) (A.jointAngle 0)
+
+theorem twoEdgeChordRadicand_nonneg {a b theta : ℝ}
+    (ha : 0 ≤ a) (hb : 0 ≤ b) :
+    0 ≤ twoEdgeChordRadicand a b theta := by
+  have hab : 0 ≤ 2 * a * b := by positivity
+  have hcos : Real.cos theta ≤ 1 := Real.cos_le_one theta
+  have hmul : 2 * a * b * Real.cos theta ≤ 2 * a * b * 1 := by
+    exact mul_le_mul_of_nonneg_left hcos hab
+  have hsq : 0 ≤ (a - b) ^ 2 := sq_nonneg (a - b)
+  unfold twoEdgeChordRadicand
+  nlinarith [hmul, hsq]
+
+theorem twoEdgeChordRadicand_mono {a b theta phi : ℝ}
+    (ha : 0 ≤ a) (hb : 0 ≤ b)
+    (htheta_nonneg : 0 ≤ theta) (hphi_le_pi : phi ≤ Real.pi)
+    (hangle : theta ≤ phi) :
+    twoEdgeChordRadicand a b theta ≤ twoEdgeChordRadicand a b phi := by
+  have hcos : Real.cos phi ≤ Real.cos theta :=
+    Real.cos_le_cos_of_nonneg_of_le_pi htheta_nonneg hphi_le_pi hangle
+  have hab : 0 ≤ 2 * a * b := by positivity
+  have hmul : 2 * a * b * Real.cos phi ≤ 2 * a * b * Real.cos theta := by
+    exact mul_le_mul_of_nonneg_left hcos hab
+  unfold twoEdgeChordRadicand
+  nlinarith
+
+theorem twoEdgeChord_mono {a b theta phi : ℝ}
+    (ha : 0 ≤ a) (hb : 0 ≤ b)
+    (htheta_nonneg : 0 ≤ theta) (hphi_le_pi : phi ≤ Real.pi)
+    (hangle : theta ≤ phi) :
+    twoEdgeChord a b theta ≤ twoEdgeChord a b phi :=
+  Real.sqrt_le_sqrt (twoEdgeChordRadicand_mono ha hb htheta_nonneg hphi_le_pi hangle)
+
+theorem twoEdgeChordRadicand_strict_mono {a b theta phi : ℝ}
+    (ha : 0 < a) (hb : 0 < b)
+    (htheta_nonneg : 0 ≤ theta) (hphi_le_pi : phi ≤ Real.pi)
+    (hangle : theta < phi) :
+    twoEdgeChordRadicand a b theta < twoEdgeChordRadicand a b phi := by
+  have hcos : Real.cos phi < Real.cos theta :=
+    Real.cos_lt_cos_of_nonneg_of_le_pi htheta_nonneg hphi_le_pi hangle
+  have hab : 0 < 2 * a * b := by positivity
+  have hmul : 2 * a * b * Real.cos phi < 2 * a * b * Real.cos theta := by
+    exact mul_lt_mul_of_pos_left hcos hab
+  unfold twoEdgeChordRadicand
+  nlinarith
+
+theorem twoEdgeChord_strict_mono {a b theta phi : ℝ}
+    (ha : 0 < a) (hb : 0 < b)
+    (htheta_nonneg : 0 ≤ theta) (hphi_le_pi : phi ≤ Real.pi)
+    (hangle : theta < phi) :
+    twoEdgeChord a b theta < twoEdgeChord a b phi := by
+  apply Real.sqrt_lt_sqrt
+  · exact twoEdgeChordRadicand_nonneg (le_of_lt ha) (le_of_lt hb)
+  · exact twoEdgeChordRadicand_strict_mono ha hb htheta_nonneg hphi_le_pi hangle
+
+/--
+Two-edge Cauchy arm monotonicity.  If the two edge lengths are fixed and the
+included angle is opened, then the endpoint chord strictly increases, unless
+the angle did not change.
+-/
+theorem arm_chord_monotone (A B : CauchyArm 2)
+    (hA : A.TwoEdgeLawOfCosines) (hB : B.TwoEdgeLawOfCosines)
+    (hlength : ∀ i : Fin 2, A.edgeLength i = B.edgeLength i)
+    (hangle : ∀ i : Fin (2 - 1), A.jointAngle i ≤ B.jointAngle i) :
+    A.chord < B.chord ∨ ∀ i : Fin (2 - 1), A.jointAngle i = B.jointAngle i := by
+  by_cases hstrict : A.jointAngle 0 < B.jointAngle 0
+  · left
+    rw [hA, hB]
+    rw [← hlength 0, ← hlength 1]
+    exact twoEdgeChord_strict_mono (A.edgeLength_pos 0) (A.edgeLength_pos 1)
+      (A.jointAngle_nonneg 0) (B.jointAngle_le_pi 0) hstrict
+  · right
+    intro i
+    have hi : i = (0 : Fin (2 - 1)) := by
+      ext
+      omega
+    rw [hi]
+    exact le_antisymm (hangle 0) (le_of_not_gt hstrict)
+
+end CauchyArm
 
 /--
 Cauchy's arm lemma (abstract finite version): if a convex polygon's angles

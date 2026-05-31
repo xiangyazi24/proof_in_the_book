@@ -4164,20 +4164,30 @@ theorem kyFanPrefixModFourStatement_iff_tuckerLemmaStatement {n : ℕ} (hn : 1 �
   · intro htucker
     exact kyFanPrefixModFourStatement_of_tuckerLemmaStatement_of_lt htucker (by omega)
 
-/-- Encode the four labels `±0, ±1` as two-bit words:
-low bit is sign, high bit is index. -/
-private def signedLabelTwoCode (L : SignedLabel 2) : BitVec 2 :=
-  BitVec.ofNat 2 (2 * L.index.val + if L.positive then 1 else 0)
+/-- The sign-flip involution on the four labels encoded as `Fin 4`. -/
+private def fin4Flip (x : Fin 4) : Fin 4 :=
+  match x.val with
+  | 0 => 1
+  | 1 => 0
+  | 2 => 3
+  | _ => 2
+
+/-- Encode the four labels `±0, ±1` as `Fin 4`:
+the low bit is sign, the high bit is index. -/
+private def signedLabelTwoCode (L : SignedLabel 2) : Fin 4 :=
+  ⟨2 * L.index.val + if L.positive then 1 else 0, by
+    have hidx : L.index.val < 2 := L.index.isLt
+    cases L.positive <;> simp <;> omega⟩
 
 private theorem signedLabelTwoCode_neg (L : SignedLabel 2) :
-    signedLabelTwoCode L.neg = signedLabelTwoCode L ^^^ (1#2) := by
+    signedLabelTwoCode L.neg = fin4Flip (signedLabelTwoCode L) := by
   cases L with
   | mk positive index =>
-      cases positive <;> fin_cases index <;> native_decide
+      cases positive <;> fin_cases index <;> decide
 
 @[simp] private theorem signedLabelTwoCode_neg_mk (L : SignedLabel 2) :
     signedLabelTwoCode { positive := !L.positive, index := L.index } =
-      signedLabelTwoCode L ^^^ (1#2) := by
+      fin4Flip (signedLabelTwoCode L) := by
   simpa [SignedLabel.neg] using signedLabelTwoCode_neg L
 
 private theorem signedLabelTwoCode_injective : Function.Injective signedLabelTwoCode := by
@@ -4197,47 +4207,186 @@ private theorem signedLabelTwoCode_noComplement
   intro hcode
   exact hno X Y hXY (signedLabelTwoCode_injective hcode)
 
+open Lean Elab Tactic in
+private structure Fin4Constraint where
+  num : Nat
+  left : Nat
+  right : Nat
+  same : Bool
+
+open Lean Elab Tactic in
+private def fin4Constraints : List Fin4Constraint :=
+  [
+    ⟨49, 0, 10, true⟩,
+    ⟨50, 0, 7, true⟩,
+    ⟨51, 0, 4, true⟩,
+    ⟨52, 0, 1, true⟩,
+    ⟨54, 0, 3, false⟩,
+    ⟨55, 0, 6, false⟩,
+    ⟨56, 0, 9, false⟩,
+    ⟨57, 0, 12, false⟩,
+    ⟨58, 1, 6, true⟩,
+    ⟨60, 1, 10, false⟩,
+    ⟨61, 2, 6, true⟩,
+    ⟨62, 2, 5, true⟩,
+    ⟨63, 2, 4, true⟩,
+    ⟨64, 2, 1, false⟩,
+    ⟨66, 2, 3, false⟩,
+    ⟨67, 2, 10, false⟩,
+    ⟨68, 2, 11, false⟩,
+    ⟨69, 2, 12, false⟩,
+    ⟨70, 3, 4, true⟩,
+    ⟨72, 3, 12, false⟩,
+    ⟨74, 5, 4, false⟩,
+    ⟨76, 5, 6, false⟩,
+    ⟨78, 7, 4, false⟩,
+    ⟨80, 7, 10, false⟩,
+    ⟨81, 8, 4, false⟩,
+    ⟨82, 8, 5, false⟩,
+    ⟨83, 8, 6, false⟩,
+    ⟨84, 8, 7, false⟩,
+    ⟨86, 8, 9, false⟩,
+    ⟨87, 8, 10, false⟩,
+    ⟨88, 8, 11, false⟩,
+    ⟨89, 8, 12, false⟩,
+    ⟨90, 9, 6, false⟩,
+    ⟨92, 9, 12, false⟩,
+    ⟨94, 11, 10, false⟩,
+    ⟨96, 11, 12, false⟩
+  ]
+
+open Lean Elab Tactic in
+private def fin4FlipNat : Nat → Nat
+  | 0 => 1
+  | 1 => 0
+  | 2 => 3
+  | _ => 2
+
+open Lean Elab Tactic in
+private def assignmentGet (assignment : Array (Option Nat)) (i : Nat) : Option Nat :=
+  match assignment[i]? with
+  | some value => value
+  | none => none
+
+open Lean Elab Tactic in
+private def violatesConstraint (assignment : Array (Option Nat)) (c : Fin4Constraint) : Bool :=
+  match assignmentGet assignment c.left, assignmentGet assignment c.right with
+  | some x, some y => x == if c.same then y else fin4FlipNat y
+  | _, _ => false
+
+open Lean Elab Tactic in
+private def findViolation (assignment : Array (Option Nat)) : Option Fin4Constraint :=
+  fin4Constraints.find? (violatesConstraint assignment)
+
+open Lean Elab Tactic in
+private def validCount (assignment : Array (Option Nat)) (v : Nat) : Nat :=
+  ([0, 1, 2, 3].filter fun value =>
+    (findViolation (assignment.set! v (some value))).isNone).length
+
+open Lean Elab Tactic in
+private def constraintDegree (v : Nat) : Nat :=
+  (fin4Constraints.filter fun c => c.left = v ∨ c.right = v).length
+
+open Lean Elab Tactic in
+private def assignedTouch (assignment : Array (Option Nat)) (v : Nat) : Nat :=
+  (fin4Constraints.filter fun c =>
+    (c.left = v ∧ (assignmentGet assignment c.right).isSome) ∨
+      (c.right = v ∧ (assignmentGet assignment c.left).isSome)).length
+
+open Lean Elab Tactic in
+private def betterVar (assignment : Array (Option Nat)) (v best : Nat) : Bool :=
+  let vv := validCount assignment v
+  let bv := validCount assignment best
+  if vv < bv then true
+  else if bv < vv then false
+  else
+    let vt := assignedTouch assignment v
+    let bt := assignedTouch assignment best
+    if bt < vt then true
+    else if vt < bt then false
+    else constraintDegree best < constraintDegree v
+
+open Lean Elab Tactic in
+private def chooseVar? (assignment : Array (Option Nat)) : Option Nat :=
+  let vars := (List.range 13).filter fun v => (assignmentGet assignment v).isNone
+  match vars with
+  | [] => none
+  | v :: vs => some (vs.foldl (fun best w => if betterVar assignment w best then w else best) v)
+
+open Lean Elab Tactic in
+private partial def dpllFin4Tac (assignment : Array (Option Nat)) : TacticM Unit := do
+  match findViolation assignment with
+  | some c =>
+      let hstx := mkIdent (Name.mkSimple s!"h{c.num}")
+      if c.same then
+        evalTactic (← `(tactic| simp at $hstx:ident))
+      else
+        evalTactic (← `(tactic| simp [fin4Flip] at $hstx:ident))
+      unless (← getUnsolvedGoals).isEmpty do
+        throwError "DPLL leaf did not close"
+  | none =>
+      match chooseVar? assignment with
+      | none => throwError "DPLL reached a satisfying assignment"
+      | some v =>
+          let stx := mkIdent (Name.mkSimple s!"L{v}")
+          evalTactic (← `(tactic| fin_cases $stx:term))
+          let goals ← getUnsolvedGoals
+          let mut remaining : List MVarId := []
+          let mut value := 0
+          for goal in goals do
+            setGoals [goal]
+            dpllFin4Tac (assignment.set! v (some value))
+            remaining := remaining ++ (← getUnsolvedGoals)
+            value := value + 1
+          setGoals remaining
+
+elab "dpll_fin4" : tactic => dpllFin4Tac (Array.replicate 13 none)
+
 /-- The finite unsatisfiable core for the three-dimensional Tucker step. -/
 private theorem tuckerLemmaStatement_three_core_unsat
-    (L0 L1 L2 L3 L4 L5 L6 L7 L8 L9 L10 L11 L12 : BitVec 2) :
+    (L0 L1 L2 L3 L4 L5 L6 L7 L8 L9 L10 L11 L12 : Fin 4) :
     ¬ (
       L0 ≠ L10 ∧
       L0 ≠ L7 ∧
       L0 ≠ L4 ∧
       L0 ≠ L1 ∧
-      L0 ≠ (L3 ^^^ (1#2)) ∧
-      L0 ≠ (L6 ^^^ (1#2)) ∧
-      L0 ≠ (L9 ^^^ (1#2)) ∧
-      L0 ≠ (L12 ^^^ (1#2)) ∧
+      L0 ≠ fin4Flip L3 ∧
+      L0 ≠ fin4Flip L6 ∧
+      L0 ≠ fin4Flip L9 ∧
+      L0 ≠ fin4Flip L12 ∧
       L1 ≠ L6 ∧
-      L1 ≠ (L10 ^^^ (1#2)) ∧
+      L1 ≠ fin4Flip L10 ∧
       L2 ≠ L6 ∧
       L2 ≠ L5 ∧
       L2 ≠ L4 ∧
-      L2 ≠ (L1 ^^^ (1#2)) ∧
-      L2 ≠ (L3 ^^^ (1#2)) ∧
-      L2 ≠ (L10 ^^^ (1#2)) ∧
-      L2 ≠ (L11 ^^^ (1#2)) ∧
-      L2 ≠ (L12 ^^^ (1#2)) ∧
+      L2 ≠ fin4Flip L1 ∧
+      L2 ≠ fin4Flip L3 ∧
+      L2 ≠ fin4Flip L10 ∧
+      L2 ≠ fin4Flip L11 ∧
+      L2 ≠ fin4Flip L12 ∧
       L3 ≠ L4 ∧
-      L3 ≠ (L12 ^^^ (1#2)) ∧
-      L5 ≠ (L4 ^^^ (1#2)) ∧
-      L5 ≠ (L6 ^^^ (1#2)) ∧
-      L7 ≠ (L4 ^^^ (1#2)) ∧
-      L7 ≠ (L10 ^^^ (1#2)) ∧
-      L8 ≠ (L4 ^^^ (1#2)) ∧
-      L8 ≠ (L5 ^^^ (1#2)) ∧
-      L8 ≠ (L6 ^^^ (1#2)) ∧
-      L8 ≠ (L7 ^^^ (1#2)) ∧
-      L8 ≠ (L9 ^^^ (1#2)) ∧
-      L8 ≠ (L10 ^^^ (1#2)) ∧
-      L8 ≠ (L11 ^^^ (1#2)) ∧
-      L8 ≠ (L12 ^^^ (1#2)) ∧
-      L9 ≠ (L6 ^^^ (1#2)) ∧
-      L9 ≠ (L12 ^^^ (1#2)) ∧
-      L11 ≠ (L10 ^^^ (1#2)) ∧
-      L11 ≠ (L12 ^^^ (1#2))) := by
-  bv_decide
+      L3 ≠ fin4Flip L12 ∧
+      L5 ≠ fin4Flip L4 ∧
+      L5 ≠ fin4Flip L6 ∧
+      L7 ≠ fin4Flip L4 ∧
+      L7 ≠ fin4Flip L10 ∧
+      L8 ≠ fin4Flip L4 ∧
+      L8 ≠ fin4Flip L5 ∧
+      L8 ≠ fin4Flip L6 ∧
+      L8 ≠ fin4Flip L7 ∧
+      L8 ≠ fin4Flip L9 ∧
+      L8 ≠ fin4Flip L10 ∧
+      L8 ≠ fin4Flip L11 ∧
+      L8 ≠ fin4Flip L12 ∧
+      L9 ≠ fin4Flip L6 ∧
+      L9 ≠ fin4Flip L12 ∧
+      L11 ≠ fin4Flip L10 ∧
+      L11 ≠ fin4Flip L12) := by
+  intro h
+  rcases h with ⟨h49, h50, h51, h52, h54, h55, h56, h57, h58, h60, h61, h62,
+    h63, h64, h66, h67, h68, h69, h70, h72, h74, h76, h78, h80, h81, h82,
+    h83, h84, h86, h87, h88, h89, h90, h92, h94, h96⟩
+  dpll_fin4
 
 set_option linter.unusedSimpArgs false in
 private theorem not_noComplementaryComparableLabels_three
@@ -4300,19 +4449,19 @@ private theorem not_noComplementaryComparableLabels_three
     ⟨{ pos := {z, o, t}, neg := ∅, disjoint := by
         simp [z, o, t] },
       by simp [SignedSubset.Nonzero]⟩
-  let B0 : BitVec 2 := signedLabelTwoCode (label R0)
-  let B1 : BitVec 2 := signedLabelTwoCode (label R1)
-  let B2 : BitVec 2 := signedLabelTwoCode (label R2)
-  let B3 : BitVec 2 := signedLabelTwoCode (label R3)
-  let B4 : BitVec 2 := signedLabelTwoCode (label R4)
-  let B5 : BitVec 2 := signedLabelTwoCode (label R5)
-  let B6 : BitVec 2 := signedLabelTwoCode (label R6)
-  let B7 : BitVec 2 := signedLabelTwoCode (label R7)
-  let B8 : BitVec 2 := signedLabelTwoCode (label R8)
-  let B9 : BitVec 2 := signedLabelTwoCode (label R9)
-  let B10 : BitVec 2 := signedLabelTwoCode (label R10)
-  let B11 : BitVec 2 := signedLabelTwoCode (label R11)
-  let B12 : BitVec 2 := signedLabelTwoCode (label R12)
+  let B0 : Fin 4 := signedLabelTwoCode (label R0)
+  let B1 : Fin 4 := signedLabelTwoCode (label R1)
+  let B2 : Fin 4 := signedLabelTwoCode (label R2)
+  let B3 : Fin 4 := signedLabelTwoCode (label R3)
+  let B4 : Fin 4 := signedLabelTwoCode (label R4)
+  let B5 : Fin 4 := signedLabelTwoCode (label R5)
+  let B6 : Fin 4 := signedLabelTwoCode (label R6)
+  let B7 : Fin 4 := signedLabelTwoCode (label R7)
+  let B8 : Fin 4 := signedLabelTwoCode (label R8)
+  let B9 : Fin 4 := signedLabelTwoCode (label R9)
+  let B10 : Fin 4 := signedLabelTwoCode (label R10)
+  let B11 : Fin 4 := signedLabelTwoCode (label R11)
+  let B12 : Fin 4 := signedLabelTwoCode (label R12)
   have h49 : B0 ≠ B10 := by
     have h := signedLabelTwoCode_noComplement hno (X := R0) (Y := R10.antipode) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R10,
@@ -4333,22 +4482,22 @@ private theorem not_noComplementaryComparableLabels_three
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R1,
         z, o, t])
     simpa [B0, B1, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h54 : B0 ≠ (B3 ^^^ (1#2)) := by
+  have h54 : B0 ≠ fin4Flip B3 := by
     have h := signedLabelTwoCode_noComplement hno (X := R0) (Y := R3) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R3,
         z, o, t])
     simpa [B0, B3, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h55 : B0 ≠ (B6 ^^^ (1#2)) := by
+  have h55 : B0 ≠ fin4Flip B6 := by
     have h := signedLabelTwoCode_noComplement hno (X := R0) (Y := R6) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R6,
         z, o, t])
     simpa [B0, B6, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h56 : B0 ≠ (B9 ^^^ (1#2)) := by
+  have h56 : B0 ≠ fin4Flip B9 := by
     have h := signedLabelTwoCode_noComplement hno (X := R0) (Y := R9) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R9,
         z, o, t])
     simpa [B0, B9, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h57 : B0 ≠ (B12 ^^^ (1#2)) := by
+  have h57 : B0 ≠ fin4Flip B12 := by
     have h := signedLabelTwoCode_noComplement hno (X := R0) (Y := R12) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R12,
         z, o, t])
@@ -4358,7 +4507,7 @@ private theorem not_noComplementaryComparableLabels_three
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R1, R6,
         z, o, t])
     simpa [B1, B6, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h60 : B1 ≠ (B10 ^^^ (1#2)) := by
+  have h60 : B1 ≠ fin4Flip B10 := by
     have h := signedLabelTwoCode_noComplement hno (X := R1) (Y := R10) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R1, R10,
         z, o, t])
@@ -4378,27 +4527,27 @@ private theorem not_noComplementaryComparableLabels_three
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R4,
         z, o, t])
     simpa [B2, B4, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h64 : B2 ≠ (B1 ^^^ (1#2)) := by
+  have h64 : B2 ≠ fin4Flip B1 := by
     have h := signedLabelTwoCode_noComplement hno (X := R2) (Y := R1) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R1,
         z, o, t])
     simpa [B2, B1, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h66 : B2 ≠ (B3 ^^^ (1#2)) := by
+  have h66 : B2 ≠ fin4Flip B3 := by
     have h := signedLabelTwoCode_noComplement hno (X := R2) (Y := R3) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R3,
         z, o, t])
     simpa [B2, B3, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h67 : B2 ≠ (B10 ^^^ (1#2)) := by
+  have h67 : B2 ≠ fin4Flip B10 := by
     have h := signedLabelTwoCode_noComplement hno (X := R2) (Y := R10) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R10,
         z, o, t])
     simpa [B2, B10, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h68 : B2 ≠ (B11 ^^^ (1#2)) := by
+  have h68 : B2 ≠ fin4Flip B11 := by
     have h := signedLabelTwoCode_noComplement hno (X := R2) (Y := R11) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R11,
         z, o, t])
     simpa [B2, B11, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h69 : B2 ≠ (B12 ^^^ (1#2)) := by
+  have h69 : B2 ≠ fin4Flip B12 := by
     have h := signedLabelTwoCode_noComplement hno (X := R2) (Y := R12) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R12,
         z, o, t])
@@ -4408,87 +4557,87 @@ private theorem not_noComplementaryComparableLabels_three
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R3, R4,
         z, o, t])
     simpa [B3, B4, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h72 : B3 ≠ (B12 ^^^ (1#2)) := by
+  have h72 : B3 ≠ fin4Flip B12 := by
     have h := signedLabelTwoCode_noComplement hno (X := R3) (Y := R12) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R3, R12,
         z, o, t])
     simpa [B3, B12, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h74 : B5 ≠ (B4 ^^^ (1#2)) := by
+  have h74 : B5 ≠ fin4Flip B4 := by
     have h := signedLabelTwoCode_noComplement hno (X := R5) (Y := R4) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R5, R4,
         z, o, t])
     simpa [B5, B4, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h76 : B5 ≠ (B6 ^^^ (1#2)) := by
+  have h76 : B5 ≠ fin4Flip B6 := by
     have h := signedLabelTwoCode_noComplement hno (X := R5) (Y := R6) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R5, R6,
         z, o, t])
     simpa [B5, B6, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h78 : B7 ≠ (B4 ^^^ (1#2)) := by
+  have h78 : B7 ≠ fin4Flip B4 := by
     have h := signedLabelTwoCode_noComplement hno (X := R7) (Y := R4) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R7, R4,
         z, o, t])
     simpa [B7, B4, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h80 : B7 ≠ (B10 ^^^ (1#2)) := by
+  have h80 : B7 ≠ fin4Flip B10 := by
     have h := signedLabelTwoCode_noComplement hno (X := R7) (Y := R10) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R7, R10,
         z, o, t])
     simpa [B7, B10, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h81 : B8 ≠ (B4 ^^^ (1#2)) := by
+  have h81 : B8 ≠ fin4Flip B4 := by
     have h := signedLabelTwoCode_noComplement hno (X := R8) (Y := R4) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R4,
         z, o, t])
     simpa [B8, B4, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h82 : B8 ≠ (B5 ^^^ (1#2)) := by
+  have h82 : B8 ≠ fin4Flip B5 := by
     have h := signedLabelTwoCode_noComplement hno (X := R8) (Y := R5) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R5,
         z, o, t])
     simpa [B8, B5, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h83 : B8 ≠ (B6 ^^^ (1#2)) := by
+  have h83 : B8 ≠ fin4Flip B6 := by
     have h := signedLabelTwoCode_noComplement hno (X := R8) (Y := R6) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R6,
         z, o, t])
     simpa [B8, B6, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h84 : B8 ≠ (B7 ^^^ (1#2)) := by
+  have h84 : B8 ≠ fin4Flip B7 := by
     have h := signedLabelTwoCode_noComplement hno (X := R8) (Y := R7) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R7,
         z, o, t])
     simpa [B8, B7, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h86 : B8 ≠ (B9 ^^^ (1#2)) := by
+  have h86 : B8 ≠ fin4Flip B9 := by
     have h := signedLabelTwoCode_noComplement hno (X := R8) (Y := R9) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R9,
         z, o, t])
     simpa [B8, B9, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h87 : B8 ≠ (B10 ^^^ (1#2)) := by
+  have h87 : B8 ≠ fin4Flip B10 := by
     have h := signedLabelTwoCode_noComplement hno (X := R8) (Y := R10) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R10,
         z, o, t])
     simpa [B8, B10, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h88 : B8 ≠ (B11 ^^^ (1#2)) := by
+  have h88 : B8 ≠ fin4Flip B11 := by
     have h := signedLabelTwoCode_noComplement hno (X := R8) (Y := R11) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R11,
         z, o, t])
     simpa [B8, B11, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h89 : B8 ≠ (B12 ^^^ (1#2)) := by
+  have h89 : B8 ≠ fin4Flip B12 := by
     have h := signedLabelTwoCode_noComplement hno (X := R8) (Y := R12) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R12,
         z, o, t])
     simpa [B8, B12, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h90 : B9 ≠ (B6 ^^^ (1#2)) := by
+  have h90 : B9 ≠ fin4Flip B6 := by
     have h := signedLabelTwoCode_noComplement hno (X := R9) (Y := R6) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R9, R6,
         z, o, t])
     simpa [B9, B6, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h92 : B9 ≠ (B12 ^^^ (1#2)) := by
+  have h92 : B9 ≠ fin4Flip B12 := by
     have h := signedLabelTwoCode_noComplement hno (X := R9) (Y := R12) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R9, R12,
         z, o, t])
     simpa [B9, B12, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h94 : B11 ≠ (B10 ^^^ (1#2)) := by
+  have h94 : B11 ≠ fin4Flip B10 := by
     have h := signedLabelTwoCode_noComplement hno (X := R11) (Y := R10) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R11, R10,
         z, o, t])
     simpa [B11, B10, signedLabelTwoCode_neg, SignedLabel.neg, hantipodal] using h
-  have h96 : B11 ≠ (B12 ^^^ (1#2)) := by
+  have h96 : B11 ≠ fin4Flip B12 := by
     have h := signedLabelTwoCode_noComplement hno (X := R11) (Y := R12) (by
       simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R11, R12,
         z, o, t])
@@ -4506,5 +4655,1789 @@ theorem kyFanEndpointPairingStatement_two_two : KyFanEndpointPairingStatement 2 
 theorem tuckerLemmaStatement_three : TuckerLemmaStatement 3 :=
   tuckerLemmaStatement_succ_of_endpointPairing (by omega)
     kyFanEndpointPairingStatement_two_two
+
+/-! ### Four-dimensional finite Tucker step -/
+
+/-- Encode the six labels `±0, ±1, ±2` as three-bit words.
+The low bit is sign and the remaining bits are the index. -/
+private def signedLabelThreeCode (L : SignedLabel 3) : BitVec 3 :=
+  BitVec.ofNat 3 (2 * L.index.val + if L.positive then 1 else 0)
+
+private theorem signedLabelThreeCode_lt (L : SignedLabel 3) :
+    signedLabelThreeCode L < (6#3) := by
+  cases L with
+  | mk positive index =>
+      cases positive <;> fin_cases index <;> native_decide
+
+private theorem signedLabelThreeCode_neg (L : SignedLabel 3) :
+    signedLabelThreeCode L.neg = signedLabelThreeCode L ^^^ (1#3) := by
+  cases L with
+  | mk positive index =>
+      cases positive <;> fin_cases index <;> native_decide
+
+@[simp] private theorem signedLabelThreeCode_neg_mk (L : SignedLabel 3) :
+    signedLabelThreeCode { positive := !L.positive, index := L.index } =
+      signedLabelThreeCode L ^^^ (1#3) := by
+  simpa [SignedLabel.neg] using signedLabelThreeCode_neg L
+
+private theorem signedLabelThreeCode_injective : Function.Injective signedLabelThreeCode := by
+  intro L M h
+  cases L with
+  | mk lp li =>
+      cases M with
+      | mk mp mi =>
+          cases lp <;> cases mp <;> fin_cases li <;> fin_cases mi <;>
+            simp [signedLabelThreeCode] at h ⊢
+
+private theorem signedLabelThreeCode_noComplement
+    {label : NonzeroSignedSubset 4 → SignedLabel 3}
+    (hno : NoComplementaryComparableLabels label)
+    {X Y : NonzeroSignedSubset 4} (hXY : SignedSubset.Le X.1 Y.1) :
+    signedLabelThreeCode (label X) ≠ signedLabelThreeCode (label Y).neg := by
+  intro hcode
+  exact hno X Y hXY (signedLabelThreeCode_injective hcode)
+
+set_option maxHeartbeats 0 in
+set_option maxRecDepth 2000 in
+set_option linter.unusedVariables false in
+/-- The finite unsatisfiable core for the four-dimensional Tucker step. -/
+private theorem tuckerLemmaStatement_four_core_unsat
+    (L0 L1 L2 L3 L4 L5 L6 L7 L8 L9 L10 L11 L12 L13 L14 L15 L16 L17 L18 L19 L20 L21 L22 L23 L24 L25 L26 L27 L28 L29 L30 L31 L32 L33 L34 L35 L36 L37 L38 L39 : BitVec 3)
+    (hdom0 : L0 < (6#3))
+    (hdom1 : L1 < (6#3))
+    (hdom2 : L2 < (6#3))
+    (hdom3 : L3 < (6#3))
+    (hdom4 : L4 < (6#3))
+    (hdom5 : L5 < (6#3))
+    (hdom6 : L6 < (6#3))
+    (hdom7 : L7 < (6#3))
+    (hdom8 : L8 < (6#3))
+    (hdom9 : L9 < (6#3))
+    (hdom10 : L10 < (6#3))
+    (hdom11 : L11 < (6#3))
+    (hdom12 : L12 < (6#3))
+    (hdom13 : L13 < (6#3))
+    (hdom14 : L14 < (6#3))
+    (hdom15 : L15 < (6#3))
+    (hdom16 : L16 < (6#3))
+    (hdom17 : L17 < (6#3))
+    (hdom18 : L18 < (6#3))
+    (hdom19 : L19 < (6#3))
+    (hdom20 : L20 < (6#3))
+    (hdom21 : L21 < (6#3))
+    (hdom22 : L22 < (6#3))
+    (hdom23 : L23 < (6#3))
+    (hdom24 : L24 < (6#3))
+    (hdom25 : L25 < (6#3))
+    (hdom26 : L26 < (6#3))
+    (hdom27 : L27 < (6#3))
+    (hdom28 : L28 < (6#3))
+    (hdom29 : L29 < (6#3))
+    (hdom30 : L30 < (6#3))
+    (hdom31 : L31 < (6#3))
+    (hdom32 : L32 < (6#3))
+    (hdom33 : L33 < (6#3))
+    (hdom34 : L34 < (6#3))
+    (hdom35 : L35 < (6#3))
+    (hdom36 : L36 < (6#3))
+    (hdom37 : L37 < (6#3))
+    (hdom38 : L38 < (6#3))
+    (hdom39 : L39 < (6#3))
+    (h0 : L0 ≠ L1)
+    (h1 : L0 ≠ (L3 ^^^ (1#3)))
+    (h2 : L0 ≠ L4)
+    (h3 : L0 ≠ (L6 ^^^ (1#3)))
+    (h4 : L0 ≠ L7)
+    (h5 : L0 ≠ (L9 ^^^ (1#3)))
+    (h6 : L0 ≠ L10)
+    (h7 : L0 ≠ (L12 ^^^ (1#3)))
+    (h8 : L0 ≠ L13)
+    (h9 : L0 ≠ (L15 ^^^ (1#3)))
+    (h10 : L0 ≠ L16)
+    (h11 : L0 ≠ (L18 ^^^ (1#3)))
+    (h12 : L0 ≠ L19)
+    (h13 : L0 ≠ (L21 ^^^ (1#3)))
+    (h14 : L0 ≠ L22)
+    (h15 : L0 ≠ (L24 ^^^ (1#3)))
+    (h16 : L0 ≠ L25)
+    (h17 : L0 ≠ (L27 ^^^ (1#3)))
+    (h18 : L0 ≠ L28)
+    (h19 : L0 ≠ (L30 ^^^ (1#3)))
+    (h20 : L0 ≠ L31)
+    (h21 : L0 ≠ (L33 ^^^ (1#3)))
+    (h22 : L0 ≠ L34)
+    (h23 : L0 ≠ (L36 ^^^ (1#3)))
+    (h24 : L0 ≠ L37)
+    (h25 : L0 ≠ (L39 ^^^ (1#3)))
+    (h26 : L2 ≠ (L1 ^^^ (1#3)))
+    (h27 : L1 ≠ L6)
+    (h28 : L1 ≠ (L10 ^^^ (1#3)))
+    (h29 : L1 ≠ L15)
+    (h30 : L1 ≠ (L19 ^^^ (1#3)))
+    (h31 : L1 ≠ L24)
+    (h32 : L1 ≠ (L28 ^^^ (1#3)))
+    (h33 : L1 ≠ L33)
+    (h34 : L1 ≠ (L37 ^^^ (1#3)))
+    (h35 : L2 ≠ (L3 ^^^ (1#3)))
+    (h36 : L2 ≠ L4)
+    (h37 : L2 ≠ L5)
+    (h38 : L2 ≠ L6)
+    (h39 : L2 ≠ (L10 ^^^ (1#3)))
+    (h40 : L2 ≠ (L11 ^^^ (1#3)))
+    (h41 : L2 ≠ (L12 ^^^ (1#3)))
+    (h42 : L2 ≠ L13)
+    (h43 : L2 ≠ L14)
+    (h44 : L2 ≠ L15)
+    (h45 : L2 ≠ (L19 ^^^ (1#3)))
+    (h46 : L2 ≠ (L20 ^^^ (1#3)))
+    (h47 : L2 ≠ (L21 ^^^ (1#3)))
+    (h48 : L2 ≠ L22)
+    (h49 : L2 ≠ L23)
+    (h50 : L2 ≠ L24)
+    (h51 : L2 ≠ (L28 ^^^ (1#3)))
+    (h52 : L2 ≠ (L29 ^^^ (1#3)))
+    (h53 : L2 ≠ (L30 ^^^ (1#3)))
+    (h54 : L2 ≠ L31)
+    (h55 : L2 ≠ L32)
+    (h56 : L2 ≠ L33)
+    (h57 : L2 ≠ (L37 ^^^ (1#3)))
+    (h58 : L2 ≠ (L38 ^^^ (1#3)))
+    (h59 : L2 ≠ (L39 ^^^ (1#3)))
+    (h60 : L3 ≠ L4)
+    (h61 : L3 ≠ (L12 ^^^ (1#3)))
+    (h62 : L3 ≠ L13)
+    (h63 : L3 ≠ (L21 ^^^ (1#3)))
+    (h64 : L3 ≠ L22)
+    (h65 : L3 ≠ (L30 ^^^ (1#3)))
+    (h66 : L3 ≠ L31)
+    (h67 : L3 ≠ (L39 ^^^ (1#3)))
+    (h68 : L5 ≠ (L4 ^^^ (1#3)))
+    (h69 : L7 ≠ (L4 ^^^ (1#3)))
+    (h70 : L8 ≠ (L4 ^^^ (1#3)))
+    (h71 : L4 ≠ L21)
+    (h72 : L4 ≠ (L31 ^^^ (1#3)))
+    (h73 : L5 ≠ (L6 ^^^ (1#3)))
+    (h74 : L8 ≠ (L5 ^^^ (1#3)))
+    (h75 : L5 ≠ L19)
+    (h76 : L5 ≠ L20)
+    (h77 : L5 ≠ L21)
+    (h78 : L5 ≠ (L31 ^^^ (1#3)))
+    (h79 : L5 ≠ (L32 ^^^ (1#3)))
+    (h80 : L5 ≠ (L33 ^^^ (1#3)))
+    (h81 : L8 ≠ (L6 ^^^ (1#3)))
+    (h82 : L9 ≠ (L6 ^^^ (1#3)))
+    (h83 : L6 ≠ L19)
+    (h84 : L6 ≠ (L33 ^^^ (1#3)))
+    (h85 : L8 ≠ (L7 ^^^ (1#3)))
+    (h86 : L7 ≠ (L10 ^^^ (1#3)))
+    (h87 : L7 ≠ L15)
+    (h88 : L7 ≠ L18)
+    (h89 : L7 ≠ L21)
+    (h90 : L7 ≠ (L31 ^^^ (1#3)))
+    (h91 : L7 ≠ (L34 ^^^ (1#3)))
+    (h92 : L7 ≠ (L37 ^^^ (1#3)))
+    (h93 : L8 ≠ (L9 ^^^ (1#3)))
+    (h94 : L8 ≠ (L10 ^^^ (1#3)))
+    (h95 : L8 ≠ (L11 ^^^ (1#3)))
+    (h96 : L8 ≠ (L12 ^^^ (1#3)))
+    (h97 : L8 ≠ L13)
+    (h98 : L8 ≠ L14)
+    (h99 : L8 ≠ L15)
+    (h100 : L8 ≠ L16)
+    (h101 : L8 ≠ L17)
+    (h102 : L8 ≠ L18)
+    (h103 : L8 ≠ L19)
+    (h104 : L8 ≠ L20)
+    (h105 : L8 ≠ L21)
+    (h106 : L8 ≠ (L31 ^^^ (1#3)))
+    (h107 : L8 ≠ (L32 ^^^ (1#3)))
+    (h108 : L8 ≠ (L33 ^^^ (1#3)))
+    (h109 : L8 ≠ (L34 ^^^ (1#3)))
+    (h110 : L8 ≠ (L35 ^^^ (1#3)))
+    (h111 : L8 ≠ (L36 ^^^ (1#3)))
+    (h112 : L8 ≠ (L37 ^^^ (1#3)))
+    (h113 : L8 ≠ (L38 ^^^ (1#3)))
+    (h114 : L8 ≠ (L39 ^^^ (1#3)))
+    (h115 : L9 ≠ (L12 ^^^ (1#3)))
+    (h116 : L9 ≠ L13)
+    (h117 : L9 ≠ L16)
+    (h118 : L9 ≠ L19)
+    (h119 : L9 ≠ (L33 ^^^ (1#3)))
+    (h120 : L9 ≠ (L36 ^^^ (1#3)))
+    (h121 : L9 ≠ (L39 ^^^ (1#3)))
+    (h122 : L11 ≠ (L10 ^^^ (1#3)))
+    (h123 : L10 ≠ L15)
+    (h124 : L10 ≠ (L37 ^^^ (1#3)))
+    (h125 : L11 ≠ (L12 ^^^ (1#3)))
+    (h126 : L11 ≠ L13)
+    (h127 : L11 ≠ L14)
+    (h128 : L11 ≠ L15)
+    (h129 : L11 ≠ (L37 ^^^ (1#3)))
+    (h130 : L11 ≠ (L38 ^^^ (1#3)))
+    (h131 : L11 ≠ (L39 ^^^ (1#3)))
+    (h132 : L12 ≠ L13)
+    (h133 : L12 ≠ (L39 ^^^ (1#3)))
+    (h134 : L14 ≠ (L13 ^^^ (1#3)))
+    (h135 : L16 ≠ (L13 ^^^ (1#3)))
+    (h136 : L17 ≠ (L13 ^^^ (1#3)))
+    (h137 : L22 ≠ (L13 ^^^ (1#3)))
+    (h138 : L23 ≠ (L13 ^^^ (1#3)))
+    (h139 : L25 ≠ (L13 ^^^ (1#3)))
+    (h140 : L26 ≠ (L13 ^^^ (1#3)))
+    (h141 : L14 ≠ (L15 ^^^ (1#3)))
+    (h142 : L17 ≠ (L14 ^^^ (1#3)))
+    (h143 : L23 ≠ (L14 ^^^ (1#3)))
+    (h144 : L26 ≠ (L14 ^^^ (1#3)))
+    (h145 : L17 ≠ (L15 ^^^ (1#3)))
+    (h146 : L18 ≠ (L15 ^^^ (1#3)))
+    (h147 : L23 ≠ (L15 ^^^ (1#3)))
+    (h148 : L24 ≠ (L15 ^^^ (1#3)))
+    (h149 : L26 ≠ (L15 ^^^ (1#3)))
+    (h150 : L27 ≠ (L15 ^^^ (1#3)))
+    (h151 : L17 ≠ (L16 ^^^ (1#3)))
+    (h152 : L16 ≠ (L19 ^^^ (1#3)))
+    (h153 : L25 ≠ (L16 ^^^ (1#3)))
+    (h154 : L26 ≠ (L16 ^^^ (1#3)))
+    (h155 : L17 ≠ (L18 ^^^ (1#3)))
+    (h156 : L17 ≠ (L19 ^^^ (1#3)))
+    (h157 : L17 ≠ (L20 ^^^ (1#3)))
+    (h158 : L17 ≠ (L21 ^^^ (1#3)))
+    (h159 : L26 ≠ (L17 ^^^ (1#3)))
+    (h160 : L18 ≠ (L21 ^^^ (1#3)))
+    (h161 : L26 ≠ (L18 ^^^ (1#3)))
+    (h162 : L27 ≠ (L18 ^^^ (1#3)))
+    (h163 : L20 ≠ (L19 ^^^ (1#3)))
+    (h164 : L25 ≠ (L19 ^^^ (1#3)))
+    (h165 : L26 ≠ (L19 ^^^ (1#3)))
+    (h166 : L28 ≠ (L19 ^^^ (1#3)))
+    (h167 : L29 ≠ (L19 ^^^ (1#3)))
+    (h168 : L20 ≠ (L21 ^^^ (1#3)))
+    (h169 : L26 ≠ (L20 ^^^ (1#3)))
+    (h170 : L29 ≠ (L20 ^^^ (1#3)))
+    (h171 : L26 ≠ (L21 ^^^ (1#3)))
+    (h172 : L27 ≠ (L21 ^^^ (1#3)))
+    (h173 : L29 ≠ (L21 ^^^ (1#3)))
+    (h174 : L30 ≠ (L21 ^^^ (1#3)))
+    (h175 : L23 ≠ (L22 ^^^ (1#3)))
+    (h176 : L25 ≠ (L22 ^^^ (1#3)))
+    (h177 : L26 ≠ (L22 ^^^ (1#3)))
+    (h178 : L22 ≠ (L31 ^^^ (1#3)))
+    (h179 : L23 ≠ (L24 ^^^ (1#3)))
+    (h180 : L26 ≠ (L23 ^^^ (1#3)))
+    (h181 : L23 ≠ (L31 ^^^ (1#3)))
+    (h182 : L23 ≠ (L32 ^^^ (1#3)))
+    (h183 : L23 ≠ (L33 ^^^ (1#3)))
+    (h184 : L26 ≠ (L24 ^^^ (1#3)))
+    (h185 : L27 ≠ (L24 ^^^ (1#3)))
+    (h186 : L24 ≠ (L33 ^^^ (1#3)))
+    (h187 : L26 ≠ (L25 ^^^ (1#3)))
+    (h188 : L25 ≠ (L28 ^^^ (1#3)))
+    (h189 : L25 ≠ (L31 ^^^ (1#3)))
+    (h190 : L25 ≠ (L34 ^^^ (1#3)))
+    (h191 : L25 ≠ (L37 ^^^ (1#3)))
+    (h192 : L26 ≠ (L27 ^^^ (1#3)))
+    (h193 : L26 ≠ (L28 ^^^ (1#3)))
+    (h194 : L26 ≠ (L29 ^^^ (1#3)))
+    (h195 : L26 ≠ (L30 ^^^ (1#3)))
+    (h196 : L26 ≠ (L31 ^^^ (1#3)))
+    (h197 : L26 ≠ (L32 ^^^ (1#3)))
+    (h198 : L26 ≠ (L33 ^^^ (1#3)))
+    (h199 : L26 ≠ (L34 ^^^ (1#3)))
+    (h200 : L26 ≠ (L35 ^^^ (1#3)))
+    (h201 : L26 ≠ (L36 ^^^ (1#3)))
+    (h202 : L26 ≠ (L37 ^^^ (1#3)))
+    (h203 : L26 ≠ (L38 ^^^ (1#3)))
+    (h204 : L26 ≠ (L39 ^^^ (1#3)))
+    (h205 : L27 ≠ (L30 ^^^ (1#3)))
+    (h206 : L27 ≠ (L33 ^^^ (1#3)))
+    (h207 : L27 ≠ (L36 ^^^ (1#3)))
+    (h208 : L27 ≠ (L39 ^^^ (1#3)))
+    (h209 : L29 ≠ (L28 ^^^ (1#3)))
+    (h210 : L28 ≠ (L37 ^^^ (1#3)))
+    (h211 : L29 ≠ (L30 ^^^ (1#3)))
+    (h212 : L29 ≠ (L37 ^^^ (1#3)))
+    (h213 : L29 ≠ (L38 ^^^ (1#3)))
+    (h214 : L29 ≠ (L39 ^^^ (1#3)))
+    (h215 : L30 ≠ (L39 ^^^ (1#3)))
+    (h216 : L32 ≠ (L31 ^^^ (1#3)))
+    (h217 : L34 ≠ (L31 ^^^ (1#3)))
+    (h218 : L35 ≠ (L31 ^^^ (1#3)))
+    (h219 : L32 ≠ (L33 ^^^ (1#3)))
+    (h220 : L35 ≠ (L32 ^^^ (1#3)))
+    (h221 : L35 ≠ (L33 ^^^ (1#3)))
+    (h222 : L36 ≠ (L33 ^^^ (1#3)))
+    (h223 : L35 ≠ (L34 ^^^ (1#3)))
+    (h224 : L34 ≠ (L37 ^^^ (1#3)))
+    (h225 : L35 ≠ (L36 ^^^ (1#3)))
+    (h226 : L35 ≠ (L37 ^^^ (1#3)))
+    (h227 : L35 ≠ (L38 ^^^ (1#3)))
+    (h228 : L35 ≠ (L39 ^^^ (1#3)))
+    (h229 : L36 ≠ (L39 ^^^ (1#3)))
+    (h230 : L38 ≠ (L37 ^^^ (1#3)))
+    (h231 : L38 ≠ (L39 ^^^ (1#3)))
+    : False := by
+  bv_decide
+
+set_option linter.unusedSimpArgs false in
+set_option linter.unreachableTactic false in
+set_option linter.unusedTactic false in
+set_option linter.unnecessarySeqFocus false in
+private theorem not_noComplementaryComparableLabels_four
+    (label : NonzeroSignedSubset 4 → SignedLabel 3)
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (hno : NoComplementaryComparableLabels label) : False := by
+  classical
+  let a : Fin 4 := ⟨0, by omega⟩
+  let b : Fin 4 := ⟨1, by omega⟩
+  let c : Fin 4 := ⟨2, by omega⟩
+  let d : Fin 4 := ⟨3, by omega⟩
+  let R0 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {d}, neg := ∅, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R1 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {c}, neg := {d}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R2 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {c}, neg := ∅, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R3 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {c, d}, neg := ∅, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R4 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {b}, neg := {c, d}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R5 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {b}, neg := {c}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R6 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {b, d}, neg := {c}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R7 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {b}, neg := {d}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R8 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {b}, neg := ∅, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R9 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {b, d}, neg := ∅, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R10 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {b, c}, neg := {d}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R11 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {b, c}, neg := ∅, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R12 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {b, c, d}, neg := ∅, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R13 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a}, neg := {b, c, d}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R14 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a}, neg := {b, c}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R15 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, d}, neg := {b, c}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R16 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a}, neg := {b, d}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R17 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a}, neg := {b}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R18 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, d}, neg := {b}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R19 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, c}, neg := {b, d}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R20 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, c}, neg := {b}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R21 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, c, d}, neg := {b}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R22 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a}, neg := {c, d}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R23 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a}, neg := {c}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R24 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, d}, neg := {c}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R25 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a}, neg := {d}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R26 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a}, neg := ∅, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R27 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, d}, neg := ∅, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R28 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, c}, neg := {d}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R29 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, c}, neg := ∅, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R30 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, c, d}, neg := ∅, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R31 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, b}, neg := {c, d}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R32 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, b}, neg := {c}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R33 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, b, d}, neg := {c}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R34 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, b}, neg := {d}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R35 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, b}, neg := ∅, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R36 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, b, d}, neg := ∅, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R37 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, b, c}, neg := {d}, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R38 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, b, c}, neg := ∅, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let R39 : NonzeroSignedSubset 4 :=
+    ⟨{ pos := {a, b, c, d}, neg := ∅, disjoint := by decide },
+      by simp [SignedSubset.Nonzero]⟩
+  let B0 : BitVec 3 := signedLabelThreeCode (label R0)
+  let B1 : BitVec 3 := signedLabelThreeCode (label R1)
+  let B2 : BitVec 3 := signedLabelThreeCode (label R2)
+  let B3 : BitVec 3 := signedLabelThreeCode (label R3)
+  let B4 : BitVec 3 := signedLabelThreeCode (label R4)
+  let B5 : BitVec 3 := signedLabelThreeCode (label R5)
+  let B6 : BitVec 3 := signedLabelThreeCode (label R6)
+  let B7 : BitVec 3 := signedLabelThreeCode (label R7)
+  let B8 : BitVec 3 := signedLabelThreeCode (label R8)
+  let B9 : BitVec 3 := signedLabelThreeCode (label R9)
+  let B10 : BitVec 3 := signedLabelThreeCode (label R10)
+  let B11 : BitVec 3 := signedLabelThreeCode (label R11)
+  let B12 : BitVec 3 := signedLabelThreeCode (label R12)
+  let B13 : BitVec 3 := signedLabelThreeCode (label R13)
+  let B14 : BitVec 3 := signedLabelThreeCode (label R14)
+  let B15 : BitVec 3 := signedLabelThreeCode (label R15)
+  let B16 : BitVec 3 := signedLabelThreeCode (label R16)
+  let B17 : BitVec 3 := signedLabelThreeCode (label R17)
+  let B18 : BitVec 3 := signedLabelThreeCode (label R18)
+  let B19 : BitVec 3 := signedLabelThreeCode (label R19)
+  let B20 : BitVec 3 := signedLabelThreeCode (label R20)
+  let B21 : BitVec 3 := signedLabelThreeCode (label R21)
+  let B22 : BitVec 3 := signedLabelThreeCode (label R22)
+  let B23 : BitVec 3 := signedLabelThreeCode (label R23)
+  let B24 : BitVec 3 := signedLabelThreeCode (label R24)
+  let B25 : BitVec 3 := signedLabelThreeCode (label R25)
+  let B26 : BitVec 3 := signedLabelThreeCode (label R26)
+  let B27 : BitVec 3 := signedLabelThreeCode (label R27)
+  let B28 : BitVec 3 := signedLabelThreeCode (label R28)
+  let B29 : BitVec 3 := signedLabelThreeCode (label R29)
+  let B30 : BitVec 3 := signedLabelThreeCode (label R30)
+  let B31 : BitVec 3 := signedLabelThreeCode (label R31)
+  let B32 : BitVec 3 := signedLabelThreeCode (label R32)
+  let B33 : BitVec 3 := signedLabelThreeCode (label R33)
+  let B34 : BitVec 3 := signedLabelThreeCode (label R34)
+  let B35 : BitVec 3 := signedLabelThreeCode (label R35)
+  let B36 : BitVec 3 := signedLabelThreeCode (label R36)
+  let B37 : BitVec 3 := signedLabelThreeCode (label R37)
+  let B38 : BitVec 3 := signedLabelThreeCode (label R38)
+  let B39 : BitVec 3 := signedLabelThreeCode (label R39)
+  have hdom0 : B0 < (6#3) := by
+    simpa [B0] using signedLabelThreeCode_lt (label R0)
+  have hdom1 : B1 < (6#3) := by
+    simpa [B1] using signedLabelThreeCode_lt (label R1)
+  have hdom2 : B2 < (6#3) := by
+    simpa [B2] using signedLabelThreeCode_lt (label R2)
+  have hdom3 : B3 < (6#3) := by
+    simpa [B3] using signedLabelThreeCode_lt (label R3)
+  have hdom4 : B4 < (6#3) := by
+    simpa [B4] using signedLabelThreeCode_lt (label R4)
+  have hdom5 : B5 < (6#3) := by
+    simpa [B5] using signedLabelThreeCode_lt (label R5)
+  have hdom6 : B6 < (6#3) := by
+    simpa [B6] using signedLabelThreeCode_lt (label R6)
+  have hdom7 : B7 < (6#3) := by
+    simpa [B7] using signedLabelThreeCode_lt (label R7)
+  have hdom8 : B8 < (6#3) := by
+    simpa [B8] using signedLabelThreeCode_lt (label R8)
+  have hdom9 : B9 < (6#3) := by
+    simpa [B9] using signedLabelThreeCode_lt (label R9)
+  have hdom10 : B10 < (6#3) := by
+    simpa [B10] using signedLabelThreeCode_lt (label R10)
+  have hdom11 : B11 < (6#3) := by
+    simpa [B11] using signedLabelThreeCode_lt (label R11)
+  have hdom12 : B12 < (6#3) := by
+    simpa [B12] using signedLabelThreeCode_lt (label R12)
+  have hdom13 : B13 < (6#3) := by
+    simpa [B13] using signedLabelThreeCode_lt (label R13)
+  have hdom14 : B14 < (6#3) := by
+    simpa [B14] using signedLabelThreeCode_lt (label R14)
+  have hdom15 : B15 < (6#3) := by
+    simpa [B15] using signedLabelThreeCode_lt (label R15)
+  have hdom16 : B16 < (6#3) := by
+    simpa [B16] using signedLabelThreeCode_lt (label R16)
+  have hdom17 : B17 < (6#3) := by
+    simpa [B17] using signedLabelThreeCode_lt (label R17)
+  have hdom18 : B18 < (6#3) := by
+    simpa [B18] using signedLabelThreeCode_lt (label R18)
+  have hdom19 : B19 < (6#3) := by
+    simpa [B19] using signedLabelThreeCode_lt (label R19)
+  have hdom20 : B20 < (6#3) := by
+    simpa [B20] using signedLabelThreeCode_lt (label R20)
+  have hdom21 : B21 < (6#3) := by
+    simpa [B21] using signedLabelThreeCode_lt (label R21)
+  have hdom22 : B22 < (6#3) := by
+    simpa [B22] using signedLabelThreeCode_lt (label R22)
+  have hdom23 : B23 < (6#3) := by
+    simpa [B23] using signedLabelThreeCode_lt (label R23)
+  have hdom24 : B24 < (6#3) := by
+    simpa [B24] using signedLabelThreeCode_lt (label R24)
+  have hdom25 : B25 < (6#3) := by
+    simpa [B25] using signedLabelThreeCode_lt (label R25)
+  have hdom26 : B26 < (6#3) := by
+    simpa [B26] using signedLabelThreeCode_lt (label R26)
+  have hdom27 : B27 < (6#3) := by
+    simpa [B27] using signedLabelThreeCode_lt (label R27)
+  have hdom28 : B28 < (6#3) := by
+    simpa [B28] using signedLabelThreeCode_lt (label R28)
+  have hdom29 : B29 < (6#3) := by
+    simpa [B29] using signedLabelThreeCode_lt (label R29)
+  have hdom30 : B30 < (6#3) := by
+    simpa [B30] using signedLabelThreeCode_lt (label R30)
+  have hdom31 : B31 < (6#3) := by
+    simpa [B31] using signedLabelThreeCode_lt (label R31)
+  have hdom32 : B32 < (6#3) := by
+    simpa [B32] using signedLabelThreeCode_lt (label R32)
+  have hdom33 : B33 < (6#3) := by
+    simpa [B33] using signedLabelThreeCode_lt (label R33)
+  have hdom34 : B34 < (6#3) := by
+    simpa [B34] using signedLabelThreeCode_lt (label R34)
+  have hdom35 : B35 < (6#3) := by
+    simpa [B35] using signedLabelThreeCode_lt (label R35)
+  have hdom36 : B36 < (6#3) := by
+    simpa [B36] using signedLabelThreeCode_lt (label R36)
+  have hdom37 : B37 < (6#3) := by
+    simpa [B37] using signedLabelThreeCode_lt (label R37)
+  have hdom38 : B38 < (6#3) := by
+    simpa [B38] using signedLabelThreeCode_lt (label R38)
+  have hdom39 : B39 < (6#3) := by
+    simpa [B39] using signedLabelThreeCode_lt (label R39)
+  have h0 : B0 ≠ B1 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R1.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R1,
+        a, b, c, d] <;> decide)
+    simpa [B0, B1, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h1 : B0 ≠ B3 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R3) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R3,
+        a, b, c, d] <;> decide)
+    simpa [B0, B3, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h2 : B0 ≠ B4 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R4.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R4,
+        a, b, c, d] <;> decide)
+    simpa [B0, B4, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h3 : B0 ≠ B6 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R6) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R6,
+        a, b, c, d] <;> decide)
+    simpa [B0, B6, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h4 : B0 ≠ B7 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R7.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R7,
+        a, b, c, d] <;> decide)
+    simpa [B0, B7, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h5 : B0 ≠ B9 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R9) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R9,
+        a, b, c, d] <;> decide)
+    simpa [B0, B9, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h6 : B0 ≠ B10 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R10.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R10,
+        a, b, c, d] <;> decide)
+    simpa [B0, B10, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h7 : B0 ≠ B12 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R12) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R12,
+        a, b, c, d] <;> decide)
+    simpa [B0, B12, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h8 : B0 ≠ B13 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R13.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R13,
+        a, b, c, d] <;> decide)
+    simpa [B0, B13, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h9 : B0 ≠ B15 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R15) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R15,
+        a, b, c, d] <;> decide)
+    simpa [B0, B15, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h10 : B0 ≠ B16 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R16.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R16,
+        a, b, c, d] <;> decide)
+    simpa [B0, B16, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h11 : B0 ≠ B18 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R18) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R18,
+        a, b, c, d] <;> decide)
+    simpa [B0, B18, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h12 : B0 ≠ B19 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R19.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R19,
+        a, b, c, d] <;> decide)
+    simpa [B0, B19, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h13 : B0 ≠ B21 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R21) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R21,
+        a, b, c, d] <;> decide)
+    simpa [B0, B21, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h14 : B0 ≠ B22 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R22.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R22,
+        a, b, c, d] <;> decide)
+    simpa [B0, B22, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h15 : B0 ≠ B24 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R24) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R24,
+        a, b, c, d] <;> decide)
+    simpa [B0, B24, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h16 : B0 ≠ B25 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R25.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R25,
+        a, b, c, d] <;> decide)
+    simpa [B0, B25, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h17 : B0 ≠ B27 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R27) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R27,
+        a, b, c, d] <;> decide)
+    simpa [B0, B27, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h18 : B0 ≠ B28 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R28.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R28,
+        a, b, c, d] <;> decide)
+    simpa [B0, B28, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h19 : B0 ≠ B30 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R30) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R30,
+        a, b, c, d] <;> decide)
+    simpa [B0, B30, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h20 : B0 ≠ B31 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R31.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R31,
+        a, b, c, d] <;> decide)
+    simpa [B0, B31, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h21 : B0 ≠ B33 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R33) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R33,
+        a, b, c, d] <;> decide)
+    simpa [B0, B33, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h22 : B0 ≠ B34 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R34.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R34,
+        a, b, c, d] <;> decide)
+    simpa [B0, B34, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h23 : B0 ≠ B36 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R36) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R36,
+        a, b, c, d] <;> decide)
+    simpa [B0, B36, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h24 : B0 ≠ B37 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R37.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R37,
+        a, b, c, d] <;> decide)
+    simpa [B0, B37, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h25 : B0 ≠ B39 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R0) (Y := R39) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R0, R39,
+        a, b, c, d] <;> decide)
+    simpa [B0, B39, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h26 : B2 ≠ B1 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R1) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R1,
+        a, b, c, d] <;> decide)
+    simpa [B2, B1, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h27 : B1 ≠ B6 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R1) (Y := R6.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R1, R6,
+        a, b, c, d] <;> decide)
+    simpa [B1, B6, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h28 : B1 ≠ B10 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R1) (Y := R10) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R1, R10,
+        a, b, c, d] <;> decide)
+    simpa [B1, B10, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h29 : B1 ≠ B15 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R1) (Y := R15.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R1, R15,
+        a, b, c, d] <;> decide)
+    simpa [B1, B15, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h30 : B1 ≠ B19 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R1) (Y := R19) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R1, R19,
+        a, b, c, d] <;> decide)
+    simpa [B1, B19, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h31 : B1 ≠ B24 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R1) (Y := R24.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R1, R24,
+        a, b, c, d] <;> decide)
+    simpa [B1, B24, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h32 : B1 ≠ B28 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R1) (Y := R28) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R1, R28,
+        a, b, c, d] <;> decide)
+    simpa [B1, B28, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h33 : B1 ≠ B33 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R1) (Y := R33.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R1, R33,
+        a, b, c, d] <;> decide)
+    simpa [B1, B33, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h34 : B1 ≠ B37 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R1) (Y := R37) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R1, R37,
+        a, b, c, d] <;> decide)
+    simpa [B1, B37, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h35 : B2 ≠ B3 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R3) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R3,
+        a, b, c, d] <;> decide)
+    simpa [B2, B3, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h36 : B2 ≠ B4 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R4.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R4,
+        a, b, c, d] <;> decide)
+    simpa [B2, B4, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h37 : B2 ≠ B5 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R5.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R5,
+        a, b, c, d] <;> decide)
+    simpa [B2, B5, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h38 : B2 ≠ B6 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R6.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R6,
+        a, b, c, d] <;> decide)
+    simpa [B2, B6, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h39 : B2 ≠ B10 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R10) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R10,
+        a, b, c, d] <;> decide)
+    simpa [B2, B10, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h40 : B2 ≠ B11 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R11) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R11,
+        a, b, c, d] <;> decide)
+    simpa [B2, B11, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h41 : B2 ≠ B12 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R12) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R12,
+        a, b, c, d] <;> decide)
+    simpa [B2, B12, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h42 : B2 ≠ B13 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R13.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R13,
+        a, b, c, d] <;> decide)
+    simpa [B2, B13, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h43 : B2 ≠ B14 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R14.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R14,
+        a, b, c, d] <;> decide)
+    simpa [B2, B14, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h44 : B2 ≠ B15 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R15.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R15,
+        a, b, c, d] <;> decide)
+    simpa [B2, B15, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h45 : B2 ≠ B19 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R19) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R19,
+        a, b, c, d] <;> decide)
+    simpa [B2, B19, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h46 : B2 ≠ B20 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R20) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R20,
+        a, b, c, d] <;> decide)
+    simpa [B2, B20, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h47 : B2 ≠ B21 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R21) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R21,
+        a, b, c, d] <;> decide)
+    simpa [B2, B21, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h48 : B2 ≠ B22 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R22.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R22,
+        a, b, c, d] <;> decide)
+    simpa [B2, B22, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h49 : B2 ≠ B23 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R23.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R23,
+        a, b, c, d] <;> decide)
+    simpa [B2, B23, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h50 : B2 ≠ B24 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R24.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R24,
+        a, b, c, d] <;> decide)
+    simpa [B2, B24, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h51 : B2 ≠ B28 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R28) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R28,
+        a, b, c, d] <;> decide)
+    simpa [B2, B28, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h52 : B2 ≠ B29 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R29) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R29,
+        a, b, c, d] <;> decide)
+    simpa [B2, B29, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h53 : B2 ≠ B30 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R30) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R30,
+        a, b, c, d] <;> decide)
+    simpa [B2, B30, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h54 : B2 ≠ B31 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R31.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R31,
+        a, b, c, d] <;> decide)
+    simpa [B2, B31, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h55 : B2 ≠ B32 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R32.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R32,
+        a, b, c, d] <;> decide)
+    simpa [B2, B32, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h56 : B2 ≠ B33 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R33.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R33,
+        a, b, c, d] <;> decide)
+    simpa [B2, B33, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h57 : B2 ≠ B37 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R37) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R37,
+        a, b, c, d] <;> decide)
+    simpa [B2, B37, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h58 : B2 ≠ B38 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R38) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R38,
+        a, b, c, d] <;> decide)
+    simpa [B2, B38, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h59 : B2 ≠ B39 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R2) (Y := R39) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R2, R39,
+        a, b, c, d] <;> decide)
+    simpa [B2, B39, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h60 : B3 ≠ B4 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R3) (Y := R4.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R3, R4,
+        a, b, c, d] <;> decide)
+    simpa [B3, B4, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h61 : B3 ≠ B12 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R3) (Y := R12) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R3, R12,
+        a, b, c, d] <;> decide)
+    simpa [B3, B12, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h62 : B3 ≠ B13 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R3) (Y := R13.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R3, R13,
+        a, b, c, d] <;> decide)
+    simpa [B3, B13, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h63 : B3 ≠ B21 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R3) (Y := R21) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R3, R21,
+        a, b, c, d] <;> decide)
+    simpa [B3, B21, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h64 : B3 ≠ B22 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R3) (Y := R22.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R3, R22,
+        a, b, c, d] <;> decide)
+    simpa [B3, B22, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h65 : B3 ≠ B30 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R3) (Y := R30) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R3, R30,
+        a, b, c, d] <;> decide)
+    simpa [B3, B30, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h66 : B3 ≠ B31 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R3) (Y := R31.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R3, R31,
+        a, b, c, d] <;> decide)
+    simpa [B3, B31, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h67 : B3 ≠ B39 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R3) (Y := R39) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R3, R39,
+        a, b, c, d] <;> decide)
+    simpa [B3, B39, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h68 : B5 ≠ B4 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R5) (Y := R4) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R5, R4,
+        a, b, c, d] <;> decide)
+    simpa [B5, B4, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h69 : B7 ≠ B4 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R7) (Y := R4) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R7, R4,
+        a, b, c, d] <;> decide)
+    simpa [B7, B4, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h70 : B8 ≠ B4 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R4) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R4,
+        a, b, c, d] <;> decide)
+    simpa [B8, B4, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h71 : B4 ≠ B21 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R4) (Y := R21.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R4, R21,
+        a, b, c, d] <;> decide)
+    simpa [B4, B21, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h72 : B4 ≠ B31 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R4) (Y := R31) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R4, R31,
+        a, b, c, d] <;> decide)
+    simpa [B4, B31, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h73 : B5 ≠ B6 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R5) (Y := R6) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R5, R6,
+        a, b, c, d] <;> decide)
+    simpa [B5, B6, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h74 : B8 ≠ B5 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R5) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R5,
+        a, b, c, d] <;> decide)
+    simpa [B8, B5, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h75 : B5 ≠ B19 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R5) (Y := R19.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R5, R19,
+        a, b, c, d] <;> decide)
+    simpa [B5, B19, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h76 : B5 ≠ B20 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R5) (Y := R20.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R5, R20,
+        a, b, c, d] <;> decide)
+    simpa [B5, B20, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h77 : B5 ≠ B21 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R5) (Y := R21.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R5, R21,
+        a, b, c, d] <;> decide)
+    simpa [B5, B21, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h78 : B5 ≠ B31 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R5) (Y := R31) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R5, R31,
+        a, b, c, d] <;> decide)
+    simpa [B5, B31, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h79 : B5 ≠ B32 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R5) (Y := R32) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R5, R32,
+        a, b, c, d] <;> decide)
+    simpa [B5, B32, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h80 : B5 ≠ B33 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R5) (Y := R33) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R5, R33,
+        a, b, c, d] <;> decide)
+    simpa [B5, B33, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h81 : B8 ≠ B6 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R6) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R6,
+        a, b, c, d] <;> decide)
+    simpa [B8, B6, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h82 : B9 ≠ B6 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R9) (Y := R6) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R9, R6,
+        a, b, c, d] <;> decide)
+    simpa [B9, B6, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h83 : B6 ≠ B19 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R6) (Y := R19.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R6, R19,
+        a, b, c, d] <;> decide)
+    simpa [B6, B19, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h84 : B6 ≠ B33 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R6) (Y := R33) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R6, R33,
+        a, b, c, d] <;> decide)
+    simpa [B6, B33, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h85 : B8 ≠ B7 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R7) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R7,
+        a, b, c, d] <;> decide)
+    simpa [B8, B7, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h86 : B7 ≠ B10 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R7) (Y := R10) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R7, R10,
+        a, b, c, d] <;> decide)
+    simpa [B7, B10, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h87 : B7 ≠ B15 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R7) (Y := R15.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R7, R15,
+        a, b, c, d] <;> decide)
+    simpa [B7, B15, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h88 : B7 ≠ B18 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R7) (Y := R18.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R7, R18,
+        a, b, c, d] <;> decide)
+    simpa [B7, B18, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h89 : B7 ≠ B21 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R7) (Y := R21.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R7, R21,
+        a, b, c, d] <;> decide)
+    simpa [B7, B21, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h90 : B7 ≠ B31 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R7) (Y := R31) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R7, R31,
+        a, b, c, d] <;> decide)
+    simpa [B7, B31, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h91 : B7 ≠ B34 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R7) (Y := R34) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R7, R34,
+        a, b, c, d] <;> decide)
+    simpa [B7, B34, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h92 : B7 ≠ B37 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R7) (Y := R37) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R7, R37,
+        a, b, c, d] <;> decide)
+    simpa [B7, B37, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h93 : B8 ≠ B9 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R9) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R9,
+        a, b, c, d] <;> decide)
+    simpa [B8, B9, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h94 : B8 ≠ B10 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R10) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R10,
+        a, b, c, d] <;> decide)
+    simpa [B8, B10, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h95 : B8 ≠ B11 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R11) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R11,
+        a, b, c, d] <;> decide)
+    simpa [B8, B11, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h96 : B8 ≠ B12 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R12) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R12,
+        a, b, c, d] <;> decide)
+    simpa [B8, B12, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h97 : B8 ≠ B13 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R13.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R13,
+        a, b, c, d] <;> decide)
+    simpa [B8, B13, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h98 : B8 ≠ B14 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R14.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R14,
+        a, b, c, d] <;> decide)
+    simpa [B8, B14, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h99 : B8 ≠ B15 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R15.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R15,
+        a, b, c, d] <;> decide)
+    simpa [B8, B15, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h100 : B8 ≠ B16 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R16.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R16,
+        a, b, c, d] <;> decide)
+    simpa [B8, B16, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h101 : B8 ≠ B17 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R17.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R17,
+        a, b, c, d] <;> decide)
+    simpa [B8, B17, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h102 : B8 ≠ B18 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R18.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R18,
+        a, b, c, d] <;> decide)
+    simpa [B8, B18, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h103 : B8 ≠ B19 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R19.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R19,
+        a, b, c, d] <;> decide)
+    simpa [B8, B19, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h104 : B8 ≠ B20 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R20.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R20,
+        a, b, c, d] <;> decide)
+    simpa [B8, B20, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h105 : B8 ≠ B21 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R21.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R21,
+        a, b, c, d] <;> decide)
+    simpa [B8, B21, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h106 : B8 ≠ B31 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R31) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R31,
+        a, b, c, d] <;> decide)
+    simpa [B8, B31, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h107 : B8 ≠ B32 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R32) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R32,
+        a, b, c, d] <;> decide)
+    simpa [B8, B32, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h108 : B8 ≠ B33 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R33) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R33,
+        a, b, c, d] <;> decide)
+    simpa [B8, B33, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h109 : B8 ≠ B34 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R34) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R34,
+        a, b, c, d] <;> decide)
+    simpa [B8, B34, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h110 : B8 ≠ B35 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R35) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R35,
+        a, b, c, d] <;> decide)
+    simpa [B8, B35, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h111 : B8 ≠ B36 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R36) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R36,
+        a, b, c, d] <;> decide)
+    simpa [B8, B36, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h112 : B8 ≠ B37 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R37) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R37,
+        a, b, c, d] <;> decide)
+    simpa [B8, B37, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h113 : B8 ≠ B38 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R38) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R38,
+        a, b, c, d] <;> decide)
+    simpa [B8, B38, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h114 : B8 ≠ B39 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R8) (Y := R39) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R8, R39,
+        a, b, c, d] <;> decide)
+    simpa [B8, B39, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h115 : B9 ≠ B12 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R9) (Y := R12) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R9, R12,
+        a, b, c, d] <;> decide)
+    simpa [B9, B12, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h116 : B9 ≠ B13 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R9) (Y := R13.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R9, R13,
+        a, b, c, d] <;> decide)
+    simpa [B9, B13, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h117 : B9 ≠ B16 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R9) (Y := R16.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R9, R16,
+        a, b, c, d] <;> decide)
+    simpa [B9, B16, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h118 : B9 ≠ B19 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R9) (Y := R19.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R9, R19,
+        a, b, c, d] <;> decide)
+    simpa [B9, B19, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h119 : B9 ≠ B33 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R9) (Y := R33) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R9, R33,
+        a, b, c, d] <;> decide)
+    simpa [B9, B33, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h120 : B9 ≠ B36 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R9) (Y := R36) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R9, R36,
+        a, b, c, d] <;> decide)
+    simpa [B9, B36, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h121 : B9 ≠ B39 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R9) (Y := R39) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R9, R39,
+        a, b, c, d] <;> decide)
+    simpa [B9, B39, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h122 : B11 ≠ B10 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R11) (Y := R10) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R11, R10,
+        a, b, c, d] <;> decide)
+    simpa [B11, B10, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h123 : B10 ≠ B15 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R10) (Y := R15.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R10, R15,
+        a, b, c, d] <;> decide)
+    simpa [B10, B15, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h124 : B10 ≠ B37 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R10) (Y := R37) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R10, R37,
+        a, b, c, d] <;> decide)
+    simpa [B10, B37, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h125 : B11 ≠ B12 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R11) (Y := R12) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R11, R12,
+        a, b, c, d] <;> decide)
+    simpa [B11, B12, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h126 : B11 ≠ B13 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R11) (Y := R13.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R11, R13,
+        a, b, c, d] <;> decide)
+    simpa [B11, B13, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h127 : B11 ≠ B14 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R11) (Y := R14.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R11, R14,
+        a, b, c, d] <;> decide)
+    simpa [B11, B14, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h128 : B11 ≠ B15 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R11) (Y := R15.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R11, R15,
+        a, b, c, d] <;> decide)
+    simpa [B11, B15, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h129 : B11 ≠ B37 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R11) (Y := R37) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R11, R37,
+        a, b, c, d] <;> decide)
+    simpa [B11, B37, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h130 : B11 ≠ B38 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R11) (Y := R38) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R11, R38,
+        a, b, c, d] <;> decide)
+    simpa [B11, B38, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h131 : B11 ≠ B39 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R11) (Y := R39) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R11, R39,
+        a, b, c, d] <;> decide)
+    simpa [B11, B39, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h132 : B12 ≠ B13 := by
+    have h := signedLabelThreeCode_noComplement hno (X := R12) (Y := R13.antipode) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R12, R13,
+        a, b, c, d] <;> decide)
+    simpa [B12, B13, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h133 : B12 ≠ B39 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R12) (Y := R39) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R12, R39,
+        a, b, c, d] <;> decide)
+    simpa [B12, B39, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h134 : B14 ≠ B13 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R14) (Y := R13) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R14, R13,
+        a, b, c, d] <;> decide)
+    simpa [B14, B13, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h135 : B16 ≠ B13 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R16) (Y := R13) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R16, R13,
+        a, b, c, d] <;> decide)
+    simpa [B16, B13, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h136 : B17 ≠ B13 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R17) (Y := R13) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R17, R13,
+        a, b, c, d] <;> decide)
+    simpa [B17, B13, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h137 : B22 ≠ B13 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R22) (Y := R13) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R22, R13,
+        a, b, c, d] <;> decide)
+    simpa [B22, B13, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h138 : B23 ≠ B13 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R23) (Y := R13) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R23, R13,
+        a, b, c, d] <;> decide)
+    simpa [B23, B13, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h139 : B25 ≠ B13 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R25) (Y := R13) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R25, R13,
+        a, b, c, d] <;> decide)
+    simpa [B25, B13, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h140 : B26 ≠ B13 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R13) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R13,
+        a, b, c, d] <;> decide)
+    simpa [B26, B13, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h141 : B14 ≠ B15 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R14) (Y := R15) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R14, R15,
+        a, b, c, d] <;> decide)
+    simpa [B14, B15, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h142 : B17 ≠ B14 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R17) (Y := R14) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R17, R14,
+        a, b, c, d] <;> decide)
+    simpa [B17, B14, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h143 : B23 ≠ B14 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R23) (Y := R14) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R23, R14,
+        a, b, c, d] <;> decide)
+    simpa [B23, B14, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h144 : B26 ≠ B14 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R14) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R14,
+        a, b, c, d] <;> decide)
+    simpa [B26, B14, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h145 : B17 ≠ B15 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R17) (Y := R15) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R17, R15,
+        a, b, c, d] <;> decide)
+    simpa [B17, B15, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h146 : B18 ≠ B15 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R18) (Y := R15) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R18, R15,
+        a, b, c, d] <;> decide)
+    simpa [B18, B15, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h147 : B23 ≠ B15 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R23) (Y := R15) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R23, R15,
+        a, b, c, d] <;> decide)
+    simpa [B23, B15, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h148 : B24 ≠ B15 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R24) (Y := R15) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R24, R15,
+        a, b, c, d] <;> decide)
+    simpa [B24, B15, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h149 : B26 ≠ B15 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R15) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R15,
+        a, b, c, d] <;> decide)
+    simpa [B26, B15, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h150 : B27 ≠ B15 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R27) (Y := R15) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R27, R15,
+        a, b, c, d] <;> decide)
+    simpa [B27, B15, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h151 : B17 ≠ B16 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R17) (Y := R16) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R17, R16,
+        a, b, c, d] <;> decide)
+    simpa [B17, B16, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h152 : B16 ≠ B19 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R16) (Y := R19) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R16, R19,
+        a, b, c, d] <;> decide)
+    simpa [B16, B19, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h153 : B25 ≠ B16 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R25) (Y := R16) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R25, R16,
+        a, b, c, d] <;> decide)
+    simpa [B25, B16, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h154 : B26 ≠ B16 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R16) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R16,
+        a, b, c, d] <;> decide)
+    simpa [B26, B16, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h155 : B17 ≠ B18 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R17) (Y := R18) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R17, R18,
+        a, b, c, d] <;> decide)
+    simpa [B17, B18, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h156 : B17 ≠ B19 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R17) (Y := R19) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R17, R19,
+        a, b, c, d] <;> decide)
+    simpa [B17, B19, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h157 : B17 ≠ B20 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R17) (Y := R20) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R17, R20,
+        a, b, c, d] <;> decide)
+    simpa [B17, B20, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h158 : B17 ≠ B21 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R17) (Y := R21) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R17, R21,
+        a, b, c, d] <;> decide)
+    simpa [B17, B21, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h159 : B26 ≠ B17 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R17) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R17,
+        a, b, c, d] <;> decide)
+    simpa [B26, B17, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h160 : B18 ≠ B21 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R18) (Y := R21) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R18, R21,
+        a, b, c, d] <;> decide)
+    simpa [B18, B21, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h161 : B26 ≠ B18 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R18) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R18,
+        a, b, c, d] <;> decide)
+    simpa [B26, B18, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h162 : B27 ≠ B18 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R27) (Y := R18) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R27, R18,
+        a, b, c, d] <;> decide)
+    simpa [B27, B18, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h163 : B20 ≠ B19 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R20) (Y := R19) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R20, R19,
+        a, b, c, d] <;> decide)
+    simpa [B20, B19, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h164 : B25 ≠ B19 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R25) (Y := R19) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R25, R19,
+        a, b, c, d] <;> decide)
+    simpa [B25, B19, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h165 : B26 ≠ B19 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R19) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R19,
+        a, b, c, d] <;> decide)
+    simpa [B26, B19, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h166 : B28 ≠ B19 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R28) (Y := R19) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R28, R19,
+        a, b, c, d] <;> decide)
+    simpa [B28, B19, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h167 : B29 ≠ B19 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R29) (Y := R19) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R29, R19,
+        a, b, c, d] <;> decide)
+    simpa [B29, B19, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h168 : B20 ≠ B21 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R20) (Y := R21) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R20, R21,
+        a, b, c, d] <;> decide)
+    simpa [B20, B21, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h169 : B26 ≠ B20 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R20) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R20,
+        a, b, c, d] <;> decide)
+    simpa [B26, B20, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h170 : B29 ≠ B20 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R29) (Y := R20) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R29, R20,
+        a, b, c, d] <;> decide)
+    simpa [B29, B20, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h171 : B26 ≠ B21 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R21) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R21,
+        a, b, c, d] <;> decide)
+    simpa [B26, B21, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h172 : B27 ≠ B21 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R27) (Y := R21) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R27, R21,
+        a, b, c, d] <;> decide)
+    simpa [B27, B21, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h173 : B29 ≠ B21 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R29) (Y := R21) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R29, R21,
+        a, b, c, d] <;> decide)
+    simpa [B29, B21, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h174 : B30 ≠ B21 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R30) (Y := R21) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R30, R21,
+        a, b, c, d] <;> decide)
+    simpa [B30, B21, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h175 : B23 ≠ B22 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R23) (Y := R22) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R23, R22,
+        a, b, c, d] <;> decide)
+    simpa [B23, B22, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h176 : B25 ≠ B22 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R25) (Y := R22) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R25, R22,
+        a, b, c, d] <;> decide)
+    simpa [B25, B22, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h177 : B26 ≠ B22 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R22) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R22,
+        a, b, c, d] <;> decide)
+    simpa [B26, B22, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h178 : B22 ≠ B31 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R22) (Y := R31) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R22, R31,
+        a, b, c, d] <;> decide)
+    simpa [B22, B31, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h179 : B23 ≠ B24 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R23) (Y := R24) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R23, R24,
+        a, b, c, d] <;> decide)
+    simpa [B23, B24, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h180 : B26 ≠ B23 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R23) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R23,
+        a, b, c, d] <;> decide)
+    simpa [B26, B23, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h181 : B23 ≠ B31 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R23) (Y := R31) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R23, R31,
+        a, b, c, d] <;> decide)
+    simpa [B23, B31, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h182 : B23 ≠ B32 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R23) (Y := R32) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R23, R32,
+        a, b, c, d] <;> decide)
+    simpa [B23, B32, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h183 : B23 ≠ B33 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R23) (Y := R33) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R23, R33,
+        a, b, c, d] <;> decide)
+    simpa [B23, B33, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h184 : B26 ≠ B24 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R24) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R24,
+        a, b, c, d] <;> decide)
+    simpa [B26, B24, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h185 : B27 ≠ B24 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R27) (Y := R24) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R27, R24,
+        a, b, c, d] <;> decide)
+    simpa [B27, B24, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h186 : B24 ≠ B33 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R24) (Y := R33) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R24, R33,
+        a, b, c, d] <;> decide)
+    simpa [B24, B33, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h187 : B26 ≠ B25 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R25) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R25,
+        a, b, c, d] <;> decide)
+    simpa [B26, B25, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h188 : B25 ≠ B28 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R25) (Y := R28) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R25, R28,
+        a, b, c, d] <;> decide)
+    simpa [B25, B28, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h189 : B25 ≠ B31 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R25) (Y := R31) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R25, R31,
+        a, b, c, d] <;> decide)
+    simpa [B25, B31, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h190 : B25 ≠ B34 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R25) (Y := R34) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R25, R34,
+        a, b, c, d] <;> decide)
+    simpa [B25, B34, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h191 : B25 ≠ B37 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R25) (Y := R37) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R25, R37,
+        a, b, c, d] <;> decide)
+    simpa [B25, B37, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h192 : B26 ≠ B27 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R27) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R27,
+        a, b, c, d] <;> decide)
+    simpa [B26, B27, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h193 : B26 ≠ B28 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R28) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R28,
+        a, b, c, d] <;> decide)
+    simpa [B26, B28, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h194 : B26 ≠ B29 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R29) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R29,
+        a, b, c, d] <;> decide)
+    simpa [B26, B29, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h195 : B26 ≠ B30 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R30) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R30,
+        a, b, c, d] <;> decide)
+    simpa [B26, B30, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h196 : B26 ≠ B31 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R31) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R31,
+        a, b, c, d] <;> decide)
+    simpa [B26, B31, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h197 : B26 ≠ B32 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R32) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R32,
+        a, b, c, d] <;> decide)
+    simpa [B26, B32, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h198 : B26 ≠ B33 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R33) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R33,
+        a, b, c, d] <;> decide)
+    simpa [B26, B33, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h199 : B26 ≠ B34 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R34) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R34,
+        a, b, c, d] <;> decide)
+    simpa [B26, B34, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h200 : B26 ≠ B35 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R35) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R35,
+        a, b, c, d] <;> decide)
+    simpa [B26, B35, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h201 : B26 ≠ B36 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R36) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R36,
+        a, b, c, d] <;> decide)
+    simpa [B26, B36, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h202 : B26 ≠ B37 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R37) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R37,
+        a, b, c, d] <;> decide)
+    simpa [B26, B37, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h203 : B26 ≠ B38 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R38) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R38,
+        a, b, c, d] <;> decide)
+    simpa [B26, B38, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h204 : B26 ≠ B39 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R26) (Y := R39) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R26, R39,
+        a, b, c, d] <;> decide)
+    simpa [B26, B39, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h205 : B27 ≠ B30 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R27) (Y := R30) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R27, R30,
+        a, b, c, d] <;> decide)
+    simpa [B27, B30, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h206 : B27 ≠ B33 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R27) (Y := R33) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R27, R33,
+        a, b, c, d] <;> decide)
+    simpa [B27, B33, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h207 : B27 ≠ B36 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R27) (Y := R36) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R27, R36,
+        a, b, c, d] <;> decide)
+    simpa [B27, B36, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h208 : B27 ≠ B39 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R27) (Y := R39) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R27, R39,
+        a, b, c, d] <;> decide)
+    simpa [B27, B39, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h209 : B29 ≠ B28 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R29) (Y := R28) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R29, R28,
+        a, b, c, d] <;> decide)
+    simpa [B29, B28, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h210 : B28 ≠ B37 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R28) (Y := R37) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R28, R37,
+        a, b, c, d] <;> decide)
+    simpa [B28, B37, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h211 : B29 ≠ B30 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R29) (Y := R30) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R29, R30,
+        a, b, c, d] <;> decide)
+    simpa [B29, B30, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h212 : B29 ≠ B37 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R29) (Y := R37) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R29, R37,
+        a, b, c, d] <;> decide)
+    simpa [B29, B37, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h213 : B29 ≠ B38 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R29) (Y := R38) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R29, R38,
+        a, b, c, d] <;> decide)
+    simpa [B29, B38, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h214 : B29 ≠ B39 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R29) (Y := R39) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R29, R39,
+        a, b, c, d] <;> decide)
+    simpa [B29, B39, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h215 : B30 ≠ B39 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R30) (Y := R39) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R30, R39,
+        a, b, c, d] <;> decide)
+    simpa [B30, B39, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h216 : B32 ≠ B31 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R32) (Y := R31) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R32, R31,
+        a, b, c, d] <;> decide)
+    simpa [B32, B31, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h217 : B34 ≠ B31 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R34) (Y := R31) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R34, R31,
+        a, b, c, d] <;> decide)
+    simpa [B34, B31, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h218 : B35 ≠ B31 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R35) (Y := R31) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R35, R31,
+        a, b, c, d] <;> decide)
+    simpa [B35, B31, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h219 : B32 ≠ B33 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R32) (Y := R33) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R32, R33,
+        a, b, c, d] <;> decide)
+    simpa [B32, B33, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h220 : B35 ≠ B32 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R35) (Y := R32) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R35, R32,
+        a, b, c, d] <;> decide)
+    simpa [B35, B32, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h221 : B35 ≠ B33 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R35) (Y := R33) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R35, R33,
+        a, b, c, d] <;> decide)
+    simpa [B35, B33, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h222 : B36 ≠ B33 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R36) (Y := R33) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R36, R33,
+        a, b, c, d] <;> decide)
+    simpa [B36, B33, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h223 : B35 ≠ B34 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R35) (Y := R34) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R35, R34,
+        a, b, c, d] <;> decide)
+    simpa [B35, B34, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h224 : B34 ≠ B37 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R34) (Y := R37) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R34, R37,
+        a, b, c, d] <;> decide)
+    simpa [B34, B37, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h225 : B35 ≠ B36 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R35) (Y := R36) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R35, R36,
+        a, b, c, d] <;> decide)
+    simpa [B35, B36, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h226 : B35 ≠ B37 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R35) (Y := R37) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R35, R37,
+        a, b, c, d] <;> decide)
+    simpa [B35, B37, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h227 : B35 ≠ B38 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R35) (Y := R38) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R35, R38,
+        a, b, c, d] <;> decide)
+    simpa [B35, B38, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h228 : B35 ≠ B39 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R35) (Y := R39) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R35, R39,
+        a, b, c, d] <;> decide)
+    simpa [B35, B39, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h229 : B36 ≠ B39 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R36) (Y := R39) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R36, R39,
+        a, b, c, d] <;> decide)
+    simpa [B36, B39, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h230 : B38 ≠ B37 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R38) (Y := R37) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R38, R37,
+        a, b, c, d] <;> decide)
+    simpa [B38, B37, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  have h231 : B38 ≠ B39 ^^^ (1#3) := by
+    have h := signedLabelThreeCode_noComplement hno (X := R38) (Y := R39) (by
+      simp [SignedSubset.Le, NonzeroSignedSubset.antipode, SignedSubset.antipode, R38, R39,
+        a, b, c, d] <;> decide)
+    simpa [B38, B39, signedLabelThreeCode_neg, SignedLabel.neg, hantipodal] using h
+  exact tuckerLemmaStatement_four_core_unsat
+    B0 B1 B2 B3 B4 B5 B6 B7
+    B8 B9 B10 B11 B12 B13 B14 B15
+    B16 B17 B18 B19 B20 B21 B22 B23
+    B24 B25 B26 B27 B28 B29 B30 B31
+    B32 B33 B34 B35 B36 B37 B38 B39
+    hdom0 hdom1 hdom2 hdom3 hdom4 hdom5 hdom6 hdom7
+    hdom8 hdom9 hdom10 hdom11 hdom12 hdom13 hdom14 hdom15
+    hdom16 hdom17 hdom18 hdom19 hdom20 hdom21 hdom22 hdom23
+    hdom24 hdom25 hdom26 hdom27 hdom28 hdom29 hdom30 hdom31
+    hdom32 hdom33 hdom34 hdom35 hdom36 hdom37 hdom38 hdom39
+    h0 h1 h2 h3 h4 h5 h6 h7
+    h8 h9 h10 h11 h12 h13 h14 h15
+    h16 h17 h18 h19 h20 h21 h22 h23
+    h24 h25 h26 h27 h28 h29 h30 h31
+    h32 h33 h34 h35 h36 h37 h38 h39
+    h40 h41 h42 h43 h44 h45 h46 h47
+    h48 h49 h50 h51 h52 h53 h54 h55
+    h56 h57 h58 h59 h60 h61 h62 h63
+    h64 h65 h66 h67 h68 h69 h70 h71
+    h72 h73 h74 h75 h76 h77 h78 h79
+    h80 h81 h82 h83 h84 h85 h86 h87
+    h88 h89 h90 h91 h92 h93 h94 h95
+    h96 h97 h98 h99 h100 h101 h102 h103
+    h104 h105 h106 h107 h108 h109 h110 h111
+    h112 h113 h114 h115 h116 h117 h118 h119
+    h120 h121 h122 h123 h124 h125 h126 h127
+    h128 h129 h130 h131 h132 h133 h134 h135
+    h136 h137 h138 h139 h140 h141 h142 h143
+    h144 h145 h146 h147 h148 h149 h150 h151
+    h152 h153 h154 h155 h156 h157 h158 h159
+    h160 h161 h162 h163 h164 h165 h166 h167
+    h168 h169 h170 h171 h172 h173 h174 h175
+    h176 h177 h178 h179 h180 h181 h182 h183
+    h184 h185 h186 h187 h188 h189 h190 h191
+    h192 h193 h194 h195 h196 h197 h198 h199
+    h200 h201 h202 h203 h204 h205 h206 h207
+    h208 h209 h210 h211 h212 h213 h214 h215
+    h216 h217 h218 h219 h220 h221 h222 h223
+    h224 h225 h226 h227 h228 h229 h230 h231
+
+theorem kyFanEndpointPairingStatement_three_three : KyFanEndpointPairingStatement 3 3 := by
+  intro label hantipodal hno
+  exact False.elim (not_noComplementaryComparableLabels_four label hantipodal hno)
+
+theorem tuckerLemmaStatement_four : TuckerLemmaStatement 4 :=
+  tuckerLemmaStatement_succ_of_endpointPairing (by omega)
+    kyFanEndpointPairingStatement_three_three
 
 end ProofsInTheBook.TuckerLemmaCore

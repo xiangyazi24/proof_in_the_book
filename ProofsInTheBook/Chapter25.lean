@@ -24,6 +24,7 @@ namespace ProofsInTheBook.Chapter25
 
 open MeasureTheory
 open scoped BigOperators
+open scoped ENNReal
 
 /-- Expected crossings for a single segment in Buffon's needle model. -/
 noncomputable def segmentExpectedCrossings (d length : ℝ) : ℝ :=
@@ -166,6 +167,12 @@ theorem volume_buffonPlacementSet (d : ℝ) :
   simp only [sub_zero]
   rw [← ENNReal.ofReal_mul Real.pi_pos.le]
   ring_nf
+
+/-- The placement rectangle is measurable. -/
+theorem measurableSet_buffonPlacementSet (d : ℝ) :
+    MeasurableSet (buffonPlacementSet d) := by
+  unfold buffonPlacementSet
+  exact measurableSet_Icc.prod measurableSet_Icc
 
 /-- The normalized placement measure has total mass one. -/
 theorem buffonPlacementMeasure_univ {d : ℝ} (hd : 0 < d) :
@@ -407,6 +414,104 @@ theorem volume_buffonCrossingSet_eq_region (length : ℝ) :
       simp [buffonCrossingRegion, regionBetween, hθ']
     rw [hclosed, hopen]
 
+/-- The crossing set area is the `lintegral` of its indicator. -/
+theorem volume_buffonCrossingSet_eq_lintegral_indicator (length : ℝ) :
+    volume (buffonCrossingSet length) =
+      ∫⁻ p, ((buffonCrossingSet length).indicator
+        (1 : BuffonPlacement → ℝ≥0∞) p) ∂volume := by
+  rw [lintegral_indicator_one (measurableSet_buffonCrossingSet length)]
+
+/-- On the placement rectangle, the threshold predicate is the same indicator
+as the closed crossing set. -/
+theorem buffonThresholdIndicator_eq_crossingIndicator_on_placementSet
+    (d length : ℝ) :
+    Set.EqOn
+      (({p : BuffonPlacement | p.2 ≤ buffonCenterThreshold length p.1}).indicator
+        (1 : BuffonPlacement → ℝ))
+      ((buffonCrossingSet length).indicator (1 : BuffonPlacement → ℝ))
+      (buffonPlacementSet d) := by
+  intro p hp
+  rcases hp with ⟨hθ, hx⟩
+  by_cases hcross : p.2 ≤ buffonCenterThreshold length p.1
+  · have hthreshold :
+        p ∈ {p : BuffonPlacement | p.2 ≤ buffonCenterThreshold length p.1} := hcross
+    have hset : p ∈ buffonCrossingSet length := ⟨hθ, ⟨hx.1, hcross⟩⟩
+    simp [hthreshold, hset]
+  · have hthreshold :
+        p ∉ {p : BuffonPlacement | p.2 ≤ buffonCenterThreshold length p.1} := hcross
+    have hset : p ∉ buffonCrossingSet length := by
+      intro hp'
+      exact hcross hp'.2.2
+    simp [hthreshold, hset]
+
+/-- The real integral of the threshold indicator over the placement rectangle
+is the planar crossing area. -/
+theorem buffonThresholdIndicator_integral_eq_crossingArea {d length : ℝ}
+    (hlen : 0 ≤ length) (hle : length ≤ d) :
+    ∫ p in buffonPlacementSet d,
+        ({p : BuffonPlacement | p.2 ≤ buffonCenterThreshold length p.1}).indicator
+          (1 : BuffonPlacement → ℝ) p ∂volume =
+      (volume (buffonCrossingSet length)).toReal := by
+  rw [setIntegral_congr_fun (measurableSet_buffonPlacementSet d)
+    (buffonThresholdIndicator_eq_crossingIndicator_on_placementSet d length)]
+  rw [integral_indicator_one (μ := volume.restrict (buffonPlacementSet d))
+    (measurableSet_buffonCrossingSet length)]
+  rw [measureReal_def]
+  rw [Measure.restrict_eq_self volume (buffonCrossingSet_subset_placementSet hlen hle)]
+
+/-- The unnormalized crossing indicator integral over the placement rectangle
+has area `length`. -/
+theorem buffonThresholdIndicator_integral {d length : ℝ}
+    (hlen : 0 ≤ length) (hle : length ≤ d) :
+    ∫ p in buffonPlacementSet d,
+        ({p : BuffonPlacement | p.2 ≤ buffonCenterThreshold length p.1}).indicator
+          (1 : BuffonPlacement → ℝ) p ∂volume =
+      length := by
+  rw [buffonThresholdIndicator_integral_eq_crossingArea hlen hle,
+    volume_buffonCrossingSet_eq_region, volume_buffonCrossingRegion hlen,
+    ENNReal.toReal_ofReal hlen]
+
+/-- The crossing probability is the crossing area divided by the total placement
+area. -/
+theorem buffonNeedleCrossingProbability_eq_volume_ratio {d length : ℝ}
+    (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
+    buffonNeedleCrossingProbability d length =
+      (volume (buffonCrossingSet length)).toReal /
+        (volume (buffonPlacementSet d)).toReal := by
+  unfold buffonNeedleCrossingProbability buffonPlacementMeasure
+  rw [Measure.smul_apply]
+  rw [Measure.restrict_eq_self volume (buffonCrossingSet_subset_placementSet hlen hle)]
+  rw [smul_eq_mul, ENNReal.toReal_mul, ENNReal.toReal_ofReal (by positivity)]
+  rw [volume_buffonPlacementSet d, ENNReal.toReal_ofReal (by positivity)]
+  field_simp [Real.pi_ne_zero, hd.ne']
+
+/-- The crossing probability is the normalized integral of the threshold
+indicator over `[0,π] × [0,d/2]`. -/
+theorem buffonNeedleCrossingProbability_eq_normalized_thresholdIntegral {d length : ℝ}
+    (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
+    buffonNeedleCrossingProbability d length =
+      (2 / (Real.pi * d)) *
+        ∫ p in buffonPlacementSet d,
+          ({p : BuffonPlacement | p.2 ≤ buffonCenterThreshold length p.1}).indicator
+            (1 : BuffonPlacement → ℝ) p ∂volume := by
+  unfold buffonNeedleCrossingProbability buffonPlacementMeasure
+  rw [Measure.smul_apply]
+  rw [Measure.restrict_eq_self volume (buffonCrossingSet_subset_placementSet hlen hle)]
+  rw [buffonThresholdIndicator_integral_eq_crossingArea hlen hle]
+  rw [smul_eq_mul, ENNReal.toReal_mul, ENNReal.toReal_ofReal (by positivity)]
+
+/-- The normalized threshold-indicator integral is Buffon's short-needle
+probability formula. -/
+theorem buffonThresholdIndicator_integral_normalized {d length : ℝ}
+    (_hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
+    (2 / (Real.pi * d)) *
+        ∫ p in buffonPlacementSet d,
+          ({p : BuffonPlacement | p.2 ≤ buffonCenterThreshold length p.1}).indicator
+            (1 : BuffonPlacement → ℝ) p ∂volume =
+      2 * length / (Real.pi * d) := by
+  rw [buffonThresholdIndicator_integral hlen hle]
+  ring
+
 /-- The placement measure of the actual crossing set is the Buffon formula. -/
 theorem buffonPlacementMeasure_crossingSet {d length : ℝ}
     (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
@@ -436,9 +541,9 @@ theorem buffonNeedleCrossingDensityAverage_eq_segmentExpectedCrossings
 theorem buffonNeedleCrossingProbability_eq_segmentExpectedCrossings
     (d length : ℝ) (hd : 0 < d) (hlen : 0 ≤ length) (hle : length ≤ d) :
     buffonNeedleCrossingProbability d length = segmentExpectedCrossings d length := by
-  unfold buffonNeedleCrossingProbability segmentExpectedCrossings
-  rw [buffonPlacementMeasure_crossingSet hd hlen hle]
-  rw [ENNReal.toReal_ofReal (show 0 ≤ 2 * length / (Real.pi * d) by positivity)]
+  rw [buffonNeedleCrossingProbability_eq_normalized_thresholdIntegral hd hlen hle,
+    buffonThresholdIndicator_integral_normalized hd hlen hle]
+  rfl
 
 /-- The measure-theoretic probability agrees with the older density-level
 average. -/

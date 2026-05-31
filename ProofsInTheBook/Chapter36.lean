@@ -301,6 +301,43 @@ theorem TriangulatedPolygon.card_pos {n : ℕ} {S : Finset (AbsTriangle n)}
   | glue h_ind T newV hT_new hShared hFresh ih =>
       exact lt_of_lt_of_le ih (Finset.card_le_card (by intro U hU; simp [hU]))
 
+/-- Every vertex in the inductively recorded vertex set belongs to some
+triangle of the triangulation. -/
+theorem TriangulatedPolygon.mem_vertices_exists_triangle {n : ℕ}
+    {S : Finset (AbsTriangle n)} (h : TriangulatedPolygon n S) {v : Fin n} :
+    v ∈ h.vertices → ∃ T ∈ S, v ∈ T.vertices := by
+  induction h with
+  | single T =>
+      intro hv
+      refine ⟨T, by simp, ?_⟩
+      simpa [TriangulatedPolygon.vertices, AbsTriangle.vertices] using hv
+  | glue h_ind T newV hT_new hShared hFresh ih =>
+      intro hv
+      simp only [TriangulatedPolygon.vertices, Finset.mem_insert] at hv
+      rcases hv with rfl | hv_old
+      · exact ⟨T, by simp, by simpa [AbsTriangle.vertices] using hT_new⟩
+      · rcases ih hv_old with ⟨U, hU, hvU⟩
+        exact ⟨U, by simp [hU], hvU⟩
+
+/-- An inductive triangulation with `k` triangles uses exactly `k + 2`
+vertices. -/
+theorem TriangulatedPolygon.vertices_card {n : ℕ} {S : Finset (AbsTriangle n)}
+    (h : TriangulatedPolygon n S) : h.vertices.card = S.card + 2 := by
+  induction h with
+  | single T =>
+      simp [TriangulatedPolygon.vertices, T.hab, T.hbc, T.hac]
+  | glue h_ind T newV hT_new hShared hFresh ih =>
+      rename_i S0
+      have hnew_not_old : newV ∉ h_ind.vertices := by
+        intro hmem
+        rcases h_ind.mem_vertices_exists_triangle hmem with ⟨U, hU, hnewU⟩
+        exact hFresh U hU (by simpa [AbsTriangle.vertices] using hnewU)
+      have hT_not_mem : T ∉ S0 := by
+        intro hT_mem
+        exact hFresh T hT_mem hT_new
+      simp [TriangulatedPolygon.vertices, Finset.card_insert_of_notMem hnew_not_old,
+        Finset.card_insert_of_notMem hT_not_mem, ih]
+
 /-- Reindex a finset of triangles after deleting a vertex avoided by all of
 them. -/
 noncomputable def deleteVertexTriangles {n : ℕ} (v : Fin (n + 1))
@@ -653,10 +690,46 @@ theorem exists_single_triangle_of_three (P : SimplePolygon 3) :
 def carrier {n : ℕ} (P : SimplePolygon n) : Set Point2 :=
   {x | ∃ T ∈ P.triangles, x ∈ T.realization P.toPolygon}
 
+/-- A certified polygon is convex when its triangulated carrier is convex. -/
+def IsConvex {n : ℕ} (P : SimplePolygon n) : Prop :=
+  Convex ℝ P.carrier
+
 /-- The geometric triangle cut off by the previous, current, and next cyclic
 vertices. -/
 def earTriangleAt {n : ℕ} (P : SimplePolygon n) (i : Fin n) : Set Point2 :=
   polygonTriangleSet P.toPolygon (cyclicPrev i) i (cyclicNext i)
+
+/-- The triangulation certificate of a `SimplePolygon` covers every indexed
+vertex. -/
+theorem triangulation_vertices_eq_univ {n : ℕ} (P : SimplePolygon n) :
+    P.triangulated.vertices = Finset.univ := by
+  refine Finset.eq_univ_of_card P.triangulated.vertices ?_
+  have hcard : P.triangulated.vertices.card = n := by
+    rw [P.triangulated.vertices_card, P.triangle_count]
+  simpa [Fintype.card_fin] using hcard
+
+/-- Every indexed polygon vertex lies in the certified polygonal carrier. -/
+theorem vertex_mem_carrier {n : ℕ} (P : SimplePolygon n) (i : Fin n) :
+    P.toPolygon i ∈ P.carrier := by
+  have hi : i ∈ P.triangulated.vertices := by
+    rw [P.triangulation_vertices_eq_univ]
+    simp
+  rcases P.triangulated.mem_vertices_exists_triangle hi with ⟨T, hT, hiT⟩
+  exact ⟨T, hT, AbsTriangle.vertex_mem_realization T P.toPolygon hiT⟩
+
+/-- In a convex certified polygon, every adjacent-vertex triangle is contained
+in the polygonal carrier. -/
+theorem earTriangleAt_subset_carrier_of_convex {n : ℕ} (P : SimplePolygon n)
+    (hconv : P.IsConvex) (i : Fin n) :
+    P.earTriangleAt i ⊆ P.carrier := by
+  dsimp [earTriangleAt, polygonTriangleSet]
+  refine convexHull_min ?_ hconv
+  intro x hx
+  simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hx
+  rcases hx with rfl | rfl | rfl
+  · exact P.vertex_mem_carrier (cyclicPrev i)
+  · exact P.vertex_mem_carrier i
+  · exact P.vertex_mem_carrier (cyclicNext i)
 
 /-- A consecutive geometric ear at vertex `i`: the adjacent-vertex triangle is
 nondegenerate and lies in the polygonal region. -/
@@ -665,6 +738,38 @@ structure ConsecutiveEarAt {n : ℕ} (P : SimplePolygon n) (i : Fin n) : Prop wh
     AffineIndependent ℝ ![P.toPolygon (cyclicPrev i), P.toPolygon i,
       P.toPolygon (cyclicNext i)]
   inside : P.earTriangleAt i ⊆ P.carrier
+
+/-- A convex certified polygon has a consecutive geometric ear at any
+nondegenerate vertex. -/
+theorem consecutiveEarAt_of_convex {n : ℕ} (P : SimplePolygon n) (i : Fin n)
+    (hconv : P.IsConvex)
+    (hnd : AffineIndependent ℝ ![P.toPolygon (cyclicPrev i), P.toPolygon i,
+      P.toPolygon (cyclicNext i)]) :
+    P.ConsecutiveEarAt i where
+  nondegenerate := hnd
+  inside := P.earTriangleAt_subset_carrier_of_convex hconv i
+
+/-- For a convex certified polygon with nondegenerate adjacent triples, every
+vertex is a consecutive geometric ear. -/
+theorem all_vertices_consecutiveEars_of_convex {n : ℕ} (P : SimplePolygon n)
+    (hconv : P.IsConvex)
+    (hnd : ∀ i : Fin n,
+      AffineIndependent ℝ ![P.toPolygon (cyclicPrev i), P.toPolygon i,
+        P.toPolygon (cyclicNext i)]) :
+    ∀ i : Fin n, P.ConsecutiveEarAt i := by
+  intro i
+  exact P.consecutiveEarAt_of_convex i hconv (hnd i)
+
+/-- Convex triangular polygons have the trivial triangulation and all three
+vertices are consecutive geometric ears. -/
+theorem convex_triangle_triangulation_trivial (P : SimplePolygon 3)
+    (hconv : P.IsConvex)
+    (hnd : ∀ i : Fin 3,
+      AffineIndependent ℝ ![P.toPolygon (cyclicPrev i), P.toPolygon i,
+        P.toPolygon (cyclicNext i)]) :
+    (∃ T : AbsTriangle 3, P.triangles = {T}) ∧
+      ∀ i : Fin 3, P.ConsecutiveEarAt i :=
+  ⟨P.exists_single_triangle_of_three, P.all_vertices_consecutiveEars_of_convex hconv hnd⟩
 
 /-- The ear supplied by a triangulation: `v` is a free vertex of triangle `T`,
 and the triangle is inside the certified polygonal region. -/

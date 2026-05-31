@@ -3558,6 +3558,235 @@ theorem even_card_of_fixedPointFree_involutive {α : Type*} [Fintype α]
     exact hinv x
   exact even_card_of_fixedPointFree_involution p hp2 hfree
 
+private lemma unique_ne_of_card_eq_two {β : Type*} [Fintype β] [DecidableEq β]
+    (hcard : Fintype.card β = 2) (x y z : β) (hy : y ≠ x) (hz : z ≠ x) : y = z := by
+  by_contra hyz
+  have hle : ({x, y, z} : Finset β).card ≤ Fintype.card β := Finset.card_le_univ _
+  have hxy : x ≠ y := fun h => hy h.symm
+  have hxz : x ≠ z := fun h => hz h.symm
+  have hcard3 : ({x, y, z} : Finset β).card = 3 := by
+    simp [hxy, hxz, hyz]
+  omega
+
+private lemma relationClassPartner_exists {α : Type*} [Fintype α] [DecidableEq α]
+    (R : α → α → Prop) [DecidableRel R]
+    (_hrefl : ∀ x, R x x)
+    (hcard : ∀ x, Fintype.card {y : α // R x y} = 2)
+    (x : α) : ∃ y, R x y ∧ y ≠ x := by
+  by_contra h
+  have hsubsingleton : Subsingleton {y : α // R x y} := by
+    refine ⟨fun a b => ?_⟩
+    apply Subtype.ext
+    have ha : a.1 = x := by
+      by_contra hne
+      exact h ⟨a.1, a.2, hne⟩
+    have hb : b.1 = x := by
+      by_contra hne
+      exact h ⟨b.1, b.2, hne⟩
+    exact ha.trans hb.symm
+  have hle : Fintype.card {y : α // R x y} ≤ 1 :=
+    Fintype.card_le_one_iff_subsingleton.mpr hsubsingleton
+  rw [hcard x] at hle
+  omega
+
+noncomputable def relationClassPartner {α : Type*} [Fintype α] [DecidableEq α]
+    (R : α → α → Prop) [DecidableRel R]
+    (hrefl : ∀ x, R x x)
+    (hcard : ∀ x, Fintype.card {y : α // R x y} = 2)
+    (x : α) : α :=
+  Classical.choose (relationClassPartner_exists R hrefl hcard x)
+
+theorem relationClassPartner_rel {α : Type*} [Fintype α] [DecidableEq α]
+    (R : α → α → Prop) [DecidableRel R]
+    (hrefl : ∀ x, R x x)
+    (hcard : ∀ x, Fintype.card {y : α // R x y} = 2)
+    (x : α) : R x (relationClassPartner R hrefl hcard x) :=
+  (Classical.choose_spec (relationClassPartner_exists R hrefl hcard x)).1
+
+theorem relationClassPartner_ne {α : Type*} [Fintype α] [DecidableEq α]
+    (R : α → α → Prop) [DecidableRel R]
+    (hrefl : ∀ x, R x x)
+    (hcard : ∀ x, Fintype.card {y : α // R x y} = 2)
+    (x : α) : relationClassPartner R hrefl hcard x ≠ x :=
+  (Classical.choose_spec (relationClassPartner_exists R hrefl hcard x)).2
+
+theorem relationClassPartner_involutive {α : Type*} [Fintype α] [DecidableEq α]
+    (R : α → α → Prop) [DecidableRel R]
+    (hrefl : ∀ x, R x x)
+    (hsymm : ∀ {x y}, R x y → R y x)
+    (hcard : ∀ x, Fintype.card {y : α // R x y} = 2) :
+    Function.Involutive (relationClassPartner R hrefl hcard) := by
+  intro x
+  let y := relationClassPartner R hrefl hcard x
+  have hxy : R x y := relationClassPartner_rel R hrefl hcard x
+  have hyx : R y x := hsymm hxy
+  have hy_partner : R y (relationClassPartner R hrefl hcard y) :=
+    relationClassPartner_rel R hrefl hcard y
+  have hfirst_ne : (⟨x, hyx⟩ : {z : α // R y z}) ≠ ⟨y, hrefl y⟩ := by
+    intro h
+    have hval := congrArg Subtype.val h
+    exact relationClassPartner_ne R hrefl hcard x hval.symm
+  have hsecond_ne :
+      (⟨relationClassPartner R hrefl hcard y, hy_partner⟩ : {z : α // R y z}) ≠
+        ⟨y, hrefl y⟩ := by
+    intro h
+    have hval := congrArg Subtype.val h
+    exact relationClassPartner_ne R hrefl hcard y hval
+  have hsub := unique_ne_of_card_eq_two (β := {z : α // R y z}) (hcard y)
+    ⟨y, hrefl y⟩ ⟨x, hyx⟩ ⟨relationClassPartner R hrefl hcard y, hy_partner⟩
+    hfirst_ne hsecond_ne
+  simpa [y] using (congrArg Subtype.val hsub).symm
+
+theorem relationClassPartner_map {α : Type*} [Fintype α] [DecidableEq α]
+    (R : α → α → Prop) [DecidableRel R]
+    (hrefl : ∀ x, R x x)
+    (hcard : ∀ x, Fintype.card {y : α // R x y} = 2)
+    (e : α ≃ α) (hmap : ∀ x y, R (e x) (e y) ↔ R x y)
+    (x : α) :
+    e (relationClassPartner R hrefl hcard x) =
+      relationClassPartner R hrefl hcard (e x) := by
+  have hleft_rel :
+      R (e x) (e (relationClassPartner R hrefl hcard x)) :=
+    (hmap x (relationClassPartner R hrefl hcard x)).mpr
+      (relationClassPartner_rel R hrefl hcard x)
+  have hright_rel :
+      R (e x) (relationClassPartner R hrefl hcard (e x)) :=
+    relationClassPartner_rel R hrefl hcard (e x)
+  have hleft_ne :
+      (⟨e (relationClassPartner R hrefl hcard x), hleft_rel⟩ :
+          {y : α // R (e x) y}) ≠ ⟨e x, hrefl (e x)⟩ := by
+    intro h
+    exact relationClassPartner_ne R hrefl hcard x (e.injective (congrArg Subtype.val h))
+  have hright_ne :
+      (⟨relationClassPartner R hrefl hcard (e x), hright_rel⟩ :
+          {y : α // R (e x) y}) ≠ ⟨e x, hrefl (e x)⟩ := by
+    intro h
+    exact relationClassPartner_ne R hrefl hcard (e x) (congrArg Subtype.val h)
+  have hsub := unique_ne_of_card_eq_two (β := {y : α // R (e x) y}) (hcard (e x))
+    ⟨e x, hrefl (e x)⟩
+    ⟨e (relationClassPartner R hrefl hcard x), hleft_rel⟩
+    ⟨relationClassPartner R hrefl hcard (e x), hright_rel⟩
+    hleft_ne hright_ne
+  exact congrArg Subtype.val hsub
+
+theorem relationClassPartner_not_map {α : Type*} [Fintype α] [DecidableEq α]
+    (R : α → α → Prop) [DecidableRel R]
+    (hrefl : ∀ x, R x x)
+    (hcard : ∀ x, Fintype.card {y : α // R x y} = 2)
+    (e : α ≃ α) (hnot : ∀ x, ¬ R x (e x))
+    (x : α) :
+    e x ≠ relationClassPartner R hrefl hcard x := by
+  intro h
+  have hrel : R x (relationClassPartner R hrefl hcard x) :=
+    relationClassPartner_rel R hrefl hcard x
+  exact hnot x (by simpa [← h] using hrel)
+
+noncomputable def relationClassPartnerEquiv {α : Type*} [Fintype α] [DecidableEq α]
+    (R : α → α → Prop) [DecidableRel R]
+    (hrefl : ∀ x, R x x)
+    (hsymm : ∀ {x y}, R x y → R y x)
+    (hcard : ∀ x, Fintype.card {y : α // R x y} = 2) : α ≃ α where
+  toFun := relationClassPartner R hrefl hcard
+  invFun := relationClassPartner R hrefl hcard
+  left_inv := relationClassPartner_involutive R hrefl hsymm hcard
+  right_inv := relationClassPartner_involutive R hrefl hsymm hcard
+
+noncomputable def endpointPartnerOfReachableCardTwo {Vertex Endpoint : Type*}
+    [Fintype Endpoint] [DecidableEq Endpoint]
+    (G : SimpleGraph Vertex) (endpointVertex : Endpoint ↪ Vertex)
+    [DecidableRel fun e e' : Endpoint => G.Reachable (endpointVertex e) (endpointVertex e')]
+    (hcard :
+      ∀ e : Endpoint,
+        Fintype.card {e' : Endpoint // G.Reachable (endpointVertex e) (endpointVertex e')} = 2) :
+    Endpoint ≃ Endpoint :=
+  relationClassPartnerEquiv
+    (fun e e' : Endpoint => G.Reachable (endpointVertex e) (endpointVertex e'))
+    (fun e => by exact SimpleGraph.Reachable.refl (G := G) (endpointVertex e))
+    (fun h => h.symm)
+    hcard
+
+theorem endpointPartnerOfReachableCardTwo_reachable {Vertex Endpoint : Type*}
+    [Fintype Endpoint] [DecidableEq Endpoint]
+    (G : SimpleGraph Vertex) (endpointVertex : Endpoint ↪ Vertex)
+    [DecidableRel fun e e' : Endpoint => G.Reachable (endpointVertex e) (endpointVertex e')]
+    (hcard :
+      ∀ e : Endpoint,
+        Fintype.card {e' : Endpoint // G.Reachable (endpointVertex e) (endpointVertex e')} = 2)
+    (e : Endpoint) :
+    G.Reachable (endpointVertex e)
+      (endpointVertex (endpointPartnerOfReachableCardTwo G endpointVertex hcard e)) :=
+  relationClassPartner_rel
+    (fun e e' : Endpoint => G.Reachable (endpointVertex e) (endpointVertex e'))
+    (fun e => by exact SimpleGraph.Reachable.refl (G := G) (endpointVertex e))
+    hcard e
+
+theorem endpointPartnerOfReachableCardTwo_involutive {Vertex Endpoint : Type*}
+    [Fintype Endpoint] [DecidableEq Endpoint]
+    (G : SimpleGraph Vertex) (endpointVertex : Endpoint ↪ Vertex)
+    [DecidableRel fun e e' : Endpoint => G.Reachable (endpointVertex e) (endpointVertex e')]
+    (hcard :
+      ∀ e : Endpoint,
+        Fintype.card {e' : Endpoint // G.Reachable (endpointVertex e) (endpointVertex e')} = 2) :
+    Function.Involutive (endpointPartnerOfReachableCardTwo G endpointVertex hcard) :=
+  relationClassPartner_involutive
+    (fun e e' : Endpoint => G.Reachable (endpointVertex e) (endpointVertex e'))
+    (fun e => by exact SimpleGraph.Reachable.refl (G := G) (endpointVertex e))
+    (fun h => h.symm)
+    hcard
+
+theorem endpointPartnerOfReachableCardTwo_fixedPointFree {Vertex Endpoint : Type*}
+    [Fintype Endpoint] [DecidableEq Endpoint]
+    (G : SimpleGraph Vertex) (endpointVertex : Endpoint ↪ Vertex)
+    [DecidableRel fun e e' : Endpoint => G.Reachable (endpointVertex e) (endpointVertex e')]
+    (hcard :
+      ∀ e : Endpoint,
+        Fintype.card {e' : Endpoint // G.Reachable (endpointVertex e) (endpointVertex e')} = 2)
+    (e : Endpoint) :
+    endpointPartnerOfReachableCardTwo G endpointVertex hcard e ≠ e :=
+  relationClassPartner_ne
+    (fun e e' : Endpoint => G.Reachable (endpointVertex e) (endpointVertex e'))
+    (fun e => by exact SimpleGraph.Reachable.refl (G := G) (endpointVertex e))
+    hcard e
+
+theorem endpointPartnerOfReachableCardTwo_comm {Vertex Endpoint : Type*}
+    [Fintype Endpoint] [DecidableEq Endpoint]
+    (G : SimpleGraph Vertex) (endpointVertex : Endpoint ↪ Vertex)
+    [DecidableRel fun e e' : Endpoint => G.Reachable (endpointVertex e) (endpointVertex e')]
+    (hcard :
+      ∀ e : Endpoint,
+        Fintype.card {e' : Endpoint // G.Reachable (endpointVertex e) (endpointVertex e')} = 2)
+    (endpointAntipode : Endpoint ≃ Endpoint)
+    (hreachable :
+      ∀ e e' : Endpoint,
+        G.Reachable (endpointVertex (endpointAntipode e))
+            (endpointVertex (endpointAntipode e')) ↔
+          G.Reachable (endpointVertex e) (endpointVertex e'))
+    (e : Endpoint) :
+    endpointAntipode (endpointPartnerOfReachableCardTwo G endpointVertex hcard e) =
+      endpointPartnerOfReachableCardTwo G endpointVertex hcard (endpointAntipode e) :=
+  relationClassPartner_map
+    (fun e e' : Endpoint => G.Reachable (endpointVertex e) (endpointVertex e'))
+    (fun e => by exact SimpleGraph.Reachable.refl (G := G) (endpointVertex e))
+    hcard endpointAntipode hreachable e
+
+theorem endpointPartnerOfReachableCardTwo_not_antipodal {Vertex Endpoint : Type*}
+    [Fintype Endpoint] [DecidableEq Endpoint]
+    (G : SimpleGraph Vertex) (endpointVertex : Endpoint ↪ Vertex)
+    [DecidableRel fun e e' : Endpoint => G.Reachable (endpointVertex e) (endpointVertex e')]
+    (hcard :
+      ∀ e : Endpoint,
+        Fintype.card {e' : Endpoint // G.Reachable (endpointVertex e) (endpointVertex e')} = 2)
+    (endpointAntipode : Endpoint ≃ Endpoint)
+    (hnot :
+      ∀ e : Endpoint,
+        ¬ G.Reachable (endpointVertex e) (endpointVertex (endpointAntipode e)))
+    (e : Endpoint) :
+    endpointAntipode e ≠ endpointPartnerOfReachableCardTwo G endpointVertex hcard e :=
+  relationClassPartner_not_map
+    (fun e e' : Endpoint => G.Reachable (endpointVertex e) (endpointVertex e'))
+    (fun e => by exact SimpleGraph.Reachable.refl (G := G) (endpointVertex e))
+    hcard endpointAntipode hnot e
+
 theorem even_card_positiveNonlastPuncturedPrefixChainType {n m : ℕ}
     (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :
     Even (Fintype.card (PositiveNonlastPuncturedPrefixChainType label)) :=
@@ -4465,6 +4694,25 @@ theorem kyFan_flag_punctured_incidence_card_eq_two_of_strict {n m : ℕ} (hn : 0
   exact kyFanDeletionGaps_card_eq_two_of_strict hn hno hstrict
     ((kyFanDeletionGaps_nonempty_iff hno P).mpr hactive)
 
+/--
+In the Tucker-critical range `m = n`, no signed-permutation prefix word of
+length `n + 1` can have strictly increasing label indices.  Thus the current
+Layer-A theorem with a full-word `StrictMono` hypothesis cannot be instantiated
+there for active punctured flags.
+-/
+theorem not_strictMono_prefixLabel_indices_critical {n : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel n}
+    (P : SignedPermutation (n + 1)) :
+    ¬ StrictMono fun i : Fin (n + 1) => (label (P.prefixChain i)).index := by
+  intro hstrict
+  exact not_strictMono_fin_of_lt (n := n + 1) (m := n) (by omega)
+    ⟨fun i => (label (P.prefixChain i)).index, hstrict⟩
+
+/--
+Raw flag-incidence predicate for the "same maximal flag" side of the Ky Fan
+path graph.  Base endpoints are not flagged by this projection; they need the
+separate boundary-incidence data of the full path construction.
+-/
 def kyFanEndpointCarriesFlag {n m : ℕ}
     {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
     (P : SignedPermutation (n + 1)) :
@@ -4498,6 +4746,21 @@ theorem kyFanPathGraph_adj_iff {n m : ℕ}
           kyFanEndpointCarriesFlag P endpoint ∧
             kyFanEndpointCarriesFlag P endpoint' := by
   rfl
+
+theorem kyFanPathGraph_base_not_adj {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (base : Bool) (endpoint : KyFanPathEndpointClass label) :
+    ¬ (KyFanPathGraph label).Adj (Sum.inr (Sum.inl base)) endpoint := by
+  intro h
+  rcases (kyFanPathGraph_adj_iff.mp h).2 with ⟨P, hbase, _hendpoint⟩
+  simp [kyFanEndpointCarriesFlag] at hbase
+
+theorem kyFanPathGraph_base_isolated {n m : ℕ}
+    {label : NonzeroSignedSubset (n + 1) → SignedLabel m}
+    (base : Bool) :
+    (KyFanPathGraph label).IsIsolated (Sum.inr (Sum.inl base)) := by
+  intro endpoint
+  exact kyFanPathGraph_base_not_adj base endpoint
 
 theorem kyFanPathEndpointClass_card {n m : ℕ}
     (label : NonzeroSignedSubset (n + 1) → SignedLabel m) :

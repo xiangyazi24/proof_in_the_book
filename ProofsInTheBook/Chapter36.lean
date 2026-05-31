@@ -88,6 +88,176 @@ instance {n : ℕ} : DecidableEq (AbsTriangle n) := by
 def AbsTriangle.edges {n : ℕ} (T : AbsTriangle n) : Finset (Sym2 (Fin n)) :=
   {Sym2.mk T.a T.b, Sym2.mk T.b T.c, Sym2.mk T.a T.c}
 
+/-- The three vertices of an abstract triangle. -/
+def AbsTriangle.vertices {n : ℕ} (T : AbsTriangle n) : Finset (Fin n) :=
+  {T.a, T.b, T.c}
+
+/-- The inverse index to `v.succAbove`, defined for vertices different from
+the deleted vertex. -/
+noncomputable def deleteVertexIndex {n : ℕ} (v : Fin (n + 1)) (i : Fin (n + 1))
+    (hi : i ≠ v) : Fin n :=
+  Classical.choose (Fin.exists_succAbove_eq hi)
+
+@[simp]
+lemma succAbove_deleteVertexIndex_of_ne {n : ℕ} (v : Fin (n + 1)) (i : Fin (n + 1))
+    (hi : i ≠ v) : v.succAbove (deleteVertexIndex v i hi) = i := by
+  exact Classical.choose_spec (Fin.exists_succAbove_eq hi)
+
+lemma deleteVertexIndex_injective_on_compl {n : ℕ} {v : Fin (n + 1)}
+    {i j : Fin (n + 1)} {hi : i ≠ v} {hj : j ≠ v}
+    (h : deleteVertexIndex v i hi = deleteVertexIndex v j hj) : i = j := by
+  have hs := congrArg v.succAbove h
+  simpa [succAbove_deleteVertexIndex_of_ne v i hi,
+    succAbove_deleteVertexIndex_of_ne v j hj] using hs
+
+@[simp]
+lemma deleteVertexIndex_proof_irrel {n : ℕ} (v : Fin (n + 1)) (i : Fin (n + 1))
+    (hi hi' : i ≠ v) :
+    deleteVertexIndex v i hi = deleteVertexIndex v i hi' := by
+  rw [show hi = hi' from Subsingleton.elim _ _]
+
+namespace AbsTriangle
+
+lemma not_mem_vertices_iff {n : ℕ} {T : AbsTriangle n} {v : Fin n} :
+    v ∉ T.vertices ↔ v ≠ T.a ∧ v ≠ T.b ∧ v ≠ T.c := by
+  simp [AbsTriangle.vertices]
+
+lemma vertex_ne_of_not_mem {n : ℕ} {T : AbsTriangle n} {v x : Fin n}
+    (hT : v ∉ T.vertices) (hx : x ∈ T.vertices) : x ≠ v := by
+  intro h
+  exact hT (h ▸ hx)
+
+/-- Delete a vertex not used by a triangle, reindexing the remaining vertices
+from `Fin (n+1)` to `Fin n`. -/
+noncomputable def deleteVertex {n : ℕ} (v : Fin (n + 1)) (T : AbsTriangle (n + 1))
+    (hT : v ∉ T.vertices) : AbsTriangle n where
+  a := deleteVertexIndex v T.a (vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices]))
+  b := deleteVertexIndex v T.b (vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices]))
+  c := deleteVertexIndex v T.c (vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices]))
+  hab := by
+    intro h
+    exact T.hab (deleteVertexIndex_injective_on_compl h)
+  hbc := by
+    intro h
+    exact T.hbc (deleteVertexIndex_injective_on_compl h)
+  hac := by
+    intro h
+    exact T.hac (deleteVertexIndex_injective_on_compl h)
+
+@[simp]
+lemma succAbove_deleteVertex_a {n : ℕ} (v : Fin (n + 1)) (T : AbsTriangle (n + 1))
+    (hT : v ∉ T.vertices) :
+    v.succAbove (T.deleteVertex v hT).a = T.a := by
+  exact succAbove_deleteVertexIndex_of_ne v T.a
+    (vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices]))
+
+@[simp]
+lemma succAbove_deleteVertex_b {n : ℕ} (v : Fin (n + 1)) (T : AbsTriangle (n + 1))
+    (hT : v ∉ T.vertices) :
+    v.succAbove (T.deleteVertex v hT).b = T.b := by
+  exact succAbove_deleteVertexIndex_of_ne v T.b
+    (vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices]))
+
+@[simp]
+lemma succAbove_deleteVertex_c {n : ℕ} (v : Fin (n + 1)) (T : AbsTriangle (n + 1))
+    (hT : v ∉ T.vertices) :
+    v.succAbove (T.deleteVertex v hT).c = T.c := by
+  exact succAbove_deleteVertexIndex_of_ne v T.c
+    (vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices]))
+
+lemma deleteVertex_eq_imp {n : ℕ} {v : Fin (n + 1)}
+    {T U : AbsTriangle (n + 1)} {hT : v ∉ T.vertices} {hU : v ∉ U.vertices}
+    (h : T.deleteVertex v hT = U.deleteVertex v hU) : T = U := by
+  have ha : T.a = U.a := by
+    have hfield := congrArg AbsTriangle.a h
+    have hs := congrArg v.succAbove hfield
+    simpa using hs
+  have hb : T.b = U.b := by
+    have hfield := congrArg AbsTriangle.b h
+    have hs := congrArg v.succAbove hfield
+    simpa using hs
+  have hc : T.c = U.c := by
+    have hfield := congrArg AbsTriangle.c h
+    have hs := congrArg v.succAbove hfield
+    simpa using hs
+  cases T
+  cases U
+  simp_all
+
+lemma deleteVertex_proof_irrel {n : ℕ} {v : Fin (n + 1)}
+    (T : AbsTriangle (n + 1)) (hT hT' : v ∉ T.vertices) :
+    T.deleteVertex v hT = T.deleteVertex v hT' := by
+  rw [show hT = hT' from Subsingleton.elim _ _]
+
+lemma deleteVertex_mem_vertices_of_mem {n : ℕ} {v x : Fin (n + 1)}
+    {T : AbsTriangle (n + 1)} (hT : v ∉ T.vertices) (hx : x ∈ T.vertices) :
+    deleteVertexIndex v x (vertex_ne_of_not_mem hT hx) ∈
+      (T.deleteVertex v hT).vertices := by
+  simp only [AbsTriangle.vertices, Finset.mem_insert, Finset.mem_singleton] at hx ⊢
+  rcases hx with rfl | rfl | rfl <;> simp [AbsTriangle.deleteVertex]
+
+lemma mem_vertices_of_deleteVertexIndex_mem {n : ℕ} {v x : Fin (n + 1)}
+    (hxv : x ≠ v) {T : AbsTriangle (n + 1)} {hT : v ∉ T.vertices}
+    (hmem : deleteVertexIndex v x hxv ∈ (T.deleteVertex v hT).vertices) :
+    x ∈ T.vertices := by
+  simp only [AbsTriangle.vertices, AbsTriangle.deleteVertex, Finset.mem_insert,
+    Finset.mem_singleton] at hmem ⊢
+  rcases hmem with h | h | h
+  · left
+    exact deleteVertexIndex_injective_on_compl
+      (hj := vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices])) h
+  · right; left
+    exact deleteVertexIndex_injective_on_compl
+      (hj := vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices])) h
+  · right; right
+    exact deleteVertexIndex_injective_on_compl
+      (hj := vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices])) h
+
+lemma vertex_mem_of_mem_edge {n : ℕ} {T : AbsTriangle n} {e : Sym2 (Fin n)}
+    {x : Fin n} (he : e ∈ T.edges) (hx : x ∈ e) : x ∈ T.vertices := by
+  simp only [AbsTriangle.edges, Finset.mem_insert, Finset.mem_singleton] at he
+  simp only [AbsTriangle.vertices, Finset.mem_insert, Finset.mem_singleton]
+  rcases he with rfl | rfl | rfl <;> simp at hx ⊢ <;> tauto
+
+/-- Delete a vertex from an edge known not to contain it. -/
+noncomputable def deleteVertexEdge {n : ℕ} (v : Fin (n + 1)) (e : Sym2 (Fin (n + 1)))
+    (he : ∀ x ∈ e, x ≠ v) : Sym2 (Fin n) :=
+  Sym2.pmap (P := fun x => x ≠ v) (fun x hx => deleteVertexIndex v x hx) e he
+
+lemma deleteVertexEdge_mem_of_mem {n : ℕ} {v : Fin (n + 1)}
+    {T : AbsTriangle (n + 1)} (hT : v ∉ T.vertices) {e : Sym2 (Fin (n + 1))}
+    (he : e ∈ T.edges) :
+    deleteVertexEdge v e (fun _ hx => vertex_ne_of_not_mem hT
+      (vertex_mem_of_mem_edge he hx)) ∈ (T.deleteVertex v hT).edges := by
+  simp only [AbsTriangle.edges, Finset.mem_insert, Finset.mem_singleton] at he ⊢
+  rcases he with rfl | rfl | rfl
+  · left
+    rw [deleteVertexEdge, Sym2.pmap_pair]
+    simp [AbsTriangle.deleteVertex]
+  · right; left
+    rw [deleteVertexEdge, Sym2.pmap_pair]
+    simp [AbsTriangle.deleteVertex]
+  · right; right
+    rw [deleteVertexEdge, Sym2.pmap_pair]
+    simp [AbsTriangle.deleteVertex]
+
+lemma deleteVertexEdge_not_mem {n : ℕ} {v x : Fin (n + 1)} (hxv : x ≠ v)
+    {e : Sym2 (Fin (n + 1))} (he : ∀ y ∈ e, y ≠ v) (hxnot : x ∉ e) :
+    deleteVertexIndex v x hxv ∉ deleteVertexEdge v e he := by
+  intro hmem
+  rw [deleteVertexEdge, Sym2.mem_pmap_iff] at hmem
+  rcases hmem with ⟨y, hy, hy_eq⟩
+  apply hxnot
+  have hyx : y = x := deleteVertexIndex_injective_on_compl hy_eq.symm
+  simpa [hyx] using hy
+
+lemma deleteVertexEdge_proof_irrel {n : ℕ} (v : Fin (n + 1))
+    (e : Sym2 (Fin (n + 1))) (he he' : ∀ x ∈ e, x ≠ v) :
+    deleteVertexEdge v e he = deleteVertexEdge v e he' := by
+  rw [show he = he' from Subsingleton.elim _ _]
+
+end AbsTriangle
+
 lemma valid_coloring_edge {n : ℕ} {T : AbsTriangle n} {c : Fin n → GuardColor}
     (hc : c T.a ≠ c T.b ∧ c T.b ≠ c T.c ∧ c T.a ≠ c T.c) {x y : Fin n}
     (h_edge : Sym2.mk x y ∈ T.edges) : c x ≠ c y := by
@@ -121,6 +291,122 @@ def TriangulatedPolygon.vertices {n : ℕ} {S : Finset (AbsTriangle n)} :
     TriangulatedPolygon n S → Finset (Fin n)
   | .single T => {T.a, T.b, T.c}
   | .glue h _ v _ _ _ => insert v h.vertices
+
+/-- Reindex a finset of triangles after deleting a vertex avoided by all of
+them. -/
+noncomputable def deleteVertexTriangles {n : ℕ} (v : Fin (n + 1))
+    (S : Finset (AbsTriangle (n + 1))) (hS : ∀ T ∈ S, v ∉ T.vertices) :
+    Finset (AbsTriangle n) :=
+  S.attach.image fun T => T.1.deleteVertex v (hS T.1 T.2)
+
+lemma deleteVertexTriangles_insert {n : ℕ} (v : Fin (n + 1))
+    (S : Finset (AbsTriangle (n + 1))) (T : AbsTriangle (n + 1))
+    (hAll : ∀ U ∈ insert T S, v ∉ U.vertices) :
+    deleteVertexTriangles v (insert T S) hAll =
+      insert (T.deleteVertex v (hAll T (by simp)))
+        (deleteVertexTriangles v S (fun U hU => hAll U (by simp [hU]))) := by
+  classical
+  ext X
+  constructor
+  · intro hX
+    rw [deleteVertexTriangles] at hX
+    rcases Finset.mem_image.mp hX with ⟨U, _hUatt, hUX⟩
+    rcases Finset.mem_insert.mp U.2 with hUT | hUS
+    · apply Finset.mem_insert.mpr
+      left
+      have hdel :
+          U.1.deleteVertex v (hAll U.1 U.2) =
+            T.deleteVertex v (hAll T (by simp)) := by
+        cases U with
+        | mk Uval Uprop =>
+            dsimp at hUT ⊢
+            subst Uval
+            exact AbsTriangle.deleteVertex_proof_irrel T _ _
+      exact hUX.symm.trans hdel
+    · apply Finset.mem_insert.mpr
+      right
+      rw [deleteVertexTriangles]
+      refine Finset.mem_image.mpr ⟨⟨U.1, hUS⟩, by simp, ?_⟩
+      exact (AbsTriangle.deleteVertex_proof_irrel U.1 _ _).trans hUX
+  · intro hX
+    rw [deleteVertexTriangles]
+    rcases Finset.mem_insert.mp hX with hXT | hXS
+    · refine Finset.mem_image.mpr ⟨⟨T, by simp⟩, by simp, ?_⟩
+      exact (AbsTriangle.deleteVertex_proof_irrel T _ _).trans hXT.symm
+    · rw [deleteVertexTriangles] at hXS
+      rcases Finset.mem_image.mp hXS with ⟨U, _hUatt, hUX⟩
+      refine Finset.mem_image.mpr ⟨⟨U.1, by simp [U.2]⟩, by simp, ?_⟩
+      exact (AbsTriangle.deleteVertex_proof_irrel U.1 _ _).trans hUX
+
+lemma deleteVertexTriangles_card {n : ℕ} (v : Fin (n + 1))
+    (S : Finset (AbsTriangle (n + 1))) (hS : ∀ T ∈ S, v ∉ T.vertices) :
+    (deleteVertexTriangles v S hS).card = S.card := by
+  classical
+  have hinj :
+      Function.Injective
+        (fun T : {T : AbsTriangle (n + 1) // T ∈ S} =>
+          T.1.deleteVertex v (hS T.1 T.2)) := by
+    intro T U hTU
+    apply Subtype.ext
+    exact AbsTriangle.deleteVertex_eq_imp hTU
+  simpa [deleteVertexTriangles] using
+    (Finset.card_image_of_injective (s := S.attach)
+      (f := fun T : {T : AbsTriangle (n + 1) // T ∈ S} =>
+        T.1.deleteVertex v (hS T.1 T.2)) hinj)
+
+noncomputable def TriangulatedPolygon.deleteVertex {n : ℕ}
+    {S : Finset (AbsTriangle (n + 1))} (h : TriangulatedPolygon (n + 1) S)
+    (v : Fin (n + 1)) (hS : ∀ T ∈ S, v ∉ T.vertices) :
+    TriangulatedPolygon n (deleteVertexTriangles v S hS) := by
+  induction h generalizing v with
+  | single T =>
+      simpa [deleteVertexTriangles] using
+        (TriangulatedPolygon.single (T.deleteVertex v (hS T (by simp))))
+  | glue h_ind T newV hT_new hShared hFresh ih =>
+      rename_i S0
+      let hS0 : ∀ U ∈ S0, v ∉ U.vertices := fun U hU => hS U (by simp [hU])
+      have hT : v ∉ T.vertices := hS T (by simp)
+      have hnew_mem_T : newV ∈ T.vertices := by
+        simpa [AbsTriangle.vertices] using hT_new
+      have hnew_ne : newV ≠ v := AbsTriangle.vertex_ne_of_not_mem hT hnew_mem_T
+      let newV' : Fin n := deleteVertexIndex v newV hnew_ne
+      let T' : AbsTriangle n := T.deleteVertex v hT
+      have hT_new' : newV' ∈ T'.vertices := by
+        simpa [newV', T'] using AbsTriangle.deleteVertex_mem_vertices_of_mem hT hnew_mem_T
+      have hShared' :
+          ∃ T_s ∈ deleteVertexTriangles v S0 hS0, ∃ e ∈ T'.edges,
+            e ∈ T_s.edges ∧ newV' ∉ e := by
+        rcases hShared with ⟨T_s, hT_s, e, heT, heTs, hnew_not_e⟩
+        let hTs : v ∉ T_s.vertices := hS0 T_s hT_s
+        let e' : Sym2 (Fin n) :=
+          AbsTriangle.deleteVertexEdge v e
+            (fun x hx => AbsTriangle.vertex_ne_of_not_mem hT
+              (AbsTriangle.vertex_mem_of_mem_edge heT hx))
+        refine ⟨T_s.deleteVertex v hTs, ?_, e', ?_, ?_, ?_⟩
+        · rw [deleteVertexTriangles]
+          refine Finset.mem_image.mpr ⟨⟨T_s, hT_s⟩, by simp, rfl⟩
+        · exact AbsTriangle.deleteVertexEdge_mem_of_mem hT heT
+        · have hmem := AbsTriangle.deleteVertexEdge_mem_of_mem hTs heTs
+          simpa [e', AbsTriangle.deleteVertexEdge_proof_irrel] using hmem
+        · exact AbsTriangle.deleteVertexEdge_not_mem hnew_ne _ hnew_not_e
+      have hFresh' :
+          ∀ T_s ∈ deleteVertexTriangles v S0 hS0,
+            newV' ∉ T_s.vertices := by
+        intro T_s hT_s hmem
+        rw [deleteVertexTriangles] at hT_s
+        rcases Finset.mem_image.mp hT_s with ⟨U, _hUatt, hUeq⟩
+        have hmem_old : newV ∈ U.1.vertices := by
+          apply AbsTriangle.mem_vertices_of_deleteVertexIndex_mem hnew_ne
+          simpa [newV', hUeq.symm] using hmem
+        have hnot := hFresh U.1 U.2
+        have hnot' : newV ∉ U.1.vertices := by
+          simpa [AbsTriangle.vertices] using hnot
+        exact hnot' hmem_old
+      have hglue :
+          TriangulatedPolygon n (insert T' (deleteVertexTriangles v S0 hS0)) :=
+        TriangulatedPolygon.glue (ih v hS0) T' newV' hT_new' hShared' hFresh'
+      rw [deleteVertexTriangles_insert]
+      exact hglue
 
 theorem TriangulatedPolygon.exists_3coloring {n : ℕ} {S : Finset (AbsTriangle n)}
     (h : TriangulatedPolygon n S) :
@@ -232,6 +518,60 @@ theorem TriangulatedPolygon.exists_ear {n : ℕ} {S : Finset (AbsTriangle n)}
       | inl hT_eq => exact absurd hT_eq hne
       | inr hT_S => exact hFresh T' hT_S
 
+/-- Deleting a free ear from an inductive triangulation leaves the previous
+inductive triangulation.  This is the combinatorial ear-clipping step. -/
+structure TriangulatedPolygon.EarRemoval {n : ℕ} {S : Finset (AbsTriangle n)}
+    (h : TriangulatedPolygon n S) where
+  ear : AbsTriangle n
+  vertex : Fin n
+  remainder : Finset (AbsTriangle n)
+  ear_mem : ear ∈ S
+  vertex_mem : vertex ∈ ear.vertices
+  remainder_triangulated : TriangulatedPolygon n remainder
+  erase_eq : S.erase ear = remainder
+  remainder_card_add_one : remainder.card + 1 = S.card
+  free_vertex :
+    ∀ T' ∈ S, T' ≠ ear → vertex ∉ T'.vertices
+
+def TriangulatedPolygon.exists_earRemoval {n : ℕ} {S : Finset (AbsTriangle n)}
+    (h : TriangulatedPolygon n S) (hS : S.card ≥ 2) :
+    h.EarRemoval := by
+  cases h with
+  | single T =>
+      exfalso
+      simp only [Finset.card_singleton] at hS
+      omega
+  | glue h_ind T newV hT_new hShared hFresh =>
+      rename_i S0
+      have hT_not_mem : T ∉ S0 := by
+        intro hT_mem
+        exact hFresh T hT_mem hT_new
+      refine
+        { ear := T
+          vertex := newV
+          remainder := _
+          ear_mem := by simp
+          vertex_mem := by simpa [AbsTriangle.vertices] using hT_new
+          remainder_triangulated := h_ind
+          erase_eq := by simp [hT_not_mem]
+          remainder_card_add_one := by
+            rw [Finset.card_insert_of_notMem hT_not_mem]
+          free_vertex := ?_ }
+      intro T' hT' hne
+      have h_eq := Finset.mem_insert.mp hT'
+      cases h_eq with
+      | inl hT_eq => exact absurd hT_eq hne
+      | inr hT_S =>
+          simpa [AbsTriangle.vertices] using hFresh T' hT_S
+
+theorem TriangulatedPolygon.erase_ear_card {n : ℕ} {S : Finset (AbsTriangle n)}
+    (h : TriangulatedPolygon n S) (hS : S.card ≥ 2) :
+    ∃ T ∈ S, (S.erase T).card + 1 = S.card := by
+  let R := h.exists_earRemoval hS
+  refine ⟨R.ear, R.ear_mem, ?_⟩
+  rw [R.erase_eq]
+  exact R.remainder_card_add_one
+
 /-- The ambient plane used for the geometric Chapter 36 interface. -/
 abbrev Point2 : Type := ℝ × ℝ
 
@@ -297,6 +637,82 @@ structure Ear {n : ℕ} (P : SimplePolygon n) (T : AbsTriangle n) (v : Fin n) :
       v ∉ ({T'.a, T'.b, T'.c} : Finset (Fin n))
   inside : T.realization P.toPolygon ⊆ P.carrier
 
+/-- The polygon obtained by deleting one indexed vertex from the cyclic list. -/
+def removeVertexPolygon {n : ℕ} (P : SimplePolygon (n + 1)) (v : Fin (n + 1)) :
+    Polygon Point2 n where
+  vertices := fun i => P.toPolygon (v.succAbove i)
+
+theorem removeVertexPolygon_vertices_injective {n : ℕ} (P : SimplePolygon (n + 1))
+    (v : Fin (n + 1)) : Function.Injective (P.removeVertexPolygon v).vertices := by
+  intro i j hij
+  apply Fin.succAbove_right_injective
+  exact P.vertices_injective hij
+
+/-- A triangle of the remaining triangulation after deleting an ear vertex. -/
+noncomputable def remainingTriangle {n : ℕ} (P : SimplePolygon (n + 1))
+    {T : AbsTriangle (n + 1)} {v : Fin (n + 1)} (E : P.Ear T v)
+    (U : {U : AbsTriangle (n + 1) // U ∈ P.triangles.erase T}) : AbsTriangle n :=
+  U.1.deleteVertex v (by
+    have hfree := E.free_vertex U.1 (Finset.mem_of_mem_erase U.2)
+      (Finset.mem_erase.mp U.2).1
+    simpa [AbsTriangle.vertices] using hfree)
+
+theorem remainingTriangle_injective {n : ℕ} (P : SimplePolygon (n + 1))
+    {T : AbsTriangle (n + 1)} {v : Fin (n + 1)} (E : P.Ear T v) :
+    Function.Injective (P.remainingTriangle E) := by
+  intro U W hUW
+  apply Subtype.ext
+  exact AbsTriangle.deleteVertex_eq_imp hUW
+
+/-- The abstract triangles left after deleting an ear triangle and reindexing
+away its free vertex. -/
+noncomputable def earClippedTriangles {n : ℕ} (P : SimplePolygon (n + 1))
+    {T : AbsTriangle (n + 1)} {v : Fin (n + 1)} (E : P.Ear T v) :
+    Finset (AbsTriangle n) :=
+  (P.triangles.erase T).attach.image (P.remainingTriangle E)
+
+theorem earClippedTriangles_card {n : ℕ} (P : SimplePolygon (n + 1))
+    {T : AbsTriangle (n + 1)} {v : Fin (n + 1)} (E : P.Ear T v) :
+    (P.earClippedTriangles E).card = (P.triangles.erase T).card := by
+  classical
+  simpa [earClippedTriangles] using
+    (Finset.card_image_of_injective (s := (P.triangles.erase T).attach)
+      (f := P.remainingTriangle E) (P.remainingTriangle_injective E))
+
+theorem earClippedTriangles_card_add_two {n : ℕ} (P : SimplePolygon (n + 1))
+    {T : AbsTriangle (n + 1)} {v : Fin (n + 1)} (E : P.Ear T v) :
+    (P.earClippedTriangles E).card + 2 = n := by
+  have herase := Finset.card_erase_add_one E.triangle_mem
+  have hcount := P.triangle_count
+  rw [P.earClippedTriangles_card E]
+  omega
+
+/-- Convert the triangulation-level ear-removal certificate into the smaller
+certified simple polygon.  The vertex list is `P` with `R.vertex` deleted, and
+the remaining triangulation is reindexed along `R.vertex.succAbove`. -/
+noncomputable def clipEar {n : ℕ} (P : SimplePolygon (n + 1))
+    (R : P.triangulated.EarRemoval) : SimplePolygon n :=
+  let hAvoid : ∀ T ∈ R.remainder, R.vertex ∉ T.vertices := by
+    intro T hT
+    have hErase : T ∈ P.triangles.erase R.ear := by
+      rwa [R.erase_eq]
+    exact R.free_vertex T (Finset.mem_of_mem_erase hErase) (Finset.mem_erase.mp hErase).1
+  { toPolygon := P.removeVertexPolygon R.vertex
+    vertices_injective := P.removeVertexPolygon_vertices_injective R.vertex
+    triangles := deleteVertexTriangles R.vertex R.remainder hAvoid
+    triangulated := R.remainder_triangulated.deleteVertex R.vertex hAvoid
+    triangle_count := by
+      have hcard := deleteVertexTriangles_card R.vertex R.remainder hAvoid
+      have hrem := R.remainder_card_add_one
+      have hcount := P.triangle_count
+      rw [hcard]
+      omega }
+
+@[simp]
+theorem clipEar_toPolygon {n : ℕ} (P : SimplePolygon (n + 1))
+    (R : P.triangulated.EarRemoval) :
+    (P.clipEar R).toPolygon = P.removeVertexPolygon R.vertex := rfl
+
 /-- Extract the certified triangulation of a simple polygon as data. -/
 def triangulatedPolygon {n : ℕ} (P : SimplePolygon n) :
     Σ S : Finset (AbsTriangle n), TriangulatedPolygon n S :=
@@ -308,19 +724,45 @@ theorem exists_triangulatedPolygon {n : ℕ} (P : SimplePolygon n) :
     ∃ S : Finset (AbsTriangle n), Nonempty (TriangulatedPolygon n S) :=
   ⟨P.triangles, ⟨P.triangulated⟩⟩
 
+/-- The certified ear-removal decomposition of a simple polygon with at least
+four vertices. -/
+def earRemoval {n : ℕ} (P : SimplePolygon n) (hn : 4 ≤ n) :
+    P.triangulated.EarRemoval := by
+  have hcard : P.triangles.card ≥ 2 := by
+    have hcount := P.triangle_count
+    omega
+  exact P.triangulated.exists_earRemoval hcard
+
+/-- The canonical one-step ear clipping operation for a certified polygon with
+`n+1` vertices.  Its result is a certified polygon on `n` vertices. -/
+noncomputable def removeEar {n : ℕ} (P : SimplePolygon (n + 1)) (hn : 4 ≤ n + 1) :
+    SimplePolygon n :=
+  P.clipEar (P.earRemoval hn)
+
+theorem removeEar_triangle_count {n : ℕ} (P : SimplePolygon (n + 1)) (hn : 4 ≤ n + 1) :
+    (P.removeEar hn).triangles.card + 2 = n :=
+  (P.removeEar hn).triangle_count
+
+theorem erase_ear_reduces_triangle_count {n : ℕ} (P : SimplePolygon n) (hn : 4 ≤ n) :
+    ∃ T ∈ P.triangles, (P.triangles.erase T).card + 1 = P.triangles.card := by
+  let R := P.earRemoval hn
+  refine ⟨R.ear, R.ear_mem, ?_⟩
+  rw [R.erase_eq]
+  exact R.remainder_card_add_one
+
 /-- Every certified simple polygon with at least four vertices has a
 triangulation ear.  The induction is the one in
 `TriangulatedPolygon.exists_ear`. -/
 theorem exists_ear {n : ℕ} (P : SimplePolygon n) (hn : 4 ≤ n) :
     ∃ T : AbsTriangle n, ∃ v : Fin n, P.Ear T v := by
-  have hcard : P.triangles.card ≥ 2 := by
-    have hcount := P.triangle_count
-    omega
-  obtain ⟨T, hT, v, hv, hfree⟩ := P.triangulated.exists_ear hcard
-  refine ⟨T, v, ?_⟩
-  refine ⟨hT, hv, hfree, ?_⟩
+  let R := P.earRemoval hn
+  refine ⟨R.ear, R.vertex, ?_⟩
+  refine ⟨R.ear_mem, ?_, ?_, ?_⟩
+  · simpa [AbsTriangle.vertices] using R.vertex_mem
+  · intro T' hT' hne
+    simpa [AbsTriangle.vertices] using R.free_vertex T' hT' hne
   intro x hx
-  exact ⟨T, hT, hx⟩
+  exact ⟨R.ear, R.ear_mem, hx⟩
 
 end SimplePolygon
 

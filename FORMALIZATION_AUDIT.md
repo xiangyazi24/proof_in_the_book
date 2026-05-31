@@ -37,11 +37,14 @@ Recent moves verified by statement inspection plus
 (`not_borsukConjecture_1325`), Ch25 (`chapter25`, algebraic/density
 Buffon formula), Ch29 (`count_determined_by_piles` → `chapter29`), and
 Ch30 (`latticeLGVCertificate` / `PathCountSystem` → `chapter30`).
-Ch36 moved on 2026-05-31: `chapter36` now takes `SimplePolygon`, calls
-`triangulatedByEarClipping`, then `chapter36_triangulated`, and no longer
-exposes `TriangulatedPolygon` as the chapter headline input.  Targeted
-`#print axioms` for `chapter36`, `chapter36_simplePolygon`, and
-`chapter36_convex` reports `[propext, Classical.choice, Quot.sound]`.
+Ch36 moved on 2026-05-31: `chapter36_simplePolygon` now takes
+`SimplePolygon`, calls `triangulatedByEarClipping`, then
+`chapter36_triangulated`, and no longer exposes `TriangulatedPolygon` as the
+chapter headline input.  `chapter36` is the book-facing alias.  Targeted
+`#print axioms` for `chapter36_simplePolygon`, `chapter36`,
+`chapter36_simplePolygon_visibility`,
+`chapter36_simplePolygon_hit_and_visibility`, and `chapter36_convex` reports
+`[propext, Classical.choice, Quot.sound]`.
 
 **Axiom audit (point 10) verified 2026-05-24** via `#print axioms` on the
 then category-A headline theorems — every printed theorem depended ONLY on
@@ -252,14 +255,19 @@ Borsuk-Ulam/Kneser lower-bound infrastructure (Ch39).
   cross-boundary cases.  Only the planarity argument (step 4 of the
   five-color theorem) remains unstated.
 - [x] Chapter36: art gallery for the certified simple-polygon interface is
-  unconditional.  Chain: `chapter36 : SimplePolygon n → ...` →
+  unconditional.  Chain: `chapter36_simplePolygon : SimplePolygon n → ...` →
   `SimplePolygon.triangulatedByEarClipping` →
   `chapter36_triangulated` → `TriangulatedPolygon.exists_3coloring` →
   smallest color-class guard selection.  The supplied-triangulation theorem is
-  retained as an internal/combinatorial form, not the chapter headline.
-  `chapter36_convex` records the convex one-guard visibility special case.
+  retained as an internal/combinatorial form, not the chapter headline;
+  `chapter36` is an alias of this certified-polygon theorem.
+  `chapter36_simplePolygon_visibility` lifts triangle hitting to carrier
+  visibility, `chapter36_simplePolygon_hit_and_visibility` records both
+  properties for the same guard set, and `chapter36_convex` records the convex
+  one-guard visibility special case.
   Targeted build: `~/.elan/bin/lake build ProofsInTheBook.Chapter36`
-  succeeded on 2026-05-31.
+  succeeded on 2026-05-31; `rg` finds no `sorry`/`axiom`/`admit`/`True :=
+  trivial` in `ProofsInTheBook/Chapter36.lean`.
 - [ ] Chapter39: Lovász/Kneser is formalized up to the discrete Tucker
   frontier.  The file now proves the Kneser graph API, vertex count, explicit
   `n - 2k + 2` coloring, elementary `k = 1` and `n = 2k` lower bounds, and the

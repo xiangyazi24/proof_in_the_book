@@ -1134,27 +1134,25 @@ The guard bound then follows from the supplied-triangulation theorem
 `chapter36_triangulated`;
 there is no remaining external triangulability or ear-existence hypothesis
 inside the certified interface. -/
-theorem chapter36 {n : ℕ} (P : SimplePolygon n) :
+theorem chapter36_simplePolygon {n : ℕ} (P : SimplePolygon n) :
     ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
       ∀ T ∈ P.triangles, ∃ v ∈ guards,
         v ∈ ({T.a, T.b, T.c} : Finset (Fin n)) :=
   chapter36_triangulated P.triangulatedByEarClipping
 
-/-- Explicit alias for the certified-polygon Chapter 36 theorem. -/
-theorem chapter36_simplePolygon {n : ℕ} (P : SimplePolygon n) :
+/-- Book-facing alias for the certified-polygon Chapter 36 theorem. -/
+theorem chapter36 {n : ℕ} (P : SimplePolygon n) :
     ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
       ∀ T ∈ P.triangles, ∃ v ∈ guards,
         v ∈ ({T.a, T.b, T.c} : Finset (Fin n)) :=
-  chapter36 P
+  chapter36_simplePolygon P
 
-/-- Carrier-level art-gallery statement for a certified simple polygon: every
-point in the certified polygonal region is visible from one of the selected
-guard vertices. -/
-theorem chapter36_simplePolygon_visibility {n : ℕ} (P : SimplePolygon n) :
-    ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
-      ∀ x ∈ P.carrier, ∃ v ∈ guards, segment ℝ (P.toPolygon v) x ⊆ P.carrier := by
-  obtain ⟨guards, hcard, hhit⟩ := chapter36_simplePolygon P
-  refine ⟨guards, hcard, ?_⟩
+/-- Triangle-hitting guards see the whole certified polygonal carrier. -/
+theorem SimplePolygon.visibility_of_triangle_hits {n : ℕ} (P : SimplePolygon n)
+    {guards : Finset (Fin n)}
+    (hhit : ∀ T ∈ P.triangles, ∃ v ∈ guards,
+      v ∈ ({T.a, T.b, T.c} : Finset (Fin n))) :
+    ∀ x ∈ P.carrier, ∃ v ∈ guards, segment ℝ (P.toPolygon v) x ⊆ P.carrier := by
   intro x hx
   rcases hx with ⟨T, hT, hxT⟩
   rcases hhit T hT with ⟨v, hvG, hvT⟩
@@ -1172,6 +1170,25 @@ theorem chapter36_simplePolygon_visibility {n : ℕ} (P : SimplePolygon n) :
   exact subset_trans hseg (by
     intro y hy
     exact ⟨T, hT, hy⟩)
+
+/-- Carrier-level art-gallery statement for a certified simple polygon: every
+point in the certified polygonal region is visible from one of the selected
+guard vertices. -/
+theorem chapter36_simplePolygon_visibility {n : ℕ} (P : SimplePolygon n) :
+    ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
+      ∀ x ∈ P.carrier, ∃ v ∈ guards, segment ℝ (P.toPolygon v) x ⊆ P.carrier := by
+  obtain ⟨guards, hcard, hhit⟩ := chapter36_simplePolygon P
+  exact ⟨guards, hcard, P.visibility_of_triangle_hits hhit⟩
+
+/-- A single guard set both hits every certified triangle and sees the whole
+certified carrier. -/
+theorem chapter36_simplePolygon_hit_and_visibility {n : ℕ} (P : SimplePolygon n) :
+    ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
+      (∀ T ∈ P.triangles, ∃ v ∈ guards,
+        v ∈ ({T.a, T.b, T.c} : Finset (Fin n))) ∧
+      ∀ x ∈ P.carrier, ∃ v ∈ guards, segment ℝ (P.toPolygon v) x ⊆ P.carrier := by
+  obtain ⟨guards, hcard, hhit⟩ := chapter36_simplePolygon P
+  exact ⟨guards, hcard, hhit, P.visibility_of_triangle_hits hhit⟩
 
 /-- Convex certified polygons have the expected special-case improvement:
 one vertex guard sees the entire certified carrier, and this still satisfies

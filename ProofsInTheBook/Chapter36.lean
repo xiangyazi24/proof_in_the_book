@@ -943,45 +943,6 @@ theorem removeVertexPolygon_vertices_injective {n : ℕ} (P : SimplePolygon (n +
   apply Fin.succAbove_right_injective
   exact P.vertices_injective hij
 
-/-- A triangle of the remaining triangulation after deleting an ear vertex. -/
-noncomputable def remainingTriangle {n : ℕ} (P : SimplePolygon (n + 1))
-    {T : AbsTriangle (n + 1)} {v : Fin (n + 1)} (E : P.Ear T v)
-    (U : {U : AbsTriangle (n + 1) // U ∈ P.triangles.erase T}) : AbsTriangle n :=
-  U.1.deleteVertex v (by
-    have hfree := E.free_vertex U.1 (Finset.mem_of_mem_erase U.2)
-      (Finset.mem_erase.mp U.2).1
-    simpa [AbsTriangle.vertices] using hfree)
-
-theorem remainingTriangle_injective {n : ℕ} (P : SimplePolygon (n + 1))
-    {T : AbsTriangle (n + 1)} {v : Fin (n + 1)} (E : P.Ear T v) :
-    Function.Injective (P.remainingTriangle E) := by
-  intro U W hUW
-  apply Subtype.ext
-  exact AbsTriangle.deleteVertex_eq_imp hUW
-
-/-- The abstract triangles left after deleting an ear triangle and reindexing
-away its free vertex. -/
-noncomputable def earClippedTriangles {n : ℕ} (P : SimplePolygon (n + 1))
-    {T : AbsTriangle (n + 1)} {v : Fin (n + 1)} (E : P.Ear T v) :
-    Finset (AbsTriangle n) :=
-  (P.triangles.erase T).attach.image (P.remainingTriangle E)
-
-theorem earClippedTriangles_card {n : ℕ} (P : SimplePolygon (n + 1))
-    {T : AbsTriangle (n + 1)} {v : Fin (n + 1)} (E : P.Ear T v) :
-    (P.earClippedTriangles E).card = (P.triangles.erase T).card := by
-  classical
-  simpa [earClippedTriangles] using
-    (Finset.card_image_of_injective (s := (P.triangles.erase T).attach)
-      (f := P.remainingTriangle E) (P.remainingTriangle_injective E))
-
-theorem earClippedTriangles_card_add_two {n : ℕ} (P : SimplePolygon (n + 1))
-    {T : AbsTriangle (n + 1)} {v : Fin (n + 1)} (E : P.Ear T v) :
-    (P.earClippedTriangles E).card + 2 = n := by
-  have herase := Finset.card_erase_add_one E.triangle_mem
-  have hcount := P.triangle_count
-  rw [P.earClippedTriangles_card E]
-  omega
-
 /-- Convert the triangulation-level ear-removal certificate into the smaller
 certified simple polygon.  The vertex list is `P` with `R.vertex` deleted, and
 the remaining triangulation is reindexed along `R.vertex.succAbove`. -/
@@ -1254,8 +1215,13 @@ theorem chapter36 {n : ℕ} {S : Finset (AbsTriangle n)}
         v ∈ ({T.a, T.b, T.c} : Finset (Fin n)) :=
   chapter36_artgallery_combinatorial h
 
-/-- The Chapter 36 guard bound for a certified simple polygon, using its
-ear-clipping triangulation certificate. -/
+/-- Milestone certified-polygon entry point for Chapter 36.
+
+From `P : SimplePolygon n` alone, `triangulatedByEarClipping` reconstructs a
+`TriangulatedPolygon n P.triangles` by the certified ear-clipping induction.
+The guard bound then follows from the closed combinatorial theorem `chapter36`;
+there is no remaining external triangulability or ear-existence hypothesis
+inside the certified interface. -/
 theorem chapter36_simplePolygon {n : ℕ} (P : SimplePolygon n) :
     ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
       ∀ T ∈ P.triangles, ∃ v ∈ guards,
@@ -1287,5 +1253,21 @@ theorem chapter36_simplePolygon_visibility {n : ℕ} (P : SimplePolygon n) :
   exact subset_trans hseg (by
     intro y hy
     exact ⟨T, hT, hy⟩)
+
+/-- Convex certified polygons have the expected special-case improvement:
+one vertex guard sees the entire certified carrier. -/
+theorem chapter36_simplePolygon_visibility_convex {n : ℕ} (P : SimplePolygon n)
+    (hconv : P.IsConvex) :
+    ∃ guards : Finset (Fin n), guards.card ≤ 1 ∧
+      ∀ x ∈ P.carrier, ∃ v ∈ guards, segment ℝ (P.toPolygon v) x ⊆ P.carrier := by
+  classical
+  have hn : 0 < n := by
+    have hthree := P.vertex_count_ge_three
+    omega
+  let i : Fin n := ⟨0, hn⟩
+  refine ⟨{i}, by simp, ?_⟩
+  intro x hx
+  refine ⟨i, by simp, ?_⟩
+  exact hconv.segment_subset (P.vertex_mem_carrier i) hx
 
 end ProofsInTheBook.Chapter36

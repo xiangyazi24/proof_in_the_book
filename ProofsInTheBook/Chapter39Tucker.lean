@@ -327,6 +327,67 @@ theorem equatorPrefixChain_projects {r : ℕ} (P : SignedPermutation r) (i : Fin
       P.prefixChain i :=
   equatorDrop_equatorEmbed (P.prefixChain i)
 
+/-! ## Label-set `A` ridges and the local sigma-degree count -/
+
+/-- The alternating label `α_k = (-1)^k(k+1)` in zero-based `Fin d` notation. -/
+def alternatingLabel (k : Fin d) : SignedLabel d where
+  positive := decide (Even k.val)
+  index := k
+
+@[simp]
+theorem alternatingLabel_index (k : Fin d) : (alternatingLabel k).index = k := rfl
+
+@[simp]
+theorem alternatingLabel_positive (k : Fin d) :
+    (alternatingLabel k).positive = decide (Even k.val) := rfl
+
+theorem alternatingLabel_inj {d : ℕ} {a b : Fin d} :
+    alternatingLabel a = alternatingLabel b ↔ a = b := by
+  constructor
+  · intro h
+    have hidx := congrArg SignedLabel.index h
+    simpa [alternatingLabel] using hidx
+  · intro h
+    subst h
+    rfl
+
+theorem alternatingLabel_neg_ne {d : ℕ} (a b : Fin d) :
+    (alternatingLabel a).neg ≠ alternatingLabel b := by
+  intro h
+  have hidx : a = b := by
+    have hidx' := congrArg SignedLabel.index h
+    simpa [alternatingLabel, SignedLabel.neg] using hidx'
+  subst b
+  have hpos := congrArg SignedLabel.positive h
+  simp [alternatingLabel, SignedLabel.neg] at hpos
+
+theorem signedLabel_eq_alternating_or_neg {d : ℕ} (L : SignedLabel d) :
+    L = alternatingLabel L.index ∨ L = (alternatingLabel L.index).neg := by
+  cases L with
+  | mk positive index =>
+      by_cases h : positive = decide (Even index.val)
+      · left
+        apply SignedLabel.ext
+        · exact h
+        · rfl
+      · right
+        apply SignedLabel.ext
+        · cases positive <;> cases hidx : decide (Even index.val) <;>
+            simp [hidx, SignedLabel.neg] at h ⊢
+        · rfl
+
+/-- The concrete `A = {+1,-2,+3,...}` label set. -/
+noncomputable def alternatingLabelSetA (d : ℕ) : Finset (SignedLabel d) :=
+  Finset.univ.image fun k : Fin d => alternatingLabel k
+
+theorem alternatingLabelSetA_card (d : ℕ) :
+    (alternatingLabelSetA d).card = d := by
+  classical
+  rw [alternatingLabelSetA, Finset.card_image_of_injective]
+  · simp
+  · intro a b h
+    exact alternatingLabel_inj.mp h
+
 /-! ## Ky Fan parity statement on the non-degenerate range -/
 
 /-- Ky Fan parity in the range actually used by Tucker: `r ≥ 1`, `m ≥ r`.
@@ -402,67 +463,6 @@ theorem equatorRestrictedLabel_positiveAlternating_odd {d : ℕ}
   hKy hd le_rfl (equatorRestrictedLabel label)
     (equatorRestrictedLabel_antipodal hantipodal)
     (equatorRestrictedLabel_noComplementary hno)
-
-/-! ## Label-set `A` ridges and the local sigma-degree count -/
-
-/-- The alternating label `α_k = (-1)^k(k+1)` in zero-based `Fin d` notation. -/
-def alternatingLabel (k : Fin d) : SignedLabel d where
-  positive := decide (Even k.val)
-  index := k
-
-@[simp]
-theorem alternatingLabel_index (k : Fin d) : (alternatingLabel k).index = k := rfl
-
-@[simp]
-theorem alternatingLabel_positive (k : Fin d) :
-    (alternatingLabel k).positive = decide (Even k.val) := rfl
-
-theorem alternatingLabel_inj {d : ℕ} {a b : Fin d} :
-    alternatingLabel a = alternatingLabel b ↔ a = b := by
-  constructor
-  · intro h
-    have hidx := congrArg SignedLabel.index h
-    simpa [alternatingLabel] using hidx
-  · intro h
-    subst h
-    rfl
-
-theorem alternatingLabel_neg_ne {d : ℕ} (a b : Fin d) :
-    (alternatingLabel a).neg ≠ alternatingLabel b := by
-  intro h
-  have hidx : a = b := by
-    have hidx' := congrArg SignedLabel.index h
-    simpa [alternatingLabel, SignedLabel.neg] using hidx'
-  subst b
-  have hpos := congrArg SignedLabel.positive h
-  simp [alternatingLabel, SignedLabel.neg] at hpos
-
-theorem signedLabel_eq_alternating_or_neg {d : ℕ} (L : SignedLabel d) :
-    L = alternatingLabel L.index ∨ L = (alternatingLabel L.index).neg := by
-  cases L with
-  | mk positive index =>
-      by_cases h : positive = decide (Even index.val)
-      · left
-        apply SignedLabel.ext
-        · exact h
-        · rfl
-      · right
-        apply SignedLabel.ext
-        · cases positive <;> cases hidx : decide (Even index.val) <;>
-            simp [hidx, SignedLabel.neg] at h ⊢
-        · rfl
-
-/-- The concrete `A = {+1,-2,+3,...}` label set. -/
-noncomputable def alternatingLabelSetA (d : ℕ) : Finset (SignedLabel d) :=
-  Finset.univ.image fun k : Fin d => alternatingLabel k
-
-theorem alternatingLabelSetA_card (d : ℕ) :
-    (alternatingLabelSetA d).card = d := by
-  classical
-  rw [alternatingLabelSetA, Finset.card_image_of_injective]
-  · simp
-  · intro a b h
-    exact alternatingLabel_inj.mp h
 
 /-- A `d`-vertex ridge whose labels are exactly the label set `A`.  In the
 Tucker reduction `d = n - 1`, so this is the dim-`(n-2)` simplex, not a full
@@ -2070,6 +2070,26 @@ noncomputable instance actualHemisphereABoundary_decidable {d : ℕ}
   classical
   exact inferInstance
 
+/-- Unordered maximal label-set-`A` objects on the equator, expressed in the
+same data language as `ActualHemisphereARidge`: the vertices are transported
+through `equatorEquiv`, and the maximal-equator witness is a boundary punctured
+flag in the upper hemisphere. -/
+def EquatorActualARidge {d : ℕ}
+    (label : NonzeroSignedSubset d → SignedLabel d) :=
+  {rho : Fin d → NonzeroSignedSubset d //
+    (∃ P : SignedPermutation (d + 1), UpperPrefixChain P ∧
+      RepresentedUpperRidgeBoundary P (Fin.last d) ∧
+        ∀ a : Fin d,
+          equatorEmbed (rho a) = P.prefixChain ((Fin.last d).succAbove a)) ∧
+      ∀ a : Fin d, ∃ t : Fin d, label (rho t) = alternatingLabel a}
+
+noncomputable instance equatorActualARidge_fintype {d : ℕ}
+    (label : NonzeroSignedSubset d → SignedLabel d) :
+    Fintype (EquatorActualARidge label) := by
+  classical
+  dsimp [EquatorActualARidge]
+  infer_instance
+
 theorem actualHemisphereABoundary_iff_represented {d : ℕ}
     {label : NonzeroSignedSubset (d + 1) → SignedLabel d}
     (rho : ActualHemisphereARidge label)
@@ -2114,6 +2134,87 @@ theorem actualHemisphereABoundary_iff_represented {d : ℕ}
       rw [hrho a] at hneg
       simpa [SignedPermutation.prefixChain, SignedPermutation.prefixSignedSubset,
         SignedPermutation.prefixNeg, hcoord] using hneg
+
+noncomputable def equatorBoundaryARidgeEquiv {d : ℕ}
+    (label : NonzeroSignedSubset (d + 1) → SignedLabel d) :
+    {rho : ActualHemisphereARidge label // actualHemisphereABoundary rho} ≃
+      EquatorActualARidge (equatorRestrictedLabel label) where
+  toFun rho := by
+    classical
+    let dropped : Fin d → NonzeroSignedSubset d :=
+      fun a => (equatorEquiv d).symm ⟨rho.1.1 a, rho.2 a⟩
+    have hrepr :
+        ∃ P : SignedPermutation (d + 1), UpperPrefixChain P ∧
+          RepresentedUpperRidgeBoundary P (Fin.last d) ∧
+            ∀ a : Fin d,
+              equatorEmbed (dropped a) =
+                P.prefixChain ((Fin.last d).succAbove a) := by
+      rcases rho.1.2.2.1 with ⟨P, hP, gap, hrho⟩
+      have hb := (actualHemisphereABoundary_iff_represented rho.1 P hP gap hrho).mp rho.2
+      rcases hb with ⟨hgap, hcoord⟩
+      subst gap
+      refine ⟨P, hP, ⟨rfl, hcoord⟩, ?_⟩
+      intro a
+      calc
+        equatorEmbed (dropped a) = rho.1.1 a := by
+          dsimp [dropped, equatorEquiv]
+          exact equatorEmbed_equatorDrop (rho.1.1 a) (rho.2 a)
+        _ = P.prefixChain ((Fin.last d).succAbove a) := hrho a
+    refine ⟨dropped, hrepr, ?_⟩
+    intro a
+    rcases rho.1.2.2.2 a with ⟨t, ht⟩
+    refine ⟨t, ?_⟩
+    dsimp [dropped, equatorRestrictedLabel, equatorEquiv]
+    simpa [equatorEmbed_equatorDrop (rho.1.1 t) (rho.2 t)] using ht
+  invFun rho := by
+    classical
+    let lifted : Fin d → NonzeroSignedSubset (d + 1) := fun a => equatorEmbed (rho.1 a)
+    have hupper : ∀ a : Fin d, UpperHemisphere (lifted a) := by
+      intro a
+      exact equator_subset_upperHemisphere (equatorEmbed_mem_equator (rho.1 a))
+    let hactual : ActualHemisphereARidge label :=
+      ⟨lifted, by
+        refine ⟨hupper, ?_, ?_⟩
+        · rcases rho.2.1 with ⟨P, hP, _hb, hrepr⟩
+          exact ⟨P, hP, ⟨Fin.last d, hrepr⟩⟩
+        · intro a
+          rcases rho.2.2 a with ⟨t, ht⟩
+          refine ⟨t, ?_⟩
+          dsimp [lifted, equatorRestrictedLabel, equatorEquiv] at ht ⊢
+          simpa using ht⟩
+    refine ⟨hactual, ?_⟩
+    intro a
+    change Equator (equatorEmbed (rho.1 a))
+    exact equatorEmbed_mem_equator (rho.1 a)
+  left_inv := by
+    intro rho
+    apply Subtype.ext
+    apply Subtype.ext
+    funext a
+    dsimp
+    exact equatorEmbed_equatorDrop (rho.1.1 a) (rho.2 a)
+  right_inv := by
+    intro rho
+    apply Subtype.ext
+    funext a
+    dsimp
+    exact equatorDrop_equatorEmbed (rho.1 a)
+
+def KyFanUnorderedParityStatement (d : ℕ) : Prop :=
+  ∀ label : NonzeroSignedSubset d → SignedLabel d,
+    (∀ X, label X.antipode = (label X).neg) →
+      NoComplementaryComparableLabels label →
+        Odd (Fintype.card (EquatorActualARidge label))
+
+theorem equatorRestrictedLabel_unordered_odd {d : ℕ}
+    (hKy : KyFanUnorderedParityStatement d)
+    {label : NonzeroSignedSubset (d + 1) → SignedLabel d}
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (hno : NoComplementaryComparableLabels label) :
+    Odd (Fintype.card (EquatorActualARidge (equatorRestrictedLabel label))) :=
+  hKy (equatorRestrictedLabel label)
+    (equatorRestrictedLabel_antipodal hantipodal)
+    (equatorRestrictedLabel_noComplementary hno)
 
 /-- A top chain is one-door when deleting exactly one of its vertices leaves
 the alternating label set `A`. -/
@@ -2501,16 +2602,20 @@ def EquatorBoundaryCardBridgeStatement (d : ℕ) : Prop :=
         Fintype.card
             {rho : ActualHemisphereARidge label //
               actualHemisphereABoundary rho} =
-          (positiveAlternatingPrefixLabelChains
-            (equatorRestrictedLabel label)).card
+          Fintype.card (EquatorActualARidge (equatorRestrictedLabel label))
+
+theorem equatorBoundaryCardBridge (d : ℕ) :
+    EquatorBoundaryCardBridgeStatement d := by
+  intro label _hantipodal _hno
+  exact Fintype.card_congr (equatorBoundaryARidgeEquiv label)
 
 theorem actualHemisphereBoundaryOdd_of_equator_card_bridge {d : ℕ}
-    (hd : 1 ≤ d) (hKy : KyFanParityStatement d d)
+    (hKy : KyFanUnorderedParityStatement d)
     (hbridge : EquatorBoundaryCardBridgeStatement d) :
     ActualHemisphereBoundaryOddStatement d := by
   intro label hantipodal hno
   have hodd :=
-    equatorRestrictedLabel_positiveAlternating_odd hd hKy hantipodal hno
+    equatorRestrictedLabel_unordered_odd hKy hantipodal hno
   have hcard := hbridge label hantipodal hno
   simpa [hcard] using hodd
 
@@ -2524,11 +2629,27 @@ theorem tuckerLemmaStatement_succ_of_actualHemisphere_boundary_odd {d : ℕ}
     (hboundaryOdd label hantipodal hno)
 
 theorem tuckerLemmaStatement_succ_of_equator_boundary_card_bridge {d : ℕ}
-    (hd : 1 ≤ d) (hKy : KyFanParityStatement d d)
+    (hd : 1 ≤ d) (hKy : KyFanUnorderedParityStatement d)
     (hbridge : EquatorBoundaryCardBridgeStatement d) :
     TuckerLemmaStatement (d + 1) :=
   tuckerLemmaStatement_succ_of_actualHemisphere_boundary_odd hd
-    (actualHemisphereBoundaryOdd_of_equator_card_bridge hd hKy hbridge)
+    (actualHemisphereBoundaryOdd_of_equator_card_bridge hKy hbridge)
+
+theorem tuckerLemma_pos_of_kyFanUnordered
+    (hKy : ∀ d : ℕ, 1 ≤ d → KyFanUnorderedParityStatement d) :
+    ∀ n : ℕ, 1 ≤ n → TuckerLemmaStatement n := by
+  intro n hn
+  cases n with
+  | zero =>
+      omega
+  | succ d =>
+      cases d with
+      | zero =>
+          exact tuckerLemmaStatement_one
+      | succ e =>
+          exact tuckerLemmaStatement_succ_of_equator_boundary_card_bridge
+            (d := e + 1) (by omega) (hKy (e + 1) (by omega))
+            (equatorBoundaryCardBridge (e + 1))
 
 /-- Fan parity induction, separated from the geometric hemisphere step.  The
 step is intended to be supplied by `kyFan_parity_step_from_rho_sigma_data`

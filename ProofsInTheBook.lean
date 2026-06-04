@@ -49,4 +49,10 @@ import ProofsInTheBook.Chapter39Tucker
 -- Backs Chapter 12 (Platonic from Euler) and the Chapter 35 five-color development.
 import ProofsInTheBook.PlanarMapEuler
 import ProofsInTheBook.PlaneSimpleGraph
+-- Chapter 35 (5-color) WIP: vertex-deletion machinery on combinatorial maps (Perm.deleteSet splice,
+-- deleteVertex + V/E counts). Euler-preservation + Kempe + coloring still to come.
+import ProofsInTheBook.PlanarMapDelete
+-- Chapter 33 (Smetaniuk/Evans) scaffold: triangular invariant + back-diagonal construction + reduction
+-- to the cunning-switching core `SmetBackDiagonalCompletableCore` (the remaining hard lemma).
+import ProofsInTheBook.Chapter33Smetaniuk
 

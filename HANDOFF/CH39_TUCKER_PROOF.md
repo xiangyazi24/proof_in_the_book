@@ -206,3 +206,32 @@ VERDICT: structurally CORRECT and avoids the degeneracy that sank codex's earlie
 This lands on the committed sound base (Chapter39Tucker.lean: tuckerLemmaStatement_of_chain_complementary)
 — the proof's conclusion is exactly "∃ maximal chain with a same-index opposite-sign comparable pair",
 which that lemma converts to TuckerLemmaStatement.
+
+---
+## State after 11 codex rounds (honest frontier)
+
+COMMITTED & sound (0-sorry, verified non-degenerate): pigeonhole base + reduction
+(`tuckerLemmaStatement_of_chain_complementary`), hemisphere/equator model (`equatorEquiv`),
+alternating-label-set A machinery, the σ-degree crux (`sigma_opposite_extra_gives_complementary_labels`),
+the abstract Ky Fan parity engine (`RhoDegreeManifoldData` + handshaking +
+`final_reduction_graph_gives_prefixChain_complementary_pair`), and the local coface model
+(`representedRidgePartner`, 2-element local coface set, `ActualHemisphereARidge` Nonempty).
+
+TARGET CORRECTION: the literal `∀ n, TuckerLemmaStatement n` is FALSE (verified: `TuckerLemmaStatement 0`
+fails — `NonzeroSignedSubset 0` is empty so the ∃-conclusion fails). The faithful, kneser-sufficient target
+is `tuckerLemma_pos : ∀ n, 1 ≤ n → TuckerLemmaStatement n`.
+
+THE ONE REMAINING LEMMA (the irreducible core codex could not prove across rounds 8-11; it kept
+chaining new interfaces instead):
+  **coface-exhaustion / ρ-degree count** for the ACTUAL hemisphere ridge type: an `ActualHemisphereARidge`
+  ρ (a punctured length-(d+1) flag with a gap) has exactly TWO cofaces in B⁺ when interior, ONE when
+  boundary. Proof = the two single-coordinate covers of `C_{k-1}` below `C_{k+1}` are exactly the deleted
+  original and `representedRidgePartner` (EXHAUSTION: no third single-coordinate cover), and the hemisphere
+  filter (last coord ≠ −1) removes exactly one iff ρ ⊂ equator. Once this `degree_card` holds on
+  `ActualHemisphereARidge`, the round-7 engine + the equator induction (via `equatorEquiv`) close
+  `tuckerLemma_pos`, discharging kneser's `htucker`.
+
+This is a concrete, provable combinatorial-lattice fact (the covering relation of the signed-subset poset
++ the hemisphere constraint). It needs careful master/strong-model formalization over the actual ridge
+encoding — codex (gpt-5.5) tangles on the represented↔actual representation consistency. NOT a math gap;
+a formalization-engineering frontier on a verified-correct proof.

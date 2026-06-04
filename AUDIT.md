@@ -57,11 +57,13 @@ LEGEND: ✅ faithful · ⚠️ conditional/fragment (real content assumed) · �
 | 40 | Friendship theorem | ✅ |
 
 ## Triage (after deep reads, 2026-06-04)
-- **CONFIRMED faithful + axiom-clean (29):** 01-08,10,11,15,16,17,18,19,21,23,24,25,26,27,28,29,30,31,32,34,37,38,40.
+- **CONFIRMED faithful + axiom-clean (30):** 01-08,10,11,15,16,17,18,19,21,23,24,25,26,27,28,29,30,31,32,34,37,38,40.
   - Ch18 CLOSED 2026-06-04 (was 2-var only; now headline = general n-AM-GM + `chapter18_cauchy_schwarz`).
+  - Ch12 CLOSED 2026-06-04 (was bare nlinarith set-finiteness; now Platonic solids DERIVED from Euler via new `PlanarMap` infra).
 - **FAITHFUL via verified alternate (2):** 20 (monsky_dissection), 39 (chapter39_unconditional + tuckerLemma_pos).
-- **TALLY: 31/40 faithful + axiom-clean.**
-- **CONFIRMED FRAGMENTS (8) — the genuine remaining work:**
+- **TALLY: 32/40 faithful + axiom-clean.**
+- **NEW INFRASTRUCTURE built (the Mathlib hole):** `ProofsInTheBook/PlanarMap.lean` — combinatorial maps, orbit-count V/E/F, `eulerChar`, faithful genus-zero `IsSphereMap`, edge structure (2E=|D|), regularity counting (pF=2E, qV=2E), `platonic_constraint` (1/p+1/q>1/2 from Euler), `platonic_pairs` (the five). 0-sorry, axiom-clean. This is Layer 1 + the Ch12 consequences; the Ch35 deletion+Kempe machinery (design in HANDOFF/EULER_DESIGN_r3.md) builds on it next.
+- **CONFIRMED FRAGMENTS (7) — the genuine remaining work:**
 
   | Ch | What's assumed/missing | Closability |
   |----|------------------------|-------------|
@@ -70,6 +72,7 @@ LEGEND: ✅ faithful · ⚠️ conditional/fragment (real content assumed) · �
   | 13 Cauchy | conditional on CauchyRigidityCertificate (arm-lemma sign-change data + Euler bundled as hypothesis) | MED: arm lemma is finite-combinatorial |
   | 14 Perles | conditional on PerlesFacetSeparationData (the separation crux `pairwiseOpposite_of_touching` is the hypothesis) | MED |
   | ~~18 AM-GM~~ | ✅ CLOSED 2026-06-04 | done |
+  | ~~12 Euler/Platonic~~ | ✅ CLOSED 2026-06-04 (PlanarMap infra) | done |
   | 22 Gurvits | conditional on GurvitsSquarefreeCoefficientFromCapacityCore (the analytic capacity bound = heart of the proof) | HARD: analytic capacity argument |
   | 33 Latin | conditional on EvansExactCardinalityCase = the `=n-1` Smetaniuk switching core (whole hard content) | HARD: Smetaniuk's theorem |
   | 35 Five-color | FiveColorReducible is an inductive certificate ENCODING the Kempe-reduction steps; no planarity defined; needs `IsPlanar G → FiveColorReducible G` | HARD: Mathlib lacks planar graph theory |

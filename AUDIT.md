@@ -77,14 +77,16 @@ LEGEND: ✅ faithful · ⚠️ conditional/fragment (real content assumed) · �
 
   Closability order: **18 ✅ → 22,33 (research-grade, self-contained) → 13,14 (need polytope geometry) → 09,12,35,36 (need geometric/topological infra Mathlib lacks).**
 
-## Remaining-work assessment (2026-06-04)
-The 8 open fragments are the hard tail — none is a quick close:
-- **Ch33 (Evans/Smetaniuk):** scaffold present (Hall, Latin-rectangle extension, normalization, padding reduction, n≤3 done); missing = the general `=n-1` Smetaniuk switching induction. Self-contained finite combinatorics, research-grade.
-- **Ch22 (Gurvits/van der Waerden permanent):** missing = the analytic capacity lower bound (stable-polynomial / capacity argument). Self-contained analysis, research-grade.
-- **Ch13/14 (Cauchy rigidity / Perles):** the combinatorial cores are reachable, but the *faithful* unconditional theorems need convex-polytope geometry (realization), which Mathlib lacks.
-- **Ch09 (Hilbert 3rd):** needs a geometric scissors-congruence/equidecomposability relation + the invariance theorem (scissors-congruent ⇒ equal Dehn). The arithmetic obstruction (arccos(1/3)/π irrational, Dehn values differ) IS proved. Mathlib lacks equidecomposability.
-- **Ch12 (Euler):** needs Euler's formula V-E+F=2 for planar graphs proved (Mathlib lacks planar-graph theory), then derive the Platonic constraint from it.
-- **Ch35 (5-color):** needs a planarity predicate + `IsPlanar G → FiveColorReducible G` (Mathlib lacks planar graphs / Kempe-chain separation).
-- **Ch36 (art gallery):** 3-coloring crux IS proved; needs polygon-triangulation existence + visibility geometry (Mathlib lacks).
+## Remaining-work assessment (2026-06-04, refined after deep reads + design rounds)
+The 8 open fragments, now with closability sharpened:
+- **Ch33 (Evans/Smetaniuk):** REDUCED (codex df0eb2b) to the single statement `EvansNormalizedCellCase n (last,last,last)` for n≥4 = the genuine Smetaniuk diagonal/switching construction. Self-contained finite combinatorics. Needs a blueprint then formalize. Scaffold (Hall, rectangle extension, normalization, n≤3) all proven.
+- **Ch22 (Gurvits/van der Waerden permanent):** scaffold complete (squarefree coeff = permanent, capacity≥1 from doubly-stochastic, n≤2 base, core-equivalences). Single gap = the capacity⇒coefficient inductive step `cap(p)≥1 ⇒ coeff ≥ n!/nⁿ` via the reduction with constant G(k)=(k-1)^{k-1}/k^{k-1}. Needs real-stable / capacity machinery (analysis). Research-grade.
+- **Ch14 (Perles):** REACHABLE — NOT an infra wall. Combinatorial 2^(d+1) counting core (`PerlesMatrix.card_lt_two_pow_succ`) PROVEN; FacetHyperplanes/rowZeroCard/missingSignVector all constructed. The ONLY gap: prove `PairwiseTouching ⇒` opposite-vertices-on-opposite-sides (`PairwiseTouchingAcrossFacets`) — pure affine geometry in ℝᵈ, and Mathlib HAS the tools (AffineSubspace.signedInfDist, WSameSide/SSameSide, Affine.Simplex). A proof obligation, not missing infra.
+- **Ch13 (Cauchy rigidity):** combinatorial counting+parity+Euler-contradiction core PROVEN; conclusion is `False` (no nontrivial flex). Gap = a polytope substrate (vertex-link as planar polygon) + ONE Euclidean arm-lemma inequality (chord strictly increases as angles open). The arm lemma is a single Euclidean fact, not a topology wall. Medium-hard, reachable.
+- **Ch09 (Hilbert 3rd):** arithmetic obstruction (arccos(1/3)/π irrational, Dehn values differ) PROVEN. Gap = scissors-congruence relation + invariance (scissors-congruent ⇒ equal Dehn). Mathlib HAS `Equidecomp` (group-action equidecomposability) as a base; need the polytope+isometry instantiation + Dehn additivity.
+- **Ch12 + Ch35 (Euler / 5-color):** building shared planar-map infrastructure (Xiang: "Mathlib 没有的我们补上"). Design converging over rounds: faithful def `IsSphereMap M := Connected ∧ EulerChar = 2` (genus-zero, NOT an inductive certificate — avoids the fragment trap), combinatorial maps (darts/α/σ), deletion-closure for the 5CT min-degree induction, σ-based Kempe non-crossing. Round 3 pinning deletion-closure + Lean encoding.
+- **Ch36 (art gallery):** 3-coloring crux PROVEN; needs polygon-triangulation existence + visibility geometry. Hardest geometric build.
 
-DISPATCH STATUS: uisai1 saturated (load ~101, 6 codex, 89 lean) as of 2026-06-04 13:11 — codex dispatch on hold to avoid thrash; resume 33/22 dispatch when it drains.
+Reclassification: 13 and 14 move from "infra-blocked" to "reachable proof obligations" (Mathlib has the affine-geometry tools). The genuine new-infra builds are 12+35 (planar maps — in progress), 09 (Dehn invariance, partial base in Equidecomp), 36 (polygon geometry).
+
+WORKERS (2026-06-04, /Xiang mode): Ch33 codex → reduced to Smetaniuk-switching (committed df0eb2b). Euler/planar design → round 3 (pbook serialized; bridge was flaky under concurrency, fixed by one-question-at-a-time).

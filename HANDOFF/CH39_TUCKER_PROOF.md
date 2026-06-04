@@ -235,3 +235,26 @@ This is a concrete, provable combinatorial-lattice fact (the covering relation o
 + the hemisphere constraint). It needs careful master/strong-model formalization over the actual ridge
 encoding — codex (gpt-5.5) tangles on the represented↔actual representation consistency. NOT a math gap;
 a formalization-engineering frontier on a verified-correct proof.
+
+---
+## State after 14 rounds — the precise framework-coherence frontier
+
+ALL individual hard facts are PROVEN and committed (0-sorry, verified):
+- coface-exhaustion / rho-degree count (`actualHemisphereA_rho_degree_card`) — for UNORDERED label-set-A ridges;
+- sigma one-door degree + `actualHemisphereA_sigma_degree_one_gives_prefixChain_complementary_pair`;
+- the abstract Ky Fan parity engine, hemisphere/equator model (`equatorEquiv`), the Ky Fan proof strategy.
+
+THE ONE REMAINING ISSUE (precisely diagnosed, codex-confirmed across rounds 12-14):
+a REPRESENTATION-COHERENCE tension. `EquatorBoundaryCardBridgeStatement` needs the boundary-ridge count to
+equal the ORDERED equator alternating-chain count, but `ActualHemisphereARidge` is UNORDERED (label-set A,
+the form the rho-degree count was proven for). The unordered→ordered card identity is FALSE as stated
+(a label-set-A chain need not be alternating-ordered). Making the ridge ORDERED fixes the bridge but BREAKS
+the sigma-degree/one-door reduction. So no single object choice currently satisfies rho-degree + sigma-degree
++ bridge + induction simultaneously.
+
+RESOLUTION (the remaining work — a careful re-architecture, NOT a quick fix; codex cannot architect the
+coherence): redesign the Ky Fan incidence graph (R, M, edge, boundary) around ONE consistent object — most
+likely ORDERED positive-alternating partial chains — and re-derive BOTH degree facts (rho coface count AND
+sigma one-door) for it, so the equator bridge is an identity via `equatorEquiv`. The coface count is
+order-independent (flag geometry); the sigma-side reduction must be re-expressed for the ordered object.
+This is focused design work on the ~2500-line framework. Needs master/strong-model architecture, not codex grind.

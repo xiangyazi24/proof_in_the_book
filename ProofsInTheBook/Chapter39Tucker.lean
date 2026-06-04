@@ -287,6 +287,29 @@ noncomputable def equatorRestrictedLabel {d : ℕ}
     NonzeroSignedSubset d → SignedLabel d :=
   fun X => label ((equatorEquiv d) X).1
 
+noncomputable def equatorRestrictedLabelOf {r m : ℕ}
+    (label : NonzeroSignedSubset (r + 1) → SignedLabel m) :
+    NonzeroSignedSubset r → SignedLabel m :=
+  fun X => label ((equatorEquiv r) X).1
+
+theorem equatorRestrictedLabelOf_antipodal {r m : ℕ}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    ∀ X, equatorRestrictedLabelOf label X.antipode =
+      (equatorRestrictedLabelOf label X).neg := by
+  intro X
+  simpa [equatorRestrictedLabelOf, equatorEquiv, equatorEmbed_antipode] using
+    hantipodal (equatorEmbed X)
+
+theorem equatorRestrictedLabelOf_noComplementary {r m : ℕ}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (hno : NoComplementaryComparableLabels label) :
+    NoComplementaryComparableLabels (equatorRestrictedLabelOf label) := by
+  intro X Y hXY hcomp
+  have hcomp' : label (equatorEmbed X) = (label (equatorEmbed Y)).neg := by
+    simpa [equatorRestrictedLabelOf, equatorEquiv] using hcomp
+  exact hno (equatorEmbed X) (equatorEmbed Y) (equatorEmbed_le hXY) hcomp'
+
 theorem equatorRestrictedLabel_antipodal {d : ℕ}
     {label : NonzeroSignedSubset (d + 1) → SignedLabel d}
     (hantipodal : ∀ X, label X.antipode = (label X).neg) :
@@ -388,6 +411,208 @@ theorem alternatingLabelSetA_card (d : ℕ) :
   · intro a b h
     exact alternatingLabel_inj.mp h
 
+/-! ### Alternating labels along an arbitrary increasing index set -/
+
+/-- The alternating label attached to the `a`th element of an index map.  The
+sign alternates with the position `a`; the absolute label is `idx a`. -/
+def alternatingLabelOf {r m : ℕ} (idx : Fin r → Fin m) (a : Fin r) :
+    SignedLabel m where
+  positive := decide (Even a.val)
+  index := idx a
+
+@[simp]
+theorem alternatingLabelOf_index {r m : ℕ} (idx : Fin r → Fin m) (a : Fin r) :
+    (alternatingLabelOf idx a).index = idx a := rfl
+
+@[simp]
+theorem alternatingLabelOf_positive {r m : ℕ} (idx : Fin r → Fin m) (a : Fin r) :
+    (alternatingLabelOf idx a).positive = decide (Even a.val) := rfl
+
+theorem alternatingLabelOf_inj {r m : ℕ} {idx : Fin r → Fin m}
+    (hidx : Function.Injective idx) {a b : Fin r} :
+    alternatingLabelOf idx a = alternatingLabelOf idx b ↔ a = b := by
+  constructor
+  · intro h
+    apply hidx
+    simpa [alternatingLabelOf] using congrArg SignedLabel.index h
+  · intro h
+    subst h
+    rfl
+
+theorem alternatingLabelOf_neg_ne {r m : ℕ} {idx : Fin r → Fin m}
+    (hidx : Function.Injective idx) (a b : Fin r) :
+    (alternatingLabelOf idx a).neg ≠ alternatingLabelOf idx b := by
+  intro h
+  have hab : a = b := by
+    apply hidx
+    have hidx' := congrArg SignedLabel.index h
+    simpa [alternatingLabelOf, SignedLabel.neg] using hidx'
+  subst b
+  have hpos := congrArg SignedLabel.positive h
+  simp [alternatingLabelOf, SignedLabel.neg] at hpos
+
+/-- The alternating label set determined by an index map. -/
+noncomputable def alternatingLabelSetOf {r m : ℕ} (idx : Fin r → Fin m) :
+    Finset (SignedLabel m) :=
+  Finset.univ.image fun a : Fin r => alternatingLabelOf idx a
+
+theorem alternatingLabelSetOf_card {r m : ℕ} {idx : Fin r → Fin m}
+    (hidx : Function.Injective idx) :
+    (alternatingLabelSetOf idx).card = r := by
+  classical
+  rw [alternatingLabelSetOf, Finset.card_image_of_injective]
+  · simp
+  · intro a b h
+    exact (alternatingLabelOf_inj hidx).mp h
+
+/-- The negative-first alternating label set determined by an index map. -/
+noncomputable def alternatingNegLabelSetOf {r m : ℕ} (idx : Fin r → Fin m) :
+    Finset (SignedLabel m) :=
+  Finset.univ.image fun a : Fin r => (alternatingLabelOf idx a).neg
+
+theorem alternatingNegLabelOf_inj {r m : ℕ} {idx : Fin r → Fin m}
+    (hidx : Function.Injective idx) {a b : Fin r} :
+    (alternatingLabelOf idx a).neg = (alternatingLabelOf idx b).neg ↔ a = b := by
+  constructor
+  · intro h
+    apply hidx
+    have hidx' := congrArg SignedLabel.index h
+    simpa [alternatingLabelOf, SignedLabel.neg] using hidx'
+  · intro h
+    subst h
+    rfl
+
+theorem alternatingNegLabelSetOf_card {r m : ℕ} {idx : Fin r → Fin m}
+    (hidx : Function.Injective idx) :
+    (alternatingNegLabelSetOf idx).card = r := by
+  classical
+  rw [alternatingNegLabelSetOf, Finset.card_image_of_injective]
+  · simp
+  · intro a b h
+    exact (alternatingNegLabelOf_inj hidx).mp h
+
+theorem alternatingLabelSetOf_range_eq_of_eq {r m : ℕ}
+    {idx eta : Fin r → Fin m}
+    (h : alternatingLabelSetOf idx = alternatingLabelSetOf eta) :
+    Set.range idx = Set.range eta := by
+  classical
+  ext x
+  constructor
+  · rintro ⟨a, rfl⟩
+    have hmem : alternatingLabelOf idx a ∈ alternatingLabelSetOf eta := by
+      rw [← h]
+      simp [alternatingLabelSetOf]
+    rcases Finset.mem_image.mp hmem with ⟨b, _hb, hb⟩
+    exact ⟨b, by
+      have hidx := congrArg SignedLabel.index hb.symm
+      simpa [alternatingLabelOf] using hidx.symm⟩
+  · rintro ⟨a, rfl⟩
+    have hmem : alternatingLabelOf eta a ∈ alternatingLabelSetOf idx := by
+      rw [h]
+      simp [alternatingLabelSetOf]
+    rcases Finset.mem_image.mp hmem with ⟨b, _hb, hb⟩
+    exact ⟨b, by
+      have hidx := congrArg SignedLabel.index hb.symm
+      simpa [alternatingLabelOf] using hidx.symm⟩
+
+theorem alternatingLabelSetOf_idx_unique {r m : ℕ}
+    {idx eta : Fin r → Fin m}
+    (hidx : StrictMono idx) (heta : StrictMono eta)
+    (h : alternatingLabelSetOf idx = alternatingLabelSetOf eta) :
+    idx = eta := by
+  exact (StrictMono.range_inj hidx heta).mp (alternatingLabelSetOf_range_eq_of_eq h)
+
+theorem alternatingNegLabelSetOf_range_eq_of_eq {r m : ℕ}
+    {idx eta : Fin r → Fin m}
+    (h : alternatingNegLabelSetOf idx = alternatingNegLabelSetOf eta) :
+    Set.range idx = Set.range eta := by
+  classical
+  ext x
+  constructor
+  · rintro ⟨a, rfl⟩
+    have hmem : (alternatingLabelOf idx a).neg ∈ alternatingNegLabelSetOf eta := by
+      rw [← h]
+      simp [alternatingNegLabelSetOf]
+    rcases Finset.mem_image.mp hmem with ⟨b, _hb, hb⟩
+    exact ⟨b, by
+      have hidx := congrArg SignedLabel.index hb.symm
+      simpa [alternatingLabelOf, SignedLabel.neg] using hidx.symm⟩
+  · rintro ⟨a, rfl⟩
+    have hmem : (alternatingLabelOf eta a).neg ∈ alternatingNegLabelSetOf idx := by
+      rw [h]
+      simp [alternatingNegLabelSetOf]
+    rcases Finset.mem_image.mp hmem with ⟨b, _hb, hb⟩
+    exact ⟨b, by
+      have hidx := congrArg SignedLabel.index hb.symm
+      simpa [alternatingLabelOf, SignedLabel.neg] using hidx.symm⟩
+
+theorem alternatingNegLabelSetOf_idx_unique {r m : ℕ}
+    {idx eta : Fin r → Fin m}
+    (hidx : StrictMono idx) (heta : StrictMono eta)
+    (h : alternatingNegLabelSetOf idx = alternatingNegLabelSetOf eta) :
+    idx = eta := by
+  exact (StrictMono.range_inj hidx heta).mp (alternatingNegLabelSetOf_range_eq_of_eq h)
+
+/-- The label set carried by an ordered simplex.  The property below does not
+use the order except to enumerate the finitely many vertices. -/
+noncomputable def simplexLabelSet {k m n : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (sigma : Fin k → NonzeroSignedSubset n) : Finset (SignedLabel m) :=
+  Finset.univ.image fun a : Fin k => label (sigma a)
+
+/-- Positive-first alternating simplex, with its index set read off from the
+simplex itself.  The `idx` below is an internal witness, not an external
+summation parameter. -/
+def IsAltPos {k m n : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (sigma : Fin k → NonzeroSignedSubset n) : Prop :=
+  ∃ idx : Fin k → Fin m,
+    StrictMono idx ∧ simplexLabelSet label sigma = alternatingLabelSetOf idx
+
+/-- Negative-first alternating simplex, with the same self-contained indexing
+convention as `IsAltPos`. -/
+def IsAltNeg {k m n : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (sigma : Fin k → NonzeroSignedSubset n) : Prop :=
+  ∃ idx : Fin k → Fin m,
+    StrictMono idx ∧ simplexLabelSet label sigma = alternatingNegLabelSetOf idx
+
+noncomputable instance isAltPos_decidable {k m n : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (sigma : Fin k → NonzeroSignedSubset n) :
+    Decidable (IsAltPos label sigma) := by
+  classical
+  unfold IsAltPos
+  infer_instance
+
+noncomputable instance isAltNeg_decidable {k m n : ℕ}
+    (label : NonzeroSignedSubset n → SignedLabel m)
+    (sigma : Fin k → NonzeroSignedSubset n) :
+    Decidable (IsAltNeg label sigma) := by
+  classical
+  unfold IsAltNeg
+  infer_instance
+
+theorem IsAltPos.idx_unique {k m n : ℕ}
+    {label : NonzeroSignedSubset n → SignedLabel m}
+    {sigma : Fin k → NonzeroSignedSubset n}
+    {idx eta : Fin k → Fin m}
+    (hidx : StrictMono idx) (heta : StrictMono eta)
+    (h₁ : simplexLabelSet label sigma = alternatingLabelSetOf idx)
+    (h₂ : simplexLabelSet label sigma = alternatingLabelSetOf eta) :
+    idx = eta :=
+  alternatingLabelSetOf_idx_unique hidx heta (h₁.symm.trans h₂)
+
+theorem IsAltNeg.idx_unique {k m n : ℕ}
+    {label : NonzeroSignedSubset n → SignedLabel m}
+    {sigma : Fin k → NonzeroSignedSubset n}
+    {idx eta : Fin k → Fin m}
+    (hidx : StrictMono idx) (heta : StrictMono eta)
+    (h₁ : simplexLabelSet label sigma = alternatingNegLabelSetOf idx)
+    (h₂ : simplexLabelSet label sigma = alternatingNegLabelSetOf eta) :
+    idx = eta :=
+  alternatingNegLabelSetOf_idx_unique hidx heta (h₁.symm.trans h₂)
+
 /-! ## Ky Fan parity statement on the non-degenerate range -/
 
 /-- Ky Fan parity in the range actually used by Tucker: `r ≥ 1`, `m ≥ r`.
@@ -487,6 +712,361 @@ noncomputable def sigmaDoorSet {d : ℕ}
   by
     classical
     exact Finset.univ.filter fun j => SigmaDeletionHasAlternatingLabelSet sigmaLabel j
+
+/-- The parameterized deletion condition: deleting `j` leaves the alternating
+label set determined by `idx`. -/
+def SigmaDeletionHasAlternatingLabelSetOf {r m : ℕ} (idx : Fin r → Fin m)
+    (sigmaLabel : Fin (r + 1) → SignedLabel m) (j : Fin (r + 1)) : Prop :=
+  ∀ a : Fin r, ∃ t : Fin (r + 1), t ≠ j ∧
+    sigmaLabel t = alternatingLabelOf idx a
+
+/-- Door set for a fixed increasing index set. -/
+noncomputable def sigmaDoorSetOf {r m : ℕ} (idx : Fin r → Fin m)
+    (sigmaLabel : Fin (r + 1) → SignedLabel m) : Finset (Fin (r + 1)) :=
+  by
+    classical
+    exact Finset.univ.filter fun j => SigmaDeletionHasAlternatingLabelSetOf idx sigmaLabel j
+
+theorem sigmaDeletionHasAlternatingLabelSetOf_extra {r m : ℕ}
+    {idx : Fin r → Fin m} {sigmaLabel : Fin (r + 1) → SignedLabel m}
+    {extra : Fin (r + 1)}
+    (hridge : ∀ a : Fin r,
+      sigmaLabel (extra.succAbove a) = alternatingLabelOf idx a) :
+    SigmaDeletionHasAlternatingLabelSetOf idx sigmaLabel extra := by
+  intro a
+  exact ⟨extra.succAbove a, Fin.succAbove_ne extra a, hridge a⟩
+
+theorem sigmaDeletionHasAlternatingLabelSetOf_duplicate {r m : ℕ}
+    {idx : Fin r → Fin m} {sigmaLabel : Fin (r + 1) → SignedLabel m}
+    {extra : Fin (r + 1)} {k : Fin r}
+    (hridge : ∀ a : Fin r,
+      sigmaLabel (extra.succAbove a) = alternatingLabelOf idx a)
+    (hextra : sigmaLabel extra = alternatingLabelOf idx k) :
+    SigmaDeletionHasAlternatingLabelSetOf idx sigmaLabel (extra.succAbove k) := by
+  intro a
+  by_cases ha : a = k
+  · subst a
+    exact ⟨extra, Fin.ne_succAbove extra k, hextra⟩
+  · exact ⟨extra.succAbove a, by
+      intro h
+      exact ha (Fin.succAbove_right_injective h), hridge a⟩
+
+theorem sigmaDeletionHasAlternatingLabelSetOf_iff_duplicate {r m : ℕ}
+    {idx : Fin r → Fin m} (hidx : Function.Injective idx)
+    {sigmaLabel : Fin (r + 1) → SignedLabel m} {extra : Fin (r + 1)} {k : Fin r}
+    (hridge : ∀ a : Fin r,
+      sigmaLabel (extra.succAbove a) = alternatingLabelOf idx a)
+    (hextra : sigmaLabel extra = alternatingLabelOf idx k) (j : Fin (r + 1)) :
+    SigmaDeletionHasAlternatingLabelSetOf idx sigmaLabel j ↔
+      j = extra ∨ j = extra.succAbove k := by
+  constructor
+  · intro hdoor
+    by_cases hje : j = extra
+    · exact Or.inl hje
+    · rcases Fin.exists_succAbove_eq hje with ⟨a, ha⟩
+      by_cases hak : a = k
+      · subst a
+        exact Or.inr ha.symm
+      · have hmissing := hdoor a
+        rcases hmissing with ⟨t, htne, htlabel⟩
+        by_cases htextra : t = extra
+        · subst t
+          rw [hextra] at htlabel
+          exact False.elim (hak ((alternatingLabelOf_inj hidx).mp htlabel).symm)
+        · rcases Fin.exists_succAbove_eq htextra with ⟨b, hb⟩
+          rw [← hb, hridge b] at htlabel
+          have hba : b = a := (alternatingLabelOf_inj hidx).mp htlabel
+          exact False.elim (htne (by rw [← hb, hba, ha]))
+  · intro h
+    rcases h with rfl | rfl
+    · exact sigmaDeletionHasAlternatingLabelSetOf_extra hridge
+    · exact sigmaDeletionHasAlternatingLabelSetOf_duplicate hridge hextra
+
+theorem sigmaDeletionHasAlternatingLabelSetOf_iff_opposite {r m : ℕ}
+    {idx : Fin r → Fin m} (hidx : Function.Injective idx)
+    {sigmaLabel : Fin (r + 1) → SignedLabel m} {extra : Fin (r + 1)} {k : Fin r}
+    (hridge : ∀ a : Fin r,
+      sigmaLabel (extra.succAbove a) = alternatingLabelOf idx a)
+    (hextra : sigmaLabel extra = (alternatingLabelOf idx k).neg) (j : Fin (r + 1)) :
+    SigmaDeletionHasAlternatingLabelSetOf idx sigmaLabel j ↔ j = extra := by
+  constructor
+  · intro hdoor
+    by_cases hje : j = extra
+    · exact hje
+    · rcases Fin.exists_succAbove_eq hje with ⟨a, ha⟩
+      rcases hdoor a with ⟨t, htne, htlabel⟩
+      by_cases htextra : t = extra
+      · subst t
+        rw [hextra] at htlabel
+        exact False.elim (alternatingLabelOf_neg_ne hidx k a htlabel)
+      · rcases Fin.exists_succAbove_eq htextra with ⟨b, hb⟩
+        rw [← hb, hridge b] at htlabel
+        have hba : b = a := (alternatingLabelOf_inj hidx).mp htlabel
+        exact False.elim (htne (by rw [← hb, hba, ha]))
+  · intro h
+    subst h
+    exact sigmaDeletionHasAlternatingLabelSetOf_extra hridge
+
+theorem sigmaDoorSetOf_card_duplicate {r m : ℕ}
+    {idx : Fin r → Fin m} (hidx : Function.Injective idx)
+    {sigmaLabel : Fin (r + 1) → SignedLabel m} {extra : Fin (r + 1)} {k : Fin r}
+    (hridge : ∀ a : Fin r,
+      sigmaLabel (extra.succAbove a) = alternatingLabelOf idx a)
+    (hextra : sigmaLabel extra = alternatingLabelOf idx k) :
+    (sigmaDoorSetOf idx sigmaLabel).card = 2 := by
+  classical
+  have hset :
+      sigmaDoorSetOf idx sigmaLabel = {extra, extra.succAbove k} := by
+    ext j
+    simp [sigmaDoorSetOf,
+      sigmaDeletionHasAlternatingLabelSetOf_iff_duplicate hidx hridge hextra j, eq_comm]
+  rw [hset]
+  exact Finset.card_pair (Fin.ne_succAbove extra k)
+
+theorem sigmaDoorSetOf_card_opposite {r m : ℕ}
+    {idx : Fin r → Fin m} (hidx : Function.Injective idx)
+    {sigmaLabel : Fin (r + 1) → SignedLabel m} {extra : Fin (r + 1)} {k : Fin r}
+    (hridge : ∀ a : Fin r,
+      sigmaLabel (extra.succAbove a) = alternatingLabelOf idx a)
+    (hextra : sigmaLabel extra = (alternatingLabelOf idx k).neg) :
+    (sigmaDoorSetOf idx sigmaLabel).card = 1 := by
+  classical
+  have hset : sigmaDoorSetOf idx sigmaLabel = {extra} := by
+    ext j
+    simp [sigmaDoorSetOf,
+      sigmaDeletionHasAlternatingLabelSetOf_iff_opposite hidx hridge hextra j]
+  rw [hset]
+  simp
+
+theorem sigmaDeletionHasAlternatingLabelSetOf_iff_not_duplicate {r m : ℕ}
+    {idx : Fin r → Fin m} (hidx : Function.Injective idx)
+    {sigmaLabel : Fin (r + 1) → SignedLabel m} {extra : Fin (r + 1)}
+    (hridge : ∀ a : Fin r,
+      sigmaLabel (extra.succAbove a) = alternatingLabelOf idx a)
+    (hnot : ∀ k : Fin r, sigmaLabel extra ≠ alternatingLabelOf idx k)
+    (j : Fin (r + 1)) :
+    SigmaDeletionHasAlternatingLabelSetOf idx sigmaLabel j ↔ j = extra := by
+  constructor
+  · intro hdoor
+    by_cases hje : j = extra
+    · exact hje
+    · rcases Fin.exists_succAbove_eq hje with ⟨a, ha⟩
+      rcases hdoor a with ⟨t, htne, htlabel⟩
+      by_cases htextra : t = extra
+      · subst t
+        exact False.elim (hnot a htlabel)
+      · rcases Fin.exists_succAbove_eq htextra with ⟨b, hb⟩
+        rw [← hb, hridge b] at htlabel
+        have hba : b = a := (alternatingLabelOf_inj hidx).mp htlabel
+        exact False.elim (htne (by rw [← hb, hba, ha]))
+  · intro h
+    subst h
+    exact sigmaDeletionHasAlternatingLabelSetOf_extra hridge
+
+theorem sigmaDoorSetOf_card_not_duplicate {r m : ℕ}
+    {idx : Fin r → Fin m} (hidx : Function.Injective idx)
+    {sigmaLabel : Fin (r + 1) → SignedLabel m} {extra : Fin (r + 1)}
+    (hridge : ∀ a : Fin r,
+      sigmaLabel (extra.succAbove a) = alternatingLabelOf idx a)
+    (hnot : ∀ k : Fin r, sigmaLabel extra ≠ alternatingLabelOf idx k) :
+    (sigmaDoorSetOf idx sigmaLabel).card = 1 := by
+  classical
+  have hset : sigmaDoorSetOf idx sigmaLabel = {extra} := by
+    ext j
+    simp [sigmaDoorSetOf,
+      sigmaDeletionHasAlternatingLabelSetOf_iff_not_duplicate hidx hridge hnot j]
+  rw [hset]
+  simp
+
+theorem sigmaDeletionHasAlternatingLabelSetOf_duplicate_of_door {r m : ℕ}
+    {idx : Fin r → Fin m} (hidx : Function.Injective idx)
+    {sigmaLabel : Fin (r + 1) → SignedLabel m} {extra t : Fin (r + 1)} {k : Fin r}
+    (hdoor : SigmaDeletionHasAlternatingLabelSetOf idx sigmaLabel extra)
+    (hextra : sigmaLabel extra = alternatingLabelOf idx k)
+    (htne : t ≠ extra)
+    (htlabel : sigmaLabel t = alternatingLabelOf idx k) :
+    SigmaDeletionHasAlternatingLabelSetOf idx sigmaLabel t := by
+  intro a
+  by_cases hak : a = k
+  · subst a
+    exact ⟨extra, by simpa [ne_eq, eq_comm] using htne, hextra⟩
+  · rcases hdoor a with ⟨u, hune, hulabel⟩
+    refine ⟨u, ?_, hulabel⟩
+    intro hut
+    subst u
+    have hka : k = a := by
+      apply (alternatingLabelOf_inj hidx).mp
+      exact htlabel.symm.trans hulabel
+    exact hak hka.symm
+
+theorem sigmaDeletionHasAlternatingLabelSetOf_retained_image_eq {r m : ℕ}
+    {idx : Fin r → Fin m} (hidx : Function.Injective idx)
+    {sigmaLabel : Fin (r + 1) → SignedLabel m} {extra : Fin (r + 1)}
+    (hdoor : SigmaDeletionHasAlternatingLabelSetOf idx sigmaLabel extra) :
+    ((Finset.univ.erase extra).image sigmaLabel) = alternatingLabelSetOf idx := by
+  classical
+  let retained : Finset (Fin (r + 1)) := Finset.univ.erase extra
+  have hA_subset :
+      alternatingLabelSetOf idx ⊆ retained.image sigmaLabel := by
+    intro L hL
+    rcases (by simpa [alternatingLabelSetOf] using hL) with ⟨a, ha⟩
+    rcases hdoor a with ⟨t, htne, htlabel⟩
+    exact Finset.mem_image.mpr ⟨t, by simp [retained, htne], htlabel.trans ha⟩
+  have hcard_le :
+      (retained.image sigmaLabel).card ≤ (alternatingLabelSetOf idx).card := by
+    have himage_le : (retained.image sigmaLabel).card ≤ retained.card :=
+      Finset.card_image_le
+    have hretained : retained.card = r := by
+      simp [retained]
+    simpa [alternatingLabelSetOf_card hidx, hretained] using himage_le
+  have hEq : alternatingLabelSetOf idx = retained.image sigmaLabel :=
+    Finset.eq_of_subset_of_card_le hA_subset hcard_le
+  exact hEq.symm
+
+theorem sigmaDeletionHasAlternatingLabelSetOf_retained_injOn {r m : ℕ}
+    {idx : Fin r → Fin m} (hidx : Function.Injective idx)
+    {sigmaLabel : Fin (r + 1) → SignedLabel m} {extra : Fin (r + 1)}
+    (hdoor : SigmaDeletionHasAlternatingLabelSetOf idx sigmaLabel extra) :
+    Set.InjOn sigmaLabel (Finset.univ.erase extra) := by
+  classical
+  let retained : Finset (Fin (r + 1)) := Finset.univ.erase extra
+  have himage := sigmaDeletionHasAlternatingLabelSetOf_retained_image_eq
+    (idx := idx) hidx (sigmaLabel := sigmaLabel) (extra := extra) hdoor
+  have hcard :
+      (retained.image sigmaLabel).card = retained.card := by
+    rw [himage, alternatingLabelSetOf_card hidx]
+    simp [retained]
+  exact (Finset.card_image_iff).mp hcard
+
+theorem sigmaDoorSetOf_card_duplicate_of_door {r m : ℕ}
+    {idx : Fin r → Fin m} (hidx : Function.Injective idx)
+    {sigmaLabel : Fin (r + 1) → SignedLabel m} {extra : Fin (r + 1)} {k : Fin r}
+    (hdoorExtra : SigmaDeletionHasAlternatingLabelSetOf idx sigmaLabel extra)
+    (hextra : sigmaLabel extra = alternatingLabelOf idx k) :
+    (sigmaDoorSetOf idx sigmaLabel).card = 2 := by
+  classical
+  rcases hdoorExtra k with ⟨t, htne, htlabel⟩
+  have htDoor : SigmaDeletionHasAlternatingLabelSetOf idx sigmaLabel t :=
+    sigmaDeletionHasAlternatingLabelSetOf_duplicate_of_door
+      (idx := idx) hidx (extra := extra) (t := t) (k := k)
+      hdoorExtra hextra htne htlabel
+  have hinj :=
+    sigmaDeletionHasAlternatingLabelSetOf_retained_injOn
+      (idx := idx) hidx (sigmaLabel := sigmaLabel) (extra := extra) hdoorExtra
+  have himage :=
+    sigmaDeletionHasAlternatingLabelSetOf_retained_image_eq
+      (idx := idx) hidx (sigmaLabel := sigmaLabel) (extra := extra) hdoorExtra
+  have hmem_imp :
+      ∀ j, j ∈ sigmaDoorSetOf idx sigmaLabel → j = extra ∨ j = t := by
+    intro j hj
+    have hdoorj : SigmaDeletionHasAlternatingLabelSetOf idx sigmaLabel j := by
+      simpa [sigmaDoorSetOf] using hj
+    by_cases hjextra : j = extra
+    · exact Or.inl hjextra
+    · right
+      have hjret : j ∈ (Finset.univ.erase extra : Finset (Fin (r + 1))) := by
+        simp [hjextra]
+      have hjimage : sigmaLabel j ∈ (Finset.univ.erase extra).image sigmaLabel :=
+        Finset.mem_image.mpr ⟨j, hjret, rfl⟩
+      rw [himage] at hjimage
+      rcases (by simpa [alternatingLabelSetOf] using hjimage) with ⟨b, hjlabel⟩
+      by_cases hbk : b = k
+      · subst b
+        exact hinj hjret (by simp [htne]) (hjlabel.symm.trans htlabel.symm)
+      · rcases hdoorj b with ⟨u, hune, hulabel⟩
+        have huneExtra : u ≠ extra := by
+          intro hue
+          subst u
+          have hkb : k = b := (alternatingLabelOf_inj hidx).mp
+            (hextra.symm.trans hulabel)
+          exact hbk hkb.symm
+        have huret : u ∈ (Finset.univ.erase extra : Finset (Fin (r + 1))) := by
+          simp [huneExtra]
+        have huj : u = j :=
+          hinj huret hjret (hulabel.trans hjlabel)
+        exact False.elim (hune huj)
+  have hset : sigmaDoorSetOf idx sigmaLabel = {extra, t} := by
+    ext j
+    constructor
+    · intro hj
+      rcases hmem_imp j hj with rfl | rfl <;> simp
+    · intro hj
+      simp only [Finset.mem_insert, Finset.mem_singleton] at hj
+      rcases hj with rfl | rfl
+      · simpa [sigmaDoorSetOf] using hdoorExtra
+      · simpa [sigmaDoorSetOf] using htDoor
+  rw [hset]
+  exact Finset.card_pair htne.symm
+
+theorem sigmaDoorSetOf_card_not_duplicate_of_door {r m : ℕ}
+    {idx : Fin r → Fin m} (hidx : Function.Injective idx)
+    {sigmaLabel : Fin (r + 1) → SignedLabel m} {extra : Fin (r + 1)}
+    (hdoorExtra : SigmaDeletionHasAlternatingLabelSetOf idx sigmaLabel extra)
+    (hnot : ∀ k : Fin r, sigmaLabel extra ≠ alternatingLabelOf idx k) :
+    (sigmaDoorSetOf idx sigmaLabel).card = 1 := by
+  classical
+  have hinj :=
+    sigmaDeletionHasAlternatingLabelSetOf_retained_injOn
+      (idx := idx) hidx (sigmaLabel := sigmaLabel) (extra := extra) hdoorExtra
+  have himage :=
+    sigmaDeletionHasAlternatingLabelSetOf_retained_image_eq
+      (idx := idx) hidx (sigmaLabel := sigmaLabel) (extra := extra) hdoorExtra
+  have hmem_imp :
+      ∀ j, j ∈ sigmaDoorSetOf idx sigmaLabel → j = extra := by
+    intro j hj
+    have hdoorj : SigmaDeletionHasAlternatingLabelSetOf idx sigmaLabel j := by
+      simpa [sigmaDoorSetOf] using hj
+    by_cases hjextra : j = extra
+    · exact hjextra
+    · have hjret : j ∈ (Finset.univ.erase extra : Finset (Fin (r + 1))) := by
+        simp [hjextra]
+      have hjimage : sigmaLabel j ∈ (Finset.univ.erase extra).image sigmaLabel :=
+        Finset.mem_image.mpr ⟨j, hjret, rfl⟩
+      rw [himage] at hjimage
+      rcases (by simpa [alternatingLabelSetOf] using hjimage) with ⟨b, hjlabel⟩
+      rcases hdoorj b with ⟨u, hune, hulabel⟩
+      have huneExtra : u ≠ extra := by
+        intro hue
+        subst u
+        exact hnot b hulabel
+      have huret : u ∈ (Finset.univ.erase extra : Finset (Fin (r + 1))) := by
+        simp [huneExtra]
+      have huj : u = j :=
+        hinj huret hjret (hulabel.trans hjlabel)
+      exact False.elim (hune huj)
+  have hset : sigmaDoorSetOf idx sigmaLabel = {extra} := by
+    ext j
+    constructor
+    · intro hj
+      exact by simpa using hmem_imp j hj
+    · intro hj
+      simp only [Finset.mem_singleton] at hj
+      subst j
+      simpa [sigmaDoorSetOf] using hdoorExtra
+  rw [hset]
+  simp
+
+theorem sigmaDoorSetOf_odd_iff_card_one_of_door {r m : ℕ}
+    {idx : Fin r → Fin m} (hidx : Function.Injective idx)
+    {sigmaLabel : Fin (r + 1) → SignedLabel m} {extra : Fin (r + 1)}
+    (hdoorExtra : SigmaDeletionHasAlternatingLabelSetOf idx sigmaLabel extra) :
+    Odd (sigmaDoorSetOf idx sigmaLabel).card ↔
+      (sigmaDoorSetOf idx sigmaLabel).card = 1 := by
+  classical
+  by_cases hdup : ∃ k : Fin r, sigmaLabel extra = alternatingLabelOf idx k
+  · rcases hdup with ⟨k, hk⟩
+    have hcard :=
+      sigmaDoorSetOf_card_duplicate_of_door
+        (idx := idx) hidx (sigmaLabel := sigmaLabel) (extra := extra) (k := k)
+        hdoorExtra hk
+    rw [hcard]
+    simp
+  · have hcard :=
+      sigmaDoorSetOf_card_not_duplicate_of_door
+        (idx := idx) hidx (sigmaLabel := sigmaLabel) (extra := extra)
+        hdoorExtra (by intro k hk; exact hdup ⟨k, hk⟩)
+    rw [hcard]
+    simp
 
 theorem sigmaDeletionHasAlternatingLabelSet_extra {d : ℕ}
     {sigmaLabel : Fin (d + 1) → SignedLabel d} {extra : Fin (d + 1)}
@@ -2505,6 +3085,535 @@ noncomputable def actualHemisphereRhoDegreeData {d : ℕ} (hd : 0 < d)
       (ActualHemisphereARidge label) (ActualHemisphereAChain label) :=
   actualHemisphereRhoDegreeDataOfDegreeCard hR
     (actualHemisphereA_rho_degree_card hd)
+
+/-! ## Actual upper-hemisphere graph for an arbitrary alternating index set -/
+
+def ActualHemisphereIdxRidge {r m : ℕ} (idx : Fin r → Fin m)
+    (label : NonzeroSignedSubset (r + 1) → SignedLabel m) :=
+  {rho : Fin r → NonzeroSignedSubset (r + 1) //
+    (∀ a : Fin r, UpperHemisphere (rho a)) ∧
+      (∃ P : SignedPermutation (r + 1), UpperPrefixChain P ∧
+        ∃ gap : Fin (r + 1), ∀ a : Fin r,
+          rho a = P.prefixChain (gap.succAbove a)) ∧
+      ∀ a : Fin r, ∃ t : Fin r, label (rho t) = alternatingLabelOf idx a}
+
+noncomputable instance actualHemisphereIdxRidge_fintype {r m : ℕ}
+    (idx : Fin r → Fin m)
+    (label : NonzeroSignedSubset (r + 1) → SignedLabel m) :
+    Fintype (ActualHemisphereIdxRidge idx label) := by
+  classical
+  dsimp [ActualHemisphereIdxRidge]
+  infer_instance
+
+def ActualHemisphereIdxChain {r m : ℕ} (idx : Fin r → Fin m)
+    (label : NonzeroSignedSubset (r + 1) → SignedLabel m) :=
+  {P : SignedPermutation (r + 1) //
+    UpperPrefixChain P ∧
+      ∃ gap : Fin (r + 1), ∀ a : Fin r,
+        ∃ t : Fin r,
+          label (P.prefixChain (gap.succAbove t)) = alternatingLabelOf idx a}
+
+noncomputable instance actualHemisphereIdxChain_fintype {r m : ℕ}
+    (idx : Fin r → Fin m)
+    (label : NonzeroSignedSubset (r + 1) → SignedLabel m) :
+    Fintype (ActualHemisphereIdxChain idx label) := by
+  classical
+  dsimp [ActualHemisphereIdxChain]
+  infer_instance
+
+def actualHemisphereIdxEdge {r m : ℕ}
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (rho : ActualHemisphereIdxRidge idx label)
+    (sigma : ActualHemisphereIdxChain idx label) : Prop :=
+  ∃ gap : Fin (r + 1), ∀ a : Fin r,
+    rho.1 a = sigma.1.prefixChain (gap.succAbove a)
+
+noncomputable instance actualHemisphereIdxEdge_decidable {r m : ℕ}
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m} :
+    DecidableRel (actualHemisphereIdxEdge (idx := idx) (label := label)) := by
+  classical
+  exact inferInstance
+
+def actualHemisphereIdxBoundary {r m : ℕ}
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (rho : ActualHemisphereIdxRidge idx label) : Prop :=
+  ∀ a : Fin r, Equator (rho.1 a)
+
+noncomputable instance actualHemisphereIdxBoundary_decidable {r m : ℕ}
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m} :
+    DecidablePred (actualHemisphereIdxBoundary (idx := idx) (label := label)) := by
+  classical
+  exact inferInstance
+
+def EquatorActualIdxRidge {r m : ℕ} (idx : Fin r → Fin m)
+    (label : NonzeroSignedSubset r → SignedLabel m) :=
+  {rho : Fin r → NonzeroSignedSubset r //
+    (∃ P : SignedPermutation (r + 1), UpperPrefixChain P ∧
+      RepresentedUpperRidgeBoundary P (Fin.last r) ∧
+        ∀ a : Fin r,
+          equatorEmbed (rho a) = P.prefixChain ((Fin.last r).succAbove a)) ∧
+      ∀ a : Fin r, ∃ t : Fin r, label (rho t) = alternatingLabelOf idx a}
+
+noncomputable instance equatorActualIdxRidge_fintype {r m : ℕ}
+    (idx : Fin r → Fin m)
+    (label : NonzeroSignedSubset r → SignedLabel m) :
+    Fintype (EquatorActualIdxRidge idx label) := by
+  classical
+  dsimp [EquatorActualIdxRidge]
+  infer_instance
+
+theorem actualHemisphereIdxBoundary_iff_represented {r m : ℕ}
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (rho : ActualHemisphereIdxRidge idx label)
+    (P : SignedPermutation (r + 1)) (hP : UpperPrefixChain P) (gap : Fin (r + 1))
+    (hrho : ∀ a : Fin r, rho.1 a = P.prefixChain (gap.succAbove a)) :
+    actualHemisphereIdxBoundary rho ↔ RepresentedUpperRidgeBoundary P gap := by
+  constructor
+  · intro hb
+    have hgap_last : gap = Fin.last r := by
+      by_contra hne
+      have hlast_ne_gap : Fin.last r ≠ gap := by
+        intro h
+        exact hne h.symm
+      rcases Fin.exists_succAbove_eq hlast_ne_gap with ⟨a, ha⟩
+      have hposTop :
+          Fin.last r ∈ (P.prefixChain (Fin.last r)).1.pos :=
+        last_mem_prefixPos_of_upper_of_order_le P (Fin.last r) (hP (Fin.last r))
+          (Fin.le_last _)
+      exact (hb a).1 (by
+        rw [hrho a]
+        simpa [← ha] using hposTop)
+    subst gap
+    have hcoord : P.order.symm (Fin.last r) = Fin.last r := by
+      by_contra hcoord
+      rcases Fin.exists_succAbove_eq hcoord with ⟨a, ha⟩
+      have hpos :
+          Fin.last r ∈ (P.prefixChain (P.order.symm (Fin.last r))).1.pos :=
+        last_mem_prefixPos_of_upper_of_order_le P (P.order.symm (Fin.last r))
+          (hP (P.order.symm (Fin.last r))) le_rfl
+      exact (hb a).1 (by
+        rw [hrho a]
+        simpa [← ha] using hpos)
+    exact ⟨rfl, hcoord⟩
+  · rintro ⟨hgap, hcoord⟩ a
+    subst gap
+    constructor
+    · intro hpos
+      rw [hrho a] at hpos
+      simpa [SignedPermutation.prefixChain, SignedPermutation.prefixSignedSubset,
+        SignedPermutation.prefixPos, hcoord] using hpos
+    · intro hneg
+      rw [hrho a] at hneg
+      simpa [SignedPermutation.prefixChain, SignedPermutation.prefixSignedSubset,
+        SignedPermutation.prefixNeg, hcoord] using hneg
+
+noncomputable def equatorBoundaryIdxRidgeToEquator {r m : ℕ}
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (rho : {rho : ActualHemisphereIdxRidge idx label //
+      actualHemisphereIdxBoundary rho}) :
+    EquatorActualIdxRidge idx (equatorRestrictedLabelOf label) := by
+  classical
+  let dropped : Fin r → NonzeroSignedSubset r :=
+    fun a => (equatorEquiv r).symm ⟨rho.1.1 a, rho.2 a⟩
+  have hrepr :
+      ∃ P : SignedPermutation (r + 1), UpperPrefixChain P ∧
+        RepresentedUpperRidgeBoundary P (Fin.last r) ∧
+          ∀ a : Fin r,
+            equatorEmbed (dropped a) =
+              P.prefixChain ((Fin.last r).succAbove a) := by
+    rcases rho.1.2.2.1 with ⟨P, hP, gap, hrho⟩
+    have hb := (actualHemisphereIdxBoundary_iff_represented rho.1 P hP gap hrho).mp rho.2
+    rcases hb with ⟨hgap, hcoord⟩
+    subst gap
+    refine ⟨P, hP, ⟨rfl, hcoord⟩, ?_⟩
+    intro a
+    calc
+      equatorEmbed (dropped a) = rho.1.1 a := by
+        dsimp [dropped, equatorEquiv]
+        exact equatorEmbed_equatorDrop (rho.1.1 a) (rho.2 a)
+      _ = P.prefixChain ((Fin.last r).succAbove a) := hrho a
+  refine ⟨dropped, hrepr, ?_⟩
+  intro a
+  rcases rho.1.2.2.2 a with ⟨t, ht⟩
+  refine ⟨t, ?_⟩
+  dsimp [dropped, equatorRestrictedLabelOf, equatorEquiv]
+  simpa [equatorEmbed_equatorDrop (rho.1.1 t) (rho.2 t)] using ht
+
+noncomputable def equatorBoundaryIdxRidgeFromEquator {r m : ℕ}
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (rho : EquatorActualIdxRidge idx (equatorRestrictedLabelOf label)) :
+    {rho : ActualHemisphereIdxRidge idx label // actualHemisphereIdxBoundary rho} := by
+  classical
+  let lifted : Fin r → NonzeroSignedSubset (r + 1) := fun a => equatorEmbed (rho.1 a)
+  have hupper : ∀ a : Fin r, UpperHemisphere (lifted a) := by
+    intro a
+    exact equator_subset_upperHemisphere (equatorEmbed_mem_equator (rho.1 a))
+  let hactual : ActualHemisphereIdxRidge idx label :=
+    ⟨lifted, by
+      refine ⟨hupper, ?_, ?_⟩
+      · rcases rho.2.1 with ⟨P, hP, _hb, hrepr⟩
+        exact ⟨P, hP, ⟨Fin.last r, hrepr⟩⟩
+      · intro a
+        rcases rho.2.2 a with ⟨t, ht⟩
+        refine ⟨t, ?_⟩
+        dsimp [lifted, equatorRestrictedLabelOf, equatorEquiv] at ht ⊢
+        simpa using ht⟩
+  refine ⟨hactual, ?_⟩
+  intro a
+  change Equator (equatorEmbed (rho.1 a))
+  exact equatorEmbed_mem_equator (rho.1 a)
+
+noncomputable def equatorBoundaryIdxRidgeEquiv {r m : ℕ}
+    (idx : Fin r → Fin m)
+    (label : NonzeroSignedSubset (r + 1) → SignedLabel m) :
+    {rho : ActualHemisphereIdxRidge idx label // actualHemisphereIdxBoundary rho} ≃
+      EquatorActualIdxRidge idx (equatorRestrictedLabelOf label) where
+  toFun := equatorBoundaryIdxRidgeToEquator
+  invFun := equatorBoundaryIdxRidgeFromEquator
+  left_inv := by
+    intro rho
+    apply Subtype.ext
+    apply Subtype.ext
+    funext a
+    dsimp [equatorBoundaryIdxRidgeToEquator, equatorBoundaryIdxRidgeFromEquator]
+    exact equatorEmbed_equatorDrop (rho.1.1 a) (rho.2 a)
+  right_inv := by
+    intro rho
+    apply Subtype.ext
+    funext a
+    dsimp [equatorBoundaryIdxRidgeToEquator, equatorBoundaryIdxRidgeFromEquator]
+    exact equatorDrop_equatorEmbed (rho.1 a)
+
+abbrev StrictIndexMap (r m : ℕ) :=
+  {idx : Fin r → Fin m // StrictMono idx}
+
+@[implicit_reducible]
+noncomputable def strictIndexMapFintype (r m : ℕ) :
+    Fintype (StrictIndexMap r m) := by
+  classical
+  exact Fintype.ofFinset
+    ((Finset.univ : Finset (Fin r → Fin m)).filter fun idx => StrictMono idx)
+    (by
+      intro idx
+      change idx ∈
+          ((Finset.univ : Finset (Fin r → Fin m)).filter fun idx => StrictMono idx) ↔
+        StrictMono idx
+      simp)
+
+abbrev EquatorActualAnyIdxRidge {r m : ℕ}
+    (label : NonzeroSignedSubset r → SignedLabel m) :=
+  Σ idx : StrictIndexMap r m, EquatorActualIdxRidge idx.1 label
+
+@[implicit_reducible]
+noncomputable def equatorActualAnyIdxRidgeFintype {r m : ℕ}
+    (label : NonzeroSignedSubset r → SignedLabel m) :
+    Fintype (EquatorActualAnyIdxRidge label) := by
+  classical
+  letI : Fintype (StrictIndexMap r m) := strictIndexMapFintype r m
+  infer_instance
+
+noncomputable def equatorActualAnyIdxRidgeCard {r m : ℕ}
+    (label : NonzeroSignedSubset r → SignedLabel m) : ℕ :=
+  @Fintype.card (EquatorActualAnyIdxRidge label) (equatorActualAnyIdxRidgeFintype label)
+
+def KyFanUnorderedParityStatement2 (r m : ℕ) : Prop :=
+  ∀ label : NonzeroSignedSubset r → SignedLabel m,
+    (∀ X, label X.antipode = (label X).neg) →
+      NoComplementaryComparableLabels label →
+        Odd (equatorActualAnyIdxRidgeCard label)
+
+def actualHemisphereIdxOneDoor {r m : ℕ}
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (sigma : ActualHemisphereIdxChain idx label) : Prop :=
+  (sigmaDoorSetOf idx (fun i => label (sigma.1.prefixChain i))).card = 1
+
+noncomputable instance actualHemisphereIdxOneDoor_decidable {r m : ℕ}
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m} :
+    DecidablePred (actualHemisphereIdxOneDoor (idx := idx) (label := label)) := by
+  classical
+  exact inferInstance
+
+noncomputable def actualHemisphereIdxIncidentRepresentedCofaceEquiv {r m : ℕ}
+    (hr : 0 < r)
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (rho : ActualHemisphereIdxRidge idx label)
+    (P : SignedPermutation (r + 1)) (hP : UpperPrefixChain P) (gap : Fin (r + 1))
+    (hrho : ∀ a : Fin r, rho.1 a = P.prefixChain (gap.succAbove a)) :
+    {sigma : ActualHemisphereIdxChain idx label // actualHemisphereIdxEdge rho sigma} ≃
+      {Q : SignedPermutation (r + 1) // Q ∈ representedUpperRidgeLocalCofaces P gap} where
+  toFun sigma := by
+    classical
+    let eta : Fin (r + 1) := Classical.choose sigma.2
+    have heta : ∀ a : Fin r, rho.1 a = sigma.1.1.prefixChain (eta.succAbove a) :=
+      Classical.choose_spec sigma.2
+    have heta_eq_gap : eta = gap := by
+      apply deletion_gap_eq_of_prefixChain_eq hr (P := P) (Q := sigma.1.1)
+      intro a
+      exact (heta a).symm.trans (hrho a)
+    have hdel :
+        ∀ a : Fin r,
+          sigma.1.1.prefixChain (gap.succAbove a) =
+            P.prefixChain (gap.succAbove a) := by
+      intro a
+      have ha := heta a
+      rw [heta_eq_gap] at ha
+      exact ha.symm.trans (hrho a)
+    have hcases :=
+      eq_or_representedRidgePartner_of_deletion_eq P sigma.1.1 gap hdel
+    refine ⟨sigma.1.1, ?_⟩
+    by_cases hb : RepresentedUpperRidgeBoundary P gap
+    · rcases hcases with hQ | hQ
+      · simpa [representedUpperRidgeLocalCofaces, hb, hQ]
+      · exact False.elim
+          (representedRidgePartner_not_upperPrefixChain_of_boundary P gap hP hb
+            (by simpa [hQ] using sigma.1.2.1))
+    · rcases hcases with hQ | hQ
+      · simpa [representedUpperRidgeLocalCofaces, hb, hQ]
+      · simpa [representedUpperRidgeLocalCofaces, hb, hQ]
+  invFun Q := by
+    classical
+    have hQcases : Q.1 = P ∨ Q.1 = representedRidgePartner P gap := by
+      by_cases hb : RepresentedUpperRidgeBoundary P gap
+      · left
+        simpa [representedUpperRidgeLocalCofaces, hb] using Q.2
+      · simpa [representedUpperRidgeLocalCofaces, hb] using Q.2
+    have hQupper : UpperPrefixChain Q.1 := by
+      by_cases hb : RepresentedUpperRidgeBoundary P gap
+      · have hQ : Q.1 = P := by
+          simpa [representedUpperRidgeLocalCofaces, hb] using Q.2
+        simpa [hQ] using hP
+      · rcases hQcases with hQ | hQ
+        · simpa [hQ] using hP
+        · simpa [hQ] using representedRidgePartner_upperPrefixChain P gap hP hb
+    have hQdel :
+        ∀ a : Fin r, Q.1.prefixChain (gap.succAbove a) = rho.1 a := by
+      intro a
+      rcases hQcases with hQ | hQ
+      · simpa [hQ] using (hrho a).symm
+      · simpa [hQ, representedRidgePartner_deletion_eq P gap a] using (hrho a).symm
+    let sigma : ActualHemisphereIdxChain idx label :=
+      ⟨Q.1, hQupper, ⟨gap, fun a => by
+        rcases rho.2.2.2 a with ⟨t, ht⟩
+        exact ⟨t, by simpa [hQdel t] using ht⟩⟩⟩
+    exact ⟨sigma, ⟨gap, fun a => (hQdel a).symm⟩⟩
+  left_inv := by
+    intro sigma
+    apply Subtype.ext
+    apply Subtype.ext
+    rfl
+  right_inv := by
+    intro Q
+    apply Subtype.ext
+    rfl
+
+theorem actualHemisphereIdx_rho_degree_card {r m : ℕ} (hr : 0 < r)
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (rho : ActualHemisphereIdxRidge idx label) :
+    Fintype.card
+        {sigma : ActualHemisphereIdxChain idx label //
+          actualHemisphereIdxEdge rho sigma} =
+      if actualHemisphereIdxBoundary rho then 1 else 2 := by
+  classical
+  rcases rho.2.2.1 with ⟨P, hP, gap, hrho⟩
+  have hcongr :=
+    Fintype.card_congr
+      (actualHemisphereIdxIncidentRepresentedCofaceEquiv hr rho P hP gap hrho)
+  have hlocal :
+      Fintype.card
+          {Q : SignedPermutation (r + 1) // Q ∈ representedUpperRidgeLocalCofaces P gap} =
+        (representedUpperRidgeLocalCofaces P gap).card := by
+    rw [Fintype.card_subtype]
+    simp
+  have hbiff := actualHemisphereIdxBoundary_iff_represented rho P hP gap hrho
+  rw [hcongr, hlocal, representedUpperRidgeLocalCofaces_card]
+  by_cases hb : actualHemisphereIdxBoundary rho
+  · have hbr : RepresentedUpperRidgeBoundary P gap := hbiff.mp hb
+    simp [hb, hbr]
+  · have hbr : ¬ RepresentedUpperRidgeBoundary P gap := by
+      intro h
+      exact hb (hbiff.mpr h)
+    simp [hb, hbr]
+
+def actualIdxRidgeOfChainGap {r m : ℕ}
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (sigma : ActualHemisphereIdxChain idx label)
+    (gap : {j : Fin (r + 1) //
+      SigmaDeletionHasAlternatingLabelSetOf idx
+        (fun i => label (sigma.1.prefixChain i)) j}) :
+    ActualHemisphereIdxRidge idx label :=
+  ⟨fun a : Fin r => sigma.1.prefixChain (gap.1.succAbove a),
+    ⟨fun a => sigma.2.1 (gap.1.succAbove a),
+      ⟨sigma.1, sigma.2.1, ⟨gap.1, fun a => rfl⟩⟩,
+      fun a => by
+        rcases gap.2 a with ⟨t, htne, htlabel⟩
+        rcases Fin.exists_succAbove_eq htne with ⟨b, hb⟩
+        exact ⟨b, by simpa [← hb] using htlabel⟩⟩⟩
+
+theorem actualIdxRidgeOfChainGap_edge {r m : ℕ}
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (sigma : ActualHemisphereIdxChain idx label)
+    (gap : {j : Fin (r + 1) //
+      SigmaDeletionHasAlternatingLabelSetOf idx
+        (fun i => label (sigma.1.prefixChain i)) j}) :
+    actualHemisphereIdxEdge (actualIdxRidgeOfChainGap sigma gap) sigma := by
+  exact ⟨gap.1, fun a => rfl⟩
+
+theorem actualHemisphereIdxEdge_gives_door {r m : ℕ}
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    {rho : ActualHemisphereIdxRidge idx label}
+    {sigma : ActualHemisphereIdxChain idx label}
+    (hedge : actualHemisphereIdxEdge rho sigma) :
+    ∃ gap : {j : Fin (r + 1) //
+      SigmaDeletionHasAlternatingLabelSetOf idx
+        (fun i => label (sigma.1.prefixChain i)) j},
+      rho = actualIdxRidgeOfChainGap sigma gap := by
+  rcases hedge with ⟨gap, hgap⟩
+  have hdoor : SigmaDeletionHasAlternatingLabelSetOf idx
+      (fun i => label (sigma.1.prefixChain i)) gap := by
+    intro a
+    rcases rho.2.2.2 a with ⟨b, hb⟩
+    exact ⟨gap.succAbove b, Fin.succAbove_ne gap b, by
+      simpa [← hgap b] using hb⟩
+  refine ⟨⟨gap, hdoor⟩, ?_⟩
+  apply Subtype.ext
+  funext a
+  exact hgap a
+
+theorem actualIdxRidgeOfChainGap_injective {r m : ℕ}
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (sigma : ActualHemisphereIdxChain idx label) :
+    Function.Injective (actualIdxRidgeOfChainGap sigma) := by
+  intro gap eta heq
+  apply Subtype.ext
+  apply Fin.succAbove_left_injective
+  funext a
+  apply sigma.1.prefixChain_injective
+  have hfun := congrArg Subtype.val heq
+  exact congrFun hfun a
+
+noncomputable def actualHemisphereIdxIncidentDoorEquiv {r m : ℕ}
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (sigma : ActualHemisphereIdxChain idx label) :
+    {rho : ActualHemisphereIdxRidge idx label // actualHemisphereIdxEdge rho sigma} ≃
+      {j : Fin (r + 1) //
+        SigmaDeletionHasAlternatingLabelSetOf idx
+          (fun i => label (sigma.1.prefixChain i)) j} where
+  toFun rho :=
+    Classical.choose (actualHemisphereIdxEdge_gives_door rho.2)
+  invFun gap :=
+    ⟨actualIdxRidgeOfChainGap sigma gap, actualIdxRidgeOfChainGap_edge sigma gap⟩
+  left_inv := by
+    intro rho
+    have hspec := Classical.choose_spec (actualHemisphereIdxEdge_gives_door rho.2)
+    apply Subtype.ext
+    exact hspec.symm
+  right_inv := by
+    intro gap
+    have hspec :=
+      Classical.choose_spec
+        (actualHemisphereIdxEdge_gives_door (actualIdxRidgeOfChainGap_edge sigma gap))
+    apply actualIdxRidgeOfChainGap_injective sigma
+    exact hspec.symm
+
+theorem actualHemisphereIdx_sigma_degree_card {r m : ℕ}
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (sigma : ActualHemisphereIdxChain idx label) :
+    Fintype.card
+        {rho : ActualHemisphereIdxRidge idx label // actualHemisphereIdxEdge rho sigma} =
+      (sigmaDoorSetOf idx (fun i => label (sigma.1.prefixChain i))).card := by
+  classical
+  have hcongr :=
+    Fintype.card_congr (actualHemisphereIdxIncidentDoorEquiv sigma)
+  have hdoor :
+      Fintype.card
+          {j : Fin (r + 1) //
+            SigmaDeletionHasAlternatingLabelSetOf idx
+              (fun i => label (sigma.1.prefixChain i)) j} =
+        (sigmaDoorSetOf idx (fun i => label (sigma.1.prefixChain i))).card := by
+    rw [Fintype.card_subtype]
+    rfl
+  exact hcongr.trans hdoor
+
+theorem actualHemisphereIdx_sigma_odd_degree_iff_oneDoor {r m : ℕ}
+    {idx : Fin r → Fin m} (hidx : Function.Injective idx)
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (sigma : ActualHemisphereIdxChain idx label) :
+    Odd
+        (Fintype.card
+          {rho : ActualHemisphereIdxRidge idx label //
+            actualHemisphereIdxEdge rho sigma}) ↔
+      actualHemisphereIdxOneDoor sigma := by
+  rcases sigma.2.2 with ⟨gap, hgap⟩
+  have hdoorExtra :
+      SigmaDeletionHasAlternatingLabelSetOf idx
+        (fun i => label (sigma.1.prefixChain i)) gap := by
+    intro a
+    rcases hgap a with ⟨t, ht⟩
+    exact ⟨gap.succAbove t, Fin.succAbove_ne gap t, ht⟩
+  rw [actualHemisphereIdx_sigma_degree_card sigma, actualHemisphereIdxOneDoor]
+  exact sigmaDoorSetOf_odd_iff_card_one_of_door hidx hdoorExtra
+
+theorem actualHemisphereIdxRidge_nonempty_of_boundary_odd {r m : ℕ}
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (hboundaryOdd :
+      Odd (Fintype.card
+        {rho : ActualHemisphereIdxRidge idx label //
+          actualHemisphereIdxBoundary rho})) :
+    Nonempty (ActualHemisphereIdxRidge idx label) := by
+  rcases hboundaryOdd with ⟨k, hk⟩
+  have hpos :
+      0 < Fintype.card
+        {rho : ActualHemisphereIdxRidge idx label //
+          actualHemisphereIdxBoundary rho} := by
+    omega
+  obtain ⟨rho⟩ := Fintype.card_pos_iff.mp hpos
+  exact ⟨rho.1⟩
+
+noncomputable def actualHemisphereIdxRhoDegreeDataOfDegreeCard {r m : ℕ}
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (hR : Nonempty (ActualHemisphereIdxRidge idx label))
+    (hdegree :
+      ∀ rho : ActualHemisphereIdxRidge idx label,
+        Fintype.card
+            {sigma : ActualHemisphereIdxChain idx label //
+              actualHemisphereIdxEdge rho sigma} =
+          if actualHemisphereIdxBoundary rho then 1 else 2) :
+    RhoDegreeManifoldData
+      (ActualHemisphereIdxRidge idx label) (ActualHemisphereIdxChain idx label) where
+  edge := actualHemisphereIdxEdge
+  edge_decidable := actualHemisphereIdxEdge_decidable
+  boundary := actualHemisphereIdxBoundary
+  boundary_decidable := actualHemisphereIdxBoundary_decidable
+  nonempty_R := hR
+  degree_card := hdegree
+
+noncomputable def actualHemisphereIdxRhoDegreeData {r m : ℕ} (hr : 0 < r)
+    {idx : Fin r → Fin m}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (hR : Nonempty (ActualHemisphereIdxRidge idx label)) :
+    RhoDegreeManifoldData
+      (ActualHemisphereIdxRidge idx label) (ActualHemisphereIdxChain idx label) :=
+  actualHemisphereIdxRhoDegreeDataOfDegreeCard hR
+    (actualHemisphereIdx_rho_degree_card hr)
 
 /-! ## Fan parity induction and Tucker reduction, as explicit data interfaces -/
 

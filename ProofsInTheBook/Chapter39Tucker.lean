@@ -6309,4 +6309,16 @@ theorem final_reduction_graph_gives_prefixChain_complementary_pair {d : ℕ} (hd
       (hridge m hmone) (hdoor m hmone)
   exact ⟨chainOf m, i, j, hij, hidx, hsign⟩
 
+/-- **Kneser–Lovász theorem (Chapter 39), unconditional.**  The chromatic number of the
+Kneser graph `KG(n, k)` (for `1 ≤ k` and `2k ≤ n`) is exactly `n - 2k + 2`: there is a proper
+colouring with `n - 2k + 2` colours and none with `n - 2k + 1`.  The Tucker hypothesis of
+`chapter39` is discharged by the now-proven `tuckerLemma_pos`, since `2k ≤ n` and `1 ≤ k`
+give `1 ≤ n`. -/
+theorem chapter39_unconditional {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
+    (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
+    (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
+        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
+  chapter39 hk hn (tuckerLemma_pos n (by omega))
+
 end ProofsInTheBook.Chapter39

@@ -41,4 +41,7 @@ import ProofsInTheBook.Chapter40
 -- Chapter 20 (Monsky) faithful dissection theorem `monsky_dissection`
 -- (unconditional; supersedes the edge-to-edge `RealEqualAreaUnitSquareTriangulation` escape).
 import ProofsInTheBook.Chapter20DissectionFinal
+-- Chapter 39 (Kneser) faithful Tucker lemma `tuckerLemma_pos` + unconditional
+-- `chapter39_unconditional` (discharges the Tucker hypothesis of `chapter39`).
+import ProofsInTheBook.Chapter39Tucker
 

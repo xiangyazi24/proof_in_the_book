@@ -453,24 +453,672 @@ theorem smetMainPartial_completable_of_smetBackPartial_completable {N : ℕ}
       Completes (smetMainPartial L₀) L := by
   exact (reverseColumnsPartial_completion_iff (smetBackPartial L₀)).mpr h
 
-/-- The exact hard lemma still missing: Smetaniuk's column-switching
-construction completes every canonical back-diagonal partial square obtained
-from an order-`N` Latin square. -/
-def SmetBackDiagonalCompletableCore : Prop :=
-  ∀ {N : ℕ}, 3 ≤ N →
-    ∀ L₀ : Fin N → Fin N → Fin N,
-      IsLatinSquare L₀ →
-        ∃ L : Fin (N + 1) → Fin (N + 1) → Fin (N + 1),
-          Completes (smetBackPartial L₀) L
+/-!
+## The Smetaniuk switching rectangle
+
+The core construction first turns the first `N` rows into an `N × (N + 1)`
+Latin rectangle.  Column `N` is used as the temporary holding column.  When
+processing a column `c`, the active rows are the bottom rows `N - c, …, N - 1`.
+Swapping in the first active row puts the new symbol on the back diagonal; if
+that creates a repeated old symbol in the holding column, the repair follows
+the unique row carrying that old symbol.  The reachable-row closure below
+packages exactly that repair chain.
+-/
+
+inductive switchReach {N : ℕ}
+    (R : Fin N → Fin (N + 1) → Fin (N + 1)) (c : Fin (N + 1))
+    (active : Fin N → Prop) (start : Fin N) : Fin N → Prop
+  | start : switchReach R c active start start
+  | step {q r : Fin N} :
+      switchReach R c active start q →
+        active r →
+          R r (Fin.last N) = R q c →
+            switchReach R c active start r
+
+lemma switchReach_active {N : ℕ}
+    {R : Fin N → Fin (N + 1) → Fin (N + 1)} {c : Fin (N + 1)}
+    {active : Fin N → Prop} {start i : Fin N}
+    (hstart : active start) (h : switchReach R c active start i) :
+    active i := by
+  induction h with
+  | start => exact hstart
+  | step _ hr _ _ => exact hr
+
+lemma switchReach_forward {N : ℕ}
+    {R : Fin N → Fin (N + 1) → Fin (N + 1)} {c : Fin (N + 1)}
+    {active : Fin N → Prop} {start q r : Fin N}
+    (hq : switchReach R c active start q) (hr : active r)
+    (hval : R r (Fin.last N) = R q c) :
+    switchReach R c active start r :=
+  switchReach.step hq hr hval
+
+lemma switchReach_backward {N : ℕ}
+    {R : Fin N → Fin (N + 1) → Fin (N + 1)} {c : Fin (N + 1)}
+    {active : Fin N → Prop} {start i q : Fin N}
+    (hcol : Function.Injective fun r : Fin N => R r c)
+    (hstartLast : R start (Fin.last N) = Fin.last N)
+    (hcol_ne_last : ∀ r : Fin N, R r c ≠ Fin.last N)
+    (hi : switchReach R c active start i)
+    (hval : R i (Fin.last N) = R q c) :
+    switchReach R c active start q := by
+  induction hi with
+  | start =>
+      exfalso
+      exact hcol_ne_last q (by simpa [hstartLast] using hval.symm)
+  | step hp hr hstep ih =>
+      rename_i q₀ r₀
+      have hq : q₀ = q := hcol (hstep.symm.trans hval)
+      simpa [hq] using hp
+
+noncomputable def smetSwitchColumn {N : ℕ}
+    (R : Fin N → Fin (N + 1) → Fin (N + 1)) (c : Fin (N + 1))
+    (active : Fin N → Prop) (start : Fin N) :
+    Fin N → Fin (N + 1) → Fin (N + 1) :=
+  fun i j =>
+    if switchReach R c active start i then
+      if j = c then R i (Fin.last N)
+      else if j = Fin.last N then R i c
+      else R i j
+    else R i j
+
+lemma smetSwitchColumn_row_injective {N : ℕ}
+    {R : Fin N → Fin (N + 1) → Fin (N + 1)} {c : Fin (N + 1)}
+    {active : Fin N → Prop} {start : Fin N}
+    (hrow : ∀ i : Fin N, Function.Injective (R i))
+    (_hc : c ≠ Fin.last N) :
+    ∀ i : Fin N, Function.Injective (smetSwitchColumn R c active start i) := by
+  intro i j₁ j₂ h
+  unfold smetSwitchColumn at h
+  by_cases hi : switchReach R c active start i
+  · simp [hi] at h
+    have hswap :
+        (fun j : Fin (N + 1) =>
+          if j = c then R i (Fin.last N)
+          else if j = Fin.last N then R i c
+          else R i j) =
+        fun j : Fin (N + 1) => R i ((Equiv.swap c (Fin.last N)) j) := by
+      funext j
+      by_cases hjc : j = c
+      · subst j
+        simp
+      · by_cases hjl : j = Fin.last N
+        · subst j
+          simp [hjc]
+        · simp [hjc, hjl, Equiv.swap_apply_of_ne_of_ne hjc hjl]
+    have h' : R i ((Equiv.swap c (Fin.last N)) j₁) =
+        R i ((Equiv.swap c (Fin.last N)) j₂) := by
+      exact (congrFun hswap j₁).symm.trans (h.trans (congrFun hswap j₂))
+    exact (Equiv.swap c (Fin.last N)).injective ((hrow i) h')
+  · simp [hi] at h
+    exact hrow i h
+
+lemma smetSwitchColumn_col_ne_injective {N : ℕ}
+    {R : Fin N → Fin (N + 1) → Fin (N + 1)} {c d : Fin (N + 1)}
+    {active : Fin N → Prop} {start : Fin N}
+    (hdc : d ≠ c) (hdl : d ≠ Fin.last N)
+    (hcol : Function.Injective fun i : Fin N => R i d) :
+    Function.Injective fun i : Fin N => smetSwitchColumn R c active start i d := by
+  intro i₁ i₂ h
+  unfold smetSwitchColumn at h
+  by_cases h₁ : switchReach R c active start i₁ <;>
+    by_cases h₂ : switchReach R c active start i₂ <;>
+      simp [h₁, h₂, hdc, hdl] at h
+  all_goals exact hcol h
+
+lemma smetSwitchColumn_col_c_injective {N : ℕ}
+    {R : Fin N → Fin (N + 1) → Fin (N + 1)} {c : Fin (N + 1)}
+    {active : Fin N → Prop} {start : Fin N}
+    (hcol : Function.Injective fun i : Fin N => R i c)
+    (hlastActive :
+      ∀ i₁ i₂ : Fin N, active i₁ → active i₂ →
+        R i₁ (Fin.last N) = R i₂ (Fin.last N) → i₁ = i₂)
+    (hstartActive : active start)
+    (hstartLast : R start (Fin.last N) = Fin.last N)
+    (hcol_ne_last : ∀ i : Fin N, R i c ≠ Fin.last N) :
+    Function.Injective fun i : Fin N => smetSwitchColumn R c active start i c := by
+  intro i₁ i₂ h
+  unfold smetSwitchColumn at h
+  by_cases h₁ : switchReach R c active start i₁
+  · by_cases h₂ : switchReach R c active start i₂
+    · simp [h₁, h₂] at h
+      exact hlastActive i₁ i₂
+        (switchReach_active hstartActive h₁)
+        (switchReach_active hstartActive h₂) h
+    · simp [h₁, h₂] at h
+      have h₂reach :
+          switchReach R c active start i₂ :=
+        switchReach_backward hcol hstartLast hcol_ne_last h₁ h
+      exact False.elim (h₂ h₂reach)
+  · by_cases h₂ : switchReach R c active start i₂
+    · simp [h₁, h₂] at h
+      have h₁reach :
+          switchReach R c active start i₁ :=
+        switchReach_backward hcol hstartLast hcol_ne_last h₂ h.symm
+      exact False.elim (h₁ h₁reach)
+    · simp [h₁, h₂] at h
+      exact hcol h
+
+lemma smetSwitchColumn_last_active_injective {N : ℕ}
+    {R : Fin N → Fin (N + 1) → Fin (N + 1)} {c : Fin (N + 1)}
+    {active : Fin N → Prop} {start : Fin N}
+    (hc : c ≠ Fin.last N)
+    (hcol : Function.Injective fun i : Fin N => R i c)
+    (hlastActive :
+      ∀ i₁ i₂ : Fin N, active i₁ → active i₂ →
+        R i₁ (Fin.last N) = R i₂ (Fin.last N) → i₁ = i₂) :
+    ∀ i₁ i₂ : Fin N, active i₁ → active i₂ →
+      smetSwitchColumn R c active start i₁ (Fin.last N) =
+        smetSwitchColumn R c active start i₂ (Fin.last N) →
+          i₁ = i₂ := by
+  intro i₁ i₂ hi₁ hi₂ h
+  have hlast_ne_c : Fin.last N ≠ c := fun hEq => hc hEq.symm
+  unfold smetSwitchColumn at h
+  by_cases h₁ : switchReach R c active start i₁
+  · by_cases h₂ : switchReach R c active start i₂
+    · simp [h₁, h₂, hlast_ne_c] at h
+      exact hcol h
+    · simp [h₁, h₂, hlast_ne_c] at h
+      have h₂reach :
+          switchReach R c active start i₂ :=
+        switchReach_forward h₁ hi₂ h.symm
+      exact False.elim (h₂ h₂reach)
+  · by_cases h₂ : switchReach R c active start i₂
+    · simp [h₁, h₂, hlast_ne_c] at h
+      have h₁reach :
+          switchReach R c active start i₁ :=
+        switchReach_forward h₂ hi₁ h
+      exact False.elim (h₁ h₁reach)
+    · simp [h₁, h₂] at h
+      exact hlastActive i₁ i₂ hi₁ hi₂ h
+
+def smetRectInitial {N : ℕ} (L₀ : Fin N → Fin N → Fin N) :
+    Fin N → Fin (N + 1) → Fin (N + 1) :=
+  fun i j =>
+    if h : j.val < N then
+      Fin.castSucc (L₀ i ⟨j.val, h⟩)
+    else
+      Fin.last N
+
+@[simp] lemma smetRectInitial_old {N : ℕ}
+    (L₀ : Fin N → Fin N → Fin N) (i : Fin N) (j : Fin (N + 1))
+    (hj : j.val < N) :
+    smetRectInitial L₀ i j =
+      Fin.castSucc (L₀ i ⟨j.val, hj⟩) := by
+  simp [smetRectInitial, hj]
+
+@[simp] lemma smetRectInitial_last {N : ℕ}
+    (L₀ : Fin N → Fin N → Fin N) (i : Fin N) :
+    smetRectInitial L₀ i (Fin.last N) = Fin.last N := by
+  simp [smetRectInitial, Fin.last]
+
+noncomputable def smetRectStep {N : ℕ}
+    (R : Fin N → Fin (N + 1) → Fin (N + 1)) (t : ℕ) :
+    Fin N → Fin (N + 1) → Fin (N + 1) :=
+      if ht : t + 1 < N then
+        smetSwitchColumn R ⟨t + 1, by omega⟩
+          (fun i : Fin N => N - (t + 1) ≤ i.val)
+          ⟨N - (t + 1), by omega⟩
+      else
+        R
+
+noncomputable def smetRectStage {N : ℕ}
+    (L₀ : Fin N → Fin N → Fin N) :
+    Nat → Fin N → Fin (N + 1) → Fin (N + 1)
+  | 0 => smetRectInitial L₀
+  | t + 1 => smetRectStep (smetRectStage L₀ t) t
+
+lemma smetRectInitial_row_injective {N : ℕ}
+    {L₀ : Fin N → Fin N → Fin N} (hL₀ : IsLatinSquare L₀) :
+    ∀ i : Fin N, Function.Injective (smetRectInitial L₀ i) := by
+  intro i j₁ j₂ h
+  unfold smetRectInitial at h
+  by_cases h₁ : j₁.val < N
+  · by_cases h₂ : j₂.val < N
+    · simp [h₁, h₂] at h
+      have hcols :
+          (⟨j₁.val, h₁⟩ : Fin N) = ⟨j₂.val, h₂⟩ :=
+        hL₀.1 i h
+      exact Fin.ext (by simpa using congrArg Fin.val hcols)
+    · simp [h₁, h₂] at h
+  · by_cases h₂ : j₂.val < N
+    · simp [h₁, h₂] at h
+      exact False.elim (fin_castSucc_ne_last _ h.symm)
+    · have hj₁ : j₁ = Fin.last N := Fin.ext (by
+        have hj₁le : j₁.val ≤ N := Nat.lt_succ_iff.mp j₁.isLt
+        have hj₁ge : N ≤ j₁.val := Nat.le_of_not_gt h₁
+        simpa [Fin.last] using le_antisymm hj₁le hj₁ge)
+      have hj₂ : j₂ = Fin.last N := Fin.ext (by
+        have hj₂le : j₂.val ≤ N := Nat.lt_succ_iff.mp j₂.isLt
+        have hj₂ge : N ≤ j₂.val := Nat.le_of_not_gt h₂
+        simpa [Fin.last] using le_antisymm hj₂le hj₂ge)
+      exact hj₁.trans hj₂.symm
+
+lemma smetRectInitial_col_injective {N : ℕ}
+    {L₀ : Fin N → Fin N → Fin N} (hL₀ : IsLatinSquare L₀)
+    (j : Fin (N + 1)) (hj : j.val < N) :
+    Function.Injective fun i : Fin N => smetRectInitial L₀ i j := by
+  intro i₁ i₂ h
+  simp [smetRectInitial, hj] at h
+  exact hL₀.2 ⟨j.val, hj⟩ h
+
+structure SmetRectStageInvariant {N : ℕ}
+    (L₀ : Fin N → Fin N → Fin N) (t : ℕ)
+    (R : Fin N → Fin (N + 1) → Fin (N + 1)) : Prop where
+  row_inj : ∀ i : Fin N, Function.Injective (R i)
+  col_inj : ∀ j : Fin (N + 1), j.val < N →
+    Function.Injective fun i : Fin N => R i j
+  last_active_inj : ∀ i₁ i₂ : Fin N, N - t ≤ i₁.val → N - t ≤ i₂.val →
+    R i₁ (Fin.last N) = R i₂ (Fin.last N) → i₁ = i₂
+  last_unactive_new : ∀ i : Fin N, i.val < N - t →
+    R i (Fin.last N) = Fin.last N
+  unprocessed : ∀ (i : Fin N) (j : Fin (N + 1)) (_htj : t < j.val)
+    (hj : j.val < N),
+      R i j = Fin.castSucc (L₀ i ⟨j.val, hj⟩)
+  required_old : ∀ (i : Fin N) (j : Fin (N + 1)) (hj : j.val < N),
+    i.val + j.val < N →
+      R i j = Fin.castSucc (L₀ i ⟨j.val, hj⟩)
+  diag_active : ∀ i : Fin N, N - t ≤ i.val →
+    R i ⟨N - i.val, by omega⟩ = Fin.last N
+
+lemma smetRectInitial_invariant {N : ℕ}
+    {L₀ : Fin N → Fin N → Fin N} (hL₀ : IsLatinSquare L₀)
+    (hN : 0 < N) :
+    SmetRectStageInvariant L₀ 0 (smetRectInitial L₀) := by
+  constructor
+  · exact smetRectInitial_row_injective hL₀
+  · exact smetRectInitial_col_injective hL₀
+  · intro i₁ _i₂ hi₁ _hi₂ _h
+    have : i₁.val < N := i₁.isLt
+    omega
+  · intro i _hi
+    exact smetRectInitial_last L₀ i
+  · intro i j _htj hj
+    exact smetRectInitial_old L₀ i j hj
+  · intro i j hj _hij
+    exact smetRectInitial_old L₀ i j hj
+  · intro i hi
+    have : i.val < N := i.isLt
+    omega
+
+lemma smetRectStep_invariant {N t : ℕ}
+    {L₀ : Fin N → Fin N → Fin N}
+    {R : Fin N → Fin (N + 1) → Fin (N + 1)}
+    (ht : t + 1 < N)
+    (inv : SmetRectStageInvariant L₀ t R) :
+    SmetRectStageInvariant L₀ (t + 1) (smetRectStep R t) := by
+  let c : Fin (N + 1) := ⟨t + 1, by omega⟩
+  let active : Fin N → Prop := fun i => N - (t + 1) ≤ i.val
+  let start : Fin N := ⟨N - (t + 1), by omega⟩
+  have hstep :
+      smetRectStep R t = smetSwitchColumn R c active start := by
+    unfold smetRectStep
+    simp [ht, c, active, start]
+  rw [hstep]
+  have hc_ltN : c.val < N := by
+    dsimp [c]
+    omega
+  have hc_ne_last : c ≠ Fin.last N := by
+    intro h
+    have hv : c.val = N := by simpa [Fin.last] using congrArg Fin.val h
+    dsimp [c] at hv
+    omega
+  have hstartActive : active start := by
+    dsimp [active, start]
+    omega
+  have hstartLast : R start (Fin.last N) = Fin.last N := by
+    exact inv.last_unactive_new start (by dsimp [start]; omega)
+  have hcolC : Function.Injective fun i : Fin N => R i c :=
+    inv.col_inj c hc_ltN
+  have hcol_ne_last : ∀ i : Fin N, R i c ≠ Fin.last N := by
+    intro i
+    have hval : R i c = Fin.castSucc (L₀ i ⟨c.val, hc_ltN⟩) :=
+      inv.unprocessed i c (by dsimp [c]; omega) hc_ltN
+    rw [hval]
+    exact fin_castSucc_ne_last _
+  have oldLast_ne_last :
+      ∀ i : Fin N, N - t ≤ i.val → R i (Fin.last N) ≠ Fin.last N := by
+    intro i hiOld hlast
+    let d : Fin (N + 1) := ⟨N - i.val, by omega⟩
+    have hdiag : R i d = Fin.last N := by
+      simpa [d] using inv.diag_active i hiOld
+    have hd_eq_last : d = Fin.last N := inv.row_inj i (by rw [hdiag, hlast])
+    have hv : N - i.val = N := by
+      simpa [d, Fin.last] using congrArg Fin.val hd_eq_last
+    have hi_lt : i.val < N := i.isLt
+    omega
+  have hlastActiveBefore :
+      ∀ i₁ i₂ : Fin N, active i₁ → active i₂ →
+        R i₁ (Fin.last N) = R i₂ (Fin.last N) → i₁ = i₂ := by
+    intro i₁ i₂ hi₁ hi₂ hlastEq
+    have hNt : N - t = N - (t + 1) + 1 := by omega
+    by_cases h₁old : N - t ≤ i₁.val
+    · by_cases h₂old : N - t ≤ i₂.val
+      · exact inv.last_active_inj i₁ i₂ h₁old h₂old hlastEq
+      · have hi₂start : i₂ = start := Fin.ext (by
+          have hi₂lt : i₂.val < N - t := Nat.lt_of_not_ge h₂old
+          have hi₂le : i₂.val ≤ N - (t + 1) := by omega
+          exact le_antisymm hi₂le hi₂)
+        subst i₂
+        have hbad : R i₁ (Fin.last N) = Fin.last N := by
+          simpa [hstartLast] using hlastEq
+        exact False.elim (oldLast_ne_last i₁ h₁old hbad)
+    · have hi₁start : i₁ = start := Fin.ext (by
+        have hi₁lt : i₁.val < N - t := Nat.lt_of_not_ge h₁old
+        have hi₁le : i₁.val ≤ N - (t + 1) := by omega
+        exact le_antisymm hi₁le hi₁)
+      subst i₁
+      by_cases h₂old : N - t ≤ i₂.val
+      · have hbad : R i₂ (Fin.last N) = Fin.last N := by
+          simpa [hstartLast] using hlastEq.symm
+        exact False.elim (oldLast_ne_last i₂ h₂old hbad)
+      · have hi₂start : i₂ = start := Fin.ext (by
+          have hi₂lt : i₂.val < N - t := Nat.lt_of_not_ge h₂old
+          have hi₂le : i₂.val ≤ N - (t + 1) := by omega
+          exact le_antisymm hi₂le hi₂)
+        exact hi₂start.symm
+  constructor
+  · exact smetSwitchColumn_row_injective inv.row_inj hc_ne_last
+  · intro j hj
+    by_cases hjc : j = c
+    · subst j
+      exact smetSwitchColumn_col_c_injective hcolC hlastActiveBefore
+        hstartActive hstartLast hcol_ne_last
+    · have hjlast : j ≠ Fin.last N := by
+        intro hjlast
+        have hv : j.val = N := by simpa [Fin.last] using congrArg Fin.val hjlast
+        omega
+      exact smetSwitchColumn_col_ne_injective hjc hjlast (inv.col_inj j hj)
+  · exact smetSwitchColumn_last_active_injective hc_ne_last hcolC hlastActiveBefore
+  · intro i hi
+    have hnotActive : ¬ active i := by
+      intro ha
+      dsimp [active] at ha
+      omega
+    have hnotReach : ¬ switchReach R c active start i := by
+      intro hr
+      exact hnotActive (switchReach_active hstartActive hr)
+    unfold smetSwitchColumn
+    simp [hnotReach, inv.last_unactive_new i (by omega)]
+  · intro i j htj hj
+    have hjc : j ≠ c := by
+      intro h
+      subst j
+      dsimp [c] at htj
+      omega
+    have hjlast : j ≠ Fin.last N := by
+      intro h
+      have hv : j.val = N := by simpa [Fin.last] using congrArg Fin.val h
+      omega
+    unfold smetSwitchColumn
+    by_cases hr : switchReach R c active start i
+    · simp [hr, hjc, hjlast, inv.unprocessed i j (by omega) hj]
+    · simp [hr, inv.unprocessed i j (by omega) hj]
+  · intro i j hj hij
+    have hjlast : j ≠ Fin.last N := by
+      intro h
+      have hv : j.val = N := by simpa [Fin.last] using congrArg Fin.val h
+      omega
+    by_cases hjc : j = c
+    · subst j
+      have hnotActive : ¬ active i := by
+        intro ha
+        have hsubadd : N - (t + 1) + (t + 1) = N :=
+          Nat.sub_add_cancel (by omega)
+        dsimp [active, c] at ha
+        have hge : N ≤ i.val + (t + 1) := by
+          calc
+            N = N - (t + 1) + (t + 1) := hsubadd.symm
+            _ ≤ i.val + (t + 1) := Nat.add_le_add_right ha (t + 1)
+        have hlt : i.val + (t + 1) < N := by
+          simpa [c] using hij
+        omega
+      have hnotReach : ¬ switchReach R c active start i := by
+        intro hr
+        exact hnotActive (switchReach_active hstartActive hr)
+      unfold smetSwitchColumn
+      simp [hnotReach, inv.required_old i c hc_ltN (by simpa [c] using hij)]
+    · unfold smetSwitchColumn
+      by_cases hr : switchReach R c active start i
+      · simp [hr, hjc, hjlast, inv.required_old i j hj hij]
+      · simp [hr, inv.required_old i j hj hij]
+  · intro i hi
+    let d : Fin (N + 1) := ⟨N - i.val, by omega⟩
+    change smetSwitchColumn R c active start i d = Fin.last N
+    by_cases hiOld : N - t ≤ i.val
+    · have hd_ne_c : d ≠ c := by
+        intro hdc
+        have hv : N - i.val = t + 1 := by
+          simpa [d, c] using congrArg Fin.val hdc
+        omega
+      have hd_ne_last : d ≠ Fin.last N := by
+        intro hdl
+        have hv : N - i.val = N := by
+          simpa [d, Fin.last] using congrArg Fin.val hdl
+        have hi_lt : i.val < N := i.isLt
+        omega
+      have hdiag : R i d = Fin.last N := by
+        simpa [d] using inv.diag_active i hiOld
+      unfold smetSwitchColumn
+      by_cases hr : switchReach R c active start i
+      · simp [hr, hd_ne_c, hd_ne_last, hdiag]
+      · simp [hr, hdiag]
+    · have histart : i = start := Fin.ext (by
+        have hNt : N - t = N - (t + 1) + 1 := by omega
+        have hilt : i.val < N - t := Nat.lt_of_not_ge hiOld
+        have hile : i.val ≤ N - (t + 1) := by omega
+        exact le_antisymm hile hi)
+      subst i
+      have hd_eq_c : d = c := Fin.ext (by
+        dsimp [d, start, c]
+        omega)
+      unfold smetSwitchColumn
+      rw [hd_eq_c]
+      simp [switchReach.start, hstartLast]
+
+lemma smetRectStage_invariant {N t : ℕ}
+    {L₀ : Fin N → Fin N → Fin N} (hL₀ : IsLatinSquare L₀)
+    (ht : t < N) :
+    SmetRectStageInvariant L₀ t (smetRectStage L₀ t) := by
+  induction t with
+  | zero =>
+      exact smetRectInitial_invariant hL₀ (by omega)
+  | succ t ih =>
+      change SmetRectStageInvariant L₀ (t + 1)
+        (smetRectStep (smetRectStage L₀ t) t)
+      exact smetRectStep_invariant ht (ih (by omega))
+
+theorem SmetBackDiagonalCompletableCore {N : ℕ} (hN : 3 ≤ N)
+    (L₀ : Fin N → Fin N → Fin N) (hL₀ : IsLatinSquare L₀) :
+    ∃ L : Fin (N + 1) → Fin (N + 1) → Fin (N + 1),
+      Completes (smetBackPartial L₀) L := by
+  let R : Fin N → Fin (N + 1) → Fin (N + 1) :=
+    smetRectStage L₀ (N - 1)
+  have hInv : SmetRectStageInvariant L₀ (N - 1) R := by
+    dsimp [R]
+    exact smetRectStage_invariant hL₀ (by omega)
+  have hlast_ne_of_pos :
+      ∀ i : Fin N, 0 < i.val → R i (Fin.last N) ≠ Fin.last N := by
+    intro i hiPos hlast
+    let d : Fin (N + 1) := ⟨N - i.val, by omega⟩
+    have hactive : N - (N - 1) ≤ i.val := by omega
+    have hdiag : R i d = Fin.last N := by
+      simpa [d] using hInv.diag_active i hactive
+    have hd_eq_last : d = Fin.last N := hInv.row_inj i (by rw [hdiag, hlast])
+    have hv : N - i.val = N := by
+      simpa [d, Fin.last] using congrArg Fin.val hd_eq_last
+    omega
+  have hlast_col_inj :
+      Function.Injective fun i : Fin N => R i (Fin.last N) := by
+    intro i₁ i₂ h
+    by_cases h₁zero : i₁.val = 0
+    · by_cases h₂zero : i₂.val = 0
+      · exact Fin.ext (h₁zero.trans h₂zero.symm)
+      · have h₁last : R i₁ (Fin.last N) = Fin.last N := by
+          exact hInv.last_unactive_new i₁ (by omega)
+        have h₂pos : 0 < i₂.val := by omega
+        have h₂last : R i₂ (Fin.last N) = Fin.last N := by
+          exact h.symm.trans h₁last
+        exact False.elim (hlast_ne_of_pos i₂ h₂pos h₂last)
+    · have h₁pos : 0 < i₁.val := by omega
+      by_cases h₂zero : i₂.val = 0
+      · have h₂last : R i₂ (Fin.last N) = Fin.last N := by
+          exact hInv.last_unactive_new i₂ (by omega)
+        have h₁last : R i₁ (Fin.last N) = Fin.last N := by
+          exact h.trans h₂last
+        exact False.elim (hlast_ne_of_pos i₁ h₁pos h₁last)
+      · have h₂pos : 0 < i₂.val := by omega
+        exact hInv.last_active_inj i₁ i₂ (by omega) (by omega) h
+  have hcolR : ∀ j : Fin (N + 1), Function.Injective fun i : Fin N => R i j := by
+    intro j
+    by_cases hj : j.val < N
+    · exact hInv.col_inj j hj
+    · have hjlast : j = Fin.last N := Fin.ext (by
+        have hjle : j.val ≤ N := Nat.lt_succ_iff.mp j.isLt
+        have hjge : N ≤ j.val := Nat.le_of_not_gt hj
+        simpa [Fin.last] using le_antisymm hjle hjge)
+      subst j
+      exact hlast_col_inj
+  obtain ⟨lastRow, hlastRow_inj, hlastRow_avoid⟩ :
+      ∃ row : Fin (N + 1) → Fin (N + 1), Function.Injective row ∧
+        ∀ i j, row j ≠ R i j :=
+    latin_rectangle_extend_one R hInv.row_inj hcolR (by omega)
+  let L : Fin (N + 1) → Fin (N + 1) → Fin (N + 1) :=
+    fun i j => if hi : i.val < N then R ⟨i.val, hi⟩ j else lastRow j
+  have hrowL : ∀ i : Fin (N + 1), Function.Injective (L i) := by
+    intro i j₁ j₂ h
+    by_cases hi : i.val < N
+    · have h' : R ⟨i.val, hi⟩ j₁ = R ⟨i.val, hi⟩ j₂ := by
+        simpa [L, hi] using h
+      exact hInv.row_inj ⟨i.val, hi⟩ h'
+    · have h' : lastRow j₁ = lastRow j₂ := by
+        simpa [L, hi] using h
+      exact hlastRow_inj h'
+  have hcolL : ∀ j : Fin (N + 1), Function.Injective fun i : Fin (N + 1) => L i j := by
+    intro j i₁ i₂ h
+    by_cases h₁ : i₁.val < N
+    · by_cases h₂ : i₂.val < N
+      · have hR : R ⟨i₁.val, h₁⟩ j = R ⟨i₂.val, h₂⟩ j := by
+          simpa [L, h₁, h₂] using h
+        have hii : (⟨i₁.val, h₁⟩ : Fin N) = ⟨i₂.val, h₂⟩ :=
+          hcolR j hR
+        exact Fin.ext (by simpa using congrArg Fin.val hii)
+      · have hlast : i₂ = Fin.last N := Fin.ext (by
+          have hle : i₂.val ≤ N := Nat.lt_succ_iff.mp i₂.isLt
+          have hge : N ≤ i₂.val := Nat.le_of_not_gt h₂
+          simpa [Fin.last] using le_antisymm hle hge)
+        subst i₂
+        have hbad : lastRow j = R ⟨i₁.val, h₁⟩ j := by
+          simpa [L, h₁] using h.symm
+        exact False.elim (hlastRow_avoid ⟨i₁.val, h₁⟩ j hbad)
+    · by_cases h₂ : i₂.val < N
+      · have hlast : i₁ = Fin.last N := Fin.ext (by
+          have hle : i₁.val ≤ N := Nat.lt_succ_iff.mp i₁.isLt
+          have hge : N ≤ i₁.val := Nat.le_of_not_gt h₁
+          simpa [Fin.last] using le_antisymm hle hge)
+        subst i₁
+        have hbad : lastRow j = R ⟨i₂.val, h₂⟩ j := by
+          simpa [L, h₂] using h
+        exact False.elim (hlastRow_avoid ⟨i₂.val, h₂⟩ j hbad)
+      · have hi₁last : i₁ = Fin.last N := Fin.ext (by
+          have hle : i₁.val ≤ N := Nat.lt_succ_iff.mp i₁.isLt
+          have hge : N ≤ i₁.val := Nat.le_of_not_gt h₁
+          simpa [Fin.last] using le_antisymm hle hge)
+        have hi₂last : i₂ = Fin.last N := Fin.ext (by
+          have hle : i₂.val ≤ N := Nat.lt_succ_iff.mp i₂.isLt
+          have hge : N ≤ i₂.val := Nat.le_of_not_gt h₂
+          simpa [Fin.last] using le_antisymm hle hge)
+        exact hi₁last.trans hi₂last.symm
+  have hlastRow_zero : lastRow 0 = Fin.last N := by
+    by_contra hne
+    have hvlt : (lastRow 0).val < N := by
+      have hvle : (lastRow 0).val ≤ N := Nat.lt_succ_iff.mp (lastRow 0).isLt
+      have hvne : (lastRow 0).val ≠ N := by
+        intro hv
+        exact hne (Fin.ext (by simpa [Fin.last] using hv))
+      omega
+    let a : Fin N := ⟨(lastRow 0).val, hvlt⟩
+    let zN : Fin N := ⟨0, by omega⟩
+    obtain ⟨i₀, hi₀⟩ :=
+      (hL₀.2 zN).surjective_of_finite (Equiv.refl (Fin N)) a
+    have hzero_lt : (0 : Fin (N + 1)).val < N := by
+      show 0 < N
+      omega
+    have hR0 : R i₀ 0 = Fin.castSucc (L₀ i₀ zN) := by
+      have hreq := hInv.required_old i₀ (0 : Fin (N + 1)) hzero_lt (by simpa using i₀.isLt)
+      simpa [zN] using hreq
+    have hcasta : Fin.castSucc a = lastRow 0 := Fin.ext (by rfl)
+    have hRlast : R i₀ 0 = lastRow 0 := by
+      calc
+        R i₀ 0 = Fin.castSucc (L₀ i₀ zN) := hR0
+        _ = Fin.castSucc a := congrArg Fin.castSucc hi₀
+        _ = lastRow 0 := hcasta
+    exact hlastRow_avoid i₀ 0 hRlast.symm
+  refine ⟨L, ?_⟩
+  constructor
+  · exact ⟨hrowL, hcolL⟩
+  · intro i j a hcell
+    by_cases hi : i.val < N
+    · let ii : Fin N := ⟨i.val, hi⟩
+      by_cases hdiag : i.val + j.val = N
+      · have ha : a = Fin.last N := by
+          simpa [smetBackPartial, hdiag] using hcell.symm
+        subst a
+        have hj_eq : j = ⟨N - ii.val, by omega⟩ := Fin.ext (by
+          dsimp [ii]
+          omega)
+        have hdiagR : R ii ⟨N - ii.val, by omega⟩ = Fin.last N := by
+          by_cases hrow0 : ii.val = 0
+          · have hdlast : (⟨N - ii.val, by omega⟩ : Fin (N + 1)) = Fin.last N :=
+              Fin.ext (by
+                have hv : N - ii.val = N := by omega
+                simpa [Fin.last] using hv)
+            rw [hdlast]
+            exact hInv.last_unactive_new ii (by omega)
+          · have hactive : N - (N - 1) ≤ ii.val := by omega
+            exact hInv.diag_active ii hactive
+        simpa [L, hi, R, ii, hj_eq] using hdiagR
+      · by_cases hlt : i.val + j.val < N
+        · have hjN : j.val < N := by omega
+          have ha : a = Fin.castSucc (L₀ ii ⟨j.val, hjN⟩) := by
+            simpa [smetBackPartial, hdiag, hlt, ii] using hcell.symm
+          subst a
+          have hreq := hInv.required_old ii j hjN (by simpa [ii] using hlt)
+          simpa [L, hi, R] using hreq
+        · simp [smetBackPartial, hdiag, hlt] at hcell
+    · have hilast : i = Fin.last N := Fin.ext (by
+        have hle : i.val ≤ N := Nat.lt_succ_iff.mp i.isLt
+        have hge : N ≤ i.val := Nat.le_of_not_gt hi
+        simpa [Fin.last] using le_antisymm hle hge)
+      subst i
+      have hlastInfo : j = 0 ∧ a = Fin.last N := by
+        by_cases hdiag : (Fin.last N).val + j.val = N
+        · have hj0 : j = 0 := Fin.ext (by
+            simpa [Fin.last] using hdiag)
+          have ha : a = Fin.last N := by
+            have htmp :
+                smetBackPartial L₀ (Fin.last N) j = some (Fin.last N) :=
+              smetBackPartial_back_diagonal L₀ hdiag
+            have hsome : some (Fin.last N) = some a := by
+              simpa [htmp] using hcell
+            exact (Option.some.inj hsome).symm
+          exact ⟨hj0, ha⟩
+        · have hlt : ¬ (Fin.last N).val + j.val < N := by
+            intro hlt'
+            have hv : (Fin.last N).val = N := by simp [Fin.last]
+            omega
+          simp [smetBackPartial, hdiag, hlt] at hcell
+          exact ⟨hcell.1, hcell.2.symm⟩
+      rcases hlastInfo with ⟨hj0, ha⟩
+      rw [hj0, ha]
+      simpa [L, hlastRow_zero]
 
 theorem smetMainPartial_completable_of_core
-    (hcore : SmetBackDiagonalCompletableCore)
     {N : ℕ} (hN : 3 ≤ N) {L₀ : Fin N → Fin N → Fin N}
     (hL₀ : IsLatinSquare L₀) :
     ∃ L : Fin (N + 1) → Fin (N + 1) → Fin (N + 1),
       Completes (smetMainPartial L₀) L := by
   exact smetMainPartial_completable_of_smetBackPartial_completable
-    (hcore hN L₀ hL₀)
+    (SmetBackDiagonalCompletableCore hN L₀ hL₀)
 
 /-- The normalized theorem that would close the exact-cardinality induction in
 orders at least four.  It is recorded as a proposition so the remaining proof

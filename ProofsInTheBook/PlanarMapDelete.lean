@@ -17,6 +17,7 @@ variable {D : Type*} [Fintype D] [DecidableEq D]
 
 namespace DeleteSet
 
+omit [DecidableEq D] in
 /-- There is always a positive iterate of `p` from a surviving point back to a
 surviving point: `orderOf p` returns to the starting point. -/
 lemma exists_pos_pow_notMem (p : Equiv.Perm D) (S : Finset D) (x : {d : D // d ∉ S}) :
@@ -405,6 +406,149 @@ lemma deleteVertex_E (M : CombMap D) (v : D) (hloop : M.NoLoopAt v) :
     rw [h2E', hcard, ← h2E]
     omega
   exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) h2
+
+/-- The faces of `M` touched by the vertex represented by `v`, recorded as
+`φ`-orbit quotients. -/
+noncomputable def vertexFaces (M : CombMap D) (v : D) :
+    Finset (Quotient (cycleSetoid M.φ)) :=
+  (M.vertexDarts v).image (fun d => Quotient.mk (cycleSetoid M.φ) d)
+
+/-- The local simple-boundary condition that each dart at `v` lies on a
+different face.  Without it, a cut vertex or bridge can make the same face
+appear more than once around `v`, so the connected face-count formula is not
+`F' = F - deg(v) + 1`. -/
+def VertexFacesDistinct (M : CombMap D) (v : D) : Prop :=
+  Set.InjOn (fun d => Quotient.mk (cycleSetoid M.φ) d) (M.vertexDarts v : Set D)
+
+lemma vertexFaces_card_eq_degree (M : CombMap D) (v : D)
+    (hdistinct : M.VertexFacesDistinct v) :
+    (M.vertexFaces v).card = M.dartVertexDegree v := by
+  classical
+  rw [vertexFaces, dartVertexDegree]
+  exact Finset.card_image_of_injOn hdistinct
+
+/-- The quotient-level face model for connected vertex deletion: all faces not
+incident with `v` survive, while the faces incident with `v` are replaced by
+one merged boundary face.  The hard topological boundary lemma is precisely an
+equivalence from the actual deleted-map face quotients to this model. -/
+abbrev deleteVertexFaceModel (M : CombMap D) (v : D) :=
+  {Q : Quotient (cycleSetoid M.φ) // Q ∉ M.vertexFaces v} ⊕ Unit
+
+/-- Quotient-level statement of the deleted-star boundary lemma for the
+connected case. -/
+def DeleteVertexFacesMerge (M : CombMap D) (v : D) : Prop :=
+  Nonempty
+    (Quotient (cycleSetoid (M.deleteVertex v).φ) ≃ M.deleteVertexFaceModel v)
+
+lemma deleteVertexFaceModel_card (M : CombMap D) (v : D)
+    (hdistinct : M.VertexFacesDistinct v) :
+    Fintype.card (M.deleteVertexFaceModel v) =
+      M.F - M.dartVertexDegree v + 1 := by
+  classical
+  have hcard := vertexFaces_card_eq_degree M v hdistinct
+  change
+    Fintype.card
+        ({Q : Quotient (cycleSetoid M.φ) // Q ∉ M.vertexFaces v} ⊕ Unit) =
+      M.F - M.dartVertexDegree v + 1
+  rw [Fintype.card_sum, Fintype.card_unit,
+    Fintype.card_subtype_compl (fun Q : Quotient (cycleSetoid M.φ) =>
+      Q ∈ M.vertexFaces v),
+    Fintype.card_coe, F, hcard]
+
+lemma deleteVertex_F_of_facesMerge (M : CombMap D) (v : D)
+    (hdistinct : M.VertexFacesDistinct v)
+    (hmerge : M.DeleteVertexFacesMerge v) :
+    (M.deleteVertex v).F = M.F - M.dartVertexDegree v + 1 := by
+  classical
+  rcases hmerge with ⟨e⟩
+  change
+    Fintype.card (Quotient (cycleSetoid (M.deleteVertex v).φ)) =
+      M.F - M.dartVertexDegree v + 1
+  exact (Fintype.card_congr e).trans (deleteVertexFaceModel_card M v hdistinct)
+
+lemma dartVertexDegree_le_E (M : CombMap D) (v : D) (hloop : M.NoLoopAt v) :
+    M.dartVertexDegree v ≤ M.E := by
+  classical
+  have hsubset : M.deleteVertexSet v ⊆ Finset.univ := by
+    intro d _; exact Finset.mem_univ d
+  have hcardle : (M.deleteVertexSet v).card ≤ Fintype.card D := by
+    rw [← Finset.card_univ]
+    exact Finset.card_le_card hsubset
+  have hdel := deleteVertexSet_card_eq_two_mul_degree M v hloop
+  have h2E := two_mul_E_eq_card M
+  have hmul : 2 * M.dartVertexDegree v ≤ 2 * M.E := by
+    rw [← hdel, h2E]
+    exact hcardle
+  omega
+
+lemma dartVertexDegree_le_F_of_vertexFacesDistinct (M : CombMap D) (v : D)
+    (hdistinct : M.VertexFacesDistinct v) :
+    M.dartVertexDegree v ≤ M.F := by
+  classical
+  have hcard := vertexFaces_card_eq_degree M v hdistinct
+  have hsubset : M.vertexFaces v ⊆ Finset.univ := by
+    intro Q _; exact Finset.mem_univ Q
+  have hle : (M.vertexFaces v).card ≤
+      Fintype.card (Quotient (cycleSetoid M.φ)) := by
+    rw [← Finset.card_univ]
+    exact Finset.card_le_card hsubset
+  simpa [F, hcard] using hle
+
+lemma one_le_V_of_dart (M : CombMap D) (v : D) : 1 ≤ M.V := by
+  classical
+  have hpos : 0 < Fintype.card (Quotient (cycleSetoid M.σ)) :=
+    Fintype.card_pos_iff.mpr ⟨Quotient.mk (cycleSetoid M.σ) v⟩
+  simpa [V] using hpos
+
+lemma deleteVertex_eulerChar_of_facesMerge (M : CombMap D) (v : D)
+    (hsphereEuler : M.eulerChar = 2) (hloop : M.NoLoopAt v)
+    (hQ :
+      Quotient (cycleSetoid (M.deleteVertex v).σ) ≃
+        {Q : Quotient (cycleSetoid M.σ) //
+          Q ≠ Quotient.mk (cycleSetoid M.σ) v})
+    (hdistinct : M.VertexFacesDistinct v)
+    (hmerge : M.DeleteVertexFacesMerge v) :
+    (M.deleteVertex v).eulerChar = 2 := by
+  classical
+  have hV := deleteVertex_V_of_orbitEquiv M v hQ
+  have hE := deleteVertex_E M v hloop
+  have hF := deleteVertex_F_of_facesMerge M v hdistinct hmerge
+  have hVle : 1 ≤ M.V := one_le_V_of_dart M v
+  have hdegE : M.dartVertexDegree v ≤ M.E := dartVertexDegree_le_E M v hloop
+  have hdegF : M.dartVertexDegree v ≤ M.F :=
+    dartVertexDegree_le_F_of_vertexFacesDistinct M v hdistinct
+  unfold eulerChar
+  rw [hV, hE, hF]
+  unfold eulerChar at hsphereEuler
+  omega
+
+/-- Connected-case vertex deletion: assuming the remaining vertex quotient is
+exactly the old vertex quotient with `v` removed, and assuming the deleted-star
+face quotient really is the connected face-merge model, Euler characteristic is
+preserved.  The final `hconn` is the graph-theoretic connectedness of the
+deleted map. -/
+theorem deleteVertex_isSphereMap (M : CombMap D) (v : D) (hsphere : M.IsSphereMap)
+    (hloop : M.NoLoopAt v)
+    (hQ :
+      Quotient (cycleSetoid (M.deleteVertex v).σ) ≃
+        {Q : Quotient (cycleSetoid M.σ) //
+          Q ≠ Quotient.mk (cycleSetoid M.σ) v})
+    (hdistinct : M.VertexFacesDistinct v)
+    (hmerge : M.DeleteVertexFacesMerge v)
+    (hconn : (M.deleteVertex v).Connected) :
+    (M.deleteVertex v).IsSphereMap := by
+  exact
+    ⟨hconn,
+      deleteVertex_eulerChar_of_facesMerge M v hsphere.2 hloop hQ hdistinct hmerge⟩
+
+/-- Per-component packaging: once a deleted component has been isolated as its
+own `CombMap`, the sphere assertion is exactly connectedness plus Euler
+characteristic `2`.  Component extraction supplies these two hypotheses. -/
+theorem deleteVertex_isSphereMap_per_component
+    {D' : Type*} [Fintype D'] [DecidableEq D'] (N : CombMap D')
+    (hconn : N.Connected) (heuler : N.eulerChar = 2) :
+    N.IsSphereMap := by
+  exact ⟨hconn, heuler⟩
 
 end CombMap
 

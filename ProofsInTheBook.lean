@@ -56,3 +56,7 @@ import ProofsInTheBook.PlanarMapDelete
 -- to the cunning-switching core `SmetBackDiagonalCompletableCore` (the remaining hard lemma).
 import ProofsInTheBook.Chapter33Smetaniuk
 
+-- Chapter 22 (Gurvits) WIP: capacity constant + telescoping (n!/n^n) + univariate Gurvits analytic
+-- crux + capacity iteration; real-stable polynomial framework. Reduced to the Lieb-Sokal ∂-closure.
+import ProofsInTheBook.Chapter22Gurvits
+import ProofsInTheBook.Chapter22Stable

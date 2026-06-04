@@ -1455,6 +1455,43 @@ theorem chapter33_order_le_three (n : ℕ) (hn : n ≤ 3) :
 theorem chapter33_three : LatinSquareCompletionTheorem 3 :=
   chapter33_order_le_three 3 (by omega)
 
+def EvansNormalizedCellCase (n : ℕ) (iTarget jTarget aTarget : Fin n) : Prop :=
+  ∀ P : Fin n → Fin n → Option (Fin n),
+    IsPartialLatin P → (filledCells P).card = n - 1 →
+      P iTarget jTarget = some aTarget →
+        ∃ L : Fin n → Fin n → Fin n, Completes P L
+
+private def lastIndex (n : ℕ) (hn : 0 < n) : Fin n :=
+  ⟨n - 1, by omega⟩
+
+theorem evansExactCardinalityCase_of_normalizedCellCase {n : ℕ}
+    (hn : 2 ≤ n) {iTarget jTarget aTarget : Fin n}
+    (hnormal : EvansNormalizedCellCase n iTarget jTarget aTarget) :
+    EvansExactCardinalityCase n :=
+  evansExactCardinalityCase_of_normalized_cell_case hn iTarget jTarget aTarget hnormal
+
+theorem evansExactCardinalityCase_all_of_normalized_ge_four
+    (hnormal : ∀ n (hnpos : 0 < n), 4 ≤ n →
+      EvansNormalizedCellCase n
+        (lastIndex n hnpos) (lastIndex n hnpos) (lastIndex n hnpos)) :
+    ∀ n, EvansExactCardinalityCase n := by
+  intro n
+  by_cases hsmall : n ≤ 3
+  · exact evansExactCardinalityCase_le_three n hsmall
+  · have hge_four : 4 ≤ n := by omega
+    have hnpos : 0 < n := by omega
+    exact evansExactCardinalityCase_of_normalizedCellCase (n := n) (by omega)
+      (hnormal n hnpos hge_four)
+
+theorem chapter33_unconditional_of_normalized_ge_four
+    (hnormal : ∀ n (hnpos : 0 < n), 4 ≤ n →
+      EvansNormalizedCellCase n
+        (lastIndex n hnpos) (lastIndex n hnpos) (lastIndex n hnpos)) :
+    ∀ n, LatinSquareCompletionTheorem n :=
+  fun n =>
+    completion_from_exact_cardinality_case
+      ((evansExactCardinalityCase_all_of_normalized_ge_four hnormal) n)
+
 /-- If every used symbol has a witness cell, then the pair count of common-used
 symbols times columns is bounded by the total filled cells. -/
 lemma commonUsed_mul_le_filledCells {n : ℕ}

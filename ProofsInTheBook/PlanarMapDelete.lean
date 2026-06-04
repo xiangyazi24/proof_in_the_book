@@ -440,6 +440,17 @@ def DeleteVertexFacesMerge (M : CombMap D) (v : D) : Prop :=
   Nonempty
     (Quotient (cycleSetoid (M.deleteVertex v).φ) ≃ M.deleteVertexFaceModel v)
 
+lemma deleteVertexFacesMerge_iff_face_card_eq (M : CombMap D) (v : D) :
+    M.DeleteVertexFacesMerge v ↔
+      Fintype.card (Quotient (cycleSetoid (M.deleteVertex v).φ)) =
+        Fintype.card (M.deleteVertexFaceModel v) := by
+  classical
+  constructor
+  · rintro ⟨e⟩
+    exact Fintype.card_congr e
+  · intro h
+    exact ⟨Fintype.equivOfCardEq h⟩
+
 lemma deleteVertexFaceModel_card (M : CombMap D) (v : D)
     (hdistinct : M.VertexFacesDistinct v) :
     Fintype.card (M.deleteVertexFaceModel v) =
@@ -454,6 +465,17 @@ lemma deleteVertexFaceModel_card (M : CombMap D) (v : D)
     Fintype.card_subtype_compl (fun Q : Quotient (cycleSetoid M.φ) =>
       Q ∈ M.vertexFaces v),
     Fintype.card_coe, F, hcard]
+
+lemma deleteVertexFacesMerge_of_F_eq (M : CombMap D) (v : D)
+    (hdistinct : M.VertexFacesDistinct v)
+    (hF : (M.deleteVertex v).F = M.F - M.dartVertexDegree v + 1) :
+    M.DeleteVertexFacesMerge v := by
+  classical
+  rw [deleteVertexFacesMerge_iff_face_card_eq]
+  change
+    (M.deleteVertex v).F =
+      Fintype.card (M.deleteVertexFaceModel v)
+  rw [hF, deleteVertexFaceModel_card M v hdistinct]
 
 lemma deleteVertex_F_of_facesMerge (M : CombMap D) (v : D)
     (hdistinct : M.VertexFacesDistinct v)
@@ -549,6 +571,132 @@ theorem deleteVertex_isSphereMap_per_component
     (hconn : N.Connected) (heuler : N.eulerChar = 2) :
     N.IsSphereMap := by
   exact ⟨hconn, heuler⟩
+
+section TwoEdgePathObstruction
+
+/-!
+The two-edge path is a sphere map with no loop at the middle vertex, but its
+closed-star deletion removes every dart.  It is the minimal obstruction showing
+that `IsSphereMap` and `NoLoopAt` alone cannot imply the quotient hypotheses
+used above.
+-/
+
+def twoEdgePathAlpha : Equiv.Perm (Fin 4) :=
+  Equiv.swap (0 : Fin 4) 1 * Equiv.swap (2 : Fin 4) 3
+
+def twoEdgePathSigma : Equiv.Perm (Fin 4) :=
+  Equiv.swap (1 : Fin 4) 2
+
+def twoEdgePathMap : CombMap (Fin 4) where
+  α := twoEdgePathAlpha
+  σ := twoEdgePathSigma
+  α_invol := by
+    ext x
+    fin_cases x <;> decide
+  α_no_fixed := by
+    intro d
+    fin_cases d <;> decide
+
+lemma twoEdgePathMap_connected : twoEdgePathMap.Connected := by
+  have h01 : twoEdgePathMap.dartStep (0 : Fin 4) 1 := by right; decide
+  have h10 : twoEdgePathMap.dartStep (1 : Fin 4) 0 := by right; decide
+  have h12 : twoEdgePathMap.dartStep (1 : Fin 4) 2 := by left; decide
+  have h21 : twoEdgePathMap.dartStep (2 : Fin 4) 1 := by left; decide
+  have h23 : twoEdgePathMap.dartStep (2 : Fin 4) 3 := by right; decide
+  have h32 : twoEdgePathMap.dartStep (3 : Fin 4) 2 := by right; decide
+  intro a b
+  fin_cases a <;> fin_cases b
+  · exact Relation.ReflTransGen.refl
+  · exact Relation.ReflTransGen.single h01
+  · exact Relation.ReflTransGen.tail (Relation.ReflTransGen.single h01) h12
+  · exact Relation.ReflTransGen.tail
+      (Relation.ReflTransGen.tail (Relation.ReflTransGen.single h01) h12) h23
+  · exact Relation.ReflTransGen.single h10
+  · exact Relation.ReflTransGen.refl
+  · exact Relation.ReflTransGen.single h12
+  · exact Relation.ReflTransGen.tail (Relation.ReflTransGen.single h12) h23
+  · exact Relation.ReflTransGen.tail (Relation.ReflTransGen.single h21) h10
+  · exact Relation.ReflTransGen.single h21
+  · exact Relation.ReflTransGen.refl
+  · exact Relation.ReflTransGen.single h23
+  · exact Relation.ReflTransGen.tail
+      (Relation.ReflTransGen.tail (Relation.ReflTransGen.single h32) h21) h10
+  · exact Relation.ReflTransGen.tail (Relation.ReflTransGen.single h32) h21
+  · exact Relation.ReflTransGen.single h32
+  · exact Relation.ReflTransGen.refl
+
+lemma twoEdgePathMap_isSphereMap : twoEdgePathMap.IsSphereMap := by
+  exact ⟨twoEdgePathMap_connected, by decide⟩
+
+lemma twoEdgePathMap_noLoopAt_middle :
+    twoEdgePathMap.NoLoopAt (1 : Fin 4) := by
+  intro d hd
+  fin_cases d
+  · exfalso
+    exact (by decide : ¬ twoEdgePathMap.σ.SameCycle (1 : Fin 4) 0)
+      (by simpa [vertexDarts] using hd)
+  · exact
+      (by decide :
+        twoEdgePathMap.α (1 : Fin 4) ∉ twoEdgePathMap.vertexDarts (1 : Fin 4))
+  · exact
+      (by decide :
+        twoEdgePathMap.α (2 : Fin 4) ∉ twoEdgePathMap.vertexDarts (1 : Fin 4))
+  · exfalso
+    exact (by decide : ¬ twoEdgePathMap.σ.SameCycle (1 : Fin 4) 3)
+      (by simpa [vertexDarts] using hd)
+
+lemma twoEdgePathMap_deleteVertexSet_middle :
+    twoEdgePathMap.deleteVertexSet (1 : Fin 4) = Finset.univ := by
+  decide
+
+lemma twoEdgePathMap_not_vertexFacesDistinct_middle :
+    ¬ twoEdgePathMap.VertexFacesDistinct (1 : Fin 4) := by
+  intro hdistinct
+  have h1 : (1 : Fin 4) ∈ twoEdgePathMap.vertexDarts (1 : Fin 4) := by
+    exact twoEdgePathMap.self_mem_vertexDarts (1 : Fin 4)
+  have h2 : (2 : Fin 4) ∈ twoEdgePathMap.vertexDarts (1 : Fin 4) := by
+    simpa [vertexDarts] using
+      (by decide : twoEdgePathMap.σ.SameCycle (1 : Fin 4) 2)
+  have hface :
+      Quotient.mk (cycleSetoid twoEdgePathMap.φ) (1 : Fin 4) =
+        Quotient.mk (cycleSetoid twoEdgePathMap.φ) (2 : Fin 4) := by
+    exact Quotient.sound (by decide : twoEdgePathMap.φ.SameCycle (1 : Fin 4) 2)
+  have h12 : (1 : Fin 4) = 2 := hdistinct h1 h2 hface
+  exact (by decide : (1 : Fin 4) ≠ 2) h12
+
+lemma twoEdgePathMap_not_deleteVertex_vertexQuotient_middle :
+    ¬ Nonempty
+      (Quotient (cycleSetoid (twoEdgePathMap.deleteVertex (1 : Fin 4)).σ) ≃
+        {Q : Quotient (cycleSetoid twoEdgePathMap.σ) //
+          Q ≠ Quotient.mk (cycleSetoid twoEdgePathMap.σ) (1 : Fin 4)}) := by
+  intro hQ
+  rcases hQ with ⟨e⟩
+  let q0 :
+      {Q : Quotient (cycleSetoid twoEdgePathMap.σ) //
+        Q ≠ Quotient.mk (cycleSetoid twoEdgePathMap.σ) (1 : Fin 4)} :=
+    ⟨Quotient.mk (cycleSetoid twoEdgePathMap.σ) (0 : Fin 4), by
+      intro h
+      have hsame : twoEdgePathMap.σ.SameCycle (0 : Fin 4) 1 := Quotient.eq.mp h
+      exact (by decide : ¬ twoEdgePathMap.σ.SameCycle (0 : Fin 4) 1) hsame⟩
+  let q : Quotient (cycleSetoid (twoEdgePathMap.deleteVertex (1 : Fin 4)).σ) :=
+    e.symm q0
+  obtain ⟨x, _hx⟩ := q.exists_rep
+  have hxmem : (x : Fin 4) ∈ twoEdgePathMap.deleteVertexSet (1 : Fin 4) := by
+    simp [twoEdgePathMap_deleteVertexSet_middle]
+  exact x.2 hxmem
+
+lemma twoEdgePathMap_not_deleteVertexFacesMerge_middle :
+    ¬ twoEdgePathMap.DeleteVertexFacesMerge (1 : Fin 4) := by
+  intro hmerge
+  rcases hmerge with ⟨e⟩
+  let q : Quotient (cycleSetoid (twoEdgePathMap.deleteVertex (1 : Fin 4)).φ) :=
+    e.symm (Sum.inr ())
+  obtain ⟨x, _hx⟩ := q.exists_rep
+  have hxmem : (x : Fin 4) ∈ twoEdgePathMap.deleteVertexSet (1 : Fin 4) := by
+    simp [twoEdgePathMap_deleteVertexSet_middle]
+  exact x.2 hxmem
+
+end TwoEdgePathObstruction
 
 end CombMap
 

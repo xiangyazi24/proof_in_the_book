@@ -1,4 +1,5 @@
 import Mathlib
+import ProofsInTheBook.Chapter22
 
 /-!
 # Chapter 22 (van der Waerden permanent bound) — Gurvits capacity, algebraic core
@@ -12,6 +13,9 @@ constants telescopes to exactly `n!/nⁿ` — that is the algebraic heart proved
 namespace ProofsInTheBook.Chapter22Gurvits
 
 open scoped BigOperators
+open ProofsInTheBook.Chapter22
+
+noncomputable section
 
 /-- Gurvits capacity-reduction constant `G(k) = ((k-1)/k)^{k-1}`, with `G(0)=G(1)=1`. -/
 noncomputable def G (k : ℕ) : ℝ := ((k - 1 : ℝ) / (k : ℝ)) ^ (k - 1)
@@ -44,3 +48,59 @@ theorem gurvits_product_telescopes (n : ℕ) (hn : 1 ≤ n) :
         rw [Nat.factorial_succ, Nat.cast_mul, Nat.cast_add, Nat.cast_one]
         field_simp
         ring
+
+/-!
+### Algebraic interface to the Chapter 22 capacity core
+
+The analytic Gurvits step should produce the lower bound with the telescoping
+product of the constants `G(2), ..., G(n)`.  The theorem below is the purely
+algebraic last mile: once that iterated capacity estimate is available for the
+row-linear polynomial, the exact `n! / n^n` squarefree-coefficient core follows.
+-/
+
+/-- The remaining iterated Gurvits capacity estimate, stated with the product
+constant before telescoping. -/
+structure GurvitsIteratedCapacityCertificate (n : ℕ) where
+  squarefree_bound :
+    ∀ A : Matrix (Fin n) (Fin n) ℝ,
+      (∀ i j, 0 ≤ A i j) →
+      RowLinearCapacityAtLeastOne A →
+      (∏ m ∈ Finset.Icc 2 n, G m) ≤ rowLinearSquarefreeCoefficient A
+
+/-- The iterated Gurvits product bound discharges the literal squarefree
+coefficient core, by the telescoping identity above. -/
+theorem squarefreeCoefficientCore_of_iteratedCapacityCertificate (n : ℕ)
+    (cert : GurvitsIteratedCapacityCertificate n) :
+    GurvitsSquarefreeCoefficientFromCapacityCore n := by
+  refine ⟨?_⟩
+  intro A hA hcap
+  by_cases hn0 : n = 0
+  · subst n
+    simpa using cert.squarefree_bound A hA hcap
+  · have hn : 1 ≤ n := Nat.succ_le_of_lt (Nat.pos_of_ne_zero hn0)
+    simpa [gurvits_product_telescopes n hn] using cert.squarefree_bound A hA hcap
+
+/-- Low dimensions are already discharged in `Chapter22`; this re-exports that
+fact from the Gurvits file. -/
+theorem squarefreeCoefficientCore_of_le_two (n : ℕ) (hn : n ≤ 2) :
+    GurvitsSquarefreeCoefficientFromCapacityCore n :=
+  Chapter22.squarefreeCoefficientCore_of_le_two n hn
+
+theorem vanDerWaerdenAnalyticCore_of_iteratedCapacityCertificate (n : ℕ)
+    (cert : GurvitsIteratedCapacityCertificate n) :
+    VanDerWaerdenAnalyticCore n :=
+  Chapter22.vanDerWaerdenAnalyticCore_of_squarefreeCoefficientCore
+    (squarefreeCoefficientCore_of_iteratedCapacityCertificate n cert)
+
+theorem chapter22_from_iteratedCapacityCertificate
+    (cert : ∀ m : ℕ, 3 ≤ m → GurvitsIteratedCapacityCertificate m)
+    (n : ℕ) (A : Matrix (Fin n) (Fin n) ℝ)
+    (hA : A ∈ doublyStochastic ℝ (Fin n)) :
+    (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent := by
+  exact Chapter22.chapter22
+    (fun m hm => squarefreeCoefficientCore_of_iteratedCapacityCertificate m (cert m hm))
+    n A hA
+
+end
+
+end ProofsInTheBook.Chapter22Gurvits

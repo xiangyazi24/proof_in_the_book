@@ -5225,6 +5225,870 @@ theorem equatorBoundaryAltCardBridge {r m : ℕ}
       Fintype.card (EquatorActualAltRidge (equatorRestrictedLabelOf label)) :=
   Fintype.card_congr (equatorBoundaryAltRidgeEquiv label)
 
+/-! ## Antipodal and hemisphere bridges for self-contained alternating chains -/
+
+theorem labelSeqSet_alternatingLabelOf {k m : ℕ} (idx : Fin k → Fin m) :
+    labelSeqSet (fun a : Fin k => alternatingLabelOf idx a) = alternatingLabelSetOf idx := by
+  simp [labelSeqSet, alternatingLabelSetOf]
+
+theorem IsAltPosLabelSeq.not_isAltNeg {k m : ℕ} (hk : 0 < k)
+    {L : Fin k → SignedLabel m} :
+    IsAltPosLabelSeq L → IsAltNegLabelSeq L → False := by
+  classical
+  rintro ⟨idx, hidx, hsetPos⟩ hneg
+  let Lpos : Fin k → SignedLabel m := fun a => alternatingLabelOf idx a
+  have hLposSet : labelSeqSet Lpos = labelSeqSet L := by
+    rw [hsetPos]
+    exact labelSeqSet_alternatingLabelOf idx
+  have hnegPos : IsAltNegLabelSeq Lpos := by
+    rcases hneg with ⟨eta, heta, hsetNeg⟩
+    exact ⟨eta, heta, hLposSet.trans hsetNeg⟩
+  let sgn : Fin k → Bool := fun a => decide (Even a.val)
+  have hLpos :
+      ∀ a : Fin k, Lpos a = { positive := sgn a, index := idx a } := by
+    intro a
+    rfl
+  have hsgnNeg : signSeqAltNeg sgn :=
+    (sortedLabelSeq_isAltNeg_iff_signSeqAltNeg hidx hLpos).mp hnegPos
+  let i : Fin k := ⟨0, hk⟩
+  have hi := hsgnNeg i
+  simp [signSeqAltNeg, sgn, i] at hi
+
+theorem IsAltPos.not_isAltNeg {k m n : ℕ} (hk : 0 < k)
+    {label : NonzeroSignedSubset n → SignedLabel m}
+    {sigma : Fin k → NonzeroSignedSubset n} :
+    IsAltPos label sigma → IsAltNeg label sigma → False :=
+  IsAltPosLabelSeq.not_isAltNeg hk
+
+theorem IsAltPosLabelSeq_neg_iff_isAltNeg {k m : ℕ} {L : Fin k → SignedLabel m} :
+    IsAltPosLabelSeq (fun a => (L a).neg) ↔ IsAltNegLabelSeq L := by
+  classical
+  constructor
+  · rintro ⟨idx, hidx, hset⟩
+    refine ⟨idx, hidx, ?_⟩
+    ext x
+    constructor
+    · intro hx
+      have hxneg : x.neg ∈ labelSeqSet (fun a : Fin k => (L a).neg) := by
+        rcases Finset.mem_image.mp hx with ⟨a, _ha, ha⟩
+        refine Finset.mem_image.mpr ⟨a, Finset.mem_univ _, ?_⟩
+        rw [← ha]
+      rw [hset] at hxneg
+      rcases (by simpa [alternatingLabelSetOf] using hxneg) with ⟨a, ha⟩
+      refine Finset.mem_image.mpr ⟨a, Finset.mem_univ _, ?_⟩
+      rw [ha]
+      simp [SignedLabel.neg]
+    · intro hx
+      rcases Finset.mem_image.mp hx with ⟨a, _ha, ha⟩
+      have hxpos : alternatingLabelOf idx a ∈ alternatingLabelSetOf idx := by
+        simp [alternatingLabelSetOf]
+      rw [← hset] at hxpos
+      rcases Finset.mem_image.mp hxpos with ⟨b, _hb, hb⟩
+      refine Finset.mem_image.mpr ⟨b, Finset.mem_univ _, ?_⟩
+      rw [← ha]
+      have hb' := congrArg SignedLabel.neg hb
+      apply SignedLabel.ext
+      · simpa [SignedLabel.neg] using congrArg SignedLabel.positive hb'
+      · simpa [SignedLabel.neg] using congrArg SignedLabel.index hb'
+  · rintro ⟨idx, hidx, hset⟩
+    refine ⟨idx, hidx, ?_⟩
+    ext x
+    constructor
+    · intro hx
+      rcases Finset.mem_image.mp hx with ⟨a, _ha, ha⟩
+      have hxneg : L a ∈ alternatingNegLabelSetOf idx := by
+        rw [← hset]
+        simp [labelSeqSet]
+      rcases (by simpa [alternatingNegLabelSetOf] using hxneg) with ⟨b, hb⟩
+      refine Finset.mem_image.mpr ⟨b, Finset.mem_univ _, ?_⟩
+      rw [← ha, ← hb]
+      simp [SignedLabel.neg, alternatingLabelOf]
+    · intro hx
+      rcases Finset.mem_image.mp hx with ⟨a, _ha, ha⟩
+      have hxorig : (alternatingLabelOf idx a).neg ∈ labelSeqSet L := by
+        rw [hset]
+        simp [alternatingNegLabelSetOf]
+      rcases Finset.mem_image.mp hxorig with ⟨b, _hb, hb⟩
+      refine Finset.mem_image.mpr ⟨b, Finset.mem_univ _, ?_⟩
+      rw [← ha, hb]
+      simp [SignedLabel.neg, alternatingLabelOf]
+
+theorem IsAltNegLabelSeq_neg_iff_isAltPos {k m : ℕ} {L : Fin k → SignedLabel m} :
+    IsAltNegLabelSeq (fun a => (L a).neg) ↔ IsAltPosLabelSeq L := by
+  constructor
+  · intro h
+    have h' :=
+      (IsAltPosLabelSeq_neg_iff_isAltNeg
+        (L := fun a : Fin k => (L a).neg)).mpr h
+    simpa [SignedLabel.neg] using h'
+  · intro h
+    apply (IsAltPosLabelSeq_neg_iff_isAltNeg
+      (L := fun a : Fin k => (L a).neg)).mp
+    simpa [SignedLabel.neg] using h
+
+theorem IsAltPos_antipode_iff_isAltNeg {m n : ℕ}
+    {label : NonzeroSignedSubset n → SignedLabel m}
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (P : SignedPermutation n) :
+    IsAltPos label (fun i : Fin n => P.antipode.prefixChain i) ↔
+      IsAltNeg label (fun i : Fin n => P.prefixChain i) := by
+  have hfun :
+      (fun i : Fin n => label (P.antipode.prefixChain i)) =
+        fun i : Fin n => (label (P.prefixChain i)).neg := by
+    funext i
+    rw [SignedPermutation.prefixChain_antipode]
+    exact hantipodal (P.prefixChain i)
+  change
+    IsAltPosLabelSeq (fun i : Fin n => label (P.antipode.prefixChain i)) ↔
+      IsAltNegLabelSeq (fun i : Fin n => label (P.prefixChain i))
+  rw [hfun]
+  exact IsAltPosLabelSeq_neg_iff_isAltNeg
+
+theorem IsAltNeg_antipode_iff_isAltPos {m n : ℕ}
+    {label : NonzeroSignedSubset n → SignedLabel m}
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (P : SignedPermutation n) :
+    IsAltNeg label (fun i : Fin n => P.antipode.prefixChain i) ↔
+      IsAltPos label (fun i : Fin n => P.prefixChain i) := by
+  have hfun :
+      (fun i : Fin n => label (P.antipode.prefixChain i)) =
+        fun i : Fin n => (label (P.prefixChain i)).neg := by
+    funext i
+    rw [SignedPermutation.prefixChain_antipode]
+    exact hantipodal (P.prefixChain i)
+  change
+    IsAltNegLabelSeq (fun i : Fin n => label (P.antipode.prefixChain i)) ↔
+      IsAltPosLabelSeq (fun i : Fin n => label (P.prefixChain i))
+  rw [hfun]
+  exact IsAltNegLabelSeq_neg_iff_isAltPos
+
+theorem upperPrefixChain_iff_last_positive {n : ℕ} (P : SignedPermutation (n + 1)) :
+    UpperPrefixChain P ↔ P.positive (P.order.symm (Fin.last n)) := by
+  constructor
+  · intro hupper
+    by_contra hpos
+    exact hupper (P.order.symm (Fin.last n)) (by
+      simp [UpperHemisphere, SignedPermutation.prefixChain,
+        SignedPermutation.prefixSignedSubset, SignedPermutation.prefixNeg, hpos])
+  · intro hpos i hneg
+    have hmem : Fin.last n ∈ (P.prefixChain i).1.neg := hneg
+    simp [SignedPermutation.prefixChain, SignedPermutation.prefixSignedSubset,
+      SignedPermutation.prefixNeg, hpos] at hmem
+
+theorem upperPrefixChain_antipode_iff_not {n : ℕ} (P : SignedPermutation (n + 1)) :
+    UpperPrefixChain P.antipode ↔ ¬ UpperPrefixChain P := by
+  rw [upperPrefixChain_iff_last_positive P.antipode,
+    upperPrefixChain_iff_last_positive P]
+  simp [SignedPermutation.antipode]
+
+@[simp]
+theorem finPredOfNotLast_castSucc {r : ℕ} (i : Fin r)
+    (h : Fin.castSucc i ≠ Fin.last r) :
+    finPredOfNotLast (Fin.castSucc i) h = i := by
+  apply Fin.ext
+  rfl
+
+noncomputable def equatorExtendOrder {r : ℕ} (e : Equiv.Perm (Fin r)) :
+    Equiv.Perm (Fin (r + 1)) where
+  toFun i :=
+    if hi : i = Fin.last r then
+      Fin.last r
+    else
+      Fin.castSucc (e (finPredOfNotLast i hi))
+  invFun i :=
+    if hi : i = Fin.last r then
+      Fin.last r
+    else
+      Fin.castSucc (e.symm (finPredOfNotLast i hi))
+  left_inv := by
+    intro i
+    by_cases hi : i = Fin.last r
+    · subst i
+      simp
+    · have hnot :
+        Fin.castSucc (e (finPredOfNotLast i hi)) ≠ Fin.last r := by
+        exact (Fin.castSucc_lt_last _).ne
+      simp [hi, hnot]
+  right_inv := by
+    intro i
+    by_cases hi : i = Fin.last r
+    · subst i
+      simp
+    · have hnot :
+        Fin.castSucc (e.symm (finPredOfNotLast i hi)) ≠ Fin.last r := by
+        exact (Fin.castSucc_lt_last _).ne
+      simp [hi, hnot]
+
+@[simp]
+theorem equatorExtendOrder_apply_last {r : ℕ} (e : Equiv.Perm (Fin r)) :
+    equatorExtendOrder e (Fin.last r) = Fin.last r := by
+  simp [equatorExtendOrder]
+
+@[simp]
+theorem equatorExtendOrder_symm_apply_last {r : ℕ} (e : Equiv.Perm (Fin r)) :
+    (equatorExtendOrder e).symm (Fin.last r) = Fin.last r := by
+  simp [equatorExtendOrder]
+
+@[simp]
+theorem equatorExtendOrder_apply_castSucc {r : ℕ} (e : Equiv.Perm (Fin r))
+    (i : Fin r) :
+    equatorExtendOrder e (Fin.castSucc i) = Fin.castSucc (e i) := by
+  have h : Fin.castSucc i ≠ Fin.last r := (Fin.castSucc_lt_last i).ne
+  simp [equatorExtendOrder, h]
+
+@[simp]
+theorem equatorExtendOrder_symm_apply_castSucc {r : ℕ} (e : Equiv.Perm (Fin r))
+    (i : Fin r) :
+    (equatorExtendOrder e).symm (Fin.castSucc i) = Fin.castSucc (e.symm i) := by
+  have h : Fin.castSucc i ≠ Fin.last r := (Fin.castSucc_lt_last i).ne
+  simp [equatorExtendOrder, h]
+
+noncomputable def signedPermutationEquatorExtend {r : ℕ}
+    (P : SignedPermutation r) : SignedPermutation (r + 1) where
+  order := equatorExtendOrder P.order
+  positive := fun i =>
+    if hi : i = Fin.last r then true
+    else P.positive (finPredOfNotLast i hi)
+
+@[simp]
+theorem signedPermutationEquatorExtend_positive_last {r : ℕ}
+    (P : SignedPermutation r) :
+    (signedPermutationEquatorExtend P).positive (Fin.last r) = true := by
+  simp [signedPermutationEquatorExtend]
+
+@[simp]
+theorem signedPermutationEquatorExtend_positive_castSucc {r : ℕ}
+    (P : SignedPermutation r) (i : Fin r) :
+    (signedPermutationEquatorExtend P).positive (Fin.castSucc i) = P.positive i := by
+  have h : Fin.castSucc i ≠ Fin.last r := (Fin.castSucc_lt_last i).ne
+  simp [signedPermutationEquatorExtend, h]
+
+theorem signedPermutationEquatorExtend_upperPrefixChain {r : ℕ}
+    (P : SignedPermutation r) :
+    UpperPrefixChain (signedPermutationEquatorExtend P) := by
+  rw [upperPrefixChain_iff_last_positive]
+  simp [signedPermutationEquatorExtend]
+
+theorem signedPermutationEquatorExtend_boundary {r : ℕ}
+    (P : SignedPermutation r) :
+    RepresentedUpperRidgeBoundary (signedPermutationEquatorExtend P) (Fin.last r) := by
+  exact ⟨rfl, by simp [signedPermutationEquatorExtend]⟩
+
+theorem signedPermutationEquatorExtend_prefixChain_castSucc {r : ℕ}
+    (P : SignedPermutation r) (i : Fin r) :
+    (signedPermutationEquatorExtend P).prefixChain (Fin.castSucc i) =
+      equatorEmbed (P.prefixChain i) := by
+  apply Subtype.ext
+  apply signedSubset_ext_pos_neg
+  · ext x
+    by_cases hxlast : x = Fin.last r
+    · subst x
+      simp [SignedPermutation.prefixChain, SignedPermutation.prefixSignedSubset,
+        SignedPermutation.prefixPos, signedSubsetEquatorEmbed, equatorEmbed,
+        signedPermutationEquatorExtend]
+    · rcases Fin.exists_succAbove_eq hxlast with ⟨y, hy⟩
+      have hcast : Fin.castSucc y = x := by
+        simpa [Fin.succAbove_last] using hy
+      subst x
+      simp [SignedPermutation.prefixChain, SignedPermutation.prefixSignedSubset,
+        SignedPermutation.prefixPos, signedSubsetEquatorEmbed, equatorEmbed,
+        signedPermutationEquatorExtend, Fin.castSucc_le_castSucc_iff]
+  · ext x
+    by_cases hxlast : x = Fin.last r
+    · subst x
+      simp [SignedPermutation.prefixChain, SignedPermutation.prefixSignedSubset,
+        SignedPermutation.prefixNeg, signedSubsetEquatorEmbed, equatorEmbed,
+        signedPermutationEquatorExtend]
+    · rcases Fin.exists_succAbove_eq hxlast with ⟨y, hy⟩
+      have hcast : Fin.castSucc y = x := by
+        simpa [Fin.succAbove_last] using hy
+      subst x
+      simp [SignedPermutation.prefixChain, SignedPermutation.prefixSignedSubset,
+        SignedPermutation.prefixNeg, signedSubsetEquatorEmbed, equatorEmbed,
+        signedPermutationEquatorExtend, Fin.castSucc_le_castSucc_iff]
+
+theorem equatorEmbed_injective {r : ℕ} :
+    Function.Injective (@equatorEmbed r) := by
+  intro X Y h
+  exact (equatorEquiv r).injective (Subtype.ext h)
+
+theorem signedPermutation_eq_of_prefixChain_eq {n : ℕ}
+    (P Q : SignedPermutation n)
+    (hprefix : ∀ i : Fin n, Q.prefixChain i = P.prefixChain i) :
+    Q = P := by
+  apply SignedPermutation.ext_order_positive
+  · apply Equiv.ext
+    intro i
+    exact (order_positive_eq_of_prefixChain_eq_of_prev_eq P Q i
+      (hprefix i) (fun j _hj => hprefix j)).1
+  · funext i
+    exact (order_positive_eq_of_prefixChain_eq_of_prev_eq P Q i
+      (hprefix i) (fun j _hj => hprefix j)).2
+
+theorem perm_apply_last_of_symm_last {r : ℕ}
+    (e : Equiv.Perm (Fin (r + 1)))
+    (hcoord : e.symm (Fin.last r) = Fin.last r) :
+    e (Fin.last r) = Fin.last r := by
+  calc
+    e (Fin.last r) = e (e.symm (Fin.last r)) := by rw [hcoord]
+    _ = Fin.last r := by simp
+
+theorem perm_apply_castSucc_ne_last_of_symm_last {r : ℕ}
+    (e : Equiv.Perm (Fin (r + 1)))
+    (hcoord : e.symm (Fin.last r) = Fin.last r) (i : Fin r) :
+    e (Fin.castSucc i) ≠ Fin.last r := by
+  intro hlast
+  have h := congrArg e.symm hlast
+  have hcast : Fin.castSucc i = Fin.last r := by
+    simpa [hcoord] using h
+  exact (Fin.castSucc_lt_last i).ne hcast
+
+theorem perm_symm_apply_castSucc_ne_last_of_symm_last {r : ℕ}
+    (e : Equiv.Perm (Fin (r + 1)))
+    (hcoord : e.symm (Fin.last r) = Fin.last r) (i : Fin r) :
+    e.symm (Fin.castSucc i) ≠ Fin.last r := by
+  intro hlast
+  have h := congrArg e hlast
+  have hcast : Fin.castSucc i = Fin.last r := by
+    simpa [perm_apply_last_of_symm_last e hcoord] using h
+  exact (Fin.castSucc_lt_last i).ne hcast
+
+noncomputable def equatorDropOrder {r : ℕ} (e : Equiv.Perm (Fin (r + 1)))
+    (hcoord : e.symm (Fin.last r) = Fin.last r) :
+    Equiv.Perm (Fin r) where
+  toFun i :=
+    finPredOfNotLast (e (Fin.castSucc i))
+      (perm_apply_castSucc_ne_last_of_symm_last e hcoord i)
+  invFun i :=
+    finPredOfNotLast (e.symm (Fin.castSucc i))
+      (perm_symm_apply_castSucc_ne_last_of_symm_last e hcoord i)
+  left_inv := by
+    intro i
+    apply Fin.castSucc_injective
+    calc
+      Fin.castSucc
+          (finPredOfNotLast
+            (e.symm
+              (Fin.castSucc
+                (finPredOfNotLast (e (Fin.castSucc i))
+                  (perm_apply_castSucc_ne_last_of_symm_last e hcoord i))))
+            (perm_symm_apply_castSucc_ne_last_of_symm_last e hcoord
+              (finPredOfNotLast (e (Fin.castSucc i))
+                (perm_apply_castSucc_ne_last_of_symm_last e hcoord i)))) =
+        e.symm
+          (Fin.castSucc
+            (finPredOfNotLast (e (Fin.castSucc i))
+              (perm_apply_castSucc_ne_last_of_symm_last e hcoord i))) := by
+          rw [castSucc_finPredOfNotLast]
+      _ = e.symm (e (Fin.castSucc i)) := by
+          rw [castSucc_finPredOfNotLast]
+      _ = Fin.castSucc i := by simp
+  right_inv := by
+    intro i
+    apply Fin.castSucc_injective
+    calc
+      Fin.castSucc
+          (finPredOfNotLast
+            (e
+              (Fin.castSucc
+                (finPredOfNotLast (e.symm (Fin.castSucc i))
+                  (perm_symm_apply_castSucc_ne_last_of_symm_last e hcoord i))))
+            (perm_apply_castSucc_ne_last_of_symm_last e hcoord
+              (finPredOfNotLast (e.symm (Fin.castSucc i))
+                (perm_symm_apply_castSucc_ne_last_of_symm_last e hcoord i)))) =
+        e
+          (Fin.castSucc
+            (finPredOfNotLast (e.symm (Fin.castSucc i))
+              (perm_symm_apply_castSucc_ne_last_of_symm_last e hcoord i))) := by
+          rw [castSucc_finPredOfNotLast]
+      _ = e (e.symm (Fin.castSucc i)) := by
+          rw [castSucc_finPredOfNotLast]
+      _ = Fin.castSucc i := by simp
+
+@[simp]
+theorem equatorDropOrder_apply_castSucc {r : ℕ}
+    (e : Equiv.Perm (Fin (r + 1)))
+    (hcoord : e.symm (Fin.last r) = Fin.last r) (i : Fin r) :
+    Fin.castSucc (equatorDropOrder e hcoord i) = e (Fin.castSucc i) := by
+  dsimp [equatorDropOrder]
+  rw [castSucc_finPredOfNotLast]
+
+@[simp]
+theorem equatorDropOrder_symm_apply_castSucc {r : ℕ}
+    (e : Equiv.Perm (Fin (r + 1)))
+    (hcoord : e.symm (Fin.last r) = Fin.last r) (i : Fin r) :
+    Fin.castSucc ((equatorDropOrder e hcoord).symm i) =
+      e.symm (Fin.castSucc i) := by
+  dsimp [equatorDropOrder]
+  rw [castSucc_finPredOfNotLast]
+
+noncomputable def signedPermutationEquatorDrop {r : ℕ}
+    (P : SignedPermutation (r + 1))
+    (hcoord : P.order.symm (Fin.last r) = Fin.last r) :
+    SignedPermutation r where
+  order := equatorDropOrder P.order hcoord
+  positive := fun i => P.positive (Fin.castSucc i)
+
+theorem signedPermutationEquatorDrop_prefixChain_castSucc {r : ℕ}
+    (P : SignedPermutation (r + 1))
+    (hcoord : P.order.symm (Fin.last r) = Fin.last r) (i : Fin r) :
+    equatorEmbed ((signedPermutationEquatorDrop P hcoord).prefixChain i) =
+      P.prefixChain (Fin.castSucc i) := by
+  apply Subtype.ext
+  apply signedSubset_ext_pos_neg
+  · ext x
+    by_cases hxlast : x = Fin.last r
+    · subst x
+      simp [SignedPermutation.prefixChain, SignedPermutation.prefixSignedSubset,
+        SignedPermutation.prefixPos, signedSubsetEquatorEmbed, equatorEmbed,
+        signedPermutationEquatorDrop, hcoord]
+    · rcases Fin.exists_succAbove_eq hxlast with ⟨y, hy⟩
+      have hcast : Fin.castSucc y = x := by
+        simpa [Fin.succAbove_last] using hy
+      subst x
+      have hleiff :
+          ((equatorDropOrder P.order hcoord).symm y ≤ i) ↔
+            P.order.symm (Fin.castSucc y) ≤ Fin.castSucc i := by
+        constructor
+        · intro hle
+          rw [← equatorDropOrder_symm_apply_castSucc P.order hcoord y]
+          exact Fin.castSucc_le_castSucc_iff.mpr hle
+        · intro hle
+          apply Fin.castSucc_le_castSucc_iff.mp
+          rwa [equatorDropOrder_symm_apply_castSucc P.order hcoord y]
+      simp [SignedPermutation.prefixChain, SignedPermutation.prefixSignedSubset,
+        SignedPermutation.prefixPos, signedSubsetEquatorEmbed, equatorEmbed,
+        signedPermutationEquatorDrop, hleiff]
+  · ext x
+    by_cases hxlast : x = Fin.last r
+    · subst x
+      simp [SignedPermutation.prefixChain, SignedPermutation.prefixSignedSubset,
+        SignedPermutation.prefixNeg, signedSubsetEquatorEmbed, equatorEmbed,
+        signedPermutationEquatorDrop, hcoord]
+    · rcases Fin.exists_succAbove_eq hxlast with ⟨y, hy⟩
+      have hcast : Fin.castSucc y = x := by
+        simpa [Fin.succAbove_last] using hy
+      subst x
+      have hleiff :
+          ((equatorDropOrder P.order hcoord).symm y ≤ i) ↔
+            P.order.symm (Fin.castSucc y) ≤ Fin.castSucc i := by
+        constructor
+        · intro hle
+          rw [← equatorDropOrder_symm_apply_castSucc P.order hcoord y]
+          exact Fin.castSucc_le_castSucc_iff.mpr hle
+        · intro hle
+          apply Fin.castSucc_le_castSucc_iff.mp
+          rwa [equatorDropOrder_symm_apply_castSucc P.order hcoord y]
+      simp [SignedPermutation.prefixChain, SignedPermutation.prefixSignedSubset,
+        SignedPermutation.prefixNeg, signedSubsetEquatorEmbed, equatorEmbed,
+        signedPermutationEquatorDrop, hleiff]
+
+def FullAltPosChain {r m : ℕ}
+    (label : NonzeroSignedSubset r → SignedLabel m) :=
+  {P : SignedPermutation r // IsAltPos label (fun i : Fin r => P.prefixChain i)}
+
+noncomputable instance fullAltPosChain_fintype {r m : ℕ}
+    (label : NonzeroSignedSubset r → SignedLabel m) :
+    Fintype (FullAltPosChain label) := by
+  classical
+  dsimp [FullAltPosChain]
+  infer_instance
+
+noncomputable def fullAltPosToEquatorActualAltRidge {r m : ℕ}
+    {label : NonzeroSignedSubset r → SignedLabel m}
+    (P : FullAltPosChain label) :
+    EquatorActualAltRidge label := by
+  classical
+  refine ⟨fun i : Fin r => P.1.prefixChain i, ?_, P.2⟩
+  refine ⟨signedPermutationEquatorExtend P.1,
+    signedPermutationEquatorExtend_upperPrefixChain P.1,
+    signedPermutationEquatorExtend_boundary P.1, ?_⟩
+  intro a
+  simpa [Fin.succAbove_last] using
+    (signedPermutationEquatorExtend_prefixChain_castSucc P.1 a).symm
+
+noncomputable def equatorActualAltRidgeToFullAltPos {r m : ℕ}
+    {label : NonzeroSignedSubset r → SignedLabel m}
+    (rho : EquatorActualAltRidge label) :
+    FullAltPosChain label := by
+  classical
+  let P : SignedPermutation (r + 1) := Classical.choose rho.2.1
+  have hspec :
+      UpperPrefixChain P ∧ RepresentedUpperRidgeBoundary P (Fin.last r) ∧
+        ∀ a : Fin r,
+          equatorEmbed (rho.1 a) = P.prefixChain ((Fin.last r).succAbove a) :=
+    Classical.choose_spec rho.2.1
+  let Q : SignedPermutation r := signedPermutationEquatorDrop P hspec.2.1.2
+  have hprefix : ∀ a : Fin r, Q.prefixChain a = rho.1 a := by
+    intro a
+    apply equatorEmbed_injective
+    calc
+      equatorEmbed (Q.prefixChain a) = P.prefixChain (Fin.castSucc a) := by
+        exact signedPermutationEquatorDrop_prefixChain_castSucc P hspec.2.1.2 a
+      _ = P.prefixChain ((Fin.last r).succAbove a) := by
+        simp [Fin.succAbove_last]
+      _ = equatorEmbed (rho.1 a) := (hspec.2.2 a).symm
+  refine ⟨Q, ?_⟩
+  have hfun : (fun i : Fin r => Q.prefixChain i) = rho.1 := by
+    funext i
+    exact hprefix i
+  simpa [hfun] using rho.2.2
+
+theorem equatorActualAltRidgeToFullAltPos_prefixChain {r m : ℕ}
+    {label : NonzeroSignedSubset r → SignedLabel m}
+    (rho : EquatorActualAltRidge label) (i : Fin r) :
+    (equatorActualAltRidgeToFullAltPos rho).1.prefixChain i = rho.1 i := by
+  classical
+  unfold equatorActualAltRidgeToFullAltPos
+  dsimp
+  let P : SignedPermutation (r + 1) := Classical.choose rho.2.1
+  have hspec :
+      UpperPrefixChain P ∧ RepresentedUpperRidgeBoundary P (Fin.last r) ∧
+        ∀ a : Fin r,
+          equatorEmbed (rho.1 a) = P.prefixChain ((Fin.last r).succAbove a) :=
+    Classical.choose_spec rho.2.1
+  apply equatorEmbed_injective
+  calc
+    equatorEmbed ((signedPermutationEquatorDrop P hspec.2.1.2).prefixChain i) =
+        P.prefixChain (Fin.castSucc i) := by
+      exact signedPermutationEquatorDrop_prefixChain_castSucc P hspec.2.1.2 i
+    _ = P.prefixChain ((Fin.last r).succAbove i) := by
+      simp [Fin.succAbove_last]
+    _ = equatorEmbed (rho.1 i) := (hspec.2.2 i).symm
+
+noncomputable def equatorActualAltRidgeEquivFullAltPos {r m : ℕ}
+    (label : NonzeroSignedSubset r → SignedLabel m) :
+    EquatorActualAltRidge label ≃ FullAltPosChain label where
+  toFun := equatorActualAltRidgeToFullAltPos
+  invFun := fullAltPosToEquatorActualAltRidge
+  left_inv := by
+    intro rho
+    apply Subtype.ext
+    funext i
+    exact equatorActualAltRidgeToFullAltPos_prefixChain rho i
+  right_inv := by
+    intro P
+    apply Subtype.ext
+    apply signedPermutation_eq_of_prefixChain_eq P.1
+    intro i
+    simpa [fullAltPosToEquatorActualAltRidge] using
+      equatorActualAltRidgeToFullAltPos_prefixChain
+        (fullAltPosToEquatorActualAltRidge P) i
+
+theorem equatorActualAlt_card_eq_full_alt_pos {r m : ℕ}
+    (label : NonzeroSignedSubset r → SignedLabel m) :
+    Fintype.card (EquatorActualAltRidge label) =
+      Fintype.card (FullAltPosChain label) :=
+  Fintype.card_congr (equatorActualAltRidgeEquivFullAltPos label)
+
+noncomputable def upperTopToFullAltPos {r m : ℕ}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (sigma : {sigma : ActualHemisphereAltChain label //
+      actualHemisphereAltTop sigma}) :
+    FullAltPosChain label := by
+  classical
+  let P : SignedPermutation (r + 1) := sigma.1.1
+  by_cases hpos : IsAltPos label (fun i : Fin (r + 1) => P.prefixChain i)
+  · exact ⟨P, hpos⟩
+  · have hneg : IsAltNeg label (fun i : Fin (r + 1) => P.prefixChain i) := by
+      rcases sigma.2 with h | h
+      · exact False.elim (hpos h)
+      · exact h
+    exact ⟨P.antipode, (IsAltPos_antipode_iff_isAltNeg hantipodal P).mpr hneg⟩
+
+noncomputable def fullAltPosToUpperTop {r m : ℕ}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (P : FullAltPosChain label) :
+    {sigma : ActualHemisphereAltChain label // actualHemisphereAltTop sigma} := by
+  classical
+  by_cases hupper : UpperPrefixChain P.1
+  · exact ⟨⟨P.1, hupper⟩, Or.inl P.2⟩
+  · have hupperAnti : UpperPrefixChain P.1.antipode :=
+      (upperPrefixChain_antipode_iff_not P.1).mpr hupper
+    have hnegAnti :
+        IsAltNeg label (fun i : Fin (r + 1) => P.1.antipode.prefixChain i) :=
+      (IsAltNeg_antipode_iff_isAltPos hantipodal P.1).mpr P.2
+    exact ⟨⟨P.1.antipode, hupperAnti⟩, Or.inr hnegAnti⟩
+
+noncomputable def upperTopEquivFullAltPos {r m : ℕ}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    {sigma : ActualHemisphereAltChain label // actualHemisphereAltTop sigma} ≃
+      FullAltPosChain label where
+  toFun := upperTopToFullAltPos hantipodal
+  invFun := fullAltPosToUpperTop hantipodal
+  left_inv := by
+    intro sigma
+    classical
+    dsimp [upperTopToFullAltPos, fullAltPosToUpperTop]
+    let P : SignedPermutation (r + 1) := sigma.1.1
+    have hupper : UpperPrefixChain P := sigma.1.2
+    by_cases hpos : IsAltPos label (fun i : Fin (r + 1) => P.prefixChain i)
+    · simp [P, hpos, hupper]
+    · have hnotUpperAnti : ¬ UpperPrefixChain P.antipode := by
+        intro h
+        exact (upperPrefixChain_antipode_iff_not P).mp h hupper
+      simp [P, hpos, hnotUpperAnti]
+      apply Subtype.ext
+      apply Subtype.ext
+      exact SignedPermutation.antipode_involutive P
+  right_inv := by
+    intro P
+    classical
+    dsimp [upperTopToFullAltPos, fullAltPosToUpperTop]
+    by_cases hupper : UpperPrefixChain P.1
+    · have hposP : IsAltPos label (fun i : Fin (r + 1) => P.1.prefixChain i) := P.2
+      simp [hupper, hposP]
+    · have hupperAnti : UpperPrefixChain P.1.antipode :=
+        (upperPrefixChain_antipode_iff_not P.1).mpr hupper
+      have hnotPosAnti :
+          ¬ IsAltPos label (fun i : Fin (r + 1) => P.1.antipode.prefixChain i) := by
+        intro hposAnti
+        have hnegP :
+            IsAltNeg label (fun i : Fin (r + 1) => P.1.prefixChain i) :=
+          (IsAltPos_antipode_iff_isAltNeg hantipodal P.1).mp hposAnti
+        exact IsAltPos.not_isAltNeg (Nat.succ_pos r) P.2 hnegP
+      simp [hupper, hupperAnti, hnotPosAnti]
+      apply Subtype.ext
+      exact SignedPermutation.antipode_involutive P.1
+
+theorem upper_top_card_eq_full_alt_pos {r m : ℕ}
+    {label : NonzeroSignedSubset (r + 1) → SignedLabel m}
+    (hantipodal : ∀ X, label X.antipode = (label X).neg) :
+    Fintype.card
+        {sigma : ActualHemisphereAltChain label // actualHemisphereAltTop sigma} =
+      Fintype.card (FullAltPosChain label) :=
+  Fintype.card_congr (upperTopEquivFullAltPos hantipodal)
+
+theorem IsAltPos_one_iff_positiveAlternatingPrefixLabels {m : ℕ}
+    (label : NonzeroSignedSubset 1 → SignedLabel m)
+    (P : SignedPermutation 1) :
+    IsAltPos label (fun i : Fin 1 => P.prefixChain i) ↔
+      PositiveAlternatingPrefixLabels label P := by
+  classical
+  constructor
+  · rintro ⟨idx, _hidx, hset⟩
+    refine ⟨?_, ?_⟩
+    · intro a b hab
+      fin_cases a
+      fin_cases b
+      omega
+    · intro i
+      fin_cases i
+      have hmem :
+          label (P.prefixChain 0) ∈
+            alternatingLabelSetOf idx := by
+        have hmemSimplex :
+            label (P.prefixChain 0) ∈
+              simplexLabelSet label (fun i : Fin 1 => P.prefixChain i) := by
+          simp [simplexLabelSet]
+        simpa [hset] using hmemSimplex
+      have hlabel :
+          label (P.prefixChain 0) = alternatingLabelOf idx 0 := by
+        simpa [alternatingLabelSetOf] using hmem
+      simpa [alternatingLabelOf] using
+        congrArg SignedLabel.positive hlabel
+  · rintro ⟨hstrict, hsign⟩
+    refine ⟨fun i : Fin 1 => (label (P.prefixChain i)).index, hstrict, ?_⟩
+    have hlabel :
+        label (P.prefixChain 0) =
+          alternatingLabelOf
+            (fun i : Fin 1 => (label (P.prefixChain i)).index) 0 := by
+      apply SignedLabel.ext
+      · simpa [alternatingLabelOf] using hsign 0
+      · rfl
+    ext x
+    constructor
+    · intro hx
+      have hx0 : x = label (P.prefixChain 0) := by
+        simpa [simplexLabelSet] using hx
+      rw [hx0]
+      simp [alternatingLabelSetOf, hlabel]
+    · intro hx
+      have hx0 :
+          x =
+            alternatingLabelOf
+              (fun i : Fin 1 => (label (P.prefixChain i)).index) 0 := by
+        simpa [alternatingLabelSetOf] using hx
+      rw [hx0]
+      simp [simplexLabelSet, hlabel]
+
+noncomputable def fullAltPosChainEquivPositiveAlternatingPrefixLabelChains_one
+    {m : ℕ} (label : NonzeroSignedSubset 1 → SignedLabel m) :
+    FullAltPosChain label ≃
+      {P : SignedPermutation 1 // P ∈ positiveAlternatingPrefixLabelChains label} where
+  toFun P :=
+    ⟨P.1, by
+      classical
+      have hpos :
+          PositiveAlternatingPrefixLabels label P.1 :=
+        (IsAltPos_one_iff_positiveAlternatingPrefixLabels label P.1).mp P.2
+      simpa [positiveAlternatingPrefixLabelChains, hpos]⟩
+  invFun P :=
+    ⟨P.1, by
+      classical
+      apply (IsAltPos_one_iff_positiveAlternatingPrefixLabels label P.1).mpr
+      have hmem := P.2
+      change P.1 ∈
+        (Finset.univ.filter fun P : SignedPermutation 1 =>
+          PositiveAlternatingPrefixLabels label P) at hmem
+      exact (Finset.mem_filter.mp hmem).2⟩
+  left_inv := by
+    intro P
+    rfl
+  right_inv := by
+    intro P
+    rfl
+
+theorem fullAltPosChain_card_eq_positiveAlternatingPrefixLabelChains_one
+    {m : ℕ} (label : NonzeroSignedSubset 1 → SignedLabel m) :
+    Fintype.card (FullAltPosChain label) =
+      (positiveAlternatingPrefixLabelChains label).card := by
+  calc
+    Fintype.card (FullAltPosChain label) =
+        Fintype.card
+          {P : SignedPermutation 1 // P ∈ positiveAlternatingPrefixLabelChains label} :=
+      Fintype.card_congr
+        (fullAltPosChainEquivPositiveAlternatingPrefixLabelChains_one label)
+    _ = (positiveAlternatingPrefixLabelChains label).card := by
+      rw [Fintype.card_subtype]
+      simp
+
+theorem fullAltPosChain_one_odd {m : ℕ} (hm : 1 ≤ m)
+    {label : NonzeroSignedSubset 1 → SignedLabel m}
+    (hantipodal : ∀ X, label X.antipode = (label X).neg)
+    (hno : NoComplementaryComparableLabels label) :
+    Odd (Fintype.card (FullAltPosChain label)) := by
+  have hposOdd :=
+    (kyFanParityStatement_one (m := m) hm) (by omega) hm
+      label hantipodal hno
+  rw [fullAltPosChain_card_eq_positiveAlternatingPrefixLabelChains_one]
+  exact hposOdd
+
+theorem fan_sphere_parity :
+    ∀ r m : ℕ,
+      1 ≤ r →
+        r ≤ m →
+          ∀ label : NonzeroSignedSubset r → SignedLabel m,
+            (∀ X, label X.antipode = (label X).neg) →
+              NoComplementaryComparableLabels label →
+                Odd (Fintype.card (FullAltPosChain label)) := by
+  intro r
+  induction r with
+  | zero =>
+      intro m hr _hm _label _hantipodal _hno
+      omega
+  | succ r ih =>
+      cases r with
+      | zero =>
+          intro m _hr hm label hantipodal hno
+          exact fullAltPosChain_one_odd hm hantipodal hno
+      | succ r =>
+          intro m _hr hm label hantipodal hno
+          let labelEq : NonzeroSignedSubset (r + 1) → SignedLabel m :=
+            equatorRestrictedLabelOf label
+          have heqOdd :
+              Odd (Fintype.card (FullAltPosChain labelEq)) := by
+            exact ih m (by omega) (by omega) labelEq
+              (equatorRestrictedLabelOf_antipodal hantipodal)
+              (equatorRestrictedLabelOf_noComplementary hno)
+          have hboundaryOdd :
+              Odd (Fintype.card
+                {rho : ActualHemisphereAltRidge label //
+                  actualHemisphereAltBoundary rho}) := by
+            have hboundaryCard := equatorBoundaryAltCardBridge label
+            have heqCard := equatorActualAlt_card_eq_full_alt_pos labelEq
+            rw [hboundaryCard, heqCard]
+            exact heqOdd
+          have htopOdd :
+              Odd (Fintype.card
+                {sigma : ActualHemisphereAltChain label //
+                  actualHemisphereAltTop sigma}) :=
+            ball_parity (hr := by omega) hno hboundaryOdd
+          rw [upper_top_card_eq_full_alt_pos hantipodal] at htopOdd
+          exact htopOdd
+
+theorem strictMono_fin_self_eq_id {d : ℕ} {idx : Fin d → Fin d}
+    (hidx : StrictMono idx) :
+    idx = fun i => i := by
+  funext i
+  exact le_antisymm (StrictMono.le_id hidx i) (StrictMono.id_le hidx i)
+
+theorem IsAltPos_iff_label_set_A {d : ℕ}
+    {label : NonzeroSignedSubset d → SignedLabel d}
+    {rho : Fin d → NonzeroSignedSubset d} :
+    IsAltPos label rho ↔
+      ∀ a : Fin d, ∃ t : Fin d, label (rho t) = alternatingLabel a := by
+  classical
+  constructor
+  · rintro ⟨idx, hidx, hset⟩ a
+    have hidxId : idx = fun i : Fin d => i :=
+      strictMono_fin_self_eq_id hidx
+    subst idx
+    have hmemAlt :
+        alternatingLabel a ∈
+          alternatingLabelSetOf (fun i : Fin d => i) := by
+      simp [alternatingLabelSetOf, alternatingLabelOf, alternatingLabel]
+    have hmemSimplex :
+        alternatingLabel a ∈ simplexLabelSet label rho := by
+      simpa [hset] using hmemAlt
+    rcases (by simpa [simplexLabelSet] using hmemSimplex) with ⟨t, ht⟩
+    exact ⟨t, ht⟩
+  · intro hA
+    refine ⟨fun i : Fin d => i, (fun _ _ h => h), ?_⟩
+    have hsubset :
+        alternatingLabelSetOf (fun i : Fin d => i) ⊆
+          simplexLabelSet label rho := by
+      intro x hx
+      rcases (by simpa [alternatingLabelSetOf] using hx) with ⟨a, ha⟩
+      rcases hA a with ⟨t, ht⟩
+      refine Finset.mem_image.mpr ⟨t, Finset.mem_univ _, ?_⟩
+      rw [← ha]
+      simpa [alternatingLabelOf, alternatingLabel] using ht
+    have hsimplexCard :
+        (simplexLabelSet label rho).card ≤ d := by
+      dsimp [simplexLabelSet]
+      calc
+        (Finset.univ.image fun a : Fin d => label (rho a)).card ≤
+            (Finset.univ : Finset (Fin d)).card :=
+          Finset.card_image_le
+        _ = d := by simp
+    have hAltCard :
+        (alternatingLabelSetOf (fun i : Fin d => i)).card = d :=
+      alternatingLabelSetOf_card (Function.injective_id)
+    have hcard :
+        (simplexLabelSet label rho).card ≤
+          (alternatingLabelSetOf (fun i : Fin d => i)).card := by
+      simpa [hAltCard] using hsimplexCard
+    exact (Finset.eq_of_subset_of_card_le hsubset hcard).symm
+
+noncomputable def equatorActualARidgeEquivEquatorActualAltRidge {d : ℕ}
+    (label : NonzeroSignedSubset d → SignedLabel d) :
+    EquatorActualARidge label ≃ EquatorActualAltRidge label where
+  toFun rho :=
+    ⟨rho.1, rho.2.1, (IsAltPos_iff_label_set_A).mpr rho.2.2⟩
+  invFun rho :=
+    ⟨rho.1, rho.2.1, (IsAltPos_iff_label_set_A).mp rho.2.2⟩
+  left_inv := by
+    intro rho
+    rfl
+  right_inv := by
+    intro rho
+    rfl
+
+theorem equatorActualARidge_card_eq_full_alt_pos {d : ℕ}
+    (label : NonzeroSignedSubset d → SignedLabel d) :
+    Fintype.card (EquatorActualARidge label) =
+      Fintype.card (FullAltPosChain label) := by
+  calc
+    Fintype.card (EquatorActualARidge label) =
+        Fintype.card (EquatorActualAltRidge label) :=
+      Fintype.card_congr (equatorActualARidgeEquivEquatorActualAltRidge label)
+    _ = Fintype.card (FullAltPosChain label) :=
+      equatorActualAlt_card_eq_full_alt_pos label
+
 /-! ## Fan parity induction and Tucker reduction, as explicit data interfaces -/
 
 /-- One induction step of Ky Fan parity from the equator count and the two
@@ -5369,6 +6233,19 @@ theorem tuckerLemma_pos_of_kyFanUnordered
           exact tuckerLemmaStatement_succ_of_equator_boundary_card_bridge
             (d := e + 1) (by omega) (hKy (e + 1) (by omega))
             (equatorBoundaryCardBridge (e + 1))
+
+theorem kyFanUnordered_all :
+    ∀ d : ℕ, 1 ≤ d → KyFanUnorderedParityStatement d := by
+  intro d hd label hantipodal hno
+  have hfull :
+      Odd (Fintype.card (FullAltPosChain label)) :=
+    fan_sphere_parity d d hd le_rfl label hantipodal hno
+  rw [equatorActualARidge_card_eq_full_alt_pos label]
+  exact hfull
+
+theorem tuckerLemma_pos :
+    ∀ n : ℕ, 1 ≤ n → TuckerLemmaStatement n :=
+  tuckerLemma_pos_of_kyFanUnordered kyFanUnordered_all
 
 /-- Fan parity induction, separated from the geometric hemisphere step.  The
 step is intended to be supplied by `kyFan_parity_step_from_rho_sigma_data`

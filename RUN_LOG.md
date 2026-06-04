@@ -5,3 +5,8 @@
 - starting avenue: (a) — E1/E3/E4/E5 + color plumbing built locally; E2 → codex worker ch20-e2
 - end: <open>
 - final result: <open>
+
+## 2026-06-04 — Ch20 CLOSED (commits 8c75a60, 5c27284); full-repo lake build EXIT 0.
+monsky_dissection unconditional, #print axioms = {propext, Classical.choice, Quot.sound}.
+Next avenue: Ch39 Kneser via combinatorial Tucker lemma (TuckerLemmaStatement n).
+Open chapters remaining: 09, 13, 22, 35, 36, 39.

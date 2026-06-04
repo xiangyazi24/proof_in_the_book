@@ -1,4 +1,5 @@
 import Mathlib
+import ProofsInTheBook.Chapter22
 
 /-!
 # Real-stable polynomials (toward Chapter 22, Gurvits capacity)
@@ -69,6 +70,17 @@ lemma linearForm_stable {m : ℕ} (C : Fin m → ℝ) (hC : ∀ j, 0 ≤ C j)
   intro hz0
   rw [hz0] at hpos'
   simp at hpos'
+
+/-- **The row-linear product is real-stable** (the base of the Gurvits capacity iteration): for a
+nonnegative matrix with strictly positive row sums (e.g. doubly stochastic), `∏ᵢ ∑ⱼ Aᵢⱼ Xⱼ` is
+real-stable. -/
+lemma rowLinearMvPolynomial_realStable {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
+    (hA : ∀ i j, 0 ≤ A i j) (hrow : ∀ i, 0 < ∑ j, A i j) :
+    RealStable (ProofsInTheBook.Chapter22.rowLinearMvPolynomial A) := by
+  rw [ProofsInTheBook.Chapter22.rowLinearMvPolynomial]
+  apply RealStable.prod
+  intro i _
+  exact linearForm_stable (A i) (fun j => hA i j) (hrow i)
 
 /-!
 ### Univariate real-rootedness and its derivative closure (the univariate Lieb–Sokal heart)

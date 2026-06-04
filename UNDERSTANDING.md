@@ -5,6 +5,33 @@
 Full-book formalization of *Proofs from THE BOOK* (Aigner & Ziegler) in Lean 4.
 40 chapters, each formalizing one "book proof."
 
+**2026-06-04 — Open-chapter campaign status (honest).**
+After Ch20 closed, the 6 remaining open chapters (09, 13, 22, 35, 36, 39) each
+reduce to a research-frontier core that codex (gpt-5.5) cannot grind and that
+must NOT be rushed (rushing produces degenerate/empty-type formalizations — see
+Ch39 below):
+- **Ch39 Kneser/Tucker**: `TuckerLemmaStatement` is the genuine signed Tucker
+  (faithful; kneser's `htucker` is legitimate). `Chapter39Tucker.lean` has a
+  SOUND, verified base (`495afd8`): pigeonhole (`exists_same_index_in_prefixChain`)
+  + `tuckerLemmaStatement_of_chain_complementary` (Tucker ⟸ some chain has a
+  same-index OPPOSITE-sign comparable pair). Remaining core = forcing opposite
+  signs (the global Ky Fan path/parity argument ≈ Borsuk-Ulam). Codex failed it
+  5 rounds; its earlier "endpoint-pairing" framework was DEGENERATE (the
+  alternating-prefix types are provably empty: `StrictMono (Fin n → Fin (n-1))`
+  is impossible) — reverted (`39fd2fe`). Needs the genuine path argument
+  (master-formalized or a stronger model).
+- **Ch09 Dehn**: gap = 3-D scissors-congruence invariance of the Dehn invariant
+  on real polytopes (algebraic value-inequality `chapter09` already done).
+- **Ch22 vdW permanent**: gap = Gurvits capacity / real-stable polynomials
+  (`Matrix.permanent` + Birkhoff available; the analytic core is not).
+- **Ch13 Cauchy**: 3-D convex-polytope rigidity / arm lemma.
+- **Ch35 five-color**: planar graph type + Euler ⟹ degree-≤5 vertex (no Mathlib
+  planarity).
+- **Ch36 art gallery**: simple-polygon triangulation existence (ear theorem).
+Each is a Ch20-scale-or-harder formalization requiring a correct master-designed
+strategy before codex can build sound (non-degenerate) infrastructure. The
+ChatGPT bridge backup (channel `ssem`) was offline this run.
+
 **2026-06-04 — Ch20 Monsky CLOSED unconditionally.** `monsky_dissection`
 (`ProofsInTheBook/Chapter20DissectionFinal.lean`): no dissection of the unit
 square into an odd number of equal-area triangles, the genuine T-vertex-allowing

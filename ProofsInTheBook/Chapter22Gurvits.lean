@@ -144,6 +144,47 @@ lemma univariate_gurvits_factored {k : ℕ} (hk : 2 ≤ k) (c C : ℝ) (lam : Fi
   -- h5 : G k * C * t0 ≤ c * S * t0; cancel t0 > 0
   exact le_of_mul_le_mul_right h5 ht0
 
+/-- `G k ≥ 0`. -/
+lemma G_nonneg (k : ℕ) : 0 ≤ G k := by
+  rcases Nat.lt_or_ge k 2 with hk | hk
+  · interval_cases k <;> simp
+  · rw [G]
+    apply pow_nonneg
+    apply div_nonneg _ (by positivity)
+    have : (2 : ℝ) ≤ (k : ℝ) := by exact_mod_cast hk
+    linarith
+
+/-- **The capacity iteration.** Given a capacity sequence `cap` with the per-step Gurvits
+bound `G(m)·cap(m) ≤ cap(m-1)` for `2 ≤ m ≤ n`, the product of the constants times `cap(n)`
+bounds `cap(1)`: `(∏_{m=2}^n G(m))·cap(n) ≤ cap(1)`. (Combined with the telescoping identity
+and `cap(n) ≥ 1`, this gives the `n!/nⁿ` bound.) -/
+lemma capacity_chain (cap : ℕ → ℝ) :
+    ∀ n, 1 ≤ n → (∀ m, 2 ≤ m → m ≤ n → G m * cap m ≤ cap (m - 1)) →
+      (∏ m ∈ Finset.Icc 2 n, G m) * cap n ≤ cap 1 := by
+  intro n
+  induction n with
+  | zero => intro h; omega
+  | succ n ih =>
+      intro _hn hstep
+      rcases Nat.lt_or_ge n 1 with hn0 | hn1
+      · -- n = 0, so succ n = 1: empty product
+        interval_cases n
+        simp
+      · -- n ≥ 1
+        have hstep' : ∀ m, 2 ≤ m → m ≤ n → G m * cap m ≤ cap (m - 1) :=
+          fun m hm2 hmn => hstep m hm2 (by omega)
+        have hIH := ih hn1 hstep'
+        have hprodnn : 0 ≤ ∏ m ∈ Finset.Icc 2 n, G m :=
+          Finset.prod_nonneg (fun m _ => G_nonneg m)
+        rw [Finset.prod_Icc_succ_top (by omega : 2 ≤ n + 1)]
+        calc (∏ m ∈ Finset.Icc 2 n, G m) * G (n + 1) * cap (n + 1)
+            = (∏ m ∈ Finset.Icc 2 n, G m) * (G (n + 1) * cap (n + 1)) := by ring
+          _ ≤ (∏ m ∈ Finset.Icc 2 n, G m) * cap n := by
+              apply mul_le_mul_of_nonneg_left _ hprodnn
+              have := hstep (n + 1) (by omega) (by omega)
+              simpa using this
+          _ ≤ cap 1 := hIH
+
 /-!
 ### Algebraic interface to the Chapter 22 capacity core
 

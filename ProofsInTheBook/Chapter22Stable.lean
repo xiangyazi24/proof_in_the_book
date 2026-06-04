@@ -98,6 +98,35 @@ multiset cardinality equals the degree. -/
 def RealRooted (p : ℝ[X]) : Prop := Multiset.card p.roots = p.natDegree
 
 open Polynomial in
+/-- **A real polynomial with no root in the open upper half-plane is real-rooted**
+(conjugate-pairing: a non-real root would have a conjugate in the upper half-plane). This is the
+bridge from univariate real-stability to real-rootedness, used in the Lieb–Sokal lifting. -/
+lemma realRooted_of_forall_uhp_ne_zero (q : ℝ[X])
+    (h : ∀ w : ℂ, 0 < w.im → Polynomial.aeval w q ≠ 0) : RealRooted q := by
+  rcases eq_or_ne q 0 with rfl | hq0
+  · simp [RealRooted]
+  rw [RealRooted, ← Polynomial.splits_iff_card_roots]
+  apply Polynomial.Splits.of_splits_map_of_injective (i := algebraMap ℝ ℂ)
+    (algebraMap ℝ ℂ).injective (IsAlgClosed.splits _)
+  intro a ha
+  have haroot : Polynomial.aeval a q = 0 := by
+    have h2 := (Polynomial.mem_roots'.mp ha).2
+    rwa [Polynomial.IsRoot, Polynomial.eval_map, ← Polynomial.aeval_def] at h2
+  have him : a.im = 0 := by
+    by_contra hne
+    rcases lt_or_gt_of_ne hne with hneg | hpos
+    · have hconj : Polynomial.aeval ((starRingEnd ℂ) a) q = 0 := by
+        rw [Polynomial.aeval_conj, haroot, map_zero]
+      have hconjim : 0 < ((starRingEnd ℂ) a).im := by
+        rw [Complex.conj_im]; linarith
+      exact h _ hconjim hconj
+    · exact h a hpos haroot
+  refine ⟨a.re, ?_⟩
+  apply Complex.ext
+  · simp
+  · simp [him]
+
+open Polynomial in
 /-- **The derivative of a real-rooted polynomial is real-rooted** (Rolle interlacing). -/
 lemma RealRooted.derivative {p : ℝ[X]} (hp : RealRooted p) :
     RealRooted (Polynomial.derivative p) := by

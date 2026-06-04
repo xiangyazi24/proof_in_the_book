@@ -1,4 +1,5 @@
 import Mathlib
+import ProofsInTheBook.PlanarMap
 
 /-!
 # Chapter 12: Three applications of Euler's formula
@@ -39,8 +40,18 @@ theorem chapter12_platonic_solids :
   simp only [Set.mem_prod, Set.mem_Icc]
   exact ⟨⟨hp, by nlinarith⟩, ⟨hq, by nlinarith⟩⟩
 
-theorem chapter12 :
-    {pq : ℕ × ℕ | 3 ≤ pq.1 ∧ 3 ≤ pq.2 ∧ pq.1 * pq.2 < 2 * pq.1 + 2 * pq.2}.Finite :=
-  chapter12_platonic_solids
+open ProofsInTheBook.PlanarMap in
+/-- **Chapter 12 — the Platonic solids, derived from Euler's formula.**
+For any connected genus-zero combinatorial map (`IsSphereMap`, i.e. `V - E + F = 2`) that is
+regular — every face a `p`-gon (`p ≥ 3`) and every vertex of degree `q` (`q ≥ 3`) — the pair
+`(p, q)` is one of exactly five: `(3,3)`, `(3,4)`, `(4,3)`, `(3,5)`, `(5,3)`. The constraint
+`1/p + 1/q > 1/2` is *derived from* Euler's formula (`CombMap.platonic_constraint`), not assumed;
+hence there are exactly five Platonic solids. The set form is `chapter12_platonic_solids`. -/
+theorem chapter12 {D : Type*} [Fintype D] [DecidableEq D] (M : CombMap D)
+    (hsphere : M.IsSphereMap) {p q : ℕ} (hp : 3 ≤ p) (hq : 3 ≤ q) (hE : 0 < M.E)
+    (hF : M.FaceRegular p) (hV : M.VertexRegular q) :
+    (p = 3 ∧ q = 3) ∨ (p = 3 ∧ q = 4) ∨ (p = 4 ∧ q = 3) ∨
+      (p = 3 ∧ q = 5) ∨ (p = 5 ∧ q = 3) :=
+  CombMap.platonic_pairs M hsphere hp hq hE hF hV
 
 end ProofsInTheBook.Chapter12

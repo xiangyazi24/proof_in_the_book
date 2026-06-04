@@ -5,6 +5,17 @@
 Full-book formalization of *Proofs from THE BOOK* (Aigner & Ziegler) in Lean 4.
 40 chapters, each formalizing one "book proof."
 
+**2026-06-04 — Ch20 Monsky CLOSED unconditionally.** `monsky_dissection`
+(`ProofsInTheBook/Chapter20DissectionFinal.lean`): no dissection of the unit
+square into an odd number of equal-area triangles, the genuine T-vertex-allowing
+theorem replacing the edge-to-edge `RealEqualAreaUnitSquareTriangulation` escape.
+`#print axioms monsky_dissection = [propext, Classical.choice, Quot.sound]`,
+0 sorry across the dissection chain (Engine, E2Frontier/Cover/Boundary/Diagonal,
+Dissection/Colors/AtomicCount/SideGeom/Sperner/Final). Built via a 9-round
+master/worker codex collaboration (geometric lemma infrastructure) + master-side
+proof design and the final incidence assembly. Open chapters now: 09, 13, 22, 35,
+36, 39.
+
 **CURRENT STATUS (2026-05-26 — supersedes the old Ch11-era block below).**
 Whole repo: 0 sorry / 0 axiom. ~32 chapters fully closed & unconditional
 (incl. Ch03, Ch10, Ch11 Ungar, Ch16 Borsuk-via-constructed-Kahn-Kalai, Ch24,

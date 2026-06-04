@@ -38,4 +38,7 @@ import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38
 import ProofsInTheBook.Chapter39
 import ProofsInTheBook.Chapter40
+-- Chapter 20 (Monsky) faithful dissection theorem `monsky_dissection`
+-- (unconditional; supersedes the edge-to-edge `RealEqualAreaUnitSquareTriangulation` escape).
+import ProofsInTheBook.Chapter20DissectionFinal
 

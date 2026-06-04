@@ -56,10 +56,35 @@ LEGEND: ✅ faithful · ⚠️ conditional/fragment (real content assumed) · �
 | 39 | Kneser–Lovász | ★ headline conditional on htucker; FAITHFUL via `chapter39_unconditional` + `tuckerLemma_pos` (verified) |
 | 40 | Friendship theorem | ✅ |
 
-## Triage
-- **CONFIRMED faithful + axiom-clean (~28):** 01-08,10,11,15,16,17,19,21,23,24,25,26,27,28,29,30,31,32,34,37,38,40.
-- **FAITHFUL via verified alternate (2):** 20 (monsky_dissection), 39 (chapter39_unconditional).
-- **FRAGMENT / conditional-on-core (needs real proof) (≈4-6):** 13, 14, 22, 33, and check 35, 36.
-- **FRAGMENT-RISK / needs deeper read (3):** 09, 12, 18.
+## Triage (after deep reads, 2026-06-04)
+- **CONFIRMED faithful + axiom-clean (29):** 01-08,10,11,15,16,17,18,19,21,23,24,25,26,27,28,29,30,31,32,34,37,38,40.
+  - Ch18 CLOSED 2026-06-04 (was 2-var only; now headline = general n-AM-GM + `chapter18_cauchy_schwarz`).
+- **FAITHFUL via verified alternate (2):** 20 (monsky_dissection), 39 (chapter39_unconditional + tuckerLemma_pos).
+- **TALLY: 31/40 faithful + axiom-clean.**
+- **CONFIRMED FRAGMENTS (8) — the genuine remaining work:**
 
-Next: deep-read 09,12,13,14,18,22,33,35,36 to confirm fragment vs faithful, then close the genuine fragments.
+  | Ch | What's assumed/missing | Closability |
+  |----|------------------------|-------------|
+  | 09 Dehn | no scissors-congruence predicate; no "scissors-congruent ⇒ equal Dehn" invariance thm; headline only states two Dehn values differ (the arccos(1/3)/π irrationality IS genuinely proved) | HARD: needs geometric equidecomposability + invariance (Mathlib lacks) |
+  | 12 Euler | Euler's formula V-E+F=2 NOT proved (docstring only); chapter12 is a pure `nlinarith` finiteness fact, disconnected from graph theory; only 1 of 3 applications | MED-HARD: needs planar Euler formula |
+  | 13 Cauchy | conditional on CauchyRigidityCertificate (arm-lemma sign-change data + Euler bundled as hypothesis) | MED: arm lemma is finite-combinatorial |
+  | 14 Perles | conditional on PerlesFacetSeparationData (the separation crux `pairwiseOpposite_of_touching` is the hypothesis) | MED |
+  | ~~18 AM-GM~~ | ✅ CLOSED 2026-06-04 | done |
+  | 22 Gurvits | conditional on GurvitsSquarefreeCoefficientFromCapacityCore (the analytic capacity bound = heart of the proof) | HARD: analytic capacity argument |
+  | 33 Latin | conditional on EvansExactCardinalityCase = the `=n-1` Smetaniuk switching core (whole hard content) | HARD: Smetaniuk's theorem |
+  | 35 Five-color | FiveColorReducible is an inductive certificate ENCODING the Kempe-reduction steps; no planarity defined; needs `IsPlanar G → FiveColorReducible G` | HARD: Mathlib lacks planar graph theory |
+  | 36 Art gallery | 3-coloring of triangulation IS proved (crux); but TriangulatedPolygon is abstract (no geometry), no visibility, polygon-triangulation existence excluded | HARD: needs polygon geometry |
+
+  Closability order: **18 ✅ → 22,33 (research-grade, self-contained) → 13,14 (need polytope geometry) → 09,12,35,36 (need geometric/topological infra Mathlib lacks).**
+
+## Remaining-work assessment (2026-06-04)
+The 8 open fragments are the hard tail — none is a quick close:
+- **Ch33 (Evans/Smetaniuk):** scaffold present (Hall, Latin-rectangle extension, normalization, padding reduction, n≤3 done); missing = the general `=n-1` Smetaniuk switching induction. Self-contained finite combinatorics, research-grade.
+- **Ch22 (Gurvits/van der Waerden permanent):** missing = the analytic capacity lower bound (stable-polynomial / capacity argument). Self-contained analysis, research-grade.
+- **Ch13/14 (Cauchy rigidity / Perles):** the combinatorial cores are reachable, but the *faithful* unconditional theorems need convex-polytope geometry (realization), which Mathlib lacks.
+- **Ch09 (Hilbert 3rd):** needs a geometric scissors-congruence/equidecomposability relation + the invariance theorem (scissors-congruent ⇒ equal Dehn). The arithmetic obstruction (arccos(1/3)/π irrational, Dehn values differ) IS proved. Mathlib lacks equidecomposability.
+- **Ch12 (Euler):** needs Euler's formula V-E+F=2 for planar graphs proved (Mathlib lacks planar-graph theory), then derive the Platonic constraint from it.
+- **Ch35 (5-color):** needs a planarity predicate + `IsPlanar G → FiveColorReducible G` (Mathlib lacks planar graphs / Kempe-chain separation).
+- **Ch36 (art gallery):** 3-coloring crux IS proved; needs polygon-triangulation existence + visibility geometry (Mathlib lacks).
+
+DISPATCH STATUS: uisai1 saturated (load ~101, 6 codex, 89 lean) as of 2026-06-04 13:11 — codex dispatch on hold to avoid thrash; resume 33/22 dispatch when it drains.

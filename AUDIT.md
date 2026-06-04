@@ -93,3 +93,16 @@ The 8 open fragments, now with closability sharpened:
 Reclassification: 13 and 14 move from "infra-blocked" to "reachable proof obligations" (Mathlib has the affine-geometry tools). The genuine new-infra builds are 12+35 (planar maps — in progress), 09 (Dehn invariance, partial base in Equidecomp), 36 (polygon geometry).
 
 WORKERS (2026-06-04, /Xiang mode): Ch33 codex → reduced to Smetaniuk-switching (committed df0eb2b). Euler/planar design → round 3 (pbook serialized; bridge was flaky under concurrency, fixed by one-question-at-a-time).
+
+## Session progress 2026-06-04 (cores reduced to precise named lemmas)
+TALLY: **33/40** faithful+axiom-clean (closed this session: 39 Tucker, 18 AM-GM, 12 Platonic, 14 Perles).
+New infra (the Mathlib hole): PlanarMap / PlanarMapEuler / PlaneSimpleGraph / PlanarMapDelete; Chapter22Gurvits.
+Every remaining fragment is now reduced to ONE precise hard core:
+- **09 Dehn:** scissors-congruence def + invariance (scissors-congruent ⇒ equal Dehn). Geometry; Mathlib `Equidecomp` base. (arithmetic obstruction PROVEN)
+- **13 Cauchy:** the Euclidean arm-lemma (chord monotonic in opening angle) + a convex-polytope substrate. (combinatorial counting core PROVEN)
+- **22 Gurvits:** `GurvitsIteratedCapacityCertificate` — the single analytic estimate `∏G(m) ≤ rowLinearSquarefreeCoeff A`. Needs real-stable polynomial theory (Mathlib hole) + the univariate Gurvits lemma. (telescoping `∏G=n!/nⁿ` PROVEN; everything else wired)
+- **33 Smetaniuk:** the triangular normalization from the bare exact case ({2,2,0,0,0}-order-5 has no uniquely-occurring symbol — needs the real reordering, not pigeonhole). (the cunning-extension SWITCHING `SmetBackDiagonalCompletableCore` PROVEN)
+- **35 Five-color:** graph-layer deletion redesign — the bare-CombMap closed-star deletion is provably false (deg-1 neighbors vanish, bridges repeat faces; counterexamples in PlanarMapDelete). Then Kempe non-crossing + coloring induction. (Euler half: 3F≤2E, E≤3V−6, min-degree-5 PROVEN; `Perm.deleteSet` splice PROVEN)
+- **36 Art gallery:** polygon-triangulation existence + visibility geometry. (combinatorial 3-coloring PROVEN)
+
+Design-gated (Ch09/13/36 + Ch33 normalization): the auto pbook bridge truncates long design answers; Xiang relaying ChatGPT-Pro (as with the Tucker proof) is the reliable unblock. Blueprints staged at /tmp/pbook_*.txt.

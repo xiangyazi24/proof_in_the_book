@@ -44,4 +44,9 @@ import ProofsInTheBook.Chapter20DissectionFinal
 -- Chapter 39 (Kneser) faithful Tucker lemma `tuckerLemma_pos` + unconditional
 -- `chapter39_unconditional` (discharges the Tucker hypothesis of `chapter39`).
 import ProofsInTheBook.Chapter39Tucker
+-- Planar-graph infrastructure (the Mathlib hole): combinatorial maps, Euler characteristic,
+-- the Euler consequences (E ≤ 3V-6, min-degree ≤ 5), and the simple-graph embedding layer.
+-- Backs Chapter 12 (Platonic from Euler) and the Chapter 35 five-color development.
+import ProofsInTheBook.PlanarMapEuler
+import ProofsInTheBook.PlaneSimpleGraph
 

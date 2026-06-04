@@ -94,6 +94,56 @@ lemma prod_one_add_mul_le {k : ℕ} (hk : 1 ≤ k) (lam : Fin k → ℝ)
   rw [inv_mul_cancel₀ hkne, Real.rpow_one, Real.rpow_natCast] at hpow
   simpa [hy_def, havg_def] using hpow
 
+/-- Power cancellation: `G(k) · (k/(k-1))^k = k/(k-1)` for `k ≥ 2`. -/
+lemma G_mul_ratio_pow {k : ℕ} (hk : 2 ≤ k) :
+    G k * ((k : ℝ) / ((k : ℝ) - 1)) ^ k = (k : ℝ) / ((k : ℝ) - 1) := by
+  obtain ⟨m, rfl⟩ : ∃ m, k = m + 1 := ⟨k - 1, by omega⟩
+  have hm1 : 1 ≤ m := by omega
+  have hmpos : (0 : ℝ) < m := by exact_mod_cast hm1
+  rw [G_succ]
+  have hcast : ((m + 1 : ℕ) : ℝ) = (m : ℝ) + 1 := by push_cast; ring
+  rw [hcast]
+  have hkey : ((m : ℝ) / ((m : ℝ) + 1)) * (((m : ℝ) + 1) / (m : ℝ)) = 1 := by
+    field_simp
+  have hsimp : ((m : ℝ) + 1) / ((m : ℝ) + 1 - 1) = ((m : ℝ) + 1) / (m : ℝ) := by ring_nf
+  rw [hsimp, pow_succ, ← mul_assoc, ← mul_pow, hkey, one_pow, one_mul]
+
+/-- **Univariate Gurvits lemma (factored form).** If `C·t ≤ c·∏ᵢ(1+λᵢt)` for all `t>0`, with
+`c, λᵢ ≥ 0` and `Σλ > 0` and `k ≥ 2`, then `G(k)·C ≤ c·Σλ`. (`c·Σλ` is the coefficient of `t`
+in `c·∏(1+λᵢt)`.) This is the analytic crux of the Gurvits capacity reduction step. -/
+lemma univariate_gurvits_factored {k : ℕ} (hk : 2 ≤ k) (c C : ℝ) (lam : Fin k → ℝ)
+    (hc : 0 ≤ c) (hlam : ∀ i, 0 ≤ lam i) (hS : 0 < ∑ i, lam i)
+    (hbound : ∀ t : ℝ, 0 < t → C * t ≤ c * ∏ i, (1 + lam i * t)) :
+    G k * C ≤ c * ∑ i, lam i := by
+  set S : ℝ := ∑ i, lam i with hSdef
+  have hkR : (2 : ℝ) ≤ (k : ℝ) := by exact_mod_cast hk
+  have hk1 : (0 : ℝ) < (k : ℝ) - 1 := by linarith
+  have hkpos : (0 : ℝ) < (k : ℝ) := by linarith
+  set t0 : ℝ := (k : ℝ) / (S * ((k : ℝ) - 1)) with ht0def
+  have ht0 : 0 < t0 := by rw [ht0def]; positivity
+  have h3 : 1 + S * t0 / k = (k : ℝ) / ((k : ℝ) - 1) := by
+    rw [ht0def]; field_simp; ring
+  have h1 := hbound t0 ht0
+  have h2 := prod_one_add_mul_le (by omega : 1 ≤ k) lam hlam t0 (le_of_lt ht0)
+  have h4 : C * t0 ≤ c * ((k : ℝ) / ((k : ℝ) - 1)) ^ k := by
+    calc C * t0 ≤ c * ∏ i, (1 + lam i * t0) := h1
+      _ ≤ c * (1 + S * t0 / k) ^ k := by
+          apply mul_le_mul_of_nonneg_left _ hc; rw [hSdef]; exact h2
+      _ = c * ((k : ℝ) / ((k : ℝ) - 1)) ^ k := by rw [h3]
+  -- multiply by G k ≥ 0, use the cancellation, and that c*k/(k-1) = c*S*t0
+  have hGnn : 0 ≤ G k := by
+    rw [G]; positivity
+  have h5 : G k * (C * t0) ≤ G k * (c * ((k : ℝ) / ((k : ℝ) - 1)) ^ k) :=
+    mul_le_mul_of_nonneg_left h4 hGnn
+  rw [show G k * (c * ((k : ℝ) / ((k : ℝ) - 1)) ^ k)
+        = c * (G k * ((k : ℝ) / ((k : ℝ) - 1)) ^ k) by ring, G_mul_ratio_pow hk] at h5
+  -- h5 : G k * (C * t0) ≤ c * (k/(k-1)); and c*(k/(k-1)) = (c*S)*t0
+  have h6 : c * ((k : ℝ) / ((k : ℝ) - 1)) = (c * S) * t0 := by
+    rw [ht0def]; field_simp
+  rw [h6, ← mul_assoc] at h5
+  -- h5 : G k * C * t0 ≤ c * S * t0; cancel t0 > 0
+  exact le_of_mul_le_mul_right h5 ht0
+
 /-!
 ### Algebraic interface to the Chapter 22 capacity core
 

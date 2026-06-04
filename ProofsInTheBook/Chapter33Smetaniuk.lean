@@ -67,6 +67,191 @@ lemma fin_zero_ne_last {N : ℕ} (hN : 0 < N) :
     simpa [Fin.last] using congrArg Fin.val h
   omega
 
+private noncomputable def finSuccAboveEquivNe {m : ℕ} (x₀ : Fin (m + 1)) :
+    Fin m ≃ {x : Fin (m + 1) // x ≠ x₀} := by
+  classical
+  refine Equiv.ofBijective (fun i => ⟨x₀.succAbove i, Fin.succAbove_ne x₀ i⟩) ?_
+  constructor
+  · intro i j hij
+    exact x₀.succAbove_right_injective (congrArg Subtype.val hij)
+  · intro x
+    obtain ⟨i, hi⟩ := Fin.exists_succAbove_eq x.2
+    exact ⟨i, Subtype.ext hi⟩
+
+private noncomputable def splitAt {m : ℕ} (x₀ : Fin (m + 1)) :
+    Fin (m + 1) ≃ Option (Fin m) where
+  toFun x :=
+    if hx : x = x₀ then none else some ((finSuccAboveEquivNe x₀).symm ⟨x, hx⟩)
+  invFun o := match o with
+    | none => x₀
+    | some i => x₀.succAbove i
+  left_inv := by
+    intro x
+    by_cases hx : x = x₀
+    · simp [hx]
+    · simp [hx]
+      exact congrArg Subtype.val ((finSuccAboveEquivNe x₀).apply_symm_apply ⟨x, hx⟩)
+  right_inv := by
+    intro o
+    cases o with
+    | none => simp
+    | some i =>
+        have hne : x₀.succAbove i ≠ x₀ := Fin.succAbove_ne x₀ i
+        simp [hne]
+        have hsub : (⟨x₀.succAbove i, hne⟩ : {x : Fin (m + 1) // x ≠ x₀}) =
+            finSuccAboveEquivNe x₀ i := rfl
+        simp [hsub]
+
+private noncomputable def rankLift {m : ℕ} (x₀ : Fin (m + 1))
+    (ρ : Equiv.Perm (Fin m)) : Equiv.Perm (Fin (m + 1)) :=
+  (splitAt x₀).trans ((Equiv.optionCongr ρ).trans (finSuccEquiv m).symm)
+
+@[simp] private lemma rankLift_base {m : ℕ} (x₀ : Fin (m + 1))
+    (ρ : Equiv.Perm (Fin m)) :
+    rankLift x₀ ρ x₀ = 0 := by
+  simp [rankLift, splitAt]
+
+private lemma rankLift_succAbove {m : ℕ} (x₀ : Fin (m + 1))
+    (ρ : Equiv.Perm (Fin m)) (i : Fin m) :
+    rankLift x₀ ρ (x₀.succAbove i) = Fin.succ (ρ i) := by
+  have hne : x₀.succAbove i ≠ x₀ := Fin.succAbove_ne x₀ i
+  simp [rankLift, splitAt, hne]
+  have hsub : (⟨x₀.succAbove i, hne⟩ : {x : Fin (m + 1) // x ≠ x₀}) =
+      finSuccAboveEquivNe x₀ i := rfl
+  simp [hsub]
+
+private lemma exists_empty_column_of_card_lt {n : ℕ}
+    (S : Finset (Fin n × Fin n)) (hS : S.card < n) :
+    ∃ c₀ : Fin n, ∀ p ∈ S, p.2 ≠ c₀ := by
+  classical
+  by_contra hnone
+  have hcols_all : ∀ c : Fin n, c ∈ S.image Prod.snd := by
+    intro c
+    by_contra hc
+    exact hnone ⟨c, by
+      intro p hp hpcol
+      exact hc (Finset.mem_image.mpr ⟨p, hp, hpcol⟩)⟩
+  have hn_le_cols : n ≤ (S.image Prod.snd).card := by
+    calc
+      n = (Finset.univ : Finset (Fin n)).card := by simp
+      _ ≤ (S.image Prod.snd).card := by
+        exact Finset.card_le_card (by
+          intro c _hc
+          exact hcols_all c)
+  have hcols_le_S : (S.image Prod.snd).card ≤ S.card := Finset.card_image_le
+  omega
+
+/--
+If fewer than `n` cells are marked in an `n × n` board, rows and columns can be
+permuted so every marked cell lies strictly above the diagonal.
+
+The proof is the peeling induction used in Smetaniuk's normalization: choose
+an empty column and a nonempty row, send both to rank `0`, recurse after
+deleting them, then lift the recursive ranks by `+1`.
+-/
+theorem exists_perm_strictly_above {n : ℕ} (S : Finset (Fin n × Fin n))
+    (hS : S.card < n) :
+    ∃ σ τ : Equiv.Perm (Fin n), ∀ p ∈ S, σ p.1 < τ p.2 := by
+  classical
+  revert S
+  refine Nat.strong_induction_on n ?_
+  intro n ih S hS
+  by_cases hEmpty : S = ∅
+  · refine ⟨1, 1, ?_⟩
+    intro p hp
+    simp [hEmpty] at hp
+  · obtain ⟨p₀, hp₀⟩ := Finset.nonempty_iff_ne_empty.mpr hEmpty
+    cases n with
+    | zero =>
+        have hpos : 0 < S.card := Finset.card_pos.mpr ⟨p₀, hp₀⟩
+        omega
+    | succ m =>
+        let r₀ : Fin (m + 1) := p₀.1
+        obtain ⟨c₀, hc₀⟩ := exists_empty_column_of_card_lt S hS
+        have hScard_pos : 0 < S.card := Finset.card_pos.mpr ⟨p₀, hp₀⟩
+        have hmpos : 0 < m := by omega
+        let rowIndex : Fin (m + 1) → Fin m := fun i =>
+          if hi : i = r₀ then ⟨0, hmpos⟩ else (finSuccAboveEquivNe r₀).symm ⟨i, hi⟩
+        let colIndex : Fin (m + 1) → Fin m := fun j =>
+          if hj : j = c₀ then ⟨0, hmpos⟩ else (finSuccAboveEquivNe c₀).symm ⟨j, hj⟩
+        let S' : Finset (Fin m × Fin m) :=
+          (S.filter fun p => p.1 ≠ r₀).image fun p => (rowIndex p.1, colIndex p.2)
+        have hfilter_subset_erase :
+            (S.filter fun p => p.1 ≠ r₀) ⊆ S.erase p₀ := by
+          intro p hp
+          have hpS : p ∈ S := (Finset.mem_filter.mp hp).1
+          have hprow : p.1 ≠ r₀ := (Finset.mem_filter.mp hp).2
+          have hpne : p ≠ p₀ := by
+            intro h
+            exact hprow (by simp [r₀, h])
+          simp [hpS, hpne]
+        have hfilter_card_le :
+            (S.filter fun p => p.1 ≠ r₀).card ≤ S.card - 1 := by
+          have hle := Finset.card_le_card hfilter_subset_erase
+          have herase := Finset.card_erase_of_mem hp₀
+          omega
+        have hS'_le_filter :
+            S'.card ≤ (S.filter fun p => p.1 ≠ r₀).card := by
+          exact Finset.card_image_le
+        have hS' : S'.card < m := by
+          omega
+        obtain ⟨σ', τ', hrec⟩ := ih m (Nat.lt_succ_self m) S' hS'
+        let σ : Equiv.Perm (Fin (m + 1)) := rankLift r₀ σ'
+        let τ : Equiv.Perm (Fin (m + 1)) := rankLift c₀ τ'
+        refine ⟨σ, τ, ?_⟩
+        intro p hp
+        have hpcol_ne : p.2 ≠ c₀ := hc₀ p hp
+        by_cases hrow : p.1 = r₀
+        · have hσbase : σ p.1 = 0 := by
+            rw [hrow]
+            simp [σ]
+          have hcol_succ :
+              c₀.succAbove (colIndex p.2) = p.2 := by
+            simp [colIndex, hpcol_ne]
+            exact congrArg Subtype.val
+              ((finSuccAboveEquivNe c₀).apply_symm_apply ⟨p.2, hpcol_ne⟩)
+          have hτ :
+              τ p.2 = Fin.succ (τ' (colIndex p.2)) := by
+            calc
+              τ p.2 = τ (c₀.succAbove (colIndex p.2)) := by rw [hcol_succ]
+              _ = Fin.succ (τ' (colIndex p.2)) :=
+                rankLift_succAbove c₀ τ' (colIndex p.2)
+          rw [hσbase, hτ]
+          change (0 : ℕ) < (τ' (colIndex p.2)).val + 1
+          omega
+        · have hrow_succ :
+              r₀.succAbove (rowIndex p.1) = p.1 := by
+            simp [rowIndex, hrow]
+            exact congrArg Subtype.val
+              ((finSuccAboveEquivNe r₀).apply_symm_apply ⟨p.1, hrow⟩)
+          have hcol_succ :
+              c₀.succAbove (colIndex p.2) = p.2 := by
+            simp [colIndex, hpcol_ne]
+            exact congrArg Subtype.val
+              ((finSuccAboveEquivNe c₀).apply_symm_apply ⟨p.2, hpcol_ne⟩)
+          have hp_filter : p ∈ S.filter fun q => q.1 ≠ r₀ :=
+            Finset.mem_filter.mpr ⟨hp, hrow⟩
+          have hpS' : (rowIndex p.1, colIndex p.2) ∈ S' :=
+            Finset.mem_image.mpr ⟨p, hp_filter, rfl⟩
+          have hlt' : σ' (rowIndex p.1) < τ' (colIndex p.2) :=
+            hrec (rowIndex p.1, colIndex p.2) hpS'
+          have hσ :
+              σ p.1 = Fin.succ (σ' (rowIndex p.1)) := by
+            calc
+              σ p.1 = σ (r₀.succAbove (rowIndex p.1)) := by rw [hrow_succ]
+              _ = Fin.succ (σ' (rowIndex p.1)) :=
+                rankLift_succAbove r₀ σ' (rowIndex p.1)
+          have hτ :
+              τ p.2 = Fin.succ (τ' (colIndex p.2)) := by
+            calc
+              τ p.2 = τ (c₀.succAbove (colIndex p.2)) := by rw [hcol_succ]
+              _ = Fin.succ (τ' (colIndex p.2)) :=
+                rankLift_succAbove c₀ τ' (colIndex p.2)
+          rw [hσ, hτ]
+          exact show Fin.succ (σ' (rowIndex p.1)) < Fin.succ (τ' (colIndex p.2)) by
+            simpa [Fin.succ] using Nat.succ_lt_succ (show (σ' (rowIndex p.1)).val <
+              (τ' (colIndex p.2)).val from hlt')
+
 /-- Drop the last symbol when passing from order `N + 1` to order `N`. -/
 def dropLastSymbol {N : ℕ} (a : Fin (N + 1)) : Option (Fin N) :=
   if h : a.val < N then some ⟨a.val, h⟩ else none
@@ -452,6 +637,172 @@ theorem smetMainPartial_completable_of_smetBackPartial_completable {N : ℕ}
     ∃ L : Fin (N + 1) → Fin (N + 1) → Fin (N + 1),
       Completes (smetMainPartial L₀) L := by
   exact (reverseColumnsPartial_completion_iff (smetBackPartial L₀)).mpr h
+
+/--
+The shrink compatible with `smetMainPartial`: delete the last row and main
+column `0`, and reverse the remaining `N` columns.  Thus smaller column `k`
+records main column `N - k`, including the original last column as `k = 0`.
+-/
+def smetMainKeepLastShrink {N : ℕ}
+    (P : Fin (N + 1) → Fin (N + 1) → Option (Fin (N + 1))) :
+    Fin N → Fin N → Option (Fin N) :=
+  fun i j => (P (Fin.castSucc i) (Fin.rev (Fin.castSucc j))).bind dropLastSymbol
+
+lemma smetMainKeepLastShrink_eq_some_iff {N : ℕ}
+    (P : Fin (N + 1) → Fin (N + 1) → Option (Fin (N + 1)))
+    (i j : Fin N) (a : Fin N) :
+    smetMainKeepLastShrink P i j = some a ↔
+      P (Fin.castSucc i) (Fin.rev (Fin.castSucc j)) = some (Fin.castSucc a) := by
+  constructor
+  · intro h
+    unfold smetMainKeepLastShrink at h
+    cases hP : P (Fin.castSucc i) (Fin.rev (Fin.castSucc j)) with
+    | none =>
+        simp [hP] at h
+    | some b =>
+        simp [hP] at h
+        have hb : b = Fin.castSucc a := dropLastSymbol_eq_some h
+        simp [hb]
+  · intro h
+    simp [smetMainKeepLastShrink, h]
+
+lemma isPartialLatin_smetMainKeepLastShrink {N : ℕ}
+    {P : Fin (N + 1) → Fin (N + 1) → Option (Fin (N + 1))}
+    (hP : IsPartialLatin P) : IsPartialLatin (smetMainKeepLastShrink P) := by
+  constructor
+  · intro i j₁ j₂ a h₁ h₂
+    have h₁P := (smetMainKeepLastShrink_eq_some_iff P i j₁ a).mp h₁
+    have h₂P := (smetMainKeepLastShrink_eq_some_iff P i j₂ a).mp h₂
+    have hcols :
+        Fin.rev (Fin.castSucc j₁) = Fin.rev (Fin.castSucc j₂) :=
+      hP.1 (Fin.castSucc i) (Fin.rev (Fin.castSucc j₁))
+        (Fin.rev (Fin.castSucc j₂)) (Fin.castSucc a) h₁P h₂P
+    have hcast : Fin.castSucc j₁ = Fin.castSucc j₂ :=
+      Fin.revPerm.injective hcols
+    exact Fin.castSucc_inj.mp hcast
+  · intro i₁ i₂ j a h₁ h₂
+    have h₁P := (smetMainKeepLastShrink_eq_some_iff P i₁ j a).mp h₁
+    have h₂P := (smetMainKeepLastShrink_eq_some_iff P i₂ j a).mp h₂
+    have hrows :
+        Fin.castSucc i₁ = Fin.castSucc i₂ :=
+      hP.2 (Fin.castSucc i₁) (Fin.castSucc i₂) (Fin.rev (Fin.castSucc j))
+        (Fin.castSucc a) h₁P h₂P
+    exact Fin.castSucc_inj.mp hrows
+
+lemma filledCells_smetMainKeepLastShrink_card_le_erase_diag {N : ℕ}
+    (P : Fin (N + 1) → Fin (N + 1) → Option (Fin (N + 1))) :
+    (filledCells (smetMainKeepLastShrink P)).card ≤
+      ((filledCells P).erase (Fin.last N, Fin.last N)).card := by
+  classical
+  refine Finset.card_le_card_of_injOn
+    (fun ij : Fin N × Fin N =>
+      ((Fin.castSucc ij.1 : Fin (N + 1)), Fin.rev (Fin.castSucc ij.2))) ?_ ?_
+  · intro ij hij
+    have hs : (smetMainKeepLastShrink P ij.1 ij.2).isSome := by
+      simpa [filledCells] using hij
+    cases hcell : smetMainKeepLastShrink P ij.1 ij.2 with
+    | none =>
+        simp [hcell] at hs
+    | some a =>
+        have hP := (smetMainKeepLastShrink_eq_some_iff P ij.1 ij.2 a).mp hcell
+        have hne : ((Fin.castSucc ij.1 : Fin (N + 1)), Fin.rev (Fin.castSucc ij.2)) ≠
+            (Fin.last N, Fin.last N) := by
+          intro hp
+          exact fin_castSucc_ne_last ij.1 (congrArg Prod.fst hp)
+        simp [filledCells, hP, hne]
+  · intro x hx y hy hxy
+    have hrow : x.1 = y.1 :=
+      Fin.castSucc_inj.mp (congrArg Prod.fst hxy)
+    have hcol_rev : Fin.rev (Fin.castSucc x.2) = Fin.rev (Fin.castSucc y.2) :=
+      congrArg Prod.snd hxy
+    have hcol_cast : Fin.castSucc x.2 = Fin.castSucc y.2 :=
+      Fin.revPerm.injective hcol_rev
+    exact Prod.ext hrow (Fin.castSucc_inj.mp hcol_cast)
+
+theorem smetMainKeepLastShrink_step {N : ℕ}
+    {P : Fin (N + 1) → Fin (N + 1) → Option (Fin (N + 1))}
+    (hP : IsPartialLatin P)
+    (hdiag : P (Fin.last N) (Fin.last N) = some (Fin.last N))
+    (hcard : (filledCells P).card = N) :
+    IsPartialLatin (smetMainKeepLastShrink P) ∧
+      (filledCells (smetMainKeepLastShrink P)).card ≤ N - 1 := by
+  constructor
+  · exact isPartialLatin_smetMainKeepLastShrink hP
+  · have hle := filledCells_smetMainKeepLastShrink_card_le_erase_diag P
+    have hmem : (Fin.last N, Fin.last N) ∈ filledCells P := by
+      simp [filledCells, hdiag]
+    rw [Finset.card_erase_of_mem hmem] at hle
+    omega
+
+private lemma fin_ne_last_iff_val_lt {N : ℕ} {a : Fin (N + 1)} :
+    a ≠ Fin.last N ↔ a.val < N := by
+  constructor
+  · intro h
+    have hle : a.val ≤ N := Nat.lt_succ_iff.mp a.isLt
+    by_contra hlt
+    have hge : N ≤ a.val := Nat.le_of_not_gt hlt
+    exact h (Fin.ext (le_antisymm hle hge))
+  · intro hlt h
+    have hv : a.val = N := by simpa [Fin.last] using congrArg Fin.val h
+    omega
+
+lemma smetMainPartial_extends_of_keepLastShrink_completion {N : ℕ}
+    {P : Fin (N + 1) → Fin (N + 1) → Option (Fin (N + 1))}
+    {L₀ : Fin N → Fin N → Fin N}
+    (hL₀ : Completes (smetMainKeepLastShrink P) L₀)
+    (hnorm : SmetaniukTriangularNormalized P (Fin.last N) (Fin.last N)) :
+    ExtendsPartial P (smetMainPartial L₀) := by
+  intro i j a hcell
+  rcases hnorm with ⟨hmain, htri⟩
+  by_cases haLast : a = Fin.last N
+  · subst a
+    have hij := mainDiagonalNewSymbol_cell_eq hmain hcell
+    rcases hij with ⟨hi, hj⟩
+    subst i
+    subst j
+    exact smetMainPartial_last_last L₀
+  · have hlt : i < j := htri i j a hcell haLast
+    have hi_ltN : i.val < N := by
+      have hj_le : j.val ≤ N := Nat.lt_succ_iff.mp j.isLt
+      have hltVal : i.val < j.val := hlt
+      omega
+    have hj_pos : 0 < j.val := by
+      have hltVal : i.val < j.val := hlt
+      omega
+    have ha_ltN : a.val < N := (fin_ne_last_iff_val_lt.mp haLast)
+    let ii : Fin N := ⟨i.val, hi_ltN⟩
+    let kk : Fin N := ⟨N - j.val, by omega⟩
+    let aa : Fin N := ⟨a.val, ha_ltN⟩
+    have hi_cast : (Fin.castSucc ii : Fin (N + 1)) = i := by
+      exact Fin.ext rfl
+    have ha_cast : (Fin.castSucc aa : Fin (N + 1)) = a := by
+      exact Fin.ext rfl
+    have hj_repr : Fin.rev (Fin.castSucc kk : Fin (N + 1)) = j := by
+      apply Fin.ext
+      simp [Fin.rev, kk]
+      have hj_le : j.val ≤ N := Nat.lt_succ_iff.mp j.isLt
+      omega
+    have hsmall :
+        smetMainKeepLastShrink P ii kk = some aa := by
+      apply (smetMainKeepLastShrink_eq_some_iff P ii kk aa).mpr
+      simpa [hi_cast, hj_repr, ha_cast] using hcell
+    have hLcell : L₀ ii kk = aa := hL₀.2 ii kk aa hsmall
+    have hrev_j : Fin.rev j = (Fin.castSucc kk : Fin (N + 1)) := by
+      rw [← hj_repr]
+      simp
+    have hback_lt : i.val + (Fin.rev j).val < N := by
+      have hrev_val : (Fin.rev j).val = N - j.val := by simp [Fin.rev]
+      have hltVal : i.val < j.val := hlt
+      rw [hrev_val]
+      omega
+    have hback_ne : i.val + (Fin.rev j).val ≠ N := by omega
+    have hii : (⟨i.val, by omega⟩ : Fin N) = ii := by
+      exact Fin.ext rfl
+    have hsum_lt : i.val + kk.val < N := by
+      simpa [hrev_j] using hback_lt
+    have hsum_ne : i.val + kk.val ≠ N := by omega
+    simp [smetMainPartial, smetBackPartial, hsum_ne, hsum_lt, hLcell,
+      hrev_j, hii, ha_cast]
 
 /-!
 ## The Smetaniuk switching rectangle
@@ -1119,6 +1470,20 @@ theorem smetMainPartial_completable_of_core
       Completes (smetMainPartial L₀) L := by
   exact smetMainPartial_completable_of_smetBackPartial_completable
     (SmetBackDiagonalCompletableCore hN L₀ hL₀)
+
+theorem smetaniuk_exact_normalized_of_IH {N : ℕ} (hN : 3 ≤ N)
+    (hIH : LatinSquareCompletionTheorem N)
+    {P : Fin (N + 1) → Fin (N + 1) → Option (Fin (N + 1))}
+    (hP : IsPartialLatin P)
+    (hcard : (filledCells P).card = N)
+    (hnorm : SmetaniukTriangularNormalized P (Fin.last N) (Fin.last N)) :
+    ∃ L : Fin (N + 1) → Fin (N + 1) → Fin (N + 1), Completes P L := by
+  have hdiag : P (Fin.last N) (Fin.last N) = some (Fin.last N) := hnorm.1.1
+  have hstep := smetMainKeepLastShrink_step hP hdiag hcard
+  obtain ⟨L₀, hL₀⟩ := hIH (smetMainKeepLastShrink P) hstep.1 hstep.2
+  obtain ⟨L, hL⟩ := smetMainPartial_completable_of_core hN hL₀.1
+  exact ⟨L, completes_of_extendsPartial
+    (smetMainPartial_extends_of_keepLastShrink_completion hL₀ hnorm) hL⟩
 
 /-- The normalized theorem that would close the exact-cardinality induction in
 orders at least four.  It is recorded as a proposition so the remaining proof

@@ -62,6 +62,20 @@ def F (M : CombMap D) : ℕ := Fintype.card (Quotient (cycleSetoid M.φ))
 /-- The Euler characteristic `V - E + F`. -/
 def eulerChar (M : CombMap D) : ℤ := (V M : ℤ) - (E M : ℤ) + (F M : ℤ)
 
+/-- Adjacency of the underlying multigraph on darts: same vertex, or joined by an edge. -/
+def dartStep (M : CombMap D) (a b : D) : Prop :=
+  M.σ.SameCycle a b ∨ b = M.α a
+
+/-- The map is connected if every two darts are linked by a chain of `dartStep`s. -/
+def Connected (M : CombMap D) : Prop :=
+  ∀ a b : D, Relation.ReflTransGen M.dartStep a b
+
+/-- A **plane (sphere) map**: connected and of Euler characteristic `2` (genus zero).
+The faithful combinatorial definition of a planar graph embedding; NOT an inductive build
+certificate, so theorems proved for `IsSphereMap` are about all plane graphs. -/
+def IsSphereMap (M : CombMap D) : Prop :=
+  M.Connected ∧ M.eulerChar = 2
+
 /-- A power of an involution is either the identity or the involution itself. -/
 lemma zpow_involution (α : Equiv.Perm D) (h : α * α = 1) (i : ℤ) :
     α ^ i = 1 ∨ α ^ i = α := by
@@ -118,23 +132,75 @@ lemma two_mul_E_eq_card (M : CombMap D) : 2 * M.E = Fintype.card D := by
   rw [hsum, Finset.sum_congr rfl (fun q _ => alpha_class_card M q),
       Finset.sum_const, Finset.card_univ, smul_eq_mul, E, Nat.mul_comm]
 
-/-- Two darts are in the same vertex iff they share a `σ`-cycle. -/
-def vertexConnected (M : CombMap D) : D → D → Prop := fun a b => (M.σ.SameCycle a b)
+/-- Orbit sizes of any permutation sum to the dart count. -/
+lemma sum_class_card (p : Equiv.Perm D) :
+    ∑ Q : Quotient (cycleSetoid p),
+        (Finset.univ.filter (fun x => Quotient.mk (cycleSetoid p) x = Q)).card
+      = Fintype.card D := by
+  rw [← Finset.card_univ]
+  exact (Finset.card_eq_sum_card_fiberwise (fun x _ => Finset.mem_univ _)).symm
 
-/-- Adjacency of the underlying multigraph on darts: same vertex, or joined by an edge. -/
-def dartStep (M : CombMap D) (a b : D) : Prop :=
-  M.σ.SameCycle a b ∨ b = M.α a
+/-- A `p`-regular face structure: every face (`φ`-orbit) has exactly `p` darts. -/
+def FaceRegular (M : CombMap D) (p : ℕ) : Prop :=
+  ∀ Q : Quotient (cycleSetoid M.φ),
+    (Finset.univ.filter (fun x => Quotient.mk (cycleSetoid M.φ) x = Q)).card = p
 
-/-- The map is connected if every two darts are linked by a chain of `dartStep`s
-(same-vertex moves and edge crossings). -/
-def Connected (M : CombMap D) : Prop :=
-  ∀ a b : D, Relation.ReflTransGen M.dartStep a b
+/-- A `q`-regular vertex structure: every vertex (`σ`-orbit) has exactly `q` darts. -/
+def VertexRegular (M : CombMap D) (q : ℕ) : Prop :=
+  ∀ Q : Quotient (cycleSetoid M.σ),
+    (Finset.univ.filter (fun x => Quotient.mk (cycleSetoid M.σ) x = Q)).card = q
 
-/-- A **plane (sphere) map**: connected and of Euler characteristic `2` (genus zero).
-This is the faithful combinatorial definition of a planar graph embedding; it is NOT an
-inductive build certificate, so theorems proved for `IsSphereMap` are about all plane graphs. -/
-def IsSphereMap (M : CombMap D) : Prop :=
-  M.Connected ∧ M.eulerChar = 2
+/-- Face-counting: `p`-regular faces give `p * F = 2 * E`. -/
+lemma faceRegular_pF (M : CombMap D) {p : ℕ} (h : M.FaceRegular p) :
+    p * M.F = 2 * M.E := by
+  have hs := sum_class_card M.φ
+  rw [Finset.sum_congr rfl (fun Q _ => h Q), Finset.sum_const, Finset.card_univ,
+    smul_eq_mul] at hs
+  rw [two_mul_E_eq_card, F, Nat.mul_comm]; exact hs
+
+/-- Vertex-counting: `q`-regular vertices give `q * V = 2 * E`. -/
+lemma vertexRegular_qV (M : CombMap D) {q : ℕ} (h : M.VertexRegular q) :
+    q * M.V = 2 * M.E := by
+  have hs := sum_class_card M.σ
+  rw [Finset.sum_congr rfl (fun Q _ => h Q), Finset.sum_const, Finset.card_univ,
+    smul_eq_mul] at hs
+  rw [two_mul_E_eq_card, V, Nat.mul_comm]; exact hs
+
+/-- **The Platonic constraint, derived from Euler's formula.**
+A regular sphere map with face length `p`, vertex degree `q` (both positive, at least one
+edge) satisfies `p * q < 2 * p + 2 * q`, i.e. `1/p + 1/q > 1/2` — the inequality that
+bounds the regular convex polytopes to finitely many `(p, q)`. This is the genuine content
+of Chapter 12: the constraint is *derived from* Euler `V - E + F = 2`, not assumed. -/
+theorem platonic_constraint (M : CombMap D) (hsphere : M.IsSphereMap)
+    {p q : ℕ} (hp : 0 < p) (hq : 0 < q) (hE : 0 < M.E)
+    (hF : M.FaceRegular p) (hV : M.VertexRegular q) :
+    p * q < 2 * p + 2 * q := by
+  have hpf : (p : ℤ) * (M.F : ℤ) = 2 * (M.E : ℤ) := by exact_mod_cast faceRegular_pF M hF
+  have hqv : (q : ℤ) * (M.V : ℤ) = 2 * (M.E : ℤ) := by exact_mod_cast vertexRegular_qV M hV
+  have heuler : (M.V : ℤ) - (M.E : ℤ) + (M.F : ℤ) = 2 := hsphere.2
+  have hElt : (1 : ℤ) ≤ (M.E : ℤ) := by exact_mod_cast hE
+  have hp' : (0 : ℤ) < p := by exact_mod_cast hp
+  have hq' : (0 : ℤ) < q := by exact_mod_cast hq
+  have key : (M.E : ℤ) * (2 * p + 2 * q - p * q) = 2 * (p * q) := by
+    linear_combination (-(q : ℤ)) * hpf - (p : ℤ) * hqv + ((p : ℤ) * q) * heuler
+  have hgoal : (p : ℤ) * q < 2 * p + 2 * q := by
+    nlinarith [key, hElt, mul_pos hp' hq']
+  exact_mod_cast hgoal
+
+/-- **The five Platonic types.** A regular sphere map with face length `p ≥ 3` and vertex
+degree `q ≥ 3` (with at least one edge) has `(p, q)` equal to one of the five Platonic
+pairs: `(3,3)` tetrahedron, `(3,4)` cube, `(4,3)` octahedron, `(3,5)` dodecahedron,
+`(5,3)` icosahedron. This is Chapter 12, derived from Euler's formula. -/
+theorem platonic_pairs (M : CombMap D) (hsphere : M.IsSphereMap)
+    {p q : ℕ} (hp : 3 ≤ p) (hq : 3 ≤ q) (hE : 0 < M.E)
+    (hF : M.FaceRegular p) (hV : M.VertexRegular q) :
+    (p = 3 ∧ q = 3) ∨ (p = 3 ∧ q = 4) ∨ (p = 4 ∧ q = 3) ∨
+      (p = 3 ∧ q = 5) ∨ (p = 5 ∧ q = 3) := by
+  have hc : p * q < 2 * p + 2 * q :=
+    platonic_constraint M hsphere (by omega) (by omega) hE hF hV
+  have hpb : p ≤ 5 := by nlinarith [hc, hq, hp]
+  have hqb : q ≤ 5 := by nlinarith [hc, hp, hq]
+  interval_cases p <;> interval_cases q <;> omega
 
 end CombMap
 

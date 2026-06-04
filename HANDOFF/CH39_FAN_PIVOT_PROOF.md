@@ -62,3 +62,56 @@ opposite labels). Restrict λ to equator K_{n-1}⊂K_n: still antipodal, no comp
 local_deletion_parity ; hemisphere_incidence ; ball_parity ; fan_sphere_parity (induction, m≥r) ;
 then §6 contradiction. The §6 route may bypass the heavy ActualHemisphere restructuring: it only needs
 Fan parity at the equator (m=r) + ball parity at B_n^+ with the "no length-n alternating facet" triviality.
+
+---
+
+## ADDENDUM (round 19 reframing) — dissolve the local deletion lemma via SIGN SEQUENCES
+
+The `idx` machinery is a red herring for the local deletion lemma. Reduce to pure sign combinatorics.
+
+### Incidence correction (from pbook task 41fd9654)
+The dichotomy is purely: #{facets of B_r^+ containing ridge τ} = 1 if τ⊆K_{r-1}, else 2. ("missing the top
+rank" alone does NOT give 1 — e.g. r=2, τ={2↦+} misses top rank, not in K_1, lies in BOTH {2+}≺{1+,2+} and
+{2+}≺{1-,2+}; it's 1 iff the missing support coord is r, i.e. iff τ⊆K_{r-1}.)
+
+### Local deletion lemma — sign-sequence reduction
+σ has k+1 vertices, NO opposite-label pair (so each absolute value occurs with a single common sign).
+d_+(σ) := #{v∈σ : IsAltPos (σ\{v})}.
+
+CASE A — σ has a repeated absolute value. Then NOT IsAltPos σ and NOT IsAltNeg σ (both need distinct abs).
+  Sub-argument: with no opposite pair, a repeated abs value a means ≥2 equal labels. Any σ\{v} with distinct
+  abs values must delete down to multiplicity 1 everywhere; if exactly one value has multiplicity 2 (rest 1),
+  the only deletions giving distinct-abs are the TWO copies, and both yield the SAME k-label multiset (hence
+  same IsAltPos truth value) ⇒ d_+∈{0,2}. If any value has multiplicity ≥3, or ≥2 values have multiplicity 2,
+  no single deletion gives distinct abs ⇒ d_+=0. Either way d_+ even. ✓ (matches lemma RHS false.)
+
+CASE B — σ has all DISTINCT absolute values. Sort the k+1 vertices by |label|; extract the SIGN SEQUENCE
+  s : Fin(k+1)→{±1} (s_t = sign of the t-th smallest abs value). Deleting the vertex of the i-th smallest abs
+  value leaves the sign subsequence (s with position i removed). IsAltPos(σ\{v_i}) ⟺ that subsequence equals
+  +,-,+,...  So d_+(σ) = D(s) where:
+
+  SIGN-SEQUENCE DELETION PARITY LEMMA. For s:Fin(k+1)→{±1}, D(s):=#{i : (s delete i) = (+,-,+,...) length k}.
+  Then D(s) is ODD iff s = (+,-,+,...) (alt-start-+) OR s = (-,+,-,...) (alt-start-−).
+  And IsAltPos σ ⟺ s=alt-start-+ ; IsAltNeg σ ⟺ s=alt-start-−. So d_+(σ)≡1 ⟺ IsAltPos σ ∨ IsAltNeg σ. ∎(B)
+
+### PROOF of the sign-sequence deletion parity lemma (DOOR characterization — fully finite)
+Define door(i) for i∈{0,...,k}:  door(i) :⟺ (∀ j<i, s_j=(-1)^j) ∧ (∀ j>i, s_j=(-1)^{j-1}).
+CLAIM: deleting position i yields (+,-,+,...) iff door(i). [The kept prefix s_0..s_{i-1} must be +,-,+,... ⟹
+  s_j=(-1)^j for j<i; the kept suffix s_{i+1}..s_k, reindexed to follow position i-1, must continue the
+  alternation ⟹ s_j=(-1)^{j-1} for j>i. s_i is dropped, hence free.]
+KEY FACTS:
+ (1) prefix-cond is downward closed in i, suffix-cond is upward closed ⇒ each is an interval condition.
+ (2) NO THREE DOORS, and two doors must be ADJACENT: if i<i' both doors, every j with i<j<i' satisfies both
+     s_j=(-1)^{j-1} (door i suffix) and s_j=(-1)^j (door i' prefix) — contradiction unless no such j, i.e.
+     i'=i+1. Three doors i<i+1<i+2 would put i,i+2 non-adjacent ⇒ impossible. So D(s)∈{0,1,2}.
+ (3) For 0<i<k, door(i) forces EXACTLY ONE neighbor door: door(i+1)⟺s_i=(-1)^i ; door(i-1)⟺s_i=(-1)^{i-1};
+     s_i is one of these, so a door at an interior i always has a partner ⇒ D≥2. Hence a UNIQUE door (D=1)
+     sits at i=0 or i=k.
+ (4) Unique door at i=k: uniqueness kills door(k-1) ⟹ s_k=(-1)^k, combined with prefix ⟹ s=alt-start-+.
+     Unique door at i=0: uniqueness kills door(1) ⟹ s_0=-, combined with suffix ⟹ s=alt-start-−.
+ (5) Conversely s=alt-start-+ ⇒ only door is i=k (any suffix-cond at i<k fails since (-1)^j≠(-1)^{j-1});
+     s=alt-start-− ⇒ only door is i=0. So D=1 in exactly these two cases; otherwise D∈{0,2}, even.
+ Therefore D(s) odd ⟺ s alternating-±.  ∎
+
+This is the entire crux. No idx summation, no fixed-A specialization — pure {±1}-sequence combinatorics,
+ideal for Lean (Finset.filter over Fin(k+1), the door predicate is Decidable, the parity falls out of (2)-(5)).

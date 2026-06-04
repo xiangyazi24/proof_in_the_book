@@ -139,4 +139,71 @@ lemma RealRooted.derivative {p : ℝ[X]} (hp : RealRooted p) :
     Polynomial.natDegree_derivative_le p
   omega
 
+open Polynomial in
+/-- **Cauchy root bound**: every root of a nonzero complex polynomial satisfies
+`‖z‖ ≤ 1 + (Σ_{i<d} ‖coeff i‖) / ‖leadingCoeff‖`. Needed for the compactness step of the
+root-continuity (Hurwitz-specialization) argument. -/
+lemma norm_root_le_one_add (q : Polynomial ℂ) (hq : q ≠ 0) {z : ℂ} (hz : q.IsRoot z) :
+    ‖z‖ ≤ 1 + (∑ i ∈ Finset.range q.natDegree, ‖q.coeff i‖) / ‖q.leadingCoeff‖ := by
+  set d := q.natDegree with hd
+  set L := ‖q.leadingCoeff‖ with hL
+  set S := ∑ i ∈ Finset.range d, ‖q.coeff i‖ with hS
+  have hLpos : 0 < L := by
+    rw [hL]; exact norm_pos_iff.mpr (Polynomial.leadingCoeff_ne_zero.mpr hq)
+  have hSnn : 0 ≤ S := Finset.sum_nonneg (fun i _ => norm_nonneg _)
+  by_contra hcon
+  push_neg at hcon
+  have hz1 : 1 < ‖z‖ := by
+    have h0 : 0 ≤ S / L := div_nonneg hSnn (le_of_lt hLpos)
+    linarith
+  have hzpos : 0 < ‖z‖ := by linarith
+  -- a nonzero constant has no root, so d ≥ 1
+  have hd1 : 1 ≤ d := by
+    rcases Nat.eq_zero_or_pos d with hd0 | hpos
+    · exfalso
+      have hconst : q.eval z = q.coeff 0 := by
+        rw [Polynomial.eval_eq_sum_range, ← hd, hd0]
+        simp
+      have hc0 : q.coeff 0 = q.leadingCoeff := by
+        rw [Polynomial.leadingCoeff, ← hd, hd0]
+      have hzero := hz
+      rw [Polynomial.IsRoot, hconst, hc0] at hzero
+      exact (Polynomial.leadingCoeff_ne_zero.mpr hq) hzero
+    · exact hpos
+  -- split the evaluation: leading term + lower terms
+  have heval := hz
+  rw [Polynomial.IsRoot, Polynomial.eval_eq_sum_range, ← hd, Finset.sum_range_succ] at heval
+  have hcd : q.coeff d = q.leadingCoeff := by rw [Polynomial.leadingCoeff, hd]
+  have h1 : q.leadingCoeff * z ^ d = -(∑ i ∈ Finset.range d, q.coeff i * z ^ i) := by
+    rw [← hcd]
+    linear_combination heval
+  -- norm estimate: L‖z‖^d ≤ S‖z‖^(d-1)
+  have hmain : L * ‖z‖ ^ d ≤ S * ‖z‖ ^ (d - 1) := by
+    have h2 : ‖q.leadingCoeff * z ^ d‖ = L * ‖z‖ ^ d := by
+      rw [norm_mul, norm_pow, hL]
+    rw [← h2, h1, norm_neg]
+    calc ‖∑ i ∈ Finset.range d, q.coeff i * z ^ i‖
+        ≤ ∑ i ∈ Finset.range d, ‖q.coeff i * z ^ i‖ := norm_sum_le _ _
+      _ = ∑ i ∈ Finset.range d, ‖q.coeff i‖ * ‖z‖ ^ i := by
+          simp [norm_mul, norm_pow]
+      _ ≤ ∑ i ∈ Finset.range d, ‖q.coeff i‖ * ‖z‖ ^ (d - 1) := by
+          apply Finset.sum_le_sum
+          intro i hi
+          have hile : i ≤ d - 1 := by
+            have := Finset.mem_range.mp hi; omega
+          exact mul_le_mul_of_nonneg_left
+            (pow_le_pow_right₀ (le_of_lt hz1) hile) (norm_nonneg _)
+      _ = S * ‖z‖ ^ (d - 1) := by rw [← Finset.sum_mul, hS]
+  -- divide by ‖z‖^(d-1) > 0 to get L‖z‖ ≤ S
+  have hpowsplit : ‖z‖ ^ d = ‖z‖ ^ (d - 1) * ‖z‖ := by
+    rw [← pow_succ]
+    congr 1
+    omega
+  rw [hpowsplit] at hmain
+  have hzd : 0 < ‖z‖ ^ (d - 1) := pow_pos hzpos _
+  have hLz : L * ‖z‖ ≤ S := by
+    nlinarith [hmain, hzd]
+  have hfin : ‖z‖ ≤ S / L := (le_div_iff₀ hLpos).mpr (by linarith)
+  linarith
+
 end ProofsInTheBook.Chapter22Stable

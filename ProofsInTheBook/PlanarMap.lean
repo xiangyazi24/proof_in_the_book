@@ -62,6 +62,32 @@ def F (M : CombMap D) : ℕ := Fintype.card (Quotient (cycleSetoid M.φ))
 /-- The Euler characteristic `V - E + F`. -/
 def eulerChar (M : CombMap D) : ℤ := (V M : ℤ) - (E M : ℤ) + (F M : ℤ)
 
+/-- A power of an involution is either the identity or the involution itself. -/
+lemma zpow_involution (α : Equiv.Perm D) (h : α * α = 1) (i : ℤ) :
+    α ^ i = 1 ∨ α ^ i = α := by
+  have hsq : α ^ (2 : ℤ) = 1 := by
+    have h2 : α ^ (2 : ℤ) = α * α := by
+      rw [show (2 : ℤ) = 1 + 1 from rfl, zpow_add, zpow_one]
+    rw [h2, h]
+  rcases Int.even_or_odd i with ⟨r, hr⟩ | ⟨k, hk⟩
+  · left
+    rw [hr, show r + r = 2 * r from by ring, zpow_mul, hsq, one_zpow]
+  · right
+    rw [hk, zpow_add, zpow_mul, hsq, one_zpow, one_mul, zpow_one]
+
+/-- The edge containing a dart `d` is exactly `{d, α d}`: the `α`-orbit of any dart has
+the two darts of its edge and no more. -/
+lemma alpha_sameCycle_iff (M : CombMap D) (d x : D) :
+    M.α.SameCycle d x ↔ x = d ∨ x = M.α d := by
+  constructor
+  · rintro ⟨i, rfl⟩
+    rcases zpow_involution M.α M.α_invol i with h1 | h1
+    · left; rw [h1]; rfl
+    · right; rw [h1]
+  · rintro (rfl | rfl)
+    · exact ⟨0, by simp⟩
+    · exact ⟨1, by simp⟩
+
 /-- Two darts are in the same vertex iff they share a `σ`-cycle. -/
 def vertexConnected (M : CombMap D) : D → D → Prop := fun a b => (M.σ.SameCycle a b)
 

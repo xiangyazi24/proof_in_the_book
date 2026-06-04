@@ -206,4 +206,257 @@ lemma norm_root_le_one_add (q : Polynomial ℂ) (hq : q ≠ 0) {z : ℂ} (hz : q
   have hfin : ‖z‖ ≤ S / L := (le_div_iff₀ hLpos).mpr (by linarith)
   linarith
 
+noncomputable section
+
+lemma multiset_enum_toList {α : Type*} (s : Multiset α) {d : ℕ} (hcard : s.card = d) :
+    Multiset.map (fun i : Fin d =>
+      s.toList.get (Fin.cast (((Multiset.length_toList s).trans hcard).symm) i))
+      Finset.univ.val = s := by
+  rw [Fin.univ_val_map]
+  have hlen : s.toList.length = d := by rw [Multiset.length_toList, hcard]
+  change (List.ofFn (fun i : Fin d => s.toList.get (Fin.cast hlen.symm i)) :
+    Multiset α) = s
+  have hlist :
+      List.ofFn (fun i : Fin d => s.toList.get (Fin.cast hlen.symm i)) = s.toList := by
+    exact (List.ofFn_congr hlen (s.toList.get)).symm.trans (List.ofFn_get s.toList)
+  exact (congrArg (fun l : List α => (l : Multiset α)) hlist).trans (Multiset.coe_toList s)
+
+lemma multiset_enum_toList_mem {α : Type*} (s : Multiset α) {d : ℕ} (hcard : s.card = d)
+    (i : Fin d) :
+    s.toList.get (Fin.cast (((Multiset.length_toList s).trans hcard).symm) i) ∈ s := by
+  have hmem : s.toList.get (Fin.cast (((Multiset.length_toList s).trans hcard).symm) i) ∈
+      s.toList := List.get_mem _ _
+  rwa [Multiset.mem_toList] at hmem
+
+lemma continuous_esymm_fin (d j : ℕ) :
+    Continuous fun v : Fin d → ℂ => (Finset.univ.val.map v).esymm j := by
+  have hfun : (fun v : Fin d → ℂ => (Finset.univ.val.map v).esymm j)
+      = fun v : Fin d → ℂ => ∑ t ∈ Finset.univ.powersetCard j, ∏ i ∈ t, v i := by
+    funext v
+    exact Finset.esymm_map_val v Finset.univ j
+  rw [hfun]
+  exact continuous_finsetSum _ (fun t _ =>
+    continuous_finsetProd _ (fun i _ => continuous_apply i))
+
+lemma continuous_prod_roots_coeff_fin {d k : ℕ} (hk : k ≤ d) :
+    Continuous fun v : Fin d → ℂ =>
+      ((Finset.univ.val.map v).map (fun t => Polynomial.X - Polynomial.C t)).prod.coeff k := by
+  have hfun : (fun v : Fin d → ℂ =>
+        ((Finset.univ.val.map v).map (fun t => Polynomial.X - Polynomial.C t)).prod.coeff k)
+      = fun v : Fin d → ℂ => (-1 : ℂ) ^ (d - k) * (Finset.univ.val.map v).esymm (d - k) := by
+    funext v
+    rw [Multiset.prod_X_sub_C_coeff]
+    · simp
+    · simpa using hk
+  rw [hfun]
+  exact continuous_const.mul (continuous_esymm_fin d (d - k))
+
+lemma roots_im_nonpos_of_tendsto (d : ℕ) (q : ℕ → Polynomial ℂ) (qlim : Polynomial ℂ)
+    (hdeg : ∀ n, (q n).natDegree = d) (hdeglim : qlim.natDegree = d) (hlim0 : qlim ≠ 0)
+    (hcoeff : ∀ k, Filter.Tendsto (fun n => (q n).coeff k) Filter.atTop (nhds (qlim.coeff k)))
+    (hroots : ∀ n, ∀ z ∈ (q n).roots, z.im ≤ 0) :
+    ∀ z ∈ qlim.roots, z.im ≤ 0 := by
+  classical
+  by_cases hd0 : d = 0
+  · have hconst : qlim.roots = 0 := by
+      have hqconst : qlim = Polynomial.C (qlim.coeff 0) :=
+        Polynomial.eq_C_of_natDegree_eq_zero (by simpa [hd0] using hdeglim)
+      rw [hqconst]
+      simp
+    intro z hz
+    rw [hconst] at hz
+    simpa using hz
+  have hdpos : 0 < d := Nat.pos_of_ne_zero hd0
+  have hqnz : ∀ n, q n ≠ 0 := by
+    intro n hn
+    have := hdeg n
+    rw [hn, Polynomial.natDegree_zero] at this
+    omega
+  have hleadlim_ne : qlim.leadingCoeff ≠ 0 := Polynomial.leadingCoeff_ne_zero.mpr hlim0
+  have hcoefflim_d_ne : qlim.coeff d ≠ 0 := by
+    simpa [Polynomial.leadingCoeff, hdeglim] using hleadlim_ne
+  have hcard : ∀ n, (q n).roots.card = d := by
+    intro n
+    exact (Polynomial.splits_iff_card_roots.mp (IsAlgClosed.splits (q n))).trans (hdeg n)
+  let r : ℕ → Fin d → ℂ := fun n i =>
+    (q n).roots.toList.get
+      (Fin.cast (((Multiset.length_toList (q n).roots).trans (hcard n)).symm) i)
+  have henum : ∀ n, Finset.univ.val.map (r n) = (q n).roots := by
+    intro n
+    simpa [r] using multiset_enum_toList ((q n).roots) (hcard n)
+  have hrmem : ∀ n i, r n i ∈ (q n).roots := by
+    intro n i
+    simpa [r] using multiset_enum_toList_mem ((q n).roots) (hcard n) i
+  let L : ℝ := ‖qlim.coeff d‖
+  have hLpos : 0 < L := by
+    simp [L, hcoefflim_d_ne]
+  let S : ℝ := ∑ k ∈ Finset.range d, (‖qlim.coeff k‖ + 1)
+  have hSnonneg : 0 ≤ S := by
+    dsimp [S]
+    exact Finset.sum_nonneg fun _ _ => by positivity
+  let B : ℝ := 1 + S / (L / 2)
+  have hhalfpos : 0 < L / 2 := by positivity
+  have hBnonneg : 0 ≤ B := by
+    have hdiv_nonneg : 0 ≤ S / (L / 2) := div_nonneg hSnonneg hhalfpos.le
+    dsimp [B]
+    linarith
+  have hlead_event : ∀ᶠ n in Filter.atTop, L / 2 ≤ ‖(q n).leadingCoeff‖ := by
+    have hnorm : Filter.Tendsto (fun n => ‖(q n).coeff d‖) Filter.atTop (nhds L) := by
+      simpa [L] using (hcoeff d).norm
+    have hev : ∀ᶠ n in Filter.atTop, L / 2 < ‖(q n).coeff d‖ :=
+      hnorm.eventually (lt_mem_nhds (by linarith))
+    filter_upwards [hev] with n hn
+    have hcd : (q n).coeff d = (q n).leadingCoeff := by
+      rw [Polynomial.leadingCoeff, hdeg n]
+    rw [← hcd]
+    exact le_of_lt hn
+  have hlow_event :
+      ∀ᶠ n in Filter.atTop, ∀ k ∈ Finset.range d, ‖(q n).coeff k‖ ≤ ‖qlim.coeff k‖ + 1 := by
+    rw [Filter.eventually_all_finset]
+    intro k _
+    have hnorm : Filter.Tendsto (fun n => ‖(q n).coeff k‖) Filter.atTop
+        (nhds ‖qlim.coeff k‖) := (hcoeff k).norm
+    exact (hnorm.eventually (gt_mem_nhds (by linarith))).mono fun _ hn => le_of_lt hn
+  have hbound_event : ∀ᶠ n in Filter.atTop, ∀ i : Fin d, ‖r n i‖ ≤ B := by
+    filter_upwards [hlead_event, hlow_event] with n hlead hlow i
+    have hroot_isRoot : (q n).IsRoot (r n i) := (Polynomial.mem_roots'.mp (hrmem n i)).2
+    have hcauchy := norm_root_le_one_add (q n) (hqnz n) hroot_isRoot
+    have hcauchy' :
+        ‖r n i‖ ≤
+          1 + (∑ k ∈ Finset.range d, ‖(q n).coeff k‖) / ‖(q n).leadingCoeff‖ := by
+      simpa [hdeg n] using hcauchy
+    have hsum_nonneg : 0 ≤ ∑ k ∈ Finset.range d, ‖(q n).coeff k‖ :=
+      Finset.sum_nonneg fun _ _ => norm_nonneg _
+    have hsum_le : (∑ k ∈ Finset.range d, ‖(q n).coeff k‖) ≤ S := by
+      dsimp [S]
+      exact Finset.sum_le_sum fun k hk => hlow k hk
+    have hfrac :
+        (∑ k ∈ Finset.range d, ‖(q n).coeff k‖) / ‖(q n).leadingCoeff‖
+          ≤ S / (L / 2) :=
+      div_le_div₀ hSnonneg hsum_le hhalfpos hlead
+    exact hcauchy'.trans (by dsimp [B]; linarith)
+  obtain ⟨N, hN⟩ := Filter.eventually_atTop.mp hbound_event
+  let box : Set (Fin d → ℂ) := {v | ∀ i : Fin d, ‖v i‖ ≤ B}
+  have hbox_bdd : Bornology.IsBounded box := by
+    refine (Metric.isBounded_closedBall (x := (0 : Fin d → ℂ)) (r := B)).subset ?_
+    intro v hv
+    rw [Metric.mem_closedBall, dist_zero_right]
+    exact (pi_norm_le_iff_of_nonneg hBnonneg).2 hv
+  let x : ℕ → (Fin d → ℂ) := fun n => r (n + N)
+  have hxmem : ∀ n, x n ∈ box := by
+    intro n i
+    exact hN (n + N) (Nat.le_add_left N n) i
+  obtain ⟨s, _hs_closure, φ, hφmono, hφlim⟩ := tendsto_subseq_of_bounded hbox_bdd hxmem
+  have hs_im_nonpos : ∀ i : Fin d, (s i).im ≤ 0 := by
+    intro i
+    have him_tendsto :
+        Filter.Tendsto (fun n => (r (φ n + N) i).im) Filter.atTop (nhds (s i).im) := by
+      simpa [x, Function.comp_def] using
+        ((Complex.continuous_im.comp (continuous_apply i)).tendsto s).comp hφlim
+    exact le_of_tendsto him_tendsto
+      (Filter.Eventually.of_forall fun n =>
+        hroots (φ n + N) (r (φ n + N) i) (hrmem (φ n + N) i))
+  have hfactor : ∀ n,
+      q n = Polynomial.C (q n).leadingCoeff *
+        ((Finset.univ.val.map (r n)).map (fun t => Polynomial.X - Polynomial.C t)).prod := by
+    intro n
+    calc
+      q n = Polynomial.C (q n).leadingCoeff *
+          (((q n).roots).map (fun t => Polynomial.X - Polynomial.C t)).prod :=
+        (IsAlgClosed.splits (q n)).eq_prod_roots
+      _ = Polynomial.C (q n).leadingCoeff *
+          ((Finset.univ.val.map (r n)).map (fun t => Polynomial.X - Polynomial.C t)).prod := by
+        rw [← henum n]
+  let pstar : Polynomial ℂ :=
+    Polynomial.C qlim.leadingCoeff *
+      ((Finset.univ.val.map s).map (fun t => Polynomial.X - Polynomial.C t)).prod
+  have hψ_tendsto : Filter.Tendsto (fun n => φ n + N) Filter.atTop Filter.atTop :=
+    (Filter.tendsto_add_atTop_nat N).comp hφmono.tendsto_atTop
+  have hidentify : qlim = pstar := by
+    apply Polynomial.ext
+    intro k
+    by_cases hk : k ≤ d
+    · have hqcoeff_tendsto :
+          Filter.Tendsto (fun n => (q (φ n + N)).coeff k) Filter.atTop (nhds (qlim.coeff k)) :=
+        (hcoeff k).comp hψ_tendsto
+      have hlead_tendsto :
+          Filter.Tendsto (fun n => (q (φ n + N)).leadingCoeff) Filter.atTop
+            (nhds qlim.leadingCoeff) := by
+        have hcd : Filter.Tendsto (fun n => (q (φ n + N)).coeff d) Filter.atTop
+            (nhds (qlim.coeff d)) := (hcoeff d).comp hψ_tendsto
+        have hcd' : Filter.Tendsto (fun n => (q (φ n + N)).leadingCoeff) Filter.atTop
+            (nhds (qlim.coeff d)) := by
+          exact hcd.congr (fun n => by rw [Polynomial.leadingCoeff, hdeg (φ n + N)])
+        have hlead_eq : qlim.coeff d = qlim.leadingCoeff := by
+          rw [Polynomial.leadingCoeff, hdeglim]
+        simpa [hlead_eq] using hcd'
+      have hprod_tendsto :
+          Filter.Tendsto
+            (fun n => (((Finset.univ.val.map (r (φ n + N))).map
+                (fun t => Polynomial.X - Polynomial.C t)).prod.coeff k))
+            Filter.atTop
+            (nhds (((Finset.univ.val.map s).map
+                (fun t => Polynomial.X - Polynomial.C t)).prod.coeff k)) := by
+        simpa [x, Function.comp_def] using
+          (continuous_prod_roots_coeff_fin (d := d) (k := k) hk).tendsto s |>.comp hφlim
+      have hmul_tendsto :
+          Filter.Tendsto
+            (fun n => (q (φ n + N)).leadingCoeff *
+              (((Finset.univ.val.map (r (φ n + N))).map
+                (fun t => Polynomial.X - Polynomial.C t)).prod.coeff k))
+            Filter.atTop
+            (nhds (qlim.leadingCoeff *
+              (((Finset.univ.val.map s).map
+                (fun t => Polynomial.X - Polynomial.C t)).prod.coeff k))) :=
+        hlead_tendsto.mul hprod_tendsto
+      have hcoeff_factor : ∀ n,
+          (q (φ n + N)).coeff k =
+            (q (φ n + N)).leadingCoeff *
+              (((Finset.univ.val.map (r (φ n + N))).map
+                (fun t => Polynomial.X - Polynomial.C t)).prod.coeff k) := by
+        intro n
+        have h := congrArg (fun p : Polynomial ℂ => p.coeff k) (hfactor (φ n + N))
+        simpa [Polynomial.coeff_C_mul] using h
+      have hmul_as_q :
+          Filter.Tendsto (fun n => (q (φ n + N)).coeff k) Filter.atTop
+            (nhds (qlim.leadingCoeff *
+              (((Finset.univ.val.map s).map
+                (fun t => Polynomial.X - Polynomial.C t)).prod.coeff k))) :=
+        hmul_tendsto.congr' (Filter.Eventually.of_forall fun n => (hcoeff_factor n).symm)
+      have heq :
+          qlim.coeff k =
+            qlim.leadingCoeff *
+              (((Finset.univ.val.map s).map
+                (fun t => Polynomial.X - Polynomial.C t)).prod.coeff k) :=
+        tendsto_nhds_unique hqcoeff_tendsto hmul_as_q
+      dsimp [pstar]
+      rw [Polynomial.coeff_C_mul]
+      exact heq
+    · have hklt : d < k := Nat.lt_of_not_ge hk
+      have hleft : qlim.coeff k = 0 := by
+        exact Polynomial.coeff_eq_zero_of_natDegree_lt (by simpa [hdeglim] using hklt)
+      have hprod_natDegree :
+          (((Finset.univ.val.map s).map (fun t => Polynomial.X - Polynomial.C t)).prod).natDegree = d := by
+        rw [Polynomial.natDegree_multiset_prod_X_sub_C_eq_card]
+        simp
+      have hprod_coeff0 :
+          (((Finset.univ.val.map s).map (fun t => Polynomial.X - Polynomial.C t)).prod).coeff k = 0 := by
+        exact Polynomial.coeff_eq_zero_of_natDegree_lt (by
+          rw [hprod_natDegree]
+          exact hklt)
+      have hright : pstar.coeff k = 0 := by
+        dsimp [pstar]
+        rw [Polynomial.coeff_C_mul, hprod_coeff0, mul_zero]
+      rw [hleft, hright]
+  intro z hz
+  have hroot_eq : qlim.roots = Finset.univ.val.map s := by
+    rw [hidentify]
+    dsimp [pstar]
+    rw [Polynomial.roots_C_mul _ hleadlim_ne, Polynomial.roots_multiset_prod_X_sub_C]
+  rw [hroot_eq] at hz
+  rcases Multiset.mem_map.mp hz with ⟨i, _hi, rfl⟩
+  exact hs_im_nonpos i
+
+end
+
 end ProofsInTheBook.Chapter22Stable

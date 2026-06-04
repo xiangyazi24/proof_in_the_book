@@ -106,3 +106,19 @@ Every remaining fragment is now reduced to ONE precise hard core:
 - **36 Art gallery:** polygon-triangulation existence + visibility geometry. (combinatorial 3-coloring PROVEN)
 
 Design-gated (Ch09/13/36 + Ch33 normalization): the auto pbook bridge truncates long design answers; Xiang relaying ChatGPT-Pro (as with the Tucker proof) is the reliable unblock. Blueprints staged at /tmp/pbook_*.txt.
+
+## Definitive frontier map (2026-06-04 end-of-session, each wall verified absent from Mathlib by direct probe)
+| Ch | Everything proven except | Mathlib status of the wall |
+|----|--------------------------|----------------------------|
+| 22 Gurvits | polynomial root-continuity / Hurwitz specialization (the ε→0 boundary argument); classical proof = Rouché | NO Rouché, NO argument principle, NO root-continuity (probed) |
+| 33 Smetaniuk | the strengthened induction invariant handling no-singleton-symbol exact cases (my positional+unused-symbol design refuted by codex on counting; sharpened question with ChatGPT-Pro) | pure combinatorics; needs the literature's exact statement |
+| 35 Five-color | deleted-star boundary topology (dart-model version proven FALSE by counterexample) + Kempe non-crossing | NO planar-graph topology (probed earlier) |
+| 09 Dehn | scissors-congruence relation + Dehn additivity/invariance | only group-action `Equidecomp` exists; no polytope dissection theory |
+| 13 Cauchy | Euclidean arm lemma + convex-polytope substrate | no convex-polyhedron incidence/dihedral theory |
+| 36 Art gallery | polygon triangulation existence + visibility | no polygon/visibility geometry |
+
+Proven THIS session toward these: Ch22 = telescoping + AM-GM bound + univariate Gurvits crux + capacity
+iteration + RealStable framework + row-linear base + univariate Lieb-Sokal (derivative closure + UHP bridge).
+Ch33 = cunning-extension switching + exists_perm_strictly_above (the permutation crux). Ch35 = Euler half
+(3F≤2E, E≤3V-6, min-degree-5) + Perm.deleteSet splice + the deletion counterexamples. Plus closed outright:
+Ch39 (Tucker), Ch18 (AM-GM), Ch12 (Platonic from Euler, via the new PlanarMap infra), Ch14 (faithful touching).

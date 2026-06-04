@@ -50,6 +50,51 @@ theorem gurvits_product_telescopes (n : ℕ) (hn : 1 ≤ n) :
         ring
 
 /-!
+### The AM-GM product bound (key inequality of the univariate Gurvits step)
+
+For nonnegative `λ` and `t`, `∏ᵢ (1 + λᵢ t) ≤ (1 + (Σλ) t / k)^k`. This is AM-GM applied to the
+`k` factors `1 + λᵢ t`, and it is the inequality that, evaluated at the optimal `t`, yields the
+Gurvits capacity-reduction constant `G(k) = ((k-1)/k)^{k-1}`.
+-/
+
+/-- AM-GM: `∏ᵢ (1 + λᵢ t) ≤ (1 + (Σλ) t / k)^k` for nonnegative `λ`, `t`. -/
+lemma prod_one_add_mul_le {k : ℕ} (hk : 1 ≤ k) (lam : Fin k → ℝ)
+    (hlam : ∀ i, 0 ≤ lam i) (t : ℝ) (ht : 0 ≤ t) :
+    ∏ i, (1 + lam i * t) ≤ (1 + (∑ i, lam i) * t / k) ^ k := by
+  have hkR : (0 : ℝ) < k := by exact_mod_cast hk
+  set y : Fin k → ℝ := fun i => 1 + lam i * t with hy_def
+  have hy : ∀ i ∈ (Finset.univ : Finset (Fin k)), 0 ≤ y i := by
+    intro i _; have : 0 ≤ lam i * t := mul_nonneg (hlam i) ht; simp only [hy_def]; linarith
+  have hw : ∀ i ∈ (Finset.univ : Finset (Fin k)), 0 ≤ ((k : ℝ)⁻¹) := by
+    intro i _; positivity
+  have hw' : ∑ _i : Fin k, ((k : ℝ)⁻¹) = 1 := by
+    rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+    field_simp
+  have hgeom := Real.geom_mean_le_arith_mean_weighted Finset.univ (fun _ => (k : ℝ)⁻¹) y hw hw' hy
+  -- ∏ y_i ^ (1/k) ≤ ∑ (1/k) y_i = avg
+  set avg : ℝ := 1 + (∑ i, lam i) * t / k with havg_def
+  have hsum : ∑ i, ((k : ℝ)⁻¹) * y i = avg := by
+    rw [← Finset.mul_sum]
+    have hsy : ∑ i, y i = (k : ℝ) + (∑ i, lam i) * t := by
+      simp only [hy_def]
+      rw [Finset.sum_add_distrib, Finset.sum_const, Finset.card_univ, Fintype.card_fin,
+        nsmul_eq_mul, mul_one, ← Finset.sum_mul]
+    rw [hsy, havg_def]
+    field_simp
+  rw [hsum] at hgeom
+  -- ∏ y_i ^ (1/k) = (∏ y_i) ^ (1/k)
+  have hprod_rpow : ∏ i, (y i) ^ ((k : ℝ)⁻¹) = (∏ i, y i) ^ ((k : ℝ)⁻¹) :=
+    Real.finsetProd_rpow Finset.univ y hy _
+  rw [hprod_rpow] at hgeom
+  have hprodpos : 0 ≤ ∏ i, y i := Finset.prod_nonneg hy
+  -- raise both sides to the (k:ℝ) power, then simplify the LHS exponent (1/k)*k = 1
+  have hpow := Real.rpow_le_rpow (Real.rpow_nonneg hprodpos _) hgeom (le_of_lt hkR)
+  rw [← Real.rpow_mul hprodpos] at hpow
+  have hkne : (k : ℝ) ≠ 0 := ne_of_gt hkR
+  rw [inv_mul_cancel₀ hkne, Real.rpow_one, Real.rpow_natCast] at hpow
+  simpa [hy_def, havg_def] using hpow
+
+/-!
 ### Algebraic interface to the Chapter 22 capacity core
 
 The analytic Gurvits step should produce the lower bound with the telescoping

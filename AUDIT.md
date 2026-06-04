@@ -122,3 +122,15 @@ iteration + RealStable framework + row-linear base + univariate Lieb-Sokal (deri
 Ch33 = cunning-extension switching + exists_perm_strictly_above (the permutation crux). Ch35 = Euler half
 (3F≤2E, E≤3V-6, min-degree-5) + Perm.deleteSet splice + the deletion counterexamples. Plus closed outright:
 Ch39 (Tucker), Ch18 (AM-GM), Ch12 (Platonic from Euler, via the new PlanarMap infra), Ch14 (faithful touching).
+
+### Ch22 wall DOWNGRADED (route discovery, end of session)
+The Hurwitz/root-continuity specialization does NOT require building Rouché. Assemblable route, all
+ingredients verified present in Mathlib:
+1. Factor each q_ε over ℂ: `Polynomial.Splits.eq_prod_roots` (alg. closed). Roots of q_ε have im ≤ 0 (stability).
+2. Cauchy root bound (|root| ≤ 1 + max‖coeff‖/‖lead‖) — small elementary lemma to prove.
+3. Bolzano–Weierstrass on the bounded root vectors (Mathlib compactness) along ε→0⁺: subsequence with
+   root-vector limit, each limit root has im ≤ 0.
+4. Vieta (`Multiset.prod_X_sub_C_coeff`): coefficients = ±lead·esymm(roots), continuous in the roots —
+   so the coefficientwise limit q₀ equals lead₀·∏(X − limit-root), i.e. q₀'s roots all have im ≤ 0.
+5. Degree-drop case (lead_ε → 0) handled separately in the application.
+So Ch22 = one focused ~150-line analysis-lite formalization away (no missing Mathlib foundation).

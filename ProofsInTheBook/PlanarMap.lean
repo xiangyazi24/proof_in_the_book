@@ -71,7 +71,7 @@ lemma zpow_involution (α : Equiv.Perm D) (h : α * α = 1) (i : ℤ) :
     rw [h2, h]
   rcases Int.even_or_odd i with ⟨r, hr⟩ | ⟨k, hk⟩
   · left
-    rw [hr, show r + r = 2 * r from by ring, zpow_mul, hsq, one_zpow]
+    rw [show i = 2 * r by omega, zpow_mul, hsq, one_zpow]
   · right
     rw [hk, zpow_add, zpow_mul, hsq, one_zpow, one_mul, zpow_one]
 
@@ -87,6 +87,36 @@ lemma alpha_sameCycle_iff (M : CombMap D) (d x : D) :
   · rintro (rfl | rfl)
     · exact ⟨0, by simp⟩
     · exact ⟨1, by simp⟩
+
+/-- Every `α`-class (edge) has exactly two darts. -/
+lemma alpha_class_card (M : CombMap D)
+    (q : Quotient (cycleSetoid M.α)) :
+    (Finset.univ.filter (fun x => Quotient.mk (cycleSetoid M.α) x = q)).card = 2 := by
+  obtain ⟨d, rfl⟩ := q.exists_rep
+  have hset :
+      (Finset.univ.filter
+          (fun x => Quotient.mk (cycleSetoid M.α) x = Quotient.mk (cycleSetoid M.α) d))
+        = {d, M.α d} := by
+    ext x
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_insert,
+      Finset.mem_singleton, Quotient.eq]
+    show M.α.SameCycle x d ↔ x = d ∨ x = M.α d
+    constructor
+    · intro h; exact (alpha_sameCycle_iff M d x).mp h.symm
+    · intro h; exact ((alpha_sameCycle_iff M d x).mpr h).symm
+  rw [hset, Finset.card_insert_of_notMem (by
+    simp only [Finset.mem_singleton]
+    exact fun hcontra => M.α_no_fixed d hcontra.symm), Finset.card_singleton]
+
+/-- Every edge has exactly two darts: `2 * E = |D|`. -/
+lemma two_mul_E_eq_card (M : CombMap D) : 2 * M.E = Fintype.card D := by
+  have hsum : Fintype.card D
+      = ∑ q : Quotient (cycleSetoid M.α),
+          (Finset.univ.filter (fun x => Quotient.mk (cycleSetoid M.α) x = q)).card := by
+    rw [← Finset.card_univ]
+    exact Finset.card_eq_sum_card_fiberwise (fun x _ => Finset.mem_univ _)
+  rw [hsum, Finset.sum_congr rfl (fun q _ => alpha_class_card M q),
+      Finset.sum_const, Finset.card_univ, smul_eq_mul, E, Nat.mul_comm]
 
 /-- Two darts are in the same vertex iff they share a `σ`-cycle. -/
 def vertexConnected (M : CombMap D) : D → D → Prop := fun a b => (M.σ.SameCycle a b)

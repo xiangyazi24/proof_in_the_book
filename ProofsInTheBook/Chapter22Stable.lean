@@ -70,10 +70,32 @@ lemma linearForm_stable {m : ℕ} (C : Fin m → ℝ) (hC : ∀ j, 0 ≤ C j)
   rw [hz0] at hpos'
   simp at hpos'
 
-/-
-The remaining hard stability closure for the Gurvits reduction is the Lieb–Sokal lemma:
-`∂/∂xₘ` (followed by setting `xₘ = 0`) preserves real-stability. That is the genuine analytic
-input still to be formalized; it is NOT stated as a degenerate placeholder here.
+/-!
+### Univariate real-rootedness and its derivative closure (the univariate Lieb–Sokal heart)
+
+A univariate real polynomial is real-rooted iff it splits over ℝ — equivalently its root multiset
+(with multiplicity) has cardinality equal to its degree. The derivative of a real-rooted polynomial
+is again real-rooted (Rolle's theorem / interlacing). This is the one-variable case of the stability
+closure; the full multivariate Lieb–Sokal lemma (`∂/∂xₘ` preserves real-stability) lifts it via the
+Hurwitz theorem and remains the genuine remaining analytic input for the Gurvits reduction.
 -/
+
+open Polynomial in
+/-- A univariate real polynomial is real-rooted: all roots real (splits over ℝ), i.e. the root
+multiset cardinality equals the degree. -/
+def RealRooted (p : ℝ[X]) : Prop := Multiset.card p.roots = p.natDegree
+
+open Polynomial in
+/-- **The derivative of a real-rooted polynomial is real-rooted** (Rolle interlacing). -/
+lemma RealRooted.derivative {p : ℝ[X]} (hp : RealRooted p) :
+    RealRooted (Polynomial.derivative p) := by
+  unfold RealRooted at hp ⊢
+  have h1 : Multiset.card p.roots ≤ Multiset.card (Polynomial.derivative p).roots + 1 :=
+    Polynomial.card_roots_le_derivative p
+  have h2 : Multiset.card (Polynomial.derivative p).roots ≤ (Polynomial.derivative p).natDegree :=
+    Polynomial.card_roots' _
+  have h3 : (Polynomial.derivative p).natDegree ≤ p.natDegree - 1 :=
+    Polynomial.natDegree_derivative_le p
+  omega
 
 end ProofsInTheBook.Chapter22Stable

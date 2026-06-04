@@ -33,3 +33,16 @@ Given P : order-n partial Latin square, exactly n-1 filled cells.
    and smetBackDiagonal_completable (PROVEN) completes it. Undo the relabeling/permutations to complete P.
 
 This closes EvansExactCardinalityCase (hence chapter33_unconditional) — the switching is already proven.
+
+## CORRECTION (codex adversarial check, 2026-06-04): the above has a COUNTING GAP
+The unused-symbol route puts NO filled cell on the back-diagonal, so the order-(n-1) shrink retains all
+n-1 cells — exceeding the Evans IH at order n-1 (which handles ≤ n-2). The singleton-symbol invariant existed
+precisely so the shrink deletes one filled cell (the special diagonal cell). So:
+- exists_perm_strictly_above (PROVEN) is still necessary/useful, but NOT sufficient.
+- The genuine remaining design question (for the literature / relay): how does Smetaniuk's actual proof handle
+  the no-singleton-symbol case ({2,2,0,0,0})? Candidates: (a) a case split with a separate argument when every
+  used symbol occurs ≥2 (few distinct symbols); (b) a STRENGTHENED triangular completion statement at order N
+  allowing N cells when all are strictly above the diagonal (the triangular structure compensating the +1);
+  (c) a strengthened Smetaniuk core with extra row/column constraints. (b) looks most plausible — the classic
+  n-cell non-completable examples are not triangular.
+STATUS: Ch33 = switching PROVEN + permutation crux PROVEN + this one design question open.

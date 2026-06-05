@@ -7,6 +7,7 @@ import ProofsInTheBook.Chapter06
 import ProofsInTheBook.Chapter07
 import ProofsInTheBook.Chapter08
 import ProofsInTheBook.Chapter09
+import ProofsInTheBook.ConeLemma
 import ProofsInTheBook.Chapter10
 import ProofsInTheBook.Chapter11
 import ProofsInTheBook.Chapter12

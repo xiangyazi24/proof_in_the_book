@@ -346,6 +346,169 @@ def complexLineSection {m : ℕ} (q : MvPolynomial (Fin m) ℂ)
   MvPolynomial.eval₂ Polynomial.C
     (fun j => Polynomial.C (a j) + Polynomial.C (b j) * Polynomial.X) q
 
+lemma coeff_prod_of_natDegree_le_sum {ι R : Type*} [CommSemiring R]
+    [DecidableEq ι] (s : Finset ι) (f : ι → Polynomial R) (d : ι → ℕ)
+    (h : ∀ i ∈ s, (f i).natDegree ≤ d i) :
+    (∏ i ∈ s, f i).coeff (∑ i ∈ s, d i) =
+      ∏ i ∈ s, (f i).coeff (d i) := by
+  classical
+  induction s using Finset.induction with
+  | empty =>
+      simp
+  | insert i s his ih =>
+      have hprod : (∏ j ∈ s, f j).natDegree ≤ ∑ j ∈ s, d j := by
+        exact (Polynomial.natDegree_prod_le (s := s) (f := f)).trans
+          (Finset.sum_le_sum fun j hj => h j (Finset.mem_insert_of_mem hj))
+      rw [Finset.prod_insert his, Finset.sum_insert his, Finset.prod_insert his]
+      rw [Polynomial.coeff_mul_add_eq_of_natDegree_le
+        (h i (Finset.mem_insert_self i s)) hprod]
+      rw [ih (fun j hj => h j (Finset.mem_insert_of_mem hj))]
+
+lemma coeff_linear_pow_top {R : Type*} [CommSemiring R] (a b : R) (n : ℕ) :
+    ((Polynomial.C a + Polynomial.C b * Polynomial.X : Polynomial R) ^ n).coeff n = b ^ n := by
+  have hlin : (Polynomial.C a + Polynomial.C b * Polynomial.X : Polynomial R).natDegree ≤ 1 := by
+    simpa only [add_comm] using (Polynomial.natDegree_linear_le (a := b) (b := a))
+  have h := Polynomial.coeff_pow_of_natDegree_le
+    (p := (Polynomial.C a + Polynomial.C b * Polynomial.X : Polynomial R)) (m := n) (n := 1) hlin
+  have hcoeff : (Polynomial.C a + Polynomial.C b * Polynomial.X : Polynomial R).coeff 1 = b := by
+    simp
+  rw [Nat.mul_one, hcoeff] at h
+  exact h
+
+lemma coeff_complexLineSection_monomial_degree {m : ℕ}
+    (u : Fin m →₀ ℕ) (c : ℂ) (a b : Fin m → ℂ) :
+    (complexLineSection (MvPolynomial.monomial u c) a b).coeff u.degree =
+      c * ∏ i ∈ u.support, b i ^ u i := by
+  classical
+  rw [complexLineSection, MvPolynomial.eval₂_monomial, Polynomial.coeff_C_mul]
+  have hprod :
+      (∏ x ∈ u.support,
+          (Polynomial.C (a x) + Polynomial.C (b x) * Polynomial.X : Polynomial ℂ) ^ u x).coeff
+        (∑ x ∈ u.support, u x) =
+        ∏ x ∈ u.support,
+          (((Polynomial.C (a x) + Polynomial.C (b x) * Polynomial.X : Polynomial ℂ) ^ u x).coeff (u x)) :=
+    coeff_prod_of_natDegree_le_sum u.support
+      (fun x => (Polynomial.C (a x) + Polynomial.C (b x) * Polynomial.X : Polynomial ℂ) ^ u x)
+      (fun x => u x)
+      (by
+        intro x _hx
+        have hlin :
+            (Polynomial.C (a x) + Polynomial.C (b x) * Polynomial.X : Polynomial ℂ).natDegree ≤ 1 := by
+          simpa only [add_comm] using
+            (Polynomial.natDegree_linear_le (a := b x) (b := a x))
+        simpa only [Nat.mul_one] using Polynomial.natDegree_pow_le_of_le (u x) hlin)
+  rw [Finsupp.prod]
+  change c *
+      (∏ x ∈ u.support,
+        (Polynomial.C (a x) + Polynomial.C (b x) * Polynomial.X : Polynomial ℂ) ^ u x).coeff
+        (∑ x ∈ u.support, u x) =
+    c * ∏ i ∈ u.support, b i ^ u i
+  rw [hprod]
+  congr 1
+  apply Finset.prod_congr rfl
+  intro x _hx
+  exact coeff_linear_pow_top (a x) (b x) (u x)
+
+lemma complexLineSection_coeff_of_isHomogeneous {m d : ℕ}
+    {q : MvPolynomial (Fin m) ℂ} (hq : q.IsHomogeneous d)
+    (a b : Fin m → ℂ) :
+    (complexLineSection q a b).coeff d = MvPolynomial.eval b q := by
+  classical
+  conv_lhs =>
+    rw [q.as_sum]
+  rw [complexLineSection, MvPolynomial.eval₂_sum, Polynomial.finsetSum_coeff]
+  rw [MvPolynomial.eval_eq]
+  apply Finset.sum_congr rfl
+  intro u hu
+  have hdeg : u.degree = d := by
+    rw [← hq (MvPolynomial.mem_support_iff.mp hu)]
+    rw [Finsupp.degree, Finsupp.weight_apply, Finsupp.sum]
+    change (∑ i ∈ u.support, u i) =
+      ∑ a ∈ u.support, u a • ((1 : Fin m → ℕ) a)
+    simp
+  rw [← hdeg]
+  change
+    (complexLineSection (MvPolynomial.monomial u (MvPolynomial.coeff u q)) a b).coeff u.degree =
+      MvPolynomial.coeff u q * ∏ i ∈ u.support, b i ^ u i
+  rw [coeff_complexLineSection_monomial_degree]
+
+lemma complexLineSection_monomial_natDegree_le_degree {m : ℕ}
+    (u : Fin m →₀ ℕ) (c : ℂ) (a b : Fin m → ℂ) :
+    (complexLineSection (MvPolynomial.monomial u c) a b).natDegree ≤ u.degree := by
+  classical
+  rw [complexLineSection, MvPolynomial.eval₂_monomial]
+  refine (Polynomial.natDegree_C_mul_le c _).trans ?_
+  have hprod :
+      (∏ x ∈ u.support,
+          ((Polynomial.C (a x) + Polynomial.C (b x) * Polynomial.X : Polynomial ℂ) ^ u x)).natDegree
+        ≤ ∑ x ∈ u.support, u x := by
+    exact (Polynomial.natDegree_prod_le
+      (s := u.support)
+      (f := fun x => (Polynomial.C (a x) + Polynomial.C (b x) * Polynomial.X : Polynomial ℂ) ^ u x)).trans
+      (Finset.sum_le_sum fun x _hx => by
+        have hlin :
+            (Polynomial.C (a x) + Polynomial.C (b x) * Polynomial.X : Polynomial ℂ).natDegree ≤ 1 := by
+          simpa only [add_comm] using
+            (Polynomial.natDegree_linear_le (a := b x) (b := a x))
+        simpa only [Nat.mul_one] using Polynomial.natDegree_pow_le_of_le (u x) hlin)
+  rw [Finsupp.degree]
+  exact hprod
+
+lemma complexLineSection_natDegree_le_of_isHomogeneous {m d : ℕ}
+    {q : MvPolynomial (Fin m) ℂ} (hq : q.IsHomogeneous d)
+    (a b : Fin m → ℂ) :
+    (complexLineSection q a b).natDegree ≤ d := by
+  classical
+  rw [Polynomial.natDegree_le_iff_coeff_eq_zero]
+  intro N hN
+  conv_lhs =>
+    rw [q.as_sum]
+  rw [complexLineSection, MvPolynomial.eval₂_sum, Polynomial.finsetSum_coeff]
+  apply Finset.sum_eq_zero
+  intro u hu
+  have hdeg : u.degree = d := by
+    rw [← hq (MvPolynomial.mem_support_iff.mp hu)]
+    rw [Finsupp.degree, Finsupp.weight_apply, Finsupp.sum]
+    change (∑ i ∈ u.support, u i) =
+      ∑ a ∈ u.support, u a • ((1 : Fin m → ℕ) a)
+    simp
+  change
+    (complexLineSection (MvPolynomial.monomial u (MvPolynomial.coeff u q)) a b).coeff N = 0
+  exact Polynomial.coeff_eq_zero_of_natDegree_lt
+    (lt_of_le_of_lt (complexLineSection_monomial_natDegree_le_degree u (MvPolynomial.coeff u q) a b)
+      (by omega))
+
+lemma complexLineSection_natDegree_eq_of_isHomogeneous_eval_ne_zero {m d : ℕ}
+    {q : MvPolynomial (Fin m) ℂ} (hq : q.IsHomogeneous d)
+    (a b : Fin m → ℂ) (hbq : MvPolynomial.eval b q ≠ 0) :
+    (complexLineSection q a b).natDegree = d := by
+  apply Polynomial.natDegree_eq_of_le_of_coeff_ne_zero
+    (complexLineSection_natDegree_le_of_isHomogeneous hq a b)
+  rw [complexLineSection_coeff_of_isHomogeneous hq a b]
+  exact hbq
+
+lemma complexLineSection_firstReduction_natDegree {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hpcoeff : NonnegativeCoefficients p)
+    (hhom : p.IsHomogeneous (m + 1))
+    (hp_ne : firstReduction p ≠ 0)
+    (a b : Fin m → ℝ) (hb : ∀ j, 0 < b j) :
+    (complexLineSection ((firstReduction p).map (algebraMap ℝ ℂ))
+      (fun j => (a j : ℂ)) (fun j => (b j : ℂ))).natDegree = m := by
+  have hhomC : ((firstReduction p).map (algebraMap ℝ ℂ)).IsHomogeneous m := by
+    simpa using (firstReduction_isHomogeneous hhom).map (algebraMap ℝ ℂ)
+  have hpos : 0 < MvPolynomial.eval b (firstReduction p) :=
+    eval_pos_of_nonnegativeCoefficients (firstReduction_nonnegativeCoefficients hpcoeff) hp_ne hb
+  have hmap_eval :
+      MvPolynomial.eval (fun j => (b j : ℂ))
+        ((firstReduction p).map (algebraMap ℝ ℂ)) =
+        (MvPolynomial.eval b (firstReduction p) : ℂ) := by
+    simpa [Function.comp_def] using
+      (MvPolynomial.map_eval (q := algebraMap ℝ ℂ) (g := b) (p := firstReduction p)).symm
+  apply complexLineSection_natDegree_eq_of_isHomogeneous_eval_ne_zero hhomC
+  rw [hmap_eval]
+  exact Complex.ofReal_ne_zero.mpr (ne_of_gt hpos)
+
 def distinguishedDerivativeAt {m : ℕ} (p : MvPolynomial (Fin (m + 1)) ℝ)
     (c : ℂ) : MvPolynomial (Fin m) ℂ :=
   Polynomial.eval (MvPolynomial.C c)

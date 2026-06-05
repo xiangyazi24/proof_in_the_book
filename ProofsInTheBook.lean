@@ -67,6 +67,7 @@ import ProofsInTheBook.PlanarMapCutCapSigma2
 import ProofsInTheBook.PlanarMapCutCapEval
 import ProofsInTheBook.PlanarMapCutCap2Counts
 import ProofsInTheBook.PlanarMapCutCap2F
+import ProofsInTheBook.PlanarMapCutCap2FWalk
 import ProofsInTheBook.PlanarMapCutCapV
 import ProofsInTheBook.PlanarMapCutCapF
 import ProofsInTheBook.PlanarMapCutCapConn

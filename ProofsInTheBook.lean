@@ -8,6 +8,7 @@ import ProofsInTheBook.Chapter07
 import ProofsInTheBook.Chapter08
 import ProofsInTheBook.Chapter09
 import ProofsInTheBook.ConeLemma
+import ProofsInTheBook.SectorSum
 import ProofsInTheBook.Chapter10
 import ProofsInTheBook.Chapter11
 import ProofsInTheBook.Chapter12
@@ -37,6 +38,7 @@ import ProofsInTheBook.Chapter34
 import ProofsInTheBook.PlanarMapSimple
 import ProofsInTheBook.PlanarMapBoundary
 import ProofsInTheBook.PlanarMapNearTriangulation
+import ProofsInTheBook.PlanarMapBoundaryFan
 import ProofsInTheBook.SimpleGraphBlocks
 import ProofsInTheBook.ListColoring
 import ProofsInTheBook.Chapter35

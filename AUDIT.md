@@ -61,7 +61,7 @@ LEGEND: ✅ faithful · ⚠️ conditional/fragment (real content assumed) · �
   - Ch18 CLOSED 2026-06-04 (was 2-var only; now headline = general n-AM-GM + `chapter18_cauchy_schwarz`).
   - Ch12 CLOSED 2026-06-04 (was bare nlinarith set-finiteness; now Platonic solids DERIVED from Euler via new `PlanarMap` infra).
 - **FAITHFUL via verified alternate (3):** 20 (monsky_dissection), 39 (chapter39_unconditional + tuckerLemma_pos), 14 (chapter14_unconditional from FaithfulPairwiseTouching = touch along facet interiors, the faithful book 'touching'; #print axioms clean. NOTE: definition-faithfulness call flagged for Xiang).
-- **TALLY: 33/40 faithful + axiom-clean.**
+- **TALLY: 34/40 faithful + axiom-clean.** (Ch22 CLOSED 2026-06-04: chapter22_unconditional, van der Waerden permanent bound via Gurvits capacity — fully formalized incl. Rouche-free root-continuity + half-plane Gauss-Lucas; #print axioms clean)
 - **NEW INFRASTRUCTURE built (the Mathlib hole):** `ProofsInTheBook/PlanarMap.lean` — combinatorial maps, orbit-count V/E/F, `eulerChar`, faithful genus-zero `IsSphereMap`, edge structure (2E=|D|), regularity counting (pF=2E, qV=2E), `platonic_constraint` (1/p+1/q>1/2 from Euler), `platonic_pairs` (the five). 0-sorry, axiom-clean. This is Layer 1 + the Ch12 consequences; the Ch35 deletion+Kempe machinery (design in HANDOFF/EULER_DESIGN_r3.md) builds on it next.
 - **CONFIRMED FRAGMENTS (6) — the genuine remaining work:**
 

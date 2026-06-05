@@ -107,7 +107,36 @@ Every remaining fragment is now reduced to ONE precise hard core:
 
 Design-gated (Ch09/13/36 + Ch33 normalization): the auto pbook bridge truncates long design answers; Xiang relaying ChatGPT-Pro (as with the Tucker proof) is the reliable unblock. Blueprints staged at /tmp/pbook_*.txt.
 
-## Definitive frontier map (2026-06-04 end-of-session, each wall verified absent from Mathlib by direct probe)
+## Frontier map 2026-06-05 (36/40; every open chapter has its verbatim book text + a ChatGPT design round in HANDOFF/)
+
+Open = {09, 13, 35, 36}. New bricks landed this session (all 0-sorry, axiom-clean, in the root build):
+- ConeLemma.lean: cone_lemma (book ch9 Cone Lemma) — rational-kernel density via flat base change.
+- ArmLemma.lean: cauchy_arm_lemma (planar Cauchy arm lemma, direction-angle profile normal form,
+  chord-formula monotonicity — slicker than the book's Schoenberg induction). AUX until the
+  convex-position recognition theorem lands.
+- ListColoring.lean: ch35 layer 4 (ProperOn/ListValidOn/IsListColoring, graph+list monotonicity,
+  piecewise glue, rooted cut-vertex glue — the form that is TRUE for list colorings —, greedy extension).
+
+Per-chapter state and the named hardest remaining lemma:
+- 09 (Dehn): design = HANDOFF/CH09_GEOMETRY_DESIGN.md (simplices-only TetSolid; pearls by breakpoint
+  partition; Bricard via ONE homogeneous system + the proven cone_lemma). Hardest:
+  pearl_angle_sum_classification, normal form = 2D sector sums (disk 2π / half-disk π / wedge θ)
+  via polar-interval additivity. Briefs staged: TASK_SectorSum.md, TASK_TetPearls.md.
+- 13 (Cauchy): arm-lemma core PROVEN (profile form). Remaining: convex-position recognition
+  (polygon design layer B) + the SPHERICAL arm lemma + vertex-link substrate (the true wall;
+  design note HANDOFF/CH13_ARM_ROUTE.md).
+- 35 (Five-color): route = book ch34 Thomassen list coloring ("does not use Euler's formula at
+  all"); design = HANDOFF/CH35_DESIGN_ANSWER.md (NearTriangulation primitive, duplicated-dart chord
+  split, filtered-rotation boundary deletion — restricted to exactly the cases excluded by our
+  deletion counterexamples —, block-decomposition bridge with rooted glue). Adversarial design
+  review in flight (c35review). Hardest: deleteBoundaryVertex surgery re-verification + the
+  case-2 list bookkeeping (book reserves two colors from C(v0)).
+- 36 (Art gallery): design = HANDOFF/CH36_13_POLYGON_DESIGN.md (StrictSimplePolygon; ray-crossing
+  parity region, NO Jordan; EarTriangulation inductive existence -> GeomTriangulation finite data;
+  visibility trivial by triangle convexity). Hardest: slide_last_vertex_visible_from_A + the
+  region-split lemmas (A4). Substrate layers A0-A2 in flight (c36poly).
+
+## Definitive frontier map (2026-06-04 end-of-session, each wall verified absent from Mathlib by direct probe) [SUPERSEDED by the 06-05 map above]
 | Ch | Everything proven except | Mathlib status of the wall |
 |----|--------------------------|----------------------------|
 | 22 Gurvits | polynomial root-continuity / Hurwitz specialization (the ε→0 boundary argument); classical proof = Rouché | NO Rouché, NO argument principle, NO root-continuity (probed) |

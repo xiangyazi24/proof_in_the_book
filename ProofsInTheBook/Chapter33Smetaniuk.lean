@@ -35,6 +35,848 @@ def SmetaniukTriangularNormalized {n : ℕ}
     (P : Fin n → Fin n → Option (Fin n)) (d newSym : Fin n) : Prop :=
   MainDiagonalNewSymbol P d newSym ∧ StrictUpperTriangle P newSym
 
+/-!
+## Improper Latin squares
+
+Smetaniuk's induction keeps the order-`N` intermediate square as a signed
+array.  A proper cell `[x]` contributes one copy of `x`; an improper cell
+`[x+y-z]` contributes `+x + y - z` to every row and column balance, while a
+prescribed entry is satisfied by positive syntactic occurrence.
+-/
+
+inductive SignedCell (α : Type*) where
+  | proper : α → SignedCell α
+  | improper : α → α → α → SignedCell α
+deriving DecidableEq
+
+namespace SignedCell
+
+variable {α : Type*} [DecidableEq α]
+
+def coeff : SignedCell α → α → ℤ
+  | proper x, s => if s = x then 1 else 0
+  | improper x y z, s =>
+      (if s = x then 1 else 0) + (if s = y then 1 else 0) -
+        (if s = z then 1 else 0)
+
+def Pos : SignedCell α → α → Prop
+  | proper x, s => s = x
+  | improper x y _z, s => s = x ∨ s = y
+
+def isImproper : SignedCell α → Bool
+  | proper _ => false
+  | improper _ _ _ => true
+
+@[simp] lemma coeff_proper (x s : α) :
+    coeff (proper x) s = if s = x then 1 else 0 := rfl
+
+@[simp] lemma coeff_improper (x y z s : α) :
+    coeff (improper x y z) s =
+      (if s = x then 1 else 0) + (if s = y then 1 else 0) -
+        (if s = z then 1 else 0) := rfl
+
+@[simp] lemma pos_proper (x s : α) :
+    Pos (proper x) s ↔ s = x := Iff.rfl
+
+@[simp] lemma pos_improper (x y z s : α) :
+    Pos (improper x y z) s ↔ s = x ∨ s = y := Iff.rfl
+
+@[simp] lemma isImproper_proper (x : α) :
+    isImproper (proper x) = false := rfl
+
+@[simp] lemma isImproper_improper (x y z : α) :
+    isImproper (improper x y z) = true := rfl
+
+end SignedCell
+
+noncomputable def signedImproperCells {n : ℕ}
+    (L : Fin n → Fin n → SignedCell (Fin n)) : Finset (Fin n × Fin n) :=
+  Finset.univ.filter fun ij => (L ij.1 ij.2).isImproper
+
+def ImproperLatinSquare {n : ℕ}
+    (L : Fin n → Fin n → SignedCell (Fin n)) : Prop :=
+  (∀ i a : Fin n, (∑ j : Fin n, SignedCell.coeff (L i j) a) = 1) ∧
+    (∀ j a : Fin n, (∑ i : Fin n, SignedCell.coeff (L i j) a) = 1) ∧
+      (signedImproperCells L).card ≤ 1
+
+def ImproperlyExtends {n : ℕ} (P : Fin n → Fin n → Option (Fin n))
+    (L : Fin n → Fin n → SignedCell (Fin n)) : Prop :=
+  ∀ i j a, P i j = some a → SignedCell.Pos (L i j) a
+
+def ImproperCompletionTheorem (n : ℕ) : Prop :=
+  ∀ P : Fin n → Fin n → Option (Fin n),
+    IsPartialLatin P → (filledCells P).card ≤ n →
+      ∃ L : Fin n → Fin n → SignedCell (Fin n),
+        ImproperLatinSquare L ∧ ImproperlyExtends P L
+
+def properSigned {n : ℕ} (L : Fin n → Fin n → Fin n) :
+    Fin n → Fin n → SignedCell (Fin n) :=
+  fun i j => SignedCell.proper (L i j)
+
+lemma signedCoeff_sum_proper_of_injective {n : ℕ} (f : Fin n → Fin n)
+    (hf : Function.Injective f) (a : Fin n) :
+    (∑ j : Fin n, SignedCell.coeff (SignedCell.proper (f j)) a) = 1 := by
+  classical
+  obtain ⟨j₀, hj₀⟩ := hf.surjective_of_finite (Equiv.refl (Fin n)) a
+  rw [Finset.sum_eq_single j₀]
+  · simp [hj₀]
+  · intro j _hj hj_ne
+    have hne : f j ≠ a := by
+      intro hja
+      exact hj_ne (hf (hja.trans hj₀.symm))
+    have hne' : a ≠ f j := fun h => hne h.symm
+    simp [hne']
+  · intro hnot
+    simp at hnot
+
+lemma signedImproperCells_properSigned {n : ℕ} (L : Fin n → Fin n → Fin n) :
+    signedImproperCells (properSigned L) = ∅ := by
+  classical
+  ext ij
+  simp [signedImproperCells, properSigned]
+
+theorem improperLatinSquare_of_isLatinSquare {n : ℕ}
+    {L : Fin n → Fin n → Fin n} (hL : IsLatinSquare L) :
+    ImproperLatinSquare (properSigned L) := by
+  constructor
+  · intro i a
+    exact signedCoeff_sum_proper_of_injective (L i) (hL.1 i) a
+  · constructor
+    · intro j a
+      exact signedCoeff_sum_proper_of_injective (fun i => L i j) (hL.2 j) a
+    · rw [signedImproperCells_properSigned]
+      simp
+
+theorem improperlyExtends_of_completes {n : ℕ}
+    {P : Fin n → Fin n → Option (Fin n)}
+    {L : Fin n → Fin n → Fin n} (hL : Completes P L) :
+    ImproperlyExtends P (properSigned L) := by
+  intro i j a hcell
+  have hval := hL.2 i j a hcell
+  simp [properSigned, hval.symm]
+
+theorem improperCompletion_of_completion {n : ℕ}
+    (hcomplete : LatinSquareCompletionTheorem n)
+    {P : Fin n → Fin n → Option (Fin n)}
+    (hP : IsPartialLatin P) (hcard : (filledCells P).card ≤ n - 1) :
+    ∃ L : Fin n → Fin n → SignedCell (Fin n),
+      ImproperLatinSquare L ∧ ImproperlyExtends P L := by
+  obtain ⟨L, hL⟩ := hcomplete P hP hcard
+  exact ⟨properSigned L, improperLatinSquare_of_isLatinSquare hL.1,
+    improperlyExtends_of_completes hL⟩
+
+def clearCell {n : ℕ} (P : Fin n → Fin n → Option (Fin n))
+    (i₀ j₀ : Fin n) : Fin n → Fin n → Option (Fin n) :=
+  fun i j => if i = i₀ ∧ j = j₀ then none else P i j
+
+lemma clearCell_eq_some_iff {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n)) (i₀ j₀ i j a : Fin n) :
+    clearCell P i₀ j₀ i j = some a ↔
+      P i j = some a ∧ ¬ (i = i₀ ∧ j = j₀) := by
+  by_cases hcell : i = i₀ ∧ j = j₀
+  · simp [clearCell, hcell]
+  · simp [clearCell, hcell]
+
+lemma isPartialLatin_clearCell {n : ℕ}
+    {P : Fin n → Fin n → Option (Fin n)} (hP : IsPartialLatin P)
+    (i₀ j₀ : Fin n) : IsPartialLatin (clearCell P i₀ j₀) := by
+  constructor
+  · intro i j₁ j₂ a h₁ h₂
+    exact hP.1 i j₁ j₂ a
+      ((clearCell_eq_some_iff P i₀ j₀ i j₁ a).mp h₁).1
+      ((clearCell_eq_some_iff P i₀ j₀ i j₂ a).mp h₂).1
+  · intro i₁ i₂ j a h₁ h₂
+    exact hP.2 i₁ i₂ j a
+      ((clearCell_eq_some_iff P i₀ j₀ i₁ j a).mp h₁).1
+      ((clearCell_eq_some_iff P i₀ j₀ i₂ j a).mp h₂).1
+
+lemma filledCells_clearCell {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n)) (i₀ j₀ : Fin n) :
+    filledCells (clearCell P i₀ j₀) = (filledCells P).erase (i₀, j₀) := by
+  classical
+  ext ij
+  by_cases hcell : ij = (i₀, j₀)
+  · subst ij
+    simp [filledCells, clearCell]
+  · have hnot : ¬ (ij.1 = i₀ ∧ ij.2 = j₀) := by
+      intro h
+      exact hcell (Prod.ext h.1 h.2)
+    simp [filledCells, clearCell, hnot, hcell]
+
+lemma filledCells_clearCell_card_of_some {n : ℕ}
+    {P : Fin n → Fin n → Option (Fin n)} {i₀ j₀ a : Fin n}
+    (hcell : P i₀ j₀ = some a) :
+    (filledCells (clearCell P i₀ j₀)).card = (filledCells P).card - 1 := by
+  classical
+  rw [filledCells_clearCell]
+  have hmem : (i₀, j₀) ∈ filledCells P := by
+    simp [filledCells, hcell]
+  rw [Finset.card_erase_of_mem hmem]
+
+lemma completes_of_clearCell_and_cell {n : ℕ}
+    {P : Fin n → Fin n → Option (Fin n)} {L : Fin n → Fin n → Fin n}
+    {i₀ j₀ a : Fin n}
+    (hL : Completes (clearCell P i₀ j₀) L)
+    (hcell : P i₀ j₀ = some a) (hval : L i₀ j₀ = a) :
+    Completes P L := by
+  constructor
+  · exact hL.1
+  · intro i j b hb
+    by_cases hij : i = i₀ ∧ j = j₀
+    · rcases hij with ⟨hi, hj⟩
+      subst i
+      subst j
+      have hb_eq : b = a := Option.some.inj (by rw [← hb, hcell])
+      simpa [hb_eq] using hval
+    · have hclear : clearCell P i₀ j₀ i j = some b := by
+        simp [clearCell, hij, hb]
+      exact hL.2 i j b hclear
+
+private lemma sum_eq_of_eq_off_two_of_pair_sum {ι : Type*} [Fintype ι]
+    [DecidableEq ι] (f g : ι → ℤ) {x y : ι} (hxy : x ≠ y)
+    (hsame : ∀ z, z ≠ x → z ≠ y → g z = f z)
+    (hpair : g x + g y = f x + f y) :
+    (∑ z : ι, g z) = ∑ z : ι, f z := by
+  classical
+  let S : Finset ι := ((Finset.univ.erase y).erase x)
+  have hx_mem_erase_y : x ∈ (Finset.univ.erase y : Finset ι) := by
+    simp [hxy]
+  have hSsum : (∑ z ∈ S, g z) = (∑ z ∈ S, f z) := by
+    apply Finset.sum_congr rfl
+    intro z hz
+    have hz_ne_x : z ≠ x := (Finset.mem_erase.mp hz).1
+    have hz_in_erase_y : z ∈ (Finset.univ.erase y : Finset ι) :=
+      (Finset.mem_erase.mp hz).2
+    have hz_ne_y : z ≠ y := (Finset.mem_erase.mp hz_in_erase_y).1
+    exact hsame z hz_ne_x hz_ne_y
+  have hdecomp_g_y :
+      (∑ z : ι, g z) = (∑ z ∈ (Finset.univ.erase y : Finset ι), g z) + g y := by
+    exact (Finset.sum_erase_add Finset.univ g (by simp)).symm
+  have hdecomp_g_x :
+      (∑ z ∈ (Finset.univ.erase y : Finset ι), g z) = (∑ z ∈ S, g z) + g x := by
+    dsimp [S]
+    exact (Finset.sum_erase_add (Finset.univ.erase y) g hx_mem_erase_y).symm
+  have hdecomp_f_y :
+      (∑ z : ι, f z) = (∑ z ∈ (Finset.univ.erase y : Finset ι), f z) + f y := by
+    exact (Finset.sum_erase_add Finset.univ f (by simp)).symm
+  have hdecomp_f_x :
+      (∑ z ∈ (Finset.univ.erase y : Finset ι), f z) = (∑ z ∈ S, f z) + f x := by
+    dsimp [S]
+    exact (Finset.sum_erase_add (Finset.univ.erase y) f hx_mem_erase_y).symm
+  calc
+    (∑ z : ι, g z) = (∑ z ∈ S, g z) + (g x + g y) := by
+      rw [hdecomp_g_y, hdecomp_g_x]
+      abel
+    _ = (∑ z ∈ S, f z) + (f x + f y) := by
+      rw [hSsum, hpair]
+    _ = ∑ z : ι, f z := by
+      rw [hdecomp_f_y, hdecomp_f_x]
+      abel
+
+noncomputable def symbolRow {n : ℕ} {L : Fin n → Fin n → Fin n}
+    (hcol : ∀ j : Fin n, Function.Injective fun i : Fin n => L i j)
+    (a : Fin n) (j : Fin n) : Fin n :=
+  Classical.choose ((hcol j).surjective_of_finite (Equiv.refl (Fin n)) a)
+
+lemma symbolRow_spec {n : ℕ} {L : Fin n → Fin n → Fin n}
+    (hcol : ∀ j : Fin n, Function.Injective fun i : Fin n => L i j)
+    (a : Fin n) (j : Fin n) :
+    L (symbolRow hcol a j) j = a :=
+  Classical.choose_spec ((hcol j).surjective_of_finite (Equiv.refl (Fin n)) a)
+
+noncomputable def restoredSignedSquare {n : ℕ}
+    (L : Fin n → Fin n → Fin n) (hL : IsLatinSquare L)
+    (r c a : Fin n) : Fin n → Fin n → SignedCell (Fin n) :=
+  let b : Fin n := L r c
+  let cₐ : Fin n := symbolColumn hL.1 a r
+  let rₐ : Fin n := symbolRow hL.2 a c
+  let d : Fin n := L rₐ cₐ
+  fun i j =>
+    if i = r ∧ j = c then
+      SignedCell.proper a
+    else if i = r ∧ j = cₐ then
+      SignedCell.proper b
+    else if i = rₐ ∧ j = c then
+      SignedCell.proper b
+    else if i = rₐ ∧ j = cₐ then
+      SignedCell.improper a d b
+    else
+      SignedCell.proper (L i j)
+
+private lemma signedCoeff_improper_trade {n : ℕ} (a b d s : Fin n) :
+    SignedCell.coeff (SignedCell.proper b) s +
+        SignedCell.coeff (SignedCell.improper a d b) s =
+      SignedCell.coeff (SignedCell.proper a) s +
+        SignedCell.coeff (SignedCell.proper d) s := by
+  by_cases hsb : s = b <;> by_cases hsa : s = a <;> by_cases hsd : s = d <;>
+    simp [SignedCell.coeff, hsb, hsa, hsd] <;> ring
+
+theorem improperLatinSquare_restoredSignedSquare {n : ℕ}
+    {L : Fin n → Fin n → Fin n} (hL : IsLatinSquare L)
+    {r c a : Fin n} (hneq : L r c ≠ a) :
+    ImproperLatinSquare (restoredSignedSquare L hL r c a) := by
+  classical
+  let b : Fin n := L r c
+  let cₐ : Fin n := symbolColumn hL.1 a r
+  let rₐ : Fin n := symbolRow hL.2 a c
+  let d : Fin n := L rₐ cₐ
+  have hrow_a : L r cₐ = a := by
+    simpa [cₐ] using symbolColumn_spec hL.1 a r
+  have hcol_a : L rₐ c = a := by
+    simpa [rₐ] using symbolRow_spec hL.2 a c
+  have hcₐ_ne_c : cₐ ≠ c := by
+    intro h
+    exact hneq (by simpa [cₐ, h] using hrow_a)
+  have hc_ne_cₐ : c ≠ cₐ := fun h => hcₐ_ne_c h.symm
+  have hrₐ_ne_r : rₐ ≠ r := by
+    intro h
+    exact hneq (by simpa [rₐ, h] using hcol_a)
+  have hr_ne_rₐ : r ≠ rₐ := fun h => hrₐ_ne_r h.symm
+  constructor
+  · intro i s
+    by_cases hir : i = r
+    · subst i
+      have hsum :
+          (∑ j : Fin n, SignedCell.coeff (restoredSignedSquare L hL r c a r j) s) =
+            ∑ j : Fin n, SignedCell.coeff (SignedCell.proper (L r j)) s := by
+        apply sum_eq_of_eq_off_two_of_pair_sum
+          (f := fun j => SignedCell.coeff (SignedCell.proper (L r j)) s)
+          (g := fun j => SignedCell.coeff (restoredSignedSquare L hL r c a r j) s)
+          (x := c) (y := cₐ) hc_ne_cₐ
+        · intro z hz_c hz_cₐ
+          simp [restoredSignedSquare, b, cₐ, rₐ, d, hz_c, hz_cₐ, hr_ne_rₐ]
+        · have hg_c :
+              SignedCell.coeff (restoredSignedSquare L hL r c a r c) s =
+                SignedCell.coeff (SignedCell.proper a) s := by
+            simp [restoredSignedSquare, b, cₐ, rₐ, d]
+          have hg_cₐ :
+              SignedCell.coeff (restoredSignedSquare L hL r c a r cₐ) s =
+                SignedCell.coeff (SignedCell.proper b) s := by
+            simp [restoredSignedSquare, b, cₐ, rₐ, d, hcₐ_ne_c, hr_ne_rₐ]
+          have hf_c :
+              SignedCell.coeff (SignedCell.proper (L r c)) s =
+                SignedCell.coeff (SignedCell.proper b) s := by
+            simp [b]
+          have hf_cₐ :
+              SignedCell.coeff (SignedCell.proper (L r cₐ)) s =
+                SignedCell.coeff (SignedCell.proper a) s := by
+            rw [hrow_a]
+          rw [hg_c, hg_cₐ, hf_c, hf_cₐ]
+          abel
+      rw [hsum]
+      exact signedCoeff_sum_proper_of_injective (L r) (hL.1 r) s
+    · by_cases hirₐ : i = rₐ
+      · subst i
+        have hsum :
+            (∑ j : Fin n, SignedCell.coeff (restoredSignedSquare L hL r c a rₐ j) s) =
+              ∑ j : Fin n, SignedCell.coeff (SignedCell.proper (L rₐ j)) s := by
+          apply sum_eq_of_eq_off_two_of_pair_sum
+            (f := fun j => SignedCell.coeff (SignedCell.proper (L rₐ j)) s)
+            (g := fun j => SignedCell.coeff (restoredSignedSquare L hL r c a rₐ j) s)
+            (x := c) (y := cₐ) hc_ne_cₐ
+          · intro z hz_c hz_cₐ
+            simp [restoredSignedSquare, b, cₐ, rₐ, d, hz_c, hz_cₐ, hrₐ_ne_r]
+          · have hg_c :
+                SignedCell.coeff (restoredSignedSquare L hL r c a rₐ c) s =
+                  SignedCell.coeff (SignedCell.proper b) s := by
+              simp [restoredSignedSquare, b, cₐ, rₐ, d, hrₐ_ne_r]
+            have hg_cₐ :
+                SignedCell.coeff (restoredSignedSquare L hL r c a rₐ cₐ) s =
+                  SignedCell.coeff (SignedCell.improper a d b) s := by
+              simp [restoredSignedSquare, b, cₐ, rₐ, d, hcₐ_ne_c, hrₐ_ne_r]
+            have hf_c :
+                SignedCell.coeff (SignedCell.proper (L rₐ c)) s =
+                  SignedCell.coeff (SignedCell.proper a) s := by
+              rw [hcol_a]
+            have hf_cₐ :
+                SignedCell.coeff (SignedCell.proper (L rₐ cₐ)) s =
+                  SignedCell.coeff (SignedCell.proper d) s := by
+              simp [d]
+            rw [hg_c, hg_cₐ, hf_c, hf_cₐ]
+            exact signedCoeff_improper_trade a b d s
+        rw [hsum]
+        exact signedCoeff_sum_proper_of_injective (L rₐ) (hL.1 rₐ) s
+      · have hsum :
+            (∑ j : Fin n, SignedCell.coeff (restoredSignedSquare L hL r c a i j) s) =
+              ∑ j : Fin n, SignedCell.coeff (SignedCell.proper (L i j)) s := by
+          apply Finset.sum_congr rfl
+          intro j _hj
+          simp [restoredSignedSquare, b, cₐ, rₐ, d, hir, hirₐ]
+        rw [hsum]
+        exact signedCoeff_sum_proper_of_injective (L i) (hL.1 i) s
+  · constructor
+    · intro j s
+      by_cases hjc : j = c
+      · subst j
+        have hsum :
+            (∑ i : Fin n, SignedCell.coeff (restoredSignedSquare L hL r c a i c) s) =
+              ∑ i : Fin n, SignedCell.coeff (SignedCell.proper (L i c)) s := by
+          apply sum_eq_of_eq_off_two_of_pair_sum
+            (f := fun i => SignedCell.coeff (SignedCell.proper (L i c)) s)
+            (g := fun i => SignedCell.coeff (restoredSignedSquare L hL r c a i c) s)
+            (x := r) (y := rₐ) hr_ne_rₐ
+          · intro z hz_r hz_rₐ
+            simp [restoredSignedSquare, b, cₐ, rₐ, d, hz_r, hz_rₐ, hc_ne_cₐ]
+          · have hg_r :
+                SignedCell.coeff (restoredSignedSquare L hL r c a r c) s =
+                  SignedCell.coeff (SignedCell.proper a) s := by
+              simp [restoredSignedSquare, b, cₐ, rₐ, d]
+            have hg_rₐ :
+                SignedCell.coeff (restoredSignedSquare L hL r c a rₐ c) s =
+                  SignedCell.coeff (SignedCell.proper b) s := by
+              simp [restoredSignedSquare, b, cₐ, rₐ, d, hrₐ_ne_r]
+            have hf_r :
+                SignedCell.coeff (SignedCell.proper (L r c)) s =
+                  SignedCell.coeff (SignedCell.proper b) s := by
+              simp [b]
+            have hf_rₐ :
+                SignedCell.coeff (SignedCell.proper (L rₐ c)) s =
+                  SignedCell.coeff (SignedCell.proper a) s := by
+              rw [hcol_a]
+            rw [hg_r, hg_rₐ, hf_r, hf_rₐ]
+            abel
+        rw [hsum]
+        exact signedCoeff_sum_proper_of_injective (fun i => L i c) (hL.2 c) s
+      · by_cases hjcₐ : j = cₐ
+        · subst j
+          have hsum :
+              (∑ i : Fin n, SignedCell.coeff (restoredSignedSquare L hL r c a i cₐ) s) =
+                ∑ i : Fin n, SignedCell.coeff (SignedCell.proper (L i cₐ)) s := by
+            apply sum_eq_of_eq_off_two_of_pair_sum
+              (f := fun i => SignedCell.coeff (SignedCell.proper (L i cₐ)) s)
+              (g := fun i => SignedCell.coeff (restoredSignedSquare L hL r c a i cₐ) s)
+              (x := r) (y := rₐ) hr_ne_rₐ
+            · intro z hz_r hz_rₐ
+              simp [restoredSignedSquare, b, cₐ, rₐ, d, hz_r, hz_rₐ, hcₐ_ne_c]
+            · have hg_r :
+                  SignedCell.coeff (restoredSignedSquare L hL r c a r cₐ) s =
+                    SignedCell.coeff (SignedCell.proper b) s := by
+                simp [restoredSignedSquare, b, cₐ, rₐ, d, hcₐ_ne_c, hr_ne_rₐ]
+              have hg_rₐ :
+                  SignedCell.coeff (restoredSignedSquare L hL r c a rₐ cₐ) s =
+                    SignedCell.coeff (SignedCell.improper a d b) s := by
+                simp [restoredSignedSquare, b, cₐ, rₐ, d, hcₐ_ne_c, hrₐ_ne_r]
+              have hf_r :
+                  SignedCell.coeff (SignedCell.proper (L r cₐ)) s =
+                    SignedCell.coeff (SignedCell.proper a) s := by
+                rw [hrow_a]
+              have hf_rₐ :
+                  SignedCell.coeff (SignedCell.proper (L rₐ cₐ)) s =
+                    SignedCell.coeff (SignedCell.proper d) s := by
+                simp [d]
+              rw [hg_r, hg_rₐ, hf_r, hf_rₐ]
+              exact signedCoeff_improper_trade a b d s
+          rw [hsum]
+          exact signedCoeff_sum_proper_of_injective (fun i => L i cₐ) (hL.2 cₐ) s
+        · have hsum :
+              (∑ i : Fin n, SignedCell.coeff (restoredSignedSquare L hL r c a i j) s) =
+                ∑ i : Fin n, SignedCell.coeff (SignedCell.proper (L i j)) s := by
+            apply Finset.sum_congr rfl
+            intro i _hi
+            simp [restoredSignedSquare, b, cₐ, rₐ, d, hjc, hjcₐ]
+          rw [hsum]
+          exact signedCoeff_sum_proper_of_injective (fun i => L i j) (hL.2 j) s
+    · have hsubset :
+          signedImproperCells (restoredSignedSquare L hL r c a) ⊆ {(rₐ, cₐ)} := by
+        intro ij hij
+        have himp :
+            (restoredSignedSquare L hL r c a ij.1 ij.2).isImproper = true := by
+          simpa [signedImproperCells] using hij
+        by_cases h₁ : ij.1 = r ∧ ij.2 = c
+        · simp [restoredSignedSquare, b, cₐ, rₐ, d, h₁] at himp
+        · by_cases h₂ : ij.1 = r ∧ ij.2 = cₐ
+          · exfalso
+            rcases ij with ⟨ii, jj⟩
+            rcases h₂ with ⟨hi, hj⟩
+            change ii = r at hi
+            change jj = cₐ at hj
+            subst ii
+            subst jj
+            simp [restoredSignedSquare, b, cₐ, rₐ, d, hcₐ_ne_c] at himp
+          · by_cases h₃ : ij.1 = rₐ ∧ ij.2 = c
+            · exfalso
+              rcases ij with ⟨ii, jj⟩
+              rcases h₃ with ⟨hi, hj⟩
+              change ii = rₐ at hi
+              change jj = c at hj
+              subst ii
+              subst jj
+              simp [restoredSignedSquare, b, cₐ, rₐ, d, hrₐ_ne_r] at himp
+            · by_cases h₄ : ij.1 = rₐ ∧ ij.2 = cₐ
+              · exact Finset.mem_singleton.mpr (Prod.ext h₄.1 h₄.2)
+              · simp [restoredSignedSquare, b, cₐ, rₐ, d, h₁, h₂, h₃, h₄] at himp
+      have hcard := Finset.card_le_card hsubset
+      simpa using hcard
+
+theorem improperlyExtends_restoredSignedSquare {n : ℕ}
+    {P : Fin n → Fin n → Option (Fin n)} (hP : IsPartialLatin P)
+    {r c a : Fin n} {L : Fin n → Fin n → Fin n}
+    (hL : Completes (clearCell P r c) L)
+    (hcell : P r c = some a) (hneq : L r c ≠ a) :
+    ImproperlyExtends P (restoredSignedSquare L hL.1 r c a) := by
+  classical
+  let b : Fin n := L r c
+  let cₐ : Fin n := symbolColumn hL.1.1 a r
+  let rₐ : Fin n := symbolRow hL.1.2 a c
+  let d : Fin n := L rₐ cₐ
+  have hrow_a : L r cₐ = a := by
+    simpa [cₐ] using symbolColumn_spec hL.1.1 a r
+  have hcol_a : L rₐ c = a := by
+    simpa [rₐ] using symbolRow_spec hL.1.2 a c
+  have hcₐ_ne_c : cₐ ≠ c := by
+    intro h
+    exact hneq (by simpa [cₐ, h] using hrow_a)
+  have hrₐ_ne_r : rₐ ≠ r := by
+    intro h
+    exact hneq (by simpa [rₐ, h] using hcol_a)
+  intro i j s hs
+  by_cases hrc : i = r ∧ j = c
+  · rcases hrc with ⟨hi, hj⟩
+    subst i
+    subst j
+    have hs_eq : s = a := Option.some.inj (by rw [← hs, hcell])
+    simp [restoredSignedSquare, b, cₐ, rₐ, d, hs_eq]
+  · by_cases hr_cₐ : i = r ∧ j = cₐ
+    · exfalso
+      rcases hr_cₐ with ⟨hi, hj⟩
+      subst i
+      subst j
+      have hclear : clearCell P r c r cₐ = some s := by
+        simp [clearCell, hcₐ_ne_c, hs]
+      have hLs : L r cₐ = s := hL.2 r cₐ s hclear
+      have hs_eq : s = a := by
+        rw [← hLs, hrow_a]
+      have hdup : c = cₐ := hP.1 r c cₐ a hcell (by simpa [hs_eq] using hs)
+      exact hcₐ_ne_c hdup.symm
+    · by_cases hrₐ_c : i = rₐ ∧ j = c
+      · exfalso
+        rcases hrₐ_c with ⟨hi, hj⟩
+        subst i
+        subst j
+        have hclear : clearCell P r c rₐ c = some s := by
+          simp [clearCell, hrₐ_ne_r, hs]
+        have hLs : L rₐ c = s := hL.2 rₐ c s hclear
+        have hs_eq : s = a := by
+          rw [← hLs, hcol_a]
+        have hdup : r = rₐ := hP.2 r rₐ c a hcell (by simpa [hs_eq] using hs)
+        exact hrₐ_ne_r hdup.symm
+      · by_cases hrₐ_cₐ : i = rₐ ∧ j = cₐ
+        · rcases hrₐ_cₐ with ⟨hi, hj⟩
+          subst i
+          subst j
+          have hclear : clearCell P r c rₐ cₐ = some s := by
+            have hnot : ¬ (rₐ = r ∧ cₐ = c) := by
+              intro h
+              exact hrₐ_ne_r h.1
+            simp [clearCell, hnot, hs]
+          have hLs : L rₐ cₐ = s := hL.2 rₐ cₐ s hclear
+          have hs_eq : s = d := by
+            simpa [d] using hLs.symm
+          simp [restoredSignedSquare, b, cₐ, rₐ, d, hcₐ_ne_c, hrₐ_ne_r, hs_eq]
+        · have hclear : clearCell P r c i j = some s := by
+            simp [clearCell, hrc, hs]
+          have hLs : L i j = s := hL.2 i j s hclear
+          simp [restoredSignedSquare, b, cₐ, rₐ, d, hrc, hr_cₐ, hrₐ_c, hrₐ_cₐ,
+            hLs.symm]
+
+theorem improperCompletion_restore_one {n : ℕ}
+    {P : Fin n → Fin n → Option (Fin n)} (hP : IsPartialLatin P)
+    {r c a : Fin n} (hcell : P r c = some a)
+    {L : Fin n → Fin n → Fin n} (hL : Completes (clearCell P r c) L) :
+    ∃ S : Fin n → Fin n → SignedCell (Fin n),
+      ImproperLatinSquare S ∧ ImproperlyExtends P S := by
+  by_cases hmatch : L r c = a
+  · have hLP : Completes P L := completes_of_clearCell_and_cell hL hcell hmatch
+    exact ⟨properSigned L, improperLatinSquare_of_isLatinSquare hLP.1,
+      improperlyExtends_of_completes hLP⟩
+  · exact ⟨restoredSignedSquare L hL.1 r c a,
+      improperLatinSquare_restoredSignedSquare hL.1 hmatch,
+      improperlyExtends_restoredSignedSquare hP hL hcell hmatch⟩
+
+theorem evans_to_improperCompletion {n : ℕ}
+    (hE : LatinSquareCompletionTheorem n) :
+    ImproperCompletionTheorem n := by
+  intro P hP hcard
+  by_cases hsmall : (filledCells P).card ≤ n - 1
+  · exact improperCompletion_of_completion hE hP hsmall
+  · have hcard_eq : (filledCells P).card = n := by omega
+    have hpos : 0 < (filledCells P).card := by omega
+    obtain ⟨ij, hij⟩ := Finset.card_pos.mp hpos
+    have hisSome : (P ij.1 ij.2).isSome := by
+      simpa [filledCells] using hij
+    obtain ⟨a, hcell⟩ : ∃ a, P ij.1 ij.2 = some a := by
+      cases hopt : P ij.1 ij.2 with
+      | none =>
+          simp [hopt] at hisSome
+      | some a =>
+          exact ⟨a, rfl⟩
+    have hPclear : IsPartialLatin (clearCell P ij.1 ij.2) :=
+      isPartialLatin_clearCell hP ij.1 ij.2
+    have hcard_clear : (filledCells (clearCell P ij.1 ij.2)).card ≤ n - 1 := by
+      rw [filledCells_clearCell_card_of_some hcell, hcard_eq]
+    obtain ⟨L, hL⟩ := hE (clearCell P ij.1 ij.2) hPclear hcard_clear
+    exact improperCompletion_restore_one hP hcell hL
+
+noncomputable def usedSymbols {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n)) : Finset (Fin n) :=
+  Finset.univ.filter fun a => ∃ i j, P i j = some a
+
+lemma usedSymbols_mem_of_cell {n : ℕ}
+    {P : Fin n → Fin n → Option (Fin n)} {i j a : Fin n}
+    (hcell : P i j = some a) : a ∈ usedSymbols P := by
+  classical
+  simp [usedSymbols]
+  exact ⟨i, j, hcell⟩
+
+lemma usedSymbols_card_le_filledCells_card {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n)) :
+    (usedSymbols P).card ≤ (filledCells P).card := by
+  classical
+  by_cases hn : n = 0
+  · subst n
+    simp [usedSymbols, filledCells]
+  · have hnpos : 0 < n := Nat.pos_of_ne_zero hn
+    let default : Fin n × Fin n := (⟨0, hnpos⟩, ⟨0, hnpos⟩)
+    have hwitness :
+        ∀ a : Fin n, a ∈ usedSymbols P →
+          ∃ ij : Fin n × Fin n, ij ∈ filledCells P ∧ P ij.1 ij.2 = some a := by
+      intro a ha
+      rcases (by simpa [usedSymbols] using ha) with ⟨i, j, hcell⟩
+      exact ⟨(i, j), by simp [filledCells, hcell], hcell⟩
+    choose g hg using hwitness
+    let f : Fin n → Fin n × Fin n := fun a =>
+      if ha : a ∈ usedSymbols P then g a ha else default
+    refine Finset.card_le_card_of_injOn f ?_ ?_
+    · intro a ha
+      dsimp [f]
+      have hfa :
+          (if ha' : a ∈ usedSymbols P then g a ha' else default) = g a ha :=
+        dif_pos ha
+      simpa [hfa] using (hg a ha).1
+    · intro a ha b hb hfg
+      have hga : f a = g a ha := by
+        dsimp [f]
+        exact dif_pos ha
+      have hgb : f b = g b hb := by
+        dsimp [f]
+        exact dif_pos hb
+      have hgab : g a ha = g b hb := by simpa [hga, hgb] using hfg
+      have hcell_a : P (g b hb).1 (g b hb).2 = some a := by
+        simpa [hgab] using (hg a ha).2
+      have hcell_b : P (g b hb).1 (g b hb).2 = some b := (hg b hb).2
+      have hsome : some a = some b := by rw [← hcell_a, hcell_b]
+      exact Option.some.inj hsome
+
+lemma exists_symbol_not_used_of_card_lt {n : ℕ}
+    (P : Fin n → Fin n → Option (Fin n))
+    (hcard : (filledCells P).card < n) :
+    ∃ a : Fin n, ∀ i j, P i j ≠ some a := by
+  classical
+  have hused_lt : (usedSymbols P).card < n :=
+    lt_of_le_of_lt (usedSymbols_card_le_filledCells_card P) hcard
+  by_contra hnone
+  have hall : (Finset.univ : Finset (Fin n)) ⊆ usedSymbols P := by
+    intro a _ha
+    by_contra ha_used
+    have hnot : ∀ i j, P i j ≠ some a := by
+      intro i j hcell
+      exact ha_used (usedSymbols_mem_of_cell hcell)
+    exact hnone ⟨a, hnot⟩
+  have hn_le : n ≤ (usedSymbols P).card := by
+    calc
+      n = (Finset.univ : Finset (Fin n)).card := by simp
+      _ ≤ (usedSymbols P).card := Finset.card_le_card hall
+  omega
+
+def StrictUpperAll {n : ℕ} (P : Fin n → Fin n → Option (Fin n)) : Prop :=
+  ∀ i j a, P i j = some a → i < j
+
+def WeakUpperTriangle {n : ℕ} (P : Fin n → Fin n → Option (Fin n)) : Prop :=
+  ∀ i j a, P i j = some a → i ≤ j
+
+def NoLastSymbol {N : ℕ}
+    (P : Fin (N + 1) → Fin (N + 1) → Option (Fin (N + 1))) : Prop :=
+  ∀ i j, P i j ≠ some (Fin.last N)
+
+def strictDropLastSymbol {N : ℕ} (a : Fin (N + 1)) : Option (Fin N) :=
+  if h : a.val < N then some ⟨a.val, h⟩ else none
+
+@[simp] lemma strictDropLastSymbol_castSucc {N : ℕ} (a : Fin N) :
+    strictDropLastSymbol (Fin.castSucc a : Fin (N + 1)) = some a := by
+  unfold strictDropLastSymbol
+  have h : (Fin.castSucc a : Fin (N + 1)).val < N := by
+    simp [Fin.castSucc]
+  simp
+
+lemma strictDropLastSymbol_eq_some {N : ℕ} {a : Fin (N + 1)} {b : Fin N}
+    (h : strictDropLastSymbol a = some b) : a = Fin.castSucc b := by
+  unfold strictDropLastSymbol at h
+  by_cases ha : a.val < N
+  · simp [ha] at h
+    have hb : (⟨a.val, ha⟩ : Fin N) = b := h
+    exact Fin.ext (by simpa [Fin.castSucc] using congrArg Fin.val hb)
+  · simp [ha] at h
+
+def strictShrink {N : ℕ}
+    (P : Fin (N + 1) → Fin (N + 1) → Option (Fin (N + 1))) :
+    Fin N → Fin N → Option (Fin N) :=
+  fun i j => (P (Fin.castSucc i) (Fin.succ j)).bind strictDropLastSymbol
+
+lemma strictShrink_eq_some_iff {N : ℕ}
+    (P : Fin (N + 1) → Fin (N + 1) → Option (Fin (N + 1)))
+    (i j : Fin N) (a : Fin N) :
+    strictShrink P i j = some a ↔
+      P (Fin.castSucc i) (Fin.succ j) = some (Fin.castSucc a) := by
+  constructor
+  · intro h
+    unfold strictShrink at h
+    cases hP : P (Fin.castSucc i) (Fin.succ j) with
+    | none =>
+        simp [hP] at h
+    | some b =>
+        simp [hP] at h
+        have hb : b = Fin.castSucc a := strictDropLastSymbol_eq_some h
+        simp [hb]
+  · intro h
+    simp [strictShrink, h]
+
+lemma isPartialLatin_strictShrink {N : ℕ}
+    {P : Fin (N + 1) → Fin (N + 1) → Option (Fin (N + 1))}
+    (hP : IsPartialLatin P) : IsPartialLatin (strictShrink P) := by
+  constructor
+  · intro i j₁ j₂ a h₁ h₂
+    have h₁P := (strictShrink_eq_some_iff P i j₁ a).mp h₁
+    have h₂P := (strictShrink_eq_some_iff P i j₂ a).mp h₂
+    have hcols :
+        Fin.succ j₁ = Fin.succ j₂ :=
+      hP.1 (Fin.castSucc i) (Fin.succ j₁) (Fin.succ j₂)
+        (Fin.castSucc a) h₁P h₂P
+    exact Fin.succ_inj.mp hcols
+  · intro i₁ i₂ j a h₁ h₂
+    have h₁P := (strictShrink_eq_some_iff P i₁ j a).mp h₁
+    have h₂P := (strictShrink_eq_some_iff P i₂ j a).mp h₂
+    have hrows :
+        Fin.castSucc i₁ = Fin.castSucc i₂ :=
+      hP.2 (Fin.castSucc i₁) (Fin.castSucc i₂) (Fin.succ j)
+        (Fin.castSucc a) h₁P h₂P
+    exact Fin.castSucc_inj.mp hrows
+
+lemma filledCells_strictShrink_card_le_erase_corner {N : ℕ}
+    (P : Fin (N + 1) → Fin (N + 1) → Option (Fin (N + 1))) :
+    (filledCells (strictShrink P)).card ≤
+      ((filledCells P).erase (Fin.last N, (0 : Fin (N + 1)))).card := by
+  classical
+  refine Finset.card_le_card_of_injOn
+    (fun ij : Fin N × Fin N =>
+      ((Fin.castSucc ij.1 : Fin (N + 1)), Fin.succ ij.2)) ?_ ?_
+  · intro ij hij
+    have hs : (strictShrink P ij.1 ij.2).isSome := by
+      simpa [filledCells] using hij
+    cases hcell : strictShrink P ij.1 ij.2 with
+    | none =>
+        simp [hcell] at hs
+    | some a =>
+        have hP := (strictShrink_eq_some_iff P ij.1 ij.2 a).mp hcell
+        have hne : ((Fin.castSucc ij.1 : Fin (N + 1)), Fin.succ ij.2) ≠
+            (Fin.last N, (0 : Fin (N + 1))) := by
+          intro hp
+          have hv : ij.1.val = N := by
+            simpa [Fin.castSucc, Fin.last] using congrArg Fin.val (congrArg Prod.fst hp)
+          exact (Nat.ne_of_lt ij.1.isLt) hv
+        simp [filledCells, hP, hne]
+  · intro x hx y hy hxy
+    exact Prod.ext
+      (Fin.castSucc_inj.mp (congrArg Prod.fst hxy))
+      (Fin.succ_inj.mp (congrArg Prod.snd hxy))
+
+theorem strictShrink_weakUpper_of_strictUpper {N : ℕ}
+    {P : Fin (N + 1) → Fin (N + 1) → Option (Fin (N + 1))}
+    (hstrict : StrictUpperAll P) :
+    WeakUpperTriangle (strictShrink P) := by
+  intro i j a hcell
+  have hP := (strictShrink_eq_some_iff P i j a).mp hcell
+  have hlt : (Fin.castSucc i : Fin (N + 1)) < Fin.succ j :=
+    hstrict (Fin.castSucc i) (Fin.succ j) (Fin.castSucc a) hP
+  change i.val ≤ j.val
+  have hltVal : i.val < j.val + 1 := by
+    change (Fin.castSucc i : Fin (N + 1)).val <
+      (Fin.succ j : Fin (N + 1)).val at hlt
+    simpa [Fin.castSucc, Fin.succ] using hlt
+  omega
+
+def ShiftedCompletes {N : ℕ}
+    (Q : Fin N → Fin N → Option (Fin N))
+    (L : Fin (N + 1) → Fin (N + 1) → Fin (N + 1)) : Prop :=
+  IsLatinSquare L ∧
+    ∀ i j a, Q i j = some a →
+      L (Fin.castSucc i) (Fin.succ j) = Fin.castSucc a
+
+def ImproperSmetaniukExtensionStatement (N : ℕ) : Prop :=
+  ∀ Q : Fin N → Fin N → Option (Fin N),
+    IsPartialLatin Q →
+      WeakUpperTriangle Q →
+        ∀ Lstar : Fin N → Fin N → SignedCell (Fin N),
+          ImproperLatinSquare Lstar →
+            ImproperlyExtends Q Lstar →
+              ∃ L : Fin (N + 1) → Fin (N + 1) → Fin (N + 1),
+                ShiftedCompletes Q L
+
+theorem strictUpper_completion_of_improperExtension {N : ℕ}
+    (hI : ImproperCompletionTheorem N)
+    (hExt : ImproperSmetaniukExtensionStatement N)
+    {P : Fin (N + 1) → Fin (N + 1) → Option (Fin (N + 1))}
+    (hP : IsPartialLatin P) (hstrict : StrictUpperAll P)
+    (hNoLast : NoLastSymbol P) (hcard : (filledCells P).card ≤ N) :
+    ∃ L : Fin (N + 1) → Fin (N + 1) → Fin (N + 1), Completes P L := by
+  classical
+  have hQpartial : IsPartialLatin (strictShrink P) :=
+    isPartialLatin_strictShrink hP
+  have hQweak : WeakUpperTriangle (strictShrink P) :=
+    strictShrink_weakUpper_of_strictUpper hstrict
+  have hQcard : (filledCells (strictShrink P)).card ≤ N := by
+    have hle := filledCells_strictShrink_card_le_erase_corner P
+    have herase_le :
+        ((filledCells P).erase (Fin.last N, (0 : Fin (N + 1)))).card ≤
+          (filledCells P).card := by
+      exact Finset.card_le_card (by intro x hx; exact (Finset.mem_erase.mp hx).2)
+    exact le_trans hle (le_trans herase_le hcard)
+  obtain ⟨Lstar, hLstar, hLstar_ext⟩ := hI (strictShrink P) hQpartial hQcard
+  obtain ⟨L, hLshift⟩ := hExt (strictShrink P) hQpartial hQweak Lstar hLstar hLstar_ext
+  refine ⟨L, ?_⟩
+  constructor
+  · exact hLshift.1
+  · intro i j a hcell
+    have hlt : i < j := hstrict i j a hcell
+    have hi_ltN : i.val < N := by
+      have hj_le : j.val ≤ N := Nat.lt_succ_iff.mp j.isLt
+      have hltVal : i.val < j.val := hlt
+      omega
+    have hj_pos : 0 < j.val := by
+      have hltVal : i.val < j.val := hlt
+      omega
+    have ha_ne_last : a ≠ Fin.last N := by
+      intro ha
+      exact hNoLast i j (by simpa [ha] using hcell)
+    have ha_ltN : a.val < N := by
+      have hle : a.val ≤ N := Nat.lt_succ_iff.mp a.isLt
+      by_contra hltN
+      have hge : N ≤ a.val := Nat.le_of_not_gt hltN
+      exact ha_ne_last (Fin.ext (le_antisymm hle hge))
+    let ii : Fin N := ⟨i.val, hi_ltN⟩
+    let jj : Fin N := ⟨j.val - 1, by omega⟩
+    let aa : Fin N := ⟨a.val, ha_ltN⟩
+    have hi_cast : (Fin.castSucc ii : Fin (N + 1)) = i := Fin.ext rfl
+    have hj_succ : (Fin.succ jj : Fin (N + 1)) = j := by
+      apply Fin.ext
+      simp [Fin.succ, jj]
+      omega
+    have ha_cast : (Fin.castSucc aa : Fin (N + 1)) = a := Fin.ext rfl
+    have hsmall : strictShrink P ii jj = some aa := by
+      apply (strictShrink_eq_some_iff P ii jj aa).mpr
+      simpa [hi_cast, hj_succ, ha_cast] using hcell
+    have hLcell := hLshift.2 ii jj aa hsmall
+    simpa [hi_cast, hj_succ, ha_cast] using hLcell
+
 lemma mainDiagonalNewSymbol_cell_eq {n : ℕ}
     {P : Fin n → Fin n → Option (Fin n)} {d newSym i j : Fin n}
     (hmain : MainDiagonalNewSymbol P d newSym)
@@ -251,6 +1093,63 @@ theorem exists_perm_strictly_above {n : ℕ} (S : Finset (Fin n × Fin n))
           exact show Fin.succ (σ' (rowIndex p.1)) < Fin.succ (τ' (colIndex p.2)) by
             simpa [Fin.succ] using Nat.succ_lt_succ (show (σ' (rowIndex p.1)).val <
               (τ' (colIndex p.2)).val from hlt')
+
+theorem latinSquareCompletion_step_of_improperExtension {N : ℕ}
+    (hE : LatinSquareCompletionTheorem N)
+    (hExt : ImproperSmetaniukExtensionStatement N) :
+    LatinSquareCompletionTheorem (N + 1) := by
+  classical
+  intro P hP hcard
+  have hcardN : (filledCells P).card ≤ N := by
+    simpa using hcard
+  have hlt : (filledCells P).card < N + 1 := by omega
+  obtain ⟨fresh, hfresh⟩ := exists_symbol_not_used_of_card_lt P hlt
+  obtain ⟨σ, τ, hstrictPos⟩ := exists_perm_strictly_above (filledCells P) hlt
+  let symPerm : Equiv.Perm (Fin (N + 1)) := Equiv.swap fresh (Fin.last N)
+  let P' : Fin (N + 1) → Fin (N + 1) → Option (Fin (N + 1)) :=
+    relabelPartial σ.symm τ.symm symPerm P
+  have hP' : IsPartialLatin P' := by
+    dsimp [P']
+    exact isPartialLatin_relabelPartial σ.symm τ.symm symPerm hP
+  have hstrict : StrictUpperAll P' := by
+    intro i j a hcell
+    have hold :
+        P (σ.symm i) (τ.symm j) = some (symPerm.symm a) := by
+      exact (relabelPartial_eq_some_iff σ.symm τ.symm symPerm P i j a).mp hcell
+    have hp : (σ.symm i, τ.symm j) ∈ filledCells P := by
+      simp [filledCells, hold]
+    have hpos := hstrictPos (σ.symm i, τ.symm j) hp
+    simpa using hpos
+  have hNoLast : NoLastSymbol P' := by
+    intro i j hcell
+    have hold :
+        P (σ.symm i) (τ.symm j) =
+          some (symPerm.symm (Fin.last N)) := by
+      exact (relabelPartial_eq_some_iff σ.symm τ.symm symPerm P i j
+        (Fin.last N)).mp hcell
+    have hsym : symPerm.symm (Fin.last N) = fresh := by
+      simp [symPerm]
+    exact hfresh (σ.symm i) (τ.symm j) (by simpa [hsym] using hold)
+  have hcard' : (filledCells P').card ≤ N := by
+    dsimp [P']
+    rw [filledCells_relabelPartial_card]
+    exact hcardN
+  obtain ⟨L', hL'⟩ :=
+    strictUpper_completion_of_improperExtension
+      (evans_to_improperCompletion hE) hExt hP' hstrict hNoLast hcard'
+  exact (completion_exists_relabelPartial_iff σ.symm τ.symm symPerm P).mp ⟨L', hL'⟩
+
+theorem chapter33_unconditional_of_improperExtensionStatements
+    (hExt : ∀ N : ℕ, ImproperSmetaniukExtensionStatement N) :
+    ∀ n : ℕ, LatinSquareCompletionTheorem n := by
+  intro n
+  induction n with
+  | zero =>
+      exact chapter33_order_le_three 0 (by omega)
+  | succ N ih =>
+      by_cases hsmall : N + 1 ≤ 3
+      · exact chapter33_order_le_three (N + 1) hsmall
+      · exact latinSquareCompletion_step_of_improperExtension ih (hExt N)
 
 /-- Drop the last symbol when passing from order `N + 1` to order `N`. -/
 def dropLastSymbol {N : ℕ} (a : Fin (N + 1)) : Option (Fin N) :=

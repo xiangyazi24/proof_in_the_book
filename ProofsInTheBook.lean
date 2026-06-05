@@ -51,6 +51,7 @@ import ProofsInTheBook.PlanarMapFanSurgery
 import ProofsInTheBook.PlanarMapSeparation
 import ProofsInTheBook.PlanarMapFanConnectivity
 import ProofsInTheBook.PlanarMapFanFaces
+import ProofsInTheBook.PlanarMapFanMergedOrbit
 import ProofsInTheBook.ThomassenLists
 import ProofsInTheBook.PermTranspositionCycleCount
 import ProofsInTheBook.RelationComponentCount

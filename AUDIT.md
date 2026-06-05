@@ -134,3 +134,11 @@ ingredients verified present in Mathlib:
    so the coefficientwise limit q₀ equals lead₀·∏(X − limit-root), i.e. q₀'s roots all have im ≤ 0.
 5. Degree-drop case (lead_ε → 0) handled separately in the application.
 So Ch22 = one focused ~150-line analysis-lite formalization away (no missing Mathlib foundation).
+
+## TALLY CORRECTION (2026-06-04, after Ch22 close)
+Definitive recount: CLOSED = every chapter except {09, 13, 33, 35, 36} = **35/40**.
+(The earlier "33/40" line had an off-by-one: Ch12's close was recorded as a sub-bullet but not added to the
+count.) Closed list: 01-08, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23-32, 34, 37, 38, 39, 40.
+Open (5): 09 (Dehn invariance), 13 (Cauchy arm-lemma), 33 (Smetaniuk normalization — switching + permutation
+crux proven, ChatGPT-Pro answer in flight), 35 (5-color deletion topology + Kempe — Euler half + deleteSet
+proven), 36 (art gallery geometry — 3-coloring proven).

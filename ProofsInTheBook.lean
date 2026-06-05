@@ -52,6 +52,9 @@ import ProofsInTheBook.PlanarMapSeparation
 import ProofsInTheBook.PlanarMapFanConnectivity
 import ProofsInTheBook.PlanarMapFanFaces
 import ProofsInTheBook.ThomassenLists
+import ProofsInTheBook.PermTranspositionCycleCount
+import ProofsInTheBook.RelationComponentCount
+import ProofsInTheBook.PlanarMapEulerInequality
 import ProofsInTheBook.PlanarMapCutCap
 import ProofsInTheBook.PlanarMapCutCapSigma
 import ProofsInTheBook.SimpleGraphBlocks

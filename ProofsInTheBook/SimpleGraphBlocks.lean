@@ -840,6 +840,446 @@ theorem exists_rootedBlockEnumeration_of_connected_of_no_cut
   exists_rootedBlockEnumeration_one r
     (isBlock_univ_of_twoConnected (twoConnected_of_connected_of_no_cut hG hcut))
 
+theorem mem_subtypeImage_iff {s : Set V} (B : Set s) (v : V) :
+    v ∈ subtypeImage B ↔ ∃ h : v ∈ s, (⟨v, h⟩ : s) ∈ B := by
+  constructor
+  · rintro ⟨⟨w, hw⟩, hwB, rfl⟩
+    exact ⟨hw, hwB⟩
+  · rintro ⟨h, hB⟩
+    exact ⟨⟨v, h⟩, hB, rfl⟩
+
+/--
+Concatenation of two rooted block enumerations along a single shared vertex `x`.
+The graph splits into two induced sides `S` and `T` that cover everything, meet
+exactly in `x`, and have no edge crossing between `S \ {x}` and `T \ {x}`.  The
+`S`-enumeration is laid down first (so its start vertex `r` becomes the global
+start), then the `T`-enumeration whose first block contains `x`; that first
+`T`-block becomes the unique non-root block meeting the union of earlier blocks
+exactly at `x`.
+-/
+theorem concat_rootedBlockEnumeration {G : SimpleGraph V} {S T : Set V} {x : V}
+    (hcover : S ∪ T = Set.univ) (hxS : x ∈ S) (hxT : x ∈ T)
+    (hinter : S ∩ T = ({x} : Set V))
+    (hcross : ∀ u v : V, u ∈ S → u ≠ x → v ∈ T → v ≠ x → ¬ G.Adj u v)
+    (liftS : ∀ B : Set S, IsBlock (G.induce S) B → IsBlock G (subtypeImage B))
+    (liftT : ∀ B : Set T, IsBlock (G.induce T) B → IsBlock G (subtypeImage B))
+    (Es : RootedBlockEnumeration (G.induce S))
+    (Et : RootedBlockEnumeration (G.induce T))
+    (hstart : Et.StartsAt ⟨x, hxT⟩)
+    {r : V} (hrS : r ∈ S) (hr0 : Es.StartsAt ⟨r, hrS⟩) :
+    ∃ E : RootedBlockEnumeration G, E.StartsAt r := by
+  classical
+  -- Membership of `x` in the very first `T`-block.
+  obtain ⟨t0, ht0val, ht0mem⟩ := hstart
+  -- `x` is the only vertex shared by the two sides.
+  have hshared : ∀ v : V, v ∈ S → v ∈ T → v = x := by
+    intro v hvS hvT
+    have : v ∈ S ∩ T := ⟨hvS, hvT⟩
+    rw [hinter] at this
+    simpa using this
+  -- The global blocks: `S`-images first, then `T`-images.
+  let blocks : Fin (Es.k + Et.k) → Set V :=
+    Fin.addCases (fun i => subtypeImage (Es.blocks i))
+      (fun j => subtypeImage (Et.blocks j))
+  let roots : Fin (Es.k + Et.k) → V :=
+    Fin.addCases (fun i => (Es.roots i).1)
+      (fun j => if j.1 = 0 then x else (Et.roots j).1)
+  have blocks_castAdd : ∀ i : Fin Es.k,
+      blocks (Fin.castAdd Et.k i) = subtypeImage (Es.blocks i) :=
+    fun i => Fin.addCases_left (n := Et.k) i
+  have blocks_natAdd : ∀ j : Fin Et.k,
+      blocks (Fin.natAdd Es.k j) = subtypeImage (Et.blocks j) :=
+    fun j => Fin.addCases_right (m := Es.k) j
+  have roots_castAdd : ∀ i : Fin Es.k,
+      roots (Fin.castAdd Et.k i) = (Es.roots i).1 :=
+    fun i => Fin.addCases_left (n := Et.k) i
+  have roots_natAdd : ∀ j : Fin Et.k,
+      roots (Fin.natAdd Es.k j) = if j.1 = 0 then x else (Et.roots j).1 :=
+    fun j => Fin.addCases_right (m := Es.k) j
+  -- A vertex of an `S`-block lies in `S`.
+  have hSblock_subset : ∀ (i : Fin Es.k) (v : V),
+      v ∈ subtypeImage (Es.blocks i) → v ∈ S := by
+    rintro i v ⟨⟨w, hw⟩, _, rfl⟩; exact hw
+  have hTblock_subset : ∀ (j : Fin Et.k) (v : V),
+      v ∈ subtypeImage (Et.blocks j) → v ∈ T := by
+    rintro j v ⟨⟨w, hw⟩, _, rfl⟩; exact hw
+  -- `x` is covered by some `S`-block (the start block).
+  obtain ⟨s0, hs0val, hs0mem⟩ := hr0
+  have hxInSomeS : ∃ i : Fin Es.k, x ∈ subtypeImage (Es.blocks i) := by
+    obtain ⟨i, hi⟩ := Es.vertex_cover ⟨x, hxS⟩
+    exact ⟨i, ⟨⟨x, hxS⟩, hi, rfl⟩⟩
+  -- Key: a vertex of a `T`-block that also lies in some `S`-block must be `x`.
+  have hcrossblock : ∀ (j : Fin Et.k) (v : V),
+      v ∈ subtypeImage (Et.blocks j) →
+      (∃ i : Fin Es.k, v ∈ subtypeImage (Es.blocks i)) → v = x := by
+    rintro j v hvT ⟨i, hvS⟩
+    exact hshared v (hSblock_subset i v hvS) (hTblock_subset j v hvT)
+  -- Decompose membership in a low-index (`S`) global block.
+  have blocks_lt : ∀ (q : Fin (Es.k + Et.k)) (hq : q.1 < Es.k) (w : V),
+      w ∈ blocks q → w ∈ subtypeImage (Es.blocks ⟨q.1, hq⟩) := by
+    intro q hq w hw
+    have hcast : Fin.castAdd Et.k ⟨q.1, hq⟩ = q := Fin.ext (by simp)
+    have hb := blocks_castAdd ⟨q.1, hq⟩
+    rw [hcast] at hb
+    rwa [hb] at hw
+  -- Decompose membership in a high-index (`T`) global block.
+  have blocks_ge : ∀ (q : Fin (Es.k + Et.k)) (hq : Es.k ≤ q.1) (w : V),
+      w ∈ blocks q →
+      w ∈ subtypeImage (Et.blocks ⟨q.1 - Es.k, by omega⟩) := by
+    intro q hq w hw
+    have hnat : Fin.natAdd Es.k ⟨q.1 - Es.k, by omega⟩ = q :=
+      Fin.ext (by simp; omega)
+    have hb := blocks_natAdd ⟨q.1 - Es.k, by omega⟩
+    rw [hnat] at hb
+    rwa [hb] at hw
+  refine ⟨{
+    k := Es.k + Et.k
+    blocks := blocks
+    roots := roots
+    isBlock := ?_
+    vertex_cover := ?_
+    edge_cover := ?_
+    root_mem := ?_
+    prev_mem := ?_
+    meet_prev := ?_ }, ?_⟩
+  · -- isBlock
+    intro i
+    refine Fin.addCases (motive := fun i => IsBlock G (blocks i)) ?_ ?_ i
+    · intro i
+      rw [blocks_castAdd i]
+      exact liftS _ (Es.isBlock i)
+    · intro j
+      rw [blocks_natAdd j]
+      exact liftT _ (Et.isBlock j)
+  · -- vertex_cover
+    intro v
+    have hv : v ∈ S ∪ T := by rw [hcover]; trivial
+    rcases hv with hvS | hvT
+    · obtain ⟨i, hi⟩ := Es.vertex_cover ⟨v, hvS⟩
+      refine ⟨Fin.castAdd Et.k i, ?_⟩
+      rw [blocks_castAdd i]
+      exact ⟨⟨v, hvS⟩, hi, rfl⟩
+    · obtain ⟨j, hj⟩ := Et.vertex_cover ⟨v, hvT⟩
+      refine ⟨Fin.natAdd Es.k j, ?_⟩
+      rw [blocks_natAdd j]
+      exact ⟨⟨v, hvT⟩, hj, rfl⟩
+  · -- edge_cover
+    intro u v huv
+    have hu : u ∈ S ∪ T := by rw [hcover]; trivial
+    have hvmem : v ∈ S ∪ T := by rw [hcover]; trivial
+    -- Decide which side both endpoints share.
+    have hboth : (u ∈ S ∧ v ∈ S) ∨ (u ∈ T ∧ v ∈ T) := by
+      rcases hu with huS | huT
+      · rcases hvmem with hvS | hvT
+        · exact Or.inl ⟨huS, hvS⟩
+        · by_cases hux : u = x
+          · exact Or.inr ⟨hux ▸ hxT, hvT⟩
+          · by_cases hvx : v = x
+            · exact Or.inl ⟨huS, hvx ▸ hxS⟩
+            · exact absurd huv (hcross u v huS hux hvT hvx)
+      · rcases hvmem with hvS | hvT
+        · by_cases hvx : v = x
+          · exact Or.inr ⟨huT, hvx ▸ hxT⟩
+          · by_cases hux : u = x
+            · exact Or.inl ⟨hux ▸ hxS, hvS⟩
+            · exact absurd huv.symm (hcross v u hvS hvx huT hux)
+        · exact Or.inr ⟨huT, hvT⟩
+    rcases hboth with ⟨huS, hvS⟩ | ⟨huT, hvT⟩
+    · have hadj : (G.induce S).Adj ⟨u, huS⟩ ⟨v, hvS⟩ := by simpa using huv
+      obtain ⟨i, hui, hvi⟩ := Es.edge_cover hadj
+      refine ⟨Fin.castAdd Et.k i, ?_, ?_⟩ <;>
+        · rw [blocks_castAdd i]
+          first
+            | exact ⟨⟨u, huS⟩, hui, rfl⟩
+            | exact ⟨⟨v, hvS⟩, hvi, rfl⟩
+    · have hadj : (G.induce T).Adj ⟨u, huT⟩ ⟨v, hvT⟩ := by simpa using huv
+      obtain ⟨j, huj, hvj⟩ := Et.edge_cover hadj
+      refine ⟨Fin.natAdd Es.k j, ?_, ?_⟩ <;>
+        · rw [blocks_natAdd j]
+          first
+            | exact ⟨⟨u, huT⟩, huj, rfl⟩
+            | exact ⟨⟨v, hvT⟩, hvj, rfl⟩
+  · -- root_mem
+    intro i hi
+    refine Fin.addCases
+      (motive := fun i => i.1 ≠ 0 → roots i ∈ blocks i) ?_ ?_ i hi
+    · intro i hi
+      have hival : (Fin.castAdd Et.k i).1 = i.1 := Fin.val_castAdd Et.k i
+      have hi0 : i.1 ≠ 0 := by rw [hival] at hi; exact hi
+      rw [roots_castAdd i, blocks_castAdd i]
+      exact ⟨Es.roots i, Es.root_mem i hi0, rfl⟩
+    · intro j hj
+      rw [roots_natAdd j, blocks_natAdd j]
+      by_cases hj0 : j.1 = 0
+      · simp only [hj0, if_pos]
+        -- first T-block; need x ∈ it
+        have : (⟨x, hxT⟩ : T) ∈ Et.blocks j := by
+          have ht0eq : t0 = j := Fin.ext (by rw [ht0val, hj0])
+          rw [← ht0eq]; exact ht0mem
+        exact ⟨⟨x, hxT⟩, this, rfl⟩
+      · simp only [hj0, ite_false]
+        exact ⟨Et.roots j, Et.root_mem j hj0, rfl⟩
+  · -- prev_mem
+    intro i hi
+    refine Fin.addCases
+      (motive := fun i => i.1 ≠ 0 →
+        ∃ j : Fin (Es.k + Et.k), j.1 < i.1 ∧ roots i ∈ blocks j) ?_ ?_ i hi
+    · intro i hi
+      have hival : (Fin.castAdd Et.k i).1 = i.1 := Fin.val_castAdd Et.k i
+      have hi0 : i.1 ≠ 0 := by rw [hival] at hi; exact hi
+      obtain ⟨q, hqi, hq⟩ := Es.prev_mem i hi0
+      refine ⟨Fin.castAdd Et.k q, ?_, ?_⟩
+      · rw [Fin.val_castAdd, Fin.val_castAdd]; exact hqi
+      · rw [roots_castAdd i, blocks_castAdd q]
+        exact ⟨Es.roots i, hq, rfl⟩
+    · intro j hj
+      have hjval : (Fin.natAdd Es.k j).1 = Es.k + j.1 := Fin.val_natAdd Es.k j
+      by_cases hj0 : j.1 = 0
+      · -- root is x; x is in some S-block, which is an earlier block.
+        obtain ⟨i, hi⟩ := hxInSomeS
+        refine ⟨Fin.castAdd Et.k i, ?_, ?_⟩
+        · rw [Fin.val_castAdd, hjval, hj0]; exact Nat.lt_of_lt_of_le i.2 (Nat.le_add_right _ _)
+        · rw [roots_natAdd j, blocks_castAdd i]
+          simp only [hj0, if_pos]
+          exact hi
+      · obtain ⟨q, hqj, hq⟩ := Et.prev_mem j hj0
+        refine ⟨Fin.natAdd Es.k q, ?_, ?_⟩
+        · rw [Fin.val_natAdd, hjval]; exact Nat.add_lt_add_left hqj _
+        · rw [roots_natAdd j, blocks_natAdd q]
+          simp only [hj0, ite_false]
+          exact ⟨Et.roots j, hq, rfl⟩
+  · -- meet_prev
+    intro i hi v
+    refine Fin.addCases
+      (motive := fun i => i.1 ≠ 0 → v ∈ blocks i →
+        ((∃ q : Fin (Es.k + Et.k), q.1 < i.1 ∧ v ∈ blocks q) ↔ v = roots i))
+      ?_ ?_ i hi
+    · -- castAdd case: previous blocks that contain `v` (in an `S`-block) must
+      -- themselves be `S`-blocks, so this reduces to `Es.meet_prev`.
+      intro i hi hvmem
+      have hival : (Fin.castAdd Et.k i).1 = i.1 := Fin.val_castAdd Et.k i
+      have hi0 : i.1 ≠ 0 := by rw [hival] at hi; exact hi
+      have hvmem' : v ∈ subtypeImage (Es.blocks i) := by
+        rwa [blocks_castAdd i] at hvmem
+      obtain ⟨hvS, hvSb⟩ := (mem_subtypeImage_iff (Es.blocks i) v).mp hvmem'
+      rw [roots_castAdd i, hival]
+      constructor
+      · rintro ⟨q, hqlt, hqv⟩
+        have hqcast : q.1 < Es.k := lt_of_lt_of_le hqlt (le_of_lt i.2)
+        have hqv' : v ∈ subtypeImage (Es.blocks ⟨q.1, hqcast⟩) :=
+          blocks_lt q hqcast v hqv
+        obtain ⟨_, hqvb⟩ := (mem_subtypeImage_iff _ v).mp hqv'
+        have hex : ∃ q' : Fin Es.k, q'.1 < i.1 ∧ (⟨v, hvS⟩ : S) ∈ Es.blocks q' :=
+          ⟨⟨q.1, hqcast⟩, hqlt, by simpa using hqvb⟩
+        have := (Es.meet_prev i hi0 ⟨v, hvS⟩ hvSb).mp hex
+        exact congrArg Subtype.val this
+      · intro hvroot
+        have hvSroot : (⟨v, hvS⟩ : S) = Es.roots i := Subtype.ext hvroot
+        have hex : ∃ q' : Fin Es.k, q'.1 < i.1 ∧ (⟨v, hvS⟩ : S) ∈ Es.blocks q' := by
+          rw [hvSroot]
+          obtain ⟨q', hq'i, hq'⟩ := Es.prev_mem i hi0
+          exact ⟨q', hq'i, hq'⟩
+        obtain ⟨q', hq'i, hq'⟩ := hex
+        refine ⟨Fin.castAdd Et.k q', ?_, ?_⟩
+        · rw [Fin.val_castAdd]; exact hq'i
+        · rw [blocks_castAdd q']
+          exact ⟨⟨v, hvS⟩, hq', rfl⟩
+    · -- natAdd case: `v` lies in a `T`-block.
+      intro j hj hvmem
+      have hjval : (Fin.natAdd Es.k j).1 = Es.k + j.1 := Fin.val_natAdd Es.k j
+      have hvmemT : v ∈ subtypeImage (Et.blocks j) := by
+        rwa [blocks_natAdd j] at hvmem
+      obtain ⟨hvT, hvTb⟩ := (mem_subtypeImage_iff (Et.blocks j) v).mp hvmemT
+      -- `v` lies in some `S`-block iff `v = x`.
+      have hvInS_iff : (∃ i : Fin Es.k, v ∈ subtypeImage (Es.blocks i)) ↔ v = x := by
+        constructor
+        · intro h; exact hcrossblock j v hvmemT h
+        · rintro rfl; exact hxInSomeS
+      -- `x ∈ Et.blocks 0`, and block 0 is an earlier `T`-block when `j ≠ 0`.
+      have hxprevT : ∀ (hj0 : j.1 ≠ 0),
+          ∃ q' : Fin Et.k, q'.1 < j.1 ∧ (⟨x, hxT⟩ : T) ∈ Et.blocks q' :=
+        fun _ => ⟨t0, by rw [ht0val]; omega, ht0mem⟩
+      by_cases hj0 : j.1 = 0
+      · -- root is `x`; only `S`-blocks precede.
+        have hroot : roots (Fin.natAdd Es.k j) = x := by
+          rw [roots_natAdd j]; simp [hj0]
+        rw [hroot]
+        constructor
+        · rintro ⟨q, hqlt, hqv⟩
+          rw [hjval, hj0, Nat.add_zero] at hqlt
+          have hqv' : v ∈ subtypeImage (Es.blocks ⟨q.1, hqlt⟩) :=
+            blocks_lt q hqlt v hqv
+          exact hvInS_iff.mp ⟨⟨q.1, hqlt⟩, hqv'⟩
+        · intro hvx
+          obtain ⟨i, hi⟩ := hvInS_iff.mpr hvx
+          refine ⟨Fin.castAdd Et.k i, ?_, ?_⟩
+          · rw [Fin.val_castAdd, hjval, hj0]; exact Nat.lt_of_lt_of_le i.2 (by omega)
+          · rw [blocks_castAdd i]
+            exact hi
+      · -- root is `Et.roots j`.
+        have hroot : roots (Fin.natAdd Es.k j) = (Et.roots j).1 := by
+          rw [roots_natAdd j]; simp [hj0]
+        rw [hroot]
+        -- If `v = x` then `x ∈ Et.blocks j` forces `Et.roots j = x`.
+        have hx_forces : v = x → v = (Et.roots j).1 := by
+          intro hvx
+          have hxb : (⟨x, hxT⟩ : T) ∈ Et.blocks j := by
+            have heq : (⟨x, hxT⟩ : T) = ⟨v, hvT⟩ := Subtype.ext hvx.symm
+            rw [heq]; exact hvTb
+          obtain ⟨q', hq'lt, hq'⟩ := hxprevT hj0
+          have hxroot : (⟨x, hxT⟩ : T) = Et.roots j :=
+            (Et.meet_prev j hj0 ⟨x, hxT⟩ hxb).mp ⟨q', hq'lt, hq'⟩
+          rw [hvx]; exact congrArg Subtype.val hxroot
+        -- `v` in an earlier `T`-block iff `v = Et.roots j`.
+        have hvInPrevT_iff :
+            (∃ q' : Fin Et.k, q'.1 < j.1 ∧ (⟨v, hvT⟩ : T) ∈ Et.blocks q')
+              ↔ (⟨v, hvT⟩ : T) = Et.roots j :=
+          Et.meet_prev j hj0 ⟨v, hvT⟩ hvTb
+        constructor
+        · rintro ⟨q, hqlt, hqv⟩
+          rw [hjval] at hqlt
+          by_cases hqcast : q.1 < Es.k
+          · -- `v` in an `S`-block ⟹ `v = x` ⟹ `v = Et.roots j`.
+            have hqv' : v ∈ subtypeImage (Es.blocks ⟨q.1, hqcast⟩) :=
+              blocks_lt q hqcast v hqv
+            exact hx_forces (hvInS_iff.mp ⟨⟨q.1, hqcast⟩, hqv'⟩)
+          · -- `v` in an earlier `T`-block.
+            push Not at hqcast
+            have hqlt' : q.1 - Es.k < j.1 := by omega
+            have hqv' : v ∈ subtypeImage (Et.blocks ⟨q.1 - Es.k, by omega⟩) :=
+              blocks_ge q hqcast v hqv
+            obtain ⟨_, hqvb⟩ := (mem_subtypeImage_iff _ v).mp hqv'
+            have : (⟨v, hvT⟩ : T) = Et.roots j :=
+              hvInPrevT_iff.mp ⟨⟨q.1 - Es.k, by omega⟩, hqlt', by simpa using hqvb⟩
+            exact congrArg Subtype.val this
+        · intro hvroot
+          have hvTroot : (⟨v, hvT⟩ : T) = Et.roots j := Subtype.ext hvroot
+          obtain ⟨q', hq'lt, hq'⟩ := hvInPrevT_iff.mpr hvTroot
+          refine ⟨Fin.natAdd Es.k q', ?_, ?_⟩
+          · rw [Fin.val_natAdd, hjval]; omega
+          · rw [blocks_natAdd q']
+            exact ⟨⟨v, hvT⟩, hq', rfl⟩
+  · -- StartsAt r
+    refine ⟨Fin.castAdd Et.k s0, ?_, ?_⟩
+    · rw [Fin.val_castAdd]; exact hs0val
+    · show r ∈ blocks (Fin.castAdd Et.k s0)
+      rw [blocks_castAdd s0]
+      exact ⟨⟨r, hrS⟩, hs0mem, rfl⟩
+
+/--
+Strong-induction core: every finite connected graph admits a rooted block
+enumeration starting at any prescribed root.  Induction is on `Nat.card`.  In
+the no-cut case the whole graph is a single block; otherwise a cut vertex `x`
+splits the graph into two strictly smaller connected sides meeting only at `x`,
+each of which is handled by the induction hypothesis and the two enumerations
+are concatenated by `concat_rootedBlockEnumeration`.
+-/
+theorem exists_rootedBlockEnumeration_startsAt_aux :
+    ∀ n : ℕ, ∀ {W : Type*} [Finite W] (H : SimpleGraph W),
+      Nat.card W = n → H.Connected → ∀ r : W,
+        ∃ E : RootedBlockEnumeration H, E.StartsAt r := by
+  intro n
+  induction n using Nat.strong_induction_on with
+  | _ n ih =>
+    intro W _ H hcard hH r
+    classical
+    by_cases hcut : ∀ x : W, ¬ IsCutVertex H x
+    · exact exists_rootedBlockEnumeration_of_connected_of_no_cut hH hcut r
+    · push Not at hcut
+      obtain ⟨x, hxcut⟩ := hcut
+      -- `H - x` is not preconnected: extract two non-reachable vertices.
+      have hnotpre : ¬ (H.induce {y : W | y ≠ x}).Preconnected := hxcut.2
+      obtain ⟨a, b, hab⟩ : ∃ a b : {y : W // y ≠ x},
+          ¬ (H.induce {y : W | y ≠ x}).Reachable a b := by
+        unfold SimpleGraph.Preconnected at hnotpre
+        push Not at hnotpre
+        exact hnotpre
+      -- Choose the component `C` of `a`; the component `D` of `b` is different.
+      set C : (H.induce {y : W | y ≠ x}).ConnectedComponent :=
+        (H.induce {y : W | y ≠ x}).connectedComponentMk a with hCdef
+      set D : (H.induce {y : W | y ≠ x}).ConnectedComponent :=
+        (H.induce {y : W | y ≠ x}).connectedComponentMk b with hDdef
+      have hDC : D ≠ C := by
+        intro he
+        have hmk : (H.induce {y : W | y ≠ x}).connectedComponentMk a
+            = (H.induce {y : W | y ≠ x}).connectedComponentMk b :=
+          hCdef.symm.trans (he.symm.trans hDdef)
+        exact hab (SimpleGraph.ConnectedComponent.exact hmk)
+      have hother : ∃ E : (H.induce {y : W | y ≠ x}).ConnectedComponent, E ≠ C := ⟨D, hDC⟩
+      -- Abbreviations for the two sides.
+      set S₁ : Set W := deleteComponentSide H x C with hS₁
+      set S₂ : Set W := deleteComponentOtherSide H x C with hS₂
+      have hxS₁ : x ∈ S₁ := by simp [hS₁, deleteComponentSide]
+      have hxS₂ : x ∈ S₂ := by
+        simp only [hS₂]; exact deleteComponentSet_notMem_self C
+      -- Cover, intersection, no cross edge.
+      have hcover : S₁ ∪ S₂ = Set.univ :=
+        deleteComponentSide_union_otherSide C
+      have hinter : S₁ ∩ S₂ = ({x} : Set W) :=
+        deleteComponentSide_inter_otherSide C
+      have hcross : ∀ u v : W, u ∈ S₁ → u ≠ x → v ∈ S₂ → v ≠ x → ¬ H.Adj u v :=
+        fun u v hu hune hv hvne =>
+          not_adj_deleteComponentSide_otherSide hu hune hv hvne
+      -- Lifts of induced blocks to global blocks.
+      have liftS₁ : ∀ B : Set S₁, IsBlock (H.induce S₁) B → IsBlock H (subtypeImage B) :=
+        fun B hB => isBlock_image_of_induce_deleteComponentSide hH C hB
+      have liftS₂ : ∀ B : Set S₂, IsBlock (H.induce S₂) B → IsBlock H (subtypeImage B) :=
+        fun B hB => isBlock_image_of_induce_deleteComponentOtherSide hH C hother hB
+      -- Both sides are connected.
+      have hconnS₁ : (H.induce S₁).Connected := deleteComponentSide_connected hH x C
+      have hconnS₂ : (H.induce S₂).Connected := deleteComponentOtherSide_connected hH x C
+      -- Both sides are strictly smaller than `W`.
+      have hcardS₁ : Nat.card S₁ < n := by
+        rw [← hcard]
+        obtain ⟨d, hd⟩ := D.nonempty_supp
+        have hd_notmem : (d.1 : W) ∉ S₁ := by
+          rw [hS₁]
+          intro hmem
+          rcases hmem with hdx | hdC
+          · exact d.2 hdx
+          · rcases hdC with ⟨_, hdCmem⟩
+            exact hDC (SimpleGraph.ConnectedComponent.eq_of_common_vertex (by simpa using hd) hdCmem)
+        exact Finite.card_subtype_lt (p := (· ∈ S₁)) hd_notmem
+      have hcardS₂ : Nat.card S₂ < n := by
+        rw [← hcard]
+        obtain ⟨c, hc⟩ := C.nonempty_supp
+        have hc_notmem : (c.1 : W) ∉ S₂ := by
+          rw [hS₂]
+          simp only [deleteComponentOtherSide, Set.mem_compl_iff, not_not]
+          exact ⟨c.2, by simpa using hc⟩
+        exact Finite.card_subtype_lt (p := (· ∈ S₂)) hc_notmem
+      -- Apply the induction hypothesis to each side.
+      have IH₁ : ∀ r₁ : S₁, ∃ E : RootedBlockEnumeration (H.induce S₁), E.StartsAt r₁ :=
+        fun r₁ => ih (Nat.card S₁) hcardS₁ (H.induce S₁) rfl hconnS₁ r₁
+      have IH₂ : ∀ r₂ : S₂, ∃ E : RootedBlockEnumeration (H.induce S₂), E.StartsAt r₂ :=
+        fun r₂ => ih (Nat.card S₂) hcardS₂ (H.induce S₂) rfl hconnS₂ r₂
+      -- `r` is on one side or the other.
+      have hrmem : r ∈ S₁ ∪ S₂ := by rw [hcover]; trivial
+      rcases hrmem with hrS₁ | hrS₂
+      · -- `r ∈ S₁`: lay down `S₁` first, then `S₂` rooted at `x`.
+        obtain ⟨Es, hEs⟩ := IH₁ ⟨r, hrS₁⟩
+        obtain ⟨Et, hEt⟩ := IH₂ ⟨x, hxS₂⟩
+        exact concat_rootedBlockEnumeration hcover hxS₁ hxS₂ hinter hcross
+          liftS₁ liftS₂ Es Et hEt hrS₁ hEs
+      · -- `r ∈ S₂`: lay down `S₂` first, then `S₁` rooted at `x`.
+        obtain ⟨Es, hEs⟩ := IH₂ ⟨r, hrS₂⟩
+        obtain ⟨Et, hEt⟩ := IH₁ ⟨x, hxS₁⟩
+        refine concat_rootedBlockEnumeration (S := S₂) (T := S₁)
+          (by rw [Set.union_comm]; exact hcover) hxS₂ hxS₁
+          (by rw [Set.inter_comm]; exact hinter)
+          (fun u v hu hune hv hvne => fun hadj =>
+            hcross v u hv hvne hu hune hadj.symm)
+          liftS₂ liftS₁ Es Et hEt hrS₂ hEs
+
+/-- **Existence of a rooted block enumeration for a finite connected graph.**
+Every finite connected simple graph admits a rooted block enumeration. -/
+theorem exists_rootedBlockEnumeration_of_connected {G : SimpleGraph V} [Finite V]
+    (hG : G.Connected) : Nonempty (RootedBlockEnumeration G) := by
+  obtain ⟨r⟩ := hG.nonempty
+  obtain ⟨E, _⟩ :=
+    exists_rootedBlockEnumeration_startsAt_aux (Nat.card V) G rfl hG r
+  exact ⟨E⟩
+
 end RootedEnumeration
 
 section AbstractGlue

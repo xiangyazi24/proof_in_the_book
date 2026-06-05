@@ -136,7 +136,18 @@ ingredients verified present in Mathlib:
 So Ch22 = one focused ~150-line analysis-lite formalization away (no missing Mathlib foundation).
 
 ## TALLY CORRECTION (2026-06-04, after Ch22 close)
-Definitive recount: CLOSED = every chapter except {09, 13, 33, 35, 36} = **35/40**.
+Definitive recount: CLOSED = every chapter except {09, 13, 35, 36} = **36/40**.
+
+## Ch33 CLOSED (2026-06-05): chapter33_unconditional
+`ProofsInTheBook.Chapter33.chapter33_unconditional : ∀ n, LatinSquareCompletionTheorem n` —
+the Evans conjecture (Smetaniuk's theorem), no hypotheses, axioms = {propext, Classical.choice, Quot.sound},
+full build 8422 jobs. Route = the BOOK's own proof (HANDOFF/CH33_BOOK_ROUTE.md), not improper Latin squares:
+book Lemma 2 (Chapter33Ryser.lean: conjugacy + row-by-row Hall with the quadratic inequality) for the
+few-symbols case; otherwise a singleton symbol is renamed to the fresh symbol, normalized onto the diagonal,
+deleted before the inductive call (card drops to <= N-1), and recovered automatically because the proven
+back-diagonal extension prescribes the fresh symbol on the whole back diagonal. The improper-Latin-square
+conditional route (chapter33_unconditional_of_improperExtensionStatements) remains in the file as the
+documented alternative; its missing extension lemma is now moot.
 (The earlier "33/40" line had an off-by-one: Ch12's close was recorded as a sub-bullet but not added to the
 count.) Closed list: 01-08, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23-32, 34, 37, 38, 39, 40.
 Open (5): 09 (Dehn invariance), 13 (Cauchy arm-lemma), 33 (Smetaniuk normalization — switching + permutation

@@ -55,6 +55,8 @@ import ProofsInTheBook.PlanarMapDelete
 -- Chapter 33 (Smetaniuk/Evans) scaffold: triangular invariant + back-diagonal construction + reduction
 -- to the cunning-switching core `SmetBackDiagonalCompletableCore` (the remaining hard lemma).
 import ProofsInTheBook.Chapter33Smetaniuk
+import ProofsInTheBook.Chapter33Ryser
+import ProofsInTheBook.Chapter33Unconditional
 
 -- Chapter 22 (Gurvits) WIP: capacity constant + telescoping (n!/n^n) + univariate Gurvits analytic
 -- crux + capacity iteration; real-stable polynomial framework. Reduced to the Lieb-Sokal ∂-closure.

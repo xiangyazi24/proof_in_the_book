@@ -140,6 +140,91 @@ lemma RealRooted.derivative {p : ℝ[X]} (hp : RealRooted p) :
   omega
 
 open Polynomial in
+/-- **Half-plane Gauss-Lucas, univariate form.** If every root of a complex polynomial lies in
+the closed lower half-plane, then every root of its derivative also lies in the closed lower
+half-plane. -/
+lemma derivative_roots_im_nonpos (p : Polynomial ℂ)
+    (hp : ∀ z ∈ p.roots, z.im ≤ 0) :
+    ∀ z ∈ (Polynomial.derivative p).roots, z.im ≤ 0 := by
+  classical
+  intro w hw
+  by_contra hnot
+  have hwpos : 0 < w.im := lt_of_not_ge hnot
+  have hder_info := Polynomial.mem_roots'.mp hw
+  have hder_ne : Polynomial.derivative p ≠ 0 := hder_info.1
+  have hder_root : (Polynomial.derivative p).IsRoot w := hder_info.2
+  have hder_eval : Polynomial.eval w (Polynomial.derivative p) = 0 := by
+    simpa [Polynomial.IsRoot] using hder_root
+  have hp_ne : p ≠ 0 := by
+    intro hp0
+    apply hder_ne
+    rw [hp0, Polynomial.derivative_zero]
+  by_cases hpw : Polynomial.eval w p = 0
+  · have hmem : w ∈ p.roots :=
+      Polynomial.mem_roots'.mpr ⟨hp_ne, by simpa [Polynomial.IsRoot] using hpw⟩
+    have := hp w hmem
+    linarith
+  · have hsum_eq :
+        (p.roots.map fun r => 1 / (w - r)).sum = 0 := by
+      have hlog := (IsAlgClosed.splits p).eval_derivative_div_eval_of_ne_zero hpw
+      rw [hder_eval, zero_div] at hlog
+      simpa using hlog.symm
+    have hdeg_pos : 0 < p.natDegree := by
+      by_contra hdeg_not
+      have hdeg0 : p.natDegree = 0 := Nat.eq_zero_of_not_pos hdeg_not
+      have hder0 : Polynomial.derivative p = 0 := Polynomial.derivative_of_natDegree_zero hdeg0
+      exact hder_ne hder0
+    have hroots_nonempty : p.roots ≠ 0 := by
+      have hcard : p.roots.card = p.natDegree :=
+        Polynomial.splits_iff_card_roots.mp (IsAlgClosed.splits p)
+      intro hzero
+      have : p.natDegree = 0 := by
+        rw [← hcard, hzero]
+        simp
+      omega
+    have him_lt :
+        ((p.roots.map fun r => 1 / (w - r)).sum).im < 0 := by
+      have him_sum :
+          ((p.roots.map fun r => 1 / (w - r)).sum).im =
+            (p.roots.map fun r => (1 / (w - r)).im).sum := by
+        simpa using
+          (Complex.imAddGroupHom.map_multiset_sum
+            (p.roots.map fun r => 1 / (w - r)))
+      rw [him_sum]
+      have hlt :
+          (p.roots.map fun r => (1 / (w - r)).im).sum <
+            (p.roots.map fun _r => (0 : ℝ)).sum := by
+        apply Multiset.sum_lt_sum_of_nonempty hroots_nonempty
+        intro r hr
+        have hrim : r.im ≤ 0 := hp r hr
+        have hsub_ne : w - r ≠ 0 := by
+          intro hwr
+          have hw_eq_r : w = r := sub_eq_zero.mp hwr
+          linarith [hrim, hwpos, congrArg Complex.im hw_eq_r]
+        have hnorm_pos : 0 < Complex.normSq (w - r) :=
+          Complex.normSq_pos.mpr hsub_ne
+        rw [one_div, Complex.inv_im]
+        have hnum_pos : 0 < (w - r).im := by
+          simp [Complex.sub_im]
+          linarith
+        have : - (w - r).im / Complex.normSq (w - r) < 0 :=
+          div_neg_of_neg_of_pos (neg_neg_of_pos hnum_pos) hnorm_pos
+        exact this
+      simpa using hlt
+    rw [hsum_eq] at him_lt
+    simpa using him_lt
+
+open Polynomial in
+lemma eval_ne_zero_of_roots_im_nonpos (q : Polynomial ℂ) (hq : q ≠ 0)
+    (hroots : ∀ z ∈ q.roots, z.im ≤ 0) :
+    ∀ w : ℂ, 0 < w.im → Polynomial.eval w q ≠ 0 := by
+  intro w hw hzero
+  have hmem : w ∈ q.roots :=
+    Polynomial.mem_roots'.mpr ⟨hq, by simpa [Polynomial.IsRoot] using hzero⟩
+  have := hroots w hmem
+  linarith
+
+open Polynomial in
 /-- **Cauchy root bound**: every root of a nonzero complex polynomial satisfies
 `‖z‖ ≤ 1 + (Σ_{i<d} ‖coeff i‖) / ‖leadingCoeff‖`. Needed for the compactness step of the
 root-continuity (Hurwitz-specialization) argument. -/
@@ -456,6 +541,30 @@ lemma roots_im_nonpos_of_tendsto (d : ℕ) (q : ℕ → Polynomial ℂ) (qlim : 
   rw [hroot_eq] at hz
   rcases Multiset.mem_map.mp hz with ⟨i, _hi, rfl⟩
   exact hs_im_nonpos i
+
+lemma roots_im_nonpos_of_tendsto_eventually (d : ℕ) (q : ℕ → Polynomial ℂ)
+    (qlim : Polynomial ℂ)
+    (hdeg : ∀ᶠ n in Filter.atTop, (q n).natDegree = d)
+    (hdeglim : qlim.natDegree = d) (hlim0 : qlim ≠ 0)
+    (hcoeff : ∀ k, Filter.Tendsto (fun n => (q n).coeff k) Filter.atTop (nhds (qlim.coeff k)))
+    (hroots : ∀ᶠ n in Filter.atTop, ∀ z ∈ (q n).roots, z.im ≤ 0) :
+    ∀ z ∈ qlim.roots, z.im ≤ 0 := by
+  classical
+  obtain ⟨Ndeg, hNdeg⟩ := Filter.eventually_atTop.mp hdeg
+  obtain ⟨Nroots, hNroots⟩ := Filter.eventually_atTop.mp hroots
+  let N := max Ndeg Nroots
+  let q' : ℕ → Polynomial ℂ := fun n => q (n + N)
+  have hdeg' : ∀ n, (q' n).natDegree = d := by
+    intro n
+    exact hNdeg (n + N) (by dsimp [N]; omega)
+  have hcoeff' : ∀ k, Filter.Tendsto (fun n => (q' n).coeff k)
+      Filter.atTop (nhds (qlim.coeff k)) := by
+    intro k
+    exact (hcoeff k).comp (Filter.tendsto_add_atTop_nat N)
+  have hroots' : ∀ n, ∀ z ∈ (q' n).roots, z.im ≤ 0 := by
+    intro n
+    exact hNroots (n + N) (by dsimp [N]; omega)
+  exact roots_im_nonpos_of_tendsto d q' qlim hdeg' hdeglim hlim0 hcoeff' hroots'
 
 end
 

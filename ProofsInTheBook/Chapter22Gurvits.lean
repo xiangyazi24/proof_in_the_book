@@ -240,6 +240,20 @@ lemma rowLinearMvPolynomial_nonnegativeCoefficients {n : ℕ}
   intro j _
   exact (nonnegativeCoefficients_C (hA i j)).mul (nonnegativeCoefficients_X j)
 
+lemma rowLinearMvPolynomial_isHomogeneous {n : ℕ}
+    (A : Matrix (Fin n) (Fin n) ℝ) :
+    (rowLinearMvPolynomial A).IsHomogeneous n := by
+  classical
+  rw [rowLinearMvPolynomial]
+  convert MvPolynomial.IsHomogeneous.prod (Finset.univ : Finset (Fin n))
+    (fun i => ∑ j, MvPolynomial.C (A i j) * (MvPolynomial.X j : MvPolynomial (Fin n) ℝ))
+    (fun _ => 1) ?_ using 1
+  · simp
+  · intro i _hi
+    apply MvPolynomial.IsHomogeneous.sum
+    intro j _hj
+    exact MvPolynomial.isHomogeneous_C_mul_X (A i j) j
+
 lemma eval_nonneg_of_nonnegativeCoefficients {m : ℕ} {p : MvPolynomial (Fin m) ℝ}
     (hp : NonnegativeCoefficients p) {x : Fin m → ℝ} (hx : ∀ i, 0 ≤ x i) :
     0 ≤ MvPolynomial.eval x p := by
@@ -281,6 +295,13 @@ lemma firstReduction_nonnegativeCoefficients {m : ℕ}
   rw [coeff_firstReduction]
   exact hp _
 
+lemma firstReduction_isHomogeneous {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hp : p.IsHomogeneous (m + 1)) :
+    (firstReduction p).IsHomogeneous m := by
+  simpa [firstReduction] using
+    hp.finSuccEquiv_coeff_isHomogeneous 1 m (by omega)
+
 lemma coeff_finSuccEquiv_nonnegativeCoefficients {m : ℕ}
     {p : MvPolynomial (Fin (m + 1)) ℝ}
     (hp : NonnegativeCoefficients p) (i : ℕ) :
@@ -320,6 +341,16 @@ def complexSectionPolynomial {m : ℕ} (p : MvPolynomial (Fin (m + 1)) ℝ)
   Polynomial.map (MvPolynomial.eval z)
     (MvPolynomial.finSuccEquiv ℂ m (p.map (algebraMap ℝ ℂ)))
 
+def complexLineSection {m : ℕ} (q : MvPolynomial (Fin m) ℂ)
+    (a b : Fin m → ℂ) : Polynomial ℂ :=
+  MvPolynomial.eval₂ Polynomial.C
+    (fun j => Polynomial.C (a j) + Polynomial.C (b j) * Polynomial.X) q
+
+def distinguishedDerivativeAt {m : ℕ} (p : MvPolynomial (Fin (m + 1)) ℝ)
+    (c : ℂ) : MvPolynomial (Fin m) ℂ :=
+  Polynomial.eval (MvPolynomial.C c)
+    (Polynomial.derivative (MvPolynomial.finSuccEquiv ℂ m (p.map (algebraMap ℝ ℂ))))
+
 lemma sectionPolynomial_eval {m : ℕ} (p : MvPolynomial (Fin (m + 1)) ℝ)
     (x : Fin m → ℝ) (t : ℝ) :
     Polynomial.eval t (sectionPolynomial p x) =
@@ -335,6 +366,42 @@ lemma complexSectionPolynomial_eval {m : ℕ} (p : MvPolynomial (Fin (m + 1)) �
     (MvPolynomial.eval_eq_eval_mv_eval' (s := z) (y := t)
       (f := p.map (algebraMap ℝ ℂ))).symm
 
+lemma complexLineSection_eval {m : ℕ} (q : MvPolynomial (Fin m) ℂ)
+    (a b : Fin m → ℂ) (t : ℂ) :
+    Polynomial.eval t (complexLineSection q a b) =
+      MvPolynomial.eval (fun j => a j + b j * t) q := by
+  induction q using MvPolynomial.induction_on' with
+  | monomial u c =>
+      rw [complexLineSection, MvPolynomial.eval₂_monomial, MvPolynomial.eval_monomial,
+        Polynomial.eval_mul, Polynomial.eval_C]
+      congr 1
+      rw [Finsupp.prod, Polynomial.eval_prod, Finsupp.prod]
+      apply Finset.prod_congr rfl
+      intro i _hi
+      rw [Polynomial.eval_pow, Polynomial.eval_add, Polynomial.eval_mul,
+        Polynomial.eval_C, Polynomial.eval_X, Polynomial.eval_C]
+  | add p q hp hq =>
+      rw [complexLineSection, MvPolynomial.eval₂_add, Polynomial.eval_add,
+        MvPolynomial.eval_add]
+      change Polynomial.eval t (complexLineSection p a b) +
+          Polynomial.eval t (complexLineSection q a b) =
+        (MvPolynomial.eval (fun j => a j + b j * t) p) +
+          (MvPolynomial.eval (fun j => a j + b j * t) q)
+      rw [hp, hq]
+
+lemma distinguishedDerivativeAt_eval {m : ℕ}
+    (p : MvPolynomial (Fin (m + 1)) ℝ) (z : Fin m → ℂ) (c : ℂ) :
+    MvPolynomial.eval z (distinguishedDerivativeAt p c) =
+      Polynomial.eval c (Polynomial.derivative (complexSectionPolynomial p z)) := by
+  let P := Polynomial.derivative (MvPolynomial.finSuccEquiv ℂ m (p.map (algebraMap ℝ ℂ)))
+  have h :
+      Polynomial.eval₂ (MvPolynomial.eval z) c P =
+        MvPolynomial.eval z (Polynomial.eval (MvPolynomial.C c) P) := by
+    simpa using
+      (Polynomial.eval₂_hom (p := P) (f := MvPolynomial.eval z) (x := MvPolynomial.C c))
+  simp [distinguishedDerivativeAt, complexSectionPolynomial, Polynomial.derivative_map,
+    Polynomial.eval_map, P, h.symm]
+
 lemma complexSectionPolynomial_no_uhp_root {m : ℕ}
     {p : MvPolynomial (Fin (m + 1)) ℝ}
     (hp : ProofsInTheBook.Chapter22Stable.RealStable p)
@@ -348,6 +415,50 @@ lemma complexSectionPolynomial_no_uhp_root {m : ℕ}
     · exact hw
     · intro j
       exact hz j)
+
+lemma distinguishedDerivativeLine_eval_ne_zero_of_section_derivative_ne_zero {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hp : ProofsInTheBook.Chapter22Stable.RealStable p)
+    {c : ℂ} (hc : 0 < c.im) (a b : Fin m → ℝ) (hb : ∀ j, 0 < b j) :
+    ∀ t : ℂ, 0 < t.im →
+      Polynomial.derivative
+          (complexSectionPolynomial p (fun j => (a j : ℂ) + (b j : ℂ) * t)) ≠ 0 →
+      Polynomial.eval t
+          (complexLineSection (distinguishedDerivativeAt p c)
+            (fun j => (a j : ℂ)) (fun j => (b j : ℂ))) ≠ 0 := by
+  intro t ht hder_ne hzero
+  let z : Fin m → ℂ := fun j => (a j : ℂ) + (b j : ℂ) * t
+  have hz : ∀ j, 0 < (z j).im := by
+    intro j
+    dsimp [z]
+    simp [Complex.mul_im]
+    exact mul_pos (hb j) ht
+  have hsection_no_roots :
+      ∀ w : ℂ, 0 < w.im → Polynomial.eval w (complexSectionPolynomial p z) ≠ 0 :=
+    complexSectionPolynomial_no_uhp_root hp hz
+  have hsection_roots :
+      ∀ w ∈ (complexSectionPolynomial p z).roots, w.im ≤ 0 := by
+    intro w hw
+    by_contra hnot
+    have hwpos : 0 < w.im := lt_of_not_ge hnot
+    have hroot := (Polynomial.mem_roots'.mp hw).2
+    exact hsection_no_roots w hwpos (by simpa [Polynomial.IsRoot] using hroot)
+  have hder_roots :
+      ∀ w ∈ (Polynomial.derivative (complexSectionPolynomial p z)).roots, w.im ≤ 0 :=
+    ProofsInTheBook.Chapter22Stable.derivative_roots_im_nonpos
+      (complexSectionPolynomial p z) hsection_roots
+  have hczero :
+      Polynomial.eval c (Polynomial.derivative (complexSectionPolynomial p z)) = 0 := by
+    have hline :=
+      complexLineSection_eval (distinguishedDerivativeAt p c)
+        (fun j => (a j : ℂ)) (fun j => (b j : ℂ)) t
+    rw [hline] at hzero
+    have hdist := distinguishedDerivativeAt_eval p z c
+    simpa [z] using hdist.symm.trans hzero
+  have hcmem : c ∈ (Polynomial.derivative (complexSectionPolynomial p z)).roots :=
+    Polynomial.mem_roots'.mpr ⟨hder_ne, by simpa [Polynomial.IsRoot] using hczero⟩
+  have := hder_roots c hcmem
+  linarith
 
 lemma sectionPolynomial_coeff_one {m : ℕ} (p : MvPolynomial (Fin (m + 1)) ℝ)
     (x : Fin m → ℝ) :
@@ -371,6 +482,82 @@ lemma sectionPolynomial_coeff_pos_of_coeff_ne_zero {m : ℕ}
   exact eval_pos_of_nonnegativeCoefficients
     (coeff_finSuccEquiv_nonnegativeCoefficients hp k) hk hx
 
+lemma coeff_zero_prod_one_add_mul_X {ι : Type*} [DecidableEq ι] (s : Finset ι)
+    (lam : ι → ℝ) :
+    (∏ i ∈ s, (1 + Polynomial.C (lam i) * Polynomial.X : Polynomial ℝ)).coeff 0 = 1 := by
+  classical
+  induction s using Finset.induction with
+  | empty =>
+      simp
+  | insert i s his ih =>
+      rw [Finset.prod_insert his]
+      rw [Polynomial.mul_coeff_zero, ih]
+      simp
+
+lemma coeff_one_prod_one_add_mul_X {ι : Type*} [DecidableEq ι] (s : Finset ι)
+    (lam : ι → ℝ) :
+    (∏ i ∈ s, (1 + Polynomial.C (lam i) * Polynomial.X : Polynomial ℝ)).coeff 1 =
+      ∑ i ∈ s, lam i := by
+  classical
+  induction s using Finset.induction with
+  | empty =>
+      simpa using (Polynomial.coeff_one (R := ℝ) (n := 1))
+  | insert i s his ih =>
+      rw [Finset.prod_insert his, Finset.sum_insert his]
+      rw [Polynomial.mul_coeff_one, ih, coeff_zero_prod_one_add_mul_X s lam]
+      have hcoeff_one : (1 : Polynomial ℝ).coeff 1 = 0 := by
+        simpa using (Polynomial.coeff_one (R := ℝ) (n := 1))
+      simp [hcoeff_one]
+      ring
+
+lemma coeff_one_C_mul_prod_one_add_mul_X {ι : Type*} [DecidableEq ι] (s : Finset ι)
+    (c : ℝ) (lam : ι → ℝ) :
+    (Polynomial.C c * ∏ i ∈ s,
+        (1 + Polynomial.C (lam i) * Polynomial.X : Polynomial ℝ)).coeff 1 =
+      c * ∑ i ∈ s, lam i := by
+  rw [Polynomial.coeff_C_mul, coeff_one_prod_one_add_mul_X]
+
+lemma root_neg_of_nonnegative_coefficients_of_coeff_zero_pos {q : Polynomial ℝ}
+    (hcoeff : ∀ n : ℕ, 0 ≤ q.coeff n) (h0 : 0 < q.coeff 0)
+    {r : ℝ} (hr : r ∈ q.roots) :
+    r < 0 := by
+  have hroot : q.IsRoot r := (Polynomial.mem_roots'.mp hr).2
+  by_contra hnot
+  have hr_nonneg : 0 ≤ r := le_of_not_gt hnot
+  have hsum_pos :
+      0 < ∑ i ∈ Finset.range (q.natDegree + 1), q.coeff i * r ^ i := by
+    apply Finset.sum_pos'
+    · intro i _hi
+      exact mul_nonneg (hcoeff i) (pow_nonneg hr_nonneg i)
+    · refine ⟨0, ?_, ?_⟩
+      · simp
+      · simpa using h0
+  have heval : q.eval r = ∑ i ∈ Finset.range (q.natDegree + 1), q.coeff i * r ^ i :=
+    Polynomial.eval_eq_sum_range r
+  have hzero : q.eval r = 0 := by
+    simpa [Polynomial.IsRoot] using hroot
+  linarith
+
+lemma roots_enum_toList {α : Type*} (s : Multiset α) {d : ℕ} (hcard : s.card = d) :
+    Multiset.map (fun i : Fin d =>
+      s.toList.get (Fin.cast (((Multiset.length_toList s).trans hcard).symm) i))
+      Finset.univ.val = s := by
+  rw [Fin.univ_val_map]
+  have hlen : s.toList.length = d := by rw [Multiset.length_toList, hcard]
+  change (List.ofFn (fun i : Fin d => s.toList.get (Fin.cast hlen.symm i)) :
+    Multiset α) = s
+  have hlist :
+      List.ofFn (fun i : Fin d => s.toList.get (Fin.cast hlen.symm i)) = s.toList := by
+    exact (List.ofFn_congr hlen (s.toList.get)).symm.trans (List.ofFn_get s.toList)
+  exact (congrArg (fun l : List α => (l : Multiset α)) hlist).trans (Multiset.coe_toList s)
+
+lemma roots_enum_toList_mem {α : Type*} (s : Multiset α) {d : ℕ} (hcard : s.card = d)
+    (i : Fin d) :
+    s.toList.get (Fin.cast (((Multiset.length_toList s).trans hcard).symm) i) ∈ s := by
+  have hmem : s.toList.get (Fin.cast (((Multiset.length_toList s).trans hcard).symm) i) ∈
+      s.toList := List.get_mem _ _
+  rwa [Multiset.mem_toList] at hmem
+
 structure FactoredSectionData (k : ℕ) (q : Polynomial ℝ) where
   c : ℝ
   lam : Fin k → ℝ
@@ -380,9 +567,133 @@ structure FactoredSectionData (k : ℕ) (q : Polynomial ℝ) where
   eval_eq : ∀ t : ℝ, Polynomial.eval t q = c * ∏ i, (1 + lam i * t)
   coeff_one_eq : Polynomial.coeff q 1 = c * ∑ i, lam i
 
+noncomputable def rootsAsFin (q : Polynomial ℝ) (hcard : q.roots.card = q.natDegree)
+    (i : Fin q.natDegree) : ℝ :=
+  q.roots.toList.get
+    (Fin.cast (((Multiset.length_toList q.roots).trans hcard).symm) i)
+
+lemma rootsAsFin_mem (q : Polynomial ℝ) (hcard : q.roots.card = q.natDegree)
+    (i : Fin q.natDegree) :
+    rootsAsFin q hcard i ∈ q.roots := by
+  simpa [rootsAsFin] using roots_enum_toList_mem q.roots hcard i
+
+lemma rootsAsFin_enum (q : Polynomial ℝ) (hcard : q.roots.card = q.natDegree) :
+    Finset.univ.val.map (rootsAsFin q hcard) = q.roots := by
+  simpa [rootsAsFin] using roots_enum_toList q.roots hcard
+
+noncomputable def factoredSectionData_natDegree_of_realRooted_nonnegative {q : Polynomial ℝ}
+    (hcoeff : ∀ n : ℕ, 0 ≤ q.coeff n) (h0 : 0 < q.coeff 0)
+    (hrooted : ProofsInTheBook.Chapter22Stable.RealRooted q)
+    (hdeg_pos : 0 < q.natDegree) :
+    FactoredSectionData q.natDegree q := by
+  classical
+  have hq_ne : q ≠ 0 := by
+    intro hq
+    rw [hq] at h0
+    simp at h0
+  have hsplits : q.Splits := by
+    rw [Polynomial.splits_iff_card_roots]
+    exact hrooted
+  have hcard : q.roots.card = q.natDegree := hrooted
+  let r : Fin q.natDegree → ℝ := rootsAsFin q hcard
+  let lam : Fin q.natDegree → ℝ := fun i => - (r i)⁻¹
+  have hr_mem : ∀ i, r i ∈ q.roots := by
+    intro i
+    exact rootsAsFin_mem q hcard i
+  have hr_neg : ∀ i, r i < 0 := by
+    intro i
+    exact root_neg_of_nonnegative_coefficients_of_coeff_zero_pos hcoeff h0 (hr_mem i)
+  have hr_ne : ∀ i, r i ≠ 0 := fun i => (hr_neg i).ne
+  have hlam_pos : ∀ i, 0 < lam i := by
+    intro i
+    dsimp [lam]
+    have hinv : (r i)⁻¹ < 0 := by
+      simpa using (inv_lt_zero.mpr (hr_neg i))
+    linarith
+  have hroots_enum : Finset.univ.val.map r = q.roots := by
+    simpa [r] using rootsAsFin_enum q hcard
+  have heval_roots : ∀ t : ℝ, q.eval t = q.leadingCoeff * ∏ i, (t - r i) := by
+    intro t
+    have h := hsplits.eval_eq_prod_roots t
+    rw [← hroots_enum] at h
+    simpa [Finset.prod, Multiset.map_map, Function.comp_def] using h
+  have hconst : q.coeff 0 = q.leadingCoeff * ∏ i, (-r i) := by
+    have h0eval := heval_roots 0
+    rw [Polynomial.coeff_zero_eq_eval_zero]
+    simpa using h0eval
+  have heval_factored : ∀ t : ℝ,
+      q.eval t = q.coeff 0 * ∏ i, (1 + lam i * t) := by
+    intro t
+    have hfactor_each : ∀ i : Fin q.natDegree,
+        t - r i = (-r i) * (1 + lam i * t) := by
+      intro i
+      dsimp [lam]
+      field_simp [hr_ne i]
+      ring
+    have hprod :
+        (∏ i, (t - r i)) = (∏ i, (-r i)) * ∏ i, (1 + lam i * t) := by
+      simp_rw [hfactor_each]
+      rw [Finset.prod_mul_distrib]
+    rw [heval_roots t, hprod, hconst]
+    ring
+  refine
+    ⟨q.coeff 0, lam, le_of_lt h0, (fun i => le_of_lt (hlam_pos i)), ?_, ?_, ?_⟩
+  · haveI : Nonempty (Fin q.natDegree) := ⟨⟨0, hdeg_pos⟩⟩
+    exact Finset.sum_pos (fun i _ => hlam_pos i) Finset.univ_nonempty
+  · exact heval_factored
+  · have hpoly :
+        q = Polynomial.C (q.coeff 0) *
+          ∏ i, (1 + Polynomial.C (lam i) * Polynomial.X : Polynomial ℝ) := by
+      apply Polynomial.funext
+      intro t
+      calc
+        q.eval t = q.coeff 0 * ∏ i, (1 + lam i * t) := heval_factored t
+        _ = Polynomial.eval t
+            (Polynomial.C (q.coeff 0) *
+              ∏ i, (1 + Polynomial.C (lam i) * Polynomial.X : Polynomial ℝ)) := by
+              have hprod_eval :
+                  Polynomial.eval t
+                    (∏ i, (1 + Polynomial.C (lam i) * Polynomial.X : Polynomial ℝ)) =
+                    ∏ i, (1 + lam i * t) := by
+                rw [Polynomial.eval_prod]
+                simp
+              rw [Polynomial.eval_mul, Polynomial.eval_C, hprod_eval]
+    calc
+      q.coeff 1 =
+          (Polynomial.C (q.coeff 0) *
+            ∏ i, (1 + Polynomial.C (lam i) * Polynomial.X : Polynomial ℝ)).coeff 1 :=
+        congrArg (fun p : Polynomial ℝ => p.coeff 1) hpoly
+      _ = q.coeff 0 * ∑ i, lam i :=
+        coeff_one_C_mul_prod_one_add_mul_X
+          (Finset.univ : Finset (Fin q.natDegree)) (q.coeff 0) lam
+
 def PositiveFactoredSections {m : ℕ} (p : MvPolynomial (Fin (m + 1)) ℝ) : Type :=
   ∀ x : Fin m → ℝ, PositiveVector x →
     FactoredSectionData (m + 1) (sectionPolynomial p x)
+
+noncomputable def positiveFactoredSections_of_realRooted_sections {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hpcoeff : NonnegativeCoefficients p)
+    (hrooted :
+      ∀ x : Fin m → ℝ, PositiveVector x →
+        ProofsInTheBook.Chapter22Stable.RealRooted (sectionPolynomial p x))
+    (hconst :
+      ∀ x : Fin m → ℝ, PositiveVector x →
+        0 < (sectionPolynomial p x).coeff 0)
+    (hdegree :
+      ∀ x : Fin m → ℝ, PositiveVector x →
+        (sectionPolynomial p x).natDegree = m + 1) :
+    PositiveFactoredSections p := by
+  intro x hx
+  have hcoeff : ∀ n : ℕ, 0 ≤ (sectionPolynomial p x).coeff n := by
+    intro n
+    exact sectionPolynomial_coeff_nonneg hpcoeff (fun i => le_of_lt (hx i)) n
+  have hdeg_pos : 0 < (sectionPolynomial p x).natDegree := by
+    rw [hdegree x hx]
+    omega
+  simpa [hdegree x hx] using
+    factoredSectionData_natDegree_of_realRooted_nonnegative
+      (q := sectionPolynomial p x) hcoeff (hconst x hx) (hrooted x hx) hdeg_pos
 
 lemma firstReduction_capLB_of_factoredSections {m : ℕ}
     {p : MvPolynomial (Fin (m + 1)) ℝ} {C : ℝ}

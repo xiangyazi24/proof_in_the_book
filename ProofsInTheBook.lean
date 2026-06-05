@@ -50,6 +50,7 @@ import ProofsInTheBook.PlanarMapChordSplit
 import ProofsInTheBook.PlanarMapFanSurgery
 import ProofsInTheBook.PlanarMapSeparation
 import ProofsInTheBook.PlanarMapFanConnectivity
+import ProofsInTheBook.PlanarMapFanFaces
 import ProofsInTheBook.ThomassenLists
 import ProofsInTheBook.SimpleGraphBlocks
 import ProofsInTheBook.ListColoring

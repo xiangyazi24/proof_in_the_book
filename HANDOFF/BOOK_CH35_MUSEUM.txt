@@ -1,0 +1,127 @@
+How to guard a museum                                                                               Chapter 35
+
+
+
+
+Here is an appealing problem which was raised by Victor Klee in 1973.
+Suppose the manager of a museum wants to make sure that at all times
+every point of the museum is watched by a guard. The guards are stationed
+at fixed posts, but they are able to turn around. How many guards are
+needed?
+We picture the walls of the museum as a polygon consisting of n sides.
+Of course, if the polygon is convex, then one guard is enough. In fact, the
+guard may be stationed at any point of the museum. But, in general, the
+walls of the museum may have the shape of any closed polygon.                      A convex exhibition hall
+Consider a comb-shaped museum with n = 3m walls, as depicted on the
+right. It is easy to see that this requires at least m = n3 guards. In fact,
+there are n walls. Now notice that the point 1 can only be observed by a
+guard stationed in the shaded triangle containing 1, and similarly for the
+other points 2, 3, . . . , m. Since all these triangles are disjoint we conclude
+that at least m guards are needed. But m guards are also enough, since they
+can be placed at the top lines of the triangles. By cutting off one or two                                        ...
+walls at the end, we conclude that for any n there is an n-walled museum
+which requires n3 guards.                                                            1          2         3         ...   m
+
+
+
+
+                                                                                   A real life art gallery. . .
+
+M. Aigner, G.M. Ziegler, Proofs from THE BOOK,
+DOI 10.1007/978-3-642-00856-6_35, © Springer-Verlag Berlin Heidelberg 2013
+232                                                                                              How to guard a museum
+
+                                           The following result states that this is the worst case.
+
+
+                                               Theorem. For any museum with n walls,         n
+                                                                                             3   guards suffice.
+
+
+                                           This “art gallery theorem” was first proved by Vašek Chvátal by a clever
+                                           argument, but here is a proof due to Steve Fisk that is truly beautiful.
+A museum with n = 12 walls                  Proof. First of all, let us draw n − 3 non-crossing diagonals between
+                                           corners of the walls until the interior is triangulated. For example, we can
+                                           draw 9 diagonals in the museum depicted in the margin to produce a trian-
+                                           gulation. It does not matter which triangulation we choose, any one will do.
+                                           Now think of the new figure as a plane graph with the corners as vertices
+                                           and the walls and diagonals as edges.
+                                               Claim. This graph is 3-colorable.
+
+A triangulation of the museum              For n = 3 there is nothing to prove. Now for n > 3 pick any two vertices
+                                           u and v which are connected by a diagonal. This diagonal will split the
+                                           graph into two smaller triangulated graphs both containing the edge uv. By
+                                           induction we may color each part with 3 colors where we may choose color
+                                           1 for u and color 2 for v in each coloring. Pasting the colorings together
+                                           yields a 3-coloring of the whole graph.
+                                           The rest is easy. Since there are n vertices, at least one of the color classes,
+                                           say the vertices colored 1, contains at most n3 vertices, and this is where
+                                           we place the guards. Since every triangle contains a vertex of color 1 we in-
+                                           fer that every triangle is guarded, and hence so is the whole museum.         
+           C
+                              B            The astute reader may have noticed a subtle point in our reasoning. Does
+ A                                         a triangulation always exist? Probably everybody’s first reaction is: Obvi-
+                                           ously, yes! Well, it does exist, but this is not completely obvious, and,
+                                           in fact, the natural generalization to three dimensions (partitioning into
+                                           tetrahedra) is false! This may be seen from Schönhardt’s polyhedron, de-
+                                           picted on the left. It is obtained from a triangular prism by rotating the
+                                           top triangle, so that each of the quadrilateral faces breaks into two triangles
+                   C
+                                           with a non-convex edge. Try to triangulate this polyhedron! You will notice
+                                           that any tetrahedron that contains the bottom triangle must contain one of
+A                                          the three top vertices: but the resulting tetrahedron will not be contained in
+                             B             Schönhardt’s polyhedron. So there is no triangulation without an additional
+Schönhardt’s polyhedron: The interior      vertex.
+dihedral angles at the edges AB  , BC    To prove that a triangulation exists in the case of a planar non-convex
+and CA are greater than 180◦ .            polygon, we proceed by induction on the number n of vertices. For n = 3
+                                           the polygon is a triangle, and there is nothing to prove. Let n ≥ 4. To
+                                           use induction, all we have to produce is one diagonal which will split the
+                                           polygon P into two smaller parts, such that a triangulation of the polygon
+                                           can be pasted together from triangulations of the parts.
+                                           Call a vertex A convex if the interior angle at the vertex is less than 180◦ .
+                                           Since the sum of the interior angles of P is (n − 2)180◦, there must be a
+How to guard a museum                                                                            233
+
+convex vertex A. In fact, there must be at least three of them: In essence
+this is an application of the pigeonhole principle! Or you may consider the
+convex hull of the polygon, and note that all its vertices are convex also for
+the original polygon.
+                                                                                 B           C
+Now look at the two neighboring vertices B and C of A. If the segment
+BC lies entirely in P , then this is our diagonal. If not, the triangle ABC              Z
+contains other vertices. Slide BC towards A until it hits the last vertex Z
+in ABC. Now AZ is within P , and we have a diagonal.                                 A
+There are many variants to the art gallery theorem. For example, we may
+only want to guard the walls (which is, after all, where the paintings hang),
+or the guards are all stationed at vertices. A particularly nice (unsolved)
+variant goes as follows:
+
+    Suppose each guard may patrol one wall of the museum, so he
+    walks along his wall and sees anything that can be seen from any
+    point along this wall.
+    How many “wall guards” do we then need to keep control?
+
+Godfried Toussaint constructed the example of a museum displayed here
+which shows that n4 guards may be necessary.
+This polygon has 28 sides (and, in general, 4m sides), and the reader is in-
+vited to check that m wall-guards are needed. It is conjectured that, except
+for some small values of n, this number is also sufficient, but a proof, let
+alone a Book Proof, is still missing.
+
+References
+[1] V. C HVÁTAL : A combinatorial theorem in plane geometry, J. Combinatorial
+    Theory, Ser. B 18 (1975), 39-41.
+[2] S. F ISK : A short proof of Chvátal’s watchman theorem, J. Combinatorial
+    Theory, Ser. B 24 (1978), 374.
+[3] J. O’ROURKE : Art Gallery Theorems and Algorithms, Oxford University
+    Press 1987.
+[4] E. S CHÖNHARDT: Über die Zerlegung von Dreieckspolyedern in Tetraeder,
+    Math. Annalen 98 (1928), 309-312.
+234                                     How to guard a museum
+
+
+
+
+“Museum guards”
+(A 3-dimensional art-gallery problem)
+

@@ -60,6 +60,7 @@ import ProofsInTheBook.RelationComponentCount
 import ProofsInTheBook.PlanarMapEulerInequality
 import ProofsInTheBook.PlanarMapCutCap
 import ProofsInTheBook.PlanarMapCutCapSigma
+import ProofsInTheBook.PlanarMapCutCapCounts
 import ProofsInTheBook.SimpleGraphBlocks
 import ProofsInTheBook.ListColoring
 import ProofsInTheBook.Chapter35

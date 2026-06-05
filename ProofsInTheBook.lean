@@ -66,6 +66,7 @@ import ProofsInTheBook.PlanarMapCutCapCounts
 import ProofsInTheBook.PlanarMapCutCapV
 import ProofsInTheBook.PlanarMapCutCapF
 import ProofsInTheBook.PlanarMapCutCapConn
+import ProofsInTheBook.PlanarMapCutCapFCore
 import ProofsInTheBook.SimpleGraphBlocks
 import ProofsInTheBook.ListColoring
 import ProofsInTheBook.Chapter35

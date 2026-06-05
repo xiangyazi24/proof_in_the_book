@@ -34,6 +34,7 @@ import ProofsInTheBook.Chapter31
 import ProofsInTheBook.Chapter32
 import ProofsInTheBook.Chapter33
 import ProofsInTheBook.Chapter34
+import ProofsInTheBook.ListColoring
 import ProofsInTheBook.Chapter35
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37

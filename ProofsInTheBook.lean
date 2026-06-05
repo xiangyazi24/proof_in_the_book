@@ -56,6 +56,7 @@ import ProofsInTheBook.PlanarMapDeletedBoundary
 import ProofsInTheBook.PlanarMapOuterArc
 import ProofsInTheBook.PlanarMapFanExistence
 import ProofsInTheBook.ThomassenLists
+import ProofsInTheBook.ThomassenInduction
 import ProofsInTheBook.PermTranspositionCycleCount
 import ProofsInTheBook.RelationComponentCount
 import ProofsInTheBook.PlanarMapEulerInequality

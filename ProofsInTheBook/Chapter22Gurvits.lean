@@ -1,5 +1,6 @@
 import Mathlib
 import ProofsInTheBook.Chapter22
+import ProofsInTheBook.Chapter22Stable
 
 /-!
 # Chapter 22 (van der Waerden permanent bound) — Gurvits capacity, algebraic core
@@ -154,6 +155,312 @@ lemma G_nonneg (k : ℕ) : 0 ≤ G k := by
     have : (2 : ℝ) ≤ (k : ℝ) := by exact_mod_cast hk
     linarith
 
+/-!
+### Capacity lower-bound bookkeeping for the reduction chain
+
+The analytic-free stable-polynomial step is most convenient to state as a
+lower-bound invariant rather than as an actual infimum.  `CapLB p c` means that
+`c` is a certified lower bound for the Gurvits capacity of `p`.
+-/
+
+def NonnegativeCoefficients {m : ℕ} (p : MvPolynomial (Fin m) ℝ) : Prop :=
+  ∀ a : Fin m →₀ ℕ, 0 ≤ MvPolynomial.coeff a p
+
+def PositiveVector {m : ℕ} (x : Fin m → ℝ) : Prop :=
+  ∀ i, 0 < x i
+
+def CapLB {m : ℕ} (p : MvPolynomial (Fin m) ℝ) (c : ℝ) : Prop :=
+  ∀ x : Fin m → ℝ, PositiveVector x → c * ∏ i, x i ≤ MvPolynomial.eval x p
+
+lemma nonnegativeCoefficients_C {m : ℕ} {c : ℝ} (hc : 0 ≤ c) :
+    NonnegativeCoefficients (MvPolynomial.C c : MvPolynomial (Fin m) ℝ) := by
+  classical
+  intro a
+  rw [MvPolynomial.coeff_C]
+  split_ifs <;> positivity
+
+lemma nonnegativeCoefficients_X {m : ℕ} (i : Fin m) :
+    NonnegativeCoefficients (MvPolynomial.X i : MvPolynomial (Fin m) ℝ) := by
+  classical
+  intro a
+  rw [MvPolynomial.coeff_X']
+  split_ifs <;> positivity
+
+lemma NonnegativeCoefficients.add {m : ℕ} {p q : MvPolynomial (Fin m) ℝ}
+    (hp : NonnegativeCoefficients p) (hq : NonnegativeCoefficients q) :
+    NonnegativeCoefficients (p + q) := by
+  intro a
+  rw [MvPolynomial.coeff_add]
+  exact add_nonneg (hp a) (hq a)
+
+lemma NonnegativeCoefficients.mul {m : ℕ} {p q : MvPolynomial (Fin m) ℝ}
+    (hp : NonnegativeCoefficients p) (hq : NonnegativeCoefficients q) :
+    NonnegativeCoefficients (p * q) := by
+  classical
+  intro a
+  rw [MvPolynomial.coeff_mul]
+  exact Finset.sum_nonneg fun b _ =>
+    mul_nonneg (hp b.1) (hq b.2)
+
+lemma nonnegativeCoefficients_sum {m : ℕ} {ι : Type*} (s : Finset ι)
+    (f : ι → MvPolynomial (Fin m) ℝ)
+    (hf : ∀ i ∈ s, NonnegativeCoefficients (f i)) :
+    NonnegativeCoefficients (∑ i ∈ s, f i) := by
+  classical
+  induction s using Finset.induction with
+  | empty =>
+      intro a
+      simp
+  | insert i s his ih =>
+      simp_rw [Finset.sum_insert his]
+      exact (hf i (Finset.mem_insert_self i s)).add
+        (ih fun j hj => hf j (Finset.mem_insert_of_mem hj))
+
+lemma nonnegativeCoefficients_prod {m : ℕ} {ι : Type*} (s : Finset ι)
+    (f : ι → MvPolynomial (Fin m) ℝ)
+    (hf : ∀ i ∈ s, NonnegativeCoefficients (f i)) :
+    NonnegativeCoefficients (∏ i ∈ s, f i) := by
+  classical
+  induction s using Finset.induction with
+  | empty =>
+      exact nonnegativeCoefficients_C (by positivity : (0 : ℝ) ≤ 1)
+  | insert i s his ih =>
+      simp_rw [Finset.prod_insert his]
+      exact (hf i (Finset.mem_insert_self i s)).mul
+        (ih fun j hj => hf j (Finset.mem_insert_of_mem hj))
+
+lemma rowLinearMvPolynomial_nonnegativeCoefficients {n : ℕ}
+    (A : Matrix (Fin n) (Fin n) ℝ) (hA : ∀ i j, 0 ≤ A i j) :
+    NonnegativeCoefficients (rowLinearMvPolynomial A) := by
+  classical
+  rw [rowLinearMvPolynomial]
+  apply nonnegativeCoefficients_prod
+  intro i _
+  apply nonnegativeCoefficients_sum
+  intro j _
+  exact (nonnegativeCoefficients_C (hA i j)).mul (nonnegativeCoefficients_X j)
+
+lemma eval_nonneg_of_nonnegativeCoefficients {m : ℕ} {p : MvPolynomial (Fin m) ℝ}
+    (hp : NonnegativeCoefficients p) {x : Fin m → ℝ} (hx : ∀ i, 0 ≤ x i) :
+    0 ≤ MvPolynomial.eval x p := by
+  rw [MvPolynomial.eval_eq]
+  apply Finset.sum_nonneg
+  intro a ha
+  exact mul_nonneg (hp a) (Finset.prod_nonneg fun i _ => pow_nonneg (hx i) _)
+
+lemma eval_pos_of_nonnegativeCoefficients {m : ℕ} {p : MvPolynomial (Fin m) ℝ}
+    (hp : NonnegativeCoefficients p) (hp_ne : p ≠ 0)
+    {x : Fin m → ℝ} (hx : ∀ i, 0 < x i) :
+    0 < MvPolynomial.eval x p := by
+  rw [MvPolynomial.eval_eq]
+  apply Finset.sum_pos'
+  · intro a ha
+    exact mul_nonneg (hp a) (Finset.prod_nonneg fun i _ => pow_nonneg (le_of_lt (hx i)) _)
+  · obtain ⟨a, ha⟩ := MvPolynomial.support_nonempty.mpr hp_ne
+    refine ⟨a, ha, ?_⟩
+    have hcoeff_ne : MvPolynomial.coeff a p ≠ 0 := MvPolynomial.mem_support_iff.mp ha
+    have hcoeff_pos : 0 < MvPolynomial.coeff a p :=
+      lt_of_le_of_ne (hp a) (Ne.symm hcoeff_ne)
+    exact mul_pos hcoeff_pos (Finset.prod_pos fun i _ => pow_pos (hx i) _)
+
+def firstReduction {m : ℕ} (p : MvPolynomial (Fin (m + 1)) ℝ) :
+    MvPolynomial (Fin m) ℝ :=
+  Polynomial.coeff (MvPolynomial.finSuccEquiv ℝ m p) 1
+
+lemma coeff_firstReduction {m : ℕ} (p : MvPolynomial (Fin (m + 1)) ℝ)
+    (a : Fin m →₀ ℕ) :
+    MvPolynomial.coeff a (firstReduction p) =
+      MvPolynomial.coeff (Finsupp.cons 1 a) p := by
+  simpa [firstReduction] using MvPolynomial.finSuccEquiv_coeff_coeff a p 1
+
+lemma firstReduction_nonnegativeCoefficients {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hp : NonnegativeCoefficients p) :
+    NonnegativeCoefficients (firstReduction p) := by
+  intro a
+  rw [coeff_firstReduction]
+  exact hp _
+
+lemma coeff_finSuccEquiv_nonnegativeCoefficients {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hp : NonnegativeCoefficients p) (i : ℕ) :
+    NonnegativeCoefficients (Polynomial.coeff (MvPolynomial.finSuccEquiv ℝ m p) i) := by
+  intro a
+  rw [MvPolynomial.finSuccEquiv_coeff_coeff]
+  exact hp _
+
+def iteratedFirstReductionCoefficient : (m : ℕ) → MvPolynomial (Fin m) ℝ → ℝ
+  | 0, p => MvPolynomial.coeff (squarefreeExponent 0) p
+  | m + 1, p => iteratedFirstReductionCoefficient m (firstReduction p)
+
+lemma squarefreeExponent_succ (m : ℕ) :
+    Finsupp.cons 1 (squarefreeExponent m) = squarefreeExponent (m + 1) := by
+  ext i
+  refine Fin.cases ?_ ?_ i
+  · simp [squarefreeExponent]
+  · intro j
+    simp [squarefreeExponent]
+
+lemma iteratedFirstReductionCoefficient_eq_squarefreeCoefficient :
+    ∀ (m : ℕ) (p : MvPolynomial (Fin m) ℝ),
+      iteratedFirstReductionCoefficient m p =
+        MvPolynomial.coeff (squarefreeExponent m) p
+  | 0, p => rfl
+  | m + 1, p => by
+      rw [iteratedFirstReductionCoefficient,
+        iteratedFirstReductionCoefficient_eq_squarefreeCoefficient m (firstReduction p),
+        coeff_firstReduction, squarefreeExponent_succ]
+
+def sectionPolynomial {m : ℕ} (p : MvPolynomial (Fin (m + 1)) ℝ)
+    (x : Fin m → ℝ) : Polynomial ℝ :=
+  Polynomial.map (MvPolynomial.eval x) (MvPolynomial.finSuccEquiv ℝ m p)
+
+def complexSectionPolynomial {m : ℕ} (p : MvPolynomial (Fin (m + 1)) ℝ)
+    (z : Fin m → ℂ) : Polynomial ℂ :=
+  Polynomial.map (MvPolynomial.eval z)
+    (MvPolynomial.finSuccEquiv ℂ m (p.map (algebraMap ℝ ℂ)))
+
+lemma sectionPolynomial_eval {m : ℕ} (p : MvPolynomial (Fin (m + 1)) ℝ)
+    (x : Fin m → ℝ) (t : ℝ) :
+    Polynomial.eval t (sectionPolynomial p x) =
+      MvPolynomial.eval (Fin.cons t x) p := by
+  simpa [sectionPolynomial] using
+    (MvPolynomial.eval_eq_eval_mv_eval' (s := x) (y := t) (f := p)).symm
+
+lemma complexSectionPolynomial_eval {m : ℕ} (p : MvPolynomial (Fin (m + 1)) ℝ)
+    (z : Fin m → ℂ) (t : ℂ) :
+    Polynomial.eval t (complexSectionPolynomial p z) =
+      MvPolynomial.eval (Fin.cons t z) (p.map (algebraMap ℝ ℂ)) := by
+  simpa [complexSectionPolynomial] using
+    (MvPolynomial.eval_eq_eval_mv_eval' (s := z) (y := t)
+      (f := p.map (algebraMap ℝ ℂ))).symm
+
+lemma complexSectionPolynomial_no_uhp_root {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hp : ProofsInTheBook.Chapter22Stable.RealStable p)
+    {z : Fin m → ℂ} (hz : ∀ i, 0 < (z i).im) :
+    ∀ w : ℂ, 0 < w.im → Polynomial.eval w (complexSectionPolynomial p z) ≠ 0 := by
+  intro w hw
+  rw [complexSectionPolynomial_eval]
+  exact hp (Fin.cons w z) (by
+    intro i
+    refine Fin.cases ?_ ?_ i
+    · exact hw
+    · intro j
+      exact hz j)
+
+lemma sectionPolynomial_coeff_one {m : ℕ} (p : MvPolynomial (Fin (m + 1)) ℝ)
+    (x : Fin m → ℝ) :
+    Polynomial.coeff (sectionPolynomial p x) 1 =
+      MvPolynomial.eval x (firstReduction p) := by
+  simp [sectionPolynomial, firstReduction]
+
+lemma sectionPolynomial_coeff_nonneg {m : ℕ} {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hp : NonnegativeCoefficients p) {x : Fin m → ℝ} (hx : ∀ i, 0 ≤ x i) (k : ℕ) :
+    0 ≤ Polynomial.coeff (sectionPolynomial p x) k := by
+  rw [sectionPolynomial, Polynomial.coeff_map]
+  exact eval_nonneg_of_nonnegativeCoefficients
+    (coeff_finSuccEquiv_nonnegativeCoefficients hp k) hx
+
+lemma sectionPolynomial_coeff_pos_of_coeff_ne_zero {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hp : NonnegativeCoefficients p) {x : Fin m → ℝ} (hx : ∀ i, 0 < x i)
+    {k : ℕ} (hk : Polynomial.coeff (MvPolynomial.finSuccEquiv ℝ m p) k ≠ 0) :
+    0 < Polynomial.coeff (sectionPolynomial p x) k := by
+  rw [sectionPolynomial, Polynomial.coeff_map]
+  exact eval_pos_of_nonnegativeCoefficients
+    (coeff_finSuccEquiv_nonnegativeCoefficients hp k) hk hx
+
+structure FactoredSectionData (k : ℕ) (q : Polynomial ℝ) where
+  c : ℝ
+  lam : Fin k → ℝ
+  c_nonneg : 0 ≤ c
+  lam_nonneg : ∀ i, 0 ≤ lam i
+  sum_lam_pos : 0 < ∑ i, lam i
+  eval_eq : ∀ t : ℝ, Polynomial.eval t q = c * ∏ i, (1 + lam i * t)
+  coeff_one_eq : Polynomial.coeff q 1 = c * ∑ i, lam i
+
+def PositiveFactoredSections {m : ℕ} (p : MvPolynomial (Fin (m + 1)) ℝ) : Type :=
+  ∀ x : Fin m → ℝ, PositiveVector x →
+    FactoredSectionData (m + 1) (sectionPolynomial p x)
+
+lemma firstReduction_capLB_of_factoredSections {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ} {C : ℝ}
+    (hm : 1 ≤ m)
+    (hsections : PositiveFactoredSections p)
+    (hcap : CapLB p C) :
+    CapLB (firstReduction p) (G (m + 1) * C) := by
+  intro x hx
+  obtain ⟨c, lam, hc, hlam, hS, heval, hcoeff⟩ := hsections x hx
+  have hbound :
+      ∀ t : ℝ, 0 < t →
+        (C * ∏ i, x i) * t ≤ c * ∏ i, (1 + lam i * t) := by
+    intro t ht
+    have hpos : PositiveVector (Fin.cons t x) := by
+      intro i
+      refine Fin.cases ?_ ?_ i
+      · exact ht
+      · intro j
+        exact hx j
+    have h := hcap (Fin.cons t x) hpos
+    rw [← sectionPolynomial_eval p x t, heval t] at h
+    simpa [Fin.prod_univ_succ, mul_assoc, mul_comm, mul_left_comm] using h
+  have hstep :
+      G (m + 1) * (C * ∏ i, x i) ≤ c * ∑ i, lam i :=
+    univariate_gurvits_factored (k := m + 1) (by omega) c
+      (C * ∏ i, x i) lam hc hlam hS hbound
+  calc
+    (G (m + 1) * C) * ∏ i, x i =
+        G (m + 1) * (C * ∏ i, x i) := by ring
+    _ ≤ c * ∑ i, lam i := hstep
+    _ = Polynomial.coeff (sectionPolynomial p x) 1 := hcoeff.symm
+    _ = MvPolynomial.eval x (firstReduction p) := sectionPolynomial_coeff_one p x
+
+lemma rowLinear_capLB_one_of_capacity {n : ℕ}
+    {A : Matrix (Fin n) (Fin n) ℝ}
+    (hcap : RowLinearCapacityAtLeastOne A) :
+    CapLB (rowLinearMvPolynomial A) 1 := by
+  intro x hx
+  simpa [CapLB, PositiveVector, eval_rowLinearMvPolynomial, one_mul] using
+    hcap.le_rowLinearProduct x hx
+
+lemma row_sum_pos_of_nonnegative_of_capacity {n : ℕ}
+    {A : Matrix (Fin n) (Fin n) ℝ}
+    (hA : ∀ i j, 0 ≤ A i j)
+    (hcap : RowLinearCapacityAtLeastOne A) (i : Fin n) :
+    0 < ∑ j, A i j := by
+  have hx : PositiveVector (fun _ : Fin n => (1 : ℝ)) := by
+    intro j
+    positivity
+  have h := hcap.le_rowLinearProduct (fun _ : Fin n => (1 : ℝ)) hx
+  have hprod_ge_one : 1 ≤ ∏ i, ∑ j, A i j := by
+    simpa [rowLinearProduct] using h
+  have hprod_pos : 0 < ∏ i, ∑ j, A i j := by linarith
+  have hrow_nonneg : 0 ≤ ∑ j, A i j :=
+    Finset.sum_nonneg fun j _ => hA i j
+  by_contra hnot
+  have hrow_le_zero : ∑ j, A i j ≤ 0 := le_of_not_gt hnot
+  have hrow_zero : ∑ j, A i j = 0 := le_antisymm hrow_le_zero hrow_nonneg
+  have hprod_zero : (∏ i, ∑ j, A i j) = 0 :=
+    Finset.prod_eq_zero (Finset.mem_univ i) hrow_zero
+  linarith
+
+lemma rowLinearMvPolynomial_realStable_of_capacity {n : ℕ}
+    (A : Matrix (Fin n) (Fin n) ℝ)
+    (hA : ∀ i j, 0 ≤ A i j)
+    (hcap : RowLinearCapacityAtLeastOne A) :
+    ProofsInTheBook.Chapter22Stable.RealStable (rowLinearMvPolynomial A) :=
+  ProofsInTheBook.Chapter22Stable.rowLinearMvPolynomial_realStable A hA
+    (row_sum_pos_of_nonnegative_of_capacity hA hcap)
+
+structure GurvitsCapacityReductionData (n : ℕ)
+    (A : Matrix (Fin n) (Fin n) ℝ) where
+  cap : ℕ → ℝ
+  top_capacity : 1 ≤ cap n
+  step_capacity :
+    ∀ m, 2 ≤ m → m ≤ n → G m * cap m ≤ cap (m - 1)
+  bottom_capacity : cap 1 ≤ rowLinearSquarefreeCoefficient A
+
 /-- **The capacity iteration.** Given a capacity sequence `cap` with the per-step Gurvits
 bound `G(m)·cap(m) ≤ cap(m-1)` for `2 ≤ m ≤ n`, the product of the constants times `cap(n)`
 bounds `cap(1)`: `(∏_{m=2}^n G(m))·cap(n) ≤ cap(1)`. (Combined with the telescoping identity
@@ -203,6 +510,31 @@ structure GurvitsIteratedCapacityCertificate (n : ℕ) where
       RowLinearCapacityAtLeastOne A →
       (∏ m ∈ Finset.Icc 2 n, G m) ≤ rowLinearSquarefreeCoefficient A
 
+theorem iteratedCapacityCertificate_of_capacityReductionData (n : ℕ) (hn : 1 ≤ n)
+    (hdata :
+      ∀ A : Matrix (Fin n) (Fin n) ℝ,
+        (∀ i j, 0 ≤ A i j) →
+        RowLinearCapacityAtLeastOne A →
+        GurvitsCapacityReductionData n A) :
+    GurvitsIteratedCapacityCertificate n := by
+  refine ⟨?_⟩
+  intro A hA hcap
+  let data := hdata A hA hcap
+  have hchain :
+      (∏ m ∈ Finset.Icc 2 n, G m) * data.cap n ≤ data.cap 1 :=
+    capacity_chain data.cap n hn data.step_capacity
+  have hprod_nonneg : 0 ≤ ∏ m ∈ Finset.Icc 2 n, G m :=
+    Finset.prod_nonneg fun m _ => G_nonneg m
+  have hprod_le :
+      (∏ m ∈ Finset.Icc 2 n, G m) ≤
+        (∏ m ∈ Finset.Icc 2 n, G m) * data.cap n := by
+    calc
+      (∏ m ∈ Finset.Icc 2 n, G m) =
+          (∏ m ∈ Finset.Icc 2 n, G m) * 1 := by ring
+      _ ≤ (∏ m ∈ Finset.Icc 2 n, G m) * data.cap n :=
+          mul_le_mul_of_nonneg_left data.top_capacity hprod_nonneg
+  exact hprod_le.trans (hchain.trans data.bottom_capacity)
+
 /-- The iterated Gurvits product bound discharges the literal squarefree
 coefficient core, by the telescoping identity above. -/
 theorem squarefreeCoefficientCore_of_iteratedCapacityCertificate (n : ℕ)
@@ -235,6 +567,21 @@ theorem chapter22_from_iteratedCapacityCertificate
     (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent := by
   exact Chapter22.chapter22
     (fun m hm => squarefreeCoefficientCore_of_iteratedCapacityCertificate m (cert m hm))
+    n A hA
+
+theorem chapter22_from_capacityReductionData
+    (hdata :
+      ∀ m : ℕ, 3 ≤ m →
+        ∀ A : Matrix (Fin m) (Fin m) ℝ,
+          (∀ i j, 0 ≤ A i j) →
+          RowLinearCapacityAtLeastOne A →
+          GurvitsCapacityReductionData m A)
+    (n : ℕ) (A : Matrix (Fin n) (Fin n) ℝ)
+    (hA : A ∈ doublyStochastic ℝ (Fin n)) :
+    (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent := by
+  exact chapter22_from_iteratedCapacityCertificate
+    (fun m hm =>
+      iteratedCapacityCertificate_of_capacityReductionData m (by omega) (hdata m hm))
     n A hA
 
 end

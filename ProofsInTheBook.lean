@@ -53,6 +53,7 @@ import ProofsInTheBook.PlanarMapFanConnectivity
 import ProofsInTheBook.PlanarMapFanFaces
 import ProofsInTheBook.PlanarMapFanMergedOrbit
 import ProofsInTheBook.PlanarMapDeletedBoundary
+import ProofsInTheBook.PlanarMapOuterArc
 import ProofsInTheBook.ThomassenLists
 import ProofsInTheBook.PermTranspositionCycleCount
 import ProofsInTheBook.RelationComponentCount

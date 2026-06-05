@@ -228,6 +228,27 @@ theorem numCycles_mul_listSwap_merges (p : Equiv.Perm D) :
       simp only [List.length_append, List.length_singleton]
       omega
 
+/-! ### Evaluating a product of transpositions at a point
+
+The decomposition proof multiplies an explicit list of swaps; we need to evaluate
+its action at a single dart.  Two regimes suffice: the point is fixed by every
+swap (it lies in none of the pairs), or all *later* swaps fix it. -/
+
+/-- A product of transpositions fixes a point disjoint from every pair. -/
+lemma listSwap_prod_apply_of_notMem (x : D) :
+    ∀ l : List (D × D),
+      (∀ w ∈ l, x ≠ w.1 ∧ x ≠ w.2) →
+      (l.map (fun w => Equiv.swap w.1 w.2)).prod x = x := by
+  intro l
+  induction l with
+  | nil => intro _; simp
+  | cons a t ih =>
+      intro h
+      have ha := h a List.mem_cons_self
+      have ht : ∀ w ∈ t, x ≠ w.1 ∧ x ≠ w.2 := fun w hw => h w (List.mem_cons_of_mem a hw)
+      rw [List.map_cons, List.prod_cons, Equiv.Perm.mul_apply, ih ht,
+        Equiv.swap_apply_of_ne_of_ne ha.1 ha.2]
+
 /-! ### Cycle count of a sum-extended permutation
 
 `Equiv.Perm.sumCongr σ 1` acts as `σ` on the left summand and as the identity on

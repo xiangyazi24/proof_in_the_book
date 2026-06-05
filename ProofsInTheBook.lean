@@ -36,6 +36,7 @@ import ProofsInTheBook.Chapter33
 import ProofsInTheBook.Chapter34
 import ProofsInTheBook.ListColoring
 import ProofsInTheBook.Chapter35
+import ProofsInTheBook.PolygonSubstrate
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

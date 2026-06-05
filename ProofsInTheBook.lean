@@ -43,6 +43,7 @@ import ProofsInTheBook.PlanarMapNearTriangulation
 import ProofsInTheBook.PlanarMapBoundaryFan
 import ProofsInTheBook.PlanarMapFilteredRotation
 import ProofsInTheBook.PlanarMapChordSplitData
+import ProofsInTheBook.PlanarMapBoundaryDelete
 import ProofsInTheBook.SimpleGraphBlocks
 import ProofsInTheBook.ListColoring
 import ProofsInTheBook.Chapter35

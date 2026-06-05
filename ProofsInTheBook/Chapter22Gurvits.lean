@@ -172,6 +172,10 @@ def PositiveVector {m : ℕ} (x : Fin m → ℝ) : Prop :=
 def CapLB {m : ℕ} (p : MvPolynomial (Fin m) ℝ) (c : ℝ) : Prop :=
   ∀ x : Fin m → ℝ, PositiveVector x → c * ∏ i, x i ≤ MvPolynomial.eval x p
 
+def AllDegreeCoefficientsPositive {m : ℕ} (d : ℕ) (p : MvPolynomial (Fin m) ℝ) :
+    Prop :=
+  ∀ a : Fin m →₀ ℕ, a.degree = d → 0 < MvPolynomial.coeff a p
+
 lemma nonnegativeCoefficients_C {m : ℕ} {c : ℝ} (hc : 0 ≤ c) :
     NonnegativeCoefficients (MvPolynomial.C c : MvPolynomial (Fin m) ℝ) := by
   classical
@@ -277,6 +281,99 @@ lemma eval_pos_of_nonnegativeCoefficients {m : ℕ} {p : MvPolynomial (Fin m) �
       lt_of_le_of_ne (hp a) (Ne.symm hcoeff_ne)
     exact mul_pos hcoeff_pos (Finset.prod_pos fun i _ => pow_pos (hx i) _)
 
+lemma coeff_mul_C_mul_X_of_pos {m : ℕ}
+    (p : MvPolynomial (Fin m) ℝ) (a : Fin m →₀ ℕ) (j : Fin m) (c : ℝ)
+    (ha : a j ≠ 0) :
+    MvPolynomial.coeff a (p * (MvPolynomial.C c * MvPolynomial.X j)) =
+      MvPolynomial.coeff (a - Finsupp.single j 1) p * c := by
+  have hsum : a - Finsupp.single j 1 + Finsupp.single j 1 = a :=
+    Finsupp.sub_add_single_one_cancel ha
+  rw [← hsum]
+  rw [show p * (MvPolynomial.C c * MvPolynomial.X j) =
+      MvPolynomial.C c * (p * MvPolynomial.X j) by ring]
+  rw [MvPolynomial.coeff_C_mul, MvPolynomial.coeff_mul_X]
+  have hsub : (a - Finsupp.single j 1 + Finsupp.single j 1) - Finsupp.single j 1 =
+      a - Finsupp.single j 1 := by
+    rw [hsum]
+  rw [hsub]
+  ring
+
+lemma degree_sub_single_of_pos {m d : ℕ}
+    (a : Fin m →₀ ℕ) (j : Fin m) (hdeg : a.degree = d + 1) (ha : a j ≠ 0) :
+    (a - Finsupp.single j 1).degree = d := by
+  have hsum : a - Finsupp.single j 1 + Finsupp.single j 1 = a :=
+    Finsupp.sub_add_single_one_cancel ha
+  have hdeg_sum := congrArg Finsupp.degree hsum
+  simp [hdeg] at hdeg_sum
+  omega
+
+lemma exists_pos_apply_of_degree_pos {m : ℕ} (a : Fin m →₀ ℕ) (hdeg : 0 < a.degree) :
+    ∃ j : Fin m, 0 < a j := by
+  by_contra h
+  push Not at h
+  have hazero : a = 0 := by
+    ext j
+    exact Nat.eq_zero_of_le_zero (h j)
+  rw [hazero] at hdeg
+  simp at hdeg
+
+lemma allDegreeCoefficientsPositive_one {m : ℕ} :
+    AllDegreeCoefficientsPositive 0 (1 : MvPolynomial (Fin m) ℝ) := by
+  intro a hdeg
+  have ha0 : a = 0 := (Finsupp.degree_eq_zero_iff a).mp hdeg
+  subst a
+  simp
+
+lemma allDegreeCoefficientsPositive_mul_positive_linear {m d : ℕ}
+    {p : MvPolynomial (Fin m) ℝ} (hpnonneg : NonnegativeCoefficients p)
+    (hp : AllDegreeCoefficientsPositive d p) (C : Fin m → ℝ) (hC : ∀ j, 0 < C j) :
+    AllDegreeCoefficientsPositive (d + 1)
+      (p * ∑ j, MvPolynomial.C (C j) * (MvPolynomial.X j : MvPolynomial (Fin m) ℝ)) := by
+  intro a hdeg
+  have hdegpos : 0 < a.degree := by rw [hdeg]; omega
+  obtain ⟨j0, hj0pos⟩ := exists_pos_apply_of_degree_pos a hdegpos
+  rw [Finset.mul_sum, MvPolynomial.coeff_sum]
+  apply Finset.sum_pos'
+  · intro j _hj
+    exact (hpnonneg.mul ((nonnegativeCoefficients_C (le_of_lt (hC j))).mul
+      (nonnegativeCoefficients_X j))) a
+  · refine ⟨j0, Finset.mem_univ j0, ?_⟩
+    rw [coeff_mul_C_mul_X_of_pos p a j0 (C j0) (ne_of_gt hj0pos)]
+    exact mul_pos (hp _ (degree_sub_single_of_pos a j0 hdeg (ne_of_gt hj0pos))) (hC j0)
+
+lemma product_positive_linear_allDegreeCoefficientsPositive {n : ℕ}
+    (A : Matrix (Fin n) (Fin n) ℝ) (hApos : ∀ i j, 0 < A i j) (s : Finset (Fin n)) :
+    AllDegreeCoefficientsPositive s.card
+      (∏ i ∈ s, ∑ j, MvPolynomial.C (A i j) *
+        (MvPolynomial.X j : MvPolynomial (Fin n) ℝ)) := by
+  classical
+  induction s using Finset.induction with
+  | empty =>
+      simpa using (allDegreeCoefficientsPositive_one (m := n))
+  | insert i s his ih =>
+      rw [Finset.card_insert_of_notMem his]
+      simp_rw [Finset.prod_insert his]
+      rw [mul_comm]
+      exact allDegreeCoefficientsPositive_mul_positive_linear
+        (nonnegativeCoefficients_prod s
+          (fun i => ∑ j, MvPolynomial.C (A i j) *
+            (MvPolynomial.X j : MvPolynomial (Fin n) ℝ))
+          (by
+            intro i _hi
+            apply nonnegativeCoefficients_sum
+            intro j _hj
+            exact (nonnegativeCoefficients_C (le_of_lt (hApos i j))).mul
+              (nonnegativeCoefficients_X j)))
+        ih (A i) (hApos i)
+
+lemma rowLinearMvPolynomial_allDegreeCoefficientsPositive {n : ℕ}
+    (A : Matrix (Fin n) (Fin n) ℝ) (hApos : ∀ i j, 0 < A i j) :
+    AllDegreeCoefficientsPositive n (rowLinearMvPolynomial A) := by
+  classical
+  rw [rowLinearMvPolynomial]
+  simpa using
+    product_positive_linear_allDegreeCoefficientsPositive A hApos (Finset.univ : Finset (Fin n))
+
 def firstReduction {m : ℕ} (p : MvPolynomial (Fin (m + 1)) ℝ) :
     MvPolynomial (Fin m) ℝ :=
   Polynomial.coeff (MvPolynomial.finSuccEquiv ℝ m p) 1
@@ -302,6 +399,22 @@ lemma firstReduction_isHomogeneous {m : ℕ}
   simpa [firstReduction] using
     hp.finSuccEquiv_coeff_isHomogeneous 1 m (by omega)
 
+lemma degree_cons {m : ℕ} (k : ℕ) (a : Fin m →₀ ℕ) :
+    (Finsupp.cons k a).degree = k + a.degree := by
+  rw [Finsupp.degree_eq_sum, Fin.sum_univ_succ, Finsupp.degree_eq_sum]
+  simp [Finsupp.cons_zero, Finsupp.cons_succ]
+
+lemma allDegreeCoefficientsPositive_firstReduction {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hp : AllDegreeCoefficientsPositive (m + 1) p) :
+    AllDegreeCoefficientsPositive m (firstReduction p) := by
+  intro a hdeg
+  rw [coeff_firstReduction]
+  have hcons : (Finsupp.cons 1 a).degree = m + 1 := by
+    rw [degree_cons, hdeg]
+    omega
+  exact hp (Finsupp.cons 1 a) hcons
+
 lemma coeff_finSuccEquiv_nonnegativeCoefficients {m : ℕ}
     {p : MvPolynomial (Fin (m + 1)) ℝ}
     (hp : NonnegativeCoefficients p) (i : ℕ) :
@@ -321,6 +434,33 @@ lemma squarefreeExponent_succ (m : ℕ) :
   · simp [squarefreeExponent]
   · intro j
     simp [squarefreeExponent]
+
+lemma finsupp_fin_one_eq_squarefree_of_degree_one (a : Fin 1 →₀ ℕ) (hdeg : a.degree = 1) :
+    a = squarefreeExponent 1 := by
+  apply Finsupp.ext
+  intro j
+  fin_cases j
+  have h : a 0 = 1 := by
+    simpa [Finsupp.degree_eq_sum, Fin.sum_univ_one] using hdeg
+  simp [squarefreeExponent, h]
+
+lemma eval_one_eq_squarefreeCoeff_of_homogeneous_one
+    {p : MvPolynomial (Fin 1) ℝ} (hhom : p.IsHomogeneous 1) :
+    MvPolynomial.eval (fun _ : Fin 1 => (1 : ℝ)) p =
+      MvPolynomial.coeff (squarefreeExponent 1) p := by
+  rw [MvPolynomial.eval_eq]
+  rw [Finset.sum_eq_single (squarefreeExponent 1)]
+  · simp
+  · intro a _ha hne
+    have hcoeff0 : MvPolynomial.coeff a p = 0 := by
+      by_cases hdeg : a.degree = 1
+      · exact False.elim (hne (finsupp_fin_one_eq_squarefree_of_degree_one a hdeg))
+      · exact hhom.coeff_eq_zero hdeg
+    rw [hcoeff0, zero_mul]
+  · intro hnot
+    rw [MvPolynomial.mem_support_iff] at hnot
+    have hc0 : MvPolynomial.coeff (squarefreeExponent 1) p = 0 := not_not.mp hnot
+    rw [hc0, zero_mul]
 
 lemma iteratedFirstReductionCoefficient_eq_squarefreeCoefficient :
     ∀ (m : ℕ) (p : MvPolynomial (Fin m) ℝ),
@@ -478,6 +618,23 @@ lemma complexLineSection_natDegree_le_of_isHomogeneous {m d : ℕ}
     (lt_of_le_of_lt (complexLineSection_monomial_natDegree_le_degree u (MvPolynomial.coeff u q) a b)
       (by omega))
 
+lemma complexLineSection_natDegree_le_totalDegree {m : ℕ}
+    (q : MvPolynomial (Fin m) ℂ) (a b : Fin m → ℂ) :
+    (complexLineSection q a b).natDegree ≤ q.totalDegree := by
+  classical
+  rw [Polynomial.natDegree_le_iff_coeff_eq_zero]
+  intro N hN
+  conv_lhs =>
+    rw [q.as_sum]
+  rw [complexLineSection, MvPolynomial.eval₂_sum, Polynomial.finsetSum_coeff]
+  apply Finset.sum_eq_zero
+  intro u hu
+  change
+    (complexLineSection (MvPolynomial.monomial u (MvPolynomial.coeff u q)) a b).coeff N = 0
+  exact Polynomial.coeff_eq_zero_of_natDegree_lt
+    (lt_of_le_of_lt (complexLineSection_monomial_natDegree_le_degree u (MvPolynomial.coeff u q) a b)
+      (lt_of_le_of_lt (MvPolynomial.le_totalDegree hu) hN))
+
 lemma complexLineSection_natDegree_eq_of_isHomogeneous_eval_ne_zero {m d : ℕ}
     {q : MvPolynomial (Fin m) ℂ} (hq : q.IsHomogeneous d)
     (a b : Fin m → ℂ) (hbq : MvPolynomial.eval b q ≠ 0) :
@@ -513,6 +670,90 @@ def distinguishedDerivativeAt {m : ℕ} (p : MvPolynomial (Fin (m + 1)) ℝ)
     (c : ℂ) : MvPolynomial (Fin m) ℂ :=
   Polynomial.eval (MvPolynomial.C c)
     (Polynomial.derivative (MvPolynomial.finSuccEquiv ℂ m (p.map (algebraMap ℝ ℂ))))
+
+lemma distinguishedDerivativeAt_zero {m : ℕ}
+    (p : MvPolynomial (Fin (m + 1)) ℝ) :
+    distinguishedDerivativeAt p 0 = (firstReduction p).map (algebraMap ℝ ℂ) := by
+  ext a
+  simp only [distinguishedDerivativeAt, firstReduction, MvPolynomial.C_0]
+  rw [Polynomial.eval, Polynomial.eval₂_at_zero]
+  rw [Polynomial.coeff_derivative]
+  simp
+  rw [MvPolynomial.finSuccEquiv_coeff_coeff, MvPolynomial.coeff_map, MvPolynomial.coeff_map,
+    MvPolynomial.finSuccEquiv_coeff_coeff]
+
+lemma complexLineSection_coeff_eval_C_eq_sum {m : ℕ}
+    (P : Polynomial (MvPolynomial (Fin m) ℂ)) (a b : Fin m → ℂ) (k : ℕ) (c : ℂ) :
+    (complexLineSection (Polynomial.eval (MvPolynomial.C c) P) a b).coeff k =
+      ∑ i ∈ Finset.range (P.natDegree + 1),
+        c ^ i * (complexLineSection (P.coeff i) a b).coeff k := by
+  rw [Polynomial.eval_eq_sum_range]
+  rw [complexLineSection, MvPolynomial.eval₂_sum, Polynomial.finsetSum_coeff]
+  apply Finset.sum_congr rfl
+  intro i _hi
+  rw [MvPolynomial.eval₂_mul]
+  have hCpow :
+      MvPolynomial.eval₂ Polynomial.C
+        (fun j => Polynomial.C (a j) + Polynomial.C (b j) * Polynomial.X)
+        (MvPolynomial.C c ^ i : MvPolynomial (Fin m) ℂ) = Polynomial.C (c ^ i) := by
+    simp
+  rw [hCpow, mul_comm, Polynomial.coeff_C_mul]
+  rfl
+
+lemma continuous_complexLineSection_coeff_eval_C {m : ℕ}
+    (P : Polynomial (MvPolynomial (Fin m) ℂ)) (a b : Fin m → ℂ) (k : ℕ) :
+    Continuous fun c : ℂ =>
+      (complexLineSection (Polynomial.eval (MvPolynomial.C c) P) a b).coeff k := by
+  rw [show (fun c : ℂ =>
+        (complexLineSection (Polynomial.eval (MvPolynomial.C c) P) a b).coeff k) =
+      fun c : ℂ => ∑ i ∈ Finset.range (P.natDegree + 1),
+        c ^ i * (complexLineSection (P.coeff i) a b).coeff k by
+    funext c
+    exact complexLineSection_coeff_eval_C_eq_sum P a b k c]
+  exact continuous_finsetSum _ (fun i _ => (continuous_id.pow i).mul continuous_const)
+
+lemma derivative_finSuccEquiv_coeff_totalDegree_le {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hhom : p.IsHomogeneous (m + 1)) (i : ℕ) :
+    (Polynomial.coeff
+      (Polynomial.derivative (MvPolynomial.finSuccEquiv ℂ m (p.map (algebraMap ℝ ℂ)))) i).totalDegree ≤ m := by
+  let Q := MvPolynomial.finSuccEquiv ℂ m (p.map (algebraMap ℝ ℂ))
+  change (Polynomial.coeff (Polynomial.derivative Q) i).totalDegree ≤ m
+  rw [Polynomial.coeff_derivative]
+  refine (MvPolynomial.totalDegree_mul _ _).trans ?_
+  have hconst : ((↑i + 1 : MvPolynomial (Fin m) ℂ).totalDegree) = 0 := by
+    rw [← Nat.cast_one, ← Nat.cast_add]
+    rw [← MvPolynomial.C_eq_coe_nat (R := ℂ) (σ := Fin m) (i + 1)]
+    rw [MvPolynomial.totalDegree_C]
+  rw [hconst]
+  change (Polynomial.coeff Q (i + 1)).totalDegree + 0 ≤ m
+  by_cases hq : Polynomial.coeff Q (i + 1) = 0
+  · rw [hq, MvPolynomial.totalDegree_zero]
+    exact Nat.zero_le m
+  · have hle := MvPolynomial.totalDegree_coeff_finSuccEquiv_add_le
+      (p.map (algebraMap ℝ ℂ)) (i + 1) hq
+    change (Polynomial.coeff Q (i + 1)).totalDegree + (i + 1) ≤
+      (p.map (algebraMap ℝ ℂ)).totalDegree at hle
+    have hhomC : (p.map (algebraMap ℝ ℂ)).IsHomogeneous (m + 1) := by
+      simpa using hhom.map (algebraMap ℝ ℂ)
+    have htot : (p.map (algebraMap ℝ ℂ)).totalDegree ≤ m + 1 := hhomC.totalDegree_le
+    omega
+
+lemma distinguishedDerivativeAt_totalDegree_le {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hhom : p.IsHomogeneous (m + 1)) (c : ℂ) :
+    (distinguishedDerivativeAt p c).totalDegree ≤ m := by
+  rw [distinguishedDerivativeAt, Polynomial.eval_eq_sum_range]
+  apply MvPolynomial.totalDegree_finsetSum_le
+  intro i _hi
+  refine (MvPolynomial.totalDegree_mul _ _).trans ?_
+  have hCpow_le : (MvPolynomial.C c ^ i : MvPolynomial (Fin m) ℂ).totalDegree ≤ 0 := by
+    simpa [MvPolynomial.totalDegree_C] using
+      (MvPolynomial.totalDegree_pow (MvPolynomial.C c : MvPolynomial (Fin m) ℂ) i)
+  have hCpow : (MvPolynomial.C c ^ i : MvPolynomial (Fin m) ℂ).totalDegree = 0 :=
+    le_antisymm hCpow_le (Nat.zero_le _)
+  rw [hCpow]
+  simpa using derivative_finSuccEquiv_coeff_totalDegree_le hhom i
 
 lemma sectionPolynomial_eval {m : ℕ} (p : MvPolynomial (Fin (m + 1)) ℝ)
     (x : Fin m → ℝ) (t : ℝ) :
@@ -744,6 +985,344 @@ lemma rootsAsFin_enum (q : Polynomial ℝ) (hcard : q.roots.card = q.natDegree) 
     Finset.univ.val.map (rootsAsFin q hcard) = q.roots := by
   simpa [rootsAsFin] using roots_enum_toList q.roots hcard
 
+lemma polynomialCoeff_finSuccEquiv_ne_zero_of_allDegree {m k : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hp : AllDegreeCoefficientsPositive (m + 1) p)
+    (a : Fin m →₀ ℕ) (hdeg : k + a.degree = m + 1) :
+    Polynomial.coeff (MvPolynomial.finSuccEquiv ℝ m p) k ≠ 0 := by
+  intro hzero
+  have hcoeff_pos :
+      0 < MvPolynomial.coeff a (Polynomial.coeff (MvPolynomial.finSuccEquiv ℝ m p) k) := by
+    rw [MvPolynomial.finSuccEquiv_coeff_coeff]
+    exact hp (Finsupp.cons k a) (by rw [degree_cons, hdeg])
+  rw [hzero] at hcoeff_pos
+  simp at hcoeff_pos
+
+lemma sectionPolynomial_coeff_pos_of_allDegree {m k : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hpcoeff : NonnegativeCoefficients p)
+    (hp : AllDegreeCoefficientsPositive (m + 1) p)
+    {x : Fin m → ℝ} (hx : PositiveVector x)
+    (a : Fin m →₀ ℕ) (hdeg : k + a.degree = m + 1) :
+    0 < (sectionPolynomial p x).coeff k := by
+  rw [sectionPolynomial, Polynomial.coeff_map]
+  exact eval_pos_of_nonnegativeCoefficients
+    (coeff_finSuccEquiv_nonnegativeCoefficients hpcoeff k)
+    (polynomialCoeff_finSuccEquiv_ne_zero_of_allDegree hp a hdeg) hx
+
+lemma sectionPolynomial_const_coeff_pos_of_allDegree {m : ℕ}
+    (hm : 1 ≤ m) {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hpcoeff : NonnegativeCoefficients p)
+    (hp : AllDegreeCoefficientsPositive (m + 1) p)
+    {x : Fin m → ℝ} (hx : PositiveVector x) :
+    0 < (sectionPolynomial p x).coeff 0 := by
+  let j0 : Fin m := ⟨0, by omega⟩
+  let a : Fin m →₀ ℕ := Finsupp.single j0 (m + 1)
+  exact sectionPolynomial_coeff_pos_of_allDegree hpcoeff hp hx a (by simp [a])
+
+lemma sectionPolynomial_top_coeff_pos_of_allDegree {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hpcoeff : NonnegativeCoefficients p)
+    (hp : AllDegreeCoefficientsPositive (m + 1) p)
+    {x : Fin m → ℝ} (hx : PositiveVector x) :
+    0 < (sectionPolynomial p x).coeff (m + 1) := by
+  exact sectionPolynomial_coeff_pos_of_allDegree hpcoeff hp hx 0 (by simp)
+
+lemma sectionPolynomial_natDegree_eq_of_allDegree {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hpcoeff : NonnegativeCoefficients p)
+    (hp : AllDegreeCoefficientsPositive (m + 1) p)
+    (hhom : p.IsHomogeneous (m + 1))
+    {x : Fin m → ℝ} (hx : PositiveVector x) :
+    (sectionPolynomial p x).natDegree = m + 1 := by
+  apply Polynomial.natDegree_eq_of_le_of_coeff_ne_zero
+  · refine Polynomial.natDegree_map_le.trans ?_
+    rw [MvPolynomial.natDegree_finSuccEquiv]
+    exact (MvPolynomial.degreeOf_le_totalDegree p 0).trans hhom.totalDegree_le
+  · exact ne_of_gt (sectionPolynomial_top_coeff_pos_of_allDegree hpcoeff hp hx)
+
+lemma isHomogeneous_zero_eq_C_coeff_zero_complex {m : ℕ} {p : MvPolynomial (Fin m) ℂ}
+    (hp : p.IsHomogeneous 0) :
+    p = MvPolynomial.C (MvPolynomial.coeff 0 p) := by
+  ext a
+  by_cases ha : a = 0
+  · subst a
+    simp
+  · have hdeg_ne : a.degree ≠ 0 := by
+      intro hdeg
+      exact ha ((Finsupp.degree_eq_zero_iff a).mp hdeg)
+    have h0a : ¬ (0 : Fin m →₀ ℕ) = a := fun h => ha h.symm
+    rw [hp.coeff_eq_zero hdeg_ne]
+    simp [h0a]
+
+lemma complexSectionPolynomial_top_coeff_ne_zero_of_allDegree {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hp : AllDegreeCoefficientsPositive (m + 1) p)
+    (hhom : p.IsHomogeneous (m + 1))
+    (z : Fin m → ℂ) :
+    (complexSectionPolynomial p z).coeff (m + 1) ≠ 0 := by
+  let topPoly : MvPolynomial (Fin m) ℂ :=
+    Polynomial.coeff (MvPolynomial.finSuccEquiv ℂ m (p.map (algebraMap ℝ ℂ))) (m + 1)
+  have hhomC : (p.map (algebraMap ℝ ℂ)).IsHomogeneous (m + 1) := by
+    simpa using hhom.map (algebraMap ℝ ℂ)
+  have htopHom : topPoly.IsHomogeneous 0 := by
+    dsimp [topPoly]
+    simpa using hhomC.finSuccEquiv_coeff_isHomogeneous (m + 1) 0 (by omega)
+  have htop0_ne : MvPolynomial.coeff 0 topPoly ≠ 0 := by
+    dsimp [topPoly]
+    rw [MvPolynomial.finSuccEquiv_coeff_coeff, MvPolynomial.coeff_map]
+    exact Complex.ofReal_ne_zero.mpr
+      (ne_of_gt (hp (Finsupp.cons (m + 1) 0) (by simp [degree_cons])))
+  rw [complexSectionPolynomial, Polynomial.coeff_map]
+  change MvPolynomial.eval z topPoly ≠ 0
+  rw [isHomogeneous_zero_eq_C_coeff_zero_complex htopHom]
+  simpa using htop0_ne
+
+lemma complexSectionPolynomial_natDegree_eq_of_allDegree {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hp : AllDegreeCoefficientsPositive (m + 1) p)
+    (hhom : p.IsHomogeneous (m + 1))
+    (z : Fin m → ℂ) :
+    (complexSectionPolynomial p z).natDegree = m + 1 := by
+  apply Polynomial.natDegree_eq_of_le_of_coeff_ne_zero
+  · refine Polynomial.natDegree_map_le.trans ?_
+    rw [MvPolynomial.natDegree_finSuccEquiv]
+    have hhomC : (p.map (algebraMap ℝ ℂ)).IsHomogeneous (m + 1) := by
+      simpa using hhom.map (algebraMap ℝ ℂ)
+    exact (MvPolynomial.degreeOf_le_totalDegree (p.map (algebraMap ℝ ℂ)) 0).trans
+      hhomC.totalDegree_le
+  · exact complexSectionPolynomial_top_coeff_ne_zero_of_allDegree hp hhom z
+
+lemma coeff_finSuccEquiv_map_complex {m : ℕ}
+    (p : MvPolynomial (Fin (m + 1)) ℝ) (k : ℕ) :
+    Polynomial.coeff (MvPolynomial.finSuccEquiv ℂ m (p.map (algebraMap ℝ ℂ))) k =
+      (Polynomial.coeff (MvPolynomial.finSuccEquiv ℝ m p) k).map (algebraMap ℝ ℂ) := by
+  ext a
+  rw [MvPolynomial.finSuccEquiv_coeff_coeff]
+  rw [MvPolynomial.coeff_map, MvPolynomial.coeff_map]
+  rw [MvPolynomial.finSuccEquiv_coeff_coeff]
+
+lemma complexSectionPolynomial_ofReal {m : ℕ}
+    (p : MvPolynomial (Fin (m + 1)) ℝ) (x : Fin m → ℝ) :
+    complexSectionPolynomial p (fun j => (x j : ℂ)) =
+      (sectionPolynomial p x).map (algebraMap ℝ ℂ) := by
+  ext k
+  simp [complexSectionPolynomial, sectionPolynomial, Polynomial.coeff_map,
+    coeff_finSuccEquiv_map_complex]
+  rw [MvPolynomial.eval₂_eq_eval_map]
+  exact (MvPolynomial.map_eval (q := algebraMap ℝ ℂ) (g := x)
+    (p := ((MvPolynomial.finSuccEquiv ℝ m) p).coeff k)).symm
+
+lemma complexSectionPolynomial_coeff_tendsto {m : ℕ}
+    (p : MvPolynomial (Fin (m + 1)) ℝ) {zN : ℕ → Fin m → ℂ} {z : Fin m → ℂ}
+    (hz : Filter.Tendsto zN Filter.atTop (nhds z)) (k : ℕ) :
+    Filter.Tendsto (fun N : ℕ => (complexSectionPolynomial p (zN N)).coeff k)
+      Filter.atTop (nhds ((complexSectionPolynomial p z).coeff k)) := by
+  simp [complexSectionPolynomial, Polynomial.coeff_map]
+  exact ((MvPolynomial.continuous_eval
+    (Polynomial.coeff (MvPolynomial.finSuccEquiv ℂ m (p.map (algebraMap ℝ ℂ))) k)).tendsto z).comp hz
+
+lemma tendsto_upper_perturb {m : ℕ} (x : Fin m → ℝ) :
+    Filter.Tendsto
+      (fun N : ℕ => fun j : Fin m => (x j : ℂ) + (((N + 1 : ℕ) : ℝ)⁻¹ : ℂ) * Complex.I)
+      Filter.atTop (nhds (fun j : Fin m => (x j : ℂ))) := by
+  rw [tendsto_pi_nhds]
+  intro j
+  have hepsR : Filter.Tendsto (fun N : ℕ => (((N + 1 : ℕ) : ℝ)⁻¹ : ℝ))
+      Filter.atTop (nhds 0) := by
+    simpa using (tendsto_one_div_add_atTop_nhds_zero_nat (𝕜 := ℝ))
+  have hepsC : Filter.Tendsto (fun N : ℕ => ((((N + 1 : ℕ) : ℝ)⁻¹ : ℝ) : ℂ))
+      Filter.atTop (nhds 0) :=
+    Complex.continuous_ofReal.continuousAt.tendsto.comp hepsR
+  simpa using (tendsto_const_nhds.add (hepsC.mul tendsto_const_nhds))
+
+lemma upper_perturb_im_pos {m : ℕ} (x : Fin m → ℝ) (N : ℕ) (j : Fin m) :
+    0 < ((x j : ℂ) + (((N + 1 : ℕ) : ℝ)⁻¹ : ℂ) * Complex.I).im := by
+  simp only [Complex.add_im, Complex.ofReal_im, zero_add, Complex.mul_I_im]
+  rw [Complex.inv_re]
+  have hpos : 0 < (((N + 1 : ℕ) : ℝ)) := by positivity
+  have hnorm : 0 < Complex.normSq ((((N + 1 : ℕ) : ℝ) : ℂ)) := by
+    exact Complex.normSq_pos.mpr (by exact_mod_cast ne_of_gt hpos)
+  exact div_pos hpos hnorm
+
+lemma sectionPolynomial_realRooted_of_realStable_allDegree {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hstable : ProofsInTheBook.Chapter22Stable.RealStable p)
+    (hp : AllDegreeCoefficientsPositive (m + 1) p)
+    (hhom : p.IsHomogeneous (m + 1))
+    (x : Fin m → ℝ) :
+    ProofsInTheBook.Chapter22Stable.RealRooted (sectionPolynomial p x) := by
+  let zN : ℕ → Fin m → ℂ := fun N j =>
+    (x j : ℂ) + (((N + 1 : ℕ) : ℝ)⁻¹ : ℂ) * Complex.I
+  let z0 : Fin m → ℂ := fun j => (x j : ℂ)
+  let qN : ℕ → Polynomial ℂ := fun N => complexSectionPolynomial p (zN N)
+  let q0 : Polynomial ℂ := complexSectionPolynomial p z0
+  have hzN : Filter.Tendsto zN Filter.atTop (nhds z0) := by
+    simpa [zN, z0] using tendsto_upper_perturb x
+  have hdegN : ∀ N, (qN N).natDegree = m + 1 := by
+    intro N
+    exact complexSectionPolynomial_natDegree_eq_of_allDegree hp hhom (zN N)
+  have hdeg0 : q0.natDegree = m + 1 :=
+    complexSectionPolynomial_natDegree_eq_of_allDegree hp hhom z0
+  have hq0_ne : q0 ≠ 0 := by
+    intro hzero
+    have := hdeg0
+    rw [hzero, Polynomial.natDegree_zero] at this
+    omega
+  have hcoeff : ∀ k, Filter.Tendsto (fun N : ℕ => (qN N).coeff k) Filter.atTop
+      (nhds (q0.coeff k)) := by
+    intro k
+    exact complexSectionPolynomial_coeff_tendsto p hzN k
+  have hrootsN : ∀ N, ∀ w ∈ (qN N).roots, w.im ≤ 0 := by
+    intro N w hw
+    by_contra hnot
+    have hwpos : 0 < w.im := lt_of_not_ge hnot
+    have hroot := (Polynomial.mem_roots'.mp hw).2
+    exact complexSectionPolynomial_no_uhp_root hstable
+      (fun j => upper_perturb_im_pos x N j) w hwpos
+      (by simpa [qN, zN, Polynomial.IsRoot] using hroot)
+  have hroots0 : ∀ w ∈ q0.roots, w.im ≤ 0 :=
+    ProofsInTheBook.Chapter22Stable.roots_im_nonpos_of_tendsto (m + 1) qN q0
+      hdegN hdeg0 hq0_ne hcoeff hrootsN
+  apply ProofsInTheBook.Chapter22Stable.realRooted_of_forall_uhp_ne_zero
+  intro w hw hzero
+  have hzero_eval : Polynomial.eval w q0 = 0 := by
+    dsimp [q0, z0]
+    rw [complexSectionPolynomial_ofReal]
+    simpa [Polynomial.aeval_def, Polynomial.eval_map] using hzero
+  have hmem : w ∈ q0.roots :=
+    Polynomial.mem_roots'.mpr ⟨hq0_ne, by simpa [Polynomial.IsRoot] using hzero_eval⟩
+  have := hroots0 w hmem
+  linarith
+
+lemma tendsto_I_inv_nat :
+    Filter.Tendsto (fun N : ℕ => ((((N + 1 : ℕ) : ℝ)⁻¹ : ℂ) * Complex.I))
+      Filter.atTop (nhds 0) := by
+  have hepsR : Filter.Tendsto (fun N : ℕ => (((N + 1 : ℕ) : ℝ)⁻¹ : ℝ))
+      Filter.atTop (nhds 0) := by
+    simpa using (tendsto_one_div_add_atTop_nhds_zero_nat (𝕜 := ℝ))
+  have hepsC : Filter.Tendsto (fun N : ℕ => ((((N + 1 : ℕ) : ℝ)⁻¹ : ℝ) : ℂ))
+      Filter.atTop (nhds 0) :=
+    Complex.continuous_ofReal.continuousAt.tendsto.comp hepsR
+  simpa using hepsC.mul tendsto_const_nhds
+
+lemma I_inv_nat_im_pos (N : ℕ) :
+    0 < ((((N + 1 : ℕ) : ℝ)⁻¹ : ℂ) * Complex.I).im := by
+  simp only [Complex.mul_I_im]
+  rw [Complex.inv_re]
+  have hpos : 0 < (((N + 1 : ℕ) : ℝ)) := by positivity
+  have hnorm : 0 < Complex.normSq ((((N + 1 : ℕ) : ℝ) : ℂ)) := by
+    exact Complex.normSq_pos.mpr (by exact_mod_cast ne_of_gt hpos)
+  exact div_pos hpos hnorm
+
+lemma firstReduction_ne_zero_of_allDegree {m : ℕ} (hm : 1 ≤ m)
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hp : AllDegreeCoefficientsPositive (m + 1) p) :
+    firstReduction p ≠ 0 := by
+  let j0 : Fin m := ⟨0, by omega⟩
+  let a : Fin m →₀ ℕ := Finsupp.single j0 m
+  have hpos : 0 < MvPolynomial.coeff a (firstReduction p) :=
+    allDegreeCoefficientsPositive_firstReduction hp a (by simp [a])
+  intro hzero
+  rw [hzero] at hpos
+  simp at hpos
+
+lemma complexSectionPolynomial_derivative_ne_zero_of_allDegree {m : ℕ}
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hp : AllDegreeCoefficientsPositive (m + 1) p)
+    (hhom : p.IsHomogeneous (m + 1)) (z : Fin m → ℂ) :
+    Polynomial.derivative (complexSectionPolynomial p z) ≠ 0 := by
+  intro hder
+  have hnat0 := Polynomial.natDegree_eq_zero_of_derivative_eq_zero hder
+  have hnat := complexSectionPolynomial_natDegree_eq_of_allDegree hp hhom z
+  rw [hnat] at hnat0
+  omega
+
+lemma firstReduction_realStable_of_allDegree {m : ℕ} (hm : 1 ≤ m)
+    {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hpcoeff : NonnegativeCoefficients p)
+    (hp : AllDegreeCoefficientsPositive (m + 1) p)
+    (hhom : p.IsHomogeneous (m + 1))
+    (hstable : ProofsInTheBook.Chapter22Stable.RealStable p) :
+    ProofsInTheBook.Chapter22Stable.RealStable (firstReduction p) := by
+  intro z hz hzero
+  let ar : Fin m → ℝ := fun j => (z j).re
+  let br : Fin m → ℝ := fun j => (z j).im
+  let a : Fin m → ℂ := fun j => (ar j : ℂ)
+  let b : Fin m → ℂ := fun j => (br j : ℂ)
+  let cN : ℕ → ℂ := fun N => ((((N + 1 : ℕ) : ℝ)⁻¹ : ℂ) * Complex.I)
+  let qN : ℕ → Polynomial ℂ := fun N =>
+    complexLineSection (distinguishedDerivativeAt p (cN N)) a b
+  let q0 : Polynomial ℂ :=
+    complexLineSection ((firstReduction p).map (algebraMap ℝ ℂ)) a b
+  have hbpos : ∀ j, 0 < br j := by
+    intro j
+    exact hz j
+  have hfr_ne : firstReduction p ≠ 0 := firstReduction_ne_zero_of_allDegree hm hp
+  have hdeg0 : q0.natDegree = m := by
+    dsimp [q0, a, b]
+    exact complexLineSection_firstReduction_natDegree hpcoeff hhom hfr_ne ar br hbpos
+  have hq0_ne : q0 ≠ 0 := by
+    intro hq
+    have := hdeg0
+    rw [hq, Polynomial.natDegree_zero] at this
+    omega
+  have hq0_coeff_m_ne : q0.coeff m ≠ 0 := by
+    have hlead := Polynomial.leadingCoeff_ne_zero.mpr hq0_ne
+    simpa [Polynomial.leadingCoeff, hdeg0] using hlead
+  have hcoeff : ∀ k, Filter.Tendsto (fun N : ℕ => (qN N).coeff k) Filter.atTop
+      (nhds (q0.coeff k)) := by
+    intro k
+    let P : Polynomial (MvPolynomial (Fin m) ℂ) :=
+      Polynomial.derivative (MvPolynomial.finSuccEquiv ℂ m (p.map (algebraMap ℝ ℂ)))
+    have ht := (continuous_complexLineSection_coeff_eval_C P a b k).tendsto 0
+    have ht' := ht.comp tendsto_I_inv_nat
+    have hlimit :
+        complexLineSection (Polynomial.eval (MvPolynomial.C 0) P) a b = q0 := by
+      dsimp [P, q0]
+      simpa [distinguishedDerivativeAt] using
+        congrArg (fun q => complexLineSection q a b) (distinguishedDerivativeAt_zero p)
+    rw [hlimit] at ht'
+    simpa [Function.comp_def, qN, cN, P, distinguishedDerivativeAt] using ht'
+  have hdegN_eventually : ∀ᶠ N in Filter.atTop, (qN N).natDegree = m := by
+    have hnorm_tend := (hcoeff m).norm
+    have hnorm_pos : 0 < ‖q0.coeff m‖ := norm_pos_iff.mpr hq0_coeff_m_ne
+    have hev : ∀ᶠ N in Filter.atTop, 0 < ‖(qN N).coeff m‖ :=
+      hnorm_tend.eventually (lt_mem_nhds hnorm_pos)
+    filter_upwards [hev] with N hNnorm
+    have hcoeff_ne : (qN N).coeff m ≠ 0 := norm_pos_iff.mp hNnorm
+    have hle : (qN N).natDegree ≤ m := by
+      dsimp [qN]
+      exact (complexLineSection_natDegree_le_totalDegree (distinguishedDerivativeAt p (cN N)) a b).trans
+        (distinguishedDerivativeAt_totalDegree_le hhom (cN N))
+    exact Polynomial.natDegree_eq_of_le_of_coeff_ne_zero hle hcoeff_ne
+  have hrootsN : ∀ᶠ N in Filter.atTop, ∀ w ∈ (qN N).roots, w.im ≤ 0 := by
+    apply Filter.Eventually.of_forall
+    intro N w hw
+    by_contra hnot
+    have hwpos : 0 < w.im := lt_of_not_ge hnot
+    have hroot := (Polynomial.mem_roots'.mp hw).2
+    have hne_der : Polynomial.derivative
+        (complexSectionPolynomial p (fun j => (ar j : ℂ) + (br j : ℂ) * w)) ≠ 0 :=
+      complexSectionPolynomial_derivative_ne_zero_of_allDegree hp hhom _
+    have hne := distinguishedDerivativeLine_eval_ne_zero_of_section_derivative_ne_zero hstable
+      (I_inv_nat_im_pos N) ar br hbpos w hwpos hne_der
+    exact hne (by simpa [qN, cN, a, b, Polynomial.IsRoot] using hroot)
+  have hroots0 : ∀ w ∈ q0.roots, w.im ≤ 0 :=
+    ProofsInTheBook.Chapter22Stable.roots_im_nonpos_of_tendsto_eventually m qN q0
+      hdegN_eventually hdeg0 hq0_ne hcoeff hrootsN
+  have hz_repr : (fun j : Fin m => (ar j : ℂ) + (br j : ℂ) * Complex.I) = z := by
+    funext j
+    apply Complex.ext <;> simp [ar, br]
+  have hIroot_eval : Polynomial.eval Complex.I q0 = 0 := by
+    dsimp [q0, a, b]
+    rw [complexLineSection_eval, hz_repr]
+    simpa using hzero
+  have hImem : Complex.I ∈ q0.roots :=
+    Polynomial.mem_roots'.mpr ⟨hq0_ne, by simpa [Polynomial.IsRoot] using hIroot_eval⟩
+  have hI_im_nonpos := hroots0 Complex.I hImem
+  norm_num at hI_im_nonpos
+
 noncomputable def factoredSectionData_natDegree_of_realRooted_nonnegative {q : Polynomial ℝ}
     (hcoeff : ∀ n : ℕ, 0 ≤ q.coeff n) (h0 : 0 < q.coeff 0)
     (hrooted : ProofsInTheBook.Chapter22Stable.RealRooted q)
@@ -858,6 +1437,18 @@ noncomputable def positiveFactoredSections_of_realRooted_sections {m : ℕ}
     factoredSectionData_natDegree_of_realRooted_nonnegative
       (q := sectionPolynomial p x) hcoeff (hconst x hx) (hrooted x hx) hdeg_pos
 
+noncomputable def positiveFactoredSections_of_realStable_allDegree {m : ℕ}
+    (hm : 1 ≤ m) {p : MvPolynomial (Fin (m + 1)) ℝ}
+    (hpcoeff : NonnegativeCoefficients p)
+    (hp : AllDegreeCoefficientsPositive (m + 1) p)
+    (hhom : p.IsHomogeneous (m + 1))
+    (hstable : ProofsInTheBook.Chapter22Stable.RealStable p) :
+    PositiveFactoredSections p :=
+  positiveFactoredSections_of_realRooted_sections hpcoeff
+    (fun x _hx => sectionPolynomial_realRooted_of_realStable_allDegree hstable hp hhom x)
+    (fun _x hx => sectionPolynomial_const_coeff_pos_of_allDegree hm hpcoeff hp hx)
+    (fun _x hx => sectionPolynomial_natDegree_eq_of_allDegree hpcoeff hp hhom hx)
+
 lemma firstReduction_capLB_of_factoredSections {m : ℕ}
     {p : MvPolynomial (Fin (m + 1)) ℝ} {C : ℝ}
     (hm : 1 ≤ m)
@@ -926,6 +1517,53 @@ lemma rowLinearMvPolynomial_realStable_of_capacity {n : ℕ}
     ProofsInTheBook.Chapter22Stable.RealStable (rowLinearMvPolynomial A) :=
   ProofsInTheBook.Chapter22Stable.rowLinearMvPolynomial_realStable A hA
     (row_sum_pos_of_nonnegative_of_capacity hA hcap)
+
+theorem stable_allDegree_capacity_bound :
+    ∀ (m : ℕ) (p : MvPolynomial (Fin m) ℝ) (C : ℝ), 1 ≤ m →
+      NonnegativeCoefficients p →
+      AllDegreeCoefficientsPositive m p →
+      p.IsHomogeneous m →
+      ProofsInTheBook.Chapter22Stable.RealStable p →
+      CapLB p C →
+      (∏ i ∈ Finset.Icc 2 m, G i) * C ≤
+        MvPolynomial.coeff (squarefreeExponent m) p
+  | 0, _p, _C, hm, _hpcoeff, _hpall, _hhom, _hstable, _hcap => by omega
+  | 1, p, C, _hm, _hpcoeff, _hpall, hhom, _hstable, hcap => by
+      have hx : PositiveVector (fun _ : Fin 1 => (1 : ℝ)) := by
+        intro i
+        fin_cases i
+        positivity
+      have h := hcap (fun _ : Fin 1 => (1 : ℝ)) hx
+      simpa [eval_one_eq_squarefreeCoeff_of_homogeneous_one hhom] using h
+  | m + 2, p, C, _hm, hpcoeff, hpall, hhom, hstable, hcap => by
+      let p' : MvPolynomial (Fin (m + 1)) ℝ := firstReduction p
+      have hm1 : 1 ≤ m + 1 := by omega
+      have hsections : PositiveFactoredSections p :=
+        positiveFactoredSections_of_realStable_allDegree hm1 hpcoeff hpall hhom hstable
+      have hcap' : CapLB p' (G (m + 2) * C) := by
+        exact firstReduction_capLB_of_factoredSections hm1 hsections hcap
+      have hpcoeff' : NonnegativeCoefficients p' :=
+        firstReduction_nonnegativeCoefficients hpcoeff
+      have hpall' : AllDegreeCoefficientsPositive (m + 1) p' :=
+        allDegreeCoefficientsPositive_firstReduction hpall
+      have hhom' : p'.IsHomogeneous (m + 1) :=
+        firstReduction_isHomogeneous hhom
+      have hstable' : ProofsInTheBook.Chapter22Stable.RealStable p' :=
+        firstReduction_realStable_of_allDegree hm1 hpcoeff hpall hhom hstable
+      have ih := stable_allDegree_capacity_bound (m + 1) p' (G (m + 2) * C)
+        hm1 hpcoeff' hpall' hhom' hstable' hcap'
+      have hcoeff_eq :
+          MvPolynomial.coeff (squarefreeExponent (m + 1)) p' =
+            MvPolynomial.coeff (squarefreeExponent (m + 2)) p := by
+        dsimp [p']
+        rw [coeff_firstReduction, squarefreeExponent_succ]
+      rw [← hcoeff_eq]
+      calc
+        (∏ i ∈ Finset.Icc 2 (m + 2), G i) * C =
+            (∏ i ∈ Finset.Icc 2 (m + 1), G i) * (G (m + 2) * C) := by
+              rw [Finset.prod_Icc_succ_top (by omega : 2 ≤ m + 2)]
+              ring
+        _ ≤ MvPolynomial.coeff (squarefreeExponent (m + 1)) p' := ih
 
 structure GurvitsCapacityReductionData (n : ℕ)
     (A : Matrix (Fin n) (Fin n) ℝ) where
@@ -1057,6 +1695,102 @@ theorem chapter22_from_capacityReductionData
     (fun m hm =>
       iteratedCapacityCertificate_of_capacityReductionData m (by omega) (hdata m hm))
     n A hA
+
+theorem chapter22_positive (n : ℕ) (A : Matrix (Fin n) (Fin n) ℝ)
+    (hpos : ∀ i j, 0 < A i j)
+    (hA : A ∈ doublyStochastic ℝ (Fin n)) :
+    (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent := by
+  by_cases hn0 : n = 0
+  · subst n
+    simpa using Chapter22.van_der_Waerden_permanent_fin_zero A hA
+  · have hn : 1 ≤ n := Nat.succ_le_of_lt (Nat.pos_of_ne_zero hn0)
+    have hnonneg : ∀ i j, 0 ≤ A i j := fun i j => le_of_lt (hpos i j)
+    have hcap : RowLinearCapacityAtLeastOne A :=
+      rowLinearCapacityAtLeastOne_of_doublyStochastic A hA
+    have hbound :
+        (∏ i ∈ Finset.Icc 2 n, G i) ≤ rowLinearSquarefreeCoefficient A := by
+      have h := stable_allDegree_capacity_bound n (rowLinearMvPolynomial A) 1 hn
+        (rowLinearMvPolynomial_nonnegativeCoefficients A hnonneg)
+        (rowLinearMvPolynomial_allDegreeCoefficientsPositive A hpos)
+        (rowLinearMvPolynomial_isHomogeneous A)
+        (rowLinearMvPolynomial_realStable_of_capacity A hnonneg hcap)
+        (rowLinear_capLB_one_of_capacity hcap)
+      simpa [rowLinearSquarefreeCoefficient] using h
+    rw [rowLinearSquarefreeCoefficient_eq_permanent A] at hbound
+    simpa [gurvits_product_telescopes n hn] using hbound
+
+lemma permanent_tendsto_of_entrywise {n : ℕ}
+    {B : ℕ → Matrix (Fin n) (Fin n) ℝ} {A : Matrix (Fin n) (Fin n) ℝ}
+    (hentry : ∀ i j, Filter.Tendsto (fun N : ℕ => B N i j) Filter.atTop
+      (nhds (A i j))) :
+    Filter.Tendsto (fun N : ℕ => (B N).permanent) Filter.atTop (nhds A.permanent) := by
+  classical
+  unfold Matrix.permanent
+  exact tendsto_finsetSum Finset.univ fun σ _ =>
+    tendsto_finsetProd Finset.univ fun i _ => hentry (σ i) i
+
+theorem chapter22_unconditional (n : ℕ) (A : Matrix (Fin n) (Fin n) ℝ)
+    (hA : A ∈ doublyStochastic ℝ (Fin n)) :
+    (n.factorial : ℝ) / (n : ℝ) ^ n ≤ A.permanent := by
+  by_cases hn0 : n = 0
+  · subst n
+    simpa using Chapter22.van_der_Waerden_permanent_fin_zero A hA
+  · have hn : 1 ≤ n := Nat.succ_le_of_lt (Nat.pos_of_ne_zero hn0)
+    let θ : ℕ → ℝ := fun N => (((N + 1 : ℕ) : ℝ)⁻¹)
+    let Aθ : ℕ → Matrix (Fin n) (Fin n) ℝ :=
+      fun N => (1 - θ N) • A + θ N • flatDoublyStochasticMatrix n
+    have hθ_pos : ∀ N, 0 < θ N := by
+      intro N
+      dsimp [θ]
+      positivity
+    have hθ_le_one : ∀ N, θ N ≤ 1 := by
+      intro N
+      have hden : (1 : ℝ) ≤ ((N + 1 : ℕ) : ℝ) := by
+        exact_mod_cast Nat.succ_le_succ (Nat.zero_le N)
+      simpa [θ] using inv_le_one_of_one_le₀ hden
+    have hflat : flatDoublyStochasticMatrix n ∈ doublyStochastic ℝ (Fin n) :=
+      flatDoublyStochasticMatrix_mem_doublyStochastic n
+    have hAθ_ds : ∀ N, Aθ N ∈ doublyStochastic ℝ (Fin n) := by
+      intro N
+      have hleft : 0 ≤ 1 - θ N := sub_nonneg.mpr (hθ_le_one N)
+      have hright : 0 ≤ θ N := le_of_lt (hθ_pos N)
+      have hsum : (1 - θ N) + θ N = 1 := by ring
+      simpa [Aθ] using
+        (convex_doublyStochastic (R := ℝ) (n := Fin n)) hA hflat hleft hright hsum
+    have hAθ_pos : ∀ N i j, 0 < Aθ N i j := by
+      intro N i j
+      have hnR : 0 < (n : ℝ) := by exact_mod_cast hn
+      have hflat_pos : 0 < flatDoublyStochasticMatrix n i j := by
+        simpa [flatDoublyStochasticMatrix] using inv_pos.mpr hnR
+      have hAij : 0 ≤ A i j := nonneg_of_mem_doublyStochastic hA
+      have hleft : 0 ≤ (1 - θ N) * A i j :=
+        mul_nonneg (sub_nonneg.mpr (hθ_le_one N)) hAij
+      have hright : 0 < θ N * flatDoublyStochasticMatrix n i j :=
+        mul_pos (hθ_pos N) hflat_pos
+      simpa [Aθ, Matrix.add_apply, Matrix.smul_apply] using add_pos_of_nonneg_of_pos hleft hright
+    have hθ_tend : Filter.Tendsto θ Filter.atTop (nhds 0) := by
+      simpa [θ] using (tendsto_one_div_add_atTop_nhds_zero_nat (𝕜 := ℝ))
+    have hentry : ∀ i j, Filter.Tendsto (fun N : ℕ => Aθ N i j) Filter.atTop
+        (nhds (A i j)) := by
+      intro i j
+      have hleft :
+          Filter.Tendsto (fun N : ℕ => (1 - θ N) * A i j) Filter.atTop
+            (nhds ((1 - 0) * A i j)) :=
+        (tendsto_const_nhds.sub hθ_tend).mul tendsto_const_nhds
+      have hright :
+          Filter.Tendsto
+            (fun N : ℕ => θ N * flatDoublyStochasticMatrix n i j) Filter.atTop
+            (nhds (0 * flatDoublyStochasticMatrix n i j)) :=
+        hθ_tend.mul tendsto_const_nhds
+      simpa [Aθ, Matrix.add_apply, Matrix.smul_apply] using hleft.add hright
+    have hperm_tend :
+        Filter.Tendsto (fun N : ℕ => (Aθ N).permanent) Filter.atTop
+          (nhds A.permanent) :=
+      permanent_tendsto_of_entrywise hentry
+    have hineq : ∀ N, (n.factorial : ℝ) / (n : ℝ) ^ n ≤ (Aθ N).permanent := by
+      intro N
+      exact chapter22_positive n (Aθ N) (hAθ_pos N) (hAθ_ds N)
+    exact ge_of_tendsto hperm_tend (Filter.Eventually.of_forall hineq)
 
 end
 

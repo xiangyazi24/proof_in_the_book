@@ -40,6 +40,7 @@ import ProofsInTheBook.PlanarMapSimple
 import ProofsInTheBook.PlanarMapBoundary
 import ProofsInTheBook.PlanarMapNearTriangulation
 import ProofsInTheBook.PlanarMapBoundaryFan
+import ProofsInTheBook.PlanarMapFilteredRotation
 import ProofsInTheBook.SimpleGraphBlocks
 import ProofsInTheBook.ListColoring
 import ProofsInTheBook.Chapter35

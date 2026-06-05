@@ -47,6 +47,7 @@ import ProofsInTheBook.PlanarMapChordSplitData
 import ProofsInTheBook.PlanarMapBoundaryDelete
 import ProofsInTheBook.PlanarMapChordSplit
 import ProofsInTheBook.PlanarMapFanSurgery
+import ProofsInTheBook.PlanarMapSeparation
 import ProofsInTheBook.SimpleGraphBlocks
 import ProofsInTheBook.ListColoring
 import ProofsInTheBook.Chapter35

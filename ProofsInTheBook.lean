@@ -52,6 +52,7 @@ import ProofsInTheBook.PlanarMapSeparation
 import ProofsInTheBook.PlanarMapFanConnectivity
 import ProofsInTheBook.PlanarMapFanFaces
 import ProofsInTheBook.ThomassenLists
+import ProofsInTheBook.PlanarMapCutCap
 import ProofsInTheBook.SimpleGraphBlocks
 import ProofsInTheBook.ListColoring
 import ProofsInTheBook.Chapter35

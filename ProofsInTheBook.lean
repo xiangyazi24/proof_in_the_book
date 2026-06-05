@@ -39,6 +39,7 @@ import ProofsInTheBook.SimpleGraphBlocks
 import ProofsInTheBook.ListColoring
 import ProofsInTheBook.Chapter35
 import ProofsInTheBook.PolygonSubstrate
+import ProofsInTheBook.PolygonDiagonal
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

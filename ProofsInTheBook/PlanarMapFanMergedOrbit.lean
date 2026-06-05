@@ -244,6 +244,76 @@ private lemma fanTriangle_chain_step {a b c : M.Vertex}
     rw [hsig]; exact fanTriangle_d1_survives Tj htail0
   rw [deleteVertex_phi_apply_of_next_deleted M d0 _ hdel hsurv, hsig]
 
+/-- `φ'`-cycle form of the chain step: consecutive triangle edge darts are in one
+`φ'`-cycle. -/
+private lemma fanTriangle_chain_sameCycle {a b c : M.Vertex}
+    (Ti : FanTriangle hNT v0 a b) (Tj : FanTriangle hNT v0 b c)
+    {d0 : D} (htail0 : M.tail d0 = v0) :
+    (M.deleteVertex d0).φ.SameCycle
+      ⟨Ti.d1, fanTriangle_d1_survives Ti htail0⟩
+      ⟨Tj.d1, fanTriangle_d1_survives Tj htail0⟩ := by
+  refine ⟨1, ?_⟩
+  apply Subtype.ext
+  rw [zpow_one]
+  exact fanTriangle_chain_step Ti Tj htail0
+
+/-! ## All fan-triangle edge darts lie in one `φ'`-cycle
+
+Walking the fan path `x, z_1, …, z_t, w`, the consecutive triangles' edge darts
+chain together, so every fan triangle's edge dart is in the `φ'`-cycle of the
+head triangle's edge dart. -/
+
+/-- `consecutivePairs` of a two-or-more element list. -/
+private lemma consecutivePairs_cons_cons {α : Type*} (a b : α) (l : List α) :
+    consecutivePairs (a :: b :: l) = (a, b) :: consecutivePairs (b :: l) := by
+  simp [consecutivePairs]
+
+/-- Every triangle edge dart along the path is in the `φ'`-cycle of a fixed
+reference survivor `r`, provided `r` is already linked to the head triangle's
+edge dart and all consecutive pairs carry triangles. -/
+private lemma fanTriangle_edge_dart_sameCycle_ref {d0 : D} (htail0 : M.tail d0 = v0)
+    (r : {d : D // d ∉ M.deleteVertexSet d0}) :
+    ∀ (L : List M.Vertex) (hd : M.Vertex)
+      (htri : ∀ a b : M.Vertex, (a, b) ∈ consecutivePairs (hd :: L) →
+        FanTriangle hNT v0 a b),
+      (∀ (c : M.Vertex) (hpc : (hd, c) ∈ consecutivePairs (hd :: L)),
+        (M.deleteVertex d0).φ.SameCycle r
+          ⟨(htri hd c hpc).d1, fanTriangle_d1_survives _ htail0⟩) →
+      ∀ {a b : M.Vertex} (hab : (a, b) ∈ consecutivePairs (hd :: L)),
+        (M.deleteVertex d0).φ.SameCycle r
+          ⟨(htri a b hab).d1, fanTriangle_d1_survives _ htail0⟩ := by
+  intro L
+  induction L with
+  | nil => intro hd htri _ a b hab; simp [consecutivePairs] at hab
+  | cons c t ih =>
+      intro hd htri hhead a b hab
+      have hpc : (hd, c) ∈ consecutivePairs (hd :: c :: t) := by
+        rw [consecutivePairs_cons_cons]; exact List.mem_cons.mpr (Or.inl rfl)
+      -- lift a (c::t)-pair to a (hd::c::t)-pair.
+      have lift : ∀ a' b' : M.Vertex, (a', b') ∈ consecutivePairs (c :: t) →
+          (a', b') ∈ consecutivePairs (hd :: c :: t) := fun a' b' hab' => by
+        rw [consecutivePairs_cons_cons]; exact List.mem_cons.mpr (Or.inr hab')
+      -- triangle provider for the tail list, definitionally `htri ∘ lift`.
+      set htri' : ∀ a' b' : M.Vertex, (a', b') ∈ consecutivePairs (c :: t) →
+          FanTriangle hNT v0 a' b' :=
+        fun a' b' hab' => htri a' b' (lift a' b' hab') with htri'def
+      -- new head hypothesis: r links to (c, c')'s edge dart for each first pair of (c::t).
+      have hhead' : ∀ (c' : M.Vertex) (hpc' : (c, c') ∈ consecutivePairs (c :: t)),
+          (M.deleteVertex d0).φ.SameCycle r
+            ⟨(htri' c c' hpc').d1, fanTriangle_d1_survives _ htail0⟩ := by
+        intro c' hpc'
+        have hchain := fanTriangle_chain_sameCycle (htri hd c hpc)
+          (htri' c c' hpc') htail0
+        exact (hhead c hpc).trans hchain
+      rw [consecutivePairs_cons_cons] at hab
+      rcases List.mem_cons.mp hab with hhd | htl
+      · -- (a,b) = (hd,c).
+        have hae : a = hd := (Prod.ext_iff.mp hhd).1
+        have hbe : b = c := (Prod.ext_iff.mp hhd).2
+        cases hae; cases hbe
+        exact hhead c hab
+      · exact ih c htri' hhead' htl
+
 end NearTriangulation
 
 end CombMap

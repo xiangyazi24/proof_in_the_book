@@ -44,6 +44,7 @@ import ProofsInTheBook.PlanarMapBoundaryFan
 import ProofsInTheBook.PlanarMapFilteredRotation
 import ProofsInTheBook.PlanarMapChordSplitData
 import ProofsInTheBook.PlanarMapBoundaryDelete
+import ProofsInTheBook.PlanarMapChordSplit
 import ProofsInTheBook.SimpleGraphBlocks
 import ProofsInTheBook.ListColoring
 import ProofsInTheBook.Chapter35

@@ -11,6 +11,7 @@ import ProofsInTheBook.ConeLemma
 import ProofsInTheBook.Chapter10
 import ProofsInTheBook.Chapter11
 import ProofsInTheBook.Chapter12
+import ProofsInTheBook.ArmLemma
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15

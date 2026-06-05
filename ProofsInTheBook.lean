@@ -35,6 +35,7 @@ import ProofsInTheBook.Chapter32
 import ProofsInTheBook.Chapter33
 import ProofsInTheBook.Chapter34
 import ProofsInTheBook.PlanarMapSimple
+import ProofsInTheBook.SimpleGraphBlocks
 import ProofsInTheBook.ListColoring
 import ProofsInTheBook.Chapter35
 import ProofsInTheBook.PolygonSubstrate

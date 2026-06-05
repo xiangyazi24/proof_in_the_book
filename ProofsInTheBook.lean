@@ -49,6 +49,7 @@ import ProofsInTheBook.PlanarMapChordSplit
 import ProofsInTheBook.PlanarMapFanSurgery
 import ProofsInTheBook.PlanarMapSeparation
 import ProofsInTheBook.PlanarMapFanConnectivity
+import ProofsInTheBook.ThomassenLists
 import ProofsInTheBook.SimpleGraphBlocks
 import ProofsInTheBook.ListColoring
 import ProofsInTheBook.Chapter35

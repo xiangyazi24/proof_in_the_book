@@ -63,6 +63,8 @@ import ProofsInTheBook.PlanarMapEulerInequality
 import ProofsInTheBook.PlanarMapCutCap
 import ProofsInTheBook.PlanarMapCutCapSigma
 import ProofsInTheBook.PlanarMapCutCapCounts
+import ProofsInTheBook.PlanarMapCutCapSigma2
+import ProofsInTheBook.PlanarMapCutCapEval
 import ProofsInTheBook.PlanarMapCutCapV
 import ProofsInTheBook.PlanarMapCutCapF
 import ProofsInTheBook.PlanarMapCutCapConn

@@ -10,6 +10,7 @@ import ProofsInTheBook.Chapter09
 import ProofsInTheBook.ConeLemma
 import ProofsInTheBook.SectorSum
 import ProofsInTheBook.PearlLemma
+import ProofsInTheBook.TetPearls
 import ProofsInTheBook.Chapter10
 import ProofsInTheBook.Chapter11
 import ProofsInTheBook.Chapter12

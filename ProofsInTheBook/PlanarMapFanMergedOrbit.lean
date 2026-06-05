@@ -97,6 +97,57 @@ lemma deleteVertex_phi_apply_of_next_deleted (M : CombMap D) (v : D)
   rw [deleteVertex_phi_apply_coe]
   rw [show (M.alphaDeleteVertex v x) = y from rfl, hfo, ← hycoe, hσ2]
 
+/-! ## Survival-run iterate: `φ'` follows `M.φ` along any run of survivors
+
+If a forward `M.φ`-run of length `k` from a survivor `x` stays entirely inside
+the survivors, then `(φ')^k x` has underlying dart `(M.φ ^ k) x.1`.  Unlike the
+clean-face iterate of `PlanarMapFanFaces`, this needs no face condition — only
+that the visited darts survive.  This is the tool for walking the surviving arc
+of the old outer face. -/
+
+/-- A forward `M.φ`-run of survivors is followed step-for-step by `φ'`. -/
+lemma deleteVertex_phi_survRun_iterate (M : CombMap D) (v : D)
+    (x : {d : D // d ∉ M.deleteVertexSet v}) (k : ℕ)
+    (hrun : ∀ j ≤ k, (M.φ ^ j) x.1 ∉ M.deleteVertexSet v) :
+    (((M.deleteVertex v).φ ^ k) x : D) = (M.φ ^ k) x.1 := by
+  induction k with
+  | zero => simp
+  | succ k ih =>
+      have ihrun : ∀ j ≤ k, (M.φ ^ j) x.1 ∉ M.deleteVertexSet v :=
+        fun j hj => hrun j (Nat.le_succ_of_le hj)
+      have hval : (((M.deleteVertex v).φ ^ k) x : D) = (M.φ ^ k) x.1 := ih ihrun
+      -- the dart we are stepping from survives
+      have hxk : (M.φ ^ k) x.1 ∉ M.deleteVertexSet v := hrun k (Nat.le_succ k)
+      -- its M.φ-successor survives
+      have hnext : M.φ ((M.φ ^ k) x.1) ∉ M.deleteVertexSet v := by
+        have : (M.φ ^ (k + 1)) x.1 = M.φ ((M.φ ^ k) x.1) := by
+          rw [pow_succ']; rfl
+        rw [← this]; exact hrun (k + 1) (le_refl _)
+      have hiter1 : ((M.deleteVertex v).φ ^ (k + 1)) x
+          = (M.deleteVertex v).φ (((M.deleteVertex v).φ ^ k) x) := by
+        rw [pow_succ']; rfl
+      rw [hiter1]
+      -- φ' agrees with M.φ on the surviving dart ⟨(M.φ^k) x.1, hxk⟩
+      have hstep : ((M.deleteVertex v).φ (((M.deleteVertex v).φ ^ k) x) : D)
+          = M.φ ((M.φ ^ k) x.1) := by
+        have hpt : (((M.deleteVertex v).φ ^ k) x) = (⟨(M.φ ^ k) x.1, hxk⟩ :
+            {d : D // d ∉ M.deleteVertexSet v}) := Subtype.ext hval
+        rw [hpt]
+        exact deleteVertex_phi_apply_of_next_kept M v ⟨(M.φ ^ k) x.1, hxk⟩ hnext
+      rw [hstep, pow_succ']; rfl
+
+/-- Two survivors on the same `M`-face whose connecting forward `M.φ`-run stays
+inside the survivors are in the same `φ'`-cycle. -/
+lemma deleteVertex_phi_sameCycle_of_survRun (M : CombMap D) (v : D)
+    (x y : {d : D // d ∉ M.deleteVertexSet v}) (k : ℕ)
+    (hrun : ∀ j ≤ k, (M.φ ^ j) x.1 ∉ M.deleteVertexSet v)
+    (hk : (M.φ ^ k) x.1 = y.1) :
+    (M.deleteVertex v).φ.SameCycle x y := by
+  refine ⟨(k : ℤ), ?_⟩
+  rw [zpow_natCast]
+  apply Subtype.ext
+  rw [deleteVertex_phi_survRun_iterate M v x k hrun, hk]
+
 namespace NearTriangulation
 
 variable {M : CombMap D} {hNT : NearTriangulation M} {v0 : M.Vertex}

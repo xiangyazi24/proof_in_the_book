@@ -69,6 +69,7 @@ import ProofsInTheBook.PlanarMapCutCapConn
 import ProofsInTheBook.PlanarMapCutCapFCore
 import ProofsInTheBook.PlanarMapFaceWalk
 import ProofsInTheBook.PlanarMapDualPathSep
+import ProofsInTheBook.PlanarMapFaceWalk2
 import ProofsInTheBook.SimpleGraphBlocks
 import ProofsInTheBook.ListColoring
 import ProofsInTheBook.Chapter35

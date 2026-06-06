@@ -107,6 +107,18 @@ Every remaining fragment is now reduced to ONE precise hard core:
 
 Design-gated (Ch09/13/36 + Ch33 normalization): the auto pbook bridge truncates long design answers; Xiang relaying ChatGPT-Pro (as with the Tucker proof) is the reliable unblock. Blueprints staged at /tmp/pbook_*.txt.
 
+## Ch35 F-count state (2026-06-05 late, 7 passes deep — read before resuming)
+The ONE remaining count: NumCyclesCutPhi2 (numCycles phi'2 = F+2 for the corrected cutCapMap2).
+PROVEN stack: abstract seam-chain theorem (SeamChain), mixed-chain theorem + pure-cycle lemma +
+two-factor assembly (SeamSpec), end-to-end closure FROM SeamDecomposition data (SeamInst).
+KERNEL FACTS: F'=F+2 holds ACROSS GENUS (triangle, K4-sphere, K4-torus); but the two-disjoint-chain
+factorization is GENUS-0-ONLY (torus: chains merge into one 7-cycle); chain shapes vary by cut even
+at genus 0. CONCLUSION: the count needs either a genus-free route (local surgery identity chi'=chi+2?)
+or genus-0 injection at the APPLICATION layer (our chords live in sphere near-triangulations).
+Pbook question on the genus-free route pending. The Jordan chain otherwise COMPLETE: chi_le_two,
+V'/E', bridge two-layer, witness wiring — all proven; separates2_of_core awaits only this count
+(+ per-edge witness data SidesReach2/FragmentCompatible2, also application-layer).
+
 ## Frontier map 2026-06-05 (36/40; every open chapter has its verbatim book text + a ChatGPT design round in HANDOFF/)
 
 Open = {09, 13, 35, 36}. New bricks landed this session (all 0-sorry, axiom-clean, in the root build):

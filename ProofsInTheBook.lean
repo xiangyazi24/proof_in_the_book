@@ -135,6 +135,7 @@ import ProofsInTheBook.ChordContiguous
 import ProofsInTheBook.ChordInnerTri
 import ProofsInTheBook.ChordFaceClass
 import ProofsInTheBook.ChordBoundaryOrbit
+import ProofsInTheBook.ChordFaceFinal
 import ProofsInTheBook.ChordlessFinal
 import ProofsInTheBook.ChordlessClose
 import ProofsInTheBook.PlanarMapCutCapV
@@ -179,6 +180,7 @@ import ProofsInTheBook.PolygonCutGeometry
 import ProofsInTheBook.PolygonMClose
 import ProofsInTheBook.PolygonGeomInput
 import ProofsInTheBook.PolygonJordan
+import ProofsInTheBook.PolygonEarExterior
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

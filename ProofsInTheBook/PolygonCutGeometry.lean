@@ -1,6 +1,7 @@
 import ProofsInTheBook.PolygonContainment
 import ProofsInTheBook.PolygonWallGlobal
 import ProofsInTheBook.PolygonSeparation
+import ProofsInTheBook.PolygonGeneralWall
 
 /-!
 # Chapter 36 — the `CutGeometry` supplier (the polygon diagonal region-split) and the
@@ -245,42 +246,52 @@ theorem polygonGeometryInput_of_oracle_convexVertex
     ((polygonGeometryInput_of_oracle geom common disj).data P ρ).convexVertex
       = (geom P ρ).convexVertex := rfl
 
-/-! ## Part 3: the precise irreducible residue — `RegionSplitGenericity`
+/-! ## Part 3: the region-split genericity, now PROVED (general `n`)
 
-The single genuine residue blocking a fully unconditional `PolygonGeometryInput` is the
-general-`n` ray-direction-independence residue `GenericChainInput` (per polygon).  Every other
-`ResidualGeometryData` field is either a finite combinatorial/convex-position datum
-(`leftAxioms`/`rightAxioms`, `transversality`, `convexVertex`) whose *existence* is the
-chapter's convex-vertex machinery, or is *derived* from `GenericChainInput` via the
-region-identities (the count/parity split + the wall-global transport).  `GenericChainInput`
-is exactly the directional genericity that the triangle leaf discharges unconditionally
-(`unconditionalRayIndepInput_triangle`); for general `n` it is the kept Jordan content. -/
+The analytic core the region-split identities consume is the ray-direction independence
+of the corrected closed region: off the boundary, `ClosedRegion' P ρ x` is the same for
+every ray direction `ρ` (`PolygonFinish.UnconditionalRayIndepInput`).  The *earlier*
+isolation of this as `∀ P, PolygonWallGlobal.GenericChainInput P` was **provably false**
+for general `n` (`PolygonGenericRay.genericChainAt_false_of_straddle_on_line`: on the
+on-edge-line straddle stratum no single-intermediate generic chain can exist).  The
+correct, *true* content — which is all the region-split consumes — is supplied directly
+by `PolygonGeneralWall.unconditionalRayIndepInput_general`, the general-`n` degenerate-wall
+parity transport (the triangle pairing of `PolygonDegenerateWall` generalised to arbitrary
+`n` via the wall-skipping double-event pairing).  We therefore *define*
+`RegionSplitGenericity` as the genuine content and **prove it**. -/
 
-/-- **The region-split genericity residue** (general `n`).  For every polygon, the generic
-connecting-chain datum on the direction circle: any two ray directions have a connecting
-intermediate whose two segments meet only *generic* walls (no vertex on the ray line at an
-edge-parallel parameter).  This is `PolygonWallGlobal.GenericChainInput`, uniformly.  The wall
-*crossing* itself is proved (`closedRegion'_wallGlobal`); this residue is the measure-zero
-event-at-wall avoidance, discharged unconditionally for `n = 3` and kept for general `n`. -/
+/-- **The region-split genericity** (general `n`).  Off the boundary, the corrected closed
+region is independent of the ray direction, for *every* polygon — the analytic core the
+diagonal region-split consumes.  (This replaces the earlier — provably false —
+`GenericWallSeg`-interface proxy `∀ P, GenericChainInput P` with its genuine, true
+content, discharged by the general-`n` degenerate-wall parity transport.) -/
 def RegionSplitGenericity : Prop :=
-  ∀ {m : ℕ} (P : StrictSimplePolygon m), GenericChainInput P
+  ∀ {m : ℕ} (P : StrictSimplePolygon m), UnconditionalRayIndepInput P
 
-/-- **`RegionSplitGenericity` yields unconditional ray-independence for every polygon.**  This
-is the bridge `unconditionalRayIndepInput_of_genericChain`, uniform over all polygons — the
-exact analytic core the region-split identities consume. -/
+/-- **`RegionSplitGenericity` holds, unconditionally and for general `n`.**  The
+general-`n` degenerate-wall parity transport (`unconditionalRayIndepInput_general`) closes
+the wall residue for every polygon — no genericity hypothesis, no `n = 3` restriction. -/
+theorem regionSplitGenericity_holds : RegionSplitGenericity :=
+  fun P => ProofsInTheBook.PolygonGeneralWall.unconditionalRayIndepInput_general P
+
+/-- **`RegionSplitGenericity` yields unconditional ray-independence for every polygon.**
+The exact analytic core the region-split identities consume. -/
 theorem rayIndep_of_genericity (G : RegionSplitGenericity)
     {m : ℕ} (P : StrictSimplePolygon m) :
     UnconditionalRayIndepInput P :=
-  unconditionalRayIndepInput_of_genericChain (G P)
+  G P
 
-/-- **Non-vacuity of `RegionSplitGenericity` at the leaf** (§3.3 anti-vacuity).  For every
-triangle the residue is *satisfiable* — indeed the corresponding unconditional
-ray-independence holds outright (`PolygonDegenerateWall.unconditionalRayIndepInput_triangle`),
-so the residue is not an unsatisfiable premise; it is the genuine general-`n` extension of a
-fact that is closed at the base. -/
+/-- **Unconditional ray-independence for every polygon, supplied directly.**  No
+hypothesis: the region-split's analytic core is closed for all `n`. -/
+theorem rayIndep_unconditional {m : ℕ} (P : StrictSimplePolygon m) :
+    UnconditionalRayIndepInput P :=
+  rayIndep_of_genericity regionSplitGenericity_holds P
+
+/-- **`RegionSplitGenericity` at the leaf** (§3.3 base): for every triangle the
+ray-independence holds — now a special case of the general theorem. -/
 theorem regionSplitGenericity_holds_at_triangle (Q : StrictSimplePolygon 3) :
     UnconditionalRayIndepInput Q :=
-  ProofsInTheBook.PolygonDegenerateWall.unconditionalRayIndepInput_triangle Q
+  rayIndep_unconditional Q
 
 /-! ## Part 4: the canonical diagonal-first glue analysis for `M`
 

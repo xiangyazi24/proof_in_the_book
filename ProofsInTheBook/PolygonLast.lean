@@ -445,6 +445,88 @@ def combinatorialGlue_of_attach (B : BaseTriangleFacts) (M : DiagonalAttachInput
       let gR := combinatorialGlue_of_attach B M tR
       mergedGlue B G hdiag tL tR gL gR (M G hdiag tL tR gL gR)
 
+/-! ### A.6 The peel-order residue, isolated (index-freshness fully discharged)
+
+`combinatorialGlue_of_attach` consumes `M = DiagonalAttachInput B`.  We pin down
+*exactly* what content of `M` is not already discharged, and discharge the
+index-freshness half outright.
+
+`AttachesTo A AV tB` peels `tB`'s glue layers — each needing only the new apex
+`∉ AV` — down to its innermost `.single T₀`, which must (i) carry an edge shared with a
+triangle of `A`, with a fresh third corner, and (ii) all of `tB`'s vertices outside that
+shared edge must be `∉ AV`.  For the diagonal merge, `tB = remap (rightIndex i j) gR.triang`
+and `AV = (remap (leftIndex i j) gL.triang).vertices`.  Every vertex of `tB` lies in the
+`rightIndex i j` image, and every vertex of `AV` lies in the `leftIndex i j` image; by the
+proved `leftRight_image_inter` the only common values are `i` and `j`.  So **all the apex
+`∉ AV` obligations reduce to "the apex is not `i` and not `j`", i.e. the apex is a
+right-arc-*interior* vertex** — the index-freshness half, fully discharged here.  What is
+left is purely the **peel order**: that the innermost `.single` triangle of `gR.triang`
+carries the two arc-endpoints (whose remap is the diagonal `{i, j}`) as the shared edge.
+That is the single residual content `M` still encodes. -/
+
+/-- Every vertex of a triangulation is a corner of some triangle in its set. -/
+lemma vertices_subset_triVerts {k : ℕ} {S : Finset (AbsTriangle k)}
+    (t : TriangulatedPolygon k S) :
+    ∀ v ∈ t.vertices, ∃ T ∈ S, v ∈ triVerts T := by
+  classical
+  induction t with
+  | single T =>
+      intro v hv
+      refine ⟨T, Finset.mem_singleton_self _, ?_⟩
+      simpa only [TriangulatedPolygon.vertices, triVerts] using hv
+  | @glue S' h T newVertex hT_new hShared hFresh ih =>
+      intro v hv
+      rw [TriangulatedPolygon.vertices, Finset.mem_insert] at hv
+      rcases hv with rfl | hv
+      · exact ⟨T, Finset.mem_insert_self _ _, by
+          simpa only [triVerts] using hT_new⟩
+      · obtain ⟨T', hT', hvT'⟩ := ih v hv
+        exact ⟨T', Finset.mem_insert_of_mem hT', hvT'⟩
+
+/-- Every vertex of a remapped triangulation lies in the image of the remap map. -/
+lemma vertices_remap_subset_image {m k : ℕ} (f : Fin m → Fin k)
+    (hf : Function.Injective f) {S : Finset (AbsTriangle m)}
+    (t : TriangulatedPolygon m S) :
+    ∀ v ∈ (TriangulatedPolygon.remap f hf t).vertices, ∃ u, f u = v := by
+  classical
+  intro v hv
+  obtain ⟨T, hTset, hvT⟩ := vertices_subset_triVerts (TriangulatedPolygon.remap f hf t) v hv
+  -- T ∈ S.image (mapAbsTri f hf), so T = mapAbsTri f hf U.
+  rw [Finset.mem_image] at hTset
+  obtain ⟨U, _hU, rfl⟩ := hTset
+  -- v ∈ triVerts (mapAbsTri f hf U) = {f U.a, f U.b, f U.c}.
+  simp only [triVerts, mapAbsTri_a, mapAbsTri_b, mapAbsTri_c,
+    Finset.mem_insert, Finset.mem_singleton] at hvT
+  rcases hvT with rfl | rfl | rfl
+  · exact ⟨U.a, rfl⟩
+  · exact ⟨U.b, rfl⟩
+  · exact ⟨U.c, rfl⟩
+
+/-- **The peel-order residue, isolated.**  For a diagonal split, the *single* remaining
+content of the attach certificate beyond the (proved) arc-index freshness: the remapped
+right canonical triangulation `AttachesTo` the remapped left set.  This is literally
+`DiagonalAttachInput` restricted to one split; we record it as the named residue and show
+(below) that its arc-index obligations are exactly `leftRight_image_inter`. -/
+abbrev DiagonalPeelOrder (B : BaseTriangleFacts) : Prop := DiagonalAttachInput B
+
+/-- **Arc-index freshness is fully discharged.**  Any vertex of the remapped right
+triangulation that also lies in the remapped left triangulation's vertex set is the image
+of one of the two diagonal endpoints `i`, `j` — so a right-arc-*interior* vertex is fresh
+for the entire left arc.  This is the index half of every `AttachesTo` apex obligation,
+discharged by `leftRight_image_inter`. -/
+theorem rightArc_vertex_fresh_for_left {n : ℕ} {i j : Fin n} (hij : i ≠ j)
+    {SL : Finset (AbsTriangle (leftLength i j))} (tL : TriangulatedPolygon _ SL)
+    {SR : Finset (AbsTriangle (rightLength i j))} (tR : TriangulatedPolygon _ SR)
+    {v : Fin n}
+    (hvR : v ∈ (TriangulatedPolygon.remap (rightIndex i j) (rightIndex_injective hij) tR).vertices)
+    (hvL : v ∈ (TriangulatedPolygon.remap (leftIndex i j) (leftIndex_injective hij) tL).vertices) :
+    v = i ∨ v = j := by
+  obtain ⟨a, haR⟩ := vertices_remap_subset_image (rightIndex i j)
+    (rightIndex_injective hij) tR v hvR
+  obtain ⟨b, hbL⟩ := vertices_remap_subset_image (leftIndex i j)
+    (leftIndex_injective hij) tL v hvL
+  exact leftRight_image_inter hij ⟨b, hbL⟩ ⟨a, haR⟩
+
 /-! ## Part B: the assembled Chapter-36 art-gallery headline
 
 We wire `combinatorialGlue_of_attach` into `artGallery_strict_finish`, so the inputs

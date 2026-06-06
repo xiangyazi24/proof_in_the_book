@@ -155,6 +155,7 @@ import ProofsInTheBook.PolygonDegenerateWall
 import ProofsInTheBook.PolygonGeometryData
 import ProofsInTheBook.PolygonTriangleConvex
 import ProofsInTheBook.PolygonResidualData
+import ProofsInTheBook.PolygonCutClose
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

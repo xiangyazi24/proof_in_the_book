@@ -20,6 +20,7 @@ import ProofsInTheBook.BricardInduce
 import ProofsInTheBook.BricardPearls
 import ProofsInTheBook.BricardAssemble
 import ProofsInTheBook.BricardBalance
+import ProofsInTheBook.BricardAggregate
 import ProofsInTheBook.Chapter10
 import ProofsInTheBook.Chapter11
 import ProofsInTheBook.Chapter12

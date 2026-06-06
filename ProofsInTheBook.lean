@@ -51,6 +51,7 @@ import ProofsInTheBook.SphericalReachStuck
 import ProofsInTheBook.SphericalAdmissibleSup
 import ProofsInTheBook.SphericalArmClose
 import ProofsInTheBook.SphericalArmFinal
+import ProofsInTheBook.SphericalSZComplete
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15
@@ -127,6 +128,8 @@ import ProofsInTheBook.SubmapPlanar
 import ProofsInTheBook.ChordSideClose
 import ProofsInTheBook.ChordReconClose
 import ProofsInTheBook.ChordSideNT
+import ProofsInTheBook.ChordContiguous
+import ProofsInTheBook.ChordlessClose
 import ProofsInTheBook.PlanarMapCutCapV
 import ProofsInTheBook.PlanarMapCutCapF
 import ProofsInTheBook.PlanarMapCutCapConn
@@ -159,6 +162,7 @@ import ProofsInTheBook.PolygonWall
 import ProofsInTheBook.PolygonWallGlobal
 import ProofsInTheBook.PolygonGenericRay
 import ProofsInTheBook.PolygonDegenerateWall
+import ProofsInTheBook.PolygonGeneralWall
 import ProofsInTheBook.PolygonGeometryData
 import ProofsInTheBook.PolygonTriangleConvex
 import ProofsInTheBook.PolygonResidualData

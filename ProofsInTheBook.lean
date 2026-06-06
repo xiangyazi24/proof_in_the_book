@@ -23,6 +23,7 @@ import ProofsInTheBook.BricardBalance
 import ProofsInTheBook.BricardAggregate
 import ProofsInTheBook.BricardConcrete
 import ProofsInTheBook.BricardCube
+import ProofsInTheBook.BricardLocation
 import ProofsInTheBook.Chapter10
 import ProofsInTheBook.Chapter11
 import ProofsInTheBook.Chapter12

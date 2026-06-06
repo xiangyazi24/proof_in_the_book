@@ -18,3 +18,8 @@ NegativePrefixChainType are EMPTY; the KyFanEndpointPairing route reduces Tucker
 degenerate statement and can never close it. TuckerLemmaStatement itself IS the genuine Tucker (n=2 base
 is a real finite instance), so kneser's htucker use is faithful — but Ch39 needs the CORRECT partial-
 /almost-alternating-chain path argument, NOT full-length alternating chains. Ch39 remains open.
+## Run 2026-06-05(持续)
+- doctrine: 见 DOCTRINE.md(本次提交)
+- approval: Xiang 多次明示("继续. 自主模式, 不要停." / /automode)
+- 进行中 avenue: (a)(e)(g) 并行;(b)(c)(d)(f)(h) 排队
+- 已落地: Ch33 关闭(36/40);Ch35 引擎 25+ 文件;Ch09 substrate 全套;内核仲裁修正 cutSigma

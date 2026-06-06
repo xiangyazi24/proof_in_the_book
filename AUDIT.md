@@ -2,6 +2,36 @@
 
 Date: 2026-06-04. Method: per-chapter headline theorem `chapterNN`, statement-faithfulness + `#print axioms`.
 
+## FINAL STABLE FRONTIER (2026-06-06, end of the deep closing campaign) — 37/40
+After ~25 closing rounds, each open chapter is reduced to a SINGLE named, non-vacuous, multiply-confirmed
+(kernel + source + machine-refutation) residue. ~40 new files of genuine unconditional infrastructure banked;
+THREE "irreducible walls" cracked by a key insight (genus-slack monotonicity / Ch35 eulerChar; the
+Grassmann–Plücker syzygy / Ch13 convex position; the general-n parity-pairing / Ch36 ray-independence);
+every re-wrapper, unsound Prop, and wrong angle caught (incl. a machine-checked §6 refutation of the
+"closing-support-vanishes-first" idea). The three residues are now genuine research-frontier data that need
+design-level insight (the established unblock = a ChatGPT-Pro design round Xiang relays), NOT more structural
+rounds (which now re-confirm rather than close):
+
+- **Ch13 → `TerminalVisibility`** (spherical convex geometry). The §8.4 SZ-opening's stuck branch needs the
+  closing triple (A 0, A 1, qstar); the augmented trichotomy yields only SOME vanishing support, and
+  `closing_not_first` (machine-checked, design §6 config) PROVES the closing support is NOT the first to
+  vanish — so the identification needs the design's §7 `terminal_visibility` theorem, which "ordinary strict
+  spherical convexity gives no implication of." ALL scaffolding built (both-sign keystone, full §8.3
+  persistence, hemisphere-augmented admissible-sup, cyclicTriplePos, DiagonalCutArm, two-sided cut, relabel,
+  reach measure). Needs the terminal-visibility theorem itself (new math / design round).
+- **Ch35 → `BoundaryOrbitClass` (chord) / `CleanFaceClass` (chordless)** = WHICH φ'-orbit is the boundary face
+  (the face↔M-face correspondence). genus core (genus-slack), connectivity, vertex ι_surj, sphere field,
+  chord-choice contiguity, the face-SIZE=3 theorem, and the face-orbit SURJECTION (sideFace_has_inl_rep, the
+  face analogue of ι_surj) ALL proved. The lone residue is identifying the boundary orbit — CutFaceLabel
+  kernel-refutes it as a genus-uniform orbit label; needs a genus-0-essential boundary-orbit certificate (the
+  genus-slack-style route for orbit IDENTITY, not yet found) or the discrete-Jordan classification.
+- **Ch36 → `PolygonGeomResidue` + `LastToFirstAll`**. PolygonGeomResidue = the per-edge `crossTau`-sign /
+  single-edge-jump Jordan content for n≥4 (a point interior to P has odd crossing — the convex vertex's ear
+  triangle is inside P): ray-independence transports parity between rays but seeds no interior odd-crossing;
+  crossingNumber'_interior_eq_one gives 1 only at n=3. LastToFirstAll = the dual-tree re-root of the canonical
+  glue (M's peel-order). The entire parity core, ray-independence (all n), region-split set-identities, det2
+  geometry, convex-vertex index, triangle leaf are PROVED.
+
 ## CONSOLIDATED FRONTIER (2026-06-06, after the deep multi-round closing campaign) — 37/40
 Three open chapters; each driven layer-by-layer to its precise final core, banking ~30 new files of
 genuine unconditional infrastructure (all 0-sorry, clean-3, pushed). Multiple re-wrappers caught and NOT

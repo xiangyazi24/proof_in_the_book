@@ -53,6 +53,7 @@ import ProofsInTheBook.SphericalArmClose
 import ProofsInTheBook.SphericalArmFinal
 import ProofsInTheBook.SphericalSZComplete
 import ProofsInTheBook.SphericalStuckWitness
+import ProofsInTheBook.SphericalTerminalVis
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15
@@ -132,6 +133,7 @@ import ProofsInTheBook.ChordSideNT
 import ProofsInTheBook.ChordContiguous
 import ProofsInTheBook.ChordInnerTri
 import ProofsInTheBook.ChordFaceClass
+import ProofsInTheBook.ChordBoundaryOrbit
 import ProofsInTheBook.ChordlessFinal
 import ProofsInTheBook.ChordlessClose
 import ProofsInTheBook.PlanarMapCutCapV

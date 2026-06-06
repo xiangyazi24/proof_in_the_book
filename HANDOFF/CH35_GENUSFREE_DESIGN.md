@@ -1,3 +1,1165 @@
+The route that closes genus-free is B: the phi'-orbit bijection done at the quotient/label level, not a semiconjugacy and not a decomposition of faceCorr2.
+
+The right invariant is:
+
+lean
+Every `phi'2`-orbit has a unique label in
+  OldFace(phi) ⊕ Side,
+and every label fiber is exactly one `phi'2`-orbit.
+
+So you prove
+
+lean
+numCycles phi'2 = Fintype.card (OldFace phi ⊕ Side)
+                = numCycles phi + 2
+                = F + 2.
+
+This proof is genus-free because it never uses the cycle structure of faceCorr2. It uses only the closed forms for phi'2 itself.
+
+0. Why the two-chain route failed, and what replaces it
+
+The false assumption was:
+
+lean
+faceCorr2 = plusChain * minusChain
+
+with two independently telescoping seam chains. Kernel data refutes that at positive genus and even shows shape variation at genus zero.
+
+The replacement is not to understand faceCorr2 as a product. Instead, ignore faceCorr2 after the factorization has given you the closed forms of
+
+lean
+phi'2 : Perm Dcut.
+
+Then prove directly that the orbits of phi'2 are classified by:
+
+lean
+OldFace(phi) ⊕ Side
+
+where:
+
+lean
+OldFace(phi) := quotient/orbit type of phi on D
+Side := plus | minus
+
+The two Side labels are the two newly capped faces. The OldFace(phi) labels are the old faces transported through the surgery.
+
+This avoids all genus dependence. The old face orbits may be rearranged as sets of darts, and faceCorr2 may have any cycle structure, but the phi'2-orbits are still counted by these labels.
+
+1. Generic permutation theorem: orbit labels count cycles
+
+First prove a pure permutation theorem.
+
+Let q : Equiv.Perm X and let β be a finite label type. Suppose we have:
+
+lean
+label  : X → β
+anchor : β → X
+
+such that:
+
+lean
+label_anchor :
+  ∀ b, label (anchor b) = b
+
+label_invariant :
+  ∀ x, label (q x) = label x
+
+same_anchor :
+  ∀ x, SameCycle q x (anchor (label x))
+
+Then:
+
+lean
+numCycles q = Fintype.card β.
+
+This is the central abstract theorem.
+
+1.1 Lean statement
+lean
+structure OrbitLabelCert
+    (X β : Type*) [Fintype X] [DecidableEq X]
+    [Fintype β] [DecidableEq β]
+    (q : Equiv.Perm X) where
+  label : X → β
+  anchor : β → X
+
+  label_anchor :
+    ∀ b, label (anchor b) = b
+
+  label_invariant :
+    ∀ x, label (q x) = label x
+
+  same_anchor :
+    ∀ x, SameCycle q x (anchor (label x))
+
+Then:
+
+lean
+theorem numCycles_eq_card_of_orbitLabelCert
+    {X β : Type*} [Fintype X] [DecidableEq X]
+    [Fintype β] [DecidableEq β]
+    (q : Equiv.Perm X)
+    (C : OrbitLabelCert X β q) :
+  numCycles q = Fintype.card β
+1.2 Proof
+
+You prove that SameCycle q x y is equivalent to C.label x = C.label y.
+
+First direction:
+
+lean
+lemma label_eq_of_sameCycle
+    (h : SameCycle q x y) :
+  C.label x = C.label y
+
+Proof: label_invariant says the label is constant under one forward q step. Since q is a permutation, it is also constant under backward steps:
+
+lean
+have h_inv_back : ∀ x, C.label (q.symm x) = C.label x := by
+  intro x
+  have h := C.label_invariant (q.symm x)
+  simpa using h
+
+Then induct over the orbit relation.
+
+Second direction:
+
+lean
+lemma sameCycle_of_label_eq
+    (h : C.label x = C.label y) :
+  SameCycle q x y
+
+Proof:
+
+lean
+x ~ anchor (label x)
+  = anchor (label y)
+  ~ y.
+
+In Lean:
+
+lean
+exact SameCycle.trans
+  (C.same_anchor x)
+  (SameCycle.symm (by simpa [h] using C.same_anchor y))
+
+Thus the quotient of X by SameCycle q is equivalent to β.
+
+Define:
+
+lean
+def orbitLabelEquiv :
+  Quotient (SameCycle.setoid q) ≃ β
+
+by:
+
+lean
+toFun [x] := C.label x
+invFun b := Quotient.mk _ (C.anchor b)
+
+Well-definedness uses label_eq_of_sameCycle. The inverse proofs use label_anchor and same_anchor.
+
+Then:
+
+lean
+numCycles q
+= Fintype.card (Quotient (SameCycle.setoid q))
+= Fintype.card β.
+
+This theorem is completely independent of maps, genus, chains, and faceCorr2.
+
+2. Apply the theorem with label type OldFace(phi) ⊕ Side
+
+For the cut-and-cap map, set:
+
+lean
+X := Dcut
+q := phi'2
+β := OldFace(phi) ⊕ Side
+
+where:
+
+lean
+inductive Side
+| plus
+| minus
+
+and:
+
+lean
+OldFace(phi) := Quotient (SameCycle.setoid phi)
+
+with:
+
+lean
+faceOf : D → OldFace(phi)
+faceOf d := Quotient.mk _ d
+
+The target certificate is:
+
+lean
+def cutFaceLabelCert :
+  OrbitLabelCert Dcut (OldFace(phi) ⊕ Side) phi'2
+
+Once this is built:
+
+lean
+calc
+  numCycles phi'2
+      = Fintype.card (OldFace(phi) ⊕ Side) := by
+          exact numCycles_eq_card_of_orbitLabelCert phi'2 cutFaceLabelCert
+  _   = Fintype.card (OldFace(phi)) + Fintype.card Side := by
+          simp
+  _   = numCycles phi + 2 := by
+          simp [OldFace_card_eq_numCycles_phi, Side]
+  _   = F + 2 := by
+          rw [hF]
+
+This is the full genus-free count.
+
+3. What the label means
+
+The label is not a projection semiconjugacy. It is an orbit classifier.
+
+A cut dart is labeled either by:
+
+lean
+Sum.inl f
+
+meaning “this dart lies on the transported old face f,” or by:
+
+lean
+Sum.inr Side.plus
+Sum.inr Side.minus
+
+meaning “this dart lies on one of the two new capped faces.”
+
+So define:
+
+lean
+def FaceLabel := OldFace(phi) ⊕ Side
+
+Then define:
+
+lean
+cutLabel : Dcut → FaceLabel
+
+by a case table generated from the closed forms of phi'2.
+
+This is the crucial point: cutLabel is not required to satisfy
+
+lean
+cutLabel (phi'2 x) = mapSomething (cutLabel x)
+
+for an old dart-level projection. It only satisfies the much weaker and correct invariant:
+
+lean
+cutLabel (phi'2 x) = cutLabel x.
+
+That is exactly what orbit counting needs.
+
+4. The concrete certificate fields
+
+You need:
+
+lean
+cutLabel : Dcut → OldFace(phi) ⊕ Side
+cutAnchor : OldFace(phi) ⊕ Side → Dcut
+
+with:
+
+lean
+cutLabel_anchor :
+  ∀ b, cutLabel (cutAnchor b) = b
+
+cutLabel_phi'2 :
+  ∀ x, cutLabel (phi'2 x) = cutLabel x
+
+cut_same_anchor :
+  ∀ x, SameCycle phi'2 x (cutAnchor (cutLabel x))
+
+These three facts close the count.
+
+4.1 The anchors
+
+For the two new faces:
+
+lean
+cutAnchor (Sum.inr Side.plus)  := plusCapAnchor
+cutAnchor (Sum.inr Side.minus) := minusCapAnchor
+
+Usually:
+
+lean
+plusCapAnchor  := cap Side.plus  0
+minusCapAnchor := cap Side.minus 0
+
+or whichever representatives your closed forms make convenient.
+
+For old faces, choose a representative old dart:
+
+lean
+noncomputable def oldFaceRep : OldFace(phi) → D :=
+  Quotient.out
+
+Then:
+
+lean
+cutAnchor (Sum.inl f) := oldFaceLift (oldFaceRep f)
+
+where:
+
+lean
+oldFaceLift : D → Dcut
+
+is the cut dart representing the old face corner of d.
+
+In the simplest cases:
+
+lean
+oldFaceLift d = Sum.inl d
+
+but do not require that globally. At seam/cycle darts, oldFaceLift should be the representative selected by your phi'2 closed-form table.
+
+The required anchor label lemma is:
+
+lean
+lemma cutLabel_oldFaceLift :
+  ∀ d, cutLabel (oldFaceLift d) = Sum.inl (faceOf d)
+
+Then:
+
+lean
+lemma cutLabel_anchor_old :
+  ∀ f, cutLabel (cutAnchor (Sum.inl f)) = Sum.inl f := by
+  intro f
+  unfold cutAnchor
+  rw [cutLabel_oldFaceLift]
+  exact Quotient.out_eq f
+
+and for sides:
+
+lean
+lemma cutLabel_plusCapAnchor :
+  cutLabel plusCapAnchor = Sum.inr Side.plus
+
+lemma cutLabel_minusCapAnchor :
+  cutLabel minusCapAnchor = Sum.inr Side.minus
+
+Together:
+
+lean
+lemma cutLabel_anchor :
+  ∀ b, cutLabel (cutAnchor b) = b := by
+  intro b
+  cases b with
+  | inl f =>
+      exact cutLabel_anchor_old f
+  | inr s =>
+      cases s <;> simp [cutAnchor, cutLabel_plusCapAnchor, cutLabel_minusCapAnchor]
+5. How to define cutLabel from closed forms
+
+Do not define cutLabel by guessing from faceCorr2.
+
+Define it from the closed forms of phi'2.
+
+You already have symbolic theorems of the shape:
+
+lean
+phi'2_apply_old_nonseam
+phi'2_apply_old_plus_seam
+phi'2_apply_old_minus_seam
+phi'2_apply_cap_plus
+phi'2_apply_cap_minus
+...
+
+Use the same partition of Dcut to define:
+
+lean
+def cutLabel : Dcut → OldFace(phi) ⊕ Side
+
+The table should satisfy these two local principles.
+
+5.1 Old-face labels
+
+For every old face corner represented by d : D:
+
+lean
+cutLabel (oldFaceLift d) = Sum.inl (faceOf d)
+
+and if a phi'2 step represents an old phi step, its labels agree because:
+
+lean
+faceOf (phi d) = faceOf d.
+
+So typical proofs look like:
+
+lean
+simp [cutLabel, phi'2_apply_*, faceOf_phi]
+
+where:
+
+lean
+lemma faceOf_phi (d : D) :
+  faceOf (phi d) = faceOf d
+5.2 New-face labels
+
+For the two capped faces, every dart in the plus capped trace receives:
+
+lean
+Sum.inr Side.plus
+
+and every dart in the minus capped trace receives:
+
+lean
+Sum.inr Side.minus.
+
+Then the closed forms give:
+
+lean
+cutLabel (phi'2 x) = cutLabel x
+
+by direct rewriting.
+
+In Lean, the invariant proof should be a single case split over the closed-form classes:
+
+lean
+lemma cutLabel_phi'2 :
+  ∀ x, cutLabel (phi'2 x) = cutLabel x := by
+  intro x
+  rcases classify_cut_dart x with h | h | h | h | ...
+  · subst h
+    simp [cutLabel, phi'2_apply_old_nonseam, faceOf_phi]
+  · subst h
+    simp [cutLabel, phi'2_apply_old_plus_seam, faceOf_phi, cycle_index_identities]
+  · subst h
+    simp [cutLabel, phi'2_apply_old_minus_seam, faceOf_phi, cycle_index_identities]
+  · subst h
+    simp [cutLabel, phi'2_apply_cap_plus]
+  · subst h
+    simp [cutLabel, phi'2_apply_cap_minus]
+
+This proof is genus-free because it is purely local.
+
+6. The hard-looking part: one orbit per label
+
+The only nontrivial certificate field is:
+
+lean
+cut_same_anchor :
+  ∀ x, SameCycle phi'2 x (cutAnchor (cutLabel x))
+
+This says every label fiber is connected under phi'2.
+
+Prove it in two pieces.
+
+6.1 Old labels are connected to old-face anchors
+
+First prove a local lift of every old phi step.
+
+lean
+lemma oldFaceLift_phi_step :
+  ∀ d : D,
+    SameCycle phi'2
+      (oldFaceLift d)
+      (oldFaceLift (phi d))
+
+This is not a semiconjugacy. It does not say:
+
+lean
+phi'2 (oldFaceLift d) = oldFaceLift (phi d)
+
+It only says they are in the same phi'2 orbit.
+
+In most nonseam cases the proof is one step:
+
+lean
+phi'2 (oldFaceLift d) = oldFaceLift (phi d)
+
+At seam cases, the proof is a bounded closed-form path through the local cut/cap darts:
+
+lean
+oldFaceLift d
+  --phi'2--> local seam dart 1
+  --phi'2--> local seam dart 2
+  ...
+  --phi'2--> oldFaceLift (phi d)
+
+So the Lean proof is:
+
+lean
+lemma oldFaceLift_phi_step :
+  ∀ d : D,
+    SameCycle phi'2
+      (oldFaceLift d)
+      (oldFaceLift (phi d)) := by
+  intro d
+  by_cases h : IsSeamDart d
+  · rcases seam_cases d h with ⟨i, rfl⟩ | ⟨i, rfl⟩ | ...
+    · exact sameCycle_of_phi'2_path
+        [phi'2_apply_seam_1, phi'2_apply_seam_2, ...]
+    · exact sameCycle_of_phi'2_path
+        [phi'2_apply_seam_1, phi'2_apply_seam_2, ...]
+  · exact sameCycle_of_apply_eq
+      (by simp [oldFaceLift, phi'2_apply_old_nonseam, h])
+
+Then extend from one old phi step to an entire old face orbit.
+
+lean
+lemma oldFaceLift_same_old_face
+    {d e : D}
+    (h : SameCycle phi d e) :
+  SameCycle phi'2 (oldFaceLift d) (oldFaceLift e)
+
+Proof: induction over the SameCycle phi path, using oldFaceLift_phi_step and symmetry.
+
+Now for an old face label:
+
+lean
+lemma oldFaceLift_to_anchor
+    (d : D) :
+  SameCycle phi'2
+    (oldFaceLift d)
+    (cutAnchor (Sum.inl (faceOf d))) := by
+  unfold cutAnchor
+  exact oldFaceLift_same_old_face
+    (sameCycle_faceOf_out d)
+
+where:
+
+lean
+sameCycle_faceOf_out :
+  SameCycle phi d (oldFaceRep (faceOf d))
+
+comes from Quotient.out_eq.
+
+6.2 Every dart with old label reaches its old lift
+
+Next prove:
+
+lean
+lemma cutDart_oldLabel_to_lift :
+  ∀ x d,
+    cutLabel x = Sum.inl (faceOf d) →
+    SameCycle phi'2 x (oldFaceLift d)
+
+Again, this is a finite case split using closed forms.
+
+For an old nonseam dart, this is usually immediate:
+
+lean
+x = oldFaceLift d
+
+or one local path to it.
+
+For a seam/cap dart that belongs to an old transported face, the closed forms give a bounded path from that dart to the corresponding oldFaceLift d.
+
+Lean skeleton:
+
+lean
+lemma cutDart_oldLabel_to_lift :
+  ∀ x d,
+    cutLabel x = Sum.inl (faceOf d) →
+    SameCycle phi'2 x (oldFaceLift d) := by
+  intro x d hx
+  rcases classify_cut_dart x with h | h | h | h | ...
+  · subst h
+    simp [cutLabel] at hx
+    -- reduce to oldFaceLift_same_old_face
+    exact oldFaceLift_same_old_face (by simpa using hx)
+  · subst h
+    simp [cutLabel] at hx
+    exact sameCycle_trans
+      (sameCycle_of_phi'2_path [phi'2_apply_*, ...])
+      (oldFaceLift_same_old_face (by simpa using hx))
+  · ...
+
+This proof is where your per-class symbolic phi'2 equations are used.
+
+6.3 New labels are connected to side anchors
+
+For the plus new face:
+
+lean
+lemma plusLabel_to_anchor :
+  ∀ x,
+    cutLabel x = Sum.inr Side.plus →
+    SameCycle phi'2 x plusCapAnchor
+
+For the minus new face:
+
+lean
+lemma minusLabel_to_anchor :
+  ∀ x,
+    cutLabel x = Sum.inr Side.minus →
+    SameCycle phi'2 x minusCapAnchor
+
+These are also direct finite closed-form orbit traces.
+
+The capped-face traces may be pure cap cycles in some maps and mixed in others. That does not matter. The trace is not faceCorr2’s trace. It is the phi'2 trace. Your closed forms identify the phi'2 successor of every dart, so the proof is a finite local path around the capped boundary.
+
+Lean skeleton:
+
+lean
+lemma sideLabel_to_anchor :
+  ∀ x s,
+    cutLabel x = Sum.inr s →
+    SameCycle phi'2 x (cutAnchor (Sum.inr s)) := by
+  intro x s hx
+  cases s
+  · exact plusLabel_to_anchor x hx
+  · exact minusLabel_to_anchor x hx
+6.4 Assemble cut_same_anchor
+lean
+lemma cut_same_anchor :
+  ∀ x, SameCycle phi'2 x (cutAnchor (cutLabel x)) := by
+  intro x
+  cases h : cutLabel x with
+  | inl f =>
+      -- choose old representative of f
+      let d := oldFaceRep f
+      have hf : faceOf d = f := by
+        exact Quotient.out_eq f
+      have hx :
+          cutLabel x = Sum.inl (faceOf d) := by
+        simpa [d, hf] using h
+      exact cutDart_oldLabel_to_lift_then_anchor x d hx
+  | inr s =>
+      exact sideLabel_to_anchor x s h
+
+where:
+
+lean
+lemma cutDart_oldLabel_to_lift_then_anchor
+    (x : Dcut) (d : D)
+    (hx : cutLabel x = Sum.inl (faceOf d)) :
+  SameCycle phi'2 x (cutAnchor (Sum.inl (faceOf d))) := by
+  exact SameCycle.trans
+    (cutDart_oldLabel_to_lift x d hx)
+    (oldFaceLift_to_anchor d)
+
+This completes the certificate.
+
+7. The genus-free theorem
+
+Now define:
+
+lean
+def cutFaceLabelCert :
+  OrbitLabelCert Dcut (OldFace(phi) ⊕ Side) phi'2 where
+  label := cutLabel
+  anchor := cutAnchor
+  label_anchor := cutLabel_anchor
+  label_invariant := cutLabel_phi'2
+  same_anchor := cut_same_anchor
+
+Then:
+
+lean
+theorem numCycles_phi'2_eq :
+  numCycles phi'2 = numCycles phi + 2 := by
+  have h :=
+    numCycles_eq_card_of_orbitLabelCert
+      phi'2 cutFaceLabelCert
+  calc
+    numCycles phi'2
+        = Fintype.card (OldFace(phi) ⊕ Side) := h
+    _   = Fintype.card (OldFace(phi)) + Fintype.card Side := by
+            simp
+    _   = numCycles phi + 2 := by
+            simp [OldFace_card_eq_numCycles, Side]
+
+Using your existing theorem:
+
+lean
+numCycles_phiLift = F + 2*k
+
+is no longer needed for this proof, except as consistency evidence. The direct phi'2 orbit-label proof gives the target immediately.
+
+If you want to keep the already-established notation:
+
+lean
+F := numCycles phi
+F' := numCycles phi'2
+
+then:
+
+lean
+theorem face_count_cutCapMap2 :
+  F' = F + 2 := by
+  unfold F' F
+  exact numCycles_phi'2_eq
+8. Why this is not a forbidden semiconjugacy
+
+The kernel refuted a projection semiconjugacy of the form:
+
+lean
+π (phi'2 x) = phi (π x)
+
+or similar.
+
+This proof does not need one.
+
+It only proves:
+
+lean
+cutLabel (phi'2 x) = cutLabel x.
+
+That is an invariant label, not a dynamics-preserving projection.
+
+For old labels, cutLabel x = Sum.inl f means “the cut dart x lies in the transported old face f.” Since a face label is already a quotient by phi, it is constant under old phi steps. Therefore it is reasonable and provable that it is also constant under the corresponding cut-face walk.
+
+The old face may be represented by a very different set of darts after surgery. That is fine. The theorem counts orbit labels, not preserved orbit supports.
+
+9. Why this handles the K4 torus evidence
+
+In the K4 torus case, faceCorr2 may be one combined cycle threading both cap signs.
+
+This proof never asks about:
+
+lean
+numCycles faceCorr2
+
+or about any chain decomposition of faceCorr2.
+
+It asks only:
+
+lean
+cutLabel (phi'2 x) = cutLabel x
+
+and
+
+lean
+SameCycle phi'2 x (cutAnchor (cutLabel x)).
+
+The first is a closed-form one-step check. The second is a closed-form orbit-trace check. Both are local to phi'2.
+
+So even if faceCorr2 has one combined cycle, the actual face permutation phi'2 still has exactly one orbit per label in:
+
+lean
+OldFace(phi) ⊕ Side.
+
+Hence:
+
+lean
+F' = F + 2
+
+without any planarity or genus assumption.
+
+10. Dependency-ordered Lean implementation plan
+Layer 1: orbit and cycle-count API
+
+You likely already have these, but the label theorem needs them cleanly.
+
+lean
+def SameCycle (p : Equiv.Perm X) (x y : X) : Prop := ...
+
+Lemmas:
+
+lean
+sameCycle_refl :
+  SameCycle p x x
+
+sameCycle_symm :
+  SameCycle p x y → SameCycle p y x
+
+sameCycle_trans :
+  SameCycle p x y → SameCycle p y z → SameCycle p x z
+
+sameCycle_step :
+  SameCycle p x (p x)
+
+sameCycle_step_inv :
+  SameCycle p x (p.symm x)
+
+Also:
+
+lean
+OldFace := Quotient (SameCycle.setoid phi)
+
+faceOf : D → OldFace
+faceOf d := Quotient.mk _ d
+
+faceOf_phi :
+  faceOf (phi d) = faceOf d
+
+oldFace_card_eq_numCycles :
+  Fintype.card OldFace = numCycles phi
+Layer 2: generic orbit-label count theorem
+
+Define:
+
+lean
+structure OrbitLabelCert
+    (X β : Type*) [Fintype X] [DecidableEq X]
+    [Fintype β] [DecidableEq β]
+    (q : Equiv.Perm X) where
+  label : X → β
+  anchor : β → X
+  label_anchor :
+    ∀ b, label (anchor b) = b
+  label_invariant :
+    ∀ x, label (q x) = label x
+  same_anchor :
+    ∀ x, SameCycle q x (anchor (label x))
+
+Prove:
+
+lean
+lemma label_eq_of_sameCycle
+    (C : OrbitLabelCert X β q)
+    (h : SameCycle q x y) :
+  C.label x = C.label y
+
+Prove:
+
+lean
+lemma sameCycle_of_label_eq
+    (C : OrbitLabelCert X β q)
+    (h : C.label x = C.label y) :
+  SameCycle q x y
+
+Then:
+
+lean
+def orbitLabelEquiv
+    (C : OrbitLabelCert X β q) :
+  Quotient (SameCycle.setoid q) ≃ β
+
+Finally:
+
+lean
+theorem numCycles_eq_card_of_orbitLabelCert
+    (C : OrbitLabelCert X β q) :
+  numCycles q = Fintype.card β
+
+This layer is pure permutation theory.
+
+Layer 3: define the cut face label type
+lean
+inductive Side
+| plus
+| minus
+deriving DecidableEq, Fintype
+
+abbrev CutFaceLabel :=
+  OldFace(phi) ⊕ Side
+
+Then:
+
+lean
+def cutLabel : Dcut → CutFaceLabel
+
+Use the same classifier you use for the closed forms of phi'2.
+
+Do not try to define it from faceCorr2.
+
+Layer 4: define old-face lifts and anchors
+lean
+def oldFaceLift : D → Dcut
+
+with:
+
+lean
+lemma cutLabel_oldFaceLift :
+  ∀ d, cutLabel (oldFaceLift d) = Sum.inl (faceOf d)
+
+Define:
+
+lean
+def plusCapAnchor : Dcut := ...
+def minusCapAnchor : Dcut := ...
+
+with:
+
+lean
+lemma cutLabel_plusCapAnchor :
+  cutLabel plusCapAnchor = Sum.inr Side.plus
+
+lemma cutLabel_minusCapAnchor :
+  cutLabel minusCapAnchor = Sum.inr Side.minus
+
+Define:
+
+lean
+noncomputable def oldFaceRep : OldFace(phi) → D :=
+  Quotient.out
+
+noncomputable def cutAnchor : CutFaceLabel → Dcut
+| Sum.inl f => oldFaceLift (oldFaceRep f)
+| Sum.inr Side.plus => plusCapAnchor
+| Sum.inr Side.minus => minusCapAnchor
+
+Prove:
+
+lean
+lemma cutLabel_anchor :
+  ∀ b, cutLabel (cutAnchor b) = b
+Layer 5: label invariance under phi'2
+
+This is a direct closed-form proof.
+
+lean
+lemma cutLabel_phi'2 :
+  ∀ x, cutLabel (phi'2 x) = cutLabel x := by
+  intro x
+  cases x using cutDartClosedFormCases
+  all_goals
+    simp [
+      cutLabel,
+      phi'2_apply_closed_form_1,
+      phi'2_apply_closed_form_2,
+      phi'2_apply_closed_form_3,
+      faceOf_phi,
+      index_simp
+    ]
+
+The exact closed-form lemmas are your existing per-class symbolic equations.
+
+This is the local invariant.
+
+Layer 6: old-face lift connectivity
+
+First, one old phi step lifts to a phi'2 orbit path:
+
+lean
+lemma oldFaceLift_phi_step :
+  ∀ d : D,
+    SameCycle phi'2
+      (oldFaceLift d)
+      (oldFaceLift (phi d))
+
+Proof by closed-form cases:
+
+lean
+lemma oldFaceLift_phi_step :
+  ∀ d : D,
+    SameCycle phi'2
+      (oldFaceLift d)
+      (oldFaceLift (phi d)) := by
+  intro d
+  cases d using oldDartClosedFormCases
+  · exact sameCycle_of_apply_eq
+      (by simp [oldFaceLift, phi'2_apply_closed_form])
+  · exact sameCycle_path
+      [by simp [phi'2_apply_closed_form_1],
+       by simp [phi'2_apply_closed_form_2],
+       by simp [phi'2_apply_closed_form_3]]
+  · ...
+
+Then extend to old face orbits:
+
+lean
+lemma oldFaceLift_same_old_face
+    {d e : D}
+    (h : SameCycle phi d e) :
+  SameCycle phi'2 (oldFaceLift d) (oldFaceLift e) := by
+  induction h with
+  | refl =>
+      exact sameCycle_refl
+  | step h ih =>
+      exact SameCycle.trans ih (oldFaceLift_phi_step _)
+  | symm h ih =>
+      exact SameCycle.symm ih
+  | trans h1 h2 ih1 ih2 =>
+      exact SameCycle.trans ih1 ih2
+
+Adapt the induction shape to your SameCycle definition.
+
+Then:
+
+lean
+lemma oldFaceLift_to_anchor
+    (d : D) :
+  SameCycle phi'2
+    (oldFaceLift d)
+    (cutAnchor (Sum.inl (faceOf d))) := by
+  unfold cutAnchor oldFaceRep
+  apply oldFaceLift_same_old_face
+  exact sameCycle_quotient_out d
+
+where:
+
+lean
+sameCycle_quotient_out :
+  SameCycle phi d (Quotient.out (faceOf d))
+Layer 7: every dart reaches the anchor of its label
+
+Prove old-label darts reach their old lift:
+
+lean
+lemma cutDart_oldLabel_to_lift :
+  ∀ x d,
+    cutLabel x = Sum.inl (faceOf d) →
+    SameCycle phi'2 x (oldFaceLift d)
+
+Proof by closed-form cases on x.
+
+For a dart whose label is an old face, the closed forms either identify it with the lift or give a bounded path to the lift. If the local representative is a different old dart e in the same old face, use:
+
+lean
+oldFaceLift_same_old_face :
+  SameCycle phi e d → SameCycle phi'2 (oldFaceLift e) (oldFaceLift d)
+
+For plus and minus labels:
+
+lean
+lemma plusLabel_to_anchor :
+  ∀ x,
+    cutLabel x = Sum.inr Side.plus →
+    SameCycle phi'2 x plusCapAnchor
+lean
+lemma minusLabel_to_anchor :
+  ∀ x,
+    cutLabel x = Sum.inr Side.minus →
+    SameCycle phi'2 x minusCapAnchor
+
+Again, these are closed-form orbit traces under phi'2, not faceCorr2.
+
+Then:
+
+lean
+lemma cut_same_anchor :
+  ∀ x, SameCycle phi'2 x (cutAnchor (cutLabel x)) := by
+  intro x
+  cases h : cutLabel x with
+  | inl f =>
+      let d := oldFaceRep f
+      have hf : faceOf d = f := by
+        exact Quotient.out_eq f
+      have hx : cutLabel x = Sum.inl (faceOf d) := by
+        simpa [d, hf] using h
+      exact SameCycle.trans
+        (cutDart_oldLabel_to_lift x d hx)
+        (oldFaceLift_to_anchor d)
+  | inr s =>
+      cases s
+      · simpa [cutAnchor] using plusLabel_to_anchor x h
+      · simpa [cutAnchor] using minusLabel_to_anchor x h
+Layer 8: build the certificate
+lean
+def cutFaceLabelCert :
+  OrbitLabelCert Dcut CutFaceLabel phi'2 where
+  label := cutLabel
+  anchor := cutAnchor
+  label_anchor := cutLabel_anchor
+  label_invariant := cutLabel_phi'2
+  same_anchor := cut_same_anchor
+
+Then:
+
+lean
+theorem numCycles_phi'2_eq_numCycles_phi_add_two :
+  numCycles phi'2 = numCycles phi + 2 := by
+  have h :=
+    numCycles_eq_card_of_orbitLabelCert
+      (q := phi'2)
+      cutFaceLabelCert
+  calc
+    numCycles phi'2
+        = Fintype.card CutFaceLabel := h
+    _   = Fintype.card (OldFace(phi) ⊕ Side) := rfl
+    _   = Fintype.card (OldFace(phi)) + Fintype.card Side := by
+            simp
+    _   = numCycles phi + 2 := by
+            simp [oldFace_card_eq_numCycles, Side]
+
+Finally:
+
+lean
+theorem F'_eq_F_add_two :
+  F' = F + 2 := by
+  unfold F' F
+  exact numCycles_phi'2_eq_numCycles_phi_add_two
+11. Candidate-route assessment
+A. Local induction on k
+
+This can work, but it creates unnecessary intermediate maps that are not natural cut-cap maps. You would have to design partial surgeries, prove their permutations are valid combinatorial maps, and prove a delta theorem for each partial operation. That is a lot of infrastructure for a count that can be read directly from phi'2.
+
+B. Orbit-label bijection
+
+This is the route that closes cleanly.
+
+It uses exactly the data you have: closed forms for phi'2.
+
+It does not require:
+
+lean
+faceCorr2
+
+to have any stable cycle structure.
+
+It does not require:
+
+lean
+phi'2
+
+to semiconjugate to phi.
+
+It proves directly:
+
+lean
+Orbits(phi'2) ≃ Orbits(phi) ⊕ Side.
+C. Euler via components/genus
+
+Skip. It imports genus theory or an equivalent Euler-characteristic classification theorem.
+
+D. Face-degree double count
+
+Insufficient alone. Degree sums do not determine the number of cycles.
+
+E. Conservation law for transposition walks
+
+There may be such a law, but it would effectively reconstruct the same orbit-label invariant in a less direct language. The kernel evidence says the adaptive same/different-cycle statuses vary with genus and map structure. The stable object is not the faceCorr2 transposition walk; it is the phi'2 orbit labeling.
+
+12. Final theorem shape for the chapter
+
+The chapter-facing theorem should not mention faceCorr2 chains.
+
+Use:
+
+lean
+theorem cutCapMap2_numFaces
+    (M : CombMap)
+    (C : SimplePrimalCycle M)
+    (hcut : cutCapMap2 M C = M') :
+  numFaces M' = numFaces M + 2
+
+and internally prove:
+
+lean
+phi'2_orbit_label_equiv :
+  Quotient (SameCycle.setoid phi'2)
+    ≃
+  Quotient (SameCycle.setoid phi) ⊕ Side
+
+Then the count is immediate by cardinality.
+
+The invariant to remember is:
+
+lean
+cutLabel : Dcut → OldFace(phi) ⊕ Side
+
+with:
+
+lean
+cutLabel (phi'2 x) = cutLabel x
+
+and:
+
+lean
+∀ x, SameCycle phi'2 x (cutAnchor (cutLabel x)).
+
+Those two facts say exactly:
+
+lean
+phi'2-orbits are the fibers of cutLabel.
+
+Since the label type has F + 2 elements, the face count is:
+
+lean
+F' = F + 2.
+
 I’ll develop the genus-free count as a quotient-level orbit certificate for phi'2, using only its closed-form successor table. The key is classifying phi'2-orbits by labels, not by faceCorr2 cycles or old-dart projection.
 
 The closing route is B, but with one important refinement:

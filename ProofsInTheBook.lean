@@ -38,6 +38,7 @@ import ProofsInTheBook.SphericalSZ
 import ProofsInTheBook.SphericalCore
 import ProofsInTheBook.SphericalFinish
 import ProofsInTheBook.SphericalOpening
+import ProofsInTheBook.SphericalHinge
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15
@@ -133,6 +134,7 @@ import ProofsInTheBook.PolygonOracle
 import ProofsInTheBook.PolygonOracleClose
 import ProofsInTheBook.PolygonLeaf
 import ProofsInTheBook.PolygonSeparation
+import ProofsInTheBook.PolygonWall
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

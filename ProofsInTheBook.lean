@@ -152,6 +152,7 @@ import ProofsInTheBook.PolygonGenericRay
 import ProofsInTheBook.PolygonDegenerateWall
 import ProofsInTheBook.PolygonGeometryData
 import ProofsInTheBook.PolygonTriangleConvex
+import ProofsInTheBook.PolygonResidualData
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

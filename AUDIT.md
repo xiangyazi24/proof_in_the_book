@@ -107,6 +107,13 @@ Every remaining fragment is now reduced to ONE precise hard core:
 
 Design-gated (Ch09/13/36 + Ch33 normalization): the auto pbook bridge truncates long design answers; Xiang relaying ChatGPT-Pro (as with the Tucker proof) is the reliable unblock. Blueprints staged at /tmp/pbook_*.txt.
 
+## Closing-round status (2026-06-06, latest)
+In flight: polylast (Ch36: count bijection + half-plane + merge => unconditional artGallery),
+bricardloc (Ch09: the two concrete LocationData certificates => unconditional headline),
+sphcore (Ch13: SZOpeningCore => unconditional spherical arm; then vertex-link).
+Ch35 queued: abstract seam characterization => BankComponentCert; bridge witness; deletion data.
+Each chapter's full engine is proven and pushed; the in-flight rounds are pure instantiation.
+
 ## Endgame status (2026-06-06, late)
 - Ch36: in-flight rayindep = ray-direction independence (span_mod_two in the direction variable) +
   Fisk bridge + artGallery_strict headline. Everything else proven.

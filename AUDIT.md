@@ -107,6 +107,21 @@ Every remaining fragment is now reduced to ONE precise hard core:
 
 Design-gated (Ch09/13/36 + Ch33 normalization): the auto pbook bridge truncates long design answers; Xiang relaying ChatGPT-Pro (as with the Tucker proof) is the reliable unblock. Blueprints staged at /tmp/pbook_*.txt.
 
+## Frontier 2026-06-06 (the three-chapter endgame, all engines built)
+- Ch35: chord wall = BankComponentCert.same_component (per-cycle bank-component fact; 13 passes of
+  machinery all proven: chi_le_two, V'/E', touch-rank engine, word realization, Jordan-from-lower-
+  bound) + bridge witness data + deletion-side orientation data (FanIncidenceData etc.) + f13-16
+  assembly. The convergent missing layer: ABSTRACT symbolic characterization of faceCorr2's cycle
+  structure (everything kernel-anchored, no abstract SimplePrimalCycle instance exists yet).
+- Ch09: headline regularTet_cube_no_equidecomp_aggregated stands on {LocationData/PearlSectorModel
+  certificates, concrete normalizations, EdgeSourceFaithful}; bricardconcrete agent closing these
+  (cube tet-decomposition + concrete certificates).
+- Ch36: exists_diagonal' UNCONDITIONAL under the corrected side-coordinate convention (the old
+  fixed-ray parity was REFUTED by counterexample and repaired per ChatGPT ruling); polytri agent
+  building EarTriangulation existence + region splits; then the art-gallery bridge to the proven
+  combinatorial 3-coloring.
+- Ch13: planar arm core proven (profile form); spherical substrate design not yet started (queue).
+
 ## Ch35 F-count state (2026-06-05 late, 7 passes deep — read before resuming)
 The ONE remaining count: NumCyclesCutPhi2 (numCycles phi'2 = F+2 for the corrected cutCapMap2).
 PROVEN stack: abstract seam-chain theorem (SeamChain), mixed-chain theorem + pure-cycle lemma +

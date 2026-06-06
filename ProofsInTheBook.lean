@@ -128,6 +128,7 @@ import ProofsInTheBook.PolygonLast
 import ProofsInTheBook.PolygonOracle
 import ProofsInTheBook.PolygonOracleClose
 import ProofsInTheBook.PolygonLeaf
+import ProofsInTheBook.PolygonSeparation
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

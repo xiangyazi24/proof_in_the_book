@@ -134,6 +134,30 @@ Each chapter's full engine is proven and pushed; the in-flight rounds are pure i
 - Ch35: queued = abstract seam characterization (the convergent missing layer) feeding
   BankComponentCert.same_component; bridge witness data; deletion orientation data; f13-16.
 
+## Closing wave (2026-06-06, this session) — 37/40, residues named + closers dispatched
+Three open chapters; each hard core REDUCED to a named 0-sorry residue (axioms clean-3, pushed),
+with one Opus closer in flight per chapter:
+- **Ch35**: WitnessFinal.lean closed `SidesReach2` UNCONDITIONALLY (refuted the prior bwitness
+  "irreducible core" verdict — the corrected sigma'2 wiring threads cycle darts into one phi'2-orbit;
+  sidesReach2_concrete is a total no-hypothesis theorem). separates_final assembled. Remaining surface =
+  (1) F-side seam, (2) interior-dual fragment supplier (triangle-dischargeable per fragmentCompatible2_singleFace),
+  (3) deletion-side + NumCyclesCutPhi2 + f13-16. CLOSER: jordanoracle — construct JordanOracle α
+  unconditionally (the last hypothesis of nearTriangulation_five_colorable) → unconditional 5CT.
+- **Ch13**: SphericalHinge.lean — load-bearing reduction openedArmReachOrStuck_of_hingeConvexPosition
+  (stuck branch PRODUCES the 3 determinant/Gram fields from betweenness, not a re-wrapper); clean arm
+  lemmas conditional only on the single residue HingeConvexPosition = OpeningData (the §8.4 SZ opening
+  construction). CLOSER: szchain — prove openingData_holds via §8.4 Case-2 cut-and-induct (the
+  diagonal cut from a NON-terminal tight determinant, which sidesteps the false terminal-first /
+  terminal-visibility obstruction) → UNCONDITIONAL spherical arm lemma. Frontier after = vertex-link
+  correspondence (Cauchy bridge §9-§13, full design in CH13_CAUCHY_FULL_DESIGN.md).
+- **Ch36**: PolygonWall.lean — rfcount_eventually_zero_of_wall (each direction wall, generic OR
+  degenerate, off-boundary contributes 0 crossing-count change in a nbhd). CLOSER: pwglobal — global
+  assembly (local constancy everywhere + no-jump-at-walls over compact ℝ → ℤ-valued count constant →
+  r1=r2 count equality → unconditional ray independence → discharge PolygonSeparation's ray oracle →
+  unconditional artGallery_strict).
+The Rodrigues rotation engine (SphericalRotation: rot/rotS2/group-law/isometry) is fully built — Ch13
+§8.1 layer done, reused not rebuilt.
+
 ## Frontier 2026-06-06 (the three-chapter endgame, all engines built)
 - Ch35: chord wall = BankComponentCert.same_component (per-cycle bank-component fact; 13 passes of
   machinery all proven: chi_le_two, V'/E', touch-rank engine, word realization, Jordan-from-lower-

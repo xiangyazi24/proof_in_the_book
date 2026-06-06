@@ -110,6 +110,7 @@ import ProofsInTheBook.SeamIncidence
 import ProofsInTheBook.DartArc
 import ProofsInTheBook.WitnessFinal
 import ProofsInTheBook.ChordSplitNT
+import ProofsInTheBook.ChordSplitEuler
 import ProofsInTheBook.PlanarMapCutCapV
 import ProofsInTheBook.PlanarMapCutCapF
 import ProofsInTheBook.PlanarMapCutCapConn

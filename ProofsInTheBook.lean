@@ -57,6 +57,7 @@ import ProofsInTheBook.SphericalTerminalVis
 import ProofsInTheBook.SphericalArmUncond
 import ProofsInTheBook.SphericalMatchedCut
 import ProofsInTheBook.SphericalCornerStep
+import ProofsInTheBook.SphericalConeMembership
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15
@@ -140,6 +141,7 @@ import ProofsInTheBook.ChordBoundaryOrbit
 import ProofsInTheBook.ChordFaceFinal
 import ProofsInTheBook.ChordAnchor
 import ProofsInTheBook.ChordAnchorInst
+import ProofsInTheBook.ChordBigonWrap
 import ProofsInTheBook.ChordlessFinal
 import ProofsInTheBook.ChordlessClose
 import ProofsInTheBook.PlanarMapCutCapV

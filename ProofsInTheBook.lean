@@ -98,6 +98,7 @@ import ProofsInTheBook.FaceCorrWord
 import ProofsInTheBook.TouchRank
 import ProofsInTheBook.TouchCert
 import ProofsInTheBook.SeamStructure
+import ProofsInTheBook.SeamApplication
 import ProofsInTheBook.PlanarMapCutCapV
 import ProofsInTheBook.PlanarMapCutCapF
 import ProofsInTheBook.PlanarMapCutCapConn

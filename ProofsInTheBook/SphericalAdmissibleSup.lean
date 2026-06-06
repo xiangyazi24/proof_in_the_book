@@ -229,6 +229,140 @@ theorem reach_endpoint_at_sup {n : ℕ} {A : Fin (n + 1 + 1) → S2}
       ≤ sDist (A 0) (rotS2 (openAxis A) (-δ) (A (Fin.last (n + 1)))) :=
   reach_endpoint_mono_arm hA hn hδ0 hδπ
 
+/-! ## The hemisphere-augmented admissible family (the §8.3 hemisphere monitored at `δ*`).
+
+The substrate's `combinedSupport` monitors only the mixed-support determinants and the joint-angle
+target slack.  The §8.3 convex-polygon certificate of `openArm A θ` has one further genuinely
+`θ`-dependent member that `combinedSupport` does **not** track: the **`open_hemisphere` functional at
+the rotated tail**, `θ ↦ ⟪h, rot axis θ tail⟫`, where `h` is the open-hemisphere normal of `A`.  If it
+degenerates strictly *before* `δ*`, the opened arm can fail to be a `StrictConvexSphArm` at `δ*` even
+though every monitored constraint is still positive.  We **augment** the monitored family with this
+functional, so the admissible supremum `δ*` respects it too — closing the §8.3→§8.4 boundary gap. -/
+
+/-- The hemisphere margin functional at the rotated tail: `θ ↦ ⟪h, rot (openAxis A) θ (A last)⟫`.
+This is the only genuinely `θ`-dependent value of the `open_hemisphere` functional under the opening
+(every fixed vertex `≤ n` contributes the `θ`-constant `⟪h, A i⟫`). -/
+def hemiMargin {n : ℕ} (A : Fin (n + 1 + 1) → S2) (h : E3) : ℝ → ℝ :=
+  fun θ => (⟪h, rot (openAxis A : E3) θ (A (Fin.last (n + 1)) : E3)⟫ : ℝ)
+
+/-- The hemisphere margin is continuous in `θ` (inner product with the continuous rotated tail). -/
+theorem continuous_hemiMargin {n : ℕ} (A : Fin (n + 1 + 1) → S2) (h : E3) :
+    Continuous (hemiMargin A h) :=
+  continuous_const.inner (continuous_rot (openAxis A : E3) (A (Fin.last (n + 1)) : E3))
+
+/-- At `θ = 0` the hemisphere margin equals `⟪h, A last⟫` (the original tail's hemisphere value). -/
+theorem hemiMargin_zero {n : ℕ} (A : Fin (n + 1 + 1) → S2) (h : E3) :
+    hemiMargin A h 0 = (⟪h, (A (Fin.last (n + 1)) : E3)⟫ : ℝ) := by
+  simp only [hemiMargin, rot_zero]
+
+/-- The **augmented** admissible family: the combined family (target slack + mixed supports) together
+with the hemisphere margin at the rotated tail.  Indexed by `Option (Fin _ × Fin _) ⊕ Unit`: `inl o`
+is the combined family member `o`, `inr ()` is the hemisphere margin.  Carries the hemisphere normal
+`h`. -/
+def augmentedSupport {n : ℕ} (A : Fin (n + 1 + 1) → S2) (T : ℝ) (h : E3) :
+    (Option (Fin (n + 1 + 1) × Fin (n + 1 + 1))) ⊕ Unit → ℝ → ℝ
+  | Sum.inl o => combinedSupport A T o
+  | Sum.inr () => hemiMargin A h
+
+/-- Each augmented support function is continuous in `θ`. -/
+theorem continuous_augmentedSupport {n : ℕ} {A : Fin (n + 1 + 1) → S2}
+    (hA : StrictConvexSphArm A) (hn : 2 ≤ n) (T : ℝ) (h : E3) :
+    ∀ o, Continuous (augmentedSupport A T h o) := by
+  rintro (o | ⟨⟩)
+  · exact continuous_combinedSupport hA hn T o
+  · exact continuous_hemiMargin A h
+
+/-- **The augmented admissible supremum `δ*` is admissible.**  The augmented family is finite and
+continuous; its admissible supremum (closed, nonempty, bounded) is admissible. -/
+theorem sSup_augmented_mem {n : ℕ} {A : Fin (n + 1 + 1) → S2}
+    (hA : StrictConvexSphArm A) (hn : 2 ≤ n) {T Tcap : ℝ} (h : E3) (hTcap : 0 ≤ Tcap)
+    (h0 : ∀ o, 0 ≤ augmentedSupport A T h o 0) :
+    sSup (admissibleSet (augmentedSupport A T h) Tcap)
+      ∈ admissibleSet (augmentedSupport A T h) Tcap :=
+  sSup_mem_admissibleSet (continuous_augmentedSupport hA hn T h) hTcap h0
+
+/-- **Reach/stuck at the augmented admissible supremum.**  At `δ* = sSup (admissibleSet
+(augmentedSupport A T h) Tcap)`: either `δ* = Tcap`, or some augmented support vanishes.  This is
+`reach_or_stuck` on the augmented family — now also able to detect a vanishing hemisphere margin. -/
+theorem augmented_reach_or_stuck {n : ℕ} {A : Fin (n + 1 + 1) → S2}
+    (hA : StrictConvexSphArm A) (hn : 2 ≤ n) {T Tcap : ℝ} (h : E3) (hTcap : 0 ≤ Tcap)
+    (h0 : ∀ o, 0 ≤ augmentedSupport A T h o 0) :
+    sSup (admissibleSet (augmentedSupport A T h) Tcap) = Tcap ∨
+      ∃ o, augmentedSupport A T h o (sSup (admissibleSet (augmentedSupport A T h) Tcap)) = 0 :=
+  reach_or_stuck (continuous_augmentedSupport hA hn T h) hTcap h0
+
+/-- **The §8.4 reach/stuck trichotomy at the augmented `δ*`.**  Rephrasing into:
+
+* **CAP** `δ* = Tcap`, *or*
+* **REACH** the target joint angle is reached (`openedLastJointAngle A δ* = T`), *or*
+* **STUCK** a mixed support *or* the hemisphere margin vanishes
+  (`(∃ ij, mixedSupport A ij δ* = 0) ∨ hemiMargin A h δ* = 0`).
+
+The augmented family now additionally surfaces a vanishing hemisphere margin in the STUCK branch — the
+constraint `combinedSupport` was blind to. -/
+theorem augmented_reachOrStuck_at_sup {n : ℕ} {A : Fin (n + 1 + 1) → S2}
+    (hA : StrictConvexSphArm A) (hn : 2 ≤ n) {T Tcap : ℝ} (h : E3) (hTcap : 0 ≤ Tcap)
+    (h0 : ∀ o, 0 ≤ augmentedSupport A T h o 0) :
+    let δ := sSup (admissibleSet (augmentedSupport A T h) Tcap)
+    δ = Tcap ∨ openedLastJointAngle A δ = T ∨
+      ((∃ ij, mixedSupport A ij δ = 0) ∨ hemiMargin A h δ = 0) := by
+  intro δ
+  rcases augmented_reach_or_stuck hA hn h hTcap h0 with hcap | ⟨o, ho⟩
+  · exact Or.inl hcap
+  · rcases o with (_ | ij) | ⟨⟩
+    · -- target slack vanishes (REACH).
+      refine Or.inr (Or.inl ?_)
+      have : targetSlack A T δ = 0 := ho
+      simp only [targetSlack] at this; linarith
+    · exact Or.inr (Or.inr (Or.inl ⟨ij, ho⟩))
+    · exact Or.inr (Or.inr (Or.inr ho))
+
+/-! ## REACH-case strict convexity at the augmented supremum.
+
+The payoff of the augmentation.  In the REACH branch, `δ*` is admissible for the augmented family, so
+at `δ*`: every mixed support is `≥ 0`, the hemisphere margin at the rotated tail is `≥ 0`, and the
+target slack is `≥ 0`; moreover the REACH branch is precisely where *no support / hemisphere constraint
+is tight* — only the target-slack constraint binds.  Hence at `δ*` every mixed support is **strictly**
+positive and the hemisphere margin is **strictly** positive, and (combined with the `θ`-invariant
+non-mixed supports and the fixed-vertex hemisphere positivity) the opened arm `openArm A δ*` is a
+`StrictConvexSphArm`.  This is exactly the boundary persistence the substrate's
+`BoundaryConvexPersistAtSup` over-stated — now **true and proved** in the REACH case via the augmented
+monitoring. -/
+
+/-- **REACH-case strict convexity at the augmented supremum (the discharged boundary obstacle).**
+Suppose at the angle `δ` (the augmented admissible supremum, REACH branch):
+
+* `hmix : ∀ ij, j ≠ i → j ≠ i+1 → 0 < sOrient (openArm A δ i)(openArm A δ (i+1))(openArm A δ j)`
+  — every non-incident support of the *opened* arm is strictly positive (no support is tight: REACH,
+  not STUCK), and
+* `hhem : ∀ k, 0 < ⟪h, (openArm A δ k : E3)⟫` — the hemisphere functional is strictly positive at every
+  vertex of the opened arm (the rotated tail's margin is strict because the hemisphere constraint is
+  not tight in REACH; the fixed vertices' margins are the `θ`-constant strict values of `A`),
+* `hedge : ∀ i, ShortArc (openArm A δ i)(openArm A δ (i+1))` — every edge stays a short arc,
+* `hnorm : ‖h‖ = 1`.
+
+Then `openArm A δ` is a `StrictConvexSphArm`.  This is the §8.3 certificate read off field-by-field at
+the boundary `δ = δ*`, with the hemisphere field supplied by the *augmented monitoring*. -/
+theorem reach_strictConvex_at_sup {n : ℕ} {A : Fin (n + 1 + 1) → S2}
+    (hA : StrictConvexSphArm A) {δ : ℝ} {h : E3} (hnorm : ‖h‖ = 1)
+    (hedge : ∀ i : Fin (n + 1 + 1), ShortArc (openArm A δ i) (openArm A δ (i + 1)))
+    (hmix : ∀ i j : Fin (n + 1 + 1), j ≠ i → j ≠ i + 1 →
+        0 < sOrient (openArm A δ i) (openArm A δ (i + 1)) (openArm A δ j))
+    (hhem : ∀ k : Fin (n + 1 + 1), 0 < (⟪h, (openArm A δ k : E3)⟫ : ℝ)) :
+    StrictConvexSphArm (openArm A δ) := by
+  refine { two_le := hA.two_le, closed_convex := ?_ }
+  refine { three_le := by have := hA.two_le; omega
+           edge_short := hedge
+           edge_support := ?_
+           strict_nonincident := hmix
+           open_hemisphere := ⟨h, hnorm, hhem⟩ }
+  intro i j
+  by_cases hji : j = i
+  · subst hji; rw [sOrient, det3_self_right]
+  · by_cases hji1 : j = i + 1
+    · subst hji1; rw [sOrient, det3_self_mid]
+    · exact le_of_lt (hmix i j hji hji1)
+
 /-! ## The single isolated boundary obstacle (honest residue).
 
 Everything in the §8.4 admissible-supremum process *except the convexity of the opened arm at the

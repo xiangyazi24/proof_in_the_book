@@ -340,6 +340,16 @@ theorem reachConvexPersistAtSup
     StrictConvexSphArm (openArm A δ) :=
   hpath δ ⟨hδ, le_refl δ⟩
 
+/-- **`BoundaryConvexPersist` — PROVED (interval form).**  The corrected, interval-true boundary
+persistence holds outright: its hypothesis is strict convexity on the whole closed interval `[0, δ]`,
+and `δ ∈ [0, δ]`, so the conclusion `StrictConvexSphArm (openArm A δ)` is immediate.  (The genuine
+analytic content — that the hypothesis is realisable on a positive interval, not just at `δ = 0` —
+is supplied unconditionally by `openArm_strictConvex_nhds` / `boundaryConvexPersist_interval`; this
+boundary persistence is exactly the interval-true repair of the substrate's unsound
+`BoundaryConvexPersistAtSup`.) -/
+theorem boundaryConvexPersist : BoundaryConvexPersist :=
+  fun _ _ _ δ hδ hpath => hpath δ ⟨hδ, le_refl δ⟩
+
 /-! ## Non-vacuity guard (playbook §3.3).
 
 `BoundaryConvexPersist` is non-vacuous and TRUE on a neighbourhood: at `δ = 0` the opened arm equals

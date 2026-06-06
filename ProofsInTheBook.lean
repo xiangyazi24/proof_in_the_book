@@ -50,6 +50,7 @@ import ProofsInTheBook.SphericalOpeningProcess
 import ProofsInTheBook.SphericalReachStuck
 import ProofsInTheBook.SphericalAdmissibleSup
 import ProofsInTheBook.SphericalArmClose
+import ProofsInTheBook.SphericalArmFinal
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15
@@ -125,6 +126,7 @@ import ProofsInTheBook.ChordDisk
 import ProofsInTheBook.SubmapPlanar
 import ProofsInTheBook.ChordSideClose
 import ProofsInTheBook.ChordReconClose
+import ProofsInTheBook.ChordSideNT
 import ProofsInTheBook.PlanarMapCutCapV
 import ProofsInTheBook.PlanarMapCutCapF
 import ProofsInTheBook.PlanarMapCutCapConn

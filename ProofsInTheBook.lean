@@ -15,6 +15,7 @@ import ProofsInTheBook.TetVolume
 import ProofsInTheBook.TetDihedral
 import ProofsInTheBook.PearlClassification
 import ProofsInTheBook.Bricard
+import ProofsInTheBook.BricardMatch
 import ProofsInTheBook.Chapter10
 import ProofsInTheBook.Chapter11
 import ProofsInTheBook.Chapter12

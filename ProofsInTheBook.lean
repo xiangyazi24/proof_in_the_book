@@ -104,6 +104,7 @@ import ProofsInTheBook.SeamStructure
 import ProofsInTheBook.SeamApplication
 import ProofsInTheBook.SeamIncidence
 import ProofsInTheBook.DartArc
+import ProofsInTheBook.WitnessFinal
 import ProofsInTheBook.PlanarMapCutCapV
 import ProofsInTheBook.PlanarMapCutCapF
 import ProofsInTheBook.PlanarMapCutCapConn

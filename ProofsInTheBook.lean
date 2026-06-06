@@ -123,6 +123,7 @@ import ProofsInTheBook.ChordFaceCount
 import ProofsInTheBook.ChordDisk
 import ProofsInTheBook.SubmapPlanar
 import ProofsInTheBook.ChordSideClose
+import ProofsInTheBook.ChordReconClose
 import ProofsInTheBook.PlanarMapCutCapV
 import ProofsInTheBook.PlanarMapCutCapF
 import ProofsInTheBook.PlanarMapCutCapConn

@@ -92,6 +92,7 @@ import ProofsInTheBook.PolygonSubstrate
 import ProofsInTheBook.PolygonDiagonal
 import ProofsInTheBook.PolygonParity
 import ProofsInTheBook.PolygonConvexVertex
+import ProofsInTheBook.PolygonResidues
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

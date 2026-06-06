@@ -33,6 +33,7 @@ import ProofsInTheBook.SphericalArm
 import ProofsInTheBook.SphericalRotation
 import ProofsInTheBook.SphericalSZ
 import ProofsInTheBook.SphericalCore
+import ProofsInTheBook.SphericalFinish
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15

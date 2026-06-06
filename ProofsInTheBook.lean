@@ -80,6 +80,7 @@ import ProofsInTheBook.PlanarMapSeamChain
 import ProofsInTheBook.PlanarMapSeamSpec
 import ProofsInTheBook.PlanarMapSeamInst
 import ProofsInTheBook.ForcedSplits
+import ProofsInTheBook.FaceCorrWord
 import ProofsInTheBook.PlanarMapCutCapV
 import ProofsInTheBook.PlanarMapCutCapF
 import ProofsInTheBook.PlanarMapCutCapConn

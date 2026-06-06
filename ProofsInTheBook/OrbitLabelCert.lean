@@ -1,6 +1,6 @@
 /-
 The abstract orbit-label certificate engine (Chapter 35, genus-free F count,
-design HANDOFF/CH35_GENUSFREE_DESIGN.md §1-2).
+design HANDOFF/CH35_GENUSFREE_DESIGN.md §1-3).
 
 A permutation whose orbits are classified by a finite label type — a label
 function constant along the permutation, an anchor in each fiber, and the
@@ -36,18 +36,16 @@ theorem label_inv_apply (x : X) : C.label (q⁻¹ x) = C.label x := by
   simp at h
   exact h.symm
 
-theorem label_zpow (i : ℤ) (x : X) : C.label ((q ^ i) x) = C.label x := by
+theorem label_zpow (i : ℤ) : ∀ x : X, C.label ((q ^ i) x) = C.label x := by
   induction i using Int.induction_on with
-  | zero => simp
+  | zero => intro x; simp
   | succ n ih =>
-      have : ((q : Equiv.Perm X) ^ ((n : ℤ) + 1)) x = q ((q ^ (n : ℤ)) x) := by
-        rw [zpow_add_one, Equiv.Perm.mul_apply]
-      rw [this, C.label_invariant, ih]
+      intro x
+      rw [zpow_add_one, Equiv.Perm.mul_apply, ih (q x), C.label_invariant]
   | pred n ih =>
-      have : ((q : Equiv.Perm X) ^ (-(n : ℤ) - 1)) x = q⁻¹ ((q ^ (-(n : ℤ))) x) := by
-        rw [sub_eq_add_neg, zpow_add]
-        simp [Equiv.Perm.mul_apply]
-      rw [this, C.label_inv_apply, ih]
+      intro x
+      rw [sub_eq_add_neg, zpow_add, Equiv.Perm.mul_apply, zpow_neg_one,
+        ih (q⁻¹ x), C.label_inv_apply]
 
 theorem label_eq_of_sameCycle {x y : X} (h : q.SameCycle x y) :
     C.label x = C.label y := by
@@ -70,10 +68,11 @@ noncomputable def orbitEquiv : Quotient (SameCycle.setoid q) ≃ β where
 
 /-- **The abstract engine**: a permutation with an orbit-label certificate
 over `β` has exactly `card β` cycles. -/
-theorem numCycles_eq_card : numCycles q = Fintype.card β := by
+theorem numCycles_eq_card (C : OrbitLabelCert q β) :
+    numCycles q = Fintype.card β := by
   classical
   unfold numCycles
-  exact Fintype.card_congr (orbitEquiv C)
+  exact Fintype.card_congr C.orbitEquiv
 
 end OrbitLabelCert
 

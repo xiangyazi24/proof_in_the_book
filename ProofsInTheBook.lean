@@ -17,6 +17,7 @@ import ProofsInTheBook.PearlClassification
 import ProofsInTheBook.Bricard
 import ProofsInTheBook.BricardMatch
 import ProofsInTheBook.BricardInduce
+import ProofsInTheBook.BricardPearls
 import ProofsInTheBook.Chapter10
 import ProofsInTheBook.Chapter11
 import ProofsInTheBook.Chapter12

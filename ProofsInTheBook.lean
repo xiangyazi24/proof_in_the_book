@@ -52,6 +52,7 @@ import ProofsInTheBook.SphericalAdmissibleSup
 import ProofsInTheBook.SphericalArmClose
 import ProofsInTheBook.SphericalArmFinal
 import ProofsInTheBook.SphericalSZComplete
+import ProofsInTheBook.SphericalStuckWitness
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15

@@ -177,6 +177,7 @@ import ProofsInTheBook.PolygonContainment
 import ProofsInTheBook.PolygonCutGeometry
 import ProofsInTheBook.PolygonMClose
 import ProofsInTheBook.PolygonGeomInput
+import ProofsInTheBook.PolygonJordan
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

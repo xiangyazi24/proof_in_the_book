@@ -13,6 +13,7 @@ import ProofsInTheBook.PearlLemma
 import ProofsInTheBook.TetPearls
 import ProofsInTheBook.TetVolume
 import ProofsInTheBook.TetDihedral
+import ProofsInTheBook.PearlClassification
 import ProofsInTheBook.Chapter10
 import ProofsInTheBook.Chapter11
 import ProofsInTheBook.Chapter12

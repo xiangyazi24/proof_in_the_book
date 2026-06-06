@@ -108,6 +108,7 @@ import ProofsInTheBook.PolygonLocalConstancy
 import ProofsInTheBook.PolygonVertexSweep
 import ProofsInTheBook.PolygonSideCrossing
 import ProofsInTheBook.PolygonTriangulation
+import ProofsInTheBook.PolygonCutOracle
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

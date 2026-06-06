@@ -139,6 +139,7 @@ import ProofsInTheBook.PolygonLeaf
 import ProofsInTheBook.PolygonSeparation
 import ProofsInTheBook.PolygonWall
 import ProofsInTheBook.PolygonWallGlobal
+import ProofsInTheBook.PolygonGenericRay
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

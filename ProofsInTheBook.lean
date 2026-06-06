@@ -115,6 +115,7 @@ import ProofsInTheBook.ChordSplitNT
 import ProofsInTheBook.ChordSplitEuler
 import ProofsInTheBook.ChordSideRecon
 import ProofsInTheBook.ChordFaceCount
+import ProofsInTheBook.ChordDisk
 import ProofsInTheBook.PlanarMapCutCapV
 import ProofsInTheBook.PlanarMapCutCapF
 import ProofsInTheBook.PlanarMapCutCapConn

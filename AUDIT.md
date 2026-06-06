@@ -2,6 +2,43 @@
 
 Date: 2026-06-04. Method: per-chapter headline theorem `chapterNN`, statement-faithfulness + `#print axioms`.
 
+## CONSOLIDATED FRONTIER (2026-06-06, after the deep multi-round closing campaign) — 37/40
+Three open chapters; each driven layer-by-layer to its precise final core, banking ~30 new files of
+genuine unconditional infrastructure (all 0-sorry, clean-3, pushed). Multiple re-wrappers caught and NOT
+banked; several unsound Props caught and corrected. The residues now require UPSTREAM single-file edits or
+new sub-developments (leaf-new-file agents correctly refused to cross their write boundary) — the
+orchestrator-coordination inflection point.
+
+- **Ch13 (Cauchy rigidity), spherical arm lemma.** UNCONDITIONAL: PlanarConvexDiagPos (GP-syzygy,
+  sign-definite), cyclicTriplePos, both-sign §8.1 keystone (oriented opening), DiagonalCutArm, tailArm
+  (endpoint-preserving), the joint-angle-target reach/stuck trichotomy at the admissible sup, and the FULL
+  §8.3 neighbourhood convexity persistence (openArm_strictConvex_nhds, all 5 fields incl. open_hemisphere).
+  RESIDUE: BoundaryConvexPersist (extend §8.3 persistence to the admissible sup δ* — the admissible-sup
+  family monitors only mixed-supports + targetSlack, NOT the rotated-tail open_hemisphere; needs adding it
+  to the monitored family upstream in SphericalAdmissibleSup/SphericalCore) + OpeningStructuralAssembly
+  (arbitrary-joint opening + reach recursion + matched-data cut). The prior BoundaryConvexPersistAtSup was
+  found UNSOUND and replaced.
+- **Ch35 (Five Color / Thomassen).** UNCONDITIONAL: SidesReach2, chord-case recursion knot, V/E/face-count
+  theorems, the genus-0 no-handle core (genus-slack monotonicity — the deepest 3-kernel-round residue,
+  closed), kept-side connectivity, Side₁IsDisk (fully unconditional), ι_surj (side-vertex orbit surjection).
+  RESIDUE: ChordSideClassification = NearTriangulation(sideMap₁) — the outerCycle/inner_tri face
+  classification (kernel-confirmed genus-dependent face structure, CutFaceLabel) + correct-anchor
+  ContiguousInterval (for ι_inj / the fresh-chord-dart ι_adj) + the chordless FanSurgeryReconstruction
+  outerCycle/inner_tri (no producer) + hcompat (Separates' input, obvious form false per CH35_BRIDGE §6).
+  The genuine discrete-Jordan face-classification development.
+- **Ch36 (Chvátal art gallery).** UNCONDITIONAL: the entire ray-crossing-parity core (global
+  ray-independence, n=3 degenerate-wall transport), hconv (crossTau-sign), SubRegionContainment +
+  OffDiagDisjoint (derived from a CutGeometry's primitive split-region fields), the det2-side diagonal-line
+  geometry. RESIDUE: RegionSplitGenericity (= general-n GenericChainInput — the det2-side↔crossing-region
+  link IS the wall-crossing parity transport ∘ general-n ray-genericity; n=3 done, general n needs extending
+  the degenwall machinery; straight-segment shortcut blocked) + M peel-order (upstream
+  PolygonLast.combinatorialGlue_of_attach edit).
+
+Pattern: Ch35 + Ch36 both bottom out at discrete-Jordan face/region classification; Ch13 at the SZ-opening
+boundary persistence + structural assembly. Genus-slack (Ch35) and the CutGeometry primitive-field
+reduction (Ch36) proved that "irreducible Jordan walls" can crack — the remaining cores are coordinated
+upstream extensions, not foundational impossibilities.
+
 ## Objective results (mechanical, definitive)
 - **0 `sorry` / 0 `admit`** across all 54 `.lean` files.
 - **0 top-level `axiom`** declarations.

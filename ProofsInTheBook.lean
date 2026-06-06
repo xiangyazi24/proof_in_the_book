@@ -43,6 +43,7 @@ import ProofsInTheBook.SphericalSZChain
 import ProofsInTheBook.SphericalCyclicTriple
 import ProofsInTheBook.SphericalGnomonic
 import ProofsInTheBook.PlanarConvexDiag
+import ProofsInTheBook.SphericalSZStep
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15

@@ -47,6 +47,7 @@ import ProofsInTheBook.SphericalSZStep
 import ProofsInTheBook.SphericalHingeCut
 import ProofsInTheBook.SphericalDiagCut
 import ProofsInTheBook.SphericalOpeningProcess
+import ProofsInTheBook.SphericalReachStuck
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15

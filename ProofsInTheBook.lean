@@ -54,6 +54,7 @@ import ProofsInTheBook.SphericalArmFinal
 import ProofsInTheBook.SphericalSZComplete
 import ProofsInTheBook.SphericalStuckWitness
 import ProofsInTheBook.SphericalTerminalVis
+import ProofsInTheBook.SphericalArmUncond
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15

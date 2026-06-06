@@ -107,6 +107,16 @@ Every remaining fragment is now reduced to ONE precise hard core:
 
 Design-gated (Ch09/13/36 + Ch33 normalization): the auto pbook bridge truncates long design answers; Xiang relaying ChatGPT-Pro (as with the Tucker proof) is the reliable unblock. Blueprints staged at /tmp/pbook_*.txt.
 
+## Ch09 CLOSED (2026-06-06): chapter09_weighted — 37/40
+`ProofsInTheBook.Chapter09Weighted.chapter09_weighted : ¬ Nonempty (TetEquidecomp regularTetSolid cubeSolid)`
+— UNCONDITIONAL, axioms = {propext, Classical.choice, Quot.sound}. The Bricard angular obstruction
+(Pearl/Cone route, book ch9): cone_lemma -> pearl_lemma -> sector sums -> tet substrate -> dihedral
+angles (arccos(1/3) / Kuhn classification pi/2,pi,2pi) -> weighted Sigma double count -> mod-Qpi
+contradiction via the proven arccos irrationality. Fixed-size pair (regular tet, unit Kuhn cube);
+the obstruction is scale-invariant (no volume used) — the forall-size form is a cosmetic similarity
+transport, noted honestly. 20 files, ~8000 lines built for this chapter.
+Open = {13, 35, 36} = 3 chapters.
+
 ## Closing-round status (2026-06-06, latest)
 In flight: polylast (Ch36: count bijection + half-plane + merge => unconditional artGallery),
 bricardloc (Ch09: the two concrete LocationData certificates => unconditional headline),

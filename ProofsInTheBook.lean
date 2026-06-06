@@ -49,6 +49,7 @@ import ProofsInTheBook.SphericalDiagCut
 import ProofsInTheBook.SphericalOpeningProcess
 import ProofsInTheBook.SphericalReachStuck
 import ProofsInTheBook.SphericalAdmissibleSup
+import ProofsInTheBook.SphericalArmClose
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15
@@ -161,6 +162,7 @@ import ProofsInTheBook.PolygonTriangleConvex
 import ProofsInTheBook.PolygonResidualData
 import ProofsInTheBook.PolygonCutClose
 import ProofsInTheBook.PolygonContainment
+import ProofsInTheBook.PolygonCutGeometry
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

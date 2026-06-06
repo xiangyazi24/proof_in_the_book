@@ -158,6 +158,40 @@ with one Opus closer in flight per chapter:
 The Rodrigues rotation engine (SphericalRotation: rot/rotS2/group-law/isometry) is fully built — Ch13
 §8.1 layer done, reused not rebuilt.
 
+## Deep-grind frontier (2026-06-06, late — after the multi-round closing wave)
+Still 37/40. Each of the three open chapters had its hard core driven layer-by-layer to a single
+NAMED concrete residue, banking genuine unconditional content at every step (all 0-sorry, clean-3,
+pushed). Two re-wrapper attempts caught and NOT banked (jordanoracle JordanInput, szchain SZStepGeom
+co-extensive). The residues are the genuine mathematical cores of the three hardest BOOK chapters:
+
+- **Ch13 (Cauchy rigidity)** — spherical arm lemma. UNCONDITIONAL now: PlanarConvexDiagPos (the
+  convex-position core, via the quadratic Grassmann-Plucker syzygy = sign-definite arithmetic,
+  avoiding oriented-angle/mod-2pi — a genuine breakthrough), hence cyclicTriplePos. BANKED base:
+  reach_base_endpoint_mono (via spherical_hinge_mono), equalAngleCut_step, diag_len_eq,
+  cut_endpt_transport. RESIDUE = 3 named Props (the §8 hinge/cut machinery, currently UNBUILT):
+  OpenedBaseAngleMono (§8.1 oriented tangent-angle additivity), OpenArmConvexPersist (§8.3),
+  StuckGivesCut (§8.4 diagonal cut). Closer: SphericalHingeCut.lean (in flight). Frontier after =
+  vertex-link correspondence / Cauchy bridge (full design in CH13_CAUCHY_FULL_DESIGN.md).
+- **Ch35 (Five Color / Thomassen)** — UNCONDITIONAL now: SidesReach2, the chord-case recursion knot
+  (chord_case_recursive PRODUCES side colorings by recursing — colorings off the oracle hypothesis
+  surface), freshMap V/E orbit counts, side-map connectivity. RESIDUE = FreshFaceCount (F1+F2=F+1,
+  the genus-0 face certificate) — kernel-CONFIRMED (CutFaceLabel campaign, K4 sphere/torus mirror)
+  genus-DEPENDENT, so Separates-reachability CANNOT give it; needs M's genus-0 face structure via an
+  explicit face-permutation orbit bijection (the vertex bijection in ChordSplitEuler is the template).
+  Closer: ChordFaceCount.lean (in flight). The repo architecturally makes this a structure field
+  everywhere (CutCapSurgery.face_count, FanSurgeryReconstruction.facesMerge) — the deepest residue.
+- **Ch36 (Chvatal art gallery)** — UNCONDITIONAL now: the ENTIRE ray-crossing-parity combinatorial
+  core — global ray-independence (no-wall hyp eliminated), generic-stratum discharge, and the
+  triangle degenerate-wall double-event transport ⟹ unconditionalRayIndepInput_triangle +
+  triangleExteriorEven_unconditional (both 0-hypothesis, clean-3). RESIDUE = the Fisk
+  triangulation-recursion planar geometry: ResidualGeometryData (convex-vertex existence, diagonal
+  transversality, half-plane disjointness, intersection=diagonal), TriangleConvexLeaf (easy),
+  DiagonalAttachInput. Closer: PolygonGeometryData.lean (in flight). The "hardest geometric build."
+
+Honest note: these three residues are each substantial genuine geometry/topology (not fakeable),
+likely multi-round. The campaign is converging (real lemmas banked each round, residues named and
+shrinking), not looping.
+
 ## Frontier 2026-06-06 (the three-chapter endgame, all engines built)
 - Ch35: chord wall = BankComponentCert.same_component (per-cycle bank-component fact; 13 passes of
   machinery all proven: chi_le_two, V'/E', touch-rank engine, word realization, Jordan-from-lower-

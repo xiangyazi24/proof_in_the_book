@@ -105,6 +105,7 @@ import ProofsInTheBook.PolygonResidues
 import ProofsInTheBook.PolygonLocalConstancy
 import ProofsInTheBook.PolygonVertexSweep
 import ProofsInTheBook.PolygonSideCrossing
+import ProofsInTheBook.PolygonTriangulation
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

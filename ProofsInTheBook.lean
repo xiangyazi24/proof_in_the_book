@@ -97,6 +97,7 @@ import ProofsInTheBook.ForcedSplits
 import ProofsInTheBook.FaceCorrWord
 import ProofsInTheBook.TouchRank
 import ProofsInTheBook.TouchCert
+import ProofsInTheBook.SeamStructure
 import ProofsInTheBook.PlanarMapCutCapV
 import ProofsInTheBook.PlanarMapCutCapF
 import ProofsInTheBook.PlanarMapCutCapConn

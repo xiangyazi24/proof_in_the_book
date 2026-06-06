@@ -103,6 +103,7 @@ import ProofsInTheBook.PolygonConvexVertex
 import ProofsInTheBook.PolygonResidues
 import ProofsInTheBook.PolygonLocalConstancy
 import ProofsInTheBook.PolygonVertexSweep
+import ProofsInTheBook.PolygonSideCrossing
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

@@ -107,6 +107,16 @@ Every remaining fragment is now reduced to ONE precise hard core:
 
 Design-gated (Ch09/13/36 + Ch33 normalization): the auto pbook bridge truncates long design answers; Xiang relaying ChatGPT-Pro (as with the Tucker proof) is the reliable unblock. Blueprints staged at /tmp/pbook_*.txt.
 
+## Endgame status (2026-06-06, late)
+- Ch36: in-flight rayindep = ray-direction independence (span_mod_two in the direction variable) +
+  Fisk bridge + artGallery_strict headline. Everything else proven.
+- Ch09: in-flight bricardcube = Kuhn 6-simplex cube + EdgesNonOverlapping + pi/2 externals; then
+  only the two LocationData certificates remain.
+- Ch13: kernel + cosine rule + hinge proven; in-flight spharm = the SZ induction (triangle ineq,
+  rotation operation, admissible sup, stuck chain).
+- Ch35: queued = abstract seam characterization (the convergent missing layer) feeding
+  BankComponentCert.same_component; bridge witness data; deletion orientation data; f13-16.
+
 ## Frontier 2026-06-06 (the three-chapter endgame, all engines built)
 - Ch35: chord wall = BankComponentCert.same_component (per-cycle bank-component fact; 13 passes of
   machinery all proven: chi_le_two, V'/E', touch-rank engine, word realization, Jordan-from-lower-

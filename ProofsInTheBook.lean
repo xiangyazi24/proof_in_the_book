@@ -29,6 +29,7 @@ import ProofsInTheBook.Chapter12
 import ProofsInTheBook.ArmLemma
 import ProofsInTheBook.SphericalKernel
 import ProofsInTheBook.SphericalArm
+import ProofsInTheBook.SphericalRotation
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15

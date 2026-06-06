@@ -25,6 +25,7 @@ import ProofsInTheBook.BricardConcrete
 import ProofsInTheBook.BricardCube
 import ProofsInTheBook.BricardLocation
 import ProofsInTheBook.BricardCubePearls
+import ProofsInTheBook.Chapter09Final
 import ProofsInTheBook.Chapter10
 import ProofsInTheBook.Chapter11
 import ProofsInTheBook.Chapter12

@@ -130,6 +130,7 @@ import ProofsInTheBook.ChordSideClose
 import ProofsInTheBook.ChordReconClose
 import ProofsInTheBook.ChordSideNT
 import ProofsInTheBook.ChordContiguous
+import ProofsInTheBook.ChordInnerTri
 import ProofsInTheBook.ChordlessClose
 import ProofsInTheBook.PlanarMapCutCapV
 import ProofsInTheBook.PlanarMapCutCapF
@@ -170,6 +171,7 @@ import ProofsInTheBook.PolygonResidualData
 import ProofsInTheBook.PolygonCutClose
 import ProofsInTheBook.PolygonContainment
 import ProofsInTheBook.PolygonCutGeometry
+import ProofsInTheBook.PolygonMClose
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

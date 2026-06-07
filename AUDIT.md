@@ -2,6 +2,43 @@
 
 Date: 2026-06-04. Method: per-chapter headline theorem `chapterNN`, statement-faithfulness + `#print axioms`.
 
+## CONVERGED FRONTIER (2026-06-06, after the fresh-angle campaign) — 37/40
+The fresh-angle campaign (per the don't-give-up doctrine) REVERSED every premature "blocked/needs-new-theorem"
+verdict and drove all 3 open chapters, banking ~50 files of unconditional scaffolding, to a SINGLE unified
+irreducible core each — and crucially, ALL distinct attack angles now CONVERGE to the same core per chapter
+(a stronger signal than "angle not yet found"). Each core is the genuine Jordan / convex-geometry content the
+crossing-parity / combinatorial-map abstraction deliberately defers. Many wrong framings were machine-caught
+(vacuous Props: ChordBigonWrap.keptPhi-wrap, TerminalVisibility; false equalities: MatchedCutCornerStep joint-0;
+the §6 closing-support determinant refutation).
+
+- **Ch13 → `DeficientReachOpen`.** UNCONDITIONAL: PlanarConvexDiagPos (GP-syzygy), cyclicTriplePos, both-sign §8.1
+  keystone, the full interior matched cut (frontCut, endpoint-preserving), the cut-corner angle inequality
+  (sphAngle SSS + HINGE-11.3 additivity), the tangent-cone membership (gnomonic bridge → span ℝ≥0), full §8.3
+  persistence + hemisphere augmentation, the any-support cut (stuckSupport_gives_cut), SZInductiveStep (qstar/
+  betweenness ELIMINATED), the congruent branch (fully discharged), the reach/stuck dichotomy wiring. RESIDUE =
+  the deficient-case matched-cut: (a) REACH-branch boundary STRICT positivity at the admissible sup δ* (the
+  trichotomy gives nonneg; hemisphere strictness at the boundary), (b) STUCK-branch matched B-companion two-piece
+  cut + the terminating reach recursion. The SZ-opening's terminating recursion.
+- **Ch35 → `SideTracePhiTwoCycle`.** UNCONDITIONAL: SidesReach2, chord recursion, V/E/face-count theorems, the
+  genus-0 no-handle core (genus-slack), kept-side connectivity, Side₁IsDisk, ι_surj, the face-SIZE=3 theorem,
+  the face-orbit surjection, chord-choice contiguity, tOrbitCard=2 arithmetic, the post-splice 2-cycle algebra.
+  RESIDUE = the post-splice tracePhi 2-cycle = the correct chord-cap placement (the swap closing the bigon across
+  u↔v). Tangle: chord_case_recursive abstracts each side as a generic CombMap+ι (NOT sideMap₁), so the chord-side
+  has non-unified framings (sideMap₁/anchors vs ChordSideReconstruction/generic vs cutCap); the residue is the
+  discrete-planar chord-cap/face classification, unbuilt at the CombMap layer.
+- **Ch36 → `OffDiagDisjoint` / `earDeletedExterior`.** UNCONDITIONAL: the entire ray-crossing-parity core, global
+  + general-n ray-independence, hconv (crossTau-sign), SubRegionContainment, the det2-side geometry, the
+  convex-vertex index, IsConvexVertex' for general n (ear-deletion induction: ear_delete_strict + the diagonal
+  count-additivity + the n=3 base), the ⌊n/3⌋ headline modulo one residue. RESIDUE (UNIFIED — the ear step folds
+  into it, no new residue) = OffDiagDisjoint: the two crossing-parity sub-regions are disjoint off the diagonal
+  = inside-XOR-outside = the parity↔det2-side link = the planar Jordan curve theorem's disjointness. Parity alone
+  admits (in_L,in_R)=(1,1) (parity_admits_both_inside); needs the geometric in_L ⟹ left-of-diagonal.
+
+These three are the genuine irreducible cores: the planar Jordan curve theorem (Ch36), the SZ-opening terminating
+recursion + boundary strictness (Ch13), the discrete-planar chord-cap classification (Ch35). All angles converge
+here; closure needs substantial new discrete-Jordan / convex-geometry developments (or a design-level decision),
+not more structural rounds. The headlines stay clean-3, conditional on these named non-vacuous residues.
+
 ## FINAL STABLE FRONTIER (2026-06-06, end of the deep closing campaign) — 37/40
 After ~25 closing rounds, each open chapter is reduced to a SINGLE named, non-vacuous, multiply-confirmed
 (kernel + source + machine-refutation) residue. ~40 new files of genuine unconditional infrastructure banked;

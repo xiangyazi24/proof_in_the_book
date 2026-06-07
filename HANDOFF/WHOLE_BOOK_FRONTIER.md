@@ -57,3 +57,41 @@ ChatGPT questions 7550b8af/0b9ec59e (echoed).
 2. Or provide the Schoenberg–Zaremba paper [5] (its §4 body-transport detail for general-k).
 3. Reconcile uisai1's diverged proof_in_the_book mirror for whole-book builds (Spherical* chain is
    byte-identical/sound; Chapter wrapper files have uncommitted deletions on a diverged lineage).
+
+---
+
+## DEFINITIVE STATUS (2026-06-07, after exhaustive M-lesson re-examination of ALL cores)
+
+The whole book is at 37/40. Each open chapter is reduced to ONE genuine, minimal, INHABITED/non-vacuous
+core. The M lesson (combinatorial "design-blocked" verdicts can be premature) was applied to every core:
+
+**Autonomously DISCHARGED / IMPROVED this session (combinatorial structure was recoverable):**
+- Ch36 `M` (peel-order re-rooting): FULLY DISCHARGED — `PolygonReroot.lastToFirstAll_holds` (the dual-tree
+  adjacency was in `.glue.hShared`). [wiring TODO: import PolygonReroot into PolygonMClose consumer + Audit.lean]
+- Ch35 `gateCompat`: was UNINHABITABLE (`gateFragmentCompatible_uninhabited`); replaced by the INHABITED
+  `gateCompat'` (cap-channel `EndpointCapLink` + `InteriorTriangleGates`), with the cap-channel route to
+  `SphereChordSeparation` proved (`ChordSeparationClose.sphereChordSeparation_of_input'`). All interior
+  gates + `SidesReach2` + `ReachesBank2` + faceCore + Euler discharged. [wiring TODO: replace `gateCompat`
+  by `gateCompat'` in `ChordSeparation.ChordJordanInput`]
+- Ch13 REACH: `hmix`/`hhem` solved via `by_cases stuck` (`SphericalReachConstruction`); blocker is the
+  mechanical +δ→−δ sign fix to `SphericalMonitoredSup` + corrected `ReachStepDatum` banked.
+- Ch36 `OffDiagDisjoint` + `RegionSplitGenericity` discharged unconditionally.
+
+**Genuinely DESIGN-BLOCKED (geometric/Jordan content; re-pursuit confirmed, NOT recoverable from the substrate):**
+- Ch13 `FoldedFlatCutTransport` — §4 spherical body transport (single ≤-diagonal + straight π splice-head joint).
+  Machine-refuted: body-JointLe (splice-head straight), single-side monotonicity (~35% decrease), reversal
+  (orientation), first-corner (numerics). TRUE numerically (100%). = ChatGPT 7d00b70b (in browser).
+- Ch35 `gateCompat'` cross-bank crossing — discrete Jordan; circular with the Euler count at the comb-map layer.
+  = ChatGPT 64b92d49 design.
+- Ch36 `InteriorOddSeed` — planar Jordan (adjacent-triangle interior point inside polygon). windCross is a
+  crossing-PARITY sum (not an angle-winding integral) → can't synthesize a nonzero interior winding; the
+  winding route routes through the machine-refuted `EarHalfPlaneContainment`. = ChatGPT 7550b8af design.
+
+**THE UNBLOCK (only Xiang can do):**
+1. Relay the 3 browser ChatGPT designs (bridge returns "Instant" echoes / BRIDGE_ERROR — can't capture):
+   `7d00b70b` (Ch13 §4 body transport), `64b92d49` (Ch35 discrete Jordan), `7550b8af` (Ch36 planar Jordan).
+2. Reconcile uisai1's diverged `proof_in_the_book` mirror (diverged lineage cb5be71, dirty tree) so the
+   integrated build + the wiring TODOs above + `#print axioms` via Audit.lean can run clean.
+The Jordan curve theorem is famously hard to formalize; absent the relayed designs these 3 cores are
+multi-week dedicated efforts each. Everything else (37 chapters + all the surrounding machinery of 13/35/36)
+is proven clean-3.

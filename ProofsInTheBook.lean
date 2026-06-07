@@ -60,6 +60,7 @@ import ProofsInTheBook.SphericalCornerStep
 import ProofsInTheBook.SphericalConeMembership
 import ProofsInTheBook.SphericalArmDone
 import ProofsInTheBook.SphericalArmFinish
+import ProofsInTheBook.SphericalArmClose2
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15

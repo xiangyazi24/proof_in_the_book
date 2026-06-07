@@ -120,3 +120,30 @@ circular because the disjointness IS the theorem). Mathlib has no winding-number
 together** (vs grinding each residue). That is either ChatGPT 7550b8af (browser) or a from-scratch
 planar-Jordan campaign (major; scope decision for Xiang). Same holistic situation for Ch35 (discrete
 Jordan / cross-bank) and Ch13 (§4 spherical body transport).
+
+---
+
+## Mathlib degree/winding API — thorough check (2026-06-07)
+
+Confirmed ABSENT (the genuine gap): polygon Jordan curve theorem, point-in-polygon, a packaged
+winding number for general contours, "simple curve => winding/degree ±1". This is the irreducible
+content all 3 chapter kernels need (confirmed 6+ routes; every substrate induction circular through
+the kernel; the integer winding bound is not a finite-algebraic / Real.Angle fact).
+
+Mathlib DOES have building blocks for a (B) degree-theory campaign (more tractable than from-scratch):
+- `Analysis/Complex/CauchyIntegral`, `CircleIntegral` (contour integrals; ∮ dz/(z-w) winding for circles)
+- `Analysis/Complex/JensenFormula` (argument principle — zeros via winding)
+- `Topology/Homotopy/Lifting` (covering-space path lifting — the ℝ-lift of the boundary angle = the
+  integer winding; this is exactly what `Spherical... no -- PolygonWindingNumber/PolygonTurning`'s
+  `realTurning`/`coe_realTurning` reconstruct by hand)
+- `Topology/Homotopy/HomotopyGroup`, `AddCircle` (the circle / its cover)
+
+So (B) = compose Cauchy/lifting into "simple polygon boundary loop has winding ∈ {0,±1}, =0 on the
+unbounded component" + the ear-edge escape (route 8, P'-free path to ∞, giving x in the unbounded
+component => winding 0 => earDeletedExterior). The escape's residue `EarLeg1Free`/empty-ear reduces to
+the combinatorial two-ears (an empty ear exists) PLUS escapability (a P'-free path to ∞), the latter
+being the genuine geometric Jordan content. Still research-scope, but the lift half + region-split +
+escape are built; the missing core is "simple => degree ±1" / exterior path-connectedness.
+
+Recommendation unchanged: (A) relay the browser designs (efficient) is far better ROI than a solo
+(B) campaign overnight when the designs exist.

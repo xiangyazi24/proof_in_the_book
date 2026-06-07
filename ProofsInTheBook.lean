@@ -149,6 +149,7 @@ import ProofsInTheBook.ChordBoundaryOrbit
 import ProofsInTheBook.ChordFaceFinal
 import ProofsInTheBook.ChordAnchor
 import ProofsInTheBook.ChordAnchorInst
+import ProofsInTheBook.ChordSplitFinal
 import ProofsInTheBook.ChordBigonWrap
 import ProofsInTheBook.ChordSigmaContig
 import ProofsInTheBook.ChordlessFinal

@@ -59,6 +59,7 @@ import ProofsInTheBook.SphericalMatchedCut
 import ProofsInTheBook.SphericalCornerStep
 import ProofsInTheBook.SphericalConeMembership
 import ProofsInTheBook.SphericalArmDone
+import ProofsInTheBook.SphericalArmFinish
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15
@@ -190,6 +191,7 @@ import ProofsInTheBook.PolygonGeomInput
 import ProofsInTheBook.PolygonJordan
 import ProofsInTheBook.PolygonEarExterior
 import ProofsInTheBook.PolygonEarDelete
+import ProofsInTheBook.PolygonJordanDisjoint
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

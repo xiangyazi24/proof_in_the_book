@@ -61,6 +61,7 @@ import ProofsInTheBook.SphericalConeMembership
 import ProofsInTheBook.SphericalArmDone
 import ProofsInTheBook.SphericalArmFinish
 import ProofsInTheBook.SphericalArmClose2
+import ProofsInTheBook.SphericalStuckCollinear
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15

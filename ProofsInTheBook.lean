@@ -200,6 +200,7 @@ import ProofsInTheBook.PolygonEarDelete
 import ProofsInTheBook.PolygonJordanDisjoint
 import ProofsInTheBook.PolygonWinding
 import ProofsInTheBook.PolygonWindingZero
+import ProofsInTheBook.PolygonWindingExterior
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

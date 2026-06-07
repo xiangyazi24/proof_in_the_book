@@ -194,6 +194,7 @@ import ProofsInTheBook.PolygonJordan
 import ProofsInTheBook.PolygonEarExterior
 import ProofsInTheBook.PolygonEarDelete
 import ProofsInTheBook.PolygonJordanDisjoint
+import ProofsInTheBook.PolygonWinding
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

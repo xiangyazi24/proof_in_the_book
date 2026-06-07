@@ -62,6 +62,7 @@ import ProofsInTheBook.SphericalArmDone
 import ProofsInTheBook.SphericalArmFinish
 import ProofsInTheBook.SphericalArmClose2
 import ProofsInTheBook.SphericalStuckCollinear
+import ProofsInTheBook.SphericalSZInduction
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15
@@ -195,6 +196,7 @@ import ProofsInTheBook.PolygonEarExterior
 import ProofsInTheBook.PolygonEarDelete
 import ProofsInTheBook.PolygonJordanDisjoint
 import ProofsInTheBook.PolygonWinding
+import ProofsInTheBook.PolygonWindingZero
 import ProofsInTheBook.Chapter36
 import ProofsInTheBook.Chapter37
 import ProofsInTheBook.Chapter38

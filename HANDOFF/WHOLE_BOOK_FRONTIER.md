@@ -95,3 +95,28 @@ core. The M lesson (combinatorial "design-blocked" verdicts can be premature) wa
 The Jordan curve theorem is famously hard to formalize; absent the relayed designs these 3 cores are
 multi-week dedicated efforts each. Everything else (37 chapters + all the surrounding machinery of 13/35/36)
 is proven clean-3.
+
+---
+
+## Ch36 deep-dive conclusion (2026-06-07, after 9 routes on earDeletedExterior)
+
+Nine distinct routes drove Ch36's `earDeletedExterior` residue from the global planar Jordan theorem
+down to the tiny-local `EarLeg1Free` (the extreme vertex's ear is empty / has no P-edge endpoint
+inside). Major unconditional gains banked: the signed-angle winding foundation (`oWind`, algebraic
+diagonal-cancellation), the P'-edge classification (`rightEdge_eq_or_diagonal`), the entire Leg-2
+below-extreme-v tail + escape determinant, `¬OnBoundary P' x`, the two-leg transport, and the
+region-free bridge `windCross=0 -> ¬ClosedRegion'`. `InteriorOddSeed` proven FALSE and discarded.
+
+BUT closing `earDeletedExterior` does NOT close Ch36: `rest` (RemainingResidualData = the
+disjoint/boundary/intersection region-split identities) and `M` (DiagonalAttachInput) remain
+independent inputs, and `rest` is the SAME planar-Jordan content. So Ch36's residues all reduce to
+ONE core theorem: **a simple-polygon diagonal splits the interior into two disjoint regions** =
+**simple polygon winding ∈ {0,±1}** = the planar Jordan curve theorem (degree of a simple closed
+curve). The winding foundation is the right scaffolding; the core bound (winding ∈ {0,±1}) is the
+hard kernel (needs degree theory / a non-circular induction — every attempted split-induction is
+circular because the disjointness IS the theorem). Mathlib has no winding-number/Jordan API.
+
+**Efficient path: ONE core region-split/winding-bound theorem closes earDeletedExterior + rest
+together** (vs grinding each residue). That is either ChatGPT 7550b8af (browser) or a from-scratch
+planar-Jordan campaign (major; scope decision for Xiang). Same holistic situation for Ch35 (discrete
+Jordan / cross-bank) and Ch13 (§4 spherical body transport).

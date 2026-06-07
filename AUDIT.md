@@ -2,6 +2,37 @@
 
 Date: 2026-06-04. Method: per-chapter headline theorem `chapterNN`, statement-faithfulness + `#print axioms`.
 
+## MACHINE-BACKED SCOPING (2026-06-06, end of campaign) — 37/40, the three needed developments
+The fresh-angle campaign closed by MACHINE-PROVING what each irreducible core needs (no longer "angle not
+found" but "existing tools proven insufficient + the exact development scoped"). ~52 files of unconditional
+scaffolding banked. The three open chapters need these specific NEW developments (each substantial; not
+closable by more structural one-shots, which now re-confirm):
+
+1. **Ch36 → a winding-number / signed-degree development.** `OffDiagDisjoint` (the planar Jordan
+   chord-separation = inside-XOR-outside) is PROVEN underivable from the substrate: `intCount_admits_both_inside`
+   (the integer count identity cP+2d=cL+cR admits in_L∧in_R∧¬in_P — the diagonal term cancels, count engine
+   blind at parity AND ℤ granularity) + `lineSide_blind_to_chord_endpoints` (affine det2-sign's zero set is the
+   whole infinite line; a non-convex ear straddles it). NEEDED: a position-aware winding/degree argument tracking
+   the probe ray's SIGNED intersection with the chord SEGMENT (or a Jordan-curve-theorem instance for the ear
+   domain). Everything else in Ch36 is unconditional (parity core, general-n ray-independence, IsConvexVertex'
+   via ear-deletion, the ⌊n/3⌋ headline modulo this one residue).
+2. **Ch13 → boundary-strict-persistence + B-companion cut.** The terminating reach recursion DRIVER is built
+   (defStep_endpt). `DeficientReachStep` needs: (a) a strict-convex persistence lemma UP TO the admissible
+   supremum δ* (current reach_strictConvex_at_sup takes strictness as a hypothesis; the trichotomy gives only a
+   boundary disjunction), and (b) the matched B-companion two-piece cut at an arbitrary stuck support (current
+   stuckSupport_gives_cut gives one A-arm, no B-companion / endpoint-preservation / frontCut-alignment). Both are
+   constructive/analytic, not classical-theorem-hard. Everything else is unconditional (PlanarConvexDiagPos,
+   cyclicTriplePos, both keystones, the cut machinery, cone membership, congruent branch, the recursion driver).
+3. **Ch35 → the discrete-planar chord-cap classification.** `SideTracePhiTwoCycle` (the post-splice tracePhi
+   2-cycle = the correct chord-cap placement) needs the chord caps connected to the vertex rotation / the
+   recursion's generic side map — the same vertex-rotation σ-contiguity / face-correspondence the CombMap layer
+   defers (CutFaceLabel kernel-refuted the uniform-orbit-label route). Everything else is unconditional (genus
+   core, connectivity, ι_surj, face-size, tOrbitCard, the 2-cycle algebra).
+
+Next lever: a decision to invest in these three developments (or design rounds), notably the winding-number
+machinery for Ch36 (the polygon Jordan curve theorem). Headlines stay clean-3, conditional only on these named
+non-vacuous residues. Full build 8642 jobs.
+
 ## CONVERGED FRONTIER (2026-06-06, after the fresh-angle campaign) — 37/40
 The fresh-angle campaign (per the don't-give-up doctrine) REVERSED every premature "blocked/needs-new-theorem"
 verdict and drove all 3 open chapters, banking ~50 files of unconditional scaffolding, to a SINGLE unified

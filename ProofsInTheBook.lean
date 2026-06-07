@@ -65,6 +65,7 @@ import ProofsInTheBook.SphericalStuckCollinear
 import ProofsInTheBook.SphericalSZInduction
 import ProofsInTheBook.SphericalSZStepClose
 import ProofsInTheBook.SphericalSZFinal
+import ProofsInTheBook.SphericalSZClose
 import ProofsInTheBook.Chapter13
 import ProofsInTheBook.Chapter14
 import ProofsInTheBook.Chapter15

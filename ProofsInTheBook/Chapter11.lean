@@ -160,7 +160,7 @@ theorem Direction.angle_injective : Function.Injective Direction.angle := by
     · linarith [Real.neg_pi_div_two_lt_arctan m]
   | .finite m1, .finite m2 =>
     simp only [Direction.angle] at h
-    split_ifs at h with h1 h2 h1 h2
+    split_ifs at h with h1 _h2 h1
     · exact congr_arg _ (Real.arctan_injective h)
     · linarith [Real.arctan_lt_pi_div_two m1, Real.neg_pi_div_two_lt_arctan m2]
     · linarith [Real.arctan_lt_pi_div_two m2, Real.neg_pi_div_two_lt_arctan m1]
@@ -575,7 +575,7 @@ theorem orientedLevel_order_reversed_at_event {p q : Point2} (hpq : p ≠ q)
     (h_span : θ₂ - θ₁ < Real.pi)
     (hlt : orientedLevel θ₁ p < orientedLevel θ₁ q)
     (htie : orientedLevel θ_e p = orientedLevel θ_e q)
-    (hne2 : orientedLevel θ₂ p ≠ orientedLevel θ₂ q) :
+    (_hne2 : orientedLevel θ₂ p ≠ orientedLevel θ₂ q) :
     orientedLevel θ₂ q < orientedLevel θ₂ p := by
   have hab : -(p.1 - q.1) ≠ 0 ∨ (p.2 - q.2) ≠ 0 := by
     by_contra h; push Not at h
@@ -588,9 +588,9 @@ theorem orientedLevel_order_reversed_at_event {p q : Point2} (hpq : p ≠ q)
   have hsub := orientedLevel_sub_eq θ₂ p q
   linarith
 
-theorem orientedLevel_order_preserved_across_event {p q : Point2} (hpq : p ≠ q)
+theorem orientedLevel_order_preserved_across_event {p q : Point2} (_hpq : p ≠ q)
     {θ₁ θ_e θ₂ : ℝ}
-    (hθ₁ : 0 ≤ θ₁) (hθ₂ : θ₂ < Real.pi)
+    (_hθ₁ : 0 ≤ θ₁) (_hθ₂ : θ₂ < Real.pi)
     (h1e : θ₁ < θ_e) (he2 : θ_e < θ₂)
     (hlt : orientedLevel θ₁ p < orientedLevel θ₁ q)
     (hno_tie_at_event : orientedLevel θ_e p ≠ orientedLevel θ_e q)
@@ -730,7 +730,7 @@ theorem sweepSort_event_level_monotone {points : Finset Point2} {k : ℕ}
             ne_of_lt hlt ((sweepSort L θ₁).injective h)) θ ⟨h_lt₁, h_lt_e⟩
 
 theorem levelBlockMirror_reverses_within_block {N : ℕ} {f : Fin N → ℝ}
-    (hf : Monotone f) {i j : Fin N} (hij : i < j) (hfij : f i = f j) :
+    (_hf : Monotone f) {i j : Fin N} (hij : i < j) (hfij : f i = f j) :
     levelBlockMirror f j < levelBlockMirror f i := by
   simp [levelBlockMirror]
   have hlo_i := levelBlockLo_le (f := f) (i := i)
@@ -767,7 +767,7 @@ theorem levelBlockMirror_reverses_within_block {N : ℕ} {f : Fin N → ℝ}
   omega
 
 theorem levelBlockMirror_preserves_across_blocks {N : ℕ} {f : Fin N → ℝ}
-    (hf : Monotone f) {i j : Fin N} (hij : i < j) (hfij : f i < f j) :
+    (hf : Monotone f) {i j : Fin N} (_hij : i < j) (hfij : f i < f j) :
     levelBlockMirror f i < levelBlockMirror f j := by
   have hlo_i := levelBlockLo_le (f := f) (i := i)
   have hhi_i := levelBlockHi_ge (f := f) (i := i)
@@ -778,7 +778,7 @@ theorem levelBlockMirror_preserves_across_blocks {N : ℕ} {f : Fin N → ℝ}
     push Not at h
     linarith [hf h, levelBlockLo_val (f := f) (i := j),
               levelBlockHi_val (f := f) (i := i)]
-  simp only [levelBlockMirror, Fin.lt_def, Fin.val_mk]
+  simp only [levelBlockMirror, Fin.lt_def]
   omega
 
 theorem levelBlockLo_of_mem_block {N : ℕ} {f : Fin N → ℝ}
@@ -894,10 +894,10 @@ theorem label_index_lt_of_orientedLevel_lt {points : Finset Point2} {k : ℕ}
 theorem sweepSort_increasing_within_block {points : Finset Point2} {k : ℕ}
     (L : PointLabeling points k) {θ₀ θ_j θ_ej : ℝ}
     (hid : sweepSort L θ₀ = Equiv.refl _)
-    (hinj₀ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₀ (L.point a)))
+    (_hinj₀ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₀ (L.point a)))
     (hinj_j : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ_j (L.point a)))
-    (hθ₀ : 0 ≤ θ₀) (hθ_ej : θ_ej < Real.pi)
-    (h0j : θ₀ ≤ θ_j) (hj_ej : θ_j < θ_ej)
+    (_hθ₀ : 0 ≤ θ₀) (_hθ_ej : θ_ej < Real.pi)
+    (h0j : θ₀ ≤ θ_j) (_hj_ej : θ_j < θ_ej)
     (hno_tie : ∀ a b : Fin (2 * k), L.point a ≠ L.point b →
       orientedLevel θ_ej (L.point a) = orientedLevel θ_ej (L.point b) →
         ∀ θ ∈ Set.Icc θ₀ θ_j, orientedLevel θ (L.point a) ≠ orientedLevel θ (L.point b))
@@ -917,7 +917,7 @@ noncomputable def blockStarts {N : ℕ} (g : Fin N → ℝ) : Finset (Fin N) :=
   Finset.univ.filter (fun p =>
     p = levelBlockLo g p ∧ (levelBlockLo g p).val < (levelBlockHi g p).val)
 
-theorem blockStarts_nonempty_of_tie {N : ℕ} {g : Fin N → ℝ} (hg : Monotone g)
+theorem blockStarts_nonempty_of_tie {N : ℕ} {g : Fin N → ℝ} (_hg : Monotone g)
     {i j : Fin N} (hij : i < j) (hgij : g i = g j) :
     (blockStarts g).Nonempty := by
   have hlo_idem : levelBlockLo g (levelBlockLo g i) = levelBlockLo g i := by
@@ -6529,7 +6529,7 @@ private theorem levelBlockLo_le_of_monotone_eq' {N : ℕ}
     (hval : g p = g rep) :
     levelBlockLo g rep ≤ p := by
   by_contra h
-  push_neg at h
+  push Not at h
   have hp_le_rep : p ≤ rep :=
     le_of_lt (lt_of_lt_of_le h levelBlockLo_le)
   have hp_in : p ∈ Finset.univ.filter fun j : Fin N => g j = g rep ∧ j ≤ rep :=
@@ -6541,7 +6541,7 @@ private theorem le_levelBlockHi_of_monotone_eq' {N : ℕ}
     (hval : g p = g rep) :
     p ≤ levelBlockHi g rep := by
   by_contra h
-  push_neg at h
+  push Not at h
   have hrep_le_p : rep ≤ p :=
     le_of_lt (lt_of_le_of_lt levelBlockHi_ge h)
   have hp_in : p ∈ Finset.univ.filter fun j : Fin N => g j = g rep ∧ rep ≤ j :=
@@ -6553,7 +6553,7 @@ theorem nontrivialLevelRep_block {N : ℕ} {g : Fin N → ℝ} (hg : Monotone g)
     (levelBlockLo g (nontrivialLevelRep g v hv)).val <
       (levelBlockHi g (nontrivialLevelRep g v hv)).val := by
   by_contra h
-  push_neg at h
+  push Not at h
   have hle := Fin.le_def.mp (levelBlockLo_le (f := g) (i := nontrivialLevelRep g v hv))
   have hge := Fin.le_def.mp (levelBlockHi_ge (f := g) (i := nontrivialLevelRep g v hv))
   have hrep := nontrivialLevelRep_val hv
@@ -6701,7 +6701,7 @@ private theorem same_g_value_of_same_block {N : ℕ} {g : Fin N → ℝ}
 noncomputable def sweepReversalStep {points : Finset Point2} {k : ℕ}
     (L : PointLabeling points k)
     {θ₁ θ_e θ₂ θ₀ : ℝ}
-    (hinj₀ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₀ (L.point a)))
+    (_hinj₀ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₀ (L.point a)))
     (hinj₁ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₁ (L.point a)))
     (hinj₂ : Function.Injective (fun a : Fin (2 * k) => orientedLevel θ₂ (L.point a)))
     (hid : sweepSort L θ₀ = Equiv.refl _)
@@ -6729,8 +6729,7 @@ noncomputable def sweepReversalStep {points : Finset Point2} {k : ℕ}
     rw [hcomp]; rfl
   increasing_before := by
     set g := fun i => orientedLevel θ_e (L.point (sweepSort L θ₁ i))
-    intro i
-    intro p hp q hq hpq
+    intro i p hp q hq hpq
     simp only [PositionInterval.toSet, Set.mem_setOf_eq] at hp hq
     have htie : orientedLevel θ_e (L.point (sweepSort L θ₁ p)) =
         orientedLevel θ_e (L.point (sweepSort L θ₁ q)) :=
@@ -6790,7 +6789,7 @@ theorem sortedAngleAt_lt_pi (points : Finset Point2)
   rcases Finset.mem_image.mp (sortedAngleAt_mem points j) with ⟨d, _, hangle⟩
   rw [← hangle]; exact d.angle_lt_pi
 
-theorem orientedLevel_eq_at_direction_angle {p q : Point2} (hpq : p ≠ q) :
+theorem orientedLevel_eq_at_direction_angle {p q : Point2} (_hpq : p ≠ q) :
     orientedLevel (direction p q).angle p = orientedLevel (direction p q).angle q := by
   cases hd : direction p q with
   | vertical =>
@@ -6834,7 +6833,7 @@ theorem orientedLevel_ne_of_angle_between {p q : Point2} (hpq : p ≠ q)
   have hsin_neg : Real.sin (θ₀ - (direction p q).angle) < 0 :=
     Real.sin_neg_of_neg_of_neg_pi_lt (by linarith) (by linarith)
   have hpq_ne : -(p.1 - q.1) ≠ 0 ∨ (p.2 - q.2) ≠ 0 := by
-    by_contra h; push_neg at h
+    by_contra h; push Not at h
     exact hpq (Prod.ext (by linarith [h.1]) (by linarith [h.2]))
   have h_sq_pos : 0 < (-(p.1 - q.1)) ^ 2 + (p.2 - q.2) ^ 2 := by
     rcases hpq_ne with ha | hb <;> positivity
@@ -7197,7 +7196,7 @@ theorem orientedLevel_ne_of_ne_mod_pi {p q : Point2} (hpq : p ≠ q)
   have hzero₀ : -(p.1 - q.1) * Real.sin θ + (p.2 - q.2) * Real.cos θ = 0 := by
     have := orientedLevel_sub_eq θ p q; linarith
   have hpq_ne : -(p.1 - q.1) ≠ 0 ∨ (p.2 - q.2) ≠ 0 := by
-    by_contra h; push_neg at h
+    by_contra h; push Not at h
     exact hpq (Prod.ext (by linarith [h.1]) (by linarith [h.2]))
   have h_sq_pos : 0 < (-(p.1 - q.1)) ^ 2 + (p.2 - q.2) ^ 2 := by
     rcases hpq_ne with ha | hb <;> positivity
@@ -7709,12 +7708,12 @@ private noncomputable def shiftedIndexOfSortedIndex {points : Finset Point2}
   if h : idx.val < s.val then
     ⟨idx.val + r - s.val, by
       have hr : 0 < r := by simpa [r] using Finset.card_pos.mpr hne
-      have hs : s.val < r := by simpa [r] using s.isLt
+      have hs : s.val < r := by simp [r]
       omega⟩
   else
     ⟨idx.val - s.val, by
       have hr : 0 < r := by simpa [r] using Finset.card_pos.mpr hne
-      have hidx : idx.val < r := by simpa [r] using idx.isLt
+      have hidx : idx.val < r := by simp [r]
       omega⟩
 
 private noncomputable def shiftedEventAngleAtIndex (points : Finset Point2)
@@ -7742,7 +7741,7 @@ private theorem shiftedSortedAngleAt_shiftedIndexOfSortedIndex {points : Finset 
       omega
     have hmod : (s.val + (shiftedIndexOfSortedIndex hne s idx).val) % r = idx.val := by
       rw [hsum, Nat.add_mod_right]
-      exact Nat.mod_eq_of_lt (by simpa [r] using idx.isLt)
+      exact Nat.mod_eq_of_lt (by simp [r])
     have hfin :
         (⟨(s.val + (shiftedIndexOfSortedIndex hne s idx).val) %
             (directionsDeterminedBy points).card,
@@ -7753,16 +7752,16 @@ private theorem shiftedSortedAngleAt_shiftedIndexOfSortedIndex {points : Finset 
     simp [shiftedSortedAngleAt, shiftedEventAngleAtIndex, r, hidxs, hwrap, hfin]
   · have hval :
         (shiftedIndexOfSortedIndex hne s idx).val = idx.val - s.val := by
-        simp [shiftedIndexOfSortedIndex, r, hidxs]
+        simp [shiftedIndexOfSortedIndex, hidxs]
     have hsum : s.val + (shiftedIndexOfSortedIndex hne s idx).val = idx.val := by
       rw [hval]
       omega
     have hwrap : s.val + (shiftedIndexOfSortedIndex hne s idx).val < r := by
       rw [hsum]
-      simpa [r] using idx.isLt
+      simp [r]
     have hmod : (s.val + (shiftedIndexOfSortedIndex hne s idx).val) % r = idx.val := by
       rw [hsum]
-      exact Nat.mod_eq_of_lt (by simpa [r] using idx.isLt)
+      exact Nat.mod_eq_of_lt (by simp [r])
     have hfin :
         (⟨(s.val + (shiftedIndexOfSortedIndex hne s idx).val) %
             (directionsDeterminedBy points).card,
@@ -7802,14 +7801,14 @@ theorem interEventAngleAt_last (points : Finset Point2)
 
 theorem sweepLabelingAt_id {points : Finset Point2} {k : ℕ}
     (hcard : points.card = 2 * k)
-    (hne : (directionsDeterminedBy points).Nonempty)
+    (_hne : (directionsDeterminedBy points).Nonempty)
     (θ₀ : ℝ) :
     sweepSort (sweepLabelingAt (points := points) hcard θ₀) θ₀ = Equiv.refl _ :=
   sweepSort_reindex_eq_refl _ _
 
 theorem sweepLabelingAt_inj {points : Finset Point2} {k : ℕ}
     (hcard : points.card = 2 * k)
-    (hne : (directionsDeterminedBy points).Nonempty)
+    (_hne : (directionsDeterminedBy points).Nonempty)
     (θ₀ : ℝ)
     (hlow : ∀ d ∈ directionsDeterminedBy points, d.angle - Real.pi < θ₀)
     (hhigh : ∀ d ∈ directionsDeterminedBy points, θ₀ < d.angle) :
@@ -7834,7 +7833,7 @@ noncomputable def sweepGAS_at {points : Finset Point2} {k : ℕ}
     (s : Fin (directionsDeterminedBy points).card)
     (hlow : ∀ d ∈ directionsDeterminedBy points, d.angle - Real.pi < θ₀)
     (hhigh : ∀ d ∈ directionsDeterminedBy points, θ₀ < d.angle)
-    (hncoll : NoncollinearSet points) :
+    (_hncoll : NoncollinearSet points) :
     GeneralizedAllowableSequence k (directionsDeterminedBy points).card :=
   GeneralizedAllowableSequence.ofSweepAngles
     (sweepLabelingAt hcard θ₀)
@@ -7871,8 +7870,8 @@ private theorem shiftedSortedAngleAt_nonneg (points : Finset Point2)
     ⟨(s.val + j.val) % (directionsDeterminedBy points).card,
       Nat.mod_lt _ (Finset.card_pos.mpr hne)⟩
   by_cases hwrap : s.val + j.val < (directionsDeterminedBy points).card
-  · simp [shiftedSortedAngleAt, hwrap, idx, sortedAngleAt_nonneg]
-  · simp [shiftedSortedAngleAt, hwrap, idx]
+  · simp [hwrap, sortedAngleAt_nonneg]
+  · simp [hwrap]
     have h := sortedAngleAt_nonneg (points := points) idx
     nlinarith [h, Real.pi_pos]
 
@@ -7893,7 +7892,7 @@ theorem shiftedSortedAngleAt_lt_succ {points : Finset Point2}
       have hmod1 : (s.val + (j.val + 1)) % r = s.val + (j.val + 1) :=
         Nat.mod_eq_of_lt h1
       have hlt_nat : s.val + j.val < s.val + (j.val + 1) := by
-        simpa [Nat.add_assoc] using (Nat.lt_succ_self (s.val + j.val))
+        simp
       have hlt : sortedAngleAt points ⟨s.val + j.val, by omega⟩ <
           sortedAngleAt points ⟨s.val + (j.val + 1), by omega⟩ :=
         sortedAngleAt_strictMono points (Fin.lt_def.mpr hlt_nat)
@@ -7901,7 +7900,7 @@ theorem shiftedSortedAngleAt_lt_succ {points : Finset Point2}
         using hlt
     · have hsum : s.val + (j.val + 1) = r := by omega
       have hmod0 : (s.val + j.val) % r = s.val + j.val := Nat.mod_eq_of_lt h0
-      have hmod1 : (s.val + (j.val + 1)) % r = 0 := by simpa [hsum]
+      have hmod1 : (s.val + (j.val + 1)) % r = 0 := by simp [hsum]
       have hlt : sortedAngleAt points ⟨s.val + j.val, by omega⟩ < Real.pi :=
         sortedAngleAt_lt_pi points ⟨s.val + j.val, by omega⟩
       have hnonneg : 0 ≤ sortedAngleAt points (⟨0, Nat.zero_lt_of_lt hr0⟩) :=
@@ -7941,7 +7940,7 @@ private theorem shiftedSortedAngleAt_strictMono {points : Finset Point2}
   let down : Fin (r - 1 + 1) → Fin (directionsDeterminedBy points).card :=
     fun i => ⟨i.1, by simpa [r, hsub] using i.isLt⟩
   let up : Fin (directionsDeterminedBy points).card → Fin (r - 1 + 1) :=
-    fun i => ⟨i.1, by simpa [r, hsub] using i.isLt⟩
+    fun i => ⟨i.1, by simp [r, hsub]⟩
   have hmono' : StrictMono (fun i : Fin (r - 1 + 1) =>
       shiftedSortedAngleAt points hne s (down i)) := by
     refine (Fin.strictMono_iff_lt_succ).2 ?_
@@ -8043,7 +8042,7 @@ theorem interEventAngleAt_lt_shiftedSortedAngle
     (points : Finset Point2)
     (hne : (directionsDeterminedBy points).Nonempty)
     (θ₀ : ℝ) (s : Fin (directionsDeterminedBy points).card)
-    (hlow : ∀ d ∈ directionsDeterminedBy points, d.angle - Real.pi < θ₀)
+    (_hlow : ∀ d ∈ directionsDeterminedBy points, d.angle - Real.pi < θ₀)
     (hhigh : ∀ d ∈ directionsDeterminedBy points, θ₀ < d.angle) :
     ∀ j : Fin (directionsDeterminedBy points).card,
     interEventAngleAt points hne θ₀ s ⟨j.val, by omega⟩ <
@@ -8059,7 +8058,7 @@ theorem interEventAngleAt_lt_shiftedSortedAngle
     simpa [interEventAngleAt_zero, hj0', hjs] using hlow_start
   · have hnotlast : j.val ≠ (directionsDeterminedBy points).card := by omega
     have hpred_lt : (j.val - 1) + 1 < (directionsDeterminedBy points).card := by
-      simpa [Nat.sub_add_cancel (Nat.pos_of_ne_zero hj0)] using j.isLt
+      simp [Nat.sub_add_cancel (Nat.pos_of_ne_zero hj0)]
     have hlt0 : shiftedSortedAngleAt points hne s ⟨j.val - 1, by omega⟩ <
         shiftedSortedAngleAt points hne s ⟨(j.val - 1) + 1, by omega⟩ :=
       shiftedSortedAngleAt_lt_succ (points := points) hne s ⟨j.val - 1, by omega⟩ hpred_lt
@@ -8084,7 +8083,7 @@ theorem shiftedSortedAngleAt_lt_interEventAngleAt_succ
     (hne : (directionsDeterminedBy points).Nonempty)
     (θ₀ : ℝ) (s : Fin (directionsDeterminedBy points).card)
     (hlow : ∀ d ∈ directionsDeterminedBy points, d.angle - Real.pi < θ₀)
-    (hhigh : ∀ d ∈ directionsDeterminedBy points, θ₀ < d.angle) :
+    (_hhigh : ∀ d ∈ directionsDeterminedBy points, θ₀ < d.angle) :
     (hgap : ∀ t : Fin (directionsDeterminedBy points).card,
       t.val < s.val → sortedAngleAt points t < θ₀) →
     ∀ j : Fin (directionsDeterminedBy points).card,
@@ -8154,7 +8153,7 @@ theorem interEventAngleAt_lt_shiftedSortedAngle_mod_pi
     simpa [interEventAngleAt_zero, hj0', hjs] using hlow_start
   · have hnotlast : j.val ≠ (directionsDeterminedBy points).card := by omega
     have hpred_lt : (j.val - 1) + 1 < (directionsDeterminedBy points).card := by
-      simpa [Nat.sub_add_cancel (Nat.pos_of_ne_zero hj0)] using j.isLt
+      simp [Nat.sub_add_cancel (Nat.pos_of_ne_zero hj0)]
     have hlt0 : shiftedSortedAngleAt points hne s ⟨j.val - 1, by omega⟩ <
         shiftedSortedAngleAt points hne s ⟨(j.val - 1) + 1, by omega⟩ :=
       shiftedSortedAngleAt_lt_succ (points := points) hne s ⟨j.val - 1, by omega⟩ hpred_lt
@@ -8387,7 +8386,7 @@ private theorem interEventAngleAt_no_other_shiftedEventAngle {points : Finset Po
     False := by
   let r : ℕ := (directionsDeterminedBy points).card
   have hr : 0 < r := by simpa [r] using Finset.card_pos.mpr hne
-  let j0 : Fin (r + 1) := ⟨j.val, by simpa [r] using j.isLt⟩
+  let j0 : Fin (r + 1) := ⟨j.val, by simp [r]⟩
   let j1 : Fin (r + 1) := ⟨j.val + 1, by omega⟩
   let it : Fin (directionsDeterminedBy points).card :=
     shiftedIndexOfSortedIndex hne s idx
@@ -8437,7 +8436,7 @@ private theorem interEventAngleAt_no_other_shiftedEventAngle {points : Finset Po
     exact (not_lt_of_ge h_lower) hθ
   · have hshift_eq : shiftedSortedAngleAt points hne s it =
         shiftedSortedAngleAt points hne s j := by
-      simpa [hEq]
+      simp [hEq]
     exact hshift_ne hshift_eq
   · have hnext : j < it := hgt
     let jnext : Fin r := ⟨j.val + 1, by omega⟩
@@ -8449,17 +8448,17 @@ private theorem interEventAngleAt_no_other_shiftedEventAngle {points : Finset Po
     have hlt' : shiftedSortedAngleAt points hne s j <
         shiftedSortedAngleAt points hne s jnext := by
       have hjlt : j < jnext := by
-        exact Fin.lt_def.2 (by simpa [jnext] using Nat.lt_succ_self j.val)
+        exact Fin.lt_def.2 (by simp [jnext])
       exact hstrict hjlt
     have hrepr : interEventAngleAt points hne θ₀ s j1 =
         genericAngleBetween (shiftedSortedAngleAt points hne s j)
           (shiftedSortedAngleAt points hne s jnext) := by
       have hj1_last : j.val + 1 ≠ r := by omega
       have hj1_ne0 : (j1 : Fin (r + 1)).val ≠ 0 := by
-        simpa [j1] using (Nat.succ_ne_zero j.val)
+        simp [j1]
       by_cases h : j.val + 1 = (directionsDeterminedBy points).card
       · exact (hj1_last (by simpa [r] using h)).elim
-      · simp [interEventAngleAt, j1, jnext, hj1_ne0, h]
+      · simp [interEventAngleAt, j1, jnext, h]
     have h_succ_lt : interEventAngleAt points hne θ₀ s j1 <
         shiftedSortedAngleAt points hne s jnext := by
       simpa [hrepr] using (genericAngleBetween_lt' hlt')
@@ -8795,7 +8794,7 @@ private theorem interEventAngleAt_no_other_directionAngle {points : Finset Point
     (h_ne : sortedAngleAt points idx ≠ shiftedSortedAngleAt points hne s j) : False := by
   let r : ℕ := (directionsDeterminedBy points).card
   have hr : 0 < r := by simpa [r] using Finset.card_pos.mpr hne
-  let j0 : Fin (r + 1) := ⟨j.val, by simpa [r] using j.isLt⟩
+  let j0 : Fin (r + 1) := ⟨j.val, by simp [r]⟩
   let j1 : Fin (r + 1) := ⟨j.val + 1, by omega⟩
   have h_lower : interEventAngleAt points hne θ₀ s j0 ≤ sortedAngleAt points idx := by
     simpa [j0] using h_in.1
@@ -8815,7 +8814,7 @@ private theorem interEventAngleAt_no_other_directionAngle {points : Finset Point
     dsimp [it]
     omega
   have hmod : (s.val + it.val) % r = idx.val := by
-    have hix : idx.val < (directionsDeterminedBy points).card := by simpa [r] using idx.isLt
+    have hix : idx.val < (directionsDeterminedBy points).card := by simp
     simpa [hsum] using (Nat.mod_eq_of_lt hix)
   have hmod' : (s.val + it.val) % (directionsDeterminedBy points).card = idx.val := by
     simpa [r] using hmod
@@ -8824,7 +8823,7 @@ private theorem interEventAngleAt_no_other_directionAngle {points : Finset Point
     apply Fin.ext
     exact hmod
   have hwrap : s.val + it.val < (directionsDeterminedBy points).card := by
-    simpa [hsum] using idx.isLt
+    simp [hsum]
   have hshift_it : shiftedSortedAngleAt points hne s it = sortedAngleAt points idx := by
     unfold shiftedSortedAngleAt
     have hidx :
@@ -8841,7 +8840,7 @@ private theorem interEventAngleAt_no_other_directionAngle {points : Finset Point
     let down : Fin (r - 1 + 1) → Fin (directionsDeterminedBy points).card :=
       fun i => ⟨i.1, by simpa [r, hsub] using i.isLt⟩
     let up : Fin (directionsDeterminedBy points).card → Fin (r - 1 + 1) :=
-      fun i => ⟨i.1, by simpa [r, hsub] using i.isLt⟩
+      fun i => ⟨i.1, by simp [r, hsub]⟩
     have hmono' : StrictMono (fun i : Fin (r - 1 + 1) => shiftedSortedAngleAt points hne s (down i)) := by
       refine (Fin.strictMono_iff_lt_succ).2 ?_
       intro i
@@ -8887,7 +8886,7 @@ private theorem interEventAngleAt_no_other_directionAngle {points : Finset Point
         _ < interEventAngleAt points hne θ₀ s j0 := h_lt_start
     exact (not_lt_of_ge h_lower) hθ
   · have hshift_eq : shiftedSortedAngleAt points hne s it = shiftedSortedAngleAt points hne s j := by
-      simpa [hEq]
+      simp [hEq]
     exact hshift_ne hshift_eq
   · have hnext : j < it := hgt
     let jnext : Fin r := ⟨j.val + 1, by omega⟩
@@ -8897,16 +8896,16 @@ private theorem interEventAngleAt_no_other_directionAngle {points : Finset Point
         simpa [jnext] using (Nat.succ_le_of_lt (Fin.lt_def.mp hnext)))
     have hlt' : shiftedSortedAngleAt points hne s j < shiftedSortedAngleAt points hne s jnext := by
       have hjlt : j < jnext := by
-        exact Fin.lt_def.2 (by simpa [jnext] using Nat.lt_succ_self j.val)
+        exact Fin.lt_def.2 (by simp [jnext])
       exact hstrict hjlt
     have hrepr : interEventAngleAt points hne θ₀ s j1 =
         genericAngleBetween (shiftedSortedAngleAt points hne s j) (shiftedSortedAngleAt points hne s jnext) := by
       have hj1_last : j.val + 1 ≠ r := by omega
       have hj1_ne0 : (j1 : Fin (r + 1)).val ≠ 0 := by
-        simpa [j1] using (Nat.succ_ne_zero j.val)
+        simp [j1]
       by_cases h : j.val + 1 = (directionsDeterminedBy points).card
       · exact (hj1_last h).elim
-      · simp [interEventAngleAt, j1, jnext, hj1_ne0, h]
+      · simp [interEventAngleAt, j1, jnext, h]
     have h_succ_lt : interEventAngleAt points hne θ₀ s j1 < shiftedSortedAngleAt points hne s jnext := by
       simpa [hrepr] using (genericAngleBetween_lt' hlt')
     have hθ : interEventAngleAt points hne θ₀ s j1 < sortedAngleAt points idx := by
@@ -9035,7 +9034,7 @@ private theorem inj_at_interEventAngleAt {points : Finset Point2} {k : ℕ}
             (interEventAngleAt points hne θ₀ s ⟨j.val, by omega⟩)
             (interEventAngleAt points hne θ₀ s ⟨j.val + 1, by omega⟩) := by
           have hθeq : interEventAngleAt points hne θ₀ s j = sortedAngleAt points idx := by
-            simpa [h_sorted]
+            simp [h_sorted]
           exact ⟨le_of_eq hθeq, hθeq ▸ le_of_lt h_lt⟩
         have hθ_ne_shift : sortedAngleAt points idx ≠ shiftedSortedAngleAt points hne s ⟨j.val, hj_lt⟩ := by
           rw [h_sorted]
@@ -9091,8 +9090,8 @@ private theorem shiftedSortedAngleAt_mod_pi_mem {points : Finset Point2}
   rcases Finset.mem_image.mp hmem with ⟨d, hd, hangle⟩
   refine ⟨d, hd, ?_⟩
   by_cases hwrap : s.val + j.val < (directionsDeterminedBy points).card
-  · left; simpa [idx, hwrap, hangle]
-  · right; simpa [idx, hwrap, hangle]
+  · left; simp [idx, hwrap, hangle]
+  · right; simp [idx, hwrap, hangle]
 
 private theorem nontrivial_blocks_at_eventAt {points : Finset Point2} {k : ℕ}
     (hcard : points.card = 2 * k)
@@ -10066,7 +10065,7 @@ theorem sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_wrap_nonlast
         ⟨s.val + j.val + 1 - (directionsDeterminedBy points).card, by omega⟩ := by
       apply Fin.ext
       simpa [Nat.succ_eq_add_one] using (Nat.succ_sub hwrap).symm
-    simpa [sweepConcreteGAS, CountedGeneralizedAllowableSequence.ofReversesBlocks,
+    simp [sweepConcreteGAS, CountedGeneralizedAllowableSequence.ofReversesBlocks,
       sweepGAS, GeneralizedAllowableSequence.ofSweepAngles, stepTo, L, l, hidx]
   change stepCrossingLabelsCard k
       ((sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).seq.π (stepFrom j))
@@ -10140,7 +10139,7 @@ theorem sweepConcreteGAS_atIndex_mod_pi_crossingLabelsCard_wrap_last
       apply Fin.ext
       change s.val + j.val - (directionsDeterminedBy points).card + 1 = s.val
       omega
-    simpa [sweepConcreteGAS, CountedGeneralizedAllowableSequence.ofReversesBlocks,
+    simp [sweepConcreteGAS, CountedGeneralizedAllowableSequence.ofReversesBlocks,
       sweepGAS, GeneralizedAllowableSequence.ofSweepAngles, stepTo, L, l, θs, τ, hidx]
   change stepCrossingLabelsCard k
       ((sweepConcreteGAS_atIndex_mod_pi hcard hne hr hncoll s).seq.π (stepFrom j))
@@ -10874,8 +10873,7 @@ noncomputable def sweepConcreteGAS_cyclicEndGapWitness_of_noFull
       cyclic_gap_eq := ?_ }
   · refine ⟨hlastB_cross, hnextFirstB_cross, ?_, ?_⟩
     · omega
-    · intro l hlast_l hl_first
-      intro hBl
+    · intro l hlast_l hl_first hBl
       have hlnext : l.val + 1 < (directionsDeterminedBy points).card := by
         omega
       let idx : Fin (directionsDeterminedBy points).card :=

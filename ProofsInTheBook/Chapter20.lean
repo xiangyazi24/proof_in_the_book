@@ -15,9 +15,8 @@ Sperner's lemma to show the triangulation must have an even count.
 Formalization status: this file closes the finite coloring and parity layer.
 It defines Monsky's three colors, red-green boundary edges, trichromatic
 triangles, proves the local parity identity, proves an abstract Sperner
-parity theorem, and derives `chapter20_from_monskyCertificate`: a
-`MonskyCertificate n` yields a trichromatic triangle.  It also packages
-Mathlib's local-subring/Zorn
+parity theorem, and derives `chapter20`: a `MonskyCertificate n` yields a
+trichromatic triangle.  It also packages Mathlib's local-subring/Zorn
 infrastructure into `exists_valuation_extension`, which gives an extension of
 any valuation on a field to any field extension; in particular
 `exists_real_twoAdic_extension` extends `Rat.padicValuation 2` from `ℚ` to `ℝ`.
@@ -29,18 +28,21 @@ with an explicit finite list of unit-square boundary point-edges, constructs
 contradiction for a trichromatic triangle of ordinary real area `1 / n` with
 `n` odd.
 
-The endpoint is packaged in finite interfaces.  `ExtractedEqualAreaSquareTriangulation`
-is the exact payload consumed by the Monsky contradiction: finite vertices,
-listed triangles, a unit-square boundary chain, the odd-multiplicity boundary
-incidence theorem, side constraints, and ordinary equal area `1 / n`.
-`EqualAreaSquareTriangulation` records the usual geometric square-tiling cover
-together with the incidence facts from which the extracted payload is built.
-Both interfaces prove `false_of_odd`, and the top-level `chapter20` theorem
-states the final contradiction for the named geometric interface.
-
-Remaining outside this file: prove that a preferred Mathlib/topological notion
-of a real triangulation of `[0,1]^2` supplies the fields of
-`EqualAreaSquareTriangulation`.
+Gap to the full book theorem: the remaining work is geometric triangulation
+infrastructure.  One needs a finite real triangulation model for the unit
+square and an extraction theorem producing:
+1. a finite vertex type `α`, a point map `vertices : α → ℝ × ℝ`, and triangles
+   `triangles : Fin n → α × α × α`;
+2. four side subdivision lists `bottom right top left : List ℝ`, or equivalently
+   the explicit point-edge chain `realTwoAdicSquareBoundaryPointEdgeList`;
+3. the boundary-incidence theorem that the odd-multiplicity triangle edges are
+   exactly that square boundary chain after mapping boundary points to the
+   finite vertex type;
+4. the ordinary equal-area fact
+   `∀ i, realTriangleArea ... = (1 / n : ℚ)`.
+Mathlib has `Analysis.Convex.SimplicialComplex` and `Geometry.Polygon.Basic`,
+but not this assembled theorem extracting boundary chains and equal-area facts
+from a triangulation of the unit square.
 -/
 
 namespace ProofsInTheBook.Chapter20
@@ -277,19 +279,6 @@ def doubleArea {K : Type*} [Ring K] (a b c : K × K) : K :=
 noncomputable def realTriangleArea (a b c : ℝ × ℝ) : ℝ :=
   |doubleArea a b c| / 2
 
-/-- The closed unit square in the coordinate model used by this chapter. -/
-def unitSquare : Set (ℝ × ℝ) :=
-  {p | 0 ≤ p.1 ∧ p.1 ≤ 1 ∧ 0 ≤ p.2 ∧ p.2 ≤ 1}
-
-/-- The closed geometric triangle spanned by three real plane points. -/
-noncomputable def realTriangleHull (a b c : ℝ × ℝ) : Set (ℝ × ℝ) :=
-  convexHull ℝ ({a, b, c} : Set (ℝ × ℝ))
-
-/-- The closed geometric triangle named by three vertices in a finite vertex model. -/
-noncomputable def triangleHullOfVertices {α : Type*} (vertices : α → ℝ × ℝ)
-    (t : α × α × α) : Set (ℝ × ℝ) :=
-  realTriangleHull (vertices t.1) (vertices t.2.1) (vertices t.2.2)
-
 theorem abs_doubleArea_eq_two_div_of_realTriangleArea_eq_one_div
     {n : ℕ} (hn : n ≠ 0) {a b c : ℝ × ℝ}
     (harea : realTriangleArea a b c = (((1 : ℚ) / n : ℚ) : ℝ)) :
@@ -480,30 +469,6 @@ theorem realTwoAdicColor_left_red_or_blue (y : ℝ) :
   simpa [realTwoAdicColor, valuationColor] using
     colorOfValues_zero_left_red_or_blue (realTwoAdicValuation y)
 
-@[simp]
-theorem realTwoAdicColor_vertex_bottomLeft {α : Type*} (vertices : α → ℝ × ℝ)
-    {v : α} (hv : vertices v = (0, 0)) :
-    (realTwoAdicColor ∘ vertices) v = red := by
-  simp [hv]
-
-@[simp]
-theorem realTwoAdicColor_vertex_bottomRight {α : Type*} (vertices : α → ℝ × ℝ)
-    {v : α} (hv : vertices v = (1, 0)) :
-    (realTwoAdicColor ∘ vertices) v = green := by
-  simp [hv]
-
-@[simp]
-theorem realTwoAdicColor_vertex_topRight {α : Type*} (vertices : α → ℝ × ℝ)
-    {v : α} (hv : vertices v = (1, 1)) :
-    (realTwoAdicColor ∘ vertices) v = green := by
-  simp [hv]
-
-@[simp]
-theorem realTwoAdicColor_vertex_topLeft {α : Type*} (vertices : α → ℝ × ℝ)
-    {v : α} (hv : vertices v = (0, 1)) :
-    (realTwoAdicColor ∘ vertices) v = blue := by
-  simp [hv]
-
 /-- A triangle is trichromatic when its three vertex colors are pairwise different. -/
 def TrichromaticTriangle (a b c : MonskyColor) : Prop :=
   a ≠ b ∧ b ≠ c ∧ c ≠ a
@@ -693,30 +658,6 @@ def colorIsGreenBlue (c : MonskyColor) : Prop := c = green ∨ c = blue
 
 /-- Predicate for colors lying on the red-blue side of the Monsky boundary argument. -/
 def colorIsRedBlue (c : MonskyColor) : Prop := c = red ∨ c = blue
-
-theorem realTwoAdicColor_vertex_on_bottom_redGreen {α : Type*}
-    (vertices : α → ℝ × ℝ) {v : α} (hv : ∃ x : ℝ, vertices v = (x, 0)) :
-    colorIsRedGreen ((realTwoAdicColor ∘ vertices) v) := by
-  rcases hv with ⟨x, hx⟩
-  simpa [Function.comp_def, hx, colorIsRedGreen] using realTwoAdicColor_bottom_red_or_green x
-
-theorem realTwoAdicColor_vertex_on_right_greenBlue {α : Type*}
-    (vertices : α → ℝ × ℝ) {v : α} (hv : ∃ y : ℝ, vertices v = (1, y)) :
-    colorIsGreenBlue ((realTwoAdicColor ∘ vertices) v) := by
-  rcases hv with ⟨y, hy⟩
-  simpa [Function.comp_def, hy, colorIsGreenBlue] using realTwoAdicColor_right_green_or_blue y
-
-theorem realTwoAdicColor_vertex_on_top_greenBlue {α : Type*}
-    (vertices : α → ℝ × ℝ) {v : α} (hv : ∃ x : ℝ, vertices v = (x, 1)) :
-    colorIsGreenBlue ((realTwoAdicColor ∘ vertices) v) := by
-  rcases hv with ⟨x, hx⟩
-  simpa [Function.comp_def, hx, colorIsGreenBlue] using realTwoAdicColor_top_green_or_blue x
-
-theorem realTwoAdicColor_vertex_on_left_redBlue {α : Type*}
-    (vertices : α → ℝ × ℝ) {v : α} (hv : ∃ y : ℝ, vertices v = (0, y)) :
-    colorIsRedBlue ((realTwoAdicColor ∘ vertices) v) := by
-  rcases hv with ⟨y, hy⟩
-  simpa [Function.comp_def, hy, colorIsRedBlue] using realTwoAdicColor_left_red_or_blue y
 
 /-- Encode red/green colors in `ZMod 2`; blue is unused when the red-green invariant applies. -/
 def colorRGParityBit : MonskyColor → ZMod 2
@@ -1061,45 +1002,6 @@ theorem oddEdgeRedGreenCount_odd_of_boundaryEdges
   rw [oddEdgeRedGreenCount_eq_boundaryEdgeRedGreenCount_of_oddMultiplicity
     triangles color boundary hboundary]
   exact hodd
-
-/--
-Convert the stronger incidence data usually obtained from a conforming
-triangulation into the exact odd-multiplicity boundary statement: boundary
-edges are odd, and every non-boundary edge has even multiplicity.
--/
-theorem edgeMultiplicity_odd_iff_mem_boundary_of_odd_on_boundary_even_off
-    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
-    (triangles : Fin n → α × α × α)
-    (boundary : Finset (Sym2 α))
-    (hboundaryOdd : ∀ e : Sym2 α, e ∈ boundary → Odd (edgeMultiplicity triangles e))
-    (hoffBoundaryEven : ∀ e : Sym2 α, e ∉ boundary → Even (edgeMultiplicity triangles e)) :
-    ∀ e : Sym2 α, Odd (edgeMultiplicity triangles e) ↔ e ∈ boundary := by
-  intro e
-  constructor
-  · intro hodd
-    by_contra hnot
-    rcases hodd with ⟨k, hk⟩
-    rcases hoffBoundaryEven e hnot with ⟨l, hl⟩
-    omega
-  · intro hmem
-    exact hboundaryOdd e hmem
-
-/--
-Common geometric incidence form: boundary chain edges appear once, while every
-other unordered edge appears an even number of times.
--/
-theorem edgeMultiplicity_odd_iff_mem_boundary_of_one_on_boundary_even_off
-    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
-    (triangles : Fin n → α × α × α)
-    (boundary : Finset (Sym2 α))
-    (hboundaryOne : ∀ e : Sym2 α, e ∈ boundary → edgeMultiplicity triangles e = 1)
-    (hoffBoundaryEven : ∀ e : Sym2 α, e ∉ boundary → Even (edgeMultiplicity triangles e)) :
-    ∀ e : Sym2 α, Odd (edgeMultiplicity triangles e) ↔ e ∈ boundary := by
-  refine edgeMultiplicity_odd_iff_mem_boundary_of_odd_on_boundary_even_off
-    triangles boundary ?_ hoffBoundaryEven
-  intro e hmem
-  rw [hboundaryOne e hmem]
-  exact ⟨0, by omega⟩
 
 /-- Consecutive unordered edges in a finite vertex chain. -/
 def consecutiveEdges {α : Type*} : List α → List (Sym2 α)
@@ -1529,73 +1431,16 @@ noncomputable def edgeParityMonskyCertificate {α : Type*} [Fintype α] [Decidab
   hparity := sum_triangleLocalRGCount_mod_two_eq_oddEdgeRedGreenCount triangles color
   hodd := hodd
 
-/--
-Construct the certificate directly from a finite square boundary vertex chain.
-This is the combinatorial bridge needed after a geometric triangulation
-extraction has identified the odd-multiplicity edges with the boundary chain.
--/
-noncomputable def squareBoundaryVertexChainMonskyCertificate
-    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
-    (triangles : Fin n → α × α × α) (color : α → MonskyColor)
-    (bottom right top left : List α) (bottomLeft bottomRight topRight topLeft : α)
-    (hboundary : ∀ e : Sym2 α,
-      Odd (edgeMultiplicity triangles e) ↔
-        e ∈ (squareBoundaryEdgeList bottom right top left
-          bottomLeft bottomRight topRight topLeft).toFinset)
-    (hnodup : (squareBoundaryEdgeList bottom right top left
-      bottomLeft bottomRight topRight topLeft).Nodup)
-    (hbottomLeft : color bottomLeft = red)
-    (hbottomRight : color bottomRight = green)
-    (htopRight : color topRight = green)
-    (htopLeft : color topLeft = blue)
-    (hbottom : ∀ v ∈ bottom, colorIsRedGreen (color v))
-    (hright : ∀ v ∈ right, colorIsGreenBlue (color v))
-    (htop : ∀ v ∈ top, colorIsGreenBlue (color v))
-    (hleft : ∀ v ∈ left, colorIsRedBlue (color v)) :
-    MonskyCertificate n :=
-  edgeParityMonskyCertificate triangles color
-    (oddEdgeRedGreenCount_odd_of_squareBoundaryVertexChain triangles color
-      bottom right top left bottomLeft bottomRight topRight topLeft
-      hboundary hnodup hbottomLeft hbottomRight htopRight htopLeft
-      hbottom hright htop hleft)
-
-/--
-The real Monsky-coloring certificate obtained from finite vertex data on the
-unit-square boundary.  The remaining geometric task is to extract these finite
-data and their incidence theorem from an actual triangulation object.
--/
-noncomputable def realSquareBoundaryVertexChainMonskyCertificate
-    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
-    (vertices : α → ℝ × ℝ) (triangles : Fin n → α × α × α)
-    (bottom right top left : List α) (bottomLeft bottomRight topRight topLeft : α)
-    (hboundary : ∀ e : Sym2 α,
-      Odd (edgeMultiplicity triangles e) ↔
-        e ∈ (squareBoundaryEdgeList bottom right top left
-          bottomLeft bottomRight topRight topLeft).toFinset)
-    (hnodup : (squareBoundaryEdgeList bottom right top left
-      bottomLeft bottomRight topRight topLeft).Nodup)
-    (hbottomLeft : vertices bottomLeft = (0, 0))
-    (hbottomRight : vertices bottomRight = (1, 0))
-    (htopRight : vertices topRight = (1, 1))
-    (htopLeft : vertices topLeft = (0, 1))
-    (hbottom : ∀ v ∈ bottom, ∃ x : ℝ, vertices v = (x, 0))
-    (hright : ∀ v ∈ right, ∃ y : ℝ, vertices v = (1, y))
-    (htop : ∀ v ∈ top, ∃ x : ℝ, vertices v = (x, 1))
-    (hleft : ∀ v ∈ left, ∃ y : ℝ, vertices v = (0, y)) :
-    MonskyCertificate n :=
-  edgeParityMonskyCertificate triangles (realTwoAdicColor ∘ vertices)
-    (oddEdgeRedGreenCount_odd_of_realSquareBoundaryVertexChain vertices triangles
-      bottom right top left bottomLeft bottomRight topRight topLeft
-      hboundary hnodup hbottomLeft hbottomRight htopRight htopLeft
-      hbottom hright htop hleft)
-
 /-
-Finite geometric interfaces below isolate the extraction boundary.  The
-Sperner/coloring layer only needs a finite vertex model, square side chains,
-odd-multiplicity boundary incidence, and the equal-area facts.
+Remaining geometric interface: given a hypothetical equal-area triangulation
+of the unit square into an odd number of real triangles, one still needs to
+extract the finite list of triangle vertices, identify the odd-multiplicity
+triangle edges with the explicit square boundary point-edge chain, and express
+the equal-area hypothesis as oriented double area `± 2 / n` for each listed
+triangle.
 -/
 
-/-- Monsky certificate endpoint (Tier 1 conditional):
+/-- Chapter 20 (Monsky's theorem, Tier 1 conditional):
 Given a Monsky 2-adic coloring certificate (which packages the 2-adic
 extension construction + the double-counting parity result + the odd-boundary
 witness), there exists a trichromatic triangle — corresponding to the
@@ -1611,7 +1456,7 @@ prove the oriented double-area alternative `±2/n` for each triangle.  This
 needs square triangulation/boundary-chain infrastructure and oriented-area
 accounting not currently assembled in Mathlib.
 -/
-theorem chapter20_from_monskyCertificate {n : ℕ} (cert : MonskyCertificate n) :
+theorem chapter20 {n : ℕ} (cert : MonskyCertificate n) :
     ∃ i : Fin n,
       TrichromaticTriangle (cert.triangleColors i).1
         (cert.triangleColors i).2.1 (cert.triangleColors i).2.2 :=
@@ -1643,8 +1488,7 @@ theorem chapter20_from_edge_parity {α : Type*} [Fintype α] [DecidableEq α]
       TrichromaticTriangle (triangleColorsOfVertices color (triangles i)).1
         (triangleColorsOfVertices color (triangles i)).2.1
         (triangleColorsOfVertices color (triangles i)).2.2 := by
-  simpa using chapter20_from_monskyCertificate
-    (edgeParityMonskyCertificate triangles color hodd)
+  simpa using chapter20 (edgeParityMonskyCertificate triangles color hodd)
 
 /--
 Finite edge-parity form of the stronger Sperner conclusion: the number of
@@ -1743,7 +1587,7 @@ theorem no_odd_equalArea_realization_of_monskyCertificate {n : ℕ} (hn : Odd n)
     (harea : ∀ i : Fin n,
       doubleArea (triangles i).1 (triangles i).2.1 (triangles i).2.2 =
         (((2 : ℚ) / n : ℚ) : ℝ)) : False := by
-  obtain ⟨i, hi⟩ := chapter20_from_monskyCertificate cert
+  obtain ⟨i, hi⟩ := chapter20 cert
   have htri : TrichromaticTriangle (realTwoAdicColor (triangles i).1)
       (realTwoAdicColor (triangles i).2.1) (realTwoAdicColor (triangles i).2.2) := by
     simpa [hcolors i] using hi
@@ -1766,7 +1610,7 @@ theorem no_odd_equalArea_realization_of_monskyCertificate_abs {n : ℕ} (hn : Od
         (((2 : ℚ) / n : ℚ) : ℝ) ∨
       doubleArea (triangles i).1 (triangles i).2.1 (triangles i).2.2 =
         -(((2 : ℚ) / n : ℚ) : ℝ)) : False := by
-  obtain ⟨i, hi⟩ := chapter20_from_monskyCertificate cert
+  obtain ⟨i, hi⟩ := chapter20 cert
   have htri : TrichromaticTriangle (realTwoAdicColor (triangles i).1)
       (realTwoAdicColor (triangles i).2.1) (realTwoAdicColor (triangles i).2.2) := by
     simpa [hcolors i] using hi
@@ -1787,7 +1631,7 @@ theorem no_odd_equalArea_realization_of_monskyCertificate_area {n : ℕ} (hn : O
     (harea : ∀ i : Fin n,
       realTriangleArea (triangles i).1 (triangles i).2.1 (triangles i).2.2 =
         (((1 : ℚ) / n : ℚ) : ℝ)) : False := by
-  obtain ⟨i, hi⟩ := chapter20_from_monskyCertificate cert
+  obtain ⟨i, hi⟩ := chapter20 cert
   have htri : TrichromaticTriangle (realTwoAdicColor (triangles i).1)
       (realTwoAdicColor (triangles i).2.1) (realTwoAdicColor (triangles i).2.2) := by
     simpa [hcolors i] using hi
@@ -1861,97 +1705,6 @@ theorem no_odd_equalArea_realization_of_edgeParity_area
     cert
     (by intro i; rfl)
     harea
-
-/--
-Minimal geometric hypothesis `H` for closing the Monsky gap.
-
-This is the smallest finite payload consumed by the completed coloring,
-Sperner-parity, and valuation argument: finite real vertex data, `n` listed
-triangles, the single odd boundary-count conclusion for the induced Monsky
-coloring, and ordinary equal area `1 / n` for every listed triangle.
-
-A future extraction theorem from an honest triangulation of `[0,1]^2` should
-produce exactly this structure.  The hard geometric work is hidden only in
-`hboundaryOdd`: for a genuine square triangulation it follows from the
-odd-multiplicity boundary-edge theorem and the four unit-square side color
-constraints.
--/
-structure MinimalMonskyHypothesis (n : ℕ) where
-  Vertex : Type*
-  [instFintype : Fintype Vertex]
-  [instDecidableEq : DecidableEq Vertex]
-  vertices : Vertex → ℝ × ℝ
-  triangles : Fin n → Vertex × Vertex × Vertex
-  hboundaryOdd : Odd (oddEdgeRedGreenCount triangles (realTwoAdicColor ∘ vertices))
-  harea : ∀ i : Fin n,
-    realTriangleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
-        (vertices (triangles i).2.2) =
-      (((1 : ℚ) / n : ℚ) : ℝ)
-
-namespace MinimalMonskyHypothesis
-
-/-- The Monsky color assigned to each vertex in the minimal hypothesis. -/
-noncomputable def color {n : ℕ} (H : MinimalMonskyHypothesis n) :
-    H.Vertex → MonskyColor :=
-  realTwoAdicColor ∘ H.vertices
-
-/-- The Monsky certificate extracted from the minimal hypothesis. -/
-noncomputable def toMonskyCertificate {n : ℕ}
-    (H : MinimalMonskyHypothesis n) : MonskyCertificate n := by
-  letI := H.instFintype
-  letI := H.instDecidableEq
-  exact edgeParityMonskyCertificate H.triangles (realTwoAdicColor ∘ H.vertices)
-    H.hboundaryOdd
-
-@[simp]
-theorem toMonskyCertificate_triangleColors {n : ℕ}
-    (H : MinimalMonskyHypothesis n) (i : Fin n) :
-    (H.toMonskyCertificate.triangleColors i) =
-      triangleColorsOfVertices (realTwoAdicColor ∘ H.vertices) (H.triangles i) := by
-  rfl
-
-/--
-Clean `H → False` endpoint: any finite real triangle data satisfying the
-minimal Monsky boundary-count and equal-area hypotheses cannot have odd size.
--/
-theorem false_of_odd {n : ℕ} (hn : Odd n)
-    (H : MinimalMonskyHypothesis n) : False := by
-  letI := H.instFintype
-  letI := H.instDecidableEq
-  exact no_odd_equalArea_realization_of_edgeParity_area hn H.vertices H.triangles
-    H.hboundaryOdd H.harea
-
-theorem not_odd {n : ℕ} (H : MinimalMonskyHypothesis n) : ¬ Odd n := by
-  intro hn
-  exact H.false_of_odd hn
-
-theorem isEmpty_of_odd {n : ℕ} (hn : Odd n) :
-    IsEmpty (MinimalMonskyHypothesis n) := by
-  constructor
-  intro H
-  exact H.false_of_odd hn
-
-end MinimalMonskyHypothesis
-
-/--
-Top-level spelling of the clean minimal endpoint.  This is the statement to
-target when proving that an arbitrary real equal-area triangulation of the
-unit square supplies the Monsky extraction data.
--/
-theorem no_odd_minimal_monsky_hypothesis {n : ℕ} (hn : Odd n)
-    (H : MinimalMonskyHypothesis n) : False :=
-  MinimalMonskyHypothesis.false_of_odd hn H
-
-/--
-Generic extraction endpoint: for any chosen formal type of real square
-triangulations, it is enough to construct a map into
-`MinimalMonskyHypothesis`.  Odd `n` then contradicts Monsky's coloring and
-valuation argument immediately.
--/
-theorem no_odd_of_minimal_monsky_extraction {Geom : ℕ → Type*}
-    (extract : ∀ {n : ℕ}, Geom n → MinimalMonskyHypothesis n)
-    {n : ℕ} (hn : Odd n) (T : Geom n) : False :=
-  no_odd_minimal_monsky_hypothesis hn (extract T)
 
 /--
 Turn the exact geometric boundary-incidence statement into the odd boundary
@@ -2149,528 +1902,6 @@ theorem no_odd_equalArea_realization_of_realSquareBoundaryVertexChain_area
       hbottom hright htop hleft)
     harea
 
-/--
-Finite data extracted from an equal-area triangulation of the unit square.
-This structure is intentionally not a new geometric definition of
-triangulation; it records the finite output that a future Mathlib-facing
-geometric extraction theorem should produce.
--/
-structure ExtractedEqualAreaSquareTriangulation (n : ℕ) where
-  Vertex : Type*
-  [instFintype : Fintype Vertex]
-  [instDecidableEq : DecidableEq Vertex]
-  vertices : Vertex → ℝ × ℝ
-  triangles : Fin n → Vertex × Vertex × Vertex
-  bottom : List Vertex
-  right : List Vertex
-  top : List Vertex
-  left : List Vertex
-  bottomLeft : Vertex
-  bottomRight : Vertex
-  topRight : Vertex
-  topLeft : Vertex
-  hboundary : ∀ e : Sym2 Vertex,
-    Odd (edgeMultiplicity triangles e) ↔
-      e ∈ (squareBoundaryEdgeList bottom right top left
-        bottomLeft bottomRight topRight topLeft).toFinset
-  hnodup : (squareBoundaryEdgeList bottom right top left
-    bottomLeft bottomRight topRight topLeft).Nodup
-  hbottomLeft : vertices bottomLeft = (0, 0)
-  hbottomRight : vertices bottomRight = (1, 0)
-  htopRight : vertices topRight = (1, 1)
-  htopLeft : vertices topLeft = (0, 1)
-  hbottom : ∀ v ∈ bottom, ∃ x : ℝ, vertices v = (x, 0)
-  hright : ∀ v ∈ right, ∃ y : ℝ, vertices v = (1, y)
-  htop : ∀ v ∈ top, ∃ x : ℝ, vertices v = (x, 1)
-  hleft : ∀ v ∈ left, ∃ y : ℝ, vertices v = (0, y)
-  harea : ∀ i : Fin n,
-    realTriangleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
-        (vertices (triangles i).2.2) =
-      (((1 : ℚ) / n : ℚ) : ℝ)
-
-namespace ExtractedEqualAreaSquareTriangulation
-
-/-- The Monsky certificate canonically associated to extracted finite data. -/
-noncomputable def toMonskyCertificate {n : ℕ}
-    (T : ExtractedEqualAreaSquareTriangulation n) : MonskyCertificate n := by
-  letI := T.instFintype
-  letI := T.instDecidableEq
-  exact realSquareBoundaryVertexChainMonskyCertificate T.vertices T.triangles
-    T.bottom T.right T.top T.left T.bottomLeft T.bottomRight T.topRight T.topLeft
-    T.hboundary T.hnodup T.hbottomLeft T.hbottomRight T.htopRight T.htopLeft
-    T.hbottom T.hright T.htop T.hleft
-
-@[simp]
-theorem toMonskyCertificate_triangleColors {n : ℕ}
-    (T : ExtractedEqualAreaSquareTriangulation n) (i : Fin n) :
-    (T.toMonskyCertificate.triangleColors i) =
-      triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i) := by
-  rfl
-
-/--
-The certificate colors are exactly the 2-adic colors of the three real
-vertices of each extracted triangle.
--/
-theorem toMonskyCertificate_triangleColors_apply {n : ℕ}
-    (T : ExtractedEqualAreaSquareTriangulation n) (i : Fin n) :
-    (T.toMonskyCertificate.triangleColors i) =
-      (realTwoAdicColor (T.vertices (T.triangles i).1),
-       realTwoAdicColor (T.vertices (T.triangles i).2.1),
-       realTwoAdicColor (T.vertices (T.triangles i).2.2)) := by
-  rw [toMonskyCertificate_triangleColors]
-  rfl
-
-/-- The Monsky color assigned to each extracted geometric vertex. -/
-noncomputable def color {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
-    T.Vertex → MonskyColor :=
-  realTwoAdicColor ∘ T.vertices
-
-@[simp]
-theorem color_bottomLeft {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
-    T.color T.bottomLeft = red := by
-  simpa [color] using realTwoAdicColor_vertex_bottomLeft T.vertices T.hbottomLeft
-
-@[simp]
-theorem color_bottomRight {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
-    T.color T.bottomRight = green := by
-  simpa [color] using realTwoAdicColor_vertex_bottomRight T.vertices T.hbottomRight
-
-@[simp]
-theorem color_topRight {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
-    T.color T.topRight = green := by
-  simpa [color] using realTwoAdicColor_vertex_topRight T.vertices T.htopRight
-
-@[simp]
-theorem color_topLeft {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
-    T.color T.topLeft = blue := by
-  simpa [color] using realTwoAdicColor_vertex_topLeft T.vertices T.htopLeft
-
-theorem bottom_colorIsRedGreen {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
-    ∀ v ∈ T.bottom, colorIsRedGreen (T.color v) := by
-  intro v hv
-  simpa [color] using realTwoAdicColor_vertex_on_bottom_redGreen T.vertices (T.hbottom v hv)
-
-theorem right_colorIsGreenBlue {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
-    ∀ v ∈ T.right, colorIsGreenBlue (T.color v) := by
-  intro v hv
-  simpa [color] using realTwoAdicColor_vertex_on_right_greenBlue T.vertices (T.hright v hv)
-
-theorem top_colorIsGreenBlue {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
-    ∀ v ∈ T.top, colorIsGreenBlue (T.color v) := by
-  intro v hv
-  simpa [color] using realTwoAdicColor_vertex_on_top_greenBlue T.vertices (T.htop v hv)
-
-theorem left_colorIsRedBlue {n : ℕ} (T : ExtractedEqualAreaSquareTriangulation n) :
-    ∀ v ∈ T.left, colorIsRedBlue (T.color v) := by
-  intro v hv
-  simpa [color] using realTwoAdicColor_vertex_on_left_redBlue T.vertices (T.hleft v hv)
-
-/-- Boundary red-green edge count induced by the extracted triangle incidence data. -/
-noncomputable def boundaryRedGreenCount {n : ℕ}
-    (T : ExtractedEqualAreaSquareTriangulation n) : ℕ := by
-  letI := T.instFintype
-  letI := T.instDecidableEq
-  exact oddEdgeRedGreenCount T.triangles T.color
-
-theorem boundaryRedGreenCount_odd {n : ℕ}
-    (T : ExtractedEqualAreaSquareTriangulation n) :
-    Odd T.boundaryRedGreenCount := by
-  letI := T.instFintype
-  letI := T.instDecidableEq
-  simpa [boundaryRedGreenCount, color] using
-    oddEdgeRedGreenCount_odd_of_realSquareBoundaryVertexChain
-      T.vertices T.triangles T.bottom T.right T.top T.left
-      T.bottomLeft T.bottomRight T.topRight T.topLeft
-      T.hboundary T.hnodup T.hbottomLeft T.hbottomRight T.htopRight T.htopLeft
-      T.hbottom T.hright T.htop T.hleft
-
-/--
-Forget the square side-chain witnesses and retain the minimal Monsky
-hypothesis needed by the final contradiction.
--/
-noncomputable def toMinimalMonskyHypothesis {n : ℕ}
-    (T : ExtractedEqualAreaSquareTriangulation n) : MinimalMonskyHypothesis n where
-  Vertex := T.Vertex
-  instFintype := T.instFintype
-  instDecidableEq := T.instDecidableEq
-  vertices := T.vertices
-  triangles := T.triangles
-  hboundaryOdd := by
-    letI := T.instFintype
-    letI := T.instDecidableEq
-    simpa [boundaryRedGreenCount, color] using T.boundaryRedGreenCount_odd
-  harea := T.harea
-
-theorem boundaryRedGreenCount_odd_of_odd {n : ℕ} (_hn : Odd n)
-    (T : ExtractedEqualAreaSquareTriangulation n) :
-    Odd T.boundaryRedGreenCount :=
-  T.boundaryRedGreenCount_odd
-
-theorem toMonskyCertificate_boundaryRGCount_odd {n : ℕ}
-    (T : ExtractedEqualAreaSquareTriangulation n) :
-    Odd T.toMonskyCertificate.boundaryRGCount := by
-  simpa using T.toMonskyCertificate.hodd
-
-/--
-The extracted data already give the Sperner conclusion through the constructed
-certificate.
--/
-theorem exists_trichromatic {n : ℕ}
-    (T : ExtractedEqualAreaSquareTriangulation n) :
-    ∃ i : Fin n,
-      TrichromaticTriangle
-        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).1
-        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).2.1
-        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).2.2 := by
-  letI := T.instFintype
-  letI := T.instDecidableEq
-  simpa using chapter20_from_monskyCertificate T.toMonskyCertificate
-
-/--
-An extracted equal-area square triangulation cannot have odd cardinality.
-The only remaining step toward the unconditional book theorem is to obtain an
-object of this structure from a concrete geometric triangulation hypothesis.
--/
-theorem false_of_odd {n : ℕ} (hn : Odd n)
-    (T : ExtractedEqualAreaSquareTriangulation n) : False := by
-  exact T.toMinimalMonskyHypothesis.false_of_odd hn
-
-theorem isEmpty_of_odd {n : ℕ} (hn : Odd n) :
-    IsEmpty (ExtractedEqualAreaSquareTriangulation n) := by
-  constructor
-  intro T
-  exact false_of_odd hn T
-
-end ExtractedEqualAreaSquareTriangulation
-
-/--
-Conservative interface for a genuine equal-area triangulation of the unit
-square.  Besides the finite vertex and triangle data, it records the geometric
-cover of the square and the local edge-incidence facts from which the extracted
-`Odd (edgeMultiplicity ...) ↔ boundary` field follows.
--/
-structure ActualEqualAreaSquareTriangulation (n : ℕ) where
-  Vertex : Type*
-  [instFintype : Fintype Vertex]
-  [instDecidableEq : DecidableEq Vertex]
-  vertices : Vertex → ℝ × ℝ
-  triangles : Fin n → Vertex × Vertex × Vertex
-  hcover : unitSquare = ⋃ i : Fin n, triangleHullOfVertices vertices (triangles i)
-  bottom : List Vertex
-  right : List Vertex
-  top : List Vertex
-  left : List Vertex
-  bottomLeft : Vertex
-  bottomRight : Vertex
-  topRight : Vertex
-  topLeft : Vertex
-  hboundary_one : ∀ e : Sym2 Vertex,
-    e ∈ (squareBoundaryEdgeList bottom right top left
-      bottomLeft bottomRight topRight topLeft).toFinset →
-      edgeMultiplicity triangles e = 1
-  hoffBoundary_even : ∀ e : Sym2 Vertex,
-    e ∉ (squareBoundaryEdgeList bottom right top left
-      bottomLeft bottomRight topRight topLeft).toFinset →
-      Even (edgeMultiplicity triangles e)
-  hnodup : (squareBoundaryEdgeList bottom right top left
-    bottomLeft bottomRight topRight topLeft).Nodup
-  hbottomLeft : vertices bottomLeft = (0, 0)
-  hbottomRight : vertices bottomRight = (1, 0)
-  htopRight : vertices topRight = (1, 1)
-  htopLeft : vertices topLeft = (0, 1)
-  hbottom : ∀ v ∈ bottom, ∃ x : ℝ, vertices v = (x, 0)
-  hright : ∀ v ∈ right, ∃ y : ℝ, vertices v = (1, y)
-  htop : ∀ v ∈ top, ∃ x : ℝ, vertices v = (x, 1)
-  hleft : ∀ v ∈ left, ∃ y : ℝ, vertices v = (0, y)
-  harea : ∀ i : Fin n,
-    realTriangleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
-        (vertices (triangles i).2.2) =
-      (((1 : ℚ) / n : ℚ) : ℝ)
-
-namespace ActualEqualAreaSquareTriangulation
-
-/-- The boundary edge list carried by the actual triangulation interface. -/
-def boundaryEdgeList {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
-    List (Sym2 T.Vertex) :=
-  squareBoundaryEdgeList T.bottom T.right T.top T.left
-    T.bottomLeft T.bottomRight T.topRight T.topLeft
-
-/-- The finite odd-multiplicity boundary statement needed by the extracted layer. -/
-theorem hboundary {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
-    letI := T.instFintype
-    letI := T.instDecidableEq
-    ∀ e : Sym2 T.Vertex,
-      Odd (edgeMultiplicity T.triangles e) ↔ e ∈ T.boundaryEdgeList.toFinset := by
-  letI := T.instFintype
-  letI := T.instDecidableEq
-  simpa [boundaryEdgeList] using
-    edgeMultiplicity_odd_iff_mem_boundary_of_one_on_boundary_even_off
-      T.triangles
-      (squareBoundaryEdgeList T.bottom T.right T.top T.left
-        T.bottomLeft T.bottomRight T.topRight T.topLeft).toFinset
-      T.hboundary_one T.hoffBoundary_even
-
-/-- The Monsky color assigned to each vertex of the actual triangulation. -/
-noncomputable def color {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
-    T.Vertex → MonskyColor :=
-  realTwoAdicColor ∘ T.vertices
-
-@[simp]
-theorem color_bottomLeft {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
-    T.color T.bottomLeft = red := by
-  simpa [color] using realTwoAdicColor_vertex_bottomLeft T.vertices T.hbottomLeft
-
-@[simp]
-theorem color_bottomRight {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
-    T.color T.bottomRight = green := by
-  simpa [color] using realTwoAdicColor_vertex_bottomRight T.vertices T.hbottomRight
-
-@[simp]
-theorem color_topRight {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
-    T.color T.topRight = green := by
-  simpa [color] using realTwoAdicColor_vertex_topRight T.vertices T.htopRight
-
-@[simp]
-theorem color_topLeft {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
-    T.color T.topLeft = blue := by
-  simpa [color] using realTwoAdicColor_vertex_topLeft T.vertices T.htopLeft
-
-theorem bottom_colorIsRedGreen {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
-    ∀ v ∈ T.bottom, colorIsRedGreen (T.color v) := by
-  intro v hv
-  simpa [color] using realTwoAdicColor_vertex_on_bottom_redGreen T.vertices (T.hbottom v hv)
-
-theorem right_colorIsGreenBlue {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
-    ∀ v ∈ T.right, colorIsGreenBlue (T.color v) := by
-  intro v hv
-  simpa [color] using realTwoAdicColor_vertex_on_right_greenBlue T.vertices (T.hright v hv)
-
-theorem top_colorIsGreenBlue {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
-    ∀ v ∈ T.top, colorIsGreenBlue (T.color v) := by
-  intro v hv
-  simpa [color] using realTwoAdicColor_vertex_on_top_greenBlue T.vertices (T.htop v hv)
-
-theorem left_colorIsRedBlue {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
-    ∀ v ∈ T.left, colorIsRedBlue (T.color v) := by
-  intro v hv
-  simpa [color] using realTwoAdicColor_vertex_on_left_redBlue T.vertices (T.hleft v hv)
-
-/-- Extract the finite payload consumed by the existing Monsky endpoint. -/
-noncomputable def toExtracted {n : ℕ} (T : ActualEqualAreaSquareTriangulation n) :
-    ExtractedEqualAreaSquareTriangulation n where
-  Vertex := T.Vertex
-  instFintype := T.instFintype
-  instDecidableEq := T.instDecidableEq
-  vertices := T.vertices
-  triangles := T.triangles
-  bottom := T.bottom
-  right := T.right
-  top := T.top
-  left := T.left
-  bottomLeft := T.bottomLeft
-  bottomRight := T.bottomRight
-  topRight := T.topRight
-  topLeft := T.topLeft
-  hboundary := by
-    letI := T.instFintype
-    letI := T.instDecidableEq
-    simpa [boundaryEdgeList] using T.hboundary
-  hnodup := T.hnodup
-  hbottomLeft := T.hbottomLeft
-  hbottomRight := T.hbottomRight
-  htopRight := T.htopRight
-  htopLeft := T.htopLeft
-  hbottom := T.hbottom
-  hright := T.hright
-  htop := T.htop
-  hleft := T.hleft
-  harea := T.harea
-
-/-- The minimal Monsky hypothesis extracted from the actual triangulation interface. -/
-noncomputable def toMinimalMonskyHypothesis {n : ℕ}
-    (T : ActualEqualAreaSquareTriangulation n) : MinimalMonskyHypothesis n :=
-  T.toExtracted.toMinimalMonskyHypothesis
-
-/-- The boundary red-green edge count forced by an actual square triangulation. -/
-noncomputable def boundaryRedGreenCount {n : ℕ}
-    (T : ActualEqualAreaSquareTriangulation n) : ℕ :=
-  T.toExtracted.boundaryRedGreenCount
-
-theorem boundaryRedGreenCount_odd {n : ℕ}
-    (T : ActualEqualAreaSquareTriangulation n) :
-    Odd T.boundaryRedGreenCount := by
-  simpa [boundaryRedGreenCount] using T.toExtracted.boundaryRedGreenCount_odd
-
-theorem boundaryRedGreenCount_odd_of_odd {n : ℕ} (_hn : Odd n)
-    (T : ActualEqualAreaSquareTriangulation n) :
-    Odd T.boundaryRedGreenCount :=
-  T.boundaryRedGreenCount_odd
-
-/-- The Monsky certificate extracted from an actual square triangulation. -/
-noncomputable def toMonskyCertificate {n : ℕ}
-    (T : ActualEqualAreaSquareTriangulation n) : MonskyCertificate n :=
-  T.toExtracted.toMonskyCertificate
-
-theorem toMonskyCertificate_triangleColors {n : ℕ}
-    (T : ActualEqualAreaSquareTriangulation n) (i : Fin n) :
-    (T.toMonskyCertificate.triangleColors i) =
-      triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i) := by
-  rfl
-
-/--
-The certificate extracted from the geometric interface uses no extra coloring
-data: its triangle colors are the 2-adic colors of the listed triangle
-vertices.
--/
-theorem toMonskyCertificate_triangleColors_apply {n : ℕ}
-    (T : ActualEqualAreaSquareTriangulation n) (i : Fin n) :
-    (T.toMonskyCertificate.triangleColors i) =
-      (realTwoAdicColor (T.vertices (T.triangles i).1),
-       realTwoAdicColor (T.vertices (T.triangles i).2.1),
-       realTwoAdicColor (T.vertices (T.triangles i).2.2)) := by
-  rw [toMonskyCertificate_triangleColors]
-  rfl
-
-theorem toMonskyCertificate_boundaryRGCount_odd {n : ℕ}
-    (T : ActualEqualAreaSquareTriangulation n) :
-    Odd T.toMonskyCertificate.boundaryRGCount := by
-  simpa [toMonskyCertificate] using T.toExtracted.toMonskyCertificate_boundaryRGCount_odd
-
-/--
-Sperner conclusion for the geometric interface, before invoking equal area:
-the extracted Monsky coloring makes at least one listed triangle
-trichromatic.
--/
-theorem exists_trichromatic {n : ℕ}
-    (T : ActualEqualAreaSquareTriangulation n) :
-    ∃ i : Fin n,
-      TrichromaticTriangle
-        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).1
-        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).2.1
-        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).2.2 := by
-  simpa [toExtracted] using T.toExtracted.exists_trichromatic
-
-theorem false_of_odd {n : ℕ} (hn : Odd n)
-    (T : ActualEqualAreaSquareTriangulation n) : False :=
-  T.toExtracted.false_of_odd hn
-
-theorem isEmpty_of_odd {n : ℕ} (hn : Odd n) :
-    IsEmpty (ActualEqualAreaSquareTriangulation n) := by
-  constructor
-  intro T
-  exact false_of_odd hn T
-
-end ActualEqualAreaSquareTriangulation
-
-/--
-Named geometric interface for an equal-area triangulation of the unit square.
-It records `n` listed triangles covering `[0,1]^2`, each of ordinary area
-`1 / n`, together with the finite square-boundary incidence data needed to
-extract the Monsky certificate.
--/
-structure EqualAreaSquareTriangulation (n : ℕ)
-    extends ActualEqualAreaSquareTriangulation n
-
-namespace EqualAreaSquareTriangulation
-
-/-- Forget the geometric cover and keep exactly the finite data consumed by Monsky's proof. -/
-noncomputable def toExtracted {n : ℕ} (T : EqualAreaSquareTriangulation n) :
-    ExtractedEqualAreaSquareTriangulation n :=
-  T.toActualEqualAreaSquareTriangulation.toExtracted
-
-/-- The minimal Monsky hypothesis extracted from the named geometric interface. -/
-noncomputable def toMinimalMonskyHypothesis {n : ℕ}
-    (T : EqualAreaSquareTriangulation n) : MinimalMonskyHypothesis n :=
-  T.toExtracted.toMinimalMonskyHypothesis
-
-/-- The Monsky certificate canonically extracted from the geometric interface. -/
-noncomputable def toMonskyCertificate {n : ℕ}
-    (T : EqualAreaSquareTriangulation n) : MonskyCertificate n :=
-  T.toExtracted.toMonskyCertificate
-
-@[simp]
-theorem toMonskyCertificate_triangleColors {n : ℕ}
-    (T : EqualAreaSquareTriangulation n) (i : Fin n) :
-    (T.toMonskyCertificate.triangleColors i) =
-      triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i) := by
-  simpa [toMonskyCertificate, toExtracted] using
-    ActualEqualAreaSquareTriangulation.toMonskyCertificate_triangleColors
-      T.toActualEqualAreaSquareTriangulation i
-
-/--
-The certificate uses exactly the `realTwoAdicColor` colors of the three
-vertices of each geometric triangle.
--/
-theorem toMonskyCertificate_triangleColors_apply {n : ℕ}
-    (T : EqualAreaSquareTriangulation n) (i : Fin n) :
-    (T.toMonskyCertificate.triangleColors i) =
-      (realTwoAdicColor (T.vertices (T.triangles i).1),
-       realTwoAdicColor (T.vertices (T.triangles i).2.1),
-       realTwoAdicColor (T.vertices (T.triangles i).2.2)) := by
-  rw [toMonskyCertificate_triangleColors]
-  rfl
-
-/-- The geometric interface inherits the Sperner trichromatic triangle conclusion. -/
-theorem exists_trichromatic {n : ℕ}
-    (T : EqualAreaSquareTriangulation n) :
-    ∃ i : Fin n,
-      TrichromaticTriangle
-        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).1
-        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).2.1
-        (triangleColorsOfVertices (realTwoAdicColor ∘ T.vertices) (T.triangles i)).2.2 := by
-  simpa [toExtracted] using T.toExtracted.exists_trichromatic
-
-theorem false_of_odd {n : ℕ} (hn : Odd n)
-    (T : EqualAreaSquareTriangulation n) : False :=
-  T.toExtracted.false_of_odd hn
-
-/-- Monsky's contradiction for the named geometric interface: `n` cannot be odd. -/
-theorem not_odd {n : ℕ} (T : EqualAreaSquareTriangulation n) : ¬ Odd n := by
-  intro hn
-  exact false_of_odd hn T
-
-theorem isEmpty_of_odd {n : ℕ} (hn : Odd n) :
-    IsEmpty (EqualAreaSquareTriangulation n) := by
-  constructor
-  intro T
-  exact false_of_odd hn T
-
-end EqualAreaSquareTriangulation
-
-/--
-Top-level endpoint for the named geometric square-tiling interface: an odd
-number of equal-area triangles cannot tile the unit square with the recorded
-boundary incidence.
--/
-theorem chapter20 {n : ℕ} (hn : Odd n)
-    (T : EqualAreaSquareTriangulation n) : False :=
-  EqualAreaSquareTriangulation.false_of_odd hn T
-
-theorem no_odd_equalArea_square_triangulation {n : ℕ} (hn : Odd n)
-    (T : EqualAreaSquareTriangulation n) : False :=
-  chapter20 hn T
-
-theorem not_odd_of_equalArea_square_triangulation {n : ℕ}
-    (T : EqualAreaSquareTriangulation n) : ¬ Odd n :=
-  EqualAreaSquareTriangulation.not_odd T
-
-theorem equalArea_square_triangulation_isEmpty_of_odd {n : ℕ} (hn : Odd n) :
-    IsEmpty (EqualAreaSquareTriangulation n) :=
-  EqualAreaSquareTriangulation.isEmpty_of_odd hn
-
-/--
-Top-level endpoint for the finite geometric square-tiling interface: an odd
-number of equal-area triangles cannot satisfy the recorded unit-square
-triangulation hypotheses.
--/
-theorem no_odd_actual_equalArea_square_triangulation {n : ℕ} (hn : Odd n)
-    (T : ActualEqualAreaSquareTriangulation n) : False :=
-  ActualEqualAreaSquareTriangulation.false_of_odd hn T
-
-theorem actual_equalArea_square_triangulation_isEmpty_of_odd {n : ℕ} (hn : Odd n) :
-    IsEmpty (ActualEqualAreaSquareTriangulation n) :=
-  ActualEqualAreaSquareTriangulation.isEmpty_of_odd hn
-
 /-- The empty triangulation cannot carry a Monsky certificate: with 0 triangles,
 the local RG sum is 0 (even), but the certificate demands an odd boundary RG
 count of the same parity.  Contradiction. -/
@@ -2715,16 +1946,576 @@ theorem MonskyCertificate.totalRG_odd {n : ℕ} (cert : MonskyCertificate n) :
   exact Nat.odd_iff.mpr hpar
 
 /-- Any Monsky certificate has at least one trichromatic triangle — packaging
-of `chapter20_from_monskyCertificate` plus the cardinality lower bound.  This
-is the "≥ 1 trichromatic triangle exists" form used by the contradiction step
-in Monsky's argument. -/
+of `chapter20` plus the cardinality lower bound.  This is the "≥ 1 trichromatic
+triangle exists" form used by the contradiction step in Monsky's argument. -/
 theorem MonskyCertificate.one_le_trichromatic_card {n : ℕ} (cert : MonskyCertificate n) :
     1 ≤ (Finset.univ.filter fun i : Fin n =>
         TrichromaticTriangle (cert.triangleColors i).1
           (cert.triangleColors i).2.1 (cert.triangleColors i).2.2).card := by
-  obtain ⟨i, hi⟩ := chapter20_from_monskyCertificate cert
+  obtain ⟨i, hi⟩ := chapter20 cert
   exact Finset.card_pos.mpr ⟨i, by
     simp only [Finset.mem_filter, Finset.mem_univ, true_and]
     exact hi⟩
+
+/-! ### Linear-algebra bridge for `doubleArea`
+
+The signed double-area `doubleArea a b c` is the determinant of the linear map
+on `ℝ²` whose standard-basis images are the edge vectors `b - a` and `c - a`.
+This rephrasing is the foundation for connecting the chapter's combinatorial
+oriented area to Mathlib's `addHaar_image_linearMap` change-of-variables
+formula — the route by which a future geometric dissection of the unit square
+will deliver the boundary edge-parity (`hboundary`) needed to remove the
+remaining `MonskyCertificate` escape.
+-/
+
+/-- `doubleArea a b c` equals the determinant of the 2×2 matrix whose columns
+are the edge vectors `b - a` and `c - a`. -/
+theorem doubleArea_eq_det_fin_two (a b c : ℝ × ℝ) :
+    doubleArea a b c =
+      (!![b.1 - a.1, c.1 - a.1;
+          b.2 - a.2, c.2 - a.2] : Matrix (Fin 2) (Fin 2) ℝ).det := by
+  rw [Matrix.det_fin_two_of]
+  unfold doubleArea
+  ring
+
+/-- The real (unsigned) triangle area equals half the absolute value of the
+determinant of the edge-vector matrix.  This is the form that pairs directly
+with `MeasureTheory.Measure.addHaar_image_linearMap` (which computes the
+Lebesgue measure of a linear-map image as `|det| · μ(source)`). -/
+theorem realTriangleArea_eq_half_abs_det (a b c : ℝ × ℝ) :
+    realTriangleArea a b c =
+      |(!![b.1 - a.1, c.1 - a.1;
+           b.2 - a.2, c.2 - a.2] : Matrix (Fin 2) (Fin 2) ℝ).det| / 2 := by
+  rw [realTriangleArea, doubleArea_eq_det_fin_two]
+
+/-! ### Structural properties of `doubleArea`
+
+Translation invariance, vertex-permutation symmetries, and the collinearity
+equivalence — small structural lemmas needed for any future geometric work
+on triangle dissections of the unit square (Monsky's remaining frontier).
+-/
+
+/-- `doubleArea` is invariant under translation of all three vertices. -/
+theorem doubleArea_translate (a b c v : ℝ × ℝ) :
+    doubleArea (a + v) (b + v) (c + v) = doubleArea a b c := by
+  unfold doubleArea
+  simp only [Prod.fst_add, Prod.snd_add]
+  ring
+
+/-- `doubleArea` based at the origin reduces to the determinant of the two
+edge vectors. -/
+theorem doubleArea_zero_left (b c : ℝ × ℝ) :
+    doubleArea (0, 0) b c = b.1 * c.2 - c.1 * b.2 := by
+  unfold doubleArea
+  simp
+
+/-- Reduce `doubleArea` based at `a` to the origin by translating `-a`. -/
+theorem doubleArea_eq_zero_left_sub (a b c : ℝ × ℝ) :
+    doubleArea a b c = doubleArea (0, 0) (b - a) (c - a) := by
+  rw [show (b - a) = b + (-a) from by ring, show (c - a) = c + (-a) from by ring,
+      show ((0, 0) : ℝ × ℝ) = a + (-a) from by simp]
+  exact (doubleArea_translate a b c (-a)).symm
+
+/-- `doubleArea` is antisymmetric under swapping the last two vertices. -/
+theorem doubleArea_swap_right (a b c : ℝ × ℝ) :
+    doubleArea a c b = - doubleArea a b c := by
+  unfold doubleArea
+  ring
+
+/-- `doubleArea` is invariant under cyclic permutation of the three vertices. -/
+theorem doubleArea_cycle (a b c : ℝ × ℝ) :
+    doubleArea b c a = doubleArea a b c := by
+  unfold doubleArea
+  ring
+
+/-- A triple of points in `ℝ²` is collinear iff its signed double-area is zero. -/
+theorem doubleArea_eq_zero_iff_collinear (a b c : ℝ × ℝ) :
+    doubleArea a b c = 0 ↔
+      (b.1 - a.1) * (c.2 - a.2) = (c.1 - a.1) * (b.2 - a.2) := by
+  rw [doubleArea, sub_eq_zero]
+
+/-- `realTriangleArea` is invariant under translation. -/
+theorem realTriangleArea_translate (a b c v : ℝ × ℝ) :
+    realTriangleArea (a + v) (b + v) (c + v) = realTriangleArea a b c := by
+  rw [realTriangleArea, realTriangleArea, doubleArea_translate]
+
+/-- `realTriangleArea` is symmetric under any permutation of the three vertices
+(unlike the signed `doubleArea`, the unsigned area depends only on the set). -/
+theorem realTriangleArea_swap_right (a b c : ℝ × ℝ) :
+    realTriangleArea a c b = realTriangleArea a b c := by
+  rw [realTriangleArea, realTriangleArea, doubleArea_swap_right, abs_neg]
+
+theorem realTriangleArea_cycle (a b c : ℝ × ℝ) :
+    realTriangleArea b c a = realTriangleArea a b c := by
+  rw [realTriangleArea, realTriangleArea, doubleArea_cycle]
+
+/-! ### Affine parametrization of the triangle by the filled 2-simplex
+
+The triangle with vertices `a, b, c` is the image, under the affine map
+`(s, t) ↦ a + s • (b - a) + t • (c - a)`, of the filled standard 2-simplex
+`{(s, t) | 0 ≤ s, 0 ≤ t, s + t ≤ 1}`.  We define the parametrization and
+prove the forward containment (image ⊆ convex hull).  Pairing this with the
+2-dimensional Lebesgue volume formula for linear-map images is the route to
+`volume (convexHull ℝ {a, b, c}) = realTriangleArea a b c`.
+-/
+
+/-- The affine parametrization of the triangle: `(s, t) ↦ a + s • (b - a) + t • (c - a)`. -/
+def triangleAffine (a b c : ℝ × ℝ) (st : ℝ × ℝ) : ℝ × ℝ :=
+  a + st.1 • (b - a) + st.2 • (c - a)
+
+@[simp] theorem triangleAffine_zero (a b c : ℝ × ℝ) :
+    triangleAffine a b c (0, 0) = a := by
+  simp [triangleAffine]
+
+@[simp] theorem triangleAffine_e1 (a b c : ℝ × ℝ) :
+    triangleAffine a b c (1, 0) = b := by
+  simp [triangleAffine]
+
+@[simp] theorem triangleAffine_e2 (a b c : ℝ × ℝ) :
+    triangleAffine a b c (0, 1) = c := by
+  simp [triangleAffine]
+
+/-- The parametrization expressed as the standard convex combination of the
+three vertices with weights `(1 - s - t, s, t)`. -/
+theorem triangleAffine_eq_combo (a b c : ℝ × ℝ) (s t : ℝ) :
+    triangleAffine a b c (s, t) = (1 - s - t) • a + s • b + t • c := by
+  show a + s • (b - a) + t • (c - a) = (1 - s - t) • a + s • b + t • c
+  rw [smul_sub, smul_sub]
+  match_scalars <;> ring
+
+/-- The set of filled standard 2-simplex parameters: `{(s, t) | 0 ≤ s, 0 ≤ t, s + t ≤ 1}`. -/
+def filled2Simplex : Set (ℝ × ℝ) :=
+  {p : ℝ × ℝ | 0 ≤ p.1 ∧ 0 ≤ p.2 ∧ p.1 + p.2 ≤ 1}
+
+theorem filled2Simplex_mem_iff (s t : ℝ) :
+    (s, t) ∈ filled2Simplex ↔ 0 ≤ s ∧ 0 ≤ t ∧ s + t ≤ 1 := by
+  simp [filled2Simplex]
+
+/-- Forward direction: every point in the affine image of the filled 2-simplex
+is a convex combination of `a, b, c` and therefore lies in their convex hull. -/
+theorem triangleAffine_mem_convexHull (a b c : ℝ × ℝ) {s t : ℝ}
+    (hs : 0 ≤ s) (ht : 0 ≤ t) (hst : s + t ≤ 1) :
+    triangleAffine a b c (s, t) ∈ convexHull ℝ ({a, b, c} : Set (ℝ × ℝ)) := by
+  rw [triangleAffine_eq_combo]
+  set S : Set (ℝ × ℝ) := {a, b, c} with hS
+  have ha : a ∈ convexHull ℝ S := subset_convexHull _ _ (by simp [hS])
+  have hb : b ∈ convexHull ℝ S := subset_convexHull _ _ (by simp [hS])
+  have hc : c ∈ convexHull ℝ S := subset_convexHull _ _ (by simp [hS])
+  have hconv : Convex ℝ (convexHull ℝ S) := convex_convexHull _ _
+  -- Apply Convex.sum_mem with Fin 3, weights (1-s-t, s, t), points (a, b, c).
+  have hsum :
+      (∑ i : Fin 3, (![(1 - s - t), s, t] : Fin 3 → ℝ) i •
+        (![a, b, c] : Fin 3 → ℝ × ℝ) i) ∈ convexHull ℝ S := by
+    refine hconv.sum_mem (w := ![(1 - s - t), s, t]) (z := ![a, b, c]) ?_ ?_ ?_
+    · intro i _; fin_cases i
+      · show (0 : ℝ) ≤ 1 - s - t; linarith
+      · show (0 : ℝ) ≤ s; exact hs
+      · show (0 : ℝ) ≤ t; exact ht
+    · rw [Fin.sum_univ_three]
+      show (1 - s - t) + s + t = 1
+      ring
+    · intro i _; fin_cases i
+      · exact ha
+      · exact hb
+      · exact hc
+  -- Reduce the Fin 3 sum to the explicit three-term form.
+  simpa [Fin.sum_univ_three, Matrix.cons_val_zero, Matrix.cons_val_one,
+    Matrix.head_cons] using hsum
+
+/-- The image of the filled 2-simplex under `triangleAffine a b c` is a subset
+of the convex hull of `{a, b, c}`. -/
+theorem triangleAffine_image_subset_convexHull (a b c : ℝ × ℝ) :
+    triangleAffine a b c '' filled2Simplex ⊆
+      convexHull ℝ ({a, b, c} : Set (ℝ × ℝ)) := by
+  rintro p ⟨⟨s, t⟩, hst, rfl⟩
+  exact triangleAffine_mem_convexHull a b c hst.1 hst.2.1 hst.2.2
+
+/-! ### Brick 1: volume of the filled 2-simplex
+
+The 2-dimensional Lebesgue measure of `filled2Simplex` equals `1/2`.
+Direct Fubini route: slice the simplex at fixed `x`, identify the slice
+with `Icc 0 (1-x)`, and integrate the linear height. -/
+
+/-- The filled 2-simplex is a closed (and hence measurable) subset of `ℝ × ℝ`. -/
+theorem isClosed_filled2Simplex : IsClosed filled2Simplex := by
+  have h1 : IsClosed {p : ℝ × ℝ | 0 ≤ p.1} :=
+    isClosed_le continuous_const continuous_fst
+  have h2 : IsClosed {p : ℝ × ℝ | 0 ≤ p.2} :=
+    isClosed_le continuous_const continuous_snd
+  have h3 : IsClosed {p : ℝ × ℝ | p.1 + p.2 ≤ 1} :=
+    isClosed_le (continuous_fst.add continuous_snd) continuous_const
+  have hclosed :
+      IsClosed ({p : ℝ × ℝ | 0 ≤ p.1} ∩
+        ({p : ℝ × ℝ | 0 ≤ p.2} ∩ {p : ℝ × ℝ | p.1 + p.2 ≤ 1})) :=
+    h1.inter (h2.inter h3)
+  exact hclosed
+
+theorem measurableSet_filled2Simplex : MeasurableSet filled2Simplex :=
+  isClosed_filled2Simplex.measurableSet
+
+/-- The volume of the slice of `filled2Simplex` at a fixed `x` coordinate
+equals `ENNReal.ofReal (1 - x)` when `x ∈ Icc 0 1`, and zero otherwise. -/
+theorem volume_filled2Simplex_slice (x : ℝ) :
+    MeasureTheory.volume (Prod.mk x ⁻¹' filled2Simplex) =
+      (Set.Icc (0 : ℝ) 1).indicator (fun x => ENNReal.ofReal (1 - x)) x := by
+  by_cases hx : x ∈ Set.Icc (0 : ℝ) 1
+  · rw [Set.indicator_of_mem hx]
+    have heq : (Prod.mk x ⁻¹' filled2Simplex : Set ℝ) = Set.Icc 0 (1 - x) := by
+      ext y
+      simp only [filled2Simplex, Set.mem_preimage, Set.mem_setOf_eq, Set.mem_Icc]
+      refine ⟨fun ⟨_, hy, hxy⟩ => ⟨hy, by linarith⟩,
+              fun ⟨hy, hyx⟩ => ⟨hx.1, hy, by linarith⟩⟩
+    rw [heq, Real.volume_Icc, sub_zero]
+  · rw [Set.indicator_of_notMem hx]
+    have hempty : (Prod.mk x ⁻¹' filled2Simplex : Set ℝ) = ∅ := by
+      ext y
+      simp only [filled2Simplex, Set.mem_preimage, Set.mem_setOf_eq,
+        Set.mem_empty_iff_false, iff_false]
+      rintro ⟨hx0, hy, hxy⟩
+      apply hx
+      exact ⟨hx0, by linarith⟩
+    rw [hempty, MeasureTheory.measure_empty]
+
+/-- The 2-D Lebesgue volume of the filled standard 2-simplex equals `1/2`. -/
+theorem volume_filled2Simplex :
+    MeasureTheory.volume filled2Simplex = ENNReal.ofReal (1 / 2) := by
+  rw [MeasureTheory.Measure.volume_eq_prod,
+      MeasureTheory.Measure.prod_apply measurableSet_filled2Simplex]
+  simp_rw [volume_filled2Simplex_slice]
+  rw [MeasureTheory.lintegral_indicator measurableSet_Icc]
+  -- ∫⁻ x in Icc 0 1, ofReal (1 - x) ∂volume = ofReal (1/2)
+  have hint : MeasureTheory.IntegrableOn (fun x : ℝ => 1 - x)
+      (Set.Icc (0 : ℝ) 1) MeasureTheory.volume :=
+    (continuous_const.sub continuous_id).continuousOn.integrableOn_Icc
+  have hnn : 0 ≤ᵐ[MeasureTheory.volume.restrict (Set.Icc (0 : ℝ) 1)]
+      (fun x : ℝ => 1 - x) := by
+    filter_upwards [MeasureTheory.ae_restrict_mem measurableSet_Icc] with x hx
+    have hx1 : x ≤ 1 := hx.2
+    show (0 : ℝ) ≤ 1 - x
+    linarith
+  rw [← MeasureTheory.ofReal_integral_eq_lintegral_ofReal hint hnn]
+  congr 1
+  -- ∫ x in Icc 0 1, (1 - x) ∂volume = 1/2
+  rw [MeasureTheory.integral_Icc_eq_integral_Ioc,
+      ← intervalIntegral.integral_of_le (by linarith : (0 : ℝ) ≤ 1)]
+  -- ∫ x in 0..1, (1 - x) = 1/2
+  rw [intervalIntegral.integral_sub
+        (intervalIntegral.intervalIntegrable_const)
+        (intervalIntegral.intervalIntegrable_id),
+      intervalIntegral.integral_const, integral_id]
+  -- (1 - 0) • 1 - (1^2 - 0^2) / 2 = 1/2
+  simp; ring
+
+/-! ### Brick 2: convex hull ⊆ triangleAffine image
+
+The reverse inclusion `convexHull ℝ {a, b, c} ⊆ triangleAffine '' filled2Simplex`
+combined with `triangleAffine_image_subset_convexHull` gives set equality. -/
+
+/-- The filled standard 2-simplex is convex. -/
+theorem convex_filled2Simplex : Convex ℝ filled2Simplex := by
+  rintro ⟨s₁, t₁⟩ ⟨hs₁, ht₁, hst₁⟩ ⟨s₂, t₂⟩ ⟨hs₂, ht₂, hst₂⟩ μ ν hμ hν hμν
+  refine ⟨?_, ?_, ?_⟩
+  · show 0 ≤ μ * s₁ + ν * s₂
+    nlinarith
+  · show 0 ≤ μ * t₁ + ν * t₂
+    nlinarith
+  · show μ * s₁ + ν * s₂ + (μ * t₁ + ν * t₂) ≤ 1
+    have key : μ * (s₁ + t₁) + ν * (s₂ + t₂) ≤ μ * 1 + ν * 1 := by
+      have h1 : μ * (s₁ + t₁) ≤ μ * 1 := by nlinarith
+      have h2 : ν * (s₂ + t₂) ≤ ν * 1 := by nlinarith
+      linarith
+    nlinarith [hμν]
+
+/-- The affine parametrization `triangleAffine a b c` sends a convex combination
+of `(s, t)`-parameters to the corresponding convex combination of vertex images. -/
+theorem triangleAffine_convex_combo (a b c : ℝ × ℝ) (p q : ℝ × ℝ)
+    {μ ν : ℝ} (hμν : μ + ν = 1) :
+    triangleAffine a b c (μ • p + ν • q) =
+      μ • triangleAffine a b c p + ν • triangleAffine a b c q := by
+  obtain ⟨ps, pt⟩ := p
+  obtain ⟨qs, qt⟩ := q
+  show a + (μ • (ps, pt) + ν • (qs, qt)).1 • (b - a) +
+        (μ • (ps, pt) + ν • (qs, qt)).2 • (c - a) =
+      μ • (a + ps • (b - a) + pt • (c - a)) +
+        ν • (a + qs • (b - a) + qt • (c - a))
+  have h1 : ((μ • (ps, pt) + ν • (qs, qt)).1 : ℝ) = μ * ps + ν * qs := by
+    simp [Prod.smul_def]
+  have h2 : ((μ • (ps, pt) + ν • (qs, qt)).2 : ℝ) = μ * pt + ν * qt := by
+    simp [Prod.smul_def]
+  rw [h1, h2]
+  ext
+  · show a.1 + (μ * ps + ν * qs) * (b.1 - a.1) + (μ * pt + ν * qt) * (c.1 - a.1) =
+        μ * (a.1 + ps * (b.1 - a.1) + pt * (c.1 - a.1)) +
+        ν * (a.1 + qs * (b.1 - a.1) + qt * (c.1 - a.1))
+    linear_combination -a.1 * hμν
+  · show a.2 + (μ * ps + ν * qs) * (b.2 - a.2) + (μ * pt + ν * qt) * (c.2 - a.2) =
+        μ * (a.2 + ps * (b.2 - a.2) + pt * (c.2 - a.2)) +
+        ν * (a.2 + qs * (b.2 - a.2) + qt * (c.2 - a.2))
+    linear_combination -a.2 * hμν
+
+/-- The image of the filled 2-simplex under `triangleAffine a b c` is convex. -/
+theorem convex_triangleAffine_image (a b c : ℝ × ℝ) :
+    Convex ℝ (triangleAffine a b c '' filled2Simplex) := by
+  rintro _ ⟨p, hp, rfl⟩ _ ⟨q, hq, rfl⟩ μ ν hμ hν hμν
+  refine ⟨μ • p + ν • q, convex_filled2Simplex hp hq hμ hν hμν, ?_⟩
+  exact triangleAffine_convex_combo a b c p q hμν
+
+/-- Reverse direction: every point in the convex hull of `{a, b, c}` is of the
+form `triangleAffine a b c (s, t)` for some `(s, t)` in the filled 2-simplex. -/
+theorem convexHull_subset_triangleAffine_image (a b c : ℝ × ℝ) :
+    convexHull ℝ ({a, b, c} : Set (ℝ × ℝ)) ⊆
+      triangleAffine a b c '' filled2Simplex := by
+  apply convexHull_min ?_ (convex_triangleAffine_image a b c)
+  intro p hp
+  rcases hp with rfl | hp
+  · exact ⟨(0, 0), by simp [filled2Simplex], by simp⟩
+  rcases hp with rfl | hp
+  · exact ⟨(1, 0), by simp [filled2Simplex], by simp⟩
+  · rcases hp with rfl
+    exact ⟨(0, 1), by simp [filled2Simplex], by simp⟩
+
+/-- The convex hull of `{a, b, c}` equals the affine image of the filled 2-simplex. -/
+theorem convexHull_eq_triangleAffine_image (a b c : ℝ × ℝ) :
+    convexHull ℝ ({a, b, c} : Set (ℝ × ℝ)) = triangleAffine a b c '' filled2Simplex :=
+  le_antisymm (convexHull_subset_triangleAffine_image a b c)
+    (triangleAffine_image_subset_convexHull a b c)
+
+/-! ### Brick 3: glue to `volume_convexHull_triangle`
+
+The measure-theoretic bridge for Monsky's chapter 20:
+`volume (convexHull ℝ {a, b, c}) = ENNReal.ofReal (realTriangleArea a b c)`. -/
+
+/-- The linear part of `triangleAffine a b c`: `(s, t) ↦ s • (b - a) + t • (c - a)`. -/
+noncomputable def triangleEdgeMap (a b c : ℝ × ℝ) : (ℝ × ℝ) →ₗ[ℝ] (ℝ × ℝ) where
+  toFun st := st.1 • (b - a) + st.2 • (c - a)
+  map_add' u v := by
+    show (u + v).1 • (b - a) + (u + v).2 • (c - a) =
+        u.1 • (b - a) + u.2 • (c - a) + (v.1 • (b - a) + v.2 • (c - a))
+    ext
+    · show ((u + v).1 * (b - a).1 + (u + v).2 * (c - a).1 : ℝ) =
+          u.1 * (b - a).1 + u.2 * (c - a).1 + (v.1 * (b - a).1 + v.2 * (c - a).1)
+      simp [Prod.add_def]; ring
+    · show ((u + v).1 * (b - a).2 + (u + v).2 * (c - a).2 : ℝ) =
+          u.1 * (b - a).2 + u.2 * (c - a).2 + (v.1 * (b - a).2 + v.2 * (c - a).2)
+      simp [Prod.add_def]; ring
+  map_smul' r v := by
+    show (r • v).1 • (b - a) + (r • v).2 • (c - a) =
+        r • (v.1 • (b - a) + v.2 • (c - a))
+    ext
+    · show ((r • v).1 * (b - a).1 + (r • v).2 * (c - a).1 : ℝ) =
+          r * (v.1 * (b - a).1 + v.2 * (c - a).1)
+      simp [Prod.smul_def]; ring
+    · show ((r • v).1 * (b - a).2 + (r • v).2 * (c - a).2 : ℝ) =
+          r * (v.1 * (b - a).2 + v.2 * (c - a).2)
+      simp [Prod.smul_def]; ring
+
+theorem triangleEdgeMap_apply (a b c st : ℝ × ℝ) :
+    triangleEdgeMap a b c st = st.1 • (b - a) + st.2 • (c - a) := rfl
+
+theorem triangleAffine_eq_add_triangleEdgeMap (a b c st : ℝ × ℝ) :
+    triangleAffine a b c st = a + triangleEdgeMap a b c st := by
+  show a + st.1 • (b - a) + st.2 • (c - a) = a + (st.1 • (b - a) + st.2 • (c - a))
+  rw [add_assoc]
+
+/-- The determinant of `triangleEdgeMap a b c` equals `doubleArea a b c`. -/
+theorem det_triangleEdgeMap (a b c : ℝ × ℝ) :
+    LinearMap.det (triangleEdgeMap a b c) = doubleArea a b c := by
+  rw [← LinearMap.det_toMatrix (Module.Basis.finTwoProd ℝ), doubleArea_eq_det_fin_two]
+  congr 1
+  ext i j
+  rw [LinearMap.toMatrix_apply, Module.Basis.coe_finTwoProd_repr]
+  fin_cases j <;> fin_cases i <;>
+    simp [triangleEdgeMap_apply, Module.Basis.finTwoProd_zero,
+          Module.Basis.finTwoProd_one]
+
+/-- Translation invariance of the 2-D Lebesgue measure. -/
+theorem volume_image_add_left (a : ℝ × ℝ) (s : Set (ℝ × ℝ)) :
+    MeasureTheory.volume ((fun x : ℝ × ℝ => a + x) '' s) = MeasureTheory.volume s := by
+  simp
+
+/-- The image of the filled 2-simplex under the affine triangle map has
+2-D Lebesgue measure `|doubleArea a b c| · (1/2)`. -/
+theorem volume_triangleAffine_image_filled2Simplex (a b c : ℝ × ℝ) :
+    MeasureTheory.volume (triangleAffine a b c '' filled2Simplex) =
+      ENNReal.ofReal |doubleArea a b c| * ENNReal.ofReal (1 / 2) := by
+  have hcomp : (triangleAffine a b c : (ℝ × ℝ) → (ℝ × ℝ)) =
+      (fun x : ℝ × ℝ => a + x) ∘ (triangleEdgeMap a b c) := by
+    funext st
+    exact triangleAffine_eq_add_triangleEdgeMap a b c st
+  rw [hcomp, Set.image_comp, volume_image_add_left,
+      MeasureTheory.Measure.addHaar_image_linearMap MeasureTheory.volume
+        (triangleEdgeMap a b c) filled2Simplex,
+      det_triangleEdgeMap, volume_filled2Simplex]
+
+/-- **The Monsky measure bridge.** The 2-D Lebesgue measure of the triangle
+`convexHull ℝ {a, b, c}` equals its Euclidean area `realTriangleArea a b c`. -/
+theorem volume_convexHull_triangle (a b c : ℝ × ℝ) :
+    MeasureTheory.volume (convexHull ℝ ({a, b, c} : Set (ℝ × ℝ))) =
+      ENNReal.ofReal (realTriangleArea a b c) := by
+  rw [convexHull_eq_triangleAffine_image, volume_triangleAffine_image_filled2Simplex,
+      realTriangleArea,
+      show (|doubleArea a b c| / 2 : ℝ) = |doubleArea a b c| * (1 / 2) from by ring,
+      ENNReal.ofReal_mul (abs_nonneg _)]
+
+/-! ### Packaged triangulation API
+
+A `RealEqualAreaUnitSquareTriangulation α n` bundles the finite-vertex data
+the Monsky frontier theorem
+`no_odd_equalArea_realization_of_realSquareBoundaryVertexChain_area` consumes.
+This is a refactoring layer: every hypothesis the existing theorem takes is
+folded into a single named field, so downstream callers only need to construct
+one structure instead of supplying twenty-plus arguments. -/
+
+structure RealEqualAreaUnitSquareTriangulation
+    (α : Type*) [Fintype α] [DecidableEq α] (n : ℕ) where
+  vertices : α → ℝ × ℝ
+  triangles : Fin n → α × α × α
+  bottom : List α
+  right : List α
+  top : List α
+  left : List α
+  bottomLeft : α
+  bottomRight : α
+  topRight : α
+  topLeft : α
+  hboundary : ∀ e : Sym2 α,
+    Odd (edgeMultiplicity triangles e) ↔
+      e ∈ (squareBoundaryEdgeList bottom right top left
+        bottomLeft bottomRight topRight topLeft).toFinset
+  hnodup : (squareBoundaryEdgeList bottom right top left
+    bottomLeft bottomRight topRight topLeft).Nodup
+  hbottomLeft : vertices bottomLeft = (0, 0)
+  hbottomRight : vertices bottomRight = (1, 0)
+  htopRight : vertices topRight = (1, 1)
+  htopLeft : vertices topLeft = (0, 1)
+  hbottom : ∀ v ∈ bottom, ∃ x : ℝ, vertices v = (x, 0)
+  hright : ∀ v ∈ right, ∃ y : ℝ, vertices v = (1, y)
+  htop : ∀ v ∈ top, ∃ x : ℝ, vertices v = (x, 1)
+  hleft : ∀ v ∈ left, ∃ y : ℝ, vertices v = (0, y)
+  harea : ∀ i : Fin n,
+    realTriangleArea (vertices (triangles i).1) (vertices (triangles i).2.1)
+      (vertices (triangles i).2.2) = (((1 : ℚ) / n : ℚ) : ℝ)
+
+/-- **Monsky's theorem (packaged form).** An equal-area triangulation of the
+unit square into an odd number of triangles is impossible. -/
+theorem RealEqualAreaUnitSquareTriangulation.not_odd_size
+    {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (T : RealEqualAreaUnitSquareTriangulation α n) (hn : Odd n) : False :=
+  no_odd_equalArea_realization_of_realSquareBoundaryVertexChain_area hn
+    T.vertices T.triangles T.bottom T.right T.top T.left
+    T.bottomLeft T.bottomRight T.topRight T.topLeft
+    T.hboundary T.hnodup
+    T.hbottomLeft T.hbottomRight T.htopRight T.htopLeft
+    T.hbottom T.hright T.htop T.hleft T.harea
+
+/-! ### Concrete witness: the diagonal split
+
+The unit square can be split into two triangles of area 1/2 each by the main
+diagonal — a constructive `RealEqualAreaUnitSquareTriangulation (Fin 4) 2`.
+This is also a non-vacuity check on the packaged API: the structure can be
+inhabited, just not for odd `n`. -/
+
+namespace RealEqualAreaUnitSquareTriangulation
+
+/-- The 4-vertex, 2-triangle equal-area triangulation of the unit square obtained
+by drawing the main diagonal from `(0,0)` to `(1,1)`.
+
+Vertices are indexed `0 = (0,0)`, `1 = (1,0)`, `2 = (1,1)`, `3 = (0,1)`; the
+two triangles are `(0,1,2)` (bottom-right) and `(0,2,3)` (top-left). -/
+def diagonalSplit : RealEqualAreaUnitSquareTriangulation (Fin 4) 2 where
+  vertices := ![(0, 0), (1, 0), (1, 1), (0, 1)]
+  triangles := ![(0, 1, 2), (0, 2, 3)]
+  bottom := []
+  right := []
+  top := []
+  left := []
+  bottomLeft := 0
+  bottomRight := 1
+  topRight := 2
+  topLeft := 3
+  hboundary := by
+    classical
+    intro e
+    -- The boundary edge list reduces to [s(0,1), s(1,2), s(2,3), s(3,0)].
+    -- Triangle edges: (0,1), (1,2), (2,0) from triangle 0;
+    --                 (0,2), (2,3), (3,0) from triangle 1.
+    -- Edge s(0,2) = s(2,0) is shared (mult 2 — even);
+    -- all four boundary edges have multiplicity 1 (odd).
+    simp only [squareBoundaryEdgeList, consecutiveEdges, List.nil_append,
+      List.cons_append, List.toFinset_cons,
+      List.toFinset_nil, Finset.mem_insert]
+    -- Decide the iff by cases on `e`: the edge multiplicity is a finite sum
+    -- over (Fin 2 × Fin 3) of indicator (triangleEdge ... = e).
+    refine Sym2.inductionOn e ?_
+    intro a b
+    fin_cases a <;> fin_cases b <;> decide
+  hnodup := by decide
+  hbottomLeft := rfl
+  hbottomRight := rfl
+  htopRight := rfl
+  htopLeft := rfl
+  hbottom := by simp
+  hright := by simp
+  htop := by simp
+  hleft := by simp
+  harea := by
+    intro i
+    fin_cases i
+    · -- triangle (0, 1, 2): vertices (0,0), (1,0), (1,1)
+      show realTriangleArea (0, 0) (1, 0) (1, 1) = (((1 : ℚ) / 2 : ℚ) : ℝ)
+      simp [realTriangleArea, doubleArea]
+    · -- triangle (0, 2, 3): vertices (0,0), (1,1), (0,1)
+      show realTriangleArea (0, 0) (1, 1) (0, 1) = (((1 : ℚ) / 2 : ℚ) : ℝ)
+      simp [realTriangleArea, doubleArea]
+
+/-- The 5-vertex, 4-triangle equal-area triangulation of the unit square
+obtained by drawing both diagonals (the "X" pattern); they meet at the
+center `(1/2, 1/2)`.
+
+Vertices: `0 = (0,0)`, `1 = (1,0)`, `2 = (1,1)`, `3 = (0,1)`, `4 = (1/2,1/2)`.
+The center is an interior vertex, not on any side. The four triangles are
+`(0,1,4)`, `(1,2,4)`, `(2,3,4)`, `(3,0,4)` — bottom, right, top, left of center. -/
+noncomputable def centerSplit : RealEqualAreaUnitSquareTriangulation (Fin 5) 4 where
+  vertices := ![(0, 0), (1, 0), (1, 1), (0, 1), (1/2, 1/2)]
+  triangles := ![(0, 1, 4), (1, 2, 4), (2, 3, 4), (3, 0, 4)]
+  bottom := []
+  right := []
+  top := []
+  left := []
+  bottomLeft := 0
+  bottomRight := 1
+  topRight := 2
+  topLeft := 3
+  hboundary := by
+    classical
+    intro e
+    simp only [squareBoundaryEdgeList, consecutiveEdges, List.nil_append,
+      List.cons_append, List.toFinset_cons,
+      List.toFinset_nil, Finset.mem_insert]
+    refine Sym2.inductionOn e ?_
+    intro a b
+    fin_cases a <;> fin_cases b <;> decide
+  hnodup := by decide
+  hbottomLeft := rfl
+  hbottomRight := rfl
+  htopRight := rfl
+  htopLeft := rfl
+  hbottom := by simp
+  hright := by simp
+  htop := by simp
+  hleft := by simp
+  harea := by
+    intro i
+    fin_cases i
+    · show realTriangleArea (0, 0) (1, 0) (1/2, 1/2) = (((1 : ℚ) / 4 : ℚ) : ℝ)
+      simp [realTriangleArea, doubleArea]; norm_num
+    · show realTriangleArea (1, 0) (1, 1) (1/2, 1/2) = (((1 : ℚ) / 4 : ℚ) : ℝ)
+      simp [realTriangleArea, doubleArea]; norm_num
+    · show realTriangleArea (1, 1) (0, 1) (1/2, 1/2) = (((1 : ℚ) / 4 : ℚ) : ℝ)
+      simp [realTriangleArea, doubleArea]; norm_num
+    · show realTriangleArea (0, 1) (0, 0) (1/2, 1/2) = (((1 : ℚ) / 4 : ℚ) : ℝ)
+      simp [realTriangleArea, doubleArea]; norm_num
+
+end RealEqualAreaUnitSquareTriangulation
 
 end ProofsInTheBook.Chapter20

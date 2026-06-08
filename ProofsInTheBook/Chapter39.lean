@@ -1,5 +1,4 @@
 import Mathlib
-import ProofsInTheBook.TuckerLemmaCore
 
 /-!
 # Chapter 39: The chromatic number of Kneser graphs
@@ -26,20 +25,17 @@ simplicial-complex infrastructure, but no Borsuk-Ulam theorem, Tucker lemma,
 Ky Fan lemma, octahedral sphere labeling theorem, or ready-made bridge from
 too-small Kneser colorings to a forbidden antipodal/complementary labeling.
 
-The remaining upstream gap is now the finite Ky Fan boundary-parity count, or
-equivalently the core Tucker statement for every positive ambient dimension.
-`KyFanPrefixParityStatement` says that the positive-first alternating
-signed-permutation prefix chains are odd, while `KyFanPrefixModFourStatement`
-says that both orientations together have cardinality `2 mod 4`.
-
-This file proves the Matoušek construction from a hypothetical
-`(n - 2*k + 1)`-coloring of `KG(n,k)` to a Tucker counterexample, imports the
-core low-dimensional Tucker results through dimension four, packages them into
-an unconditional low-dimensional Lovász theorem, proves the one-dimensional
-Ky Fan prefix-parity count and the vacuous two-dimensional Ky Fan prefix-parity
-case, and proves either Ky Fan parity frontier implies
-`TuckerLemmaStatement → chapter39`.  It also records chromatic-number
-corollaries for the fully proved low-dimensional cases.
+The remaining upstream gap is now the finite Ky Fan boundary-parity count,
+formalized in two equivalent ways: `KyFanPrefixParityStatement` says that the
+positive-first alternating signed-permutation prefix chains are odd, while
+`KyFanPrefixModFourStatement` says that both orientations together have
+cardinality `2 mod 4`.  This file proves the Matoušek construction from a
+hypothetical `(n - 2*k + 1)`-coloring of `KG(n,k)` to a Tucker counterexample,
+proves low-dimensional Tucker cases, packages them into an unconditional
+low-dimensional Lovász theorem, proves the one-dimensional Ky Fan prefix-parity
+count and the vacuous two-dimensional Ky Fan prefix-parity case, and proves
+either Ky Fan parity frontier implies
+`TuckerLemmaStatement → chapter39`.
 -/
 
 namespace ProofsInTheBook.Chapter39
@@ -323,13 +319,6 @@ private theorem kneserColor_proper {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
         _ = n - 2 * k + 1 := Fintype.card_fin _
     omega
 
-/--
-Lovász upper bound for Kneser graphs, with an explicit coloring.  The color is
-the minimum element of the `k`-subset until the first `n - 2*k + 1` positions
-are exhausted, and one final color is used for all remaining subsets.  If two
-disjoint `k`-sets both received the final color, they would have to fit inside
-only `2*k - 1` remaining coordinates, contradicting disjointness.
--/
 theorem kneser_chromatic_upper_bound (n k : ℕ) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
     ∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
       ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b :=
@@ -1812,262 +1801,12 @@ theorem tuckerLemmaStatement_two : TuckerLemmaStatement 2 := by
     exact hP0P1.symm.trans (hP0N1.trans hN1neg)
   cases (label P1).positive <;> simp at hself
 
-/-! ### Bridging the independent Tucker core -/
-
-/-
-`ProofsInTheBook.TuckerLemmaCore` is deliberately independent of this file:
-it contains the finite Tucker/Ky Fan parity layer without importing the Kneser
-graph development.  Chapter 39 predates that split and still has local copies
-of the sign-vector and signed-label structures because Matoušek's Kneser
-labeling is written against them.
-
-The definitions in `TuckerLemmaCoreBridge` are the only conversion layer
-between those two copies.  They are fieldwise identity maps, and the lemmas
-below record the facts needed for transport: nonzero witnesses, antipodes,
-face-order comparisons, label negation, and equality all commute with the
-conversions.  This keeps the duplicated structures local while allowing the
-proved core Tucker statements to discharge Chapter 39's local statement.
--/
-
-namespace TuckerLemmaCoreBridge
-
-/-- Interpret a sign vector from the independent Tucker core in Chapter 39's
-local sign-vector type. -/
-def ofCoreSignedSubset {n : ℕ}
-    (X : ProofsInTheBook.TuckerLemmaCore.SignedSubset n) : SignedSubset n where
-  pos := X.pos
-  neg := X.neg
-  disjoint := X.disjoint
-
-/-- Interpret a Chapter 39 sign vector in the independent Tucker core. -/
-def toCoreSignedSubset {n : ℕ}
-    (X : SignedSubset n) : ProofsInTheBook.TuckerLemmaCore.SignedSubset n where
-  pos := X.pos
-  neg := X.neg
-  disjoint := X.disjoint
-
-/-- Interpret a nonzero core sign vector in Chapter 39's local type. -/
-def ofCoreNonzeroSignedSubset {n : ℕ}
-    (X : ProofsInTheBook.TuckerLemmaCore.NonzeroSignedSubset n) :
-    NonzeroSignedSubset n :=
-  ⟨ofCoreSignedSubset X.1, by
-    simpa [ofCoreSignedSubset, SignedSubset.Nonzero,
-      ProofsInTheBook.TuckerLemmaCore.SignedSubset.Nonzero] using X.2⟩
-
-/-- Interpret a Chapter 39 nonzero sign vector in the independent Tucker core. -/
-def toCoreNonzeroSignedSubset {n : ℕ}
-    (X : NonzeroSignedSubset n) :
-    ProofsInTheBook.TuckerLemmaCore.NonzeroSignedSubset n :=
-  ⟨toCoreSignedSubset X.1, by
-    simpa [toCoreSignedSubset, SignedSubset.Nonzero,
-      ProofsInTheBook.TuckerLemmaCore.SignedSubset.Nonzero] using X.2⟩
-
-/-- Interpret a Chapter 39 signed label in the independent Tucker core. -/
-def toCoreSignedLabel {m : ℕ} (L : SignedLabel m) :
-    ProofsInTheBook.TuckerLemmaCore.SignedLabel m where
-  positive := L.positive
-  index := L.index
-
-/-- Interpret a core signed label in Chapter 39's local type. -/
-def ofCoreSignedLabel {m : ℕ}
-    (L : ProofsInTheBook.TuckerLemmaCore.SignedLabel m) : SignedLabel m where
-  positive := L.positive
-  index := L.index
-
-@[simp]
-theorem ofCoreSignedSubset_toCore {n : ℕ} (X : SignedSubset n) :
-    ofCoreSignedSubset (toCoreSignedSubset X) = X := by
-  cases X
-  rfl
-
-@[simp]
-theorem toCoreSignedSubset_ofCore {n : ℕ}
-    (X : ProofsInTheBook.TuckerLemmaCore.SignedSubset n) :
-    toCoreSignedSubset (ofCoreSignedSubset X) = X := by
-  cases X
-  rfl
-
-@[simp]
-theorem ofCoreSignedSubset_antipode {n : ℕ}
-    (X : ProofsInTheBook.TuckerLemmaCore.SignedSubset n) :
-    ofCoreSignedSubset X.antipode = (ofCoreSignedSubset X).antipode := by
-  cases X
-  rfl
-
-@[simp]
-theorem toCoreSignedSubset_antipode {n : ℕ} (X : SignedSubset n) :
-    toCoreSignedSubset X.antipode = (toCoreSignedSubset X).antipode := by
-  cases X
-  rfl
-
-@[simp]
-theorem ofCoreSignedSubset_nonzero_iff {n : ℕ}
-    (X : ProofsInTheBook.TuckerLemmaCore.SignedSubset n) :
-    (ofCoreSignedSubset X).Nonzero ↔
-      ProofsInTheBook.TuckerLemmaCore.SignedSubset.Nonzero X := by
-  rfl
-
-@[simp]
-theorem toCoreSignedSubset_nonzero_iff {n : ℕ} (X : SignedSubset n) :
-    ProofsInTheBook.TuckerLemmaCore.SignedSubset.Nonzero (toCoreSignedSubset X) ↔
-      X.Nonzero := by
-  rfl
-
-@[simp]
-theorem ofCoreSignedSubset_le_iff {n : ℕ}
-    {X Y : ProofsInTheBook.TuckerLemmaCore.SignedSubset n} :
-    SignedSubset.Le (ofCoreSignedSubset X) (ofCoreSignedSubset Y) ↔
-      ProofsInTheBook.TuckerLemmaCore.SignedSubset.Le X Y := by
-  rfl
-
-@[simp]
-theorem toCoreSignedSubset_le_iff {n : ℕ} {X Y : SignedSubset n} :
-    ProofsInTheBook.TuckerLemmaCore.SignedSubset.Le
-        (toCoreSignedSubset X) (toCoreSignedSubset Y) ↔
-      SignedSubset.Le X Y := by
-  rfl
-
-@[simp]
-theorem ofCoreNonzeroSignedSubset_antipode {n : ℕ}
-    (X : ProofsInTheBook.TuckerLemmaCore.NonzeroSignedSubset n) :
-    ofCoreNonzeroSignedSubset X.antipode =
-      (ofCoreNonzeroSignedSubset X).antipode := by
-  apply Subtype.ext
-  rfl
-
-@[simp]
-theorem toCoreNonzeroSignedSubset_antipode {n : ℕ} (X : NonzeroSignedSubset n) :
-    toCoreNonzeroSignedSubset X.antipode =
-      (toCoreNonzeroSignedSubset X).antipode := by
-  apply Subtype.ext
-  rfl
-
-@[simp]
-theorem ofCoreNonzeroSignedSubset_toCore {n : ℕ} (X : NonzeroSignedSubset n) :
-    ofCoreNonzeroSignedSubset (toCoreNonzeroSignedSubset X) = X := by
-  apply Subtype.ext
-  rfl
-
-@[simp]
-theorem toCoreNonzeroSignedSubset_ofCore {n : ℕ}
-    (X : ProofsInTheBook.TuckerLemmaCore.NonzeroSignedSubset n) :
-    toCoreNonzeroSignedSubset (ofCoreNonzeroSignedSubset X) = X := by
-  apply Subtype.ext
-  rfl
-
-@[simp]
-theorem ofCoreNonzeroSignedSubset_le_iff {n : ℕ}
-    {X Y : ProofsInTheBook.TuckerLemmaCore.NonzeroSignedSubset n} :
-    SignedSubset.Le (ofCoreNonzeroSignedSubset X).1 (ofCoreNonzeroSignedSubset Y).1 ↔
-      ProofsInTheBook.TuckerLemmaCore.SignedSubset.Le X.1 Y.1 := by
-  rfl
-
-@[simp]
-theorem toCoreNonzeroSignedSubset_le_iff {n : ℕ} {X Y : NonzeroSignedSubset n} :
-    ProofsInTheBook.TuckerLemmaCore.SignedSubset.Le
-        (toCoreNonzeroSignedSubset X).1 (toCoreNonzeroSignedSubset Y).1 ↔
-      SignedSubset.Le X.1 Y.1 := by
-  rfl
-
-@[simp]
-theorem toCoreSignedLabel_neg {m : ℕ} (L : SignedLabel m) :
-    toCoreSignedLabel L.neg = (toCoreSignedLabel L).neg := by
-  rfl
-
-@[simp]
-theorem ofCoreSignedLabel_toCore {m : ℕ} (L : SignedLabel m) :
-    ofCoreSignedLabel (toCoreSignedLabel L) = L := by
-  rfl
-
-@[simp]
-theorem toCoreSignedLabel_ofCore {m : ℕ}
-    (L : ProofsInTheBook.TuckerLemmaCore.SignedLabel m) :
-    toCoreSignedLabel (ofCoreSignedLabel L) = L := by
-  rfl
-
-@[simp]
-theorem ofCoreSignedLabel_neg {m : ℕ}
-    (L : ProofsInTheBook.TuckerLemmaCore.SignedLabel m) :
-    ofCoreSignedLabel L.neg = (ofCoreSignedLabel L).neg := by
-  rfl
-
-@[simp]
-theorem toCoreSignedLabel_eq_iff {m : ℕ} {L M : SignedLabel m} :
-    toCoreSignedLabel L = toCoreSignedLabel M ↔ L = M := by
-  constructor
-  · intro h
-    have := congrArg ofCoreSignedLabel h
-    simpa using this
-  · intro h
-    simp [h]
-
-@[simp]
-theorem ofCoreSignedLabel_eq_iff {m : ℕ}
-    {L M : ProofsInTheBook.TuckerLemmaCore.SignedLabel m} :
-    ofCoreSignedLabel L = ofCoreSignedLabel M ↔ L = M := by
-  constructor
-  · intro h
-    have := congrArg toCoreSignedLabel h
-    simpa using this
-  · intro h
-    simp [h]
-
-/-- Transport a Tucker statement proved in the independent core namespace to
-Chapter 39's local copy of the sign-vector and signed-label API. -/
-theorem tuckerLemmaStatement_of_core {n : ℕ}
-    (hcore : ProofsInTheBook.TuckerLemmaCore.TuckerLemmaStatement n) :
-    TuckerLemmaStatement n := by
-  intro label hantipodal
-  let coreLabel :
-      ProofsInTheBook.TuckerLemmaCore.NonzeroSignedSubset n →
-        ProofsInTheBook.TuckerLemmaCore.SignedLabel (n - 1) :=
-    fun X => toCoreSignedLabel (label (ofCoreNonzeroSignedSubset X))
-  have hcoreAntipodal :
-      ∀ X, coreLabel X.antipode = (coreLabel X).neg := by
-    intro X
-    have h := congrArg toCoreSignedLabel
-      (hantipodal (ofCoreNonzeroSignedSubset X))
-    simpa [coreLabel] using h
-  obtain ⟨X, Y, hXY, hcomp⟩ := hcore coreLabel hcoreAntipodal
-  refine ⟨ofCoreNonzeroSignedSubset X, ofCoreNonzeroSignedSubset Y, ?_, ?_⟩
-  · simpa [ofCoreNonzeroSignedSubset, ofCoreSignedSubset, SignedSubset.Le,
-      ProofsInTheBook.TuckerLemmaCore.SignedSubset.Le] using hXY
-  · have h := congrArg ofCoreSignedLabel hcomp
-    simpa [coreLabel] using h
-
-end TuckerLemmaCoreBridge
-
-/-- Tucker's lemma in dimension three, transported from the independent core. -/
-theorem tuckerLemmaStatement_three : TuckerLemmaStatement 3 :=
-  TuckerLemmaCoreBridge.tuckerLemmaStatement_of_core
-    ProofsInTheBook.TuckerLemmaCore.tuckerLemmaStatement_three
-
-/-- Tucker's lemma in dimension four, transported from the independent core. -/
-theorem tuckerLemmaStatement_four : TuckerLemmaStatement 4 :=
-  TuckerLemmaCoreBridge.tuckerLemmaStatement_of_core
-    ProofsInTheBook.TuckerLemmaCore.tuckerLemmaStatement_four
-
-/-- Tucker's lemma is unconditional in dimensions one through three. -/
-theorem tuckerLemmaStatement_le_three {n : ℕ} (hnpos : 1 ≤ n) (hnle : n ≤ 3) :
-    TuckerLemmaStatement n := by
-  interval_cases n
-  · exact tuckerLemmaStatement_one
-  · exact tuckerLemmaStatement_two
-  · exact tuckerLemmaStatement_three
-
-/-- Tucker's lemma is unconditional in dimensions one through four. -/
-theorem tuckerLemmaStatement_le_four {n : ℕ} (hnpos : 1 ≤ n) (hnle : n ≤ 4) :
-    TuckerLemmaStatement n := by
-  interval_cases n
-  · exact tuckerLemmaStatement_one
-  · exact tuckerLemmaStatement_two
-  · exact tuckerLemmaStatement_three
-  · exact tuckerLemmaStatement_four
-
-/-- Tucker's lemma is unconditional in dimensions one and two. -/
+/-- Tucker's lemma is unconditional in the low dimensions already proved here. -/
 theorem tuckerLemmaStatement_le_two {n : ℕ} (hnpos : 1 ≤ n) (hnle : n ≤ 2) :
-    TuckerLemmaStatement n :=
-  tuckerLemmaStatement_le_four hnpos (by omega)
+    TuckerLemmaStatement n := by
+  interval_cases n
+  · exact tuckerLemmaStatement_one
+  · exact tuckerLemmaStatement_two
 
 /--
 The two-dimensional Ky Fan prefix-parity statement is discharged by the direct
@@ -2081,8 +1820,6 @@ theorem kyFanPrefixParityStatement_two : KyFanPrefixParityStatement 2 1 := by
 
 theorem tuckerLemmaStatement_two_of_kyFanPrefixParity : TuckerLemmaStatement 2 :=
   tuckerLemmaStatement_of_kyFanPrefixParity (by omega) kyFanPrefixParityStatement_two
-
-/-! ### Low-dimensional path-endpoint frontiers -/
 
 /-- The path-endpoint frontier is vacuous in dimension one: the
 `NoComplementaryComparableLabels` hypothesis contradicts the direct
@@ -2145,11 +1882,6 @@ theorem kneser_chromatic_lower_bound_from_tucker (n k : ℕ)
   obtain ⟨X, Y, hXY, hcomp⟩ := htucker label hantipodal
   exact hno_complementary X Y hXY hcomp
 
-/--
-Hard lower bound through the fully formalized Matoušek finite reduction: a
-proper `(n - 2*k + 1)`-coloring would produce an antipodal sign-vector labeling
-with no complementary comparable pair, contradicting `TuckerLemmaStatement n`.
--/
 theorem kneser_chromatic_lower_bound_from_tucker_matousek (n k : ℕ)
     (hk : 1 ≤ k) (hn : 2 * k ≤ n)
     (htucker : TuckerLemmaStatement n) :
@@ -2185,102 +1917,6 @@ theorem kneser_chromatic_lower_bound_two_mul (k : ℕ) (hk : 1 ≤ k) :
     omega
   exact hC a b hadj hfin1
 
-/-! ### Chromatic-number API and unconditional small cases -/
-
-/--
-Compact reusable form of Chapter 39's graph-coloring conclusion.  This keeps
-the theorem statement readable while preserving the explicit upper-bound
-coloring and the lower-bound nonexistence statement.
--/
-def KneserColoringBounds (n k : ℕ) : Prop :=
-  (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
-      ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
-    (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
-      ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b)
-
-/-- `SimpleGraph.Colorable` is equivalent to the explicit coloring function
-API used in this chapter. -/
-theorem kneser_colorable_iff_exists_coloring {n k q : ℕ} :
-    (kneserGraph n k).Colorable q ↔
-      ∃ C : KneserVertex n k → Fin q,
-        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b := by
-  constructor
-  · rintro ⟨C⟩
-    exact ⟨C, fun a b hadj => C.valid hadj⟩
-  · rintro ⟨C, hC⟩
-    exact ⟨SimpleGraph.Coloring.mk C (by
-      intro a b hadj
-      exact hC a b hadj)⟩
-
-/-- The explicit coloring theorem as a `SimpleGraph.Colorable` upper bound. -/
-theorem kneser_colorable_upper_bound (n k : ℕ) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
-    (kneserGraph n k).Colorable (n - 2 * k + 2) :=
-  kneser_colorable_iff_exists_coloring.mpr (kneser_chromatic_upper_bound n k hk hn)
-
-/-- `SimpleGraph.Colorable` form of the Tucker/Matoušek lower bound. -/
-theorem kneser_not_colorable_lower_bound_from_tucker_matousek (n k : ℕ)
-    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
-    (htucker : TuckerLemmaStatement n) :
-    ¬ (kneserGraph n k).Colorable (n - 2 * k + 1) := by
-  intro hcolorable
-  exact kneser_chromatic_lower_bound_from_tucker_matousek n k hk hn htucker
-    (kneser_colorable_iff_exists_coloring.mp hcolorable)
-
-/-- `SimpleGraph.Colorable` form of the elementary singleton lower bound. -/
-theorem kneser_not_colorable_one (n : ℕ) (hn : 2 ≤ n) :
-    ¬ (kneserGraph n 1).Colorable (n - 2 * 1 + 1) := by
-  intro hcolorable
-  exact kneser_chromatic_lower_bound_one n hn
-    (kneser_colorable_iff_exists_coloring.mp hcolorable)
-
-/-- `SimpleGraph.Colorable` form of the elementary boundary lower bound. -/
-theorem kneser_not_colorable_two_mul (k : ℕ) (hk : 1 ≤ k) :
-    ¬ (kneserGraph (2 * k) k).Colorable (2 * k - 2 * k + 1) := by
-  intro hcolorable
-  exact kneser_chromatic_lower_bound_two_mul k hk
-    (kneser_colorable_iff_exists_coloring.mp hcolorable)
-
-/-- Convert Chapter 39's pair of coloring bounds into Mathlib's chromatic
-number API. -/
-theorem kneser_chromaticNumber_eq_of_bounds {n k : ℕ}
-    (hupper :
-      ∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
-        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b)
-    (hlower :
-      ¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
-        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :
-    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) := by
-  have hbounds :
-      (kneserGraph n k).chromaticNumber = ((n - 2 * k + 1 : ℕ) : ℕ∞) + 1 := by
-    rw [SimpleGraph.chromaticNumber_eq_iff_colorable_not_colorable]
-    exact ⟨kneser_colorable_iff_exists_coloring.mpr hupper,
-      fun hcolorable => hlower (kneser_colorable_iff_exists_coloring.mp hcolorable)⟩
-  simpa [Nat.cast_add] using hbounds
-
-/-- Upper `SimpleGraph.Colorable` corollary extracted from the compact bounds. -/
-theorem KneserColoringBounds.colorable {n k : ℕ} (h : KneserColoringBounds n k) :
-    (kneserGraph n k).Colorable (n - 2 * k + 2) :=
-  kneser_colorable_iff_exists_coloring.mpr h.1
-
-/-- Lower `SimpleGraph.Colorable` corollary extracted from the compact bounds. -/
-theorem KneserColoringBounds.not_colorable {n k : ℕ} (h : KneserColoringBounds n k) :
-    ¬ (kneserGraph n k).Colorable (n - 2 * k + 1) := by
-  intro hcolorable
-  exact h.2 (kneser_colorable_iff_exists_coloring.mp hcolorable)
-
-/-- No smaller palette can color a Kneser graph once the Chapter 39 bounds are
-available. -/
-theorem KneserColoringBounds.not_colorable_of_le {n k q : ℕ}
-    (h : KneserColoringBounds n k) (hq : q ≤ n - 2 * k + 1) :
-    ¬ (kneserGraph n k).Colorable q := by
-  intro hcolorable
-  exact h.not_colorable (SimpleGraph.Colorable.mono hq hcolorable)
-
-/-- Chromatic-number corollary extracted from the compact bounds. -/
-theorem KneserColoringBounds.chromaticNumber {n k : ℕ} (h : KneserColoringBounds n k) :
-    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
-  kneser_chromaticNumber_eq_of_bounds h.1 h.2
-
 /-- Unconditional Chapter 39 for singleton vertices: `KG(n,1)` is the complete
 graph on `n` vertices, so it has the expected lower and upper coloring bounds. -/
 theorem chapter39_one (n : ℕ) (hn : 2 ≤ n) :
@@ -2292,14 +1928,6 @@ theorem chapter39_one (n : ℕ) (hn : 2 ≤ n) :
   · exact kneser_chromatic_upper_bound n 1 (by omega) (by omega)
   · exact kneser_chromatic_lower_bound_one n hn
 
-/-- Chromatic-number form of the singleton case: `KG(n,1)` has chromatic
-number `n`. -/
-theorem kneser_chromaticNumber_one (n : ℕ) (hn : 2 ≤ n) :
-    (kneserGraph n 1).chromaticNumber = ((n : ℕ) : ℕ∞) := by
-  have h := chapter39_one n hn
-  simpa [show n - 2 * 1 + 2 = n by omega] using
-    kneser_chromaticNumber_eq_of_bounds h.1 h.2
-
 /-- Unconditional Chapter 39 on the boundary `n = 2k`. -/
 theorem chapter39_two_mul (k : ℕ) (hk : 1 ≤ k) :
     (∃ C : KneserVertex (2 * k) k → Fin (2 * k - 2 * k + 2),
@@ -2309,14 +1937,6 @@ theorem chapter39_two_mul (k : ℕ) (hk : 1 ≤ k) :
   refine ⟨?_, ?_⟩
   · exact kneser_chromatic_upper_bound (2 * k) k hk (by omega)
   · exact kneser_chromatic_lower_bound_two_mul k hk
-
-/-- Chromatic-number form of the boundary case: `KG(2k,k)` has chromatic
-number `2`. -/
-theorem kneser_chromaticNumber_two_mul (k : ℕ) (hk : 1 ≤ k) :
-    (kneserGraph (2 * k) k).chromaticNumber = ((2 : ℕ) : ℕ∞) := by
-  have h := chapter39_two_mul k hk
-  simpa [show 2 * k - 2 * k + 2 = 2 by omega] using
-    kneser_chromaticNumber_eq_of_bounds h.1 h.2
 
 /-- Unconditional Chapter 39 whenever the Kneser graph has singleton vertices. -/
 theorem chapter39_of_k_eq_one {n k : ℕ} (hk_eq : k = 1) (hk : 1 ≤ k)
@@ -2337,28 +1957,10 @@ theorem chapter39_of_two_mul_eq {n k : ℕ} (hk : 1 ≤ k) (hn_eq : n = 2 * k) :
   subst n
   exact chapter39_two_mul k hk
 
-/-- Chromatic-number form of `chapter39_of_k_eq_one`, keeping the original
-parameters rather than first rewriting to `chapter39_one`. -/
-theorem chapter39_of_k_eq_one_chromaticNumber {n k : ℕ}
-    (hk_eq : k = 1) (hn : 2 * k ≤ n) :
-    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) := by
-  have h := chapter39_of_k_eq_one hk_eq (by omega) hn
-  exact KneserColoringBounds.chromaticNumber h
-
-/-- Chromatic-number form of `chapter39_of_two_mul_eq`, keeping the original
-parameters rather than first rewriting to `chapter39_two_mul`. -/
-theorem chapter39_of_two_mul_eq_chromaticNumber {n k : ℕ}
-    (hk : 1 ≤ k) (hn_eq : n = 2 * k) :
-    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) := by
-  have h := chapter39_of_two_mul_eq hk hn_eq
-  exact KneserColoringBounds.chromaticNumber h
-
 /--
 Chapter 39 (Lovász's theorem on Kneser graph chromatic number, conditional on
 the discrete Tucker lemma): the upper bound is explicit, and the lower bound
 is derived from Tucker's lemma via the formalized Matoušek labeling above.
-The companion theorem `chapter39_chromaticNumber` packages the same bounds
-as Mathlib's `SimpleGraph.chromaticNumber` equality.
 
 Remaining gap to an unconditional theorem in Mathlib: prove
 `TuckerLemmaStatement`.
@@ -2373,310 +1975,17 @@ theorem chapter39 {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
   · exact kneser_chromatic_upper_bound n k hk hn
   · exact kneser_chromatic_lower_bound_from_tucker_matousek n k hk hn htucker
 
-/-- Compact proposition-valued wrapper for the conditional Chapter 39 theorem. -/
-theorem chapter39_bounds {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
-    (htucker : TuckerLemmaStatement n) :
-    KneserColoringBounds n k :=
-  chapter39 hk hn htucker
-
-/-- Chromatic-number form of the conditional Chapter 39 theorem. -/
-theorem chapter39_chromaticNumber {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
-    (htucker : TuckerLemmaStatement n) :
-    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) := by
-  have h := chapter39 hk hn htucker
-  exact kneser_chromaticNumber_eq_of_bounds h.1 h.2
-
-/--
-The pointwise upstream theorem that would make Chapter 39 fully
-unconditional.  This is the exact remaining frontier for this file: the Kneser
-graph arguments and Matoušek reduction are formalized, so a core Tucker lemma
-in each positive dimension immediately yields the full theorem below.
--/
-def Chapter39TuckerFrontier : Prop :=
-  ∀ n : ℕ, 1 ≤ n → ProofsInTheBook.TuckerLemmaCore.TuckerLemmaStatement n
-
-/-- Chapter 39 using the independent core Tucker statement directly. -/
-theorem chapter39_of_core_tucker {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
-    (hcore : ProofsInTheBook.TuckerLemmaCore.TuckerLemmaStatement n) :
-    (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
-        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
-    (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
-        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
-  chapter39 hk hn (TuckerLemmaCoreBridge.tuckerLemmaStatement_of_core hcore)
-
-/-- Compact bounds form of `chapter39_of_core_tucker`. -/
-theorem chapter39_bounds_of_core_tucker {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
-    (hcore : ProofsInTheBook.TuckerLemmaCore.TuckerLemmaStatement n) :
-    KneserColoringBounds n k :=
-  chapter39_of_core_tucker hk hn hcore
-
-/-- Chromatic-number form of `chapter39_of_core_tucker`. -/
-theorem chapter39_chromaticNumber_of_core_tucker {n k : ℕ}
-    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
-    (hcore : ProofsInTheBook.TuckerLemmaCore.TuckerLemmaStatement n) :
-    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
-  KneserColoringBounds.chromaticNumber (chapter39_bounds_of_core_tucker hk hn hcore)
-
-/-- Full Chapter 39 from the exact core Tucker frontier. -/
-theorem chapter39_of_tucker_frontier (hfrontier : Chapter39TuckerFrontier)
-    {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
-    (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
-        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
-    (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
-        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
-  chapter39_of_core_tucker hk hn (hfrontier n (by omega))
-
-/-- Compact bounds form of the full theorem from the exact core Tucker frontier. -/
-theorem chapter39_bounds_of_tucker_frontier
-    (hfrontier : Chapter39TuckerFrontier) {n k : ℕ}
-    (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
-    KneserColoringBounds n k :=
-  chapter39_of_tucker_frontier hfrontier hk hn
-
-/-- Chromatic-number form of the full theorem from the exact core Tucker frontier. -/
-theorem chapter39_chromaticNumber_of_tucker_frontier
-    (hfrontier : Chapter39TuckerFrontier) {n k : ℕ}
-    (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
-    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
-  KneserColoringBounds.chromaticNumber
-    (chapter39_bounds_of_tucker_frontier hfrontier hk hn)
-
-/-- The ordinary hypotheses and `n ≤ 4` leave exactly four parameter pairs. -/
-theorem chapter39_low_dim_parameter_cases {n k : ℕ}
-    (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
-    (n = 2 ∧ k = 1) ∨ (n = 3 ∧ k = 1) ∨
-      (n = 4 ∧ k = 1) ∨ (n = 4 ∧ k = 2) := by
-  omega
-
 /--
 Unconditional low-dimensional Chapter 39.  Under the theorem's ordinary
-hypotheses, `n ≤ 4` leaves only the already-proved Tucker dimensions, so the
-conditional Tucker assumption in `chapter39` is discharged here.  The only
-parameter pairs satisfying `1 ≤ k` and `2*k ≤ n ≤ 4` are `(2,1)`, `(3,1)`,
-`(4,1)`, and `(4,2)`; concrete chromatic-number corollaries are recorded
-below.
+hypotheses, `n ≤ 2` leaves only the already-proved Tucker dimensions, so the
+conditional Tucker assumption in `chapter39` is discharged here.
 -/
-theorem chapter39_low_dim {n k : ℕ} (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
+theorem chapter39_low_dim {n k : ℕ} (hnle : n ≤ 2) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
     (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
     (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
-  chapter39 hk hn (tuckerLemmaStatement_le_four (by omega) hnle)
-
-/-- Compact proposition-valued wrapper for the low-dimensional theorem. -/
-theorem chapter39_low_dim_bounds {n k : ℕ}
-    (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
-    KneserColoringBounds n k :=
-  chapter39_low_dim hnle hk hn
-
-/-- Low-dimensional Chapter 39 together with the exhaustive parameter list. -/
-theorem chapter39_low_dim_bounds_and_cases {n k : ℕ}
-    (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
-    KneserColoringBounds n k ∧
-      ((n = 2 ∧ k = 1) ∨ (n = 3 ∧ k = 1) ∨
-        (n = 4 ∧ k = 1) ∨ (n = 4 ∧ k = 2)) :=
-  ⟨chapter39_low_dim_bounds hnle hk hn, chapter39_low_dim_parameter_cases hnle hk hn⟩
-
-/-- Chromatic-number form of the unconditional low-dimensional theorem. -/
-theorem chapter39_low_dim_chromaticNumber {n k : ℕ}
-    (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
-    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) := by
-  have h := chapter39_low_dim hnle hk hn
-  exact kneser_chromaticNumber_eq_of_bounds h.1 h.2
-
-/-- Unconditional Chapter 39 in dimensions at most four. -/
-theorem chapter39_le_four {n k : ℕ} (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
-    (∃ C : KneserVertex n k → Fin (n - 2 * k + 2),
-        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) ∧
-    (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
-        ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
-  chapter39_low_dim hnle hk hn
-
-/-- Chromatic-number alias matching the `chapter39_le_four` theorem name. -/
-theorem chapter39_le_four_chromaticNumber {n k : ℕ}
-    (hnle : n ≤ 4) (hk : 1 ≤ k) (hn : 2 * k ≤ n) :
-    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
-  chapter39_low_dim_chromaticNumber hnle hk hn
-
-/-- `KG(2,1)` has two vertices. -/
-theorem kneserVertex_card_two_one :
-    Fintype.card (KneserVertex 2 1) = 2 := by
-  rw [kneserVertex_card, Nat.choose_one_right]
-
-/-- `KG(2,1)` is the complete graph on its two singleton vertices. -/
-theorem kneserGraph_two_one_eq_completeGraph :
-    kneserGraph 2 1 = SimpleGraph.completeGraph (KneserVertex 2 1) := by
-  simpa using kneserGraph_one_eq_completeGraph 2
-
-/-- `KG(2,1)` satisfies the Chapter 39 coloring bounds:
-it is 2-colorable and not 1-colorable. -/
-theorem chapter39_two_one :
-    (∃ C : KneserVertex 2 1 → Fin 2,
-        ∀ a b, (kneserGraph 2 1).Adj a b → C a ≠ C b) ∧
-    (¬ ∃ C : KneserVertex 2 1 → Fin 1,
-        ∀ a b, (kneserGraph 2 1).Adj a b → C a ≠ C b) := by
-  simpa using chapter39_low_dim (n := 2) (k := 1)
-    (by omega) (by omega) (by omega)
-
-/-- Compact bounds form of `chapter39_two_one`. -/
-theorem chapter39_two_one_bounds : KneserColoringBounds 2 1 :=
-  chapter39_two_one
-
-/-- `KG(2,1)` has chromatic number `2`. -/
-theorem kneser_chromaticNumber_two_one :
-    (kneserGraph 2 1).chromaticNumber = ((2 : ℕ) : ℕ∞) := by
-  exact kneser_chromaticNumber_eq_of_bounds chapter39_two_one.1 chapter39_two_one.2
-
-/-- `KG(3,1)` has three vertices. -/
-theorem kneserVertex_card_three_one :
-    Fintype.card (KneserVertex 3 1) = 3 := by
-  rw [kneserVertex_card, Nat.choose_one_right]
-
-/-- `KG(3,1)` is the complete graph on its three singleton vertices. -/
-theorem kneserGraph_three_one_eq_completeGraph :
-    kneserGraph 3 1 = SimpleGraph.completeGraph (KneserVertex 3 1) := by
-  simpa using kneserGraph_one_eq_completeGraph 3
-
-/-- `KG(3,1)` satisfies the Chapter 39 coloring bounds:
-it is 3-colorable and not 2-colorable. -/
-theorem chapter39_three_one :
-    (∃ C : KneserVertex 3 1 → Fin 3,
-        ∀ a b, (kneserGraph 3 1).Adj a b → C a ≠ C b) ∧
-    (¬ ∃ C : KneserVertex 3 1 → Fin 2,
-        ∀ a b, (kneserGraph 3 1).Adj a b → C a ≠ C b) := by
-  simpa using chapter39_low_dim (n := 3) (k := 1)
-    (by omega) (by omega) (by omega)
-
-/-- Compact bounds form of `chapter39_three_one`. -/
-theorem chapter39_three_one_bounds : KneserColoringBounds 3 1 :=
-  chapter39_three_one
-
-/-- `KG(3,1)` has chromatic number `3`. -/
-theorem kneser_chromaticNumber_three_one :
-    (kneserGraph 3 1).chromaticNumber = ((3 : ℕ) : ℕ∞) := by
-  exact kneser_chromaticNumber_eq_of_bounds chapter39_three_one.1 chapter39_three_one.2
-
-/-- `KG(4,1)` has four vertices. -/
-theorem kneserVertex_card_four_one :
-    Fintype.card (KneserVertex 4 1) = 4 := by
-  rw [kneserVertex_card, Nat.choose_one_right]
-
-/-- `KG(4,1)` is the complete graph on its four singleton vertices. -/
-theorem kneserGraph_four_one_eq_completeGraph :
-    kneserGraph 4 1 = SimpleGraph.completeGraph (KneserVertex 4 1) := by
-  simpa using kneserGraph_one_eq_completeGraph 4
-
-/-- `KG(4,1)` satisfies the Chapter 39 coloring bounds:
-it is 4-colorable and not 3-colorable. -/
-theorem chapter39_four_one :
-    (∃ C : KneserVertex 4 1 → Fin 4,
-        ∀ a b, (kneserGraph 4 1).Adj a b → C a ≠ C b) ∧
-    (¬ ∃ C : KneserVertex 4 1 → Fin 3,
-        ∀ a b, (kneserGraph 4 1).Adj a b → C a ≠ C b) := by
-  simpa using chapter39_low_dim (n := 4) (k := 1)
-    (by omega) (by omega) (by omega)
-
-/-- Compact bounds form of `chapter39_four_one`. -/
-theorem chapter39_four_one_bounds : KneserColoringBounds 4 1 :=
-  chapter39_four_one
-
-/-- `KG(4,1)` has chromatic number `4`. -/
-theorem kneser_chromaticNumber_four_one :
-    (kneserGraph 4 1).chromaticNumber = ((4 : ℕ) : ℕ∞) := by
-  exact kneser_chromaticNumber_eq_of_bounds chapter39_four_one.1 chapter39_four_one.2
-
-/-- `KG(4,2)` has six vertices. -/
-theorem kneserVertex_card_four_two :
-    Fintype.card (KneserVertex 4 2) = 6 := by
-  rw [kneserVertex_card, Nat.choose_two_right]
-
-/-- `KG(4,2)` has an edge. -/
-theorem kneserGraph_four_two_exists_adj :
-    ∃ a b : KneserVertex 4 2, (kneserGraph 4 2).Adj a b :=
-  kneserGraph_exists_adj_of_two_mul_le (n := 4) (k := 2) (by omega) (by omega)
-
-/-- `KG(4,2)` satisfies the Chapter 39 coloring bounds:
-it is 2-colorable and not 1-colorable. -/
-theorem chapter39_four_two :
-    (∃ C : KneserVertex 4 2 → Fin 2,
-        ∀ a b, (kneserGraph 4 2).Adj a b → C a ≠ C b) ∧
-    (¬ ∃ C : KneserVertex 4 2 → Fin 1,
-        ∀ a b, (kneserGraph 4 2).Adj a b → C a ≠ C b) := by
-  simpa using chapter39_low_dim (n := 4) (k := 2)
-    (by omega) (by omega) (by omega)
-
-/-- Compact bounds form of `chapter39_four_two`. -/
-theorem chapter39_four_two_bounds : KneserColoringBounds 4 2 :=
-  chapter39_four_two
-
-/-- `KG(4,2)` has chromatic number `2`. -/
-theorem kneser_chromaticNumber_four_two :
-    (kneserGraph 4 2).chromaticNumber = ((2 : ℕ) : ℕ∞) := by
-  exact kneser_chromaticNumber_eq_of_bounds chapter39_four_two.1 chapter39_four_two.2
-
-/-- `KG(2,1)` is 2-colorable. -/
-theorem kneserGraph_two_one_colorable :
-    (kneserGraph 2 1).Colorable 2 :=
-  kneser_colorable_iff_exists_coloring.mpr chapter39_two_one.1
-
-/-- `KG(2,1)` is not 1-colorable. -/
-theorem kneserGraph_two_one_not_colorable_one :
-    ¬ (kneserGraph 2 1).Colorable 1 := by
-  intro hcolorable
-  exact chapter39_two_one.2 (kneser_colorable_iff_exists_coloring.mp hcolorable)
-
-/-- `KG(2,1)` is not colorable with any palette of size at most one. -/
-theorem kneserGraph_two_one_not_colorable_of_le {q : ℕ} (hq : q ≤ 1) :
-    ¬ (kneserGraph 2 1).Colorable q :=
-  chapter39_two_one_bounds.not_colorable_of_le (by simpa using hq)
-
-/-- `KG(3,1)` is 3-colorable. -/
-theorem kneserGraph_three_one_colorable :
-    (kneserGraph 3 1).Colorable 3 :=
-  kneser_colorable_iff_exists_coloring.mpr chapter39_three_one.1
-
-/-- `KG(3,1)` is not 2-colorable. -/
-theorem kneserGraph_three_one_not_colorable_two :
-    ¬ (kneserGraph 3 1).Colorable 2 := by
-  intro hcolorable
-  exact chapter39_three_one.2 (kneser_colorable_iff_exists_coloring.mp hcolorable)
-
-/-- `KG(3,1)` is not colorable with any palette of size at most two. -/
-theorem kneserGraph_three_one_not_colorable_of_le {q : ℕ} (hq : q ≤ 2) :
-    ¬ (kneserGraph 3 1).Colorable q :=
-  chapter39_three_one_bounds.not_colorable_of_le (by simpa using hq)
-
-/-- `KG(4,1)` is 4-colorable. -/
-theorem kneserGraph_four_one_colorable :
-    (kneserGraph 4 1).Colorable 4 :=
-  kneser_colorable_iff_exists_coloring.mpr chapter39_four_one.1
-
-/-- `KG(4,1)` is not 3-colorable. -/
-theorem kneserGraph_four_one_not_colorable_three :
-    ¬ (kneserGraph 4 1).Colorable 3 := by
-  intro hcolorable
-  exact chapter39_four_one.2 (kneser_colorable_iff_exists_coloring.mp hcolorable)
-
-/-- `KG(4,1)` is not colorable with any palette of size at most three. -/
-theorem kneserGraph_four_one_not_colorable_of_le {q : ℕ} (hq : q ≤ 3) :
-    ¬ (kneserGraph 4 1).Colorable q :=
-  chapter39_four_one_bounds.not_colorable_of_le (by simpa using hq)
-
-/-- `KG(4,2)` is 2-colorable. -/
-theorem kneserGraph_four_two_colorable :
-    (kneserGraph 4 2).Colorable 2 :=
-  kneser_colorable_iff_exists_coloring.mpr chapter39_four_two.1
-
-/-- `KG(4,2)` is not 1-colorable. -/
-theorem kneserGraph_four_two_not_colorable_one :
-    ¬ (kneserGraph 4 2).Colorable 1 := by
-  intro hcolorable
-  exact chapter39_four_two.2 (kneser_colorable_iff_exists_coloring.mp hcolorable)
-
-/-- `KG(4,2)` is not colorable with any palette of size at most one. -/
-theorem kneserGraph_four_two_not_colorable_of_le {q : ℕ} (hq : q ≤ 1) :
-    ¬ (kneserGraph 4 2).Colorable q :=
-  chapter39_four_two_bounds.not_colorable_of_le (by simpa using hq)
+  chapter39 hk hn (tuckerLemmaStatement_le_two (by omega) hnle)
 
 /--
 The same Chapter 39 conclusion from Ky Fan's alternating-chain form.  The
@@ -2691,19 +2000,6 @@ theorem chapter39_of_kyFan {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
   chapter39 hk hn (tuckerLemmaStatement_of_kyFan (by omega) hfan)
 
-/-- Compact bounds form of `chapter39_of_kyFan`. -/
-theorem chapter39_bounds_of_kyFan {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k ≤ n)
-    (hfan : KyFanAlternatingChainStatement n (n - 1)) :
-    KneserColoringBounds n k :=
-  chapter39_of_kyFan hk hn hfan
-
-/-- Chromatic-number form of `chapter39_of_kyFan`. -/
-theorem chapter39_chromaticNumber_of_kyFan {n k : ℕ}
-    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
-    (hfan : KyFanAlternatingChainStatement n (n - 1)) :
-    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
-  KneserColoringBounds.chromaticNumber (chapter39_bounds_of_kyFan hk hn hfan)
-
 /--
 Chapter 39 from the exact signed-permutation parity count.  This is the
 smallest remaining combinatorial frontier in this file.
@@ -2716,21 +2012,6 @@ theorem chapter39_of_kyFanPrefixParity {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k �
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
   chapter39 hk hn (tuckerLemmaStatement_of_kyFanPrefixParity (by omega) hparity)
 
-/-- Compact bounds form of `chapter39_of_kyFanPrefixParity`. -/
-theorem chapter39_bounds_of_kyFanPrefixParity {n k : ℕ}
-    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
-    (hparity : KyFanPrefixParityStatement n (n - 1)) :
-    KneserColoringBounds n k :=
-  chapter39_of_kyFanPrefixParity hk hn hparity
-
-/-- Chromatic-number form of `chapter39_of_kyFanPrefixParity`. -/
-theorem chapter39_chromaticNumber_of_kyFanPrefixParity {n k : ℕ}
-    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
-    (hparity : KyFanPrefixParityStatement n (n - 1)) :
-    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
-  KneserColoringBounds.chromaticNumber
-    (chapter39_bounds_of_kyFanPrefixParity hk hn hparity)
-
 /--
 The same conclusion from the equivalent mod-four Ky Fan count.  This is often
 the form produced directly by the standard boundary-parity proof.
@@ -2742,21 +2023,6 @@ theorem chapter39_of_kyFanPrefixModFour {n k : ℕ} (hk : 1 ≤ k) (hn : 2 * k �
     (¬ ∃ C : KneserVertex n k → Fin (n - 2 * k + 1),
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
   chapter39 hk hn (tuckerLemmaStatement_of_kyFanPrefixModFour (by omega) hmodFour)
-
-/-- Compact bounds form of `chapter39_of_kyFanPrefixModFour`. -/
-theorem chapter39_bounds_of_kyFanPrefixModFour {n k : ℕ}
-    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
-    (hmodFour : KyFanPrefixModFourStatement n (n - 1)) :
-    KneserColoringBounds n k :=
-  chapter39_of_kyFanPrefixModFour hk hn hmodFour
-
-/-- Chromatic-number form of `chapter39_of_kyFanPrefixModFour`. -/
-theorem chapter39_chromaticNumber_of_kyFanPrefixModFour {n k : ℕ}
-    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
-    (hmodFour : KyFanPrefixModFourStatement n (n - 1)) :
-    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
-  KneserColoringBounds.chromaticNumber
-    (chapter39_bounds_of_kyFanPrefixModFour hk hn hmodFour)
 
 /--
 Chapter 39 from the concrete Prescott-Su/Fan path endpoint decomposition.
@@ -2772,20 +2038,5 @@ theorem chapter39_of_kyFanPrefixPathEndpointDecomposition {n k : ℕ}
         ∀ a b, (kneserGraph n k).Adj a b → C a ≠ C b) :=
   chapter39_of_kyFanPrefixParity hk hn
     (kyFanPrefixParityStatement_of_pathEndpointDecomposition hpaths)
-
-/-- Compact bounds form of `chapter39_of_kyFanPrefixPathEndpointDecomposition`. -/
-theorem chapter39_bounds_of_kyFanPrefixPathEndpointDecomposition {n k : ℕ}
-    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
-    (hpaths : KyFanPrefixPathEndpointDecompositionStatement n (n - 1)) :
-    KneserColoringBounds n k :=
-  chapter39_of_kyFanPrefixPathEndpointDecomposition hk hn hpaths
-
-/-- Chromatic-number form of `chapter39_of_kyFanPrefixPathEndpointDecomposition`. -/
-theorem chapter39_chromaticNumber_of_kyFanPrefixPathEndpointDecomposition {n k : ℕ}
-    (hk : 1 ≤ k) (hn : 2 * k ≤ n)
-    (hpaths : KyFanPrefixPathEndpointDecompositionStatement n (n - 1)) :
-    (kneserGraph n k).chromaticNumber = ((n - 2 * k + 2 : ℕ) : ℕ∞) :=
-  KneserColoringBounds.chromaticNumber
-    (chapter39_bounds_of_kyFanPrefixPathEndpointDecomposition hk hn hpaths)
 
 end ProofsInTheBook.Chapter39

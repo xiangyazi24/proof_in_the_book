@@ -18,10 +18,7 @@ facts used in Van der Waerden-style arguments:
 
 The deep Alexandrov-Fenchel/Falikman-Egorychev/Gurvits log-concavity input is
 not hidden here.  The general convexity theorem below states exactly the local
-mixed-coefficient nonnegativity hypothesis needed for a two-row slice.  The
-checkerboard specialization proves an upper bound for an interior point in
-terms of opposite boundary endpoints; this is a genuine convexity statement,
-not a replacement for the coefficient lower bound needed in Chapter 22.
+mixed-coefficient nonnegativity hypothesis needed for a two-row slice.
 -/
 
 namespace ProofsInTheBook.PermanentConvexity
@@ -787,11 +784,6 @@ Convexity on the line joining the two opposite checkerboard exchange
 endpoints.  The original matrix is an interior point of that line whenever the
 two exchange amounts have positive sum, so its permanent is bounded by the
 corresponding convex combination of the two endpoint permanents.
-
-This is the exact consequence of convexity on this one-dimensional slice.  It
-does not imply that one of the boundary endpoints has permanent at most the
-original matrix, and therefore is not a boundary-induction proof of Van der
-Waerden's lower bound.
 -/
 theorem checkerboardExchangeEndpoint_backward_line_permanent_le
     {M : Matrix n n ℝ} {r s c d : n} (hrs : r ≠ s) (hcd : c ≠ d)

@@ -3,22 +3,30 @@ import Mathlib
 /-!
 # Chapter 36: Art galleries
 
-This file proves a certified art-gallery theorem for simple polygons.  The
-headline theorem `chapter36` takes a `SimplePolygon`; the supplied-triangulation
-form is kept separately as `chapter36_triangulated`.
+This file proves the combinatorial core of the art gallery theorem: any
+abstract polygon triangulation has a 3-coloring, and the smallest color
+class gives at most `⌊n / 3⌋` guards meeting every triangle.
 
-It also introduces a certified ear-clipping interface for planar polygons.
-Mathlib's current polygon API gives vertex-indexed `Polygon`s and boundary
-sets, but not a Jordan-curve interior theorem for raw simple planar polygons.
-The `SimplePolygon` structure below therefore keeps the cyclic sequence of
-vertices in `ℝ × ℝ` together with a checkable triangulation certificate.  The
-guard theorem then runs end-to-end through certified ear clipping, Fisk
-3-coloring, and the smallest color class.
+Geometry gap audit (2026-05-24): Mathlib has `Geometry.Polygon.Basic`, which
+currently provides a vertex-indexed `Polygon`, edge sets, boundary, and
+conversion between 3-polygons and affine triangles.  It does not yet provide
+the infrastructure needed to state and prove the full geometric art gallery
+theorem:
+
+* a definition of a simple polygon as a planar polygonal Jordan curve,
+* the polygon interior and the visibility relation from a guard point,
+* diagonals lying inside the polygon,
+* an ear theorem or equivalent induction step, and
+* existence of a triangulation of every simple polygon, together with a proof
+  that guards hitting all triangles cover the polygon.
+
+Consequently `chapter36_artgallery_combinatorial` is the closed theorem in
+this file.  Extending it to "every simple polygon with `n` vertices is guarded
+by `⌊n / 3⌋` vertices" should wait for that geometry layer rather than adding
+an unproved triangulation postulate or a placeholder structure here.
 -/
 
 namespace ProofsInTheBook.Chapter36
-
-open Set
 
 inductive GuardColor where
   | red | green | blue
@@ -87,243 +95,6 @@ instance {n : ℕ} : DecidableEq (AbsTriangle n) := by
 def AbsTriangle.edges {n : ℕ} (T : AbsTriangle n) : Finset (Sym2 (Fin n)) :=
   {Sym2.mk T.a T.b, Sym2.mk T.b T.c, Sym2.mk T.a T.c}
 
-/-- The three vertices of an abstract triangle. -/
-def AbsTriangle.vertices {n : ℕ} (T : AbsTriangle n) : Finset (Fin n) :=
-  {T.a, T.b, T.c}
-
-/-- The inverse index to `v.succAbove`, defined for vertices different from
-the deleted vertex. -/
-noncomputable def deleteVertexIndex {n : ℕ} (v : Fin (n + 1)) (i : Fin (n + 1))
-    (hi : i ≠ v) : Fin n :=
-  Classical.choose (Fin.exists_succAbove_eq hi)
-
-@[simp]
-lemma succAbove_deleteVertexIndex_of_ne {n : ℕ} (v : Fin (n + 1)) (i : Fin (n + 1))
-    (hi : i ≠ v) : v.succAbove (deleteVertexIndex v i hi) = i := by
-  exact Classical.choose_spec (Fin.exists_succAbove_eq hi)
-
-lemma deleteVertexIndex_injective_on_compl {n : ℕ} {v : Fin (n + 1)}
-    {i j : Fin (n + 1)} {hi : i ≠ v} {hj : j ≠ v}
-    (h : deleteVertexIndex v i hi = deleteVertexIndex v j hj) : i = j := by
-  have hs := congrArg v.succAbove h
-  simpa [succAbove_deleteVertexIndex_of_ne v i hi,
-    succAbove_deleteVertexIndex_of_ne v j hj] using hs
-
-@[simp]
-lemma deleteVertexIndex_proof_irrel {n : ℕ} (v : Fin (n + 1)) (i : Fin (n + 1))
-    (hi hi' : i ≠ v) :
-    deleteVertexIndex v i hi = deleteVertexIndex v i hi' := by
-  rw [show hi = hi' from Subsingleton.elim _ _]
-
-namespace AbsTriangle
-
-lemma not_mem_vertices_iff {n : ℕ} {T : AbsTriangle n} {v : Fin n} :
-    v ∉ T.vertices ↔ v ≠ T.a ∧ v ≠ T.b ∧ v ≠ T.c := by
-  simp [AbsTriangle.vertices]
-
-lemma vertex_ne_of_not_mem {n : ℕ} {T : AbsTriangle n} {v x : Fin n}
-    (hT : v ∉ T.vertices) (hx : x ∈ T.vertices) : x ≠ v := by
-  intro h
-  exact hT (h ▸ hx)
-
-/-- Delete a vertex not used by a triangle, reindexing the remaining vertices
-from `Fin (n+1)` to `Fin n`. -/
-noncomputable def deleteVertex {n : ℕ} (v : Fin (n + 1)) (T : AbsTriangle (n + 1))
-    (hT : v ∉ T.vertices) : AbsTriangle n where
-  a := deleteVertexIndex v T.a (vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices]))
-  b := deleteVertexIndex v T.b (vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices]))
-  c := deleteVertexIndex v T.c (vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices]))
-  hab := by
-    intro h
-    exact T.hab (deleteVertexIndex_injective_on_compl h)
-  hbc := by
-    intro h
-    exact T.hbc (deleteVertexIndex_injective_on_compl h)
-  hac := by
-    intro h
-    exact T.hac (deleteVertexIndex_injective_on_compl h)
-
-@[simp]
-lemma succAbove_deleteVertex_a {n : ℕ} (v : Fin (n + 1)) (T : AbsTriangle (n + 1))
-    (hT : v ∉ T.vertices) :
-    v.succAbove (T.deleteVertex v hT).a = T.a := by
-  exact succAbove_deleteVertexIndex_of_ne v T.a
-    (vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices]))
-
-@[simp]
-lemma succAbove_deleteVertex_b {n : ℕ} (v : Fin (n + 1)) (T : AbsTriangle (n + 1))
-    (hT : v ∉ T.vertices) :
-    v.succAbove (T.deleteVertex v hT).b = T.b := by
-  exact succAbove_deleteVertexIndex_of_ne v T.b
-    (vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices]))
-
-@[simp]
-lemma succAbove_deleteVertex_c {n : ℕ} (v : Fin (n + 1)) (T : AbsTriangle (n + 1))
-    (hT : v ∉ T.vertices) :
-    v.succAbove (T.deleteVertex v hT).c = T.c := by
-  exact succAbove_deleteVertexIndex_of_ne v T.c
-    (vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices]))
-
-lemma deleteVertex_eq_imp {n : ℕ} {v : Fin (n + 1)}
-    {T U : AbsTriangle (n + 1)} {hT : v ∉ T.vertices} {hU : v ∉ U.vertices}
-    (h : T.deleteVertex v hT = U.deleteVertex v hU) : T = U := by
-  have ha : T.a = U.a := by
-    have hfield := congrArg AbsTriangle.a h
-    have hs := congrArg v.succAbove hfield
-    simpa using hs
-  have hb : T.b = U.b := by
-    have hfield := congrArg AbsTriangle.b h
-    have hs := congrArg v.succAbove hfield
-    simpa using hs
-  have hc : T.c = U.c := by
-    have hfield := congrArg AbsTriangle.c h
-    have hs := congrArg v.succAbove hfield
-    simpa using hs
-  cases T
-  cases U
-  simp_all
-
-lemma deleteVertex_proof_irrel {n : ℕ} {v : Fin (n + 1)}
-    (T : AbsTriangle (n + 1)) (hT hT' : v ∉ T.vertices) :
-    T.deleteVertex v hT = T.deleteVertex v hT' := by
-  rw [show hT = hT' from Subsingleton.elim _ _]
-
-lemma deleteVertex_mem_vertices_of_mem {n : ℕ} {v x : Fin (n + 1)}
-    {T : AbsTriangle (n + 1)} (hT : v ∉ T.vertices) (hx : x ∈ T.vertices) :
-    deleteVertexIndex v x (vertex_ne_of_not_mem hT hx) ∈
-      (T.deleteVertex v hT).vertices := by
-  simp only [AbsTriangle.vertices, Finset.mem_insert, Finset.mem_singleton] at hx ⊢
-  rcases hx with rfl | rfl | rfl <;> simp [AbsTriangle.deleteVertex]
-
-lemma mem_vertices_of_deleteVertexIndex_mem {n : ℕ} {v x : Fin (n + 1)}
-    (hxv : x ≠ v) {T : AbsTriangle (n + 1)} {hT : v ∉ T.vertices}
-    (hmem : deleteVertexIndex v x hxv ∈ (T.deleteVertex v hT).vertices) :
-    x ∈ T.vertices := by
-  simp only [AbsTriangle.vertices, AbsTriangle.deleteVertex, Finset.mem_insert,
-    Finset.mem_singleton] at hmem ⊢
-  rcases hmem with h | h | h
-  · left
-    exact deleteVertexIndex_injective_on_compl
-      (hj := vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices])) h
-  · right; left
-    exact deleteVertexIndex_injective_on_compl
-      (hj := vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices])) h
-  · right; right
-    exact deleteVertexIndex_injective_on_compl
-      (hj := vertex_ne_of_not_mem hT (by simp [AbsTriangle.vertices])) h
-
-lemma vertex_mem_of_mem_edge {n : ℕ} {T : AbsTriangle n} {e : Sym2 (Fin n)}
-    {x : Fin n} (he : e ∈ T.edges) (hx : x ∈ e) : x ∈ T.vertices := by
-  simp only [AbsTriangle.edges, Finset.mem_insert, Finset.mem_singleton] at he
-  simp only [AbsTriangle.vertices, Finset.mem_insert, Finset.mem_singleton]
-  rcases he with rfl | rfl | rfl <;> simp at hx ⊢ <;> tauto
-
-/-- Delete a vertex from an edge known not to contain it. -/
-noncomputable def deleteVertexEdge {n : ℕ} (v : Fin (n + 1)) (e : Sym2 (Fin (n + 1)))
-    (he : ∀ x ∈ e, x ≠ v) : Sym2 (Fin n) :=
-  Sym2.pmap (P := fun x => x ≠ v) (fun x hx => deleteVertexIndex v x hx) e he
-
-lemma deleteVertexEdge_mem_of_mem {n : ℕ} {v : Fin (n + 1)}
-    {T : AbsTriangle (n + 1)} (hT : v ∉ T.vertices) {e : Sym2 (Fin (n + 1))}
-    (he : e ∈ T.edges) :
-    deleteVertexEdge v e (fun _ hx => vertex_ne_of_not_mem hT
-      (vertex_mem_of_mem_edge he hx)) ∈ (T.deleteVertex v hT).edges := by
-  simp only [AbsTriangle.edges, Finset.mem_insert, Finset.mem_singleton] at he ⊢
-  rcases he with rfl | rfl | rfl
-  · left
-    rw [deleteVertexEdge, Sym2.pmap_pair]
-    simp [AbsTriangle.deleteVertex]
-  · right; left
-    rw [deleteVertexEdge, Sym2.pmap_pair]
-    simp [AbsTriangle.deleteVertex]
-  · right; right
-    rw [deleteVertexEdge, Sym2.pmap_pair]
-    simp [AbsTriangle.deleteVertex]
-
-lemma deleteVertexEdge_not_mem {n : ℕ} {v x : Fin (n + 1)} (hxv : x ≠ v)
-    {e : Sym2 (Fin (n + 1))} (he : ∀ y ∈ e, y ≠ v) (hxnot : x ∉ e) :
-    deleteVertexIndex v x hxv ∉ deleteVertexEdge v e he := by
-  intro hmem
-  rw [deleteVertexEdge, Sym2.mem_pmap_iff] at hmem
-  rcases hmem with ⟨y, hy, hy_eq⟩
-  apply hxnot
-  have hyx : y = x := deleteVertexIndex_injective_on_compl hy_eq.symm
-  simpa [hyx] using hy
-
-lemma deleteVertexEdge_proof_irrel {n : ℕ} (v : Fin (n + 1))
-    (e : Sym2 (Fin (n + 1))) (he he' : ∀ x ∈ e, x ≠ v) :
-    deleteVertexEdge v e he = deleteVertexEdge v e he' := by
-  rw [show he = he' from Subsingleton.elim _ _]
-
-/-- Insert a deleted vertex back into a triangle by reindexing all vertices
-with `v.succAbove`. -/
-def insertVertex {n : ℕ} (v : Fin (n + 1)) (T : AbsTriangle n) :
-    AbsTriangle (n + 1) where
-  a := v.succAbove T.a
-  b := v.succAbove T.b
-  c := v.succAbove T.c
-  hab := by
-    intro h
-    exact T.hab (Fin.succAbove_right_injective h)
-  hbc := by
-    intro h
-    exact T.hbc (Fin.succAbove_right_injective h)
-  hac := by
-    intro h
-    exact T.hac (Fin.succAbove_right_injective h)
-
-@[simp]
-lemma insertVertex_a {n : ℕ} (v : Fin (n + 1)) (T : AbsTriangle n) :
-    (T.insertVertex v).a = v.succAbove T.a := rfl
-
-@[simp]
-lemma insertVertex_b {n : ℕ} (v : Fin (n + 1)) (T : AbsTriangle n) :
-    (T.insertVertex v).b = v.succAbove T.b := rfl
-
-@[simp]
-lemma insertVertex_c {n : ℕ} (v : Fin (n + 1)) (T : AbsTriangle n) :
-    (T.insertVertex v).c = v.succAbove T.c := rfl
-
-lemma insertVertex_deleteVertex {n : ℕ} {v : Fin (n + 1)}
-    (T : AbsTriangle (n + 1)) (hT : v ∉ T.vertices) :
-    (T.deleteVertex v hT).insertVertex v = T := by
-  cases T
-  simp [AbsTriangle.insertVertex]
-
-lemma succAbove_mem_insertVertex_vertices_iff {n : ℕ} {v : Fin (n + 1)}
-    {T : AbsTriangle n} {x : Fin n} :
-    v.succAbove x ∈ (T.insertVertex v).vertices ↔ x ∈ T.vertices := by
-  simp [AbsTriangle.vertices, AbsTriangle.insertVertex]
-
-lemma vertex_not_mem_insertVertex_vertices {n : ℕ} (v : Fin (n + 1))
-    (T : AbsTriangle n) :
-    v ∉ (T.insertVertex v).vertices := by
-  simp [AbsTriangle.vertices, AbsTriangle.insertVertex]
-
-/-- Insert a deleted vertex back into an edge by reindexing both endpoints
-with `v.succAbove`. -/
-def insertVertexEdge {n : ℕ} (v : Fin (n + 1))
-    (e : Sym2 (Fin n)) : Sym2 (Fin (n + 1)) :=
-  Sym2.map v.succAbove e
-
-lemma insertVertexEdge_mem_of_mem {n : ℕ} {v : Fin (n + 1)}
-    {T : AbsTriangle n} {e : Sym2 (Fin n)}
-    (he : e ∈ T.edges) :
-    insertVertexEdge v e ∈ (T.insertVertex v).edges := by
-  simp only [AbsTriangle.edges, Finset.mem_insert, Finset.mem_singleton] at he ⊢
-  rcases he with rfl | rfl | rfl <;>
-    simp [insertVertexEdge, AbsTriangle.insertVertex, Sym2.map_mk]
-
-lemma insertVertexEdge_not_mem {n : ℕ} {v : Fin (n + 1)}
-    {x : Fin n} {e : Sym2 (Fin n)} (hxnot : x ∉ e) :
-    v.succAbove x ∉ insertVertexEdge v e := by
-  induction e using Sym2.inductionOn with
-  | hf a b =>
-      simpa [insertVertexEdge, Sym2.map_mk, Sym2.mem_iff,
-        Fin.succAbove_right_inj] using hxnot
-
-end AbsTriangle
-
 lemma valid_coloring_edge {n : ℕ} {T : AbsTriangle n} {c : Fin n → GuardColor}
     (hc : c T.a ≠ c T.b ∧ c T.b ≠ c T.c ∧ c T.a ≠ c T.c) {x y : Fin n}
     (h_edge : Sym2.mk x y ∈ T.edges) : c x ≠ c y := by
@@ -357,239 +128,6 @@ def TriangulatedPolygon.vertices {n : ℕ} {S : Finset (AbsTriangle n)} :
     TriangulatedPolygon n S → Finset (Fin n)
   | .single T => {T.a, T.b, T.c}
   | .glue h _ v _ _ _ => insert v h.vertices
-
-/-- An inductive triangulation always contains at least one triangle. -/
-theorem TriangulatedPolygon.card_pos {n : ℕ} {S : Finset (AbsTriangle n)}
-    (h : TriangulatedPolygon n S) : 0 < S.card := by
-  induction h with
-  | single T =>
-      simp
-  | glue h_ind T newV hT_new hShared hFresh ih =>
-      exact lt_of_lt_of_le ih (Finset.card_le_card (by intro U hU; simp [hU]))
-
-/-- Every vertex in the inductively recorded vertex set belongs to some
-triangle of the triangulation. -/
-theorem TriangulatedPolygon.mem_vertices_exists_triangle {n : ℕ}
-    {S : Finset (AbsTriangle n)} (h : TriangulatedPolygon n S) {v : Fin n} :
-    v ∈ h.vertices → ∃ T ∈ S, v ∈ T.vertices := by
-  induction h with
-  | single T =>
-      intro hv
-      refine ⟨T, by simp, ?_⟩
-      simpa [TriangulatedPolygon.vertices, AbsTriangle.vertices] using hv
-  | glue h_ind T newV hT_new hShared hFresh ih =>
-      intro hv
-      simp only [TriangulatedPolygon.vertices, Finset.mem_insert] at hv
-      rcases hv with rfl | hv_old
-      · exact ⟨T, by simp, by simpa [AbsTriangle.vertices] using hT_new⟩
-      · rcases ih hv_old with ⟨U, hU, hvU⟩
-        exact ⟨U, by simp [hU], hvU⟩
-
-/-- An inductive triangulation with `k` triangles uses exactly `k + 2`
-vertices. -/
-theorem TriangulatedPolygon.vertices_card {n : ℕ} {S : Finset (AbsTriangle n)}
-    (h : TriangulatedPolygon n S) : h.vertices.card = S.card + 2 := by
-  induction h with
-  | single T =>
-      simp [TriangulatedPolygon.vertices, T.hab, T.hbc, T.hac]
-  | glue h_ind T newV hT_new hShared hFresh ih =>
-      rename_i S0
-      have hnew_not_old : newV ∉ h_ind.vertices := by
-        intro hmem
-        rcases h_ind.mem_vertices_exists_triangle hmem with ⟨U, hU, hnewU⟩
-        exact hFresh U hU (by simpa [AbsTriangle.vertices] using hnewU)
-      have hT_not_mem : T ∉ S0 := by
-        intro hT_mem
-        exact hFresh T hT_mem hT_new
-      simp [TriangulatedPolygon.vertices, Finset.card_insert_of_notMem hnew_not_old,
-        Finset.card_insert_of_notMem hT_not_mem, ih]
-
-/-- Reindex a finset of triangles after deleting a vertex avoided by all of
-them. -/
-noncomputable def deleteVertexTriangles {n : ℕ} (v : Fin (n + 1))
-    (S : Finset (AbsTriangle (n + 1))) (hS : ∀ T ∈ S, v ∉ T.vertices) :
-    Finset (AbsTriangle n) :=
-  S.attach.image fun T => T.1.deleteVertex v (hS T.1 T.2)
-
-lemma deleteVertexTriangles_insert {n : ℕ} (v : Fin (n + 1))
-    (S : Finset (AbsTriangle (n + 1))) (T : AbsTriangle (n + 1))
-    (hAll : ∀ U ∈ insert T S, v ∉ U.vertices) :
-    deleteVertexTriangles v (insert T S) hAll =
-      insert (T.deleteVertex v (hAll T (by simp)))
-        (deleteVertexTriangles v S (fun U hU => hAll U (by simp [hU]))) := by
-  classical
-  ext X
-  constructor
-  · intro hX
-    rw [deleteVertexTriangles] at hX
-    rcases Finset.mem_image.mp hX with ⟨U, _hUatt, hUX⟩
-    rcases Finset.mem_insert.mp U.2 with hUT | hUS
-    · apply Finset.mem_insert.mpr
-      left
-      have hdel :
-          U.1.deleteVertex v (hAll U.1 U.2) =
-            T.deleteVertex v (hAll T (by simp)) := by
-        cases U with
-        | mk Uval Uprop =>
-            dsimp at hUT ⊢
-            subst Uval
-            exact AbsTriangle.deleteVertex_proof_irrel T _ _
-      exact hUX.symm.trans hdel
-    · apply Finset.mem_insert.mpr
-      right
-      rw [deleteVertexTriangles]
-      refine Finset.mem_image.mpr ⟨⟨U.1, hUS⟩, by simp, ?_⟩
-      exact (AbsTriangle.deleteVertex_proof_irrel U.1 _ _).trans hUX
-  · intro hX
-    rw [deleteVertexTriangles]
-    rcases Finset.mem_insert.mp hX with hXT | hXS
-    · refine Finset.mem_image.mpr ⟨⟨T, by simp⟩, by simp, ?_⟩
-      exact (AbsTriangle.deleteVertex_proof_irrel T _ _).trans hXT.symm
-    · rw [deleteVertexTriangles] at hXS
-      rcases Finset.mem_image.mp hXS with ⟨U, _hUatt, hUX⟩
-      refine Finset.mem_image.mpr ⟨⟨U.1, by simp [U.2]⟩, by simp, ?_⟩
-      exact (AbsTriangle.deleteVertex_proof_irrel U.1 _ _).trans hUX
-
-lemma deleteVertexTriangles_card {n : ℕ} (v : Fin (n + 1))
-    (S : Finset (AbsTriangle (n + 1))) (hS : ∀ T ∈ S, v ∉ T.vertices) :
-    (deleteVertexTriangles v S hS).card = S.card := by
-  classical
-  have hinj :
-      Function.Injective
-        (fun T : {T : AbsTriangle (n + 1) // T ∈ S} =>
-          T.1.deleteVertex v (hS T.1 T.2)) := by
-    intro T U hTU
-    apply Subtype.ext
-    exact AbsTriangle.deleteVertex_eq_imp hTU
-  simpa [deleteVertexTriangles] using
-    (Finset.card_image_of_injective (s := S.attach)
-      (f := fun T : {T : AbsTriangle (n + 1) // T ∈ S} =>
-        T.1.deleteVertex v (hS T.1 T.2)) hinj)
-
-/-- Reindex a finset of triangles into the larger vertex type after inserting
-one vertex. -/
-def insertVertexTriangles {n : ℕ} (v : Fin (n + 1))
-    (S : Finset (AbsTriangle n)) : Finset (AbsTriangle (n + 1)) :=
-  S.image fun T => T.insertVertex v
-
-lemma insertVertexTriangles_deleteVertexTriangles {n : ℕ} (v : Fin (n + 1))
-    (S : Finset (AbsTriangle (n + 1))) (hS : ∀ T ∈ S, v ∉ T.vertices) :
-    insertVertexTriangles v (deleteVertexTriangles v S hS) = S := by
-  classical
-  ext T
-  constructor
-  · intro hT
-    rw [insertVertexTriangles] at hT
-    rcases Finset.mem_image.mp hT with ⟨U, hU, hUT⟩
-    rw [deleteVertexTriangles] at hU
-    rcases Finset.mem_image.mp hU with ⟨W, _hWatt, hWU⟩
-    have hT_eq : T = W.1 := by
-      rw [← hUT, ← hWU]
-      exact AbsTriangle.insertVertex_deleteVertex W.1 (hS W.1 W.2)
-    rw [hT_eq]
-    exact W.2
-  · intro hT
-    rw [insertVertexTriangles]
-    refine Finset.mem_image.mpr
-      ⟨T.deleteVertex v (hS T hT), ?_, ?_⟩
-    · rw [deleteVertexTriangles]
-      exact Finset.mem_image.mpr ⟨⟨T, hT⟩, by simp, rfl⟩
-    · exact AbsTriangle.insertVertex_deleteVertex T (hS T hT)
-
-noncomputable def TriangulatedPolygon.deleteVertex {n : ℕ}
-    {S : Finset (AbsTriangle (n + 1))} (h : TriangulatedPolygon (n + 1) S)
-    (v : Fin (n + 1)) (hS : ∀ T ∈ S, v ∉ T.vertices) :
-    TriangulatedPolygon n (deleteVertexTriangles v S hS) := by
-  induction h generalizing v with
-  | single T =>
-      simpa [deleteVertexTriangles] using
-        (TriangulatedPolygon.single (T.deleteVertex v (hS T (by simp))))
-  | glue h_ind T newV hT_new hShared hFresh ih =>
-      rename_i S0
-      let hS0 : ∀ U ∈ S0, v ∉ U.vertices := fun U hU => hS U (by simp [hU])
-      have hT : v ∉ T.vertices := hS T (by simp)
-      have hnew_mem_T : newV ∈ T.vertices := by
-        simpa [AbsTriangle.vertices] using hT_new
-      have hnew_ne : newV ≠ v := AbsTriangle.vertex_ne_of_not_mem hT hnew_mem_T
-      let newV' : Fin n := deleteVertexIndex v newV hnew_ne
-      let T' : AbsTriangle n := T.deleteVertex v hT
-      have hT_new' : newV' ∈ T'.vertices := by
-        simpa [newV', T'] using AbsTriangle.deleteVertex_mem_vertices_of_mem hT hnew_mem_T
-      have hShared' :
-          ∃ T_s ∈ deleteVertexTriangles v S0 hS0, ∃ e ∈ T'.edges,
-            e ∈ T_s.edges ∧ newV' ∉ e := by
-        rcases hShared with ⟨T_s, hT_s, e, heT, heTs, hnew_not_e⟩
-        let hTs : v ∉ T_s.vertices := hS0 T_s hT_s
-        let e' : Sym2 (Fin n) :=
-          AbsTriangle.deleteVertexEdge v e
-            (fun x hx => AbsTriangle.vertex_ne_of_not_mem hT
-              (AbsTriangle.vertex_mem_of_mem_edge heT hx))
-        refine ⟨T_s.deleteVertex v hTs, ?_, e', ?_, ?_, ?_⟩
-        · rw [deleteVertexTriangles]
-          refine Finset.mem_image.mpr ⟨⟨T_s, hT_s⟩, by simp, rfl⟩
-        · exact AbsTriangle.deleteVertexEdge_mem_of_mem hT heT
-        · have hmem := AbsTriangle.deleteVertexEdge_mem_of_mem hTs heTs
-          simpa [e', AbsTriangle.deleteVertexEdge_proof_irrel] using hmem
-        · exact AbsTriangle.deleteVertexEdge_not_mem hnew_ne _ hnew_not_e
-      have hFresh' :
-          ∀ T_s ∈ deleteVertexTriangles v S0 hS0,
-            newV' ∉ T_s.vertices := by
-        intro T_s hT_s hmem
-        rw [deleteVertexTriangles] at hT_s
-        rcases Finset.mem_image.mp hT_s with ⟨U, _hUatt, hUeq⟩
-        have hmem_old : newV ∈ U.1.vertices := by
-          apply AbsTriangle.mem_vertices_of_deleteVertexIndex_mem hnew_ne
-          simpa [newV', hUeq.symm] using hmem
-        have hnot := hFresh U.1 U.2
-        have hnot' : newV ∉ U.1.vertices := by
-          simpa [AbsTriangle.vertices] using hnot
-        exact hnot' hmem_old
-      have hglue :
-          TriangulatedPolygon n (insert T' (deleteVertexTriangles v S0 hS0)) :=
-        TriangulatedPolygon.glue (ih v hS0) T' newV' hT_new' hShared' hFresh'
-      rw [deleteVertexTriangles_insert]
-      exact hglue
-
-/-- Reindex a triangulation into the larger vertex type after inserting one
-vertex. -/
-noncomputable def TriangulatedPolygon.insertVertex {n : ℕ} {S : Finset (AbsTriangle n)}
-    (h : TriangulatedPolygon n S) (v : Fin (n + 1)) :
-    TriangulatedPolygon (n + 1) (insertVertexTriangles v S) := by
-  induction h with
-  | single T =>
-      simpa [insertVertexTriangles] using
-        (TriangulatedPolygon.single (T.insertVertex v))
-  | glue h_ind T newV hT_new hShared hFresh ih =>
-      rename_i S0
-      have hT_new' : v.succAbove newV ∈ (T.insertVertex v).vertices := by
-        simpa [AbsTriangle.vertices, AbsTriangle.insertVertex] using hT_new
-      have hShared' :
-          ∃ T_s ∈ insertVertexTriangles v S0,
-            ∃ e ∈ (T.insertVertex v).edges,
-              e ∈ T_s.edges ∧ v.succAbove newV ∉ e := by
-        rcases hShared with ⟨T_s, hT_s, e, heT, heTs, hnew_not_e⟩
-        refine ⟨T_s.insertVertex v, ?_, AbsTriangle.insertVertexEdge v e, ?_, ?_, ?_⟩
-        · rw [insertVertexTriangles]
-          exact Finset.mem_image.mpr ⟨T_s, hT_s, rfl⟩
-        · exact AbsTriangle.insertVertexEdge_mem_of_mem heT
-        · exact AbsTriangle.insertVertexEdge_mem_of_mem heTs
-        · exact AbsTriangle.insertVertexEdge_not_mem hnew_not_e
-      have hFresh' :
-          ∀ T_s ∈ insertVertexTriangles v S0,
-            v.succAbove newV ∉ T_s.vertices := by
-        intro T_s hT_s hmem
-        rw [insertVertexTriangles] at hT_s
-        rcases Finset.mem_image.mp hT_s with ⟨U, hU, hUeq⟩
-        subst hUeq
-        have hmem_old : newV ∈ U.vertices :=
-          AbsTriangle.succAbove_mem_insertVertex_vertices_iff.mp hmem
-        exact hFresh U hU (by simpa [AbsTriangle.vertices] using hmem_old)
-      have hglue :
-          TriangulatedPolygon (n + 1)
-            (insert (T.insertVertex v) (insertVertexTriangles v S0)) :=
-        TriangulatedPolygon.glue ih (T.insertVertex v) (v.succAbove newV)
-          hT_new' hShared' hFresh'
-      simpa [insertVertexTriangles] using hglue
 
 theorem TriangulatedPolygon.exists_3coloring {n : ℕ} {S : Finset (AbsTriangle n)}
     (h : TriangulatedPolygon n S) :
@@ -682,330 +220,24 @@ theorem TriangulatedPolygon.exists_3coloring {n : ℕ} {S : Finset (AbsTriangle 
         simp [h1, h2, h3]
         exact hc T'' hT''S
 
-/-- Deleting a free ear from an inductive triangulation leaves the previous
-inductive triangulation.  This is the combinatorial ear-clipping step. -/
-structure TriangulatedPolygon.EarRemoval {n : ℕ} {S : Finset (AbsTriangle n)}
-    (h : TriangulatedPolygon n S) where
-  ear : AbsTriangle n
-  vertex : Fin n
-  remainder : Finset (AbsTriangle n)
-  ear_mem : ear ∈ S
-  vertex_mem : vertex ∈ ear.vertices
-  remainder_triangulated : TriangulatedPolygon n remainder
-  erase_eq : S.erase ear = remainder
-  remainder_card_add_one : remainder.card + 1 = S.card
-  shared_edge :
-    ∃ T' ∈ remainder, ∃ e ∈ ear.edges, e ∈ T'.edges ∧ vertex ∉ e
-  free_vertex :
-    ∀ T' ∈ S, T' ≠ ear → vertex ∉ T'.vertices
-
-theorem TriangulatedPolygon.EarRemoval.vertex_not_mem_remainder {n : ℕ}
-    {S : Finset (AbsTriangle n)} {h : TriangulatedPolygon n S}
-    (R : h.EarRemoval) :
-    ∀ T ∈ R.remainder, R.vertex ∉ T.vertices := by
-  intro T hT
-  have hErase : T ∈ S.erase R.ear := by
-    rwa [R.erase_eq]
-  exact R.free_vertex T (Finset.mem_of_mem_erase hErase) (Finset.mem_erase.mp hErase).1
-
-def TriangulatedPolygon.exists_earRemoval {n : ℕ} {S : Finset (AbsTriangle n)}
+/-- Any TriangulatedPolygon with ≥ 2 triangles has a triangle with a
+"free" vertex (degree 1 in the triangulation, i.e., the ear). -/
+theorem TriangulatedPolygon.exists_ear {n : ℕ} {S : Finset (AbsTriangle n)}
     (h : TriangulatedPolygon n S) (hS : S.card ≥ 2) :
-    h.EarRemoval := by
+    ∃ T ∈ S, ∃ v ∈ ({T.a, T.b, T.c} : Finset (Fin n)),
+      ∀ T' ∈ S, T' ≠ T → v ∉ ({T'.a, T'.b, T'.c} : Finset (Fin n)) := by
   cases h with
   | single T =>
       exfalso
       simp only [Finset.card_singleton] at hS
       omega
   | glue h_ind T newV hT_new hShared hFresh =>
-      rename_i S0
-      have hT_not_mem : T ∉ S0 := by
-        intro hT_mem
-        exact hFresh T hT_mem hT_new
-      refine
-        { ear := T
-          vertex := newV
-          remainder := _
-          ear_mem := by simp
-          vertex_mem := by simpa [AbsTriangle.vertices] using hT_new
-          remainder_triangulated := h_ind
-          erase_eq := by simp [hT_not_mem]
-          remainder_card_add_one := by
-            rw [Finset.card_insert_of_notMem hT_not_mem]
-          shared_edge := hShared
-          free_vertex := ?_ }
+      refine ⟨T, by simp, newV, hT_new, ?_⟩
       intro T' hT' hne
       have h_eq := Finset.mem_insert.mp hT'
       cases h_eq with
       | inl hT_eq => exact absurd hT_eq hne
-      | inr hT_S =>
-          simpa [AbsTriangle.vertices] using hFresh T' hT_S
-
-/-- The ambient plane used for the geometric Chapter 36 interface. -/
-abbrev Point2 : Type := ℝ × ℝ
-
-/-- The closed triangle determined by three vertices of a planar polygon. -/
-def polygonTriangleSet {n : ℕ} (poly : Polygon Point2 n) (a b c : Fin n) :
-    Set Point2 :=
-  convexHull ℝ ({poly a, poly b, poly c} : Set Point2)
-
-/-- The realization of an abstract triangle in a concrete planar polygon. -/
-def AbsTriangle.realization {n : ℕ} (T : AbsTriangle n) (poly : Polygon Point2 n) :
-    Set Point2 :=
-  polygonTriangleSet poly T.a T.b T.c
-
-/-- Every abstract vertex of a triangle realizes to a point of its closed
-geometric triangle. -/
-lemma AbsTriangle.vertex_mem_realization {n : ℕ} (T : AbsTriangle n)
-    (poly : Polygon Point2 n) {v : Fin n} (hv : v ∈ T.vertices) :
-    poly v ∈ T.realization poly := by
-  apply subset_convexHull ℝ ({poly T.a, poly T.b, poly T.c} : Set Point2)
-  simp only [AbsTriangle.vertices, Finset.mem_insert, Finset.mem_singleton] at hv
-  rcases hv with rfl | rfl | rfl <;> simp
-
-/-- The previous index in the cyclic order. -/
-def cyclicPrev {n : ℕ} (i : Fin n) : Fin n :=
-  (finRotate n).symm i
-
-/-- The next index in the cyclic order. -/
-def cyclicNext {n : ℕ} (i : Fin n) : Fin n :=
-  finRotate n i
-
-/-- A certified simple polygon: a cyclic sequence of planar vertices together
-with an ear-clipping triangulation certificate on exactly those `n` vertices.
-
-The geometric simplicity/Jordan-curve part is represented here by the
-certificate rather than by a raw edge-crossing predicate, because Mathlib does
-not yet provide the planar interior API needed to prove ear clipping from only
-edge nonintersection data. -/
-structure SimplePolygon (n : ℕ) where
-  toPolygon : Polygon Point2 n
-  vertices_injective : Function.Injective toPolygon.vertices
-  triangles : Finset (AbsTriangle n)
-  triangulated : TriangulatedPolygon n triangles
-  triangle_count : triangles.card + 2 = n
-
-namespace SimplePolygon
-
-/-- The certified triangulation of a simple polygon is nonempty. -/
-theorem triangles_card_pos {n : ℕ} (P : SimplePolygon n) : 0 < P.triangles.card :=
-  P.triangulated.card_pos
-
-/-- A certified simple polygon has at least three vertices. -/
-theorem vertex_count_ge_three {n : ℕ} (P : SimplePolygon n) : 3 ≤ n := by
-  have hpos := P.triangles_card_pos
-  have hcount := P.triangle_count
-  omega
-
-/-- A certified simple polygon on three vertices has exactly one certified
-triangle. -/
-theorem triangles_card_eq_one_of_three (P : SimplePolygon 3) : P.triangles.card = 1 := by
-  have hcount := P.triangle_count
-  omega
-
-/-- Base case for ear-clipping induction: a certified simple triangle has a
-singleton triangulation. -/
-theorem exists_single_triangle_of_three (P : SimplePolygon 3) :
-    ∃ T : AbsTriangle 3, P.triangles = {T} :=
-  Finset.card_eq_one.mp P.triangles_card_eq_one_of_three
-
-/-- The polygonal region covered by the certified triangulation. -/
-def carrier {n : ℕ} (P : SimplePolygon n) : Set Point2 :=
-  {x | ∃ T ∈ P.triangles, x ∈ T.realization P.toPolygon}
-
-/-- A certified polygon is convex when its triangulated carrier is convex. -/
-def IsConvex {n : ℕ} (P : SimplePolygon n) : Prop :=
-  Convex ℝ P.carrier
-
-/-- The geometric triangle cut off by the previous, current, and next cyclic
-vertices. -/
-def earTriangleAt {n : ℕ} (P : SimplePolygon n) (i : Fin n) : Set Point2 :=
-  polygonTriangleSet P.toPolygon (cyclicPrev i) i (cyclicNext i)
-
-/-- The triangulation certificate of a `SimplePolygon` covers every indexed
-vertex. -/
-theorem triangulation_vertices_eq_univ {n : ℕ} (P : SimplePolygon n) :
-    P.triangulated.vertices = Finset.univ := by
-  refine Finset.eq_univ_of_card P.triangulated.vertices ?_
-  have hcard : P.triangulated.vertices.card = n := by
-    rw [P.triangulated.vertices_card, P.triangle_count]
-  simpa [Fintype.card_fin] using hcard
-
-/-- Every indexed polygon vertex lies in the certified polygonal carrier. -/
-theorem vertex_mem_carrier {n : ℕ} (P : SimplePolygon n) (i : Fin n) :
-    P.toPolygon i ∈ P.carrier := by
-  have hi : i ∈ P.triangulated.vertices := by
-    rw [P.triangulation_vertices_eq_univ]
-    simp
-  rcases P.triangulated.mem_vertices_exists_triangle hi with ⟨T, hT, hiT⟩
-  exact ⟨T, hT, AbsTriangle.vertex_mem_realization T P.toPolygon hiT⟩
-
-/-- In a convex certified polygon, every adjacent-vertex triangle is contained
-in the polygonal carrier. -/
-theorem earTriangleAt_subset_carrier_of_convex {n : ℕ} (P : SimplePolygon n)
-    (hconv : P.IsConvex) (i : Fin n) :
-    P.earTriangleAt i ⊆ P.carrier := by
-  dsimp [earTriangleAt, polygonTriangleSet]
-  refine convexHull_min ?_ hconv
-  intro x hx
-  simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hx
-  rcases hx with rfl | rfl | rfl
-  · exact P.vertex_mem_carrier (cyclicPrev i)
-  · exact P.vertex_mem_carrier i
-  · exact P.vertex_mem_carrier (cyclicNext i)
-
-/-- A consecutive geometric ear at vertex `i`: the adjacent-vertex triangle is
-nondegenerate and lies in the polygonal region. -/
-structure ConsecutiveEarAt {n : ℕ} (P : SimplePolygon n) (i : Fin n) : Prop where
-  nondegenerate :
-    AffineIndependent ℝ ![P.toPolygon (cyclicPrev i), P.toPolygon i,
-      P.toPolygon (cyclicNext i)]
-  inside : P.earTriangleAt i ⊆ P.carrier
-
-/-- A convex certified polygon has a consecutive geometric ear at any
-nondegenerate vertex. -/
-theorem consecutiveEarAt_of_convex {n : ℕ} (P : SimplePolygon n) (i : Fin n)
-    (hconv : P.IsConvex)
-    (hnd : AffineIndependent ℝ ![P.toPolygon (cyclicPrev i), P.toPolygon i,
-      P.toPolygon (cyclicNext i)]) :
-    P.ConsecutiveEarAt i where
-  nondegenerate := hnd
-  inside := P.earTriangleAt_subset_carrier_of_convex hconv i
-
-/-- For a convex certified polygon with nondegenerate adjacent triples, every
-vertex is a consecutive geometric ear. -/
-theorem all_vertices_consecutiveEars_of_convex {n : ℕ} (P : SimplePolygon n)
-    (hconv : P.IsConvex)
-    (hnd : ∀ i : Fin n,
-      AffineIndependent ℝ ![P.toPolygon (cyclicPrev i), P.toPolygon i,
-        P.toPolygon (cyclicNext i)]) :
-    ∀ i : Fin n, P.ConsecutiveEarAt i := by
-  intro i
-  exact P.consecutiveEarAt_of_convex i hconv (hnd i)
-
-/-- Convex triangular polygons have the trivial triangulation and all three
-vertices are consecutive geometric ears. -/
-theorem convex_triangle_triangulation_trivial (P : SimplePolygon 3)
-    (hconv : P.IsConvex)
-    (hnd : ∀ i : Fin 3,
-      AffineIndependent ℝ ![P.toPolygon (cyclicPrev i), P.toPolygon i,
-        P.toPolygon (cyclicNext i)]) :
-    (∃ T : AbsTriangle 3, P.triangles = {T}) ∧
-      ∀ i : Fin 3, P.ConsecutiveEarAt i :=
-  ⟨P.exists_single_triangle_of_three, P.all_vertices_consecutiveEars_of_convex hconv hnd⟩
-
-/-- The polygon obtained by deleting one indexed vertex from the cyclic list. -/
-def removeVertexPolygon {n : ℕ} (P : SimplePolygon (n + 1)) (v : Fin (n + 1)) :
-    Polygon Point2 n where
-  vertices := fun i => P.toPolygon (v.succAbove i)
-
-theorem removeVertexPolygon_vertices_injective {n : ℕ} (P : SimplePolygon (n + 1))
-    (v : Fin (n + 1)) : Function.Injective (P.removeVertexPolygon v).vertices := by
-  intro i j hij
-  apply Fin.succAbove_right_injective
-  exact P.vertices_injective hij
-
-/-- Convert the triangulation-level ear-removal certificate into the smaller
-certified simple polygon.  The vertex list is `P` with `R.vertex` deleted, and
-the remaining triangulation is reindexed along `R.vertex.succAbove`. -/
-noncomputable def clipEar {n : ℕ} (P : SimplePolygon (n + 1))
-    (R : P.triangulated.EarRemoval) : SimplePolygon n :=
-  { toPolygon := P.removeVertexPolygon R.vertex
-    vertices_injective := P.removeVertexPolygon_vertices_injective R.vertex
-    triangles := deleteVertexTriangles R.vertex R.remainder R.vertex_not_mem_remainder
-    triangulated := R.remainder_triangulated.deleteVertex R.vertex R.vertex_not_mem_remainder
-    triangle_count := by
-      have hcard := deleteVertexTriangles_card R.vertex R.remainder R.vertex_not_mem_remainder
-      have hrem := R.remainder_card_add_one
-      have hcount := P.triangle_count
-      rw [hcard]
-      omega }
-
-@[simp]
-theorem clipEar_toPolygon {n : ℕ} (P : SimplePolygon (n + 1))
-    (R : P.triangulated.EarRemoval) :
-    (P.clipEar R).toPolygon = P.removeVertexPolygon R.vertex := rfl
-
-/-- The certified ear-removal decomposition of a simple polygon with at least
-four vertices. -/
-def earRemoval {n : ℕ} (P : SimplePolygon n) (hn : 4 ≤ n) :
-    P.triangulated.EarRemoval := by
-  have hcard : P.triangles.card ≥ 2 := by
-    have hcount := P.triangle_count
-    omega
-  exact P.triangulated.exists_earRemoval hcard
-
-/-- The canonical one-step ear clipping operation for a certified polygon with
-`n+1` vertices.  Its result is a certified polygon on `n` vertices. -/
-noncomputable def removeEar {n : ℕ} (P : SimplePolygon (n + 1)) (hn : 4 ≤ n + 1) :
-    SimplePolygon n :=
-  P.clipEar (P.earRemoval hn)
-
-/-- Induction on certified simple polygons by repeatedly clipping ears.
-
-The base case is `n = 3`; the step receives the polygon with one certified ear
-removed, whose vertex type is one smaller. -/
-noncomputable def induction_on_vertices
-    {motive : (n : ℕ) → SimplePolygon n → Sort u}
-    (hbase : ∀ P : SimplePolygon 3, motive 3 P)
-    (hstep : ∀ n (P : SimplePolygon (n + 1)) (hn : 4 ≤ n + 1),
-      motive n (P.removeEar hn) → motive (n + 1) P)
-    {n : ℕ} (P : SimplePolygon n) : motive n P := by
-  exact
-    Nat.strongRecOn (motive := fun n => (P : SimplePolygon n) → motive n P)
-      n
-      (fun n ih P => by
-        by_cases hn_eq : n = 3
-        · subst n
-          exact hbase P
-        · have hn3 : 3 ≤ n := P.vertex_count_ge_three
-          cases n with
-          | zero => exact False.elim (by omega)
-          | succ k =>
-              have hn : 4 ≤ k + 1 := by omega
-              exact hstep k P hn (ih k (by omega) (P.removeEar hn)))
-      P
-
-/-- Reconstruct the certified triangulation by ear clipping: the triangle case
-is the singleton triangulation, and the induction step removes one certified
-ear, recursively triangulates the smaller polygon, lifts that triangulation
-back along `succAbove`, and glues the ear triangle back. -/
-noncomputable def triangulatedByEarClipping {n : ℕ} (P : SimplePolygon n) :
-    TriangulatedPolygon n P.triangles :=
-  induction_on_vertices
-    (motive := fun n P => TriangulatedPolygon n P.triangles)
-    (fun P => by
-      let T := Classical.choose P.exists_single_triangle_of_three
-      have hT : P.triangles = {T} := Classical.choose_spec P.exists_single_triangle_of_three
-      change TriangulatedPolygon 3 P.triangles
-      rw [hT]
-      exact TriangulatedPolygon.single T)
-    (fun n P hn ih => by
-      let R := P.earRemoval hn
-      have hLift0 :
-          TriangulatedPolygon (n + 1)
-            (insertVertexTriangles R.vertex (P.removeEar hn).triangles) :=
-        ih.insertVertex R.vertex
-      have hLift : TriangulatedPolygon (n + 1) R.remainder := by
-        simpa [removeEar, clipEar, R, insertVertexTriangles_deleteVertexTriangles]
-          using hLift0
-      have hT_new :
-          R.vertex ∈ ({R.ear.a, R.ear.b, R.ear.c} : Finset (Fin (n + 1))) := by
-        simpa [AbsTriangle.vertices] using R.vertex_mem
-      have hFresh :
-          ∀ T' ∈ R.remainder,
-            R.vertex ∉ ({T'.a, T'.b, T'.c} : Finset (Fin (n + 1))) := by
-        intro T' hT'
-        simpa [AbsTriangle.vertices] using R.vertex_not_mem_remainder T' hT'
-      have hGlue :
-          TriangulatedPolygon (n + 1) (insert R.ear R.remainder) :=
-        TriangulatedPolygon.glue hLift R.ear R.vertex hT_new R.shared_edge hFresh
-      have hInsert : insert R.ear R.remainder = P.triangles := by
-        rw [← R.erase_eq]
-        exact Finset.insert_erase R.ear_mem
-      simpa [hInsert] using hGlue)
-    P
-
-end SimplePolygon
+      | inr hT_S => exact hFresh T' hT_S
 
 /-- Vertices of one color class in a finite polygon vertex set. -/
 def colorClass {V : Type*} [DecidableEq V] (vertices : Finset V) (color : V → GuardColor)
@@ -1118,104 +350,93 @@ theorem chapter36_artgallery_combinatorial {n : ℕ} {S : Finset (AbsTriangle n)
       · intro tri htri
         exact h_hit blue tri (hc tri htri)
 
-/-- Internal supplied-triangulation form of the art-gallery theorem. -/
-theorem chapter36_triangulated {n : ℕ} {S : Finset (AbsTriangle n)}
+/-- Canonical Chapter 36 entry point: the closed combinatorial art-gallery theorem. -/
+theorem chapter36 {n : ℕ} {S : Finset (AbsTriangle n)}
     (h : TriangulatedPolygon n S) :
     ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
       ∀ T ∈ S, ∃ v ∈ guards,
         v ∈ ({T.a, T.b, T.c} : Finset (Fin n)) :=
   chapter36_artgallery_combinatorial h
 
-/-- Canonical Chapter 36 entry point for certified simple polygons.
+/-! ### Concrete combinatorial witnesses
 
-From `P : SimplePolygon n` alone, `triangulatedByEarClipping` reconstructs a
-`TriangulatedPolygon n P.triangles` by the certified ear-clipping induction.
-The guard bound then follows from the supplied-triangulation theorem
-`chapter36_triangulated`;
-there is no remaining external triangulability or ear-existence hypothesis
-inside the certified interface. -/
-theorem chapter36_simplePolygon {n : ℕ} (P : SimplePolygon n) :
-    ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
-      ∀ T ∈ P.triangles, ∃ v ∈ guards,
-        v ∈ ({T.a, T.b, T.c} : Finset (Fin n)) :=
-  chapter36_triangulated P.triangulatedByEarClipping
+The remaining frontier in this chapter is the geometric existence of a
+`TriangulatedPolygon` for an arbitrary simple polygon (needs Mathlib planar
+geometry).  The combinatorial layer is complete, so we can exhibit concrete
+inductive witnesses on small vertex sets, validating the inductive constructors
+and giving downstream callers ready instances to test against. -/
 
-/-- Book-facing alias for the certified-polygon Chapter 36 theorem. -/
-theorem chapter36 {n : ℕ} (P : SimplePolygon n) :
-    ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
-      ∀ T ∈ P.triangles, ∃ v ∈ guards,
-        v ∈ ({T.a, T.b, T.c} : Finset (Fin n)) :=
-  chapter36_simplePolygon P
+/-- The fundamental triangle as a `TriangulatedPolygon`: vertices `0, 1, 2`
+form a single triangle, the smallest non-degenerate art-gallery instance. -/
+def TriangulatedPolygon.unitTriangle : TriangulatedPolygon 3
+    ({⟨0, 1, 2, by decide, by decide, by decide⟩} : Finset (AbsTriangle 3)) :=
+  .single ⟨0, 1, 2, by decide, by decide, by decide⟩
 
-/-- Triangle-hitting guards see the whole certified polygonal carrier. -/
-theorem SimplePolygon.visibility_of_triangle_hits {n : ℕ} (P : SimplePolygon n)
-    {guards : Finset (Fin n)}
-    (hhit : ∀ T ∈ P.triangles, ∃ v ∈ guards,
-      v ∈ ({T.a, T.b, T.c} : Finset (Fin n))) :
-    ∀ x ∈ P.carrier, ∃ v ∈ guards, segment ℝ (P.toPolygon v) x ⊆ P.carrier := by
-  intro x hx
-  rcases hx with ⟨T, hT, hxT⟩
-  rcases hhit T hT with ⟨v, hvG, hvT⟩
-  refine ⟨v, hvG, ?_⟩
-  have hvT' : v ∈ T.vertices := by
-    simpa [AbsTriangle.vertices] using hvT
-  have hvertex : P.toPolygon v ∈ T.realization P.toPolygon :=
-    AbsTriangle.vertex_mem_realization T P.toPolygon hvT'
-  have hconv : Convex ℝ (T.realization P.toPolygon) := by
-    simpa [AbsTriangle.realization, polygonTriangleSet] using
-      (convex_convexHull ℝ
-        ({P.toPolygon T.a, P.toPolygon T.b, P.toPolygon T.c} : Set Point2))
-  have hseg : segment ℝ (P.toPolygon v) x ⊆ T.realization P.toPolygon :=
-    hconv.segment_subset hvertex hxT
-  exact subset_trans hseg (by
-    intro y hy
-    exact ⟨T, hT, hy⟩)
+/-- The unit square split along the `0 → 2` diagonal into two triangles
+`(0, 1, 2)` and `(0, 2, 3)`, glued along their shared edge `{0, 2}`. -/
+def TriangulatedPolygon.unitQuadrilateral :
+    let T1 : AbsTriangle 4 := ⟨0, 1, 2, by decide, by decide, by decide⟩
+    let T2 : AbsTriangle 4 := ⟨0, 2, 3, by decide, by decide, by decide⟩
+    TriangulatedPolygon 4 (insert T2 ({T1} : Finset (AbsTriangle 4))) := by
+  let T1 : AbsTriangle 4 := ⟨0, 1, 2, by decide, by decide, by decide⟩
+  let T2 : AbsTriangle 4 := ⟨0, 2, 3, by decide, by decide, by decide⟩
+  refine TriangulatedPolygon.glue (h := .single T1) (T := T2) (newVertex := 3)
+    ?_ ?_ ?_
+  · -- 3 ∈ {T2.a, T2.b, T2.c} = {0, 2, 3}
+    decide
+  · -- shared edge {0, 2} between T1 and T2, with 3 ∉ {0, 2}
+    refine ⟨T1, Finset.mem_singleton.mpr rfl, Sym2.mk 0 2, ?_, ?_, ?_⟩
+    · -- s(0,2) ∈ T2.edges = {s(0,2), s(2,3), s(0,3)}
+      simp [T2, AbsTriangle.edges]
+    · -- s(0,2) ∈ T1.edges = {s(0,1), s(1,2), s(0,2)}
+      simp [T1, AbsTriangle.edges]
+    · -- 3 ∉ s(0,2)
+      decide
+  · -- 3 ∉ {T1.a, T1.b, T1.c} = {0, 1, 2}
+    intro T' hT'
+    rw [Finset.mem_singleton] at hT'
+    subst hT'
+    decide
 
-/-- Carrier-level art-gallery statement for a certified simple polygon: every
-point in the certified polygonal region is visible from one of the selected
-guard vertices. -/
-theorem chapter36_simplePolygon_visibility {n : ℕ} (P : SimplePolygon n) :
-    ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
-      ∀ x ∈ P.carrier, ∃ v ∈ guards, segment ℝ (P.toPolygon v) x ⊆ P.carrier := by
-  obtain ⟨guards, hcard, hhit⟩ := chapter36_simplePolygon P
-  exact ⟨guards, hcard, P.visibility_of_triangle_hits hhit⟩
-
-/-- A single guard set both hits every certified triangle and sees the whole
-certified carrier. -/
-theorem chapter36_simplePolygon_hit_and_visibility {n : ℕ} (P : SimplePolygon n) :
-    ∃ guards : Finset (Fin n), guards.card ≤ n / 3 ∧
-      (∀ T ∈ P.triangles, ∃ v ∈ guards,
-        v ∈ ({T.a, T.b, T.c} : Finset (Fin n))) ∧
-      ∀ x ∈ P.carrier, ∃ v ∈ guards, segment ℝ (P.toPolygon v) x ⊆ P.carrier := by
-  obtain ⟨guards, hcard, hhit⟩ := chapter36_simplePolygon P
-  exact ⟨guards, hcard, hhit, P.visibility_of_triangle_hits hhit⟩
-
-/-- Convex certified polygons have the expected special-case improvement:
-one vertex guard sees the entire certified carrier, and this still satisfies
-the usual `⌊n / 3⌋` art-gallery bound because every `SimplePolygon` has at
-least three vertices. -/
-theorem chapter36_convex {n : ℕ} (P : SimplePolygon n)
-    (hconv : P.IsConvex) :
-    ∃ guards : Finset (Fin n), guards.card ≤ 1 ∧ guards.card ≤ n / 3 ∧
-      ∀ x ∈ P.carrier, ∃ v ∈ guards, segment ℝ (P.toPolygon v) x ⊆ P.carrier := by
-  classical
-  have hn : 0 < n := by
-    have hthree := P.vertex_count_ge_three
-    omega
-  let i : Fin n := ⟨0, hn⟩
-  refine ⟨{i}, by simp, ?_, ?_⟩
-  · simp
-    exact Nat.div_pos P.vertex_count_ge_three (by norm_num)
-  intro x hx
-  refine ⟨i, by simp, ?_⟩
-  exact hconv.segment_subset (P.vertex_mem_carrier i) hx
-
-/-- Backwards-compatible name for the convex visibility special case. -/
-theorem chapter36_simplePolygon_visibility_convex {n : ℕ} (P : SimplePolygon n)
-    (hconv : P.IsConvex) :
-    ∃ guards : Finset (Fin n), guards.card ≤ 1 ∧
-      ∀ x ∈ P.carrier, ∃ v ∈ guards, segment ℝ (P.toPolygon v) x ⊆ P.carrier := by
-  obtain ⟨guards, hcard_one, _hcard_gallery, hvis⟩ := chapter36_convex P hconv
-  exact ⟨guards, hcard_one, hvis⟩
+/-- The unit pentagon (vertices `0..4`) triangulated as a fan from vertex `0`:
+triangles `(0,1,2)`, `(0,2,3)`, `(0,3,4)`, each glued to its predecessor along
+a shared edge `{0,2}` then `{0,3}`. -/
+def TriangulatedPolygon.unitPentagonFan :
+    let T1 : AbsTriangle 5 := ⟨0, 1, 2, by decide, by decide, by decide⟩
+    let T2 : AbsTriangle 5 := ⟨0, 2, 3, by decide, by decide, by decide⟩
+    let T3 : AbsTriangle 5 := ⟨0, 3, 4, by decide, by decide, by decide⟩
+    TriangulatedPolygon 5 (insert T3 (insert T2 ({T1} : Finset (AbsTriangle 5)))) := by
+  let T1 : AbsTriangle 5 := ⟨0, 1, 2, by decide, by decide, by decide⟩
+  let T2 : AbsTriangle 5 := ⟨0, 2, 3, by decide, by decide, by decide⟩
+  let T3 : AbsTriangle 5 := ⟨0, 3, 4, by decide, by decide, by decide⟩
+  -- Start from the quadrilateral (T1, T2) and glue T3 along {0, 3}.
+  have h12 : TriangulatedPolygon 5 (insert T2 ({T1} : Finset (AbsTriangle 5))) := by
+    refine TriangulatedPolygon.glue (h := .single T1) (T := T2) (newVertex := 3)
+      ?_ ?_ ?_
+    · decide
+    · refine ⟨T1, Finset.mem_singleton.mpr rfl, Sym2.mk 0 2, ?_, ?_, ?_⟩
+      · simp [T2, AbsTriangle.edges]
+      · simp [T1, AbsTriangle.edges]
+      · decide
+    · intro T' hT'
+      rw [Finset.mem_singleton] at hT'
+      subst hT'
+      decide
+  refine TriangulatedPolygon.glue (h := h12) (T := T3) (newVertex := 4)
+    ?_ ?_ ?_
+  · decide
+  · -- shared edge {0,3} between T2 and T3, with 4 ∉ {0, 3}
+    refine ⟨T2, ?_, Sym2.mk 0 3, ?_, ?_, ?_⟩
+    · -- T2 ∈ {T1, T2}
+      simp
+    · -- s(0,3) ∈ T3.edges = {s(0,3), s(3,4), s(0,4)}
+      simp [T3, AbsTriangle.edges]
+    · -- s(0,3) ∈ T2.edges = {s(0,2), s(2,3), s(0,3)}
+      simp [T2, AbsTriangle.edges]
+    · decide
+  · -- 4 ∉ {T1.a..c} ∪ {T2.a..c} = {0, 1, 2, 3}
+    intro T' hT'
+    simp only [Finset.mem_insert, Finset.mem_singleton] at hT'
+    rcases hT' with rfl | rfl <;> decide
 
 end ProofsInTheBook.Chapter36

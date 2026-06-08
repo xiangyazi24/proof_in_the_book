@@ -1193,6 +1193,15 @@ def PairwiseTouchingAlongFacetInteriors {ι : Type*} {d : ℕ} [NeZero d]
     (simplices : ι → DSimplex d) : Prop :=
   ∀ ⦃i j : ι⦄, i ≠ j → TouchesAlongFacetInteriors (simplices i) (simplices j)
 
+/--
+The faithful book-facing touching relation used for the unconditional Perles
+endpoint: every pair meets along overlapping relative interiors of a common
+facet, with full simplex relative interiors disjoint.
+-/
+abbrev FaithfulPairwiseTouching {ι : Type*} {d : ℕ} [NeZero d]
+    (simplices : ι → DSimplex d) : Prop :=
+  PairwiseTouchingAlongFacetInteriors simplices
+
 /-- Pairwise touching with the stronger explicit opposite-side facet data. -/
 def PairwiseTouchingAcrossFacets {ι : Type*} {d : ℕ} [NeZero d]
     (simplices : ι → DSimplex d) : Prop :=
@@ -1257,6 +1266,13 @@ lemma pairwiseTouchingAcrossFacets_of_pairwiseTouchingAlongFacetInteriors
     PairwiseTouchingAcrossFacets simplices := by
   intro i j hij
   exact touchesAcrossFacets_of_touchesAlongFacetInteriors (h hij)
+
+/-- Faithful pairwise touching gives the across-facet certificates directly. -/
+lemma pairwiseTouchingAcrossFacets_of_faithfulPairwiseTouching
+    {ι : Type*} {d : ℕ} [NeZero d] {simplices : ι → DSimplex d}
+    (h : FaithfulPairwiseTouching simplices) :
+    PairwiseTouchingAcrossFacets simplices :=
+  pairwiseTouchingAcrossFacets_of_pairwiseTouchingAlongFacetInteriors h
 
 /--
 Pairwise touching plus an overlapping common facet for each pair is exactly
@@ -2799,6 +2815,17 @@ theorem chapter14_of_pairwiseTouchingAlongFacetInteriors {ι : Type*} [Fintype �
     Fintype.card ι < 2 ^ (d + 1) :=
   chapter14_of_pairwiseTouchingAcrossFacets simplices
     (pairwiseTouchingAcrossFacets_of_pairwiseTouchingAlongFacetInteriors htouch)
+
+/--
+Data-free Chapter 14 endpoint for the faithful book-facing touching relation.
+This removes the Perles facet-separation data hypothesis; the only geometric
+input is the corrected facet-interior touching condition.
+-/
+theorem chapter14_unconditional {ι : Type*} [Fintype ι]
+    {d : ℕ} [NeZero d] (simplices : ι → DSimplex d)
+    (htouch : FaithfulPairwiseTouching simplices) :
+    Fintype.card ι < 2 ^ (d + 1) :=
+  chapter14_of_pairwiseTouchingAlongFacetInteriors simplices htouch
 
 /--
 Chapter 14 from the current `PairwiseTouching` relation plus the geometric

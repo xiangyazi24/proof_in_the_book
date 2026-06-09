@@ -91,3 +91,18 @@ is a real finite instance), so kneser's htucker use is faithful — but Ch39 nee
 - starting avenues: Ch13(a) + Ch35(a)(b) + Ch36(a) 三线并行; worker 在 uisai2, 我主攻 Ch13
 - end: <open>
 - final result: <open>
+
+## 2026-06-09 (四续) — 路线级炸弹: Main 本身在 n=3 为 FALSE (FFCT17, 三连 clean-3 anchor)
+- 设计推演 + 数值实锤 + 有理化 + kernel anchor 一气呵成: WeakConvexSphArm 对共线构型是空约束
+  (所有支撑恒 0), 两点之字形 A=[p,q,p,q] (边余弦全 2/3, 关节全 0) 配薄严格凸伴随
+  B=[(1/9,-8/9,4/9),(2/3,-1/3,2/3),(0,0,1),(-2/15,-11/15,2/3)] (八个 strict 支撑 ∈ {1/5,4/15,8/15,5/9},
+  cos endpt B = 14/15 > 2/3 = cos endpt A) ⇒ endpt A > endpt B。
+- ZinanFFCT17.lean: main_three_false + szOpeningStep_false (经已证 main_all 连锁) +
+  foldedFlatCutTransport_false (IH 由已证 main_of_lt_two/main_two 装填, cut=(0,2)) — 全部
+  {propext, Classical.choice, Quot.sound}。今天第 4/5/6 个假命题, 根因唯一: 归纳谓词太宽。
+- 不等边变体顶点两两不同 ⇒ injectivity 修不了。修复方向: 左臂谓词收紧为"严格类的 δ*-可达闭包"
+  的一阶代理 (δ*-极限只有 binding 支撑为 0, 不可能全 0 共线多折); jointAngle_lt_pi 仍健在
+  (排 π 关节), 缺的是排多折 0 关节。已派 ChatGPT Pro 设计轮 (transport 拼接问题, 回复后追加
+  本 finding 的谓词修复轮)。
+- 同时: Ch36 thetaPos + Ch35 hsplits 两个 claude worker 在跑; codex 全账号 refresh-token 链断,
+  需要交互式重登 (待 Xiang)。

@@ -148,3 +148,14 @@ and `#print axioms ProofsInTheBook.ZinanFFCT12.planarWeakNoflatStrictEdgeCore_ho
 
 Write progress + any blocker to `HANDOFF/outbox/ffct12-reply.md`. Kill any background
 processes you start before exiting.
+
+## VERIFICATION RECIPE (this machine is a Mac WITHOUT local lake — builds live on uisai2)
+
+To typecheck your file after each edit (this is your ONLY verification loop):
+
+    scp -q ProofsInTheBook/<YourFile>.lean uisai2:~/repos/proof_in_the_book/ProofsInTheBook/ && \
+    ssh uisai2 'export PATH=$HOME/.elan/bin:$PATH; cd ~/repos/proof_in_the_book && timeout 900 lake env lean ProofsInTheBook/<YourFile>.lean'
+
+- NEVER run `lake build` anywhere. NEVER run local `lake env lean` on the Mac (no oleans here).
+- All imports you need are already built on uisai2.
+- To read existing repo files, read them locally on the Mac (the checkout matches uisai2).

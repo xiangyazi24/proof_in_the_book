@@ -84,3 +84,10 @@ is a real finite instance), so kneser's htucker use is faithful — but Ch39 nee
   下一轮: (1) 1-D 族的数值扫描 (带符号和 + Gram/hdiag 约束) 找反例或确认; (2) 若确认,
   fold 手术的 Lean 形态可能就是"共线臂折叠引理"(纯单大圆几何, 远轻于一般手术);
   (3) 先证 "StuckAtKData + 闭弱凸 ⇒ 全链共线" 的刚性引理 —— 数值证据强烈支持。
+
+## Run 2026-06-09 (终局战役 kickoff)
+- doctrine: DOCTRINE.md (本次提交; Ch13 折点手术 / Ch35 hsplits 计数 / Ch36 mono_theta 移植)
+- approval: Xiang 本 session "我们开足马力,完成剩下三章" + "统筹, 一遍先写证明, 别坐着等 build"
+- starting avenues: Ch13(a) + Ch35(a)(b) + Ch36(a) 三线并行; worker 在 uisai2, 我主攻 Ch13
+- end: <open>
+- final result: <open>

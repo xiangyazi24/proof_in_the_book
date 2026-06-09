@@ -43,3 +43,18 @@ is a real finite instance), so kneser's htucker use is faithful — but Ch39 nee
   FFCT9 branch-cut machinery applied twice (h forward / −h reversed). The remaining design question:
   what the FoldedFlatCut consumers actually need (possibly only fold-local triples, not all non-incident
   pairs) and which SZ-process invariant supplies hinj/hfirst/hlast — next design round.
+
+## 2026-06-09 (续) — worker 勘察落地 + 第三个假命题
+- FFCT14 (forward_case, 我) + FFCT15 (backward_case + planarWeakNoflatStrictEdgeCore_holds,
+  Opus worker, 独立复核) 全部 clean-3:修正版 Ch13 平面引擎已是无条件定理 (5050cb1, e53f272)。
+- FFCT7 消费端审计 (HANDOFF/outbox/ffct7-consumer-audit.md): FoldedFlatCutTransport 的唯一
+  非空消费点是 (i,j) = (n-1, n+1) —— 恰是 GnomonicNoflatJoint 的连续三元组,且只作 exfalso 用。
+  hfirst 无关、hlast 在该点自动成立、hinj 是唯一真缺口。⇒ 接口收窄后 PlanarWeakNoflatStrictEdgeCore
+  可整体退出临界路径 (留作独立定理)。TailFoldBetweenness 判 SOUND。
+- **GnomonicNoflatJoint 判 FALSE**(今日第三个同族假命题): n=2 折返臂 (三点共大圆, sphAngle=0,
+  等边长 90° 关节伴随 B) 满足全部假设,gnomonic det3 = 0 ≠ > 0。数值验证完毕,待 kernel anchor。
+  ⇒ Ch13 真残差 = 消费点处的 no-flat 排除必须由 LastCornerStuck/fold 现场数据卸载 + TailFoldBetweenness。
+- Ch35 基底报告 (HANDOFF/outbox/cutcapphi2-substrate.md): φ'₂ cap 非循环移位、F 侧无投影半共轭、
+  活路 = ForcedSplits 词上的 seam-local 强制分裂证书;注意 s 需 ≥ (concatLen+2−2len)/2 (K₄-sphere
+  要 4 > len=3,worker 的 "s=len" 算术已纠正)。
+- Ch36 残差全图 worker 仍在跑,报告将出现在 HANDOFF/outbox/ch36-residue-map.md (下个 session 提交)。

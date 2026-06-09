@@ -106,3 +106,18 @@ is a real finite instance), so kneser's htucker use is faithful — but Ch39 nee
   本 finding 的谓词修复轮)。
 - 同时: Ch36 thetaPos + Ch35 hsplits 两个 claude worker 在跑; codex 全账号 refresh-token 链断,
   需要交互式重登 (待 Xiang)。
+
+## 2026-06-09 (五续) — 修复谓词落地 + 两章 worker 大丰收
+- ChatGPT round 1 (拼接/反射设计) + round 2 (谓词修复对抗审计) 均回收; round 2 确认 P5 方向、
+  给出四层重构图 + 断点清单; 两个真风险: R1 非局部回访 A_j=A_i (j>i+2) 未被 P5 排除 (数值不确凿,
+  作为端局命名子情形), R2 openTail 双关节正性保持 (genuinely-hard, OPEN 分支重证点)。
+- ZinanFFCT18 (clean-3 x6): PositiveJoints/MainPlus/FoldedFlatCutTransportPlus (带 hcol) 落地;
+  strict_jointAngle_pos + strictConvexSphArm_positiveJoints (armMono 桥新引理);
+  intervalArm_positiveJoints (耳继承); weakConvex_no_antipodal; endpoint_le_of_tail_fold
+  ((0,n-1) 端局算术); zigzag_not_positiveJoints (FFCT17 反例免疫锚)。
+- Ch35: worker 完胜超额 — hsplits 证成无条件精确等式 (缝交换共轭, 纯置换代数), NumCyclesCutPhi2
+  关闭, 16 thms clean-3 (edd4f4a)。Ch35 仅剩连通侧 gates; worker C (ch35gates) 已派。
+- Ch36: worker 诚实部分成功 — Brick1 港完成 27 thms clean-3 (bc244fc); 挤压→交替被机器证伪;
+  残差精确收窄为 RayWindingDichotomy (单射线二值); kernel as stated 在非泛型基点为假 (消费端
+  必须加 genericity guard)。worker D (ch36dich) 已派攻二分。
+- codex 账号 refresh-token 链断, 需 Xiang 交互重登; worker 已全部走 claude headless。

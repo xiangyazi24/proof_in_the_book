@@ -73,3 +73,14 @@ is a real finite instance), so kneser's htucker use is faithful — but Ch39 nee
   的 hinge 单调机器归纳; 先数值验证该不等式在折叠构型上的方向)。ChatGPT Pro (pbook) 设计轮 +
   我审; FFCT9-15 的平面引擎保留为独立定理 (不再在临界路径)。
 - Ch36 残差图 + Ch35 基底报告均已落盘提交; Ch36 推荐路线 = mono_theta 移植到位置向量。
+
+## 2026-06-09 (三续) — fold 分支数值勘察 + DOCTRINE
+- DOCTRINE.md 落盘 (三线作战计划, 死路标注)。
+- fold 分支数值勘察 (20k 采样): 随机折叠 ⊥ 闭弱凸 —— 所有带 fold 的随机臂全部违反闭多边形弱支撑
+  (kill 计数: Aweak 7650/7650 存活者)。⇒ StuckAtKData 可达的折叠构型集高度退化, 本质是
+  近全共线族 (FFCT16 型)。fold 分支的 endpt ≤ endpt 验证/证明收缩为 1-D 问题:
+  全共线 (单大圆) 臂上, endpt A = |带符号边长和| (折点翻符号), 对比 B 凸位形端距;
+  JointLe 在直角处允许 B 也直 (strict_nonincident 不约束相邻三元组)。
+  下一轮: (1) 1-D 族的数值扫描 (带符号和 + Gram/hdiag 约束) 找反例或确认; (2) 若确认,
+  fold 手术的 Lean 形态可能就是"共线臂折叠引理"(纯单大圆几何, 远轻于一般手术);
+  (3) 先证 "StuckAtKData + 闭弱凸 ⇒ 全链共线" 的刚性引理 —— 数值证据强烈支持。

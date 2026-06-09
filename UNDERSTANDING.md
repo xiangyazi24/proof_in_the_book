@@ -2,6 +2,32 @@
 
 ## Project overview
 
+**2026-06-09 — AUDIT + REROUTE session (supersedes the per-chapter blocks below for Ch13/Ch35).**
+Open chapters: **13, 35, 36** (37/40 closed). Branch `zinan-overnight` is canonical (superset of
+`main`). uisai1 offline; interim build server = uisai2 (see HANDOFF specs; git relays through the
+Mac because uisai2's GitHub connectivity is flaky).
+
+- **Ch13**: the overnight supporting-line route's core is **vacuous** — `PlanarWeakNoflatStrictEdge`
+  (FFCT8) is FALSE (kernel-anchored, two rational counterexamples in `ZinanFFCT10.lean`), and the
+  instance-level `WeakNonflatStrictCore.planar_interior` (FFCT7) is also false (numerically verified
+  with an explicit equal-sides strictly-convex companion `B`, β = 105°). Repair: corrected residue
+  `PlanarWeakNoflatStrictEdgeCore` (injectivity + first/last-edge collinearity exclusions, each
+  certified non-removable) is TRUE and fully designed — `HANDOFF/ffct12-assembly-spec.md`; bridges
+  landed in `ZinanFFCT12.lean`. Still open: the assembly (FFCT13), the corrected-core rewiring of
+  the FFCT7 consumers, and deriving the three new exclusions from the SZ-process invariants.
+- **Ch35**: **count-route pivot** — the `SeamDecomposition` data target is abandoned.
+  `ZinanCh35CountRoute.lean` (11 results, clean-3) reduces the chapter's topological side to ONE
+  residue: the actual-split count bound `concatLen Ls + 2 ≤ 2·card(actualSplitFinset C Ls) + 2·C.len`,
+  **conjecturally genus-free** (`ZinanCh35TorusAnchor.lean`: kernel-checked `F' − F = 2` on the
+  sphere AND the K₄ torus; `ZinanCh35F.lean`'s header claim that the count fails at genus 1 is wrong —
+  it conflated the seam-factorisation failure with a count failure). Attack design: run-decomposition
+  of each `faceCorr₂` cycle through the `cutCapPhi2_*` action lemmas. `EndpointCapLink` (the
+  connectivity side of `gateCompat'`) is a separate open residue, unchanged.
+- **Ch36**: unchanged — simple-polygon winding bound (Jordan kernel); the (B) campaign
+  (Homotopy.Lifting + Cauchy + ear-escape) is designed but not started.
+- **Meta (twice this session): do not build on header/doc claims without kernel anchors.** Both
+  blockers above hid behind a wrong recorded claim ("numerically verified" / "false at genus 1").
+
 Full-book formalization of *Proofs from THE BOOK* (Aigner & Ziegler) in Lean 4.
 40 chapters, each formalizing one "book proof."
 

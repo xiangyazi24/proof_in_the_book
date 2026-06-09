@@ -58,3 +58,18 @@ is a real finite instance), so kneser's htucker use is faithful — but Ch39 nee
   活路 = ForcedSplits 词上的 seam-local 强制分裂证书;注意 s 需 ≥ (concatLen+2−2len)/2 (K₄-sphere
   要 4 > len=3,worker 的 "s=len" 算术已纠正)。
 - Ch36 残差全图 worker 仍在跑,报告将出现在 HANDOFF/outbox/ch36-residue-map.md (下个 session 提交)。
+
+## 2026-06-09 (再续) — Ch13 路线级判定 + FFCT16 anchor
+- FFCT16 (gnomonicNoflatJoint_false, clean-3, a0de322): GnomonicNoflatJoint 的折返反例 kernel 化
+  (有理数据: A 共大圆折返, B=(0,0,1)/(24/25,0,7/25)/(12/13,3/13,-4/13) 严格凸等边)。
+- 路线级判定: StuckAtKData **自带** hsupp=0 与两个 Gram 符号, stuckAtK_betweenness 已无条件导出
+  折平 betweenness —— 框架在 stuck 点把折叠当真实情形; 而 ZinanFFCT6.cut_branch_endpt_le 用
+  interior_excluded 对同一情形 exfalso。FFCT16 反例 (严格凸 B、等边、JointLe 真亏损) 证明该
+  exfalso 策略不可修复: **支撑线路线的"内部排除"核心思想死亡**(三个假残差都是它的化身)。
+  结论 endpt A ≤ endpt B 在折叠分支应当仍真 (折叠缩短端距) —— 需要的是经典折点吸收/手术论证
+  (像 tail 分支的 TailFoldBetweenness 那样提取数据后真证, 而非排除)。
+- Ch13 下一步 (新 session): 设计 interior-fold 手术 —— 从 stuckAtK_betweenness/flat_eq 的折平数据
+  + SameSides/JointLe 直接证 endpt A ≤ endpt B (候选: 折平后 A 等价于少一个顶点的退化臂, 用已证
+  的 hinge 单调机器归纳; 先数值验证该不等式在折叠构型上的方向)。ChatGPT Pro (pbook) 设计轮 +
+  我审; FFCT9-15 的平面引擎保留为独立定理 (不再在临界路径)。
+- Ch36 残差图 + Ch35 基底报告均已落盘提交; Ch36 推荐路线 = mono_theta 移植到位置向量。

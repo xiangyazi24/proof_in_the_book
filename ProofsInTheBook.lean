@@ -342,3 +342,4 @@ import ProofsInTheBook.ZinanFFCT68
 import ProofsInTheBook.ZinanFFCT69
 import ProofsInTheBook.ZinanFFCT70
 import ProofsInTheBook.ZinanFFCT71
+import ProofsInTheBook.ZinanFFCT72

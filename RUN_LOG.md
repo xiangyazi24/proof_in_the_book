@@ -121,3 +121,10 @@ is a real finite instance), so kneser's htucker use is faithful — but Ch39 nee
   残差精确收窄为 RayWindingDichotomy (单射线二值); kernel as stated 在非泛型基点为假 (消费端
   必须加 genericity guard)。worker D (ch36dich) 已派攻二分。
 - codex 账号 refresh-token 链断, 需 Xiang 交互重登; worker 已全部走 claude headless。
+
+## Run 2026-06-11 (automode, overnight)
+- doctrine version: see DOCTRINE.md this commit
+- approval: Xiang's /automode invocation "我睡觉了, 你接着全清剩下的任务"
+- starting avenue: (a) CUT replacement (FFCT48/49 in flight)
+- end: <fill on close>
+- final result: <fill on close>

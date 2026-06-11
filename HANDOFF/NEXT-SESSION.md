@@ -27,3 +27,12 @@ named input), hbpos_apos (needs the step-level assembly rewrite — codex72 IN F
 mainPlus_at_level_v6), hbpos_aneg_tail (j=n endpoint, mirror machinery WBS-pinned)}.
 Per-item reasons: HANDOFF/outbox/ch13-surface70-report.md. The loop: monitor codex72, commit,
 continue the per-item waves. hcross likely remains THE single accepted final input.
+
+
+## Update (Jun11 night): FFCT72/73 state
+v6 (FFCT72) re-carried hwpc+hffct; v7 merge (FFCT73) landed open_step_wbs_v7 (live-ihdim strict
+step, three-field-surface-closable) + cutReadyPlus_level_two_false (another refutation-class
+finding) + the wiring bricks (intervalWrapData suppliers, diag_le at level). The surface-only
+final theorem does NOT yet assemble honestly — the real blockers are in
+HANDOFF/outbox/ch13-merge-report.md. NEXT: read that report, dispatch the final-assembly wave
+on its exact blockers (the v7 step + the banked recursion), then the audit refresh.

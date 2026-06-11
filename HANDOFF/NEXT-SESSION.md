@@ -1,33 +1,21 @@
-# Next-session pickup (written 2026-06-10, usage-limit stop)
+# Next-session pickup (2026-06-11 evening)
 
-State: zinan-overnight @ 75a443f, clean-3 throughout. uisai2 synced to same commit;
-background `lake build` of new module oleans running (log: /tmp/prebuild.log on uisai2).
+State: zinan-overnight, FFCT37-69 + Ch35/36 campaign committed; ~69 Zinan modules; 13+ full
+builds clean; 6 impostors killed. AUDIT_CAMPAIGN.md has the chapter verdicts (pre-FFCT62-69;
+Ch13's surface has since shrunk massively).
 
-BOTH endgame designs are archived and ready to execute — no design work needed, go straight
-to dispatch:
+Ch13 CURRENT headline: ZinanFFCT69's surface `Ch13FinalSurface69` = mirror-aware seed (landed)
++ the non-wrap/raw wrap-base gap + BTrichotomyEndpointCases remnant + CrossPieceNoCollisionAtSup.
+Each blocker's reason is pinned in HANDOFF/outbox/ch13-spanseed-report.md.
 
-1. **Ch36 interior values** — design: HANDOFF/design-rounds/ch36-interior-value.md
-   Worker file `ProofsInTheBook/ZinanCh36InteriorValue.lean`, worker bricks first:
-   WindValuesWithSign def + wind_eq_sign_of_odd; earDeletedExterior_winding_route_sign
-   (generalize 1→s via windCross_split_common + notClosedRegion'_of_windZero);
-   windValues_split_offAll (L+R=P, L,R∈{0,s}, windCross_mem_final excludes 2s);
-   earInterior_values_of_rightValues. MASTER bricks (review before dispatch): triangle
-   signed base triSign (250-450), split perturb wrapper, peel-tree sign synchronization
-   (THE hard one, 300-600), orientedWindData_all. Then EarCutData/PolygonGeomResidue
-   wiring → artGallery_strict_mod_M.
-
-2. **Ch35 side1 hclass canonical** — design: HANDOFF/design-rounds/ch35-side1-hclass-canonical.md
-   Worker file `ProofsInTheBook/ZinanCh35HclassCanonical.lean`, sub-bricks 1–6 are all
-   worker-grade (notation; τ(β a₀)=face₁Dart₁; chord0-face bridge; Side₁OuterTraceData
-   bundle; oneFresh_canonical — the ONLY missing small brick; correctAnchor call).
-   Brick 8 hclass = master (100-180, gluing via spliceUntouched_of_face_ne_chordOrbits).
-   Degenerate audit: outer_len ≥ 3 obligation belongs to the OUTER TRACE brick, not hclass.
-
-3. **Ch13** — remaining masters unchanged: TailConePropagates discharge (out-of-plane
-   oriented reference), no_repeat_of_positiveJoints, B1 Gram-sign supremum derivative,
-   then step wrappers + headline swap to MainPlus.
-
-Worker protocol: Opus agents, one file one writer, verify via
-`scp <file> uisai2:~/repos/proof_in_the_book/ProofsInTheBook/ && ssh uisai2 'cd ~/repos/proof_in_the_book && ~/.elan/bin/lake env lean ProofsInTheBook/<file>.lean'`;
-if an import lacks an olean, `lake build ProofsInTheBook.<Module>` first. Master
-independently re-verifies (compile + #print axioms + statement faithfulness) before commit.
+NEXT WAVES (continue the codex-xhigh loop; the dispatch pattern is in HANDOFF/codex/*.md):
+1. The wrap-base gap (FFCT52 flagged it at orientationNormalized; the FFCT60/61 mirror machinery
+   + the FFCT42 wrap-cyclic identity are the ammunition).
+2. The remaining endpoint cases (read the spanseed report's exact list; bpos_aneg variant
+   collapse may still be open — the FFCT64-brief mechanism with the relabeled apex).
+3. CrossPieceNoCollisionAtSup: either the derivative-at-collision kill or keep as THE single
+   final named input (it is sharp + satisfiable; the chapter would stand mod it honestly).
+4. Then: update AUDIT_CAMPAIGN.md (the Ch13 row), full build, and consider the Ch35
+   FiveColorReducible certificate chain + Ch36 Esplit (Meisters) as the next chapters' frontiers.
+Protocol unchanged: one file per worker/codex, scp+uisai2 verify, clean-3, refute-before-commit,
+master independently re-verifies + commits + wires root imports.

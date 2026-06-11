@@ -19,3 +19,11 @@ NEXT WAVES (continue the codex-xhigh loop; the dispatch pattern is in HANDOFF/co
    FiveColorReducible certificate chain + Ch36 Esplit (Meisters) as the next chapters' frontiers.
 Protocol unchanged: one file per worker/codex, scp+uisai2 verify, clean-3, refute-before-commit,
 master independently re-verifies + commits + wires root imports.
+
+
+## Update (Jun11 late): Ch13FinalSurface71 (post FFCT70/71)
+= {hwrapSeed (raw wrap binding converter missing), hcross (PROVEN sign-indeterminate — honest
+named input), hbpos_apos (needs the step-level assembly rewrite — codex72 IN FLIGHT on
+mainPlus_at_level_v6), hbpos_aneg_tail (j=n endpoint, mirror machinery WBS-pinned)}.
+Per-item reasons: HANDOFF/outbox/ch13-surface70-report.md. The loop: monitor codex72, commit,
+continue the per-item waves. hcross likely remains THE single accepted final input.

@@ -308,3 +308,5 @@ import ProofsInTheBook.ZinanFFCT33
 import ProofsInTheBook.ZinanFFCT34
 import ProofsInTheBook.ZinanFFCT35
 import ProofsInTheBook.ZinanFFCT36
+import ProofsInTheBook.ZinanFFCT37
+import ProofsInTheBook.ZinanFFCT38

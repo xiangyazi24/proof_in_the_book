@@ -315,3 +315,6 @@ import ProofsInTheBook.ZinanFFCT40
 import ProofsInTheBook.ZinanFFCT41
 import ProofsInTheBook.ZinanFFCT42
 import ProofsInTheBook.ZinanFFCT43
+import ProofsInTheBook.ZinanFFCT44
+import ProofsInTheBook.ZinanFFCT45
+import ProofsInTheBook.ZinanFFCT46

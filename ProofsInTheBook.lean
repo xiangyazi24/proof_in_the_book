@@ -319,3 +319,11 @@ import ProofsInTheBook.ZinanFFCT44
 import ProofsInTheBook.ZinanFFCT45
 import ProofsInTheBook.ZinanFFCT46
 import ProofsInTheBook.ZinanFFCT47
+import ProofsInTheBook.ZinanFFCT48
+import ProofsInTheBook.ZinanFFCT49
+import ProofsInTheBook.ZinanFFCT51
+import ProofsInTheBook.ZinanFFCT52
+import ProofsInTheBook.ZinanFFCT53
+import ProofsInTheBook.ZinanFFCT54
+import ProofsInTheBook.ZinanFFCT55
+import ProofsInTheBook.ZinanFFCT56

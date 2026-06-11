@@ -126,5 +126,13 @@ is a real finite instance), so kneser's htucker use is faithful — but Ch39 nee
 - doctrine version: see DOCTRINE.md this commit
 - approval: Xiang's /automode invocation "我睡觉了, 你接着全清剩下的任务"
 - starting avenue: (a) CUT replacement (FFCT48/49 in flight)
-- end: <fill on close>
-- final result: <fill on close>
+- end: 2026-06-11 morning (after Opus session-limit pivot to codex-xhigh per Xiang's instruction)
+- final result: avenues (a)-(c) TERMINAL. (a) CUT replacement complete: FFCT48-61 landed
+  (CutReady chain, B1 bridge, Gram shrink, reversal+mirror suites, chirality elimination,
+  FFCTPlusNR discharge, tail-boundary kill). Two impostors killed pre-commit by the audit
+  discipline (FFCT58: spliceBodyDiagMono_false + ch13Residues_uninhabited). (c) AUDIT_CAMPAIGN.md
+  written: Ch13 CONDITIONAL-honest mod {WeakPositiveCutReady, FoldedFlatCutTransportPlus,
+  SupportStuckWBSImpossible}; Ch35 FRAGMENT (chord-side subroutine closed mod planar inputs;
+  book five-color is the separate FiveColorReducible certificate); Ch36 CONDITIONAL-honest mod
+  {Esplit, rest, M}. Ten full-repo builds verified (final: 8771 jobs, 0 errors). All endpoints
+  clean-3.

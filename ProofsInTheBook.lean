@@ -356,3 +356,6 @@ import ProofsInTheBook.ZinanFFCT82
 import ProofsInTheBook.ZinanFFCT83
 import ProofsInTheBook.ZinanFFCT84
 import ProofsInTheBook.ZinanFFCT85
+import ProofsInTheBook.ZinanFFCT86
+import ProofsInTheBook.ZinanCh35Cert
+import ProofsInTheBook.ZinanCh36Ears

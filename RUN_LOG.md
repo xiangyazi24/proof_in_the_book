@@ -136,3 +136,11 @@ is a real finite instance), so kneser's htucker use is faithful — but Ch39 nee
   book five-color is the separate FiveColorReducible certificate); Ch36 CONDITIONAL-honest mod
   {Esplit, rest, M}. Ten full-repo builds verified (final: 8771 jobs, 0 errors). All endpoints
   clean-3.
+
+## Run 2026-06-11 (day+night continuation, "直到完全证明出来为止")
+- FFCT62-85: 24 modules (codex-xhigh x14 + Opus workers), every wave honest, 7+ refutation-class
+  findings incl. impostors #5-7 caught pre-commit.
+- TERMINAL: Ch13 closes at spherical_arm_mono_final_ch13_v10 (hcross) -- ONE named satisfiable
+  input. Final build 8795 jobs / 0 errors. AUDIT_CAMPAIGN.md Ch13 row updated.
+- Remaining repo-wide (per audit): hcross (Ch13), Ch35 fragment->five-color certificate chain,
+  Ch36 Esplit/rest/M.

@@ -22,7 +22,7 @@ and `M` inputs.
 
 | Chapter | Audited headline | Verdict | Exact mod-list / blocker |
 |---|---|---|---|
-| Ch13 | `ProofsInTheBook.ZinanFFCT59.spherical_arm_mono_reachOnly_honest` plus the FFCT61 tail kill | CONDITIONAL-honest | `WeakPositiveCutReady`, `FoldedFlatCutTransportPlus`, `SupportStuckWBSImpossible`.  FFCT61 kills only non-axis tail residues with `2 <= j`; it does not prove raw sign supply into `NonAxisMixedBindingResidue` or the tail endpoint transport for `j = 0,1`. |
+| Ch13 | `ProofsInTheBook.ZinanFFCT85.spherical_arm_mono_final_ch13_v10` (UPDATED Jun11 night, FFCT62-85) | CONDITIONAL-honest | ONE input: `CrossPieceNoCollisionAtSup` (the opened arm's cross-piece collision at the WBS sup — sharp, satisfiable, guarded). Everything else of the original surface was DISCHARGED across FFCT62-85 (static b-trichotomy, mirror suites, first-step interior-zero witnesses, stratified consumers). Verified clean-3, final build 8795 jobs. |
 | Ch35 | `ProofsInTheBook.ZinanCh35FinalClose.chordSideResidue₁_final` | FRAGMENT | This closes one side-1 `ChordSideResidue` modulo planar inputs.  It is not the book-level five-color theorem.  Root `Chapter35.chapter35` is still the separate `FiveColorReducible` certificate theorem. |
 | Ch36 | `ProofsInTheBook.ZinanCh36Assembly.artGallery_strict_mod_M` | CONDITIONAL-honest | `Esplit : EarValueSplitData`, `rest : RemainingResidualData`, and `M : DiagonalAttachInput ...`.  Root `Chapter36.chapter36` remains only the combinatorial triangulation theorem. |
 

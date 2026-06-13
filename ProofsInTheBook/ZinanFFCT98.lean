@@ -23,6 +23,8 @@ open ProofsInTheBook.SphericalKernel ProofsInTheBook.SphericalArm
 open ProofsInTheBook.SphericalRotation
 open ProofsInTheBook.SphericalSZInduction
 open ProofsInTheBook.SphericalSZFinal
+open ProofsInTheBook.ZinanFFCT23
+open ProofsInTheBook.ZinanFFCT64
 open ProofsInTheBook.ZinanFFCT68
 open ProofsInTheBook.ZinanFFCT78
 open ProofsInTheBook.ZinanFFCT86
@@ -47,7 +49,28 @@ theorem spherical_arm_mono_ch13_of_noCollision
     SphericalArmMonotone :=
   spherical_arm_mono_final_ch13_v11 (collisionEndpoint_of_noCollision hnc)
 
+/-- **The natural single-wind output discharges the no-collision residue.**  The
+single-wind programme proves `NoNonadjacentRepeat (openedWBS A B k)` directly (gnomonic
+image + planar single-wind no-repeat), packaged as `OpenedWBSNoNonadjacentRepeatSupply`
+(FFCT64).  The cross-piece no-collision predicate is the `r ≤ K < s` subcase of that
+full no-repeat (`r + 2 ≤ s` ⟹ nonadjacent), so it follows by specialization. -/
+theorem crossPieceNoCollision_of_openedWBSNoRepeat
+    (hsupply : OpenedWBSNoNonadjacentRepeatSupply) :
+    CrossPieceNoCollisionAtSup := by
+  intro n A B hA hB hside hangle k hkdef hstuck r s hr hs hrs _hrK _hKs
+  exact hsupply A B hA hB hside hangle k hkdef hstuck r s hr hs hrs
+
+/-- **Ch13 strict-arm monotonicity from the opened-arm no-repeat supply.**  This is the
+cleanest unconditional headline modulo the single-wind output: once the single-wind
+machinery (FFCT94/95/96/97) supplies `NoNonadjacentRepeat (openedWBS A B k)`, Ch13 closes. -/
+theorem spherical_arm_mono_ch13_of_openedWBSNoRepeat
+    (hsupply : OpenedWBSNoNonadjacentRepeatSupply) :
+    SphericalArmMonotone :=
+  spherical_arm_mono_ch13_of_noCollision (crossPieceNoCollision_of_openedWBSNoRepeat hsupply)
+
 end ProofsInTheBook.ZinanFFCT98
 
 #print axioms ProofsInTheBook.ZinanFFCT98.collisionEndpoint_of_noCollision
 #print axioms ProofsInTheBook.ZinanFFCT98.spherical_arm_mono_ch13_of_noCollision
+#print axioms ProofsInTheBook.ZinanFFCT98.crossPieceNoCollision_of_openedWBSNoRepeat
+#print axioms ProofsInTheBook.ZinanFFCT98.spherical_arm_mono_ch13_of_openedWBSNoRepeat

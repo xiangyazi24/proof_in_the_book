@@ -62,7 +62,7 @@ theorem collisionEndpoint_of_properNoCollision
     have hzero : endpt (openedWBS A B k) = 0 := by
       unfold endpt
       rw [e0, en, hcoll]
-      unfold sDist
+      unfold sDist sInner
       rw [S2.inner_self]
       exact Real.arccos_one
     rw [hzero]

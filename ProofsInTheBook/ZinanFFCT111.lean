@@ -41,11 +41,14 @@ open ProofsInTheBook.SphericalSZFinal
 open ProofsInTheBook.SphericalArmAssembly
 open ProofsInTheBook.SphericalMonitoredSup
 open ProofsInTheBook.SphericalOpeningOutcome
+open ProofsInTheBook.PlanarConvexDiag
+open ProofsInTheBook.SphericalCyclicTriple
 open ProofsInTheBook.ZinanFFCT23
 open ProofsInTheBook.ZinanFFCT45
 open ProofsInTheBook.ZinanFFCT49
 open ProofsInTheBook.ZinanFFCT52
 open ProofsInTheBook.ZinanFFCT68
+open ProofsInTheBook.ZinanFFCT66
 open ProofsInTheBook.ZinanFFCT74
 open ProofsInTheBook.ZinanFFCT78
 open ProofsInTheBook.ZinanFFCT86
@@ -55,6 +58,52 @@ namespace ProofsInTheBook.ZinanFFCT111
 
 set_option synthInstance.maxHeartbeats 400000
 set_option maxHeartbeats 1800000
+
+/-! ## Subarm strict convexity (general start index, including `r = 0`). -/
+
+/-- Strict interval wrap data for `A[a..a+m]`, for an arbitrary start `a` (not just `a ≥ 1`).
+Mirrors `intervalWrapDataStrict_of_cyclicTriple` but is valid at `a = 0` too. -/
+theorem wrapDataStrict_general {n : ℕ} {A : Fin (n + 1) → S2} (hA : StrictConvexSphArm A)
+    {a m : ℕ} (hm : 2 ≤ m) (hb : a + m ≤ n) :
+    IntervalWrapDataStrict A a m hb := by
+  have hcyc : CyclicTriplePos (n := n + 1) A := cyclicTriplePos_unconditional hA.closed_convex
+  obtain ⟨h, _hnorm, hhem⟩ := hA.closed_convex.open_hemisphere
+  have hbase : NoNonadjacentRepeat A := strictConvex_noNonadjacentRepeat hA
+  refine { toWeak := { wrap_short := ?_, wrap_support := ?_ }, wrap_strict := ?_ }
+  · -- ShortArc (A ⟨a+m⟩) (A ⟨a⟩)
+    refine ⟨?_, hemisphere_nonAntipodal hhem ⟨a + m, by omega⟩ ⟨a, by omega⟩⟩
+    intro heq
+    exact hbase a (a + m) (by omega) (by omega) (by omega) heq.symm
+  · intro v hv
+    by_cases hv0 : v = 0
+    · subst hv0
+      have : sOrient (A ⟨a + m, by omega⟩) (A ⟨a, by omega⟩) (A ⟨a + 0, by omega⟩) = 0 := by
+        simp only [sOrient, det3]; ring
+      rw [this]
+    · by_cases hvm : v = m
+      · have hav : a + v = a + m := by omega
+        have hidx : (⟨a + v, by omega⟩ : Fin (n + 1)) = ⟨a + m, by omega⟩ := Fin.ext hav
+        rw [hidx]
+        have : sOrient (A ⟨a + m, by omega⟩) (A ⟨a, by omega⟩) (A ⟨a + m, by omega⟩) = 0 := by
+          simp only [sOrient, det3]; ring
+        rw [this]
+      · have hpos : 0 < sOrient (A ⟨a, by omega⟩) (A ⟨a + v, by omega⟩) (A ⟨a + m, by omega⟩) :=
+          hcyc ⟨a, by omega⟩ ⟨a + v, by omega⟩ ⟨a + m, by omega⟩
+            (Fin.mk_lt_mk.mpr (by omega)) (Fin.mk_lt_mk.mpr (by omega))
+        rw [sOrient_cyclic (A ⟨a + m, by omega⟩) (A ⟨a, by omega⟩) (A ⟨a + v, by omega⟩)]
+        exact le_of_lt hpos
+  · intro v hv hvm hv0
+    have hpos : 0 < sOrient (A ⟨a, by omega⟩) (A ⟨a + v, by omega⟩) (A ⟨a + m, by omega⟩) :=
+      hcyc ⟨a, by omega⟩ ⟨a + v, by omega⟩ ⟨a + m, by omega⟩
+        (Fin.mk_lt_mk.mpr (by omega)) (Fin.mk_lt_mk.mpr (by omega))
+    rw [sOrient_cyclic (A ⟨a + m, by omega⟩) (A ⟨a, by omega⟩) (A ⟨a + v, by omega⟩)]
+    exact hpos
+
+/-- The subarm `A[a..a+m]` of a strictly convex arm is strictly convex (for `2 ≤ m`). -/
+theorem strictConvex_subarm {n : ℕ} {A : Fin (n + 1) → S2} (hA : StrictConvexSphArm A)
+    {a m : ℕ} (hm : 2 ≤ m) (hb : a + m ≤ n) :
+    StrictConvexSphArm (intervalArm A a m hb) :=
+  strictConvex_intervalArm_of_wrap hA hm hb (wrapDataStrict_general hA hm hb)
 
 /-! ## The isolated hard case: proper cross collision with `r < K` and `δ > 0`. -/
 

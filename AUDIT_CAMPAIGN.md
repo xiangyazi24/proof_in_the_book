@@ -394,3 +394,13 @@ Verbatim `#print axioms` output:
 'ProofsInTheBook.Chapter35.chapter35' depends on axioms: [propext, Classical.choice, Quot.sound]
 'ProofsInTheBook.Chapter36.chapter36' depends on axioms: [propext, Classical.choice, Quot.sound]
 ```
+
+
+## UPDATE 2026-06-13: Ch13 simplicity route REFUTED, true status
+The FFCT88-92 "simplicity makes collision vacuous" route is DEAD: weakConvex_boundedJoints_noNonadjacentRepeat
+is FALSE (FFCT93 ¬PlanarClosedWeakStrictNoRepeat via the doubled-triangle A,B,C,A,B,C -- a weak-convex
+bounded-joint arm CAN wind twice and self-repeat). The FFCT88-92 conditional wrappers rest on a false Prop.
+Ch13's STANDING honest headline is FFCT86 `spherical_arm_mono_final_ch13_v11 (CrossPieceCollisionEndpointAtSup)`.
+The correct fix (q27 in flight): total-turning < 2*pi simplicity (the doubled triangle has 4*pi; openedWBS,
+being a strict single-wind arm with the tail rotated, keeps < 2*pi), OR a continuity-to-the-sup-limit route.
+NOT irreducible -- an active design+grind line.

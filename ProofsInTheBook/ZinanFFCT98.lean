@@ -1,4 +1,5 @@
 import ProofsInTheBook.ZinanFFCT86
+import ProofsInTheBook.ZinanFFCT97
 
 /-!
 # Ch13 final assembly: the no-collision residue discharges the headline (vacuously)
@@ -28,6 +29,7 @@ open ProofsInTheBook.ZinanFFCT64
 open ProofsInTheBook.ZinanFFCT68
 open ProofsInTheBook.ZinanFFCT78
 open ProofsInTheBook.ZinanFFCT86
+open ProofsInTheBook.ZinanFFCT97
 
 namespace ProofsInTheBook.ZinanFFCT98
 
@@ -68,8 +70,26 @@ theorem spherical_arm_mono_ch13_of_openedWBSNoRepeat
     SphericalArmMonotone :=
   spherical_arm_mono_ch13_of_noCollision (crossPieceNoCollision_of_openedWBSNoRepeat hsupply)
 
+/-- **Ch13 strict-arm monotonicity, reduced to the TWO planar residues.**  Combining
+the opened-arm gnomonic single-wind layer (FFCT97) with the vacuous no-collision bridge,
+Chapter 13 closes once the two genuine planar-analytic residues are discharged:
+* `OpenedWBSPlanarLiftedTurnSpanExists` — from a weak-support, distinct-edge,
+  strict-turn planar chain with an orthonormal frame, build the lifted-turn span
+  (its `one_wind : θ N − θ 0 < 2π` is the single-wind total-turning bound), and
+* `PlanarOneWindNoRepeat` — a planar lifted-turn span (single-wind) has no
+  nonadjacent vertex repeat (the full `< 2π` generalization of FFCT94's `< π` case).
+Both are non-vacuous (realised by strictly convex planar chains, e.g. FFCT94's
+`witChain`) and are the only remaining unformalized analytic content of Ch13. -/
+theorem spherical_arm_mono_ch13_of_planar_residues
+    (hres : OpenedWBSPlanarLiftedTurnSpanExists)
+    (hplanar : PlanarOneWindNoRepeat) :
+    SphericalArmMonotone :=
+  spherical_arm_mono_ch13_of_noCollision
+    (crossPieceNoCollisionAtSup_of_openedWBS_gnomonicSingleWind hres hplanar)
+
 end ProofsInTheBook.ZinanFFCT98
 
+#print axioms ProofsInTheBook.ZinanFFCT98.spherical_arm_mono_ch13_of_planar_residues
 #print axioms ProofsInTheBook.ZinanFFCT98.collisionEndpoint_of_noCollision
 #print axioms ProofsInTheBook.ZinanFFCT98.spherical_arm_mono_ch13_of_noCollision
 #print axioms ProofsInTheBook.ZinanFFCT98.crossPieceNoCollision_of_openedWBSNoRepeat

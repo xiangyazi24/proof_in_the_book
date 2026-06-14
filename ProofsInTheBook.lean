@@ -383,3 +383,4 @@ import ProofsInTheBook.ZinanFFCT107
 import ProofsInTheBook.Ch13CyclicSigns
 import ProofsInTheBook.Ch13MarkedSphere
 import ProofsInTheBook.Ch13MarkedReduction
+import ProofsInTheBook.Ch13ActiveComponent

@@ -360,6 +360,7 @@ import ProofsInTheBook.ZinanFFCT84
 import ProofsInTheBook.ZinanFFCT85
 import ProofsInTheBook.ZinanFFCT86
 import ProofsInTheBook.ZinanCh35Cert
+import ProofsInTheBook.ZinanCh35Dichotomy
 import ProofsInTheBook.ZinanCh36Ears
 import ProofsInTheBook.ZinanFFCT87
 import ProofsInTheBook.ZinanFFCT88

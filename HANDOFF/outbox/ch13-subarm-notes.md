@@ -56,6 +56,35 @@ By contradiction: assume `heq` (collision). δ := monitoredSupWBS A B k.
 4. r=K case (K'=0, not interior): O = rigid rotation of A_sub (axis index 0), endpt O = endpt A_sub by
    sDist_rotS2 isometry; collision ⟹ endpt A_sub=0 ⟹ A_K=A_s contradiction. (NO IH/limit needed.)
 
+## CURRENT STATE (FFCT111, committed, 0-sorry clean-3)
+The standalone `ProperCrossPieceNoCollisionAtSup` CANNOT be discharged: it needs `MainPlusNR m`
+(m<n) which is only available as `ihdim` INSIDE the induction; the v11 lemmas take the FULL
+`hcollision` monolithically, so no level-local feeding. Therefore I REBUILT FFCT86's dispatch as
+**v12** with the collision branch proven INLINE (ihdim in scope):
+- `supportStuckWBS_endpoint_dispatch_at_level_nr_v12` — no-collision branch verbatim from v11;
+  collision branch: full-closure (endpt 0) | δ=0 (repeat) | r=K (isometry) | r<K → `SubarmIHContra`.
+- v12 recursion (open_step/szOpeningStep/mainPlusNR_at_level/mainPlusNR_all) mirrors v11, drops hcollision.
+- `spherical_arm_mono_final_ch13_v12 : SubarmIHContra → SphericalArmMonotone`.
+- `SubarmIHContra` = the single residue: ∀n (ihdim:∀m<n,MainPlusNR m) ... r<K<s, δ>0, heq → False.
+  (Has ihdim ⟹ dischargeable in principle. This is the genuine weak-target/limit crux.)
+- Subarm infra PROVEN: `wrapDataStrict_general` (IntervalWrapDataStrict any start incl a=0),
+  `strictConvex_subarm`.
+
+## REMAINING OBSTACLE for SubarmIHContra (deep, real-analysis)
+Discharge needs: A_sub=intervalArm A r m (strict, m=s-r<n), MainPlusNR m via ihdim, and
+  endpt A_sub = sDist(A_r,A_s) > 0  ≤  endpt O_δ = sDist(openedWBS r, openedWBS s) = 0  (heq) → ⊥.
+The middle ≤ is WEAK-TARGET monotonicity (strict source A_sub, target = opened subarm).
+At the collision O_δ is DEGENERATE (endpt 0 ⟹ closing edge zero-length ⟹ NOT WeakConvexSphArm),
+so weak-target can't apply at δ directly. Limit-from-below: endpt A_sub ≤ endpt O_τ for τ<δ
+(O_τ weakly convex), continuity endpt O_τ → 0.
+**THE GAP**: needs `opened_τ` weakly convex for τ∈[0,δ) (admissible accumulates at δ from below).
+The repo has NO "admissible = Icc 0 δ"/interval lemma (only `sSup_mem_admissibleSet` = δ∈admissible).
+admissible = ∩{member_i ≥0}, members sinusoidal ⟹ NOT obviously an interval; support-only crude
+test found 6/4000 gap cases. Need either (a) prove admissible accumulates at δ from below for the
+full WBS family in the support-stuck regime, or (b) an abstract weak-target closure (strict approx
+of a weakly-convex arm with EXACT prescribed side lengths — also hard). Both are multi-day.
+Numerically the THEOREM is solid (no weak-convex opened arm has a nonadjacent coincidence: 549885/0).
+
 ## Key repo lemmas
 - endpt_openTail_interior (SZFinal:251), continuous_rot (SphRot:289), sDist_rotS2 (isometry),
   intervalArm_* (SZStepClose, FFCT52,74), strictConvex_intervalArm_of_wrap (FFCT52:493) needs IntervalWrapDataStrict,

@@ -382,3 +382,4 @@ import ProofsInTheBook.ZinanFFCT106
 import ProofsInTheBook.ZinanFFCT107
 import ProofsInTheBook.Ch13CyclicSigns
 import ProofsInTheBook.Ch13MarkedSphere
+import ProofsInTheBook.Ch13MarkedReduction

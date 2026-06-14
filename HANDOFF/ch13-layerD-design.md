@@ -175,3 +175,29 @@ all-zero ⟹ equal dihedrals ⟹ congruent.
 (the discrete Cauchy combinatorial lemma — genuine hard combinatorics, same family as Ch35 discrete-Jordan);
 (ii) `vertexFlipCount_triangulate_faces_by_zero_diagonals` (cyclic-list combinatorics, straightforward);
 (iii) FIX cauchyArmVertex_of_links signChanges to the full n+1 cycle. Everything else is plumbing.
+
+---
+
+## COMBINATORIAL LEMMA — corrected (with-zeros agent, 2026-06-14): the general form is FALSE
+
+The agent found (machine-checked) that the LITERAL `cauchy_marked_sphere_low_active_vertex` (IsSphereMap +
+nonzero ⟹ ∃ active vertex ≤2) is FALSE without a face-degree condition: `marked_target_obstruction`
+(`dipMap`, 8 darts, V=2,E=4,F=4,χ=2 — all DIGON faces) is a sphere map where EVERY vertex has exactly 4
+flips (parallel active edges +,−,+,−). NB this counterexample is NOT `FaceRegular 3`, so it does NOT
+falsify the FaceRegular-3 form used in `Ch13CauchyAssembly`'s `hcomb`.
+
+The CORRECTED, surgery-free TRUE theorem is delivered & clean-3 (`Ch13MarkedReduction.lean`):
+`active_component_low_vertex (A : CombMap) (Euler V−E+F=2) (∑faceDeg=2E) (∀ R, 3 ≤ faceDeg R) (strict s)
+(EdgeInvariant) : ∃ Q, vertexFlip Q ≤ 2` — proof = corner double-count + per-face bound `faceFlip ≤
+2·faceDeg−4` + Euler ⟹ `4V ≤ 4V−8`. This AVOIDS the fan-triangulation surgery entirely (the per-face
+bound generalizes the strict core to non-triangular faces directly). Bridges proven:
+`vertexFlipCountSkipZeros_strict_eq_vertexFlip` (skip-zero strict count = vertexFlip),
+`strict_core_low_vertex_via_active` (recovers the FaceRegular-3 case).
+
+**THE PRECISE RESIDUAL is now just the active-component EXTRACTION**: from M (the polytope's
+triangulated-sphere signing with zeros), extract the active subgraph as a connected map A with
+Euler=2, ∑faceDeg=2E, `faceDeg ≥ 3`, strict signing, + flip-transport back to M's active vertices. The
+`faceDeg ≥ 3` output requires M SIMPLE (no parallel active edges) — true for real convex polytopes; the
+digon counterexample is exactly the non-simple case. Then `active_component_low_vertex` (proven) finishes.
+This extraction is the one genuinely large CombMap construction left; the deep math + the per-face Euler
+core are DONE clean-3.

@@ -154,3 +154,5 @@ is a real finite instance), so kneser's htucker use is faithful — but Ch39 nee
 - final result: <open>
 
 - 2026-06-14 progress: avenue (a). Strict arm lemma REDUCED to single residue StuckWitnessExists (substrate armMono_strict_of_stuckWitness). FFCT112 = genuine fixed-chord contradiction from real arm lemma (conditional on residue). Dispatched StuckWitnessExists grind to subagent. FFCT111 (≤ arm lemma) discharges WeakArmStep.
+
+- 2026-06-14 MILESTONE: StuckWitnessExists DISCHARGED unconditionally (FFCT113, clean-3, tiny-opening bootstrap off FFCT111 weak lemma; subagent acb645, verified independently). => STRICT spherical arm lemma UNCONDITIONAL (FFCT112.spherical_arm_mono_strict_uncond, clean-3). Both arm-lemma halves now closed. Genuine fixed-chord contradiction unconditional (replaces posited arm_conclusion). Next: rewire Chapter13 obstruction to use it.

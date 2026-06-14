@@ -1,5 +1,6 @@
 import ProofsInTheBook.SphericalOpenedArmCore
 import ProofsInTheBook.ZinanFFCT111
+import ProofsInTheBook.ZinanFFCT113
 
 /-!
 # `ZinanFFCT112` — wiring the REAL arm lemma into the Cauchy fixed-chord contradiction.
@@ -52,4 +53,40 @@ theorem spherical_arm_mono_strict_of_residue (h : StuckWitnessExists)
     sDist (A 0) (A (Fin.last n)) < sDist (B 0) (B (Fin.last n)) :=
   armMono_strict_of_stuckWitness h hn A B hA hB hside hangle hstrict
 
+/-! ## Unconditional forms — the residue `StuckWitnessExists` is discharged in `ZinanFFCT113`.
+
+`ZinanFFCT113.stuckWitnessExists_holds : StuckWitnessExists` (clean-3, via the tiny-opening bootstrap
+off the unconditional weak lemma `spherical_arm_mono_final_ch13`) removes the last hypothesis.  The
+strict spherical arm lemma and the genuine Cauchy fixed-chord contradiction are therefore
+UNCONDITIONAL. -/
+
+/-- **The strict spherical arm lemma — UNCONDITIONAL.**  Equal-sided strictly convex spherical arms
+with nondecreasing joints and SOME joint strictly wider have a strictly longer endpoint chord.
+Companion to the unconditional `≤` headline `spherical_arm_mono_final_ch13`. -/
+theorem spherical_arm_mono_strict_uncond
+    {n : ℕ} (hn : 2 ≤ n) (A B : Fin (n + 1) → S2)
+    (hA : StrictConvexSphArm A) (hB : StrictConvexSphArm B)
+    (hside : ∀ i : Fin n, sideLen A i = sideLen B i)
+    (hangle : ∀ i : Fin (n - 1), jointAngle A i ≤ jointAngle B i)
+    (hstrict : ∃ i : Fin (n - 1), jointAngle A i < jointAngle B i) :
+    sDist (A 0) (A (Fin.last n)) < sDist (B 0) (B (Fin.last n)) :=
+  spherical_arm_mono_strict_of_residue ProofsInTheBook.ZinanFFCT113.stuckWitnessExists_holds
+    hn A B hA hB hside hangle hstrict
+
+/-- **The genuine fixed-chord arm contradiction — UNCONDITIONAL.**  This is the honest, derived
+replacement for `Chapter13.CauchyArmOpeningObstruction.arm_conclusion` (which posited it). -/
+theorem cauchy_arm_fixed_chord_contradiction_uncond
+    {n : ℕ} (hn : 2 ≤ n) (A B : Fin (n + 1) → S2)
+    (hA : StrictConvexSphArm A) (hB : StrictConvexSphArm B)
+    (hside : ∀ i : Fin n, sideLen A i = sideLen B i)
+    (hangle : ∀ i : Fin (n - 1), jointAngle A i ≤ jointAngle B i)
+    (hstrict : ∃ i : Fin (n - 1), jointAngle A i < jointAngle B i)
+    (hchord : sDist (A 0) (A (Fin.last n)) = sDist (B 0) (B (Fin.last n))) :
+    False :=
+  cauchy_arm_fixed_chord_contradiction ProofsInTheBook.ZinanFFCT113.stuckWitnessExists_holds
+    hn A B hA hB hside hangle hstrict hchord
+
 end ProofsInTheBook.ZinanFFCT112
+
+#print axioms ProofsInTheBook.ZinanFFCT112.spherical_arm_mono_strict_uncond
+#print axioms ProofsInTheBook.ZinanFFCT112.cauchy_arm_fixed_chord_contradiction_uncond

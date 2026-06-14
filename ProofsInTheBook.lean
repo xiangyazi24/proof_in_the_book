@@ -365,6 +365,7 @@ import ProofsInTheBook.ZinanCh35Coverage
 import ProofsInTheBook.ZinanCh35SeedInput
 import ProofsInTheBook.ZinanCh35Schoenflies2
 import ProofsInTheBook.ZinanCh35InnerConn
+import ProofsInTheBook.ZinanCh35OuterDual
 import ProofsInTheBook.ZinanCh36Ears
 import ProofsInTheBook.ZinanFFCT87
 import ProofsInTheBook.ZinanFFCT88

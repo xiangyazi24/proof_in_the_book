@@ -59,3 +59,42 @@ CauchyRigidityCertificate edgeSigns`, making `chapter13` yield unconditional rig
   D is laborious convex-polytope bookkeeping, not new deep mathematics.
 - Suggested order: 1 → 2 → 3 → 4 → 5 → 6, each its own file, `#print axioms` clean-3 per piece, no sorry
   banking. Dispatch the heavy pieces (1,2) to focused agents.
+
+---
+
+## SHARP ARCHITECTURE (Plan agent, 2026-06-14) — HYBRID, §3.3-driven
+
+**Decision: HYBRID** — extrinsic LOCAL geometry (per-vertex, derived) + intrinsic GLOBAL combinatorics
+(reuse `CombMap`). The seam sits exactly on the §3.3 fault line.
+
+**The §3.3 fault line (load-bearing):** two bridges MUST be THEOREMS, never structure fields/hypotheses:
+- **Bridge A** `sideLen (vertexLink S) i = EuclideanGeometry.angle (S.p i) S.o (S.p (i+1))` (link side = face angle).
+- **Bridge B** `jointAngle (vertexLink S) i = dihedral angle along edge i` (spherical angle = dihedral).
+Positing either (or carrying `harm : StrictConvexSphArm (vertexLink S)` as a field) reintroduces the
+exact trap just removed from `arm_conclusion`. REJECT any such design in review.
+
+**Steps (one file each, clean-3 per file, no sorry banking):**
+1. `Ch13VertexStar.lean` — `structure VertexStar` (apex o, neighbors p : Fin n → ℝ³, ℝ³-DERIVABLE strict
+   local convexity predicate matching `StrictConvexSphPolygon`'s fields). `edgeDir`, `vertexLink`,
+   and **`vertexLink_strictArm : StrictConvexSphArm (vertexLink S)`** (HARD sub-lemma #1: ℝ³ apex cone
+   convexity ⟹ the 5 `StrictConvexSphPolygon` fields via `sOrient`/`det3`; `open_hemisphere` = inward normal).
+2. `Ch13LinkBridges.lean` — Bridge A (easy: `cos_angle` + normalization) and **Bridge B** (HARD sub-lemma
+   #2: spherical-angle = dihedral; reuse `TetDihedral.projOut`/`inner_projOut_projOut`). §3.3-critical.
+3. `Ch13Congruence.lean` — `faceCongruent` (Mathlib `Congruent`) ⟹ equal link sides (Bridge A both sides).
+4. `Ch13EdgeSign.lean` — `edgeSign` per edge; `cauchyArmVertex_of_stars` (signChanges = cyclic flip count;
+   `signChanges_even` = cyclic parity; 0/2 → obstruction via the cyclic-split, HARD sub-lemma #3 — feeds
+   the PROVEN `cauchy_arm_fixed_chord_contradiction_uncond`).
+5. `Ch13Certificate.lean` — `CauchyPolytopePair` (CombMap + per-vertex VertexStars for P,Q + faceCongruent
+   + not_congruent); Euler/`3F=2E` from `PlanarMap`; `total_vertex_eq_total_face` double-count;
+   `cauchyRigidityCertificate_of_pair`.
+6. `Ch13Rigidity.lean` — `cauchy_rigidity := chapter13 (cauchyRigidityCertificate_of_pair …)` clean-3.
+   **MANDATORY non-vacuity guard**: concrete octahedron `CauchyPolytopePair` inhabiting every field except
+   `not_congruent` (else the headline is vacuous).
+
+**Hard sub-lemmas (dispatch):** #1 vertexLink_strictArm (focused agent), #2 Bridge B spherical=dihedral
+(Opus, §3.3 load-bearing — must be a theorem), #3 cyclic sign-change split (focused agent, arm lemma done).
+**Parallelizable independent:** `signChanges_even`, `total_vertex_eq_total_face` (pure CombMap/Fin-cyclic).
+
+**Honest minimal residual:** the `not_congruent ⟹ nontrivial` global-rigidity step is the subtlest
+non-arm piece; if it blocks, ship `cauchy_rigidity` conditional on that ONE tagged hypothesis (everything
+else unconditional) — still a major advance over the current fully-unconstructed certificate.

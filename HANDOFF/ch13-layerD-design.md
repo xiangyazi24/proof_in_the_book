@@ -201,3 +201,25 @@ Euler=2, ∑faceDeg=2E, `faceDeg ≥ 3`, strict signing, + flip-transport back t
 digon counterexample is exactly the non-simple case. Then `active_component_low_vertex` (proven) finishes.
 This extraction is the one genuinely large CombMap construction left; the deep math + the per-face Euler
 core are DONE clean-3.
+
+---
+
+## ℝ³ GEOMETRIC REALIZATION ARCHITECTURE (Plan agent, 2026-06-14) — the last residual
+
+**Do NOT build a full ConvexPolytope3** (multi-thousand-line greenfield, no Mathlib base). Use a
+`ConvexPolytopeRealization D` INTERFACE: `M : CombMap D` (sphere, FaceRegular 3, IsSimpleGraph), two
+per-vertex `VertexStar` embeddings `starP/starQ : Vertex M → VertexStar`, an order-bridge `linkOrder`
+(geometric rotational order = σ dart order), `sides_eq`/`close_eq` (congruent faces), `dihedral_consistent`.
+All 4 certificate bridges are DERIVED from these fields (Bridge A/B + cauchyArmVertexFull + the count
+reconciliation). Headline `realization_rigid : ∀ Q i, dihedral_P = dihedral_Q` (all corresponding dihedrals
+equal) — Cauchy's sign-machinery content — via the proven `cauchy_no_nonzero_edgeSign` + the combinatorial lemma.
+
+**§3.3 (load-bearing):** (1) `vertexArm_signChanges_eq` MUST be DERIVED via `linkOrder`, not posited (the
+current skeleton posits it as a field — the realization demotes it to a theorem). (2) DROP any `active`
+field — it would make rigidity vacuous; rigidity holds UNCONDITIONALLY for congruent-faced realizations.
+
+**Build DAG (4 agents dispatched 2026-06-14):** B count-reconciliation (cyclicFlips↔cyclicFlipCountSkipZeros);
+wrapped-subArc (htwoArc discharge via rotPoly∘subArc); interface-core (the structure + the crux linkOrder
+bridge + realization_rigid); octahedron witness H (non-vacuity, decide-heavy, AFTER interface defined).
+**True residuals:** (a) octahedron instance, (b) combinatorial lemma [closing now], (c) FRAGMENT
+`congruent_of_congruent_faces_eq_dihedrals` (Cauchy's final ℝ³ reconstruction — explicitly out of scope).

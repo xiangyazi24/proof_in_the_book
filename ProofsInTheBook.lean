@@ -238,6 +238,7 @@ import ProofsInTheBook.Chapter22Stable
 import ProofsInTheBook.ZinanCh35
 import ProofsInTheBook.ZinanCh35Anchoring
 import ProofsInTheBook.ZinanCh35BankAnchor
+import ProofsInTheBook.ZinanCh35OppArcSeed
 import ProofsInTheBook.ZinanCh35ChordCycle
 import ProofsInTheBook.ZinanCh35Confinement
 import ProofsInTheBook.ZinanCh35CountRoute

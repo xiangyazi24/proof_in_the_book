@@ -5,6 +5,7 @@ import ProofsInTheBook.PolygonEarExistence
 import ProofsInTheBook.PolygonWindingBound
 import ProofsInTheBook.PolygonEarEscape
 import ProofsInTheBook.PolygonEarCornerEscape
+import ProofsInTheBook.Ch13FlipTransport
 
 /-!
 # `ChapterResidueAudit` — integration / audit-readiness verification of the three open
@@ -287,3 +288,7 @@ end ProofsInTheBook.ChapterResidueAudit
 #print axioms ProofsInTheBook.ChapterResidueAudit.ch36_artGallery_strict
 #print axioms ProofsInTheBook.ChapterResidueAudit.ch36_earDeletedExterior_of_leg1Free
 #print axioms ProofsInTheBook.ChapterResidueAudit.ch36_windCross_bound
+-- Ch13 flip-transport (the `htrans` residual of the with-zeros marked-sphere low active vertex):
+#print axioms ProofsInTheBook.Ch13FlipTransport.flip_transport
+#print axioms ProofsInTheBook.Ch13FlipTransport.marked_sphere_low_active_vertex_no_htrans
+#print axioms ProofsInTheBook.Ch13FlipTransport.flip_transport_tetra_nonvacuous

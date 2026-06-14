@@ -384,3 +384,4 @@ import ProofsInTheBook.Ch13CyclicSigns
 import ProofsInTheBook.Ch13MarkedSphere
 import ProofsInTheBook.Ch13MarkedReduction
 import ProofsInTheBook.Ch13ActiveComponent
+import ProofsInTheBook.Ch13FlipTransport

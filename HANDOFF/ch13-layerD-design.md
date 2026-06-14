@@ -134,3 +134,44 @@ some dihedral differs ⟹ some active edge; if it blocks, ship conditional on th
 
 **Step 6 (`Ch13Rigidity`):** `cauchy_rigidity := chapter13 (cauchyRigidityCertificate_of_pair …)`.
 MANDATORY non-vacuity: a concrete octahedron `CauchyPolytopePair` inhabiting every field but `not_congruent`.
+
+---
+
+## FAITHFUL CERTIFICATE SPEC (ChatGPT specific audit, 2026-06-14) — the corrected target
+
+The old `CauchyRigidityCertificate` (Euler/3F=2E/double-count as fields) is UNFAITHFUL (combines active
+graph + triangulation, two incompatible graphs). ChatGPT's Lean-actionable replacement:
+
+**Q1 — the zero-skipped vertex/face double-count is FALSE with zeros** (tetra counterexample: ∑vertex=4 ≠
+∑face=2). The TRUE identity is a CORNER (dart) count: `∑_v #{corners at v with change} = ∑_f #{corners at f
+with change}` (both = #changing-corners). Corner count ≠ skip-zeros cyclic count when zeros present. The old
+double-count works ONLY after passing to a STRICT signed triangulation (no zeros).
+
+**Q2 — the geometric ≥4 = `vertexFlipCountSkipZeros`** (zero-skipped σ-cycle count around the vertex), the
+RIGHT quantity. CRUCIAL BUG FOUND: `cauchyArmVertex_of_links` computes signChanges over `Fin (n-1)` arm
+joints, MISSING 2 of the n+1 closed-link angles (arm endpoints). The bridge `vertexArm_signChanges_eq`
+(signChanges = vertexFlipCountSkipZeros over the FULL n+1 cycle) FAILS as built. ⟹ FIX: signChanges must
+count the FULL closed-link cycle (n+1 angles, skip zeros), and the 0/2 obstructions over the full cycle.
+
+**Q3 — the combinatorial lemma must return an ACTIVE low vertex** (inactive vertices trivially have 0):
+`cauchy_marked_sphere_low_active_vertex : IsSphereMap M → FaceRegular 3 M → (∃ e, edgeSign e ≠ 0) →
+∃ v, ActiveVertex M edgeSign v ∧ vertexFlipCountSkipZeros M edgeSign v ≤ 2`. Proof route: nonzero
+component → triangulate complementary regions → strict signs on diagonals (inserting a strict sign never
+decreases flip count) → strict corner double-count + each triangle ≤2 + Euler+3F=2E ⟹ contradiction.
+
+**Q4 — zero-diagonal invariance TRUE** (`cyclicFlipCountSkipZeros_filter_zero_invariant`: skip-zeros count =
+strict count of the filtered signs). Triangulating a polytope face by diagonals gives coplanar triangle
+pairs ⟹ zero dihedral difference on diagonals ⟹ skipped ⟹ vertex count unchanged. Transports the geometric
+≥4 to the triangulated map for free. (Does NOT fix Q1.)
+
+**Q5 — minimal faithful replacement.** Structure `CauchyMarkedTriangulatedSphere M`: `isSphere`,
+`triangleFaces (FaceRegular 3)`, `edgeSign`, `vertexArm : ∀ v, ActiveVertex v → CauchyArmVertex` (from
+genuine links), `vertexArm_signChanges_eq` (the bridge, over the full cycle). NO faceSigns/double_count/
+euler/3F=2E fields. Then `cauchy_no_nonzero_edgeSign C : ∀ e, edgeSign e = 0` is a ~10-line proof
+(combinatorial lemma gives active v with ≤2; bridge + four_le_signChanges gives ≥4; omega). Final rigidity:
+all-zero ⟹ equal dihedrals ⟹ congruent.
+
+**THE PRECISE RESIDUAL** (replaces the whole certificate): (i) `cauchy_marked_sphere_low_active_vertex`
+(the discrete Cauchy combinatorial lemma — genuine hard combinatorics, same family as Ch35 discrete-Jordan);
+(ii) `vertexFlipCount_triangulate_faces_by_zero_diagonals` (cyclic-list combinatorics, straightforward);
+(iii) FIX cauchyArmVertex_of_links signChanges to the full n+1 cycle. Everything else is plumbing.

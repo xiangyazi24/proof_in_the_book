@@ -1,4 +1,5 @@
 import ProofsInTheBook.Ch13MarkedSphere
+import ProofsInTheBook.Ch13ComponentClose
 import ProofsInTheBook.Chapter13
 
 /-!
@@ -38,6 +39,11 @@ structure CauchyMarkedTriangulatedSphere (M : CombMap D) where
   /-- The surface is a triangulated sphere. -/
   isSphere : M.IsSphereMap
   triangleFaces : M.FaceRegular 3
+  /-- The edge graph is simple (no loops / no parallel edges).  This is a GENUINE property of every
+  convex 3-polytope's boundary graph (Steinitz: the graph of a convex polytope is simple and
+  3-connected), supplied by the ℝ³ realization — not a combinatorial convenience.  It is what rules
+  out the digon degeneracy in the combinatorial lemma. -/
+  isSimple : M.IsSimpleGraph
   /-- The dihedral-difference signing (±/0). -/
   edgeSign : D → EdgeSign
   /-- The signing is edge-invariant (`α`-stable): both darts of an edge carry the same sign. -/
@@ -68,5 +74,19 @@ theorem cauchy_no_nonzero_edgeSign {M : CombMap D}
     rw [← C.vertexArm_signChanges_eq d hdActive]
     exact CauchyArmVertex.four_le_signChanges (C.vertexArm d hdActive)
   omega
+
+/-- **The faithful Cauchy contradiction, unconditional.**  Same as `cauchy_no_nonzero_edgeSign` but
+with the combinatorial lemma now DISCHARGED by `Ch13ComponentClose.cauchy_marked_sphere_low_active_vertex_simple`
+(both residuals `hconn`/`hFaceDeg` closed clean-3) — the simplicity it needs is supplied by the
+genuine `C.isSimple` field (Steinitz).  So: on a simple triangulated sphere with a genuine
+per-active-vertex spherical-link signing, every edge sign is zero.  The geometric `≥4` (real links)
+collides with the combinatorial `≤2`; no abstract `hcomb` hypothesis remains. -/
+theorem cauchy_no_nonzero_edgeSign_final {M : CombMap D}
+    (C : CauchyMarkedTriangulatedSphere M) :
+    ∀ d, C.edgeSign d = EdgeSign.zero :=
+  cauchy_no_nonzero_edgeSign C
+    (fun hsphere hTri hnz =>
+      Ch13ComponentClose.cauchy_marked_sphere_low_active_vertex_simple
+        M hsphere hTri C.isSimple C.edgeSign C.edgeSign_inv hnz)
 
 end ProofsInTheBook.Ch13CauchyAssembly

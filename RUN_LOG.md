@@ -144,3 +144,13 @@ is a real finite instance), so kneser's htucker use is faithful — but Ch39 nee
   input. Final build 8795 jobs / 0 errors. AUDIT_CAMPAIGN.md Ch13 row updated.
 - Remaining repo-wide (per audit): hcross (Ch13), Ch35 fragment->five-color certificate chain,
   Ch36 Esplit/rest/M.
+
+## Run 2026-06-14 (overnight, automode)
+- doctrine: DOCTRINE-ch13.md
+- authorization: /automode + "我要睡了, 交给你了"
+- goal: wire FFCT111 arm lemma into Ch13 (eliminate posited arm_conclusion §3.3 gap)
+- starting avenue: (a) strict arm lemma -> genuine obstruction
+- end: <open>
+- final result: <open>
+
+- 2026-06-14 progress: avenue (a). Strict arm lemma REDUCED to single residue StuckWitnessExists (substrate armMono_strict_of_stuckWitness). FFCT112 = genuine fixed-chord contradiction from real arm lemma (conditional on residue). Dispatched StuckWitnessExists grind to subagent. FFCT111 (≤ arm lemma) discharges WeakArmStep.

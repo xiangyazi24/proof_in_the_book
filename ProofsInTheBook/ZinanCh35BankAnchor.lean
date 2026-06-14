@@ -188,9 +188,12 @@ structure OppArcStarSeed (data : hNT.ChordSplitData u v)
     (i₀ : Fin C.len)
     (hleft : C.faceLeft i₀ = M.dartFace (hNT.chordDart data.chord))
     (hright : C.faceRight i₀ = M.dartFace (M.α (hNT.chordDart data.chord))) : Prop where
-  /-- Region edge-confinement core (carried verbatim from `Side₁StarBankAnchor`). -/
+  /-- Region edge-confinement core (carried verbatim from `Side₁StarBankAnchor`).  Restricted to
+  **bounded** darts (`dartFace e ≠ outerFace`); the outer-dart case is handled separately by the
+  consumer via the `outerArc₁` route. -/
   edge_core : ∀ {e : D},
     M.dartEdge e ≠ s(u, v) →
+    M.dartFace e ≠ hNT.outerFace →
     M.tail e ∈ sideRegion₁ data →
     M.head e ∈ sideRegion₁ data →
       M.dartFace e ∈ data.side₁

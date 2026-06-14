@@ -180,9 +180,15 @@ Both fields are inhabited statements about the concrete map; neither is vacuous 
 carries an internal vertex by `data.arc₂_internal`, and the region is inhabited by
 `sideRegion₁_nonempty`). -/
 structure Side₁StarConfinement (data : hNT.ChordSplitData u v) : Prop where
-  /-- Region edge-confinement core (geometric heart of `edge_confined`). -/
+  /-- Region edge-confinement core (geometric heart of `edge_confined`).  The
+  `M.dartFace e ≠ hNT.outerFace` hypothesis (the **bounded-dart** restriction) is essential:
+  the outward dart of an outer-arc₁ boundary edge has both endpoints in `sideRegion₁` and is
+  non-chord, but its face is the outer face (`∉ side₁`).  Such outer darts are kept via
+  `outerArc₁`, not via their face being in `side₁`, and are handled separately by the consumer
+  (`vertexStar_confined_of_starConfinement`) through the `outerArc₁` route. -/
   edge_core : ∀ {e : D},
     M.dartEdge e ≠ s(u, v) →
+    M.dartFace e ≠ hNT.outerFace →
     M.tail e ∈ sideRegion₁ data →
     M.head e ∈ sideRegion₁ data →
       M.dartFace e ∈ data.side₁
@@ -219,26 +225,62 @@ structure Side₁SchoenfliesConfinement (data : hNT.ChordSplitData u v) : Prop w
 lemma dart_edge (data : hNT.ChordSplitData u v) : M.dartEdge data.dart = s(u, v) :=
   hNT.chordDart_edge data.chord
 
+/-! ### The outer-dart route residual `OuterDartArc₁`
+
+The `edge_core` field of `Side₁StarConfinement` is — correctly — restricted to **bounded** darts
+(`dartFace e ≠ outerFace`).  The consumer `vertexStar_confined_of_starConfinement` must therefore
+account for the **outer-dart** case (`dartFace e = outerFace`) separately.  For such a dart `e`
+(non-chord, both endpoints in `sideRegion₁`), keptness is supplied not by `sideDarts₁` (its face is
+the outer face, `∉ side₁`) but by `outerArc₁ = {b | dartFace b = outerFace ∧ dartFace (α b) ∈ side₁}`.
+
+The single non-combinatorial fact this needs is the **reverse-face placement**
+`dartFace (α e) ∈ side₁`: an outer boundary dart whose tail and head are both side-1-region vertices
+points across the side-1 arc into a side-1 inner face.  This is genuine discrete-Schoenflies
+boundary-incidence content (the side-1 arc bounds the side-1 disk), not derivable from the bare
+combinatorial `keptSet₁` data here; it is isolated as the named residual below. -/
+
+/-- **The outer-dart arc residual.**  For a non-chord dart `e` whose face is the outer face and
+whose two endpoints are both side-1-region vertices, the reverse face `dartFace (α e)` lies in
+`side₁` (so `e ∈ outerArc₁`).  This is the boundary-incidence content of the outer-dart case of
+`edge_confined`; everything else in the consumer is combinatorial. -/
+def OuterDartArc₁ (data : hNT.ChordSplitData u v) : Prop :=
+  ∀ {e : D},
+    M.dartEdge e ≠ s(u, v) →
+    M.dartFace e = hNT.outerFace →
+    M.tail e ∈ sideRegion₁ data →
+    M.head e ∈ sideRegion₁ data →
+      M.dartFace (M.α e) ∈ data.side₁
+
 /-- **Master confinement from the star residual (Brick 5).**  Produces the design's
 `Side₁SchoenfliesConfinement` from `Side₁StarConfinement`, performing the `edge_confined`
-`α`-reduction with the landed `Separates`-conditional `α`-closure. -/
+`α`-reduction with the landed `Separates`-conditional `α`-closure.  The `edge_confined` derivation
+**case-splits** on whether `e` is an outer dart: a bounded dart (`dartFace e ≠ outerFace`) is kept
+via the corrected `edge_core`; an outer dart (`dartFace e = outerFace`) is kept via the `outerArc₁`
+route, supplied by the boundary-incidence residual `OuterDartArc₁`. -/
 theorem vertexStar_confined_of_starConfinement (data : hNT.ChordSplitData u v)
-    (hsep : data.Separates) (conf : Side₁StarConfinement data) :
+    (hsep : data.Separates) (conf : Side₁StarConfinement data)
+    (houter : OuterDartArc₁ data) :
     Side₁SchoenfliesConfinement data where
   edge_confined := by
     intro e htail hhead
     by_cases hchord : M.dartEdge e = s(u, v)
     · exact Or.inr hchord
-    · -- non-chord: `edge_core` gives `dartFace e ∈ side₁`, hence `e ∈ keptSet₁`; close under `α`.
+    · -- non-chord: split on whether `e` is an outer dart.
       left
-      have hface : M.dartFace e ∈ data.side₁ := conf.edge_core hchord htail hhead
       -- `e ≠ dart` (else `dartEdge e = dartEdge dart = s(u,v)`).
       have hne : e ≠ data.dart := by
         intro h; exact hchord (by rw [h]; exact dart_edge data)
-      -- `e ∈ sideDarts₁ ⊆ keptSet₁` (it is an inner side-1 dart, and `e ≠ dart`).
+      -- In both cases we produce `e ∈ keptSet₁`, then close under `α`.
       have hkept : e ∈ data.keptSet₁ := by
-        refine ⟨Or.inl hface, ?_⟩
-        simp only [Set.mem_singleton_iff]; exact hne
+        by_cases hof : M.dartFace e = hNT.outerFace
+        · -- outer dart: kept via `outerArc₁` (face = outerFace, reverse face ∈ side₁).
+          have hrev : M.dartFace (M.α e) ∈ data.side₁ := houter hchord hof htail hhead
+          refine ⟨Or.inr ⟨hof, hrev⟩, ?_⟩
+          simp only [Set.mem_singleton_iff]; exact hne
+        · -- bounded dart: corrected `edge_core` gives `dartFace e ∈ side₁`, hence `∈ sideDarts₁`.
+          have hface : M.dartFace e ∈ data.side₁ := conf.edge_core hchord hof htail hhead
+          refine ⟨Or.inl hface, ?_⟩
+          simp only [Set.mem_singleton_iff]; exact hne
       refine ⟨?_, ?_⟩
       · rw [data.mem_keptDel₁_iff]; exact hkept
       · rw [data.mem_keptDel₁_iff]
@@ -282,7 +324,7 @@ theorem homit_of_schoenflies (data : hNT.ChordSplitData u v) (hsep : data.Separa
 Schoenflies star residual plus the honest `hreflect` input. -/
 theorem side₁Confinement_of_starConfinement (data : hNT.ChordSplitData u v)
     (hsep : data.Separates) (a₀ a₁ : {d : D // d ∉ data.keptDel₁}) (hne : a₀ ≠ a₁)
-    (conf : Side₁StarConfinement data)
+    (conf : Side₁StarConfinement data) (houter : OuterDartArc₁ data)
     (hreflect : ∀ ⦃x y : (data.sideMap₁ hsep a₀ a₁ hne).Vertex⦄,
       M.toSimpleGraph.Adj (sideVertexToM₁ data hsep a₀ a₁ hne x)
           (sideVertexToM₁ data hsep a₀ a₁ hne y) →
@@ -290,7 +332,7 @@ theorem side₁Confinement_of_starConfinement (data : hNT.ChordSplitData u v)
     Side₁Confinement data hsep a₀ a₁ hne :=
   side₁Confinement_of_notMem_sideRegion₁ data hsep a₀ a₁ hne hreflect
     (homit_region_of_schoenflies data
-      (vertexStar_confined_of_starConfinement data hsep conf))
+      (vertexStar_confined_of_starConfinement data hsep conf houter))
 
 /-- **Brick 7 — the final Ch35 plug-in.**  Feeds the star-confinement-derived `Side₁Confinement`
 into the landed `chordSideResidue₁_of_confinement`, producing the full `ChordSideResidue`.  The
@@ -309,10 +351,10 @@ def chordSideResidue₁_of_schoenflies (data : hNT.ChordSplitData u v) (hsep : d
       M.toSimpleGraph.Adj (sideVertexToM₁ data hsep a₀ a₁ hne x)
           (sideVertexToM₁ data hsep a₀ a₁ hne y) →
         (data.sideMap₁ hsep a₀ a₁ hne).toSimpleGraph.Adj x y)
-    (conf : Side₁StarConfinement data) :
+    (conf : Side₁StarConfinement data) (houter : OuterDartArc₁ data) :
     ChordSideResidue data hsep a₀ a₁ hne L :=
   chordSideResidue₁_of_confinement data hsep a₀ a₁ hne L ci hshare hchord pₛ qₛ cpₛ cqₛ hLₛ
-    (side₁Confinement_of_starConfinement data hsep a₀ a₁ hne conf hreflect)
+    (side₁Confinement_of_starConfinement data hsep a₀ a₁ hne conf houter hreflect)
 
 end ProofsInTheBook.ZinanCh35Schoenflies
 

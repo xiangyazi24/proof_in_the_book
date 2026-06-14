@@ -176,6 +176,7 @@ here by `OppArcSeedInput`. -/
 theorem oppArcStarSeed_of_input (data : hNT.ChordSplitData u v)
     (edge_core : ∀ {e : D},
       M.dartEdge e ≠ s(u, v) →
+      M.dartFace e ≠ hNT.outerFace →
       M.tail e ∈ sideRegion₁ data →
       M.head e ∈ sideRegion₁ data →
         M.dartFace e ∈ data.side₁)

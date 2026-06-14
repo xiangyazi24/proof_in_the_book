@@ -242,6 +242,7 @@ import ProofsInTheBook.ZinanCh35OppArcSeed
 import ProofsInTheBook.ZinanCh35ChordCycle
 import ProofsInTheBook.ZinanCh35Confinement
 import ProofsInTheBook.ZinanCh35CountRoute
+import ProofsInTheBook.ZinanCh35EdgeCore
 import ProofsInTheBook.ZinanCh35F
 import ProofsInTheBook.ZinanCh35FinalClose
 import ProofsInTheBook.ZinanCh35Gates

@@ -386,3 +386,4 @@ import ProofsInTheBook.Ch13MarkedReduction
 import ProofsInTheBook.Ch13ActiveComponent
 import ProofsInTheBook.Ch13FlipTransport
 import ProofsInTheBook.Ch13ComponentClose
+import ProofsInTheBook.Ch13Realization

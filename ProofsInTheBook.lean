@@ -361,6 +361,10 @@ import ProofsInTheBook.ZinanFFCT85
 import ProofsInTheBook.ZinanFFCT86
 import ProofsInTheBook.ZinanCh35Cert
 import ProofsInTheBook.ZinanCh35Dichotomy
+import ProofsInTheBook.ZinanCh35Coverage
+import ProofsInTheBook.ZinanCh35SeedInput
+import ProofsInTheBook.ZinanCh35Schoenflies2
+import ProofsInTheBook.ZinanCh35InnerConn
 import ProofsInTheBook.ZinanCh36Ears
 import ProofsInTheBook.ZinanFFCT87
 import ProofsInTheBook.ZinanFFCT88

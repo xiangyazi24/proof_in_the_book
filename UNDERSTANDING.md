@@ -1,4 +1,6 @@
 # UNDERSTANDING.md — Proofs in the Book Formalization
+> **2026-06-14 SUPERSEDES the Ch13/Ch35 blocks below — see `AUDIT-2026-06-14.md`.** Ch13: spherical arm lemma FULLY proven (both halves, clean-3) + wired into chapter13; the OLD certificate is UNFAITHFUL (special-case, ChatGPT audit) — real residual = the `cauchy_marked_sphere_low_active_vertex` discrete combinatorial lemma. Ch35: the count/NumCyclesCutPhi2 residue is CLOSED clean-3 (this block is stale); real residual = `Side1SchoenfliesConfinementInput` discrete-Schoenflies bundle.
+
 
 ## Project overview
 

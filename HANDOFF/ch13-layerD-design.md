@@ -98,3 +98,39 @@ exact trap just removed from `arm_conclusion`. REJECT any such design in review.
 **Honest minimal residual:** the `not_congruent ⟹ nontrivial` global-rigidity step is the subtlest
 non-arm piece; if it blocks, ship `cauchy_rigidity` conditional on that ONE tagged hypothesis (everything
 else unconditional) — still a major advance over the current fully-unconstructed certificate.
+
+---
+
+## REFINED ASSEMBLY PLAN + design insights (2026-06-14, after Steps 1-3 done)
+
+DONE+verified clean-3: Step 1 `Ch13VertexStar` (VertexStar, vertexLink_strictArm, Bridge A), Step 2
+`Ch13Dihedral` (Bridge B jointAngle=dihedral, independent def), Step 3 `Ch13LinkSides` (equal face
+angles ⟹ equal link sides). Step 4 `Ch13LemmaII` dispatched.
+
+**Insight 1 — closed-polygon chord = closing side.** A vertex link is a CLOSED convex spherical polygon
+(`StrictConvexSphArm`, n+1 vertices). Its `endpt = sDist (A 0)(A (Fin.last n))` is the CLOSING edge =
+a side length. So for the signChanges=0 case (all joints of B ≥ A, some strict, equal sides), the arm
+lemma gives endpt A < endpt B, but endpt = closing side is EQUAL by hsides ⟹ contradiction. This is the
+`cauchy_all_open_fixed_closing` half of Lemma II — uses the proven arm lemma directly, no cut needed.
+
+**Insight 2 — signChanges=2 via two-arc shared chord.** Two split vertices cut the cycle into a "A≤B"
+arc and a "B≤A" arc sharing two endpoints. Arm lemma on each ⟹ chord_A ≤ chord_B AND chord_B ≤ chord_A
+(same chord) ⟹ equal ⟹ strict arm lemma contradiction. Needs sub-arm construction (repo cut-arm machinery).
+
+**Insight 3 — the ACTIVE-SUBGRAPH subtlety (critical for Step 5).** A vertex where P,Q have all dihedrals
+equal has signChanges=0 and is NOT a `CauchyArmVertex` (can't produce the obstruction — no strict joint).
+So Cauchy's argument restricts to the ACTIVE subgraph: the edges where `edgeSign ≠ 0`. `chapter13`'s
+certificate `V/E/F` and the `≥4`-per-vertex + Euler bound are for the ACTIVE subgraph (a subgraph of the
+sphere map). Step 5 must build the active subgraph (not the full polytope graph) and apply Euler there.
+Vertices not incident to any active edge are excluded. Each active vertex has ≥4 sign changes among its
+ACTIVE incident edges (Lemma II restricted to active edges).
+
+**Step 5 (`Ch13Certificate`) plan:** `CauchyPolytopePair` = a `CombMap` sphere map + per-vertex
+VertexStars for P and Q (consistent with incidence) + `faceCongruent` + `not_congruent`. Build the
+active subgraph from `edgeSign`; `vertexArmData v` = `cauchyArmVertex_of_links` (Step 4) on v's two links
+restricted to active edges; `faceSigns` from per-face active signs; `total_vertex_eq_total_face` =
+CombMap orbit double-count; `nontrivial` from `not_congruent` (the subtle step — global non-congruence ⟹
+some dihedral differs ⟹ some active edge; if it blocks, ship conditional on this ONE hypothesis).
+
+**Step 6 (`Ch13Rigidity`):** `cauchy_rigidity := chapter13 (cauchyRigidityCertificate_of_pair …)`.
+MANDATORY non-vacuity: a concrete octahedron `CauchyPolytopePair` inhabiting every field but `not_congruent`.

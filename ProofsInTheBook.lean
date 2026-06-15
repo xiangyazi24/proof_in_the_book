@@ -388,6 +388,7 @@ import ProofsInTheBook.ZinanCh35FanBackward
 import ProofsInTheBook.ZinanCh35ChordlessOracle
 import ProofsInTheBook.ZinanCh35Regions
 import ProofsInTheBook.ZinanCh35Final
+import ProofsInTheBook.ZinanCh35BoundaryAssembler
 import ProofsInTheBook.ZinanCh36Ears
 import ProofsInTheBook.ZinanFFCT87
 import ProofsInTheBook.ZinanFFCT88

@@ -109,12 +109,18 @@ structure BoundaryArcSplit (M : CombMap D)
   internally_disjoint :
     ∀ ⦃w : M.Vertex⦄,
       w ∈ path₁.internalVertices → w ∈ path₂.internalVertices → False
-  /-- The first arc is nontrivial exactly when the endpoint pair is not a boundary edge. -/
-  path₁_internal_iff_proper :
-    path₁.HasInternalVertex ↔ s(u, v) ∉ boundaryEdges
-  /-- The second arc is nontrivial exactly when the endpoint pair is not a boundary edge. -/
-  path₂_internal_iff_proper :
-    path₂.HasInternalVertex ↔ s(u, v) ∉ boundaryEdges
+  /-- The first arc is nontrivial when the endpoint pair is not a boundary edge.
+  (One-directional: a *proper* — non-adjacent — pair forces an internal vertex.  The
+  converse `HasInternalVertex → proper` is intentionally NOT required: for a *consecutive*
+  pair the long complementary arc must still carry the cycle's other vertices internally,
+  so demanding `↔` would make `BoundaryArcSplit`, hence `BoundaryCycle`/`NearTriangulation`,
+  uninhabited whenever the cycle has a third vertex.  See `ZinanCh35VacuityObstruction`.) -/
+  path₁_internal_of_proper :
+    s(u, v) ∉ boundaryEdges → path₁.HasInternalVertex
+  /-- The second arc is nontrivial when the endpoint pair is not a boundary edge
+  (one-directional, same rationale as `path₁_internal_of_proper`). -/
+  path₂_internal_of_proper :
+    s(u, v) ∉ boundaryEdges → path₂.HasInternalVertex
 
 /-- A boundary cycle for the selected face `f`.
 
@@ -261,23 +267,21 @@ namespace BoundaryArcSplit
 
 variable {M : CombMap D} {f : M.Face} {C : BoundaryCycle M f} {u v : M.Vertex}
 
-lemma path₁_internal_iff_proper_boundary (S : BoundaryArcSplit M C.vertices C.edges u v) :
-    S.path₁.HasInternalVertex ↔ C.ProperBoundaryPair u v := by
-  simpa [BoundaryCycle.ProperBoundaryPair, BoundaryCycle.IsBoundaryEdge] using
-    S.path₁_internal_iff_proper
+lemma path₁_internal_of_proper_boundary (S : BoundaryArcSplit M C.vertices C.edges u v)
+    (h : C.ProperBoundaryPair u v) : S.path₁.HasInternalVertex :=
+  S.path₁_internal_of_proper (by simpa [BoundaryCycle.IsBoundaryEdge] using h)
 
-lemma path₂_internal_iff_proper_boundary (S : BoundaryArcSplit M C.vertices C.edges u v) :
-    S.path₂.HasInternalVertex ↔ C.ProperBoundaryPair u v := by
-  simpa [BoundaryCycle.ProperBoundaryPair, BoundaryCycle.IsBoundaryEdge] using
-    S.path₂_internal_iff_proper
+lemma path₂_internal_of_proper_boundary (S : BoundaryArcSplit M C.vertices C.edges u v)
+    (h : C.ProperBoundaryPair u v) : S.path₂.HasInternalVertex :=
+  S.path₂_internal_of_proper (by simpa [BoundaryCycle.IsBoundaryEdge] using h)
 
 lemma path₁_internal_of_chord (S : BoundaryArcSplit M C.vertices C.edges u v)
     (h : C.Chord u v) : S.path₁.HasInternalVertex :=
-  (S.path₁_internal_iff_proper_boundary).2 h.proper
+  S.path₁_internal_of_proper_boundary h.proper
 
 lemma path₂_internal_of_chord (S : BoundaryArcSplit M C.vertices C.edges u v)
     (h : C.Chord u v) : S.path₂.HasInternalVertex :=
-  (S.path₂_internal_iff_proper_boundary).2 h.proper
+  S.path₂_internal_of_proper_boundary h.proper
 
 end BoundaryArcSplit
 
@@ -312,13 +316,13 @@ lemma two_arcs_internally_nonempty_of_chord (h : C.Chord u v) :
     boundary_cycle_two_arcs C h.endpoints_ne h.left_boundary h.right_boundary
   exact ⟨S, S.path₁_internal_of_chord h, S.path₂_internal_of_chord h⟩
 
-lemma arc₁_internal_iff_proper (S : BoundaryArcSplit M C.vertices C.edges u v) :
-    S.path₁.HasInternalVertex ↔ C.ProperBoundaryPair u v :=
-  S.path₁_internal_iff_proper_boundary
+lemma arc₁_internal_of_proper (S : BoundaryArcSplit M C.vertices C.edges u v)
+    (h : C.ProperBoundaryPair u v) : S.path₁.HasInternalVertex :=
+  S.path₁_internal_of_proper_boundary h
 
-lemma arc₂_internal_iff_proper (S : BoundaryArcSplit M C.vertices C.edges u v) :
-    S.path₂.HasInternalVertex ↔ C.ProperBoundaryPair u v :=
-  S.path₂_internal_iff_proper_boundary
+lemma arc₂_internal_of_proper (S : BoundaryArcSplit M C.vertices C.edges u v)
+    (h : C.ProperBoundaryPair u v) : S.path₂.HasInternalVertex :=
+  S.path₂_internal_of_proper_boundary h
 
 end BoundaryCycle
 

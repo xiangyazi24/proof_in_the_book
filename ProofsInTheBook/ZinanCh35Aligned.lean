@@ -888,14 +888,8 @@ noncomputable def normalizedArcSplit (h : hNT.outerCycle.Chord u v) :
       rcases hwuv with h' | h'
       · exact hwu h'
       · exact hwv h'
-    path₁_internal_iff_proper := by
-      constructor
-      · intro _; exact h.not_boundary_edge
-      · intro _; exact bpOfDartArc_hasInternal R.arcUV R.lenUV
-    path₂_internal_iff_proper := by
-      constructor
-      · intro _; exact h.not_boundary_edge
-      · intro _; exact bpOfDartArc_hasInternal R.arcVU R.lenVU }
+    path₁_internal_of_proper := fun _ => bpOfDartArc_hasInternal R.arcUV R.lenUV
+    path₂_internal_of_proper := fun _ => bpOfDartArc_hasInternal R.arcVU R.lenVU }
 
 /-- **The normalized chord-split datum** built from a chord. -/
 noncomputable def normalizedChordSplitData (h : hNT.outerCycle.Chord u v) :

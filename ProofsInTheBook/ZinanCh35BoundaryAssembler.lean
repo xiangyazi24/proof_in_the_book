@@ -357,83 +357,26 @@ noncomputable def arcSplit_of_nodup_nonBoundaryEdge (C : BoundaryCycle M f)
       rcases hwuv with h' | h'
       · exact hwu h'
       · exact hwv h'
-    path₁_internal_iff_proper := by
-      constructor
-      · intro _; exact hnbe
-      · intro _; exact bpOfDartArc_hasInternal R.arcUV R.lenUV
-    path₂_internal_iff_proper := by
-      constructor
-      · intro _; exact hnbe
-      · intro _; exact bpOfDartArc_hasInternal R.arcVU R.lenVU }
+    path₁_internal_of_proper := fun _ => bpOfDartArc_hasInternal R.arcUV R.lenUV
+    path₂_internal_of_proper := fun _ => bpOfDartArc_hasInternal R.arcVU R.lenVU }
 
 end BoundaryCycle
 
-/-! ## 2. The faithfulness obstruction (R10 §4)
+/-! ## 2. (Removed) the former "faithfulness obstruction"
 
-The universal `arcSplit` field of `BoundaryCycle` is *not* a `Nodup` consequence:
-for a consecutive pair on a cycle of length `≥ 3` it is unsatisfiable. -/
-
-/-- A non-endpoint member of a path's vertex list is an internal vertex.  If `w` is
-in `P.vertices`, `w ≠ a` (the head), and `w ≠ b` (the last), then
-`w ∈ P.internalVertices = P.vertices.tail.dropLast`. -/
-lemma mem_internalVertices_of_ne_endpoints {a b : M.Vertex} (P : BoundaryPath M a b)
-    {w : M.Vertex} (hw : w ∈ P.vertices) (hwa : w ≠ a) (hwb : w ≠ b) :
-    w ∈ P.internalVertices := by
-  show w ∈ P.vertices.tail.dropLast
-  have hhead : P.vertices.head? = some a := P.starts_at
-  have hlast : P.vertices.getLast? = some b := P.ends_at
-  rcases List.eq_nil_or_concat P.vertices with hnil | ⟨ini, lst, hcat⟩
-  · rw [hnil] at hw; simp at hw
-  · rw [hcat] at hhead hlast hw ⊢
-    simp only [List.concat_eq_append] at hhead hlast hw ⊢
-    have hlstb : lst = b := by
-      rw [List.getLast?_append_cons, List.getLast?_singleton] at hlast
-      exact Option.some.inj hlast
-    rw [hlstb] at hw ⊢
-    rcases ini with _ | ⟨c, ini'⟩
-    · -- ini = []: vertices = [b]; w ∈ [b] contradicts hwb.
-      simp only [List.nil_append, List.mem_singleton] at hw
-      exact absurd hw hwb
-    · -- head = c so c = a.
-      simp only [List.cons_append, List.head?_cons] at hhead
-      have hca : c = a := Option.some.inj hhead
-      -- (c::ini'++[b]).tail.dropLast = (ini'++[b]).dropLast = ini'.
-      have htail : (c :: ini' ++ [b]).tail = ini' ++ [b] := by simp [List.tail_cons]
-      rw [htail, List.dropLast_concat]
-      rw [List.cons_append, List.mem_cons, List.mem_append, List.mem_singleton] at hw
-      rcases hw with hwc | hwini' | hwb'
-      · exact absurd (hwc.trans hca) hwa
-      · exact hwini'
-      · exact absurd hwb' hwb
-
-/-- **The universal `arcSplit` field is genuine data, not a `Nodup` consequence.**
-If `s(u, v)` *is* a boundary edge and the boundary has a third vertex
-`w ∉ {u, v}`, no `BoundaryArcSplit M C.vertices C.edges u v` can exist: `w` must be
-covered by one of the two arcs (`boundary_vertices_covered`), hence is an internal
-vertex of that arc (it is neither endpoint), forcing `HasInternalVertex`, which by
-`path_internal_iff_proper` forces `s(u, v) ∉ C.edges` — contradicting that it is a
-boundary edge.  This is why `boundaryCycleOfFace` / `NearTriangulation.outerCycle`
-/ `DeletedOuterBoundary` take `arcSplit` as data. -/
-theorem boundaryArcSplit_consecutive_unsatisfiable {f : M.Face}
-    (C : BoundaryCycle M f) {u v w : M.Vertex}
-    (hbe : C.IsBoundaryEdge s(u, v))
-    (hwu : w ≠ u) (hwv : w ≠ v) (hw : C.IsBoundaryVertex w)
-    (S : BoundaryArcSplit M C.vertices C.edges u v) : False := by
-  -- `w` is a boundary vertex, hence on `path₁` or `path₂`.
-  have hwmem : w ∈ C.vertices := hw
-  rcases (S.boundary_vertices_covered w).mp hwmem with hw1 | hw2
-  · -- `w` is on `path₁` (u → v) and is neither endpoint, so it is internal.
-    have hint : w ∈ S.path₁.internalVertices :=
-      mem_internalVertices_of_ne_endpoints S.path₁ hw1 hwu hwv
-    have hhas : S.path₁.HasInternalVertex := by
-      rw [BoundaryPath.hasInternalVertex_iff]; exact List.ne_nil_of_mem hint
-    exact (S.path₁_internal_iff_proper.mp hhas) hbe
-  · -- symmetric: `w` on `path₂` (v → u).
-    have hint : w ∈ S.path₂.internalVertices :=
-      mem_internalVertices_of_ne_endpoints S.path₂ hw2 hwv hwu
-    have hhas : S.path₂.HasInternalVertex := by
-      rw [BoundaryPath.hasInternalVertex_iff]; exact List.ne_nil_of_mem hint
-    exact (S.path₂_internal_iff_proper.mp hhas) hbe
+This section previously held `boundaryArcSplit_consecutive_unsatisfiable`, which
+derived `False` from a `BoundaryArcSplit` for a *consecutive* boundary pair.  That
+derivation relied on the **`↔`** form of `path₁/₂_internal_iff_proper` (its forward
+direction `HasInternalVertex → proper`).  Those fields are now one-directional
+(`proper → HasInternalVertex`, see `PlanarMapBoundary.lean`), precisely because the
+old `↔` made `BoundaryArcSplit` — hence `BoundaryCycle` and `NearTriangulation` —
+**uninhabited** for any cycle of length `≥ 3` (`ZinanCh35VacuityObstruction`).  With
+the corrected fields the long complementary arc of a consecutive pair is allowed to
+carry internal vertices, so the "obstruction" is gone: a consecutive pair admits a
+(degenerate) arc split.  The theorem and its helper `mem_internalVertices_of_ne_endpoints`
+are therefore deleted.  Arc splits for the genuinely-used *non-adjacent* pairs are
+still produced unconditionally from `VertexNodup` by Piece 1
+(`arcSplit_of_nodup_nonBoundaryEdge`). -/
 
 /-! ## 3. Piece 2 — the shared `NearTriangulation` assembler (R10 §3/§5)
 
@@ -514,7 +457,6 @@ theorem nearTriangulation_of_explicit_boundary_classification_outerCycle_darts
 /-! ## 5. Axiom audit -/
 
 #print axioms BoundaryCycle.arcSplit_of_nodup_nonBoundaryEdge
-#print axioms boundaryArcSplit_consecutive_unsatisfiable
 #print axioms nearTriangulation_of_explicit_boundary_classification
 #print axioms arcSplit_of_nodup_nonBoundaryEdge_nondegenerate
 #print axioms nearTriangulation_of_explicit_boundary_classification_outerCycle_darts

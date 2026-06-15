@@ -254,22 +254,16 @@ file (`ZinanCh35BoundaryAssembler.boundaryArcSplit_consecutive_unsatisfiable`),
 specialized to the *deleted map's* merged boundary cycle, as the structural
 witness that `DeletedSeamData` is genuine data and not a genus/Euler corollary. -/
 
-/-- **The merged boundary cycle's `arcSplit` is genuine Jordan data, not a genus
-corollary (deleted-map form).**  On the deleted map's merged outer boundary cycle,
-for a *consecutive* boundary pair `s(u, v)` (a boundary edge) with a third
-boundary vertex `w`, no `BoundaryArcSplit` for `u, v` can exist.  Hence the
-boundary-cycle normalization carried by `DeletedSeamData.outerCycle` cannot be
-reconstructed from simplicity/`Nodup` alone — it is the irreducible discrete
-Schoenflies datum, exactly as `hNT.outerCycle` is data in `NearTriangulation`. -/
-theorem mergedFaceSingleOrbit_not_from_genusSlack_alone {d0 : D}
-    {outerFace : (M.deleteVertex d0).Face}
-    (C : BoundaryCycle (M.deleteVertex d0) outerFace)
-    {u v w : (M.deleteVertex d0).Vertex}
-    (hbe : C.IsBoundaryEdge s(u, v))
-    (hwu : w ≠ u) (hwv : w ≠ v) (hw : C.IsBoundaryVertex w)
-    (S : BoundaryArcSplit (M.deleteVertex d0) C.vertices C.edges u v) : False :=
-  ProofsInTheBook.ZinanCh35BoundaryAssembler.boundaryArcSplit_consecutive_unsatisfiable
-    C hbe hwu hwv hw S
+/-! (Removed) `mergedFaceSingleOrbit_not_from_genusSlack_alone`
+
+This was a re-export of the deleted `boundaryArcSplit_consecutive_unsatisfiable`
+(see `ZinanCh35BoundaryAssembler` §2).  The "obstruction" it recorded was an
+artifact of the buggy `↔` form of `BoundaryArcSplit.path*_internal_iff_proper`,
+which is now one-directional; a consecutive pair admits a (degenerate) arc split,
+so the `False` derivation no longer holds and the theorem is removed.  The genuine
+residue of the deleted-map boundary cycle remains `outer_simple` (`Nodup`) +
+`inner_tri`; for the non-adjacent pairs actually consumed, `arcSplit` follows from
+`outer_simple` via `arcSplit_of_nodup_nonBoundaryEdge`. -/
 
 /-! ## 8.  Non-vacuity of the seam bundle (§3.3 satisfiability obligation)
 
@@ -323,6 +317,5 @@ end ProofsInTheBook.ZinanCh35DeletedBoundary
 #print axioms ProofsInTheBook.ZinanCh35DeletedBoundary.deletedOuterBoundary_holds
 #print axioms ProofsInTheBook.ZinanCh35DeletedBoundary.chordlessRecon_of_seamData
 #print axioms ProofsInTheBook.ZinanCh35DeletedBoundary.deleteBoundaryVertex_nearTriangulation_holds
-#print axioms ProofsInTheBook.ZinanCh35DeletedBoundary.mergedFaceSingleOrbit_not_from_genusSlack_alone
 #print axioms ProofsInTheBook.ZinanCh35DeletedBoundary.deletedSeamData_produces_nearTriangulation
 #print axioms ProofsInTheBook.ZinanCh35DeletedBoundary.deliverables_nonvacuous

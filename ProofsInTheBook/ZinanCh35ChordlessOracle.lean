@@ -1,4 +1,5 @@
 import ProofsInTheBook.ZinanCh35FanBackward
+import ProofsInTheBook.ZinanCh35ChordlessClose
 import ProofsInTheBook.ZinanCh35Dichotomy
 import ProofsInTheBook.ChordlessClose
 import ProofsInTheBook.ChordlessFinal
@@ -185,6 +186,38 @@ theorem backward_exact_faces_faithful {v0 : M.Vertex} {d0 : D}
         (ProofsInTheBook.ZinanCh35FanBackward.backTriangle hσ htail0 hface0 hp).face = f :=
   ProofsInTheBook.ZinanCh35FanBackward.backward_exact_faces hσ htail0 hface0 f hf
 
+/-! ### The orientation residue is now σ-DERIVED (the interface bug is discharged)
+
+With `IncidentNonOuterFacesExactly` repaired to the predecessor orientation and the
+correct quantifier nesting (`PlanarMapBoundaryFan.lean`), the σ-forward incident-faces
+certificate is σ-derivable (`ZinanCh35FanBackward.incidentNonOuterFacesExactly_forward`),
+so `ZinanCh35ChordlessFull.OrientationCert` — previously an *input* to the
+`FanIncidenceData` constructor — is now a theorem
+(`ZinanCh35ChordlessClose.orientationCert_discharged`).  The remaining input to a full
+`FanIncidenceData` is the genuine `BaseCount` (the degree-2 ⟺ `V = 3` Euler count), not
+the orientation/handedness residue. -/
+
+/-- **The orientation residue is σ-discharged** (the machine-certified interface bug is
+fixed).  No orientation/chirality certificate is needed: from `hNT` + the outgoing
+boundary spoke, the exact incident-non-outer-face structure on the canonical σ-forward
+fan path exists σ-derivably. -/
+theorem orientationCert_sigma_derived {v0 : M.Vertex} {d0 : D}
+    (hσ : M.σ d0 ≠ d0) (htail0 : M.tail d0 = v0)
+    (hface0 : M.dartFace d0 = hNT.outerFace) :
+    ProofsInTheBook.ZinanCh35ChordlessFull.OrientationCert hNT (v0 := v0) (d0 := d0) :=
+  ProofsInTheBook.ZinanCh35ChordlessClose.orientationCert_discharged hσ htail0 hface0
+
+/-- **`FanIncidenceData` is now inhabitable from `hNT` + the boundary spoke + the base
+count** — no orientation residue.  This is the structure the legacy (buggy) interface
+made uninhabitable; the predecessor-orientation fix makes it σ-constructible. -/
+noncomputable def fanIncidenceData_sigma_derived {v0 : M.Vertex} {d0 : D}
+    (hσ : M.σ d0 ≠ d0) (htail0 : M.tail d0 = v0)
+    (hface0 : M.dartFace d0 = hNT.outerFace)
+    (hbase : ProofsInTheBook.ZinanCh35ChordlessFull.BaseCount hNT (d0 := d0)) :
+    NearTriangulation.FanIncidenceData hNT v0 :=
+  ProofsInTheBook.ZinanCh35ChordlessClose.fanIncidenceData_of_baseCount
+    hσ htail0 hface0 hbase
+
 /-! ## Section 3.  The chordless oracle residual and the branch supplier
 
 `ChordlessOracle hNT p q L cp cq` rigidly requires `fanData : FanIncidenceData hNT v0`
@@ -278,6 +311,8 @@ end ProofsInTheBook.ZinanCh35ChordlessOracle
 #print axioms ProofsInTheBook.ZinanCh35ChordlessOracle.forward_orientation_obstruction
 #print axioms ProofsInTheBook.ZinanCh35ChordlessOracle.backward_orientation_discharged
 #print axioms ProofsInTheBook.ZinanCh35ChordlessOracle.backward_exact_faces_faithful
+#print axioms ProofsInTheBook.ZinanCh35ChordlessOracle.orientationCert_sigma_derived
+#print axioms ProofsInTheBook.ZinanCh35ChordlessOracle.fanIncidenceData_sigma_derived
 #print axioms ProofsInTheBook.ZinanCh35ChordlessOracle.chordlessBranchSupplier_of_residual
 #print axioms ProofsInTheBook.ZinanCh35ChordlessOracle.chordlessBranchSupplier_nonvacuous
 #print axioms ProofsInTheBook.ZinanCh35ChordlessOracle.chordRecursiveDichotomy_of_chordlessResidual

@@ -381,6 +381,110 @@ theorem backward_exact_faces {v0 : M.Vertex} {d0 : D}
     rw [← hface]
     exact fanTriangle_faceIncident (backTriangle hσ htail0 hface0 hp)
 
+/-! ### Section 3b.  The σ-predecessor certificate against the σ-FORWARD path
+
+The fan interface (`FanIncidenceData.heads_eq`, `NeighborRotationOrder.heads_eq`)
+fixes the fan path to the σ-**forward** head list `forwardHeads d0 := (vertexDartList
+d0).map head`.  The *fixed* `IncidentNonOuterFacesExactly` field
+`triangle_of_pair` now asks, for a forward consecutive pair `(a, b)`, for the
+**predecessor-oriented** triangle `FanTriangle hNT v0 b a` (apex `v0`, edge `b → a`)
+— exactly what `fanTriangle_of_spoke_pred` produces and what
+`forward_fanTriangle_forces_degree_two` shows the *forward* orientation cannot.  This
+section builds that certificate directly on the forward path, so the σ-forward
+`FanIncidenceData` becomes inhabitable with no change to `heads_eq`. -/
+
+/-- The σ-forward head list at `v0` (the order fixed by `heads_eq`). -/
+def forwardHeads (d0 : D) : List M.Vertex := (M.vertexDartList d0).map M.head
+
+/-- **The σ-predecessor fan triangle for a forward consecutive pair.**  A forward
+consecutive pair `(a, b)` of the σ-rotation head list comes from an inner spoke
+`e := forwardSpoke` with `head e = b`, `head (σ⁻¹ e) = a`; `fanTriangle_of_spoke_pred`
+gives `FanTriangle hNT v0 b a` (the predecessor orientation). -/
+noncomputable def forwardTriangle {v0 : M.Vertex} {d0 : D}
+    (hσ : M.σ d0 ≠ d0) (htail0 : M.tail d0 = v0)
+    (hface0 : M.dartFace d0 = hNT.outerFace) {a b : M.Vertex}
+    (hp : (a, b) ∈ NearTriangulation.consecutivePairs (forwardHeads (M := M) d0)) :
+    FanTriangle hNT v0 b a :=
+  FanTriangle.cong (forward_pair_spoke hσ htail0 hface0 hp).choose_spec.2.2.1
+    (forward_pair_spoke hσ htail0 hface0 hp).choose_spec.2.2.2
+    (fanTriangle_of_spoke_pred (forward_pair_spoke hσ htail0 hface0 hp).choose_spec.1
+      (forward_pair_spoke hσ htail0 hface0 hp).choose_spec.2.1)
+
+/-- `forwardTriangle`'s face is the `dartFace` of the realizing forward spoke. -/
+lemma forwardTriangle_face {v0 : M.Vertex} {d0 : D}
+    (hσ : M.σ d0 ≠ d0) (htail0 : M.tail d0 = v0)
+    (hface0 : M.dartFace d0 = hNT.outerFace) {a b : M.Vertex}
+    (hp : (a, b) ∈ NearTriangulation.consecutivePairs (forwardHeads (M := M) d0)) :
+    (forwardTriangle hσ htail0 hface0 hp).face =
+      M.dartFace (forward_pair_spoke hσ htail0 hface0 hp).choose := by
+  rw [forwardTriangle, FanTriangle.cong_face, fanTriangle_of_spoke_pred_face]
+
+/-- **Every inner face at `v0` is the face of some forward consecutive pair.**  The
+forward analogue of `exists_backPair_face`: the spoke `d` realizing an inner face `f`
+sits at index `k ≥ 1` of the σ-rotation, and the forward consecutive pair at indices
+`(k-1, k)` has `forwardTriangle` face `f` (the realizing spoke is `d` by uniqueness). -/
+lemma exists_forwardPair_face {v0 : M.Vertex} {d0 : D}
+    (hσ : M.σ d0 ≠ d0) (htail0 : M.tail d0 = v0)
+    (hface0 : M.dartFace d0 = hNT.outerFace) {f : M.Face}
+    (hf : f ≠ hNT.outerFace) (hinc : NearTriangulation.FaceIncidentAtVertex M f v0) :
+    ∃ (a b : M.Vertex) (hp : (a, b) ∈
+        NearTriangulation.consecutivePairs (forwardHeads (M := M) d0)),
+      (forwardTriangle hσ htail0 hface0 hp).face = f := by
+  obtain ⟨d, hdf, hdt⟩ := hinc
+  have hdne : d ≠ d0 := by
+    intro h; rw [h] at hdf; exact hf (hdf ▸ hface0)
+  have hdmem : d ∈ M.vertexDartList d0 := by
+    rw [mem_vertexDartList_iff M hσ]
+    exact Quotient.exact (show M.tail d0 = M.tail d by rw [hdt, htail0])
+  obtain ⟨k, hk, hkd⟩ := List.getElem_of_mem hdmem
+  have hd0_0 : (M.vertexDartList d0)[0]'(M.vertexDartList_length_pos hσ) = d0 := by
+    have := M.vertexDartList_getElem d0 0 (M.vertexDartList_length_pos hσ); simpa using this
+  have hk0 : k ≠ 0 := by
+    intro h; subst h
+    exact hdne (hkd.symm.trans hd0_0)
+  set H := forwardHeads (M := M) d0 with hH
+  have hHlen : H.length = (M.vertexDartList d0).length := by
+    rw [hH, forwardHeads, List.length_map]
+  have hHk : k < H.length := by rw [hHlen]; exact hk
+  have hHk1 : k - 1 < H.length := by rw [hHlen]; omega
+  have hfwd : (H[k-1], H[k]) ∈ NearTriangulation.consecutivePairs H := by
+    rw [mem_consecutivePairs_iff]
+    refine ⟨k - 1, by omega, rfl, ?_⟩
+    exact getElem_congr (c := H) rfl (by omega) (by omega)
+  refine ⟨H[k-1], H[k], hfwd, ?_⟩
+  rw [forwardTriangle_face]
+  -- `forwardSpoke` is the spoke at `v0` whose head is `H[k] = head d`; identify with `d`.
+  obtain ⟨hsptail, hspinner, hsphead, _⟩ :=
+    (forward_pair_spoke hσ htail0 hface0 hfwd).choose_spec
+  have hHk_eq : H[k] = M.head d := by
+    rw [show H[k] = M.head ((M.vertexDartList d0)[k]'(by rw [← hHlen]; exact hHk))
+        from List.getElem_map M.head, hkd]
+  have hsp_eq : (forward_pair_spoke hσ htail0 hface0 hfwd).choose = d :=
+    ProofsInTheBook.PlanarMap.CombMap.NearTriangulation.head_injOn_sameCycle hNT
+      hsptail hdt (by rw [hsphead, hHk_eq])
+  rw [hsp_eq, hdf]
+
+/-- **The σ-forward `IncidentNonOuterFacesExactly` certificate (the FIX).**  Builds
+the (now-σ-corrected) `IncidentNonOuterFacesExactly hNT v0 (forwardHeads d0)`
+structure: `triangle_of_pair` is the predecessor-oriented `forwardTriangle`, and
+`exact_faces` is the correctly-parenthesized `f ≠ outer → (Incident ↔ Exists)`.  This
+is the σ-derived content the σ-forward `FanIncidenceData` / `BoundaryVertexFan`
+interface demands; it was uninhabitable under the legacy (forward-oriented,
+mis-parenthesized) field. -/
+noncomputable def incidentNonOuterFacesExactly_forward {v0 : M.Vertex} {d0 : D}
+    (hσ : M.σ d0 ≠ d0) (htail0 : M.tail d0 = v0)
+    (hface0 : M.dartFace d0 = hNT.outerFace) :
+    NearTriangulation.IncidentNonOuterFacesExactly hNT v0
+      (forwardHeads (M := M) d0) where
+  triangle_of_pair {_a _b} hp := forwardTriangle hσ htail0 hface0 hp
+  exact_faces f hf := by
+    constructor
+    · intro hinc
+      exact exists_forwardPair_face hσ htail0 hface0 hf hinc
+    · rintro ⟨a, b, hp, hface⟩
+      rw [← hface]
+      exact fanTriangle_faceIncident (forwardTriangle hσ htail0 hface0 hp)
+
 /-! ## Section 4.  The direction-free connectivity core (R9 §5)
 
 The existing `deleteVertex_neighborsConnected_of_fan` consumes the σ-forward fan only
@@ -712,6 +816,9 @@ end ProofsInTheBook.ZinanCh35FanBackward
 #print axioms ProofsInTheBook.ZinanCh35FanBackward.backTriangle
 #print axioms ProofsInTheBook.ZinanCh35FanBackward.backward_triangle_of_pair
 #print axioms ProofsInTheBook.ZinanCh35FanBackward.backward_exact_faces
+#print axioms ProofsInTheBook.ZinanCh35FanBackward.forwardTriangle
+#print axioms ProofsInTheBook.ZinanCh35FanBackward.exists_forwardPair_face
+#print axioms ProofsInTheBook.ZinanCh35FanBackward.incidentNonOuterFacesExactly_forward
 #print axioms ProofsInTheBook.ZinanCh35FanBackward.Conn.deleteVertex_neighborsConnected_of_fanPath
 #print axioms ProofsInTheBook.ZinanCh35FanBackward.fanPathConnectivityData_backward
 #print axioms ProofsInTheBook.ZinanCh35FanBackward.deleteVertex_neighborsConnected_backward

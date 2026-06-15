@@ -167,7 +167,7 @@ theorem deleteVertexMergedFaceSingleOrbit_of_fan_of_outerArc
     (fan : BoundaryVertexFan hNT v0) (hchord : BoundaryChordless hNT.outerCycle)
     {d0 : D} (htail0 : M.tail d0 = v0)
     (hdata : ∀ (r : {d : D // d ∉ M.deleteVertexSet d0}),
-      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 a b)
+      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 b a)
         (_hp : (a, b) ∈ consecutivePairs fan.path), r.1 = T.d1) →
       MergedOuterArcData M d0 r hNT.outerFace) :
     DeleteVertexMergedFaceSingleOrbit M d0 :=
@@ -187,7 +187,7 @@ noncomputable def DeletedMergedBoundaryCertificate.ofOuterArc
     (fan : BoundaryVertexFan hNT v0) (hchord : BoundaryChordless hNT.outerCycle)
     {d0 : D} (htail0 : M.tail d0 = v0)
     (hdata : ∀ (r : {d : D // d ∉ M.deleteVertexSet d0}),
-      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 a b)
+      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 b a)
         (_hp : (a, b) ∈ consecutivePairs fan.path), r.1 = T.d1) →
       MergedOuterArcData M d0 r hNT.outerFace)
     (boundary : DeletedOuterBoundary hNT d0) :
@@ -205,7 +205,7 @@ noncomputable def deleteBoundaryVertex_nearTriangulation_of_outerArc
     (fan : BoundaryVertexFan hNT v0) (hchord : BoundaryChordless hNT.outerCycle)
     {d0 : D} (htail0 : M.tail d0 = v0)
     (hdata : ∀ (r : {d : D // d ∉ M.deleteVertexSet d0}),
-      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 a b)
+      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 b a)
         (_hp : (a, b) ∈ consecutivePairs fan.path), r.1 = T.d1) →
       MergedOuterArcData M d0 r hNT.outerFace)
     (boundary : DeletedOuterBoundary hNT d0) :
@@ -218,7 +218,7 @@ theorem deleteBoundaryVertex_smaller_of_outerArc
     (fan : BoundaryVertexFan hNT v0) (hchord : BoundaryChordless hNT.outerCycle)
     {d0 : D} (htail0 : M.tail d0 = v0)
     (hdata : ∀ (r : {d : D // d ∉ M.deleteVertexSet d0}),
-      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 a b)
+      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 b a)
         (_hp : (a, b) ∈ consecutivePairs fan.path), r.1 = T.d1) →
       MergedOuterArcData M d0 r hNT.outerFace)
     (boundary : DeletedOuterBoundary hNT d0) :

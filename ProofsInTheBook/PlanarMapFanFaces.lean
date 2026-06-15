@@ -147,6 +147,13 @@ private lemma fanTriangle_witness_snd {a b : M.Vertex}
   show M.tail (M.α T.d1) = b
   rw [tail_alpha, hh, T.tail2]
 
+/-- A fan triangle provides a surviving dart whose tail is its first non-`v0`
+vertex `a` (the surviving edge dart `T.d1` itself, tail `a`). -/
+private lemma fanTriangle_witness_fst {a b : M.Vertex}
+    (T : FanTriangle hNT v0 a b) {d0 : D} (htail0 : M.tail d0 = v0) :
+    ∃ p : {d : D // d ∉ M.deleteVertexSet d0}, M.tail p.1 = a :=
+  ⟨⟨T.d1, fanTriangle_edge_dart_survives T htail0⟩, T.tail1⟩
+
 /-- Every vertex on the fan path carries a surviving dart whose tail is that
 vertex. -/
 lemma fan_path_vertex_has_survivor (fan : BoundaryVertexFan hNT v0) {d0 : D}
@@ -156,8 +163,9 @@ lemma fan_path_vertex_has_survivor (fan : BoundaryVertexFan hNT v0) {d0 : D}
   set L : List M.Vertex := fan.interior ++ [fan.w] with hL
   have hpath : fan.path = fan.x :: L := by
     rw [BoundaryVertexFan.path, fanPath, hL, List.cons_append]
+  -- Predecessor convention: a forward pair `(a, b)` carries `FanTriangle v0 b a`.
   have htri : ∀ a b : M.Vertex,
-      (a, b) ∈ consecutivePairs (fan.x :: L) → FanTriangle hNT v0 a b := by
+      (a, b) ∈ consecutivePairs (fan.x :: L) → FanTriangle hNT v0 b a := by
     intro a b hab
     have hab' : (a, b) ∈ consecutivePairs fan.path := by rw [hpath]; exact hab
     exact fan.incident_faces_exact.triangle_of_pair (by
@@ -168,24 +176,24 @@ lemma fan_path_vertex_has_survivor (fan : BoundaryVertexFan hNT v0) {d0 : D}
     cases fan.interior with
     | nil => exact ⟨fan.w, [], rfl⟩
     | cons c t => exact ⟨c, t ++ [fan.w], rfl⟩
-  -- The head triangle `(fan.x, b)`.
+  -- The head triangle for pair `(fan.x, b)` is `FanTriangle v0 b fan.x`.
   have hpair0 : (fan.x, b) ∈ consecutivePairs (fan.x :: L) := by
     rw [hLb, consecutivePairs_cons_cons]; exact List.mem_cons.mpr (Or.inl rfl)
-  have T0 : FanTriangle hNT v0 fan.x b := htri fan.x b hpair0
+  have T0 : FanTriangle hNT v0 b fan.x := htri fan.x b hpair0
   rw [hpath] at hu
   rcases List.mem_cons.mp hu with hux | huL
-  · -- `u = fan.x`: use the head triangle's first edge dart.
+  · -- `u = fan.x`: `fan.x` is the second label of `T0`, use `α T0.d1`.
     subst hux
-    exact ⟨⟨T0.d1, fanTriangle_edge_dart_survives T0 htail0⟩, T0.tail1⟩
-  · -- `u ∈ L`: `u` is the second vertex of some consecutive pair; use its witness.
-    -- Walk the list to find the pair whose second component is `u`.
+    exact fanTriangle_witness_snd T0 htail0
+  · -- `u ∈ L`: `u` is the second component of some forward consecutive pair, i.e.
+    -- the first label of its (swapped) triangle; use that triangle's edge dart.
     -- Induct over `L` with the running "previous vertex" being `fan.x`.
     clear hu hpair0 T0 hLb b l'
     -- General statement: for any list `M0` and head `h0` such that all pairs of
-    -- `h0 :: M0` carry triangles, every member of `M0` has a survivor.
+    -- `h0 :: M0` carry (swapped) triangles, every member of `M0` has a survivor.
     suffices hgen : ∀ (M0 : List M.Vertex) (h0 : M.Vertex),
         (∀ a b : M.Vertex, (a, b) ∈ consecutivePairs (h0 :: M0) →
-          FanTriangle hNT v0 a b) →
+          FanTriangle hNT v0 b a) →
         ∀ z : M.Vertex, z ∈ M0 →
           ∃ p : {d : D // d ∉ M.deleteVertexSet d0}, M.tail p.1 = z by
       exact hgen L fan.x htri u huL
@@ -195,16 +203,17 @@ lemma fan_path_vertex_has_survivor (fan : BoundaryVertexFan hNT v0) {d0 : D}
     | nil => intro h0 _ z hz; simp at hz
     | cons c t ih =>
         intro h0 htri' z hz
-        -- The first pair `(h0, c)` carries a triangle; `c` has a survivor.
+        -- The first pair `(h0, c)` carries the swapped triangle `FanTriangle v0 c h0`;
+        -- `c` is its first label, with surviving edge dart at `c`.
         have hpc : (h0, c) ∈ consecutivePairs (h0 :: c :: t) := by
           rw [consecutivePairs_cons_cons]; exact List.mem_cons.mpr (Or.inl rfl)
-        have Tc : FanTriangle hNT v0 h0 c := htri' h0 c hpc
+        have Tc : FanTriangle hNT v0 c h0 := htri' h0 c hpc
         rcases List.mem_cons.mp hz with hzc | hzt
         · subst hzc
-          exact fanTriangle_witness_snd Tc htail0
+          exact fanTriangle_witness_fst Tc htail0
         · -- recurse on `c :: t`.
           have htri'' : ∀ a b : M.Vertex, (a, b) ∈ consecutivePairs (c :: t) →
-              FanTriangle hNT v0 a b := by
+              FanTriangle hNT v0 b a := by
             intro a b hab
             apply htri' a b
             rw [consecutivePairs_cons_cons]
@@ -605,7 +614,7 @@ private lemma exists_incident_survivor (fan : BoundaryVertexFan hNT v0)
     | cons c t => exact ⟨c, t ++ [fan.w], rfl⟩
   have hpair0 : (fan.x, b) ∈ consecutivePairs (fan.x :: L) := by
     rw [hLb, consecutivePairs_cons_cons]; exact List.mem_cons.mpr (Or.inl rfl)
-  have T0 : FanTriangle hNT v0 fan.x b := by
+  have T0 : FanTriangle hNT v0 b fan.x := by
     apply fan.incident_faces_exact.triangle_of_pair
     have : (fan.x, b) ∈ consecutivePairs fan.path := by rw [hpath]; exact hpair0
     simpa [BoundaryVertexFan.path] using this

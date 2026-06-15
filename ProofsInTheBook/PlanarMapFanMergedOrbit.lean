@@ -272,12 +272,18 @@ private lemma consecutivePairs_cons_cons {α : Type*} (a b : α) (l : List α) :
 reference survivor `r`, provided `r` is linked to the **head** triangle's edge
 dart (the triangle of the first pair `(hd, L.head)`) and all consecutive pairs
 carry triangles.  The tail list `L` is destructured internally, so the caller
-need not split it (keeping the path's `fan.x :: interior ++ [w]` shape). -/
+need not split it (keeping the path's `fan.x :: interior ++ [w]` shape).
+
+Predecessor convention: a forward consecutive pair `(a, b)` carries the swapped
+triangle `FanTriangle v0 b a`.  Consecutive forward pairs `(hd, c), (c, c')` give
+triangles `Ti = (v0, c, hd)`, `Tj = (v0, c', c)` sharing `c` as `Ti.tail1 = Tj.tail2`;
+the chain step `fanTriangle_chain_sameCycle` (which links `(v0, a, b)`-then-`(v0, b, c)`
+in `φ'`) thus applies in the reverse order `(Tj, Ti)`, giving the same `φ'`-cycle. -/
 private lemma fanTriangle_edge_dart_sameCycle_ref {d0 : D} (htail0 : M.tail d0 = v0)
     (r : {d : D // d ∉ M.deleteVertexSet d0}) :
     ∀ (L : List M.Vertex) (hd : M.Vertex)
       (htri : ∀ a b : M.Vertex, (a, b) ∈ consecutivePairs (hd :: L) →
-        FanTriangle hNT v0 a b),
+        FanTriangle hNT v0 b a),
       (∀ (c : M.Vertex) (hpc : (hd, c) ∈ consecutivePairs (hd :: L)),
         (M.deleteVertex d0).φ.SameCycle r
           ⟨(htri hd c hpc).d1, fanTriangle_d1_survives _ htail0⟩) →
@@ -295,14 +301,17 @@ private lemma fanTriangle_edge_dart_sameCycle_ref {d0 : D} (htail0 : M.tail d0 =
           (a', b') ∈ consecutivePairs (hd :: c :: t) := fun a' b' hab' => by
         rw [consecutivePairs_cons_cons]; exact List.mem_cons.mpr (Or.inr hab')
       set htri' : ∀ a' b' : M.Vertex, (a', b') ∈ consecutivePairs (c :: t) →
-          FanTriangle hNT v0 a' b' :=
+          FanTriangle hNT v0 b' a' :=
         fun a' b' hab' => htri a' b' (lift a' b' hab') with htri'def
       have hhead' : ∀ (c' : M.Vertex) (hpc' : (c, c') ∈ consecutivePairs (c :: t)),
           (M.deleteVertex d0).φ.SameCycle r
             ⟨(htri' c c' hpc').d1, fanTriangle_d1_survives _ htail0⟩ := by
         intro c' hpc'
+        -- `htri hd c hpc : (v0, c, hd)`, `htri' c c' hpc' : (v0, c', c)`; they share `c`
+        -- as `(htri' c c').tail2 = (htri hd c).tail1`, so the chain step links
+        -- `(htri' c c').d1 → (htri hd c).d1`; take `.symm`.
         exact (hhead c hpc).trans
-          (fanTriangle_chain_sameCycle (htri hd c hpc) (htri' c c' hpc') htail0)
+          (fanTriangle_chain_sameCycle (htri' c c' hpc') (htri hd c hpc) htail0).symm
       rw [consecutivePairs_cons_cons] at hab
       rcases List.mem_cons.mp hab with hhd | htl
       · have hae : a = hd := (Prod.ext_iff.mp hhd).1
@@ -406,7 +415,7 @@ theorem deleteVertexMergedFaceSingleOrbit_of_fan (fan : BoundaryVertexFan hNT v0
     (hchord : BoundaryChordless hNT.outerCycle)
     {d0 : D} (htail0 : M.tail d0 = v0)
     (houter : ∀ (r : {d : D // d ∉ M.deleteVertexSet d0}),
-      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 a b)
+      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 b a)
         (_hp : (a, b) ∈ consecutivePairs fan.path), r.1 = T.d1) →
       MergedOuterArcReconnects M d0 r hNT.outerFace) :
     DeleteVertexMergedFaceSingleOrbit M d0 := by
@@ -415,10 +424,11 @@ theorem deleteVertexMergedFaceSingleOrbit_of_fan (fan : BoundaryVertexFan hNT v0
   set L : List M.Vertex := fan.interior ++ [fan.w] with hL
   have hpath : fan.path = fan.x :: L := by
     rw [BoundaryVertexFan.path, fanPath, hL, List.cons_append]
-  -- The triangle provider, transparent: `fan.path = fan.x :: L` definitionally,
-  -- so the membership has the right type for `triangle_of_pair`.
+  -- The triangle provider (predecessor convention): a forward pair `(a, b)` carries
+  -- `FanTriangle v0 b a`.  `fan.path = fan.x :: L` definitionally, so the membership
+  -- has the right type for `triangle_of_pair`.
   let htri : ∀ a b : M.Vertex,
-      (a, b) ∈ consecutivePairs (fan.x :: L) → FanTriangle hNT v0 a b :=
+      (a, b) ∈ consecutivePairs (fan.x :: L) → FanTriangle hNT v0 b a :=
     fun a b hab => fan.incident_faces_exact.triangle_of_pair hab
   -- The fan path is nodup (chordless), so `fan.x` occurs only at the head.
   have hnodup : (fan.x :: L).Nodup := by
@@ -472,7 +482,7 @@ theorem deleteVertexMergedFaceSingleOrbit_of_fan (fan : BoundaryVertexFan hNT v0
     have hinc : FaceIncidentAtVertex M (M.dartFace z.1) v0 :=
       faceIncidentAtVertex_of_incident htail0 z hz
     obtain ⟨a, b, hp, hface⟩ :=
-      (fan.incident_faces_exact.exact_faces (M.dartFace z.1)).1 (fun _ => hinc)
+      (fan.incident_faces_exact.exact_faces (M.dartFace z.1) hzouter).1 hinc
     -- `hp : (a,b) ∈ consecutivePairs fan.path`; view over `fan.x :: L` (defeq).
     have hp' : (a, b) ∈ consecutivePairs (fan.x :: L) := by rw [← hpath]; exact hp
     -- the chain-lemma triangle `htri a b hp'` has face `dartFace z.1` (defeq to the

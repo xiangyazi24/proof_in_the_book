@@ -407,7 +407,7 @@ noncomputable def deleteBoundaryVertex_nearTriangulation_of_incidenceData
     {v0 : M.Vertex} (data : FanIncidenceData hNT v0)
     (hchord : BoundaryChordless hNT.outerCycle)
     (hdata : ∀ (r : {d : D // d ∉ M.deleteVertexSet data.d0}),
-      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 a b)
+      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 b a)
         (_hp : (a, b) ∈ consecutivePairs (boundaryVertexFan_of_incidenceData data).path),
           r.1 = T.d1) →
       MergedOuterArcData M data.d0 r hNT.outerFace)
@@ -421,7 +421,7 @@ theorem deleteBoundaryVertex_smaller_of_incidenceData
     {v0 : M.Vertex} (data : FanIncidenceData hNT v0)
     (hchord : BoundaryChordless hNT.outerCycle)
     (hdata : ∀ (r : {d : D // d ∉ M.deleteVertexSet data.d0}),
-      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 a b)
+      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 b a)
         (_hp : (a, b) ∈ consecutivePairs (boundaryVertexFan_of_incidenceData data).path),
           r.1 = T.d1) →
       MergedOuterArcData M data.d0 r hNT.outerFace)
@@ -438,7 +438,7 @@ noncomputable def deleteBoundaryVertex_inductiveStep_of_incidenceData
     {v0 : M.Vertex} (data : FanIncidenceData hNT v0)
     (hchord : BoundaryChordless hNT.outerCycle) (hbig : 3 < M.V)
     (hdata : ∀ (r : {d : D // d ∉ M.deleteVertexSet data.d0}),
-      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 a b)
+      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 b a)
         (_hp : (a, b) ∈ consecutivePairs (boundaryVertexFan_of_incidenceData data).path),
           r.1 = T.d1) →
       MergedOuterArcData M data.d0 r hNT.outerFace)

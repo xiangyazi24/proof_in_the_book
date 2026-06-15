@@ -101,17 +101,36 @@ structure NeighborRotationOrder (M : CombMap D) (v0 : M.Vertex)
       darts.get (cyclicNext darts_nonempty i) = M.σ (darts.get i)
 
 /-- The exact statement that the non-outer faces incident with `v0` are the
-consecutive fan triangles along `path`. -/
+consecutive fan triangles along `path`.
+
+**σ-backward / predecessor orientation (machine-certified fix, commit 15bd7a6).**
+The `φ`-triangle of an inner spoke `e` at `v0` orients its edge toward the
+σ-*predecessor* `head (σ⁻¹ e)`, never the σ-successor
+(`ZinanCh35ChordlessFull.spokeFace_head_eq`); a forward-oriented
+`FanTriangle hNT v0 a b` for a σ-forward consecutive pair `(a, b)` would force the
+star of `v0` to have degree `≤ 2`
+(`ZinanCh35ChordlessFull.forward_fanTriangle_forces_degree_two`).  The genuine face
+between two σ-consecutive spokes carries the **reverse** labelling, so for a
+consecutive pair `(a, b)` of `path` the certified triangle is
+`FanTriangle hNT v0 b a` (apex `v0`, directed edge `b → a`).  All downstream
+consumers use only the *unordered* edge `{a, b}` of the triangle (its surviving
+edge dart, its face, and the symmetric `VConn`), so the predecessor labelling
+re-threads cleanly.
+
+The `exact_faces` field is stated with the **correct quantifier nesting**
+`f ≠ outerFace → (Incident ↔ Exists)` (the legacy `→ … ↔ …` parsed as
+`(f ≠ outer → Incident) ↔ Exists`, which is literally `True ↔ False` at
+`f = outerFace`, making the structure uninhabitable). -/
 structure IncidentNonOuterFacesExactly (hNT : NearTriangulation M)
     (v0 : M.Vertex) (path : List M.Vertex) where
   triangle_of_pair :
     ∀ {a b : M.Vertex}, (a, b) ∈ consecutivePairs path →
-      FanTriangle hNT v0 a b
+      FanTriangle hNT v0 b a
   exact_faces :
     ∀ f : M.Face, f ≠ hNT.outerFace →
-      FaceIncidentAtVertex M f v0 ↔
+      (FaceIncidentAtVertex M f v0 ↔
         ∃ (a b : M.Vertex) (hp : (a, b) ∈ consecutivePairs path),
-          (triangle_of_pair hp).face = f
+          (triangle_of_pair hp).face = f)
 
 /-- A certified boundary fan at a boundary vertex `v0`.
 

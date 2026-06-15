@@ -26,3 +26,9 @@ Ch35 fully unconditional (40/40), OR every avenue at its terminal verdict with t
 - starting: avenue (a) R9 in flight (chordless σ-backward), avenue (b) dispatched in overlap (统筹 rule e)
 - end: <fill on close>
 - final result: <fill on close>
+
+## RUN_LOG update (2026-06-15, automode)
+- avenue (d) final assembly: fiveColor_planar_of_recursionResiduals : Colorable 5 LANDED (1cb72ea), conditional on 2 recursion residuals. Fan-interface bug FIXED, full build green 8870 (76ef1fa). Chord-branch structural content discharged (b4919f9).
+- HONEST CORRECTION (ee62b28): the 2 recursion residuals are NOT mere plumbing — they bottom out on a genuine discrete-Schoenflies boundary-cycle construction (ContiguousInterval / DeletedOuterBoundary), genus-DEPENDENT (CutFaceLabel refutes the genus-free closed form at the K₄ torus). Over-claim corrected.
+- NEXT ATTACK VECTOR (avenue c-genus0): the side maps are GENUS 0 (sphere split); the genus-slack/SubmapPlanar machinery (which closed the coverage atom + Side₁/₂IsDisk) may construct ContiguousInterval/DeletedOuterBoundary genus-0-ly, the genus-free refutation notwithstanding. R10 to ChatGPT Pro dispatched on this.
+- Ch35 at maximal HONEST conditional form (~39.5/40), conditional on the genus-0 discrete-Schoenflies boundary-cycle construction.

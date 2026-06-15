@@ -25,14 +25,25 @@ Concrete-statement headlines (most number-theory/combinatorics chapters) cannot 
 way. Vacuity-capable (define certificate/residue/realization/assembly premises): **Ch09, Ch11,
 Ch13, Ch14, Ch16, Ch20, Ch22Gurvits, Ch30, Ch39Tucker, and the Zinan campaigns Ch35 / Ch36 / FFCT.**
 
-## Ledger (status 2026-06-15)
+## Ledger (status 2026-06-15 — source-level pass COMPLETE over vacuity-capable set)
 
-| Chapter | Headline premise structure | Verdict | Notes |
+| Chapter | Headline premise | Verdict | Evidence / notes |
 |---|---|---|---|
-| **Ch35** | `NearTriangulation` | **RED → fixed** | was provably empty; fixed @7998ab7. Needs a GREEN positive witness to fully close. |
-| **Ch13** | `ConvexPolytopeRealization` (top); `CauchyMarkedTriangulatedSphere`, `CauchyArmVertex` (mid) | **YELLOW** | NOT provably empty (no `→False`; fields are positive geometric data; degenerate P=Q inhabits). Arm lemma `spherical_arm_mono_final_ch13` is unconditional+faithful+clean-3. Honest open part = ℝ³ realization (documented out-of-scope). FFCT57 `Ch13Residues` = superseded dead scaffolding (provably empty, but not consumed by headline). "UNCONDITIONAL/CLOSED" labels overstate; should read "closed mod ℝ³ realization". |
-| Ch36 | `chapter36_artgallery_combinatorial` premise `h` | TODO | headline does NOT use NearTriangulation; combinatorial over `Finset (AbsTriangle n)`. Check `h`. |
-| Ch09/11/14/16/20/22Gurvits/30/39Tucker | TODO | UNCHECKED | source-level emptiness pass pending. |
+| **Ch35** | `NearTriangulation` | **RED → FIXED** | was provably empty (self-contradictory `↔` field); fixed @7998ab7, build green. Still want a GREEN positive witness to fully close. |
+| **Ch13** | `ConvexPolytopeRealization` (top); `CauchyMarkedTriangulatedSphere`, `CauchyArmVertex` (mid) | **YELLOW** | NOT provably empty (no `→False`; positive geometric data; degenerate P=Q inhabits). Arm lemma `spherical_arm_mono_final_ch13` unconditional+faithful+clean-3. Open part = ℝ³ realization (documented out-of-scope). FFCT57 `Ch13Residues` = superseded dead scaffolding. "UNCONDITIONAL/CLOSED" labels overstate → "closed mod ℝ³ realization". |
+| **Ch14** | `PerlesFacetSeparationData` + `FixedCoordinateCompletions`/antipodal-free | **YELLOW** | sharp `2^d` bound (`chapter14_sharp_of_*`, Chapter14.lean:3028/3043) openly conditional; docstring itself says "the unproved frontier is deriving this … from the raw touching-simplex geometry". Honest conditional, not hidden vacuity. |
+| **Ch20** | `RealEqualAreaUnitSquareTriangulation` | **GREEN** | Monsky `not_odd_size` (Chapter20.lean:2401). Structure has an EXPLICIT inhabitant — the diagonal-split `RealEqualAreaUnitSquareTriangulation (Fin 4) 2` (the file's own "non-vacuity check"). |
+| **Ch16** | `KahnKalaiCertificate` | **GREEN** | headline `not_borsukConjecture_iff_exists_certificate` (Chapter16.lean:2666) is an IFF (logically cannot be vacuous); certificate has real constructors (`ofPrimeFranklWilsonSquaredConfiguration` …) + per-dim emptiness reasoning (`isEmpty_zero`). |
+| **Ch36** | `TriangulatedPolygon` | **GREEN** | `chapter36_artgallery_combinatorial` (Chapter36.lean:297). Premise has explicit inhabitants `unitTriangle`/`unitQuadrilateral`/`unitPentagonFan` (Chapter36.lean:371-408). NB: the `ZinanCh36*` topology cluster is SEPARATE from this headline (possibly dead scaffolding). |
+| Ch09 | — (concrete) | **GREEN** | `chapter09 : unitCubeDehnInvariantQ ≠ regularTetrahedronDehnInvariantQ` — concrete inequality, no structure premise. |
+| Ch11 | — (concrete) | **GREEN** | `chapter11 (points : Finset Point2) …` — Ungar direction bound, concrete. |
+| Ch22Gurvits | — (concrete) | **GREEN** | `chapter22_unconditional (A : doublyStochastic)` — Van der Waerden permanent bound, concrete unconditional. |
+| Ch30 | — (concrete) | **GREEN** | `allOnesPathSystem_chapter30` — concrete LGV determinant identity. |
+| Ch39Tucker | — (concrete) | **GREEN** | `chapter39_unconditional (hk : 1≤k)(hn : 2k≤n)` — concrete nat hypotheses, unconditional. |
+
+**Verdict of the pass:** across all vacuity-capable chapters, **only Ch35 had a genuine hidden vacuity** (now fixed). Remaining conditionals (Ch13 realization, Ch14 antipodal-free) are HONEST, openly-documented out-of-scope frontiers — not hidden self-contradictions. Several chapters ship explicit positive witnesses (Ch20, Ch36). Concrete-statement headlines (Ch09/11/16/22/30/39) are not vacuity-capable.
+
+**Independence caveat (§3.3):** this pass was done by the orchestrator (not an independent cold engine). GREEN-with-cited-witness and YELLOW-self-documented verdicts are objectively checkable from the cited file:line. The RED-candidate hunt (attempting `→False` on each structure's fields) surfaced no new self-contradiction, but an independent cold re-pass on the structure fields — esp. `PerlesFacetSeparationData` (Ch14) and the Ch13 spherical/realization ecosystem — would harden the result.
 
 ## Cleanup debt surfaced
 

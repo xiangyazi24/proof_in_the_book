@@ -122,13 +122,12 @@ structure BoundaryArcSplit (M : CombMap D)
   path₂_internal_of_proper :
     s(u, v) ∉ boundaryEdges → path₂.HasInternalVertex
 
-/-- A boundary cycle for the selected face `f`.
-
-The dart list is a normalized cyclic enumeration of the `φ`-orbit of `f`.
-The vertex and edge lists are exposed so later files can reason about the
-boundary without repeatedly unfolding quotient-orbit facts.
--/
-structure BoundaryCycle (M : CombMap D) (f : M.Face) where
+/-- The orbit-algebraic **core** of a boundary cycle — every field except the
+`arcSplit` certificate.  Split out (2026-06-15) so the universal arc-split
+(`arcSplit_of_nodup`, derivable from `VertexNodup`) can be proved over the core and
+installed into the full `BoundaryCycle` without the `boundaryCycleOfFace ↔ arcSplit`
+self-reference.  See `HANDOFF/ch35-arcsplit-core-refactor.md`. -/
+structure BoundaryCycleData (M : CombMap D) (f : M.Face) where
   /-- Chosen dart representative fixing the cyclic rotation. -/
   root : D
   /-- Normalized cyclic dart list enumerating the selected face orbit. -/
@@ -151,6 +150,15 @@ structure BoundaryCycle (M : CombMap D) (f : M.Face) where
   consecutive_vertex :
     ∀ i : Fin darts.length,
       M.tail (darts.get (cyclicNext normalized.length_pos i)) = M.head (darts.get i)
+
+/-- A boundary cycle for the selected face `f`: the orbit-algebraic core
+(`BoundaryCycleData`) together with the arc-splitting certificate.
+
+The dart list is a normalized cyclic enumeration of the `φ`-orbit of `f`.
+The vertex and edge lists are exposed so later files can reason about the
+boundary without repeatedly unfolding quotient-orbit facts.
+-/
+structure BoundaryCycle (M : CombMap D) (f : M.Face) extends BoundaryCycleData M f where
   /-- Arc-splitting certificate for any two distinct listed boundary vertices. -/
   arcSplit :
     ∀ ⦃u v : M.Vertex⦄,

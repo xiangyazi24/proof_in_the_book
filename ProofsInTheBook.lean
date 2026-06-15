@@ -368,6 +368,7 @@ import ProofsInTheBook.ZinanCh35InnerConn
 import ProofsInTheBook.ZinanCh35OuterDual
 import ProofsInTheBook.ZinanCh35OuterCount
 import ProofsInTheBook.ZinanCh35OuterSlack
+import ProofsInTheBook.ZinanCh35StarConn
 import ProofsInTheBook.ZinanCh36Ears
 import ProofsInTheBook.ZinanFFCT87
 import ProofsInTheBook.ZinanFFCT88

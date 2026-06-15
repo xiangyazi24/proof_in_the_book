@@ -374,6 +374,7 @@ import ProofsInTheBook.ZinanCh35EdgeCoreFinal
 import ProofsInTheBook.ZinanCh35Side1Confine
 import ProofsInTheBook.ZinanCh35Side2Confine
 import ProofsInTheBook.ZinanCh35BankOrient
+import ProofsInTheBook.ZinanCh35ArcDartRun
 import ProofsInTheBook.ZinanCh36Ears
 import ProofsInTheBook.ZinanFFCT87
 import ProofsInTheBook.ZinanFFCT88

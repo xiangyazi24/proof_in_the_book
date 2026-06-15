@@ -378,6 +378,7 @@ import ProofsInTheBook.ZinanCh35ArcDartRun
 import ProofsInTheBook.ZinanCh35CycleBank
 import ProofsInTheBook.ZinanCh35Contiguity
 import ProofsInTheBook.ZinanCh35BankLabels
+import ProofsInTheBook.ZinanCh35Chordless
 import ProofsInTheBook.ZinanCh36Ears
 import ProofsInTheBook.ZinanFFCT87
 import ProofsInTheBook.ZinanFFCT88

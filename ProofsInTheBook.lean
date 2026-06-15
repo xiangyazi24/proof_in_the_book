@@ -389,6 +389,7 @@ import ProofsInTheBook.ZinanCh35ChordlessOracle
 import ProofsInTheBook.ZinanCh35Regions
 import ProofsInTheBook.ZinanCh35Final
 import ProofsInTheBook.ZinanCh35BoundaryAssembler
+import ProofsInTheBook.ZinanCh35ArcSplitUniversal
 import ProofsInTheBook.ZinanCh35Contiguous
 import ProofsInTheBook.ZinanCh35DeletedBoundary
 import ProofsInTheBook.ZinanCh36Ears

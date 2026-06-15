@@ -90,6 +90,7 @@ import ProofsInTheBook.Chapter33
 import ProofsInTheBook.Chapter34
 import ProofsInTheBook.PlanarMapSimple
 import ProofsInTheBook.PlanarMapBoundary
+import ProofsInTheBook.PlanarMapBoundaryArcSplit
 import ProofsInTheBook.PlanarMapNearTriangulation
 import ProofsInTheBook.PlanarMapBoundaryFan
 import ProofsInTheBook.PlanarMapFilteredRotation

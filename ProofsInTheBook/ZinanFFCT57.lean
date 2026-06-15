@@ -2,6 +2,19 @@ import ProofsInTheBook.ZinanFFCT48
 import ProofsInTheBook.ZinanFFCT56
 
 /-!
+# `ZinanFFCT57` — SUPERSEDED / DEAD SCAFFOLDING (do not cite as the endpoint)
+
+> **STATUS (2026-06-15 satisfiability audit):** This module's bundle `Ch13Residues` is
+> **provably uninhabited** — `ZinanFFCT58.ch13Residues_uninhabited` derives `False` from it because
+> its `hcore : SpliceBodyDiagMono` field is a false Prop (`spliceBodyDiagMono_false`).  Hence
+> `spherical_arm_mono_final_honest (res : Ch13Residues)` here is a VACUOUS conditional (the §3.3
+> "unsatisfiable-hypothesis" impostor) and is NOT the chapter's endpoint.  The genuine, UNCONDITIONAL
+> Ch13 strict-arm lemma is `ZinanFFCT111.spherical_arm_mono_final_ch13 : SphericalArmMonotone`
+> (subarm-induction route, clean-3).  Retained only as historical scaffolding; do not build on
+> `Ch13Residues`.
+
+(Original header below, kept for provenance.)
+
 # `ZinanFFCT57` — the Ch13 spherical Cauchy-arm FINAL ASSEMBLY (the chapter's honest endpoint)
 
 This module is the **final assembly** of the FFCT37–56 campaign for the spherical Schoenberg–Zaremba

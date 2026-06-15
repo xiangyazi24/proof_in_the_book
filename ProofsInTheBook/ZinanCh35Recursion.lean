@@ -79,10 +79,17 @@ interface-refactor residual `ZinanCh35ChordlessOracle.lean` documents as **out o
    the σ-forward consecutive pair forces degree `≤ 2`), not a skipped step.
 
 No `sorry` / `axiom` / `admit` / `native_decide`; no posited conclusion.  No claim that the
-residuals are dischargeable.  Ch35 is **39.5/40**: the genuine planar / discrete-Jordan /
-Schoenflies content is discharged, the colouring recursion and decision are unconditional, but the
-final UNCONDITIONAL five-colour theorem is blocked on the two discrete Jordan–Schoenflies
-boundary-cycle constructions named above.
+residuals are dischargeable.
+
+**Honest status (corrected 2026-06-15):** Ch35's headline is a NON-VACUOUS CONDITIONAL — five-colour
+of every near-triangulation GIVEN `Ch35RecursionResiduals`.  (The earlier "39.5/40" framing predated
+the discovery that `NearTriangulation` was itself *provably uninhabited* via a self-contradictory
+`BoundaryArcSplit` `↔` field — see `ZinanCh35VacuityObstruction` — which had made this and every
+`(hNT : NearTriangulation M) → …` theorem silently VACUOUS.  That foundation bug is fixed; the
+conditional is now genuine.)  Moreover `arcSplit` is NOT discrete-Jordan data: it is a free
+consequence of boundary simplicity (`ZinanCh35ArcSplitUniversal.arcSplit_of_nodup`).  The residual to
+an unconditional five-colour theorem is `outer_simple` + `inner_tri` for the side/deleted maps plus
+the Thomassen recursion fuel — NOT the Jordan/Schoenflies content once feared.
 -/
 
 set_option linter.unusedSectionVars false

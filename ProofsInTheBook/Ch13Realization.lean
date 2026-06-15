@@ -31,8 +31,12 @@ faithful order-bridge layer.
   * **σ-orbit rotation invariance** of `vertexFlipCountSkipZeros` (so the bridge holds at *every*
     active dart of a vertex, not just its `linkOrder` representative), proved here from
     `cyclicFlipCount`'s cyclic-rotation invariance and `Equiv.Perm.SameCycle.toList_isRotated`.
-* There is **no `active` field**: rigidity holds UNCONDITIONALLY for all congruent-faced realizations,
-  so `realization_rigid` is not vacuously true.
+* There is **no `active` field**: given a `ConvexPolytopeRealization`, rigidity holds with no extra
+  side-hypothesis for all congruent-faced realizations.  NOTE (honesty): `realization_rigid` is
+  *conditional on* a `ConvexPolytopeRealization R`.  The abstract structure is inhabited (e.g. the
+  degenerate `P = Q`), so the theorem is not provably vacuous; but constructing one from a genuine
+  ℝ³ convex polytope is the realization infrastructure declared out of scope (see the chapter
+  header).  So this is "Cauchy rigidity GIVEN the realization datum", not an unconditional theorem.
 
 No `sorry`, `axiom`, `admit`, or `native_decide`.
 -/
@@ -485,7 +489,8 @@ def realization_marked :
   vertexArm := R.vertexArm
   vertexArm_signChanges_eq := R.vertexArm_signChanges_eq
 
-/-- **The Cauchy conclusion: every edge sign is zero (UNCONDITIONAL).**  No dihedral angle differs
+/-- **The Cauchy conclusion: every edge sign is zero (given a `ConvexPolytopeRealization`).**
+No extra side-hypothesis beyond the realization datum `R`.  No dihedral angle differs
 between the two congruent-faced realizations.  This is `cauchy_no_nonzero_edgeSign_final` applied to
 `realization_marked`: the combinatorial low-active-vertex lemma is fully discharged (using the genuine
 `isSimple` field, Steinitz), so no abstract `hcomb` hypothesis remains.  The geometric `≥4` (real
@@ -526,7 +531,8 @@ theorem jointAngle_eq_of_edgeSign_zero (hzero : ∀ d, R.edgeSign d = EdgeSign.z
   unfold jointDiff at hk
   linarith
 
-/-- **`realization_rigid` — the headline (UNCONDITIONAL).**  Every corresponding dihedral angle of the
+/-- **`realization_rigid` — the headline (given a `ConvexPolytopeRealization`).**  Conditional on the
+realization datum `R` (the ℝ³ input, out of scope); no extra side-hypothesis.  Every corresponding dihedral angle of the
 two congruent-faced convex-polytope realizations agrees — Cauchy's sign-machinery content, with the
 combinatorial low-active-vertex lemma already discharged via the genuine `isSimple` field.  The
 `Fin.cast` reindexes the `Q`-realization joint onto the `P` index range (the two realizations have the

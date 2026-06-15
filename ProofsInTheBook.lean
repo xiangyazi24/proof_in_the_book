@@ -383,6 +383,7 @@ import ProofsInTheBook.ZinanCh35Chordless
 import ProofsInTheBook.ZinanCh35Aligned
 import ProofsInTheBook.ZinanCh35ChordBranch
 import ProofsInTheBook.ZinanCh35ChordlessFull
+import ProofsInTheBook.ZinanCh35FanBackward
 import ProofsInTheBook.ZinanCh36Ears
 import ProofsInTheBook.ZinanFFCT87
 import ProofsInTheBook.ZinanFFCT88

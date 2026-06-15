@@ -381,6 +381,7 @@ import ProofsInTheBook.ZinanCh35BankLabels
 import ProofsInTheBook.ZinanCh35ArcSide
 import ProofsInTheBook.ZinanCh35Chordless
 import ProofsInTheBook.ZinanCh35Aligned
+import ProofsInTheBook.ZinanCh35ChordBranch
 import ProofsInTheBook.ZinanCh35ChordlessFull
 import ProofsInTheBook.ZinanCh36Ears
 import ProofsInTheBook.ZinanFFCT87

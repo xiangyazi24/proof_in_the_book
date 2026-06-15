@@ -244,27 +244,6 @@ noncomputable def contiguousInterval_holds
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
     (hsimple : (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
         (side₁Anchors_ne data hsep)).IsSimpleGraph)
-    (arcSplit :
-      ∀ ⦃p q : (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
-            (side₁Anchors_ne data hsep)).Vertex⦄, p ≠ q →
-        p ∈ ((data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
-              (side₁Anchors_ne data hsep)).faceDartList (Sum.inr 1)).map
-          (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
-            (side₁Anchors_ne data hsep)).tail →
-        q ∈ ((data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
-              (side₁Anchors_ne data hsep)).faceDartList (Sum.inr 1)).map
-          (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
-            (side₁Anchors_ne data hsep)).tail →
-        BoundaryArcSplit (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
-            (side₁Anchors_ne data hsep))
-          (((data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
-              (side₁Anchors_ne data hsep)).faceDartList (Sum.inr 1)).map
-            (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
-              (side₁Anchors_ne data hsep)).tail)
-          (((data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
-              (side₁Anchors_ne data hsep)).faceDartList (Sum.inr 1)).map
-            (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
-              (side₁Anchors_ne data hsep)).dartEdge) p q)
     (outer_simple :
       (((data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
           (side₁Anchors_ne data hsep)).faceDartList (Sum.inr 1)).map
@@ -279,7 +258,7 @@ noncomputable def contiguousInterval_holds
         (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)) :
     ChordSideNT.ContiguousInterval data hsep
       (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) (side₁Anchors_ne data hsep) :=
-  contiguousInterval_of_outerTraceInputs data hsep hsimple arcSplit outer_simple
+  contiguousInterval_of_outerTraceInputs data hsep hsimple outer_simple
     (side₁_outerLen_ge_three data hsep
       (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) (side₁Anchors_ne data hsep) hd)
     inner_reps
@@ -305,17 +284,6 @@ noncomputable def contiguousInterval₂_holds
     (a₀ a₁ : {d : D // d ∉ data.keptDel₂}) (hne : a₀ ≠ a₁)
     (hsphere : (data.sideMap₂ hsep a₀ a₁ hne).IsSphereMap)
     (hsimple : (data.sideMap₂ hsep a₀ a₁ hne).IsSimpleGraph)
-    (arcSplit :
-      ∀ ⦃p q : (data.sideMap₂ hsep a₀ a₁ hne).Vertex⦄, p ≠ q →
-        p ∈ ((data.sideMap₂ hsep a₀ a₁ hne).faceDartList (Sum.inr 1)).map
-          (data.sideMap₂ hsep a₀ a₁ hne).tail →
-        q ∈ ((data.sideMap₂ hsep a₀ a₁ hne).faceDartList (Sum.inr 1)).map
-          (data.sideMap₂ hsep a₀ a₁ hne).tail →
-        BoundaryArcSplit (data.sideMap₂ hsep a₀ a₁ hne)
-          (((data.sideMap₂ hsep a₀ a₁ hne).faceDartList (Sum.inr 1)).map
-            (data.sideMap₂ hsep a₀ a₁ hne).tail)
-          (((data.sideMap₂ hsep a₀ a₁ hne).faceDartList (Sum.inr 1)).map
-            (data.sideMap₂ hsep a₀ a₁ hne).dartEdge) p q)
     (outer_simple :
       (((data.sideMap₂ hsep a₀ a₁ hne).faceDartList (Sum.inr 1)).map
         (data.sideMap₂ hsep a₀ a₁ hne).tail).Nodup)
@@ -328,7 +296,7 @@ noncomputable def contiguousInterval₂_holds
     (ZinanCh35BoundaryAssembler.nearTriangulation_of_explicit_boundary_classification
       (data.sideMap₂ hsep a₀ a₁ hne) hsphere hsimple
       ((data.sideMap₂ hsep a₀ a₁ hne).dartFace (Sum.inr 1)) (Sum.inr 1) rfl
-      arcSplit outer_simple
+      outer_simple
       (side₂_outerLen_ge_three data hsep a₀ a₁ hne hd) inner_tri)
 
 /-! ## Section 5.  §3.3 non-vacuity / faithfulness audit

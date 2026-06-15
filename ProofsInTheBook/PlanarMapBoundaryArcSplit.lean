@@ -12,14 +12,14 @@ construction (`ZinanCh35ArcSplitUniversal.arcSplit_of_nodup`), performed entirel
 the core so that the result can be installed into the full `BoundaryCycle` without the
 `boundaryCycleOfFace ↔ arcSplit` self-reference.  Everything is copied mechanically from:
 
-* `ZinanCh35Aligned.mod_cover` (pure Nat arithmetic);
+* `ZinanCh35Aligned.modCoverD` (pure Nat arithmetic);
 * `DartArc.lean` (`structure DartArc`) → renamed `DataDartArc` over the core;
 * `ZinanCh35ArcDartRun.lean` (`dartList`/`dartList_length`/`dartList_ne_nil`/
   `dartList_getElem`/`mem_dartList`);
 * `ZinanCh35ChordCycle.lean` (`cyclicDartArc`/`cyclicDartArc_arcDart`/
   `exists_pos_of_isBoundaryVertex`) → `cyclicDataDartArc`, over the core;
-* `ZinanCh35Aligned.lean` (`daCast` + its lemmas, `bpOfDartArc` + its lemmas);
-* `PlanarMapChordSplit.lean` (`BoundaryPath.internalVertex_ne_start`/`_end` + helpers);
+* `ZinanCh35Aligned.lean` (`daCastD` + its lemmas, `bpOfDDA` + its lemmas);
+* `PlanarMapChordSplit.lean` (`BoundaryPath.internalVertexNeStartD`/`_end` + helpers);
 * `ZinanCh35BoundaryAssembler.lean` (`not_consecutive_of_nonBoundaryEdge`, `NonEdgeRuns`,
   `nonEdgeRuns`);
 * `ZinanCh35ArcSplitUniversal.lean` (the `arcSplit_of_nodup` body).
@@ -68,11 +68,11 @@ lemma darts_length_pos (K : BoundaryCycleData M f) : 0 < K.darts.length :=
 
 end BoundaryCycleData
 
-/-! ## 1. `mod_cover` (verbatim, pure Nat arithmetic)
+/-! ## 1. `modCoverD` (verbatim, pure Nat arithmetic)
 
 Two complementary cyclic runs cover the residues mod `L`. -/
 
-theorem mod_cover (L pf pt : ℕ) (hLpos : 0 < L) (hpf : pf < L) (hpt : pt < L) (hne : pf ≠ pt)
+theorem modCoverD (L pf pt : ℕ) (hLpos : 0 < L) (hpf : pf < L) (hpt : pt < L) (hne : pf ≠ pt)
     (kf kb : ℕ) (hkf_eq : kf = (pt + L - pf) % L) (hkb_eq : kb = (pf + L - pt) % L) :
     1 ≤ kf ∧ 1 ≤ kb ∧ kf + kb = L ∧ (pf + kf) % L = pt ∧
     ∀ q, q < L → (∃ j, j < kf ∧ (pf + j) % L = q) ∨ (∃ j, j < kb ∧ (pt + j) % L = q) := by
@@ -332,49 +332,49 @@ noncomputable def cyclicDataDartArc (K : BoundaryCycleData M f) (hK : K.VertexNo
 
 end BoundaryCycleData
 
-/-! ## 4. Endpoint retyping casts (`daCast`) and the `BoundaryPath` of a dart arc -/
+/-! ## 4. Endpoint retyping casts (`daCastD`) and the `BoundaryPath` of a dart arc -/
 
 section Casts
 
 variable {M : CombMap D}
 
 /-- Retype a `DataDartArc`'s endpoints along equalities. -/
-noncomputable def daCast {f : M.Face} {K : BoundaryCycleData M f} {a a' b b' : M.Vertex}
+noncomputable def daCastD {f : M.Face} {K : BoundaryCycleData M f} {a a' b b' : M.Vertex}
     (A : DataDartArc M K a b) (ha : a = a') (hb : b = b') : DataDartArc M K a' b' := ha ▸ hb ▸ A
 
-@[simp] lemma daCast_len {f : M.Face} {K : BoundaryCycleData M f} {a a' b b' : M.Vertex}
-    (A : DataDartArc M K a b) (ha : a = a') (hb : b = b') : (daCast A ha hb).len = A.len := by
+@[simp] lemma daCastD_len {f : M.Face} {K : BoundaryCycleData M f} {a a' b b' : M.Vertex}
+    (A : DataDartArc M K a b) (ha : a = a') (hb : b = b') : (daCastD A ha hb).len = A.len := by
   subst ha; subst hb; rfl
 
-lemma daCast_arcDart {f : M.Face} {K : BoundaryCycleData M f} {a a' b b' : M.Vertex}
-    (A : DataDartArc M K a b) (ha : a = a') (hb : b = b') (i : Fin (daCast A ha hb).len) :
-    M.tail ((daCast A ha hb).arcDart i)
-      = M.tail (A.arcDart (Fin.cast (daCast_len A ha hb) i)) := by
+lemma daCastD_arcDart {f : M.Face} {K : BoundaryCycleData M f} {a a' b b' : M.Vertex}
+    (A : DataDartArc M K a b) (ha : a = a') (hb : b = b') (i : Fin (daCastD A ha hb).len) :
+    M.tail ((daCastD A ha hb).arcDart i)
+      = M.tail (A.arcDart (Fin.cast (daCastD_len A ha hb) i)) := by
   subst ha; subst hb; rfl
 
 /-- The arc-dart of a casted dart-arc equals the original at the cast index. -/
-lemma daCast_arcDart_eq {f : M.Face} {K : BoundaryCycleData M f} {a a' b b' : M.Vertex}
-    (A : DataDartArc M K a b) (ha : a = a') (hb : b = b') (i : Fin (daCast A ha hb).len) :
-    (daCast A ha hb).arcDart i = A.arcDart (Fin.cast (daCast_len A ha hb) i) := by
+lemma daCastD_arcDart_eq {f : M.Face} {K : BoundaryCycleData M f} {a a' b b' : M.Vertex}
+    (A : DataDartArc M K a b) (ha : a = a') (hb : b = b') (i : Fin (daCastD A ha hb).len) :
+    (daCastD A ha hb).arcDart i = A.arcDart (Fin.cast (daCastD_len A ha hb) i) := by
   subst ha; subst hb; rfl
 
 /-- **The tail of a casted cyclic dart-arc at index `i` is the cyclic-slice tail `darts[(p+i)%L]`.** -/
-lemma daCast_cyclic_tail {f : M.Face} (K : BoundaryCycleData M f) (hK : K.VertexNodup)
+lemma daCastD_cyclic_tail {f : M.Face} (K : BoundaryCycleData M f) (hK : K.VertexNodup)
     (p k : ℕ) (hk : 1 ≤ k) (hkL : k < K.darts.length) (hp : p < K.darts.length)
     {a' b' : M.Vertex}
     (ha : M.tail (K.darts[p]'hp) = a')
     (hb : M.tail (K.darts[(p + k) % K.darts.length]'(Nat.mod_lt _ (by omega))) = b')
-    (i : Fin (daCast (K.cyclicDataDartArc hK p k hk hkL hp) ha hb).len) :
-    M.tail ((daCast (K.cyclicDataDartArc hK p k hk hkL hp) ha hb).arcDart i)
+    (i : Fin (daCastD (K.cyclicDataDartArc hK p k hk hkL hp) ha hb).len) :
+    M.tail ((daCastD (K.cyclicDataDartArc hK p k hk hkL hp) ha hb).arcDart i)
       = M.tail (K.darts[(p + i.1) % K.darts.length]'(Nat.mod_lt _ (by omega))) := by
-  rw [daCast_arcDart, BoundaryCycleData.cyclicDataDartArc_arcDart]; rfl
+  rw [daCastD_arcDart, BoundaryCycleData.cyclicDataDartArc_arcDart]; rfl
 
 end Casts
 
 /-! ### `BoundaryPath` internal-vertex witnesses (adapted from `PlanarMapChordSplit`) -/
 
 /-- Under `Nodup`, the last element of a list does not occur in its `dropLast`. -/
-lemma getLast_notMem_dropLast {α : Type*} {l : List α} (hl : l ≠ [])
+lemma getLastNotMemDropLastD {α : Type*} {l : List α} (hl : l ≠ [])
     (hnd : l.Nodup) : l.getLast hl ∉ l.dropLast := by
   have hsplit : l.dropLast ++ [l.getLast hl] = l := List.dropLast_append_getLast hl
   have hnd' : (l.dropLast ++ [l.getLast hl]).Nodup := by rw [hsplit]; exact hnd
@@ -382,7 +382,7 @@ lemma getLast_notMem_dropLast {α : Type*} {l : List α} (hl : l ≠ [])
   exact (List.disjoint_of_nodup_append hnd') hmem (by simp)
 
 /-- A generic list fact: if `l.head? = some a` and `l.Nodup`, then `a ∉ l.tail`. -/
-lemma head?_notMem_tail {α : Type*} {a : α} {l : List α}
+lemma headNotMemTailD {α : Type*} {a : α} {l : List α}
     (hh : l.head? = some a) (hnd : l.Nodup) : a ∉ l.tail := by
   cases l with
   | nil => simp at hh
@@ -410,20 +410,20 @@ namespace BoundaryPath
 variable {M : CombMap D} {u v : M.Vertex}
 
 /-- An internal vertex of a path is a listed vertex of the path. -/
-lemma internalVertices_subset (P : BoundaryPath M u v) {w : M.Vertex}
+lemma internalVerticesSubsetD (P : BoundaryPath M u v) {w : M.Vertex}
     (hw : w ∈ P.internalVertices) : w ∈ P.vertices :=
   List.tail_subset _ (List.dropLast_subset _ hw)
 
 /-- An internal vertex is distinct from the initial endpoint. -/
-lemma internalVertex_ne_start (P : BoundaryPath M u v) {w : M.Vertex}
+lemma internalVertexNeStartD (P : BoundaryPath M u v) {w : M.Vertex}
     (hw : w ∈ P.internalVertices) : w ≠ u := by
   have hutail : u ∉ P.vertices.tail :=
-    head?_notMem_tail P.starts_at P.simple
+    headNotMemTailD P.starts_at P.simple
   have hwtail : w ∈ P.vertices.tail := List.dropLast_subset _ hw
   intro hwu; subst hwu; exact hutail hwtail
 
 /-- An internal vertex is distinct from the terminal endpoint. -/
-lemma internalVertex_ne_end (P : BoundaryPath M u v) {w : M.Vertex}
+lemma internalVertexNeEndD (P : BoundaryPath M u v) {w : M.Vertex}
     (hw : w ∈ P.internalVertices) : w ≠ v := by
   have hwtail_dropLast : w ∈ P.vertices.tail.dropLast := hw
   have htail_ne : P.vertices.tail ≠ [] := fun h => by rw [h] at hwtail_dropLast; simp at hwtail_dropLast
@@ -431,13 +431,13 @@ lemma internalVertex_ne_end (P : BoundaryPath M u v) {w : M.Vertex}
   have hlast_tail : P.vertices.tail.getLast htail_ne = v :=
     getLast_tail_of_getLast? P.ends_at htail_ne
   have hnotmem : P.vertices.tail.getLast htail_ne ∉ P.vertices.tail.dropLast :=
-    getLast_notMem_dropLast htail_ne hnodup_tail
+    getLastNotMemDropLastD htail_ne hnodup_tail
   intro hwv; subst hwv
   exact hnotmem (hlast_tail.symm ▸ hwtail_dropLast)
 
 end BoundaryPath
 
-/-! ### A `BoundaryPath` from a `DataDartArc` (`bpOfDartArc`) -/
+/-! ### A `BoundaryPath` from a `DataDartArc` (`bpOfDDA`) -/
 
 section BPOfDartArc
 
@@ -445,7 +445,7 @@ variable {M : CombMap D}
 
 /-- **The `BoundaryPath` of a dart arc.**  Its vertices are the arc-dart tails followed by the
 terminal endpoint `b`; its edges are the arc-dart graph edges. -/
-noncomputable def bpOfDartArc {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
+noncomputable def bpOfDDA {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
     (A : DataDartArc M K a b) : BoundaryPath M a b where
   vertices := A.dartList.map M.tail ++ [b]
   edges := A.dartList.map M.dartEdge
@@ -469,25 +469,25 @@ noncomputable def bpOfDartArc {f : M.Face} {K : BoundaryCycleData M f} {a b : M.
       rw [← hi] at hdt
       exact fun hxb => A.head_last_ne_tail i (hxb ▸ hdt.symm)
 
-@[simp] lemma bpOfDartArc_vertices {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
-    (A : DataDartArc M K a b) : (bpOfDartArc A).vertices = A.dartList.map M.tail ++ [b] := rfl
+@[simp] lemma bpOfDDA_vertices {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
+    (A : DataDartArc M K a b) : (bpOfDDA A).vertices = A.dartList.map M.tail ++ [b] := rfl
 
-@[simp] lemma bpOfDartArc_edges {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
-    (A : DataDartArc M K a b) : (bpOfDartArc A).edges = A.dartList.map M.dartEdge := rfl
+@[simp] lemma bpOfDDA_edges {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
+    (A : DataDartArc M K a b) : (bpOfDDA A).edges = A.dartList.map M.dartEdge := rfl
 
-/-- The internal vertices of `bpOfDartArc A` are the tails of the arc darts with index `≥ 1`. -/
-lemma bpOfDartArc_internal {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
+/-- The internal vertices of `bpOfDDA A` are the tails of the arc darts with index `≥ 1`. -/
+lemma bpOfDDA_internal {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
     (A : DataDartArc M K a b) :
-    (bpOfDartArc A).internalVertices = (A.dartList.map M.tail).tail := by
+    (bpOfDDA A).internalVertices = (A.dartList.map M.tail).tail := by
   show (A.dartList.map M.tail ++ [b]).tail.dropLast = (A.dartList.map M.tail).tail
   have hne : (A.dartList.map M.tail) ≠ [] := by simp [A.dartList_ne_nil]
   rw [List.tail_append_of_ne_nil hne, List.dropLast_concat]
 
-/-- Every vertex of `bpOfDartArc A` is a tail of an arc dart, or the terminal endpoint `b`. -/
-lemma bpOfDartArc_mem_vertices {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
-    (A : DataDartArc M K a b) {w : M.Vertex} (hw : w ∈ (bpOfDartArc A).vertices) :
+/-- Every vertex of `bpOfDDA A` is a tail of an arc dart, or the terminal endpoint `b`. -/
+lemma bpOfDDA_mem_vertices {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
+    (A : DataDartArc M K a b) {w : M.Vertex} (hw : w ∈ (bpOfDDA A).vertices) :
     (∃ i : Fin A.len, M.tail (A.arcDart i) = w) ∨ w = b := by
-  rw [bpOfDartArc_vertices, List.mem_append, List.mem_singleton] at hw
+  rw [bpOfDDA_vertices, List.mem_append, List.mem_singleton] at hw
   rcases hw with hw | hw
   · left
     rw [List.mem_map] at hw
@@ -496,11 +496,11 @@ lemma bpOfDartArc_mem_vertices {f : M.Face} {K : BoundaryCycleData M f} {a b : M
     exact ⟨i, hi ▸ hdt⟩
   · right; exact hw
 
-/-- An internal vertex of `bpOfDartArc A` is a tail of an arc dart. -/
-lemma bpOfDartArc_internal_tail {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
-    (A : DataDartArc M K a b) {w : M.Vertex} (hw : w ∈ (bpOfDartArc A).internalVertices) :
+/-- An internal vertex of `bpOfDDA A` is a tail of an arc dart. -/
+lemma bpOfDDA_internal_tail {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
+    (A : DataDartArc M K a b) {w : M.Vertex} (hw : w ∈ (bpOfDDA A).internalVertices) :
     ∃ i : Fin A.len, M.tail (A.arcDart i) = w := by
-  rw [bpOfDartArc_internal] at hw
+  rw [bpOfDDA_internal] at hw
   have hsub : w ∈ A.dartList.map M.tail := List.tail_subset _ hw
   rw [List.mem_map] at hsub
   obtain ⟨d, hd, hdt⟩ := hsub
@@ -508,22 +508,22 @@ lemma bpOfDartArc_internal_tail {f : M.Face} {K : BoundaryCycleData M f} {a b : 
   exact ⟨i, hi ▸ hdt⟩
 
 /-- An arc-dart tail is a boundary vertex (`A`'s darts lie on the cycle). -/
-lemma arcDart_tail_mem_vertices {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
+lemma arcDartTailMemVD {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
     (A : DataDartArc M K a b) (i : Fin A.len) : M.tail (A.arcDart i) ∈ K.vertices := by
   rw [K.vertices_eq]; exact List.mem_map_of_mem (A.boundary i)
 
-/-- Every vertex of `bpOfDartArc A` is a boundary vertex, provided the terminal endpoint `b` is. -/
-lemma bpOfDartArc_boundary_vertices {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
+/-- Every vertex of `bpOfDDA A` is a boundary vertex, provided the terminal endpoint `b` is. -/
+lemma bpOfDDA_boundary_vertices {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
     (A : DataDartArc M K a b) (hb : b ∈ K.vertices) {w : M.Vertex}
-    (hw : w ∈ (bpOfDartArc A).vertices) : w ∈ K.vertices := by
-  rcases bpOfDartArc_mem_vertices A hw with ⟨i, hi⟩ | hwb
-  · rw [← hi]; exact arcDart_tail_mem_vertices A i
+    (hw : w ∈ (bpOfDDA A).vertices) : w ∈ K.vertices := by
+  rcases bpOfDDA_mem_vertices A hw with ⟨i, hi⟩ | hwb
+  · rw [← hi]; exact arcDartTailMemVD A i
   · rw [hwb]; exact hb
 
-/-- `bpOfDartArc A` has an internal vertex when `2 ≤ A.len`. -/
-lemma bpOfDartArc_hasInternal {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
-    (A : DataDartArc M K a b) (hlen : 2 ≤ A.len) : (bpOfDartArc A).HasInternalVertex := by
-  rw [BoundaryPath.hasInternalVertex_iff, bpOfDartArc_internal]
+/-- `bpOfDDA A` has an internal vertex when `2 ≤ A.len`. -/
+lemma bpOfDDA_hasInternal {f : M.Face} {K : BoundaryCycleData M f} {a b : M.Vertex}
+    (A : DataDartArc M K a b) (hlen : 2 ≤ A.len) : (bpOfDDA A).HasInternalVertex := by
+  rw [BoundaryPath.hasInternalVertex_iff, bpOfDDA_internal]
   intro hcontra
   have hlenlist : (A.dartList.map M.tail).length = A.len := by
     rw [List.length_map, DataDartArc.dartList_length]
@@ -609,9 +609,9 @@ noncomputable def nonEdgeRuns (K : BoundaryCycleData M f) (hK : K.VertexNodup)
   set kf := (pv + L - pu) % L with hkf
   set kb := (pu + L - pv) % L with hkb
   obtain ⟨hkf1, hkb1, hsum, hpfkf, hcov⟩ :=
-    mod_cover L pu pv hLpos hpu hpv hpune kf kb hkf hkb
+    modCoverD L pu pv hLpos hpu hpv hpune kf kb hkf hkb
   obtain ⟨_, _, _, hpvkb, _⟩ :=
-    mod_cover L pv pu hLpos hpv hpu (Ne.symm hpune) kb kf hkb hkf
+    modCoverD L pv pu hLpos hpv hpu (Ne.symm hpune) kb kf hkb hkf
   have hkfL : kf < L := by rw [hkf]; exact Nat.mod_lt _ hLpos
   have hkbL : kb < L := by rw [hkb]; exact Nat.mod_lt _ hLpos
   have hkf2 : 2 ≤ kf := by
@@ -637,51 +637,51 @@ noncomputable def nonEdgeRuns (K : BoundaryCycleData M f) (hK : K.VertexNodup)
   have evu2 : M.tail (K.darts[(pv + kb) % L]'(Nat.mod_lt _ (by omega))) = u := by
     have : K.darts[(pv + kb) % L]'(Nat.mod_lt _ (by omega)) = K.darts[pu]'hpu := by congr 1
     rw [this]; exact eu
-  have htailUV : ∀ i : Fin (daCast AUV eu euv2).len,
-      M.tail ((daCast AUV eu euv2).arcDart i)
+  have htailUV : ∀ i : Fin (daCastD AUV eu euv2).len,
+      M.tail ((daCastD AUV eu euv2).arcDart i)
         = M.tail (K.darts[(pu + i.1) % L]'(Nat.mod_lt _ (by omega))) := by
-    intro i; exact daCast_cyclic_tail K hK pu kf hkf1 hkfL hpu eu euv2 i
-  have htailVU : ∀ i : Fin (daCast AVU ev evu2).len,
-      M.tail ((daCast AVU ev evu2).arcDart i)
+    intro i; exact daCastD_cyclic_tail K hK pu kf hkf1 hkfL hpu eu euv2 i
+  have htailVU : ∀ i : Fin (daCastD AVU ev evu2).len,
+      M.tail ((daCastD AVU ev evu2).arcDart i)
         = M.tail (K.darts[(pv + i.1) % L]'(Nat.mod_lt _ (by omega))) := by
-    intro i; exact daCast_cyclic_tail K hK pv kb hkb1 hkbL hpv ev evu2 i
+    intro i; exact daCastD_cyclic_tail K hK pv kb hkb1 hkbL hpv ev evu2 i
   have htailUV_fwd : ∀ j : ℕ, (hj : j < kf) →
-      ∃ i : Fin (daCast AUV eu euv2).len,
-        M.tail ((daCast AUV eu euv2).arcDart i)
+      ∃ i : Fin (daCastD AUV eu euv2).len,
+        M.tail ((daCastD AUV eu euv2).arcDart i)
           = M.tail (K.darts[(pu + j) % L]'(Nat.mod_lt _ (by omega))) := by
     intro j hj
-    have hjlen : j < (daCast AUV eu euv2).len := by rw [daCast_len]; exact hj
+    have hjlen : j < (daCastD AUV eu euv2).len := by rw [daCastD_len]; exact hj
     exact ⟨⟨j, hjlen⟩, htailUV ⟨j, hjlen⟩⟩
   have htailVU_fwd : ∀ j : ℕ, (hj : j < kb) →
-      ∃ i : Fin (daCast AVU ev evu2).len,
-        M.tail ((daCast AVU ev evu2).arcDart i)
+      ∃ i : Fin (daCastD AVU ev evu2).len,
+        M.tail ((daCastD AVU ev evu2).arcDart i)
           = M.tail (K.darts[(pv + j) % L]'(Nat.mod_lt _ (by omega))) := by
     intro j hj
-    have hjlen : j < (daCast AVU ev evu2).len := by rw [daCast_len]; exact hj
+    have hjlen : j < (daCastD AVU ev evu2).len := by rw [daCastD_len]; exact hj
     exact ⟨⟨j, hjlen⟩, htailVU ⟨j, hjlen⟩⟩
-  have htailUV_bwd : ∀ i : Fin (daCast AUV eu euv2).len,
+  have htailUV_bwd : ∀ i : Fin (daCastD AUV eu euv2).len,
       ∃ j : ℕ, j < kf ∧
-        M.tail ((daCast AUV eu euv2).arcDart i)
+        M.tail ((daCastD AUV eu euv2).arcDart i)
           = M.tail (K.darts[(pu + j) % L]'(Nat.mod_lt _ (by omega))) := by
     intro i
-    have hi : i.1 < kf := lt_of_lt_of_eq i.2 (daCast_len AUV eu euv2)
+    have hi : i.1 < kf := lt_of_lt_of_eq i.2 (daCastD_len AUV eu euv2)
     exact ⟨i.1, hi, htailUV i⟩
-  have htailVU_bwd : ∀ i : Fin (daCast AVU ev evu2).len,
+  have htailVU_bwd : ∀ i : Fin (daCastD AVU ev evu2).len,
       ∃ j : ℕ, j < kb ∧
-        M.tail ((daCast AVU ev evu2).arcDart i)
+        M.tail ((daCastD AVU ev evu2).arcDart i)
           = M.tail (K.darts[(pv + j) % L]'(Nat.mod_lt _ (by omega))) := by
     intro i
-    have hi : i.1 < kb := lt_of_lt_of_eq i.2 (daCast_len AVU ev evu2)
+    have hi : i.1 < kb := lt_of_lt_of_eq i.2 (daCastD_len AVU ev evu2)
     exact ⟨i.1, hi, htailVU i⟩
   refine
-    { arcUV := daCast AUV eu euv2
-      arcVU := daCast AVU ev evu2
+    { arcUV := daCastD AUV eu euv2
+      arcVU := daCastD AVU ev evu2
       lenUV := ?_
       lenVU := ?_
       covering := ?_
       disjoint := ?_ }
-  · rw [daCast_len]; exact hkf2
-  · rw [daCast_len]; exact hkb2
+  · rw [daCastD_len]; exact hkf2
+  · rw [daCastD_len]; exact hkb2
   · intro w hw
     obtain ⟨q, hqt⟩ := K.exists_pos_of_isBoundaryVertex hw
     rcases hcov q.1 q.2 with ⟨j, hj, hjq⟩ | ⟨j, hj, hjq⟩
@@ -781,9 +781,9 @@ noncomputable def arcSplit_of_nodup (K : BoundaryCycleData M f) (hK : K.vertices
   set kf := (pv + L - pu) % L with hkf
   set kb := (pu + L - pv) % L with hkb
   obtain ⟨hkf1, hkb1, hsum, hpfkf, hcov⟩ :=
-    mod_cover L pu pv hLpos hpu hpv hpune kf kb hkf hkb
+    modCoverD L pu pv hLpos hpu hpv hpune kf kb hkf hkb
   obtain ⟨_, _, _, hpvkb, _⟩ :=
-    mod_cover L pv pu hLpos hpv hpu (Ne.symm hpune) kb kf hkb hkf
+    modCoverD L pv pu hLpos hpv hpu (Ne.symm hpune) kb kf hkb hkf
   have hkfL : kf < L := by rw [hkf]; exact Nat.mod_lt _ hLpos
   have hkbL : kb < L := by rw [hkb]; exact Nat.mod_lt _ hLpos
   set AUV := K.cyclicDataDartArc hK pu kf hkf1 hkfL hpu with hAUV
@@ -794,48 +794,48 @@ noncomputable def arcSplit_of_nodup (K : BoundaryCycleData M f) (hK : K.vertices
   have evu2 : M.tail (K.darts[(pv + kb) % L]'(Nat.mod_lt _ (by omega))) = u := by
     have : K.darts[(pv + kb) % L]'(Nat.mod_lt _ (by omega)) = K.darts[pu]'hpu := by congr 1
     rw [this]; exact eu
-  have htailUV : ∀ i : Fin (daCast AUV eu euv2).len,
-      M.tail ((daCast AUV eu euv2).arcDart i)
+  have htailUV : ∀ i : Fin (daCastD AUV eu euv2).len,
+      M.tail ((daCastD AUV eu euv2).arcDart i)
         = M.tail (K.darts[(pu + i.1) % L]'(Nat.mod_lt _ (by omega))) := by
-    intro i; exact daCast_cyclic_tail K hK pu kf hkf1 hkfL hpu eu euv2 i
-  have htailVU : ∀ i : Fin (daCast AVU ev evu2).len,
-      M.tail ((daCast AVU ev evu2).arcDart i)
+    intro i; exact daCastD_cyclic_tail K hK pu kf hkf1 hkfL hpu eu euv2 i
+  have htailVU : ∀ i : Fin (daCastD AVU ev evu2).len,
+      M.tail ((daCastD AVU ev evu2).arcDart i)
         = M.tail (K.darts[(pv + i.1) % L]'(Nat.mod_lt _ (by omega))) := by
-    intro i; exact daCast_cyclic_tail K hK pv kb hkb1 hkbL hpv ev evu2 i
+    intro i; exact daCastD_cyclic_tail K hK pv kb hkb1 hkbL hpv ev evu2 i
   have htailUV_fwd : ∀ j : ℕ, (hj : j < kf) →
-      ∃ i : Fin (daCast AUV eu euv2).len,
-        M.tail ((daCast AUV eu euv2).arcDart i)
+      ∃ i : Fin (daCastD AUV eu euv2).len,
+        M.tail ((daCastD AUV eu euv2).arcDart i)
           = M.tail (K.darts[(pu + j) % L]'(Nat.mod_lt _ (by omega))) := by
     intro j hj
-    have hjlen : j < (daCast AUV eu euv2).len := by rw [daCast_len]; exact hj
+    have hjlen : j < (daCastD AUV eu euv2).len := by rw [daCastD_len]; exact hj
     exact ⟨⟨j, hjlen⟩, htailUV ⟨j, hjlen⟩⟩
   have htailVU_fwd : ∀ j : ℕ, (hj : j < kb) →
-      ∃ i : Fin (daCast AVU ev evu2).len,
-        M.tail ((daCast AVU ev evu2).arcDart i)
+      ∃ i : Fin (daCastD AVU ev evu2).len,
+        M.tail ((daCastD AVU ev evu2).arcDart i)
           = M.tail (K.darts[(pv + j) % L]'(Nat.mod_lt _ (by omega))) := by
     intro j hj
-    have hjlen : j < (daCast AVU ev evu2).len := by rw [daCast_len]; exact hj
+    have hjlen : j < (daCastD AVU ev evu2).len := by rw [daCastD_len]; exact hj
     exact ⟨⟨j, hjlen⟩, htailVU ⟨j, hjlen⟩⟩
-  have htailUV_bwd : ∀ i : Fin (daCast AUV eu euv2).len,
+  have htailUV_bwd : ∀ i : Fin (daCastD AUV eu euv2).len,
       ∃ j : ℕ, j < kf ∧
-        M.tail ((daCast AUV eu euv2).arcDart i)
+        M.tail ((daCastD AUV eu euv2).arcDart i)
           = M.tail (K.darts[(pu + j) % L]'(Nat.mod_lt _ (by omega))) := by
     intro i
-    have hi : i.1 < kf := lt_of_lt_of_eq i.2 (daCast_len AUV eu euv2)
+    have hi : i.1 < kf := lt_of_lt_of_eq i.2 (daCastD_len AUV eu euv2)
     exact ⟨i.1, hi, htailUV i⟩
-  have htailVU_bwd : ∀ i : Fin (daCast AVU ev evu2).len,
+  have htailVU_bwd : ∀ i : Fin (daCastD AVU ev evu2).len,
       ∃ j : ℕ, j < kb ∧
-        M.tail ((daCast AVU ev evu2).arcDart i)
+        M.tail ((daCastD AVU ev evu2).arcDart i)
           = M.tail (K.darts[(pv + j) % L]'(Nat.mod_lt _ (by omega))) := by
     intro i
-    have hi : i.1 < kb := lt_of_lt_of_eq i.2 (daCast_len AVU ev evu2)
+    have hi : i.1 < kb := lt_of_lt_of_eq i.2 (daCastD_len AVU ev evu2)
     exact ⟨i.1, hi, htailVU i⟩
   -- covering and disjointness of the two runs' tails (no length-≥2 needed)
   have hmap : (K.darts.map M.tail).Nodup := by
     have := hK; rwa [K.vertices_eq] at this
   have covering : ∀ {w : M.Vertex}, w ∈ K.vertices →
-      (∃ i, M.tail ((daCast AUV eu euv2).arcDart i) = w) ∨
-      (∃ i, M.tail ((daCast AVU ev evu2).arcDart i) = w) ∨ w = u ∨ w = v := by
+      (∃ i, M.tail ((daCastD AUV eu euv2).arcDart i) = w) ∨
+      (∃ i, M.tail ((daCastD AVU ev evu2).arcDart i) = w) ∨ w = u ∨ w = v := by
     intro w hw
     obtain ⟨q, hqt⟩ := K.exists_pos_of_isBoundaryVertex hw
     rcases hcov q.1 q.2 with ⟨j, hj, hjq⟩ | ⟨j, hj, hjq⟩
@@ -854,8 +854,8 @@ noncomputable def arcSplit_of_nodup (K : BoundaryCycleData M f) (hK : K.vertices
         getElem_congr rfl hjq _
       rw [this, hqt]
   have disjoint : ∀ {w : M.Vertex},
-      (∃ i, M.tail ((daCast AUV eu euv2).arcDart i) = w) →
-      (∃ i, M.tail ((daCast AVU ev evu2).arcDart i) = w) → w = u ∨ w = v := by
+      (∃ i, M.tail ((daCastD AUV eu euv2).arcDart i) = w) →
+      (∃ i, M.tail ((daCastD AVU ev evu2).arcDart i) = w) → w = u ∨ w = v := by
     rintro w ⟨i, hiw⟩ ⟨i', hi'w⟩
     obtain ⟨j, hj, hjeq⟩ := htailUV_bwd i
     obtain ⟨j', hj', hj'eq⟩ := htailVU_bwd i'
@@ -917,10 +917,10 @@ noncomputable def arcSplit_of_nodup (K : BoundaryCycleData M f) (hK : K.vertices
         (by rw [show (pv + 1) % L = (pv + kb) % L from by rw [hkb1'], hpvkb])
     · exact hge
   refine
-    { path₁ := bpOfDartArc (daCast AUV eu euv2)
-      path₂ := bpOfDartArc (daCast AVU ev evu2)
-      path₁_boundary_vertices := fun {w} hw => bpOfDartArc_boundary_vertices (daCast AUV eu euv2) hv hw
-      path₂_boundary_vertices := fun {w} hw => bpOfDartArc_boundary_vertices (daCast AVU ev evu2) hu hw
+    { path₁ := bpOfDDA (daCastD AUV eu euv2)
+      path₂ := bpOfDDA (daCastD AVU ev evu2)
+      path₁_boundary_vertices := fun {w} hw => bpOfDDA_boundary_vertices (daCastD AUV eu euv2) hv hw
+      path₂_boundary_vertices := fun {w} hw => bpOfDDA_boundary_vertices (daCastD AVU ev evu2) hu hw
       boundary_vertices_covered := ?_
       internally_disjoint := ?_
       path₁_internal_of_proper := ?_
@@ -930,49 +930,49 @@ noncomputable def arcSplit_of_nodup (K : BoundaryCycleData M f) (hK : K.vertices
     · intro hw
       rcases covering hw with ⟨i, hi⟩ | ⟨i, hi⟩ | hwu | hwv
       · left
-        rw [bpOfDartArc_vertices, List.mem_append]
+        rw [bpOfDDA_vertices, List.mem_append]
         refine Or.inl ?_
         rw [← hi]
         exact List.mem_map_of_mem (by
           rw [DataDartArc.dartList]; exact List.mem_map_of_mem (List.mem_finRange i))
       · right
-        rw [bpOfDartArc_vertices, List.mem_append]
+        rw [bpOfDDA_vertices, List.mem_append]
         refine Or.inl ?_
         rw [← hi]
         exact List.mem_map_of_mem (by
           rw [DataDartArc.dartList]; exact List.mem_map_of_mem (List.mem_finRange i))
       · left
-        rw [bpOfDartArc_vertices, List.mem_append]
+        rw [bpOfDDA_vertices, List.mem_append]
         refine Or.inl ?_
-        have hu_tail : M.tail ((daCast AUV eu euv2).arcDart (daCast AUV eu euv2).firstIdx) = w :=
-          (daCast AUV eu euv2).tail_first.trans hwu.symm
-        have hmem : M.tail ((daCast AUV eu euv2).arcDart (daCast AUV eu euv2).firstIdx)
-            ∈ (daCast AUV eu euv2).dartList.map M.tail :=
+        have hu_tail : M.tail ((daCastD AUV eu euv2).arcDart (daCastD AUV eu euv2).firstIdx) = w :=
+          (daCastD AUV eu euv2).tail_first.trans hwu.symm
+        have hmem : M.tail ((daCastD AUV eu euv2).arcDart (daCastD AUV eu euv2).firstIdx)
+            ∈ (daCastD AUV eu euv2).dartList.map M.tail :=
           List.mem_map_of_mem (by
             rw [DataDartArc.dartList]; exact List.mem_map_of_mem (List.mem_finRange _))
         exact hu_tail ▸ hmem
       · left
-        rw [bpOfDartArc_vertices, List.mem_append]
+        rw [bpOfDDA_vertices, List.mem_append]
         exact Or.inr (by rw [hwv]; exact List.mem_singleton_self _)
     · intro hw
       rcases hw with hw | hw
-      · exact bpOfDartArc_boundary_vertices (daCast AUV eu euv2) hv hw
-      · exact bpOfDartArc_boundary_vertices (daCast AVU ev evu2) hu hw
+      · exact bpOfDDA_boundary_vertices (daCastD AUV eu euv2) hv hw
+      · exact bpOfDDA_boundary_vertices (daCastD AVU ev evu2) hu hw
   · intro w hw1 hw2
-    obtain ⟨i, hi⟩ := bpOfDartArc_internal_tail (daCast AUV eu euv2) hw1
-    obtain ⟨i', hi'⟩ := bpOfDartArc_internal_tail (daCast AVU ev evu2) hw2
+    obtain ⟨i, hi⟩ := bpOfDDA_internal_tail (daCastD AUV eu euv2) hw1
+    obtain ⟨i', hi'⟩ := bpOfDDA_internal_tail (daCastD AVU ev evu2) hw2
     have hwuv : w = u ∨ w = v := disjoint ⟨i, hi⟩ ⟨i', hi'⟩
-    have hwu : w ≠ u := (bpOfDartArc (daCast AUV eu euv2)).internalVertex_ne_start hw1
-    have hwv : w ≠ v := (bpOfDartArc (daCast AUV eu euv2)).internalVertex_ne_end hw1
+    have hwu : w ≠ u := (bpOfDDA (daCastD AUV eu euv2)).internalVertexNeStartD hw1
+    have hwv : w ≠ v := (bpOfDDA (daCastD AUV eu euv2)).internalVertexNeEndD hw1
     rcases hwuv with h' | h'
     · exact hwu h'
     · exact hwv h'
   · intro hnbe
-    exact bpOfDartArc_hasInternal (daCast AUV eu euv2)
-      (by rw [daCast_len]; exact hkf2_of_proper hnbe)
+    exact bpOfDDA_hasInternal (daCastD AUV eu euv2)
+      (by rw [daCastD_len]; exact hkf2_of_proper hnbe)
   · intro hnbe
-    exact bpOfDartArc_hasInternal (daCast AVU ev evu2)
-      (by rw [daCast_len]; exact hkb2_of_proper hnbe)
+    exact bpOfDDA_hasInternal (daCastD AVU ev evu2)
+      (by rw [daCastD_len]; exact hkb2_of_proper hnbe)
 
 /-- **Promote a core + `VertexNodup` to a full `BoundaryCycle`** (the `arcSplit`
 certificate is derived from simplicity by `arcSplit_of_nodup`). -/

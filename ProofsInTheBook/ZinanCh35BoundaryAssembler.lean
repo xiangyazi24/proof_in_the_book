@@ -395,12 +395,6 @@ noncomputable def nearTriangulation_of_explicit_boundary_classification
     {DK : Type u} [Fintype DK] [DecidableEq DK] (K : CombMap DK)
     (hsphere : K.IsSphereMap) (hsimple : K.IsSimpleGraph)
     (outerFace : K.Face) (root : DK) (houterOrbit : K.dartFace root = outerFace)
-    (arcSplit :
-      ∀ ⦃p q : K.Vertex⦄, p ≠ q →
-        p ∈ (K.faceDartList root).map K.tail →
-        q ∈ (K.faceDartList root).map K.tail →
-        BoundaryArcSplit K ((K.faceDartList root).map K.tail)
-          ((K.faceDartList root).map K.dartEdge) p q)
     (houter_simple : ((K.faceDartList root).map K.tail).Nodup)
     (houter_len : 3 ≤ (K.faceDartList root).length)
     (hinner_tri : ∀ f : K.Face, f ≠ outerFace → K.faceLen f = 3) :
@@ -410,7 +404,7 @@ noncomputable def nearTriangulation_of_explicit_boundary_classification
   outerFace := outerFace
   outerCycle :=
     K.boundaryCycleOfFace outerFace
-      (K.phi_ne_self_of_isSimpleGraph hsimple root) houterOrbit arcSplit
+      (K.phi_ne_self_of_isSimpleGraph hsimple root) houterOrbit houter_simple
   outer_simple := houter_simple
   outer_len := houter_len
   inner_tri := hinner_tri
@@ -440,17 +434,11 @@ theorem nearTriangulation_of_explicit_boundary_classification_outerCycle_darts
     {DK : Type u} [Fintype DK] [DecidableEq DK] (K : CombMap DK)
     (hsphere : K.IsSphereMap) (hsimple : K.IsSimpleGraph)
     (outerFace : K.Face) (root : DK) (houterOrbit : K.dartFace root = outerFace)
-    (arcSplit :
-      ∀ ⦃p q : K.Vertex⦄, p ≠ q →
-        p ∈ (K.faceDartList root).map K.tail →
-        q ∈ (K.faceDartList root).map K.tail →
-        BoundaryArcSplit K ((K.faceDartList root).map K.tail)
-          ((K.faceDartList root).map K.dartEdge) p q)
     (houter_simple : ((K.faceDartList root).map K.tail).Nodup)
     (houter_len : 3 ≤ (K.faceDartList root).length)
     (hinner_tri : ∀ f : K.Face, f ≠ outerFace → K.faceLen f = 3) :
     (nearTriangulation_of_explicit_boundary_classification K hsphere hsimple outerFace root
-        houterOrbit arcSplit houter_simple houter_len hinner_tri).outerCycle.darts
+        houterOrbit houter_simple houter_len hinner_tri).outerCycle.darts
       = K.faceDartList root :=
   rfl
 

@@ -372,6 +372,7 @@ import ProofsInTheBook.ZinanCh35StarConn
 import ProofsInTheBook.ZinanCh35BankCount
 import ProofsInTheBook.ZinanCh35EdgeCoreFinal
 import ProofsInTheBook.ZinanCh35Side1Confine
+import ProofsInTheBook.ZinanCh35Side2Confine
 import ProofsInTheBook.ZinanCh36Ears
 import ProofsInTheBook.ZinanFFCT87
 import ProofsInTheBook.ZinanFFCT88

@@ -163,9 +163,38 @@ theorem canonical_side₁_outer_orbit_mem_iff
       refine (freshFace_sameCycle_iff β ρ hinv hfix hne (Sum.inr 1) (Sum.inl k)).2 ?_
       simpa [faceProj_inl, faceProj_inr_one] using hk
 
+/-- **The canonical `tracePhi` orbit through `β a₁` is exactly the kept copies of the `u → v`
+boundary dart-arc `A`** (the genuine remaining bridge — proved separately).  Packaged as a `Prop`
+so the classifier follows mechanically. -/
+structure CanonicalTracePhiArc
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle u v)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁) : Prop where
+  mem_iff : ∀ k : {d : D // d ∉ data.keptDel₁},
+    (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+        (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)).SameCycle
+      ((data.sideAlpha₁ hsep) (side₁Anchor₁ data hsep)) k
+    ↔ ∃ i : Fin A.len, k = ⟨A.arcDart i, hArcKept i⟩
+
+/-- **The classifier from the `tracePhi`-orbit ↔ arc identification.**  Combines the membership iff
+(`canonical_side₁_outer_orbit_mem_iff`) with `CanonicalTracePhiArc`: an orbit dart is `inr 1` or
+`inl k`; in the latter case `k`'s `tracePhi`-membership pins it to an arc dart. -/
+theorem canonical_arcTrace_of_tracePhiArc
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle u v)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
+    (hTA : CanonicalTracePhiArc hNT data hsep A hArcKept) :
+    CanonicalSide₁OuterArcTrace hNT data hsep A hArcKept := by
+  intro x hx
+  rcases (canonical_side₁_outer_orbit_mem_iff hNT data hsep x).1 hx with hroot | ⟨k, hxk, hτ⟩
+  · exact Or.inl hroot
+  · rcases (hTA.mem_iff k).1 hτ with ⟨i, hk⟩
+    exact Or.inr ⟨i, by rw [hxk, hk]⟩
+
 end ProofsInTheBook.ZinanCh35OuterTraceProof
 
 /-! ## Axiom audit -/
 
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonical_OuterTraceInjOn_of_arcTrace
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonical_side₁_outer_orbit_mem_iff
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonical_arcTrace_of_tracePhiArc

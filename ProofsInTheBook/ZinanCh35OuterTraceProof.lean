@@ -48,7 +48,64 @@ open ProofsInTheBook.ZinanCh35OuterTrace
 universe u
 
 variable {D : Type u} [Fintype D] [DecidableEq D] {M : CombMap D}
-  (hNT : NearTriangulation M) {u v : M.Vertex}
+
+/-! ## Boundary-cycle helpers (general `BoundaryCycle`) -/
+
+/-- **Chain ⟹ `φ`-successor.**  If two boundary darts `d,e` lie on the same boundary cycle and
+their endpoint vertices chain (`M.head d = M.tail e`), then `e` is the `φ`-successor of `d`.  Upgrades
+a `DartArc.chain` *vertex* equality to a face-walk *dart* equality, via `consecutive_phi` +
+`tail_injective_on_darts`. -/
+lemma phi_eq_of_boundary_chain
+    {f : M.Face} (C : BoundaryCycle M f) (hC : C.VertexNodup)
+    {d e : D} (hd : d ∈ C.darts) (he : e ∈ C.darts)
+    (hchain : M.head d = M.tail e) :
+    M.φ d = e := by
+  classical
+  rw [List.mem_iff_getElem] at hd
+  obtain ⟨n, hn, hdget⟩ := hd
+  set p : Fin C.darts.length := ⟨n, hn⟩ with hp
+  have hphi_get : C.darts.get (cyclicNext C.normalized.length_pos p) = M.φ d := by
+    have := C.consecutive_phi p
+    rw [show C.darts.get p = d by rw [List.get_eq_getElem]; exact hdget] at this
+    exact this
+  have hphi_mem : M.φ d ∈ C.darts := by
+    rw [← hphi_get]; exact List.get_mem _ _
+  have htail_phi : M.tail (M.φ d) = M.head d := by
+    have hv := C.consecutive_vertex p
+    rw [hphi_get, show C.darts.get p = d by rw [List.get_eq_getElem]; exact hdget] at hv
+    exact hv
+  exact C.tail_injective_on_darts hC hphi_mem he (by rw [htail_phi, hchain])
+
+/-- **`M.head` is injective on boundary-cycle darts** (mirror of `tail_injective_on_darts`).  Via the
+`φ`-successor: `head d = tail (φ d)` on the cycle, then `tail`-injectivity + `φ` injective. -/
+lemma head_injective_on_darts
+    {f : M.Face} (C : BoundaryCycle M f) (hC : C.VertexNodup)
+    {d e : D} (hd : d ∈ C.darts) (he : e ∈ C.darts)
+    (hhead : M.head d = M.head e) :
+    d = e := by
+  classical
+  rw [List.mem_iff_getElem] at hd he
+  obtain ⟨nd, hnd, hdget⟩ := hd
+  obtain ⟨ne, hne, heget⟩ := he
+  set id : Fin C.darts.length := ⟨nd, hnd⟩ with hid
+  set ie : Fin C.darts.length := ⟨ne, hne⟩ with hie
+  have hgd : C.darts.get id = d := by rw [List.get_eq_getElem]; exact hdget
+  have hge : C.darts.get ie = e := by rw [List.get_eq_getElem]; exact heget
+  have hphid : C.darts.get (cyclicNext C.normalized.length_pos id) = M.φ d := by
+    have := C.consecutive_phi id; rw [hgd] at this; exact this
+  have hphie : C.darts.get (cyclicNext C.normalized.length_pos ie) = M.φ e := by
+    have := C.consecutive_phi ie; rw [hge] at this; exact this
+  have htphid : M.tail (M.φ d) = M.head d := by
+    have hv := C.consecutive_vertex id; rw [hphid, hgd] at hv; exact hv
+  have htphie : M.tail (M.φ e) = M.head e := by
+    have hv := C.consecutive_vertex ie; rw [hphie, hge] at hv; exact hv
+  have hpd_mem : M.φ d ∈ C.darts := by rw [← hphid]; exact List.get_mem _ _
+  have hpe_mem : M.φ e ∈ C.darts := by rw [← hphie]; exact List.get_mem _ _
+  have hφeq : M.φ d = M.φ e :=
+    C.tail_injective_on_darts hC hpd_mem hpe_mem (by rw [htphid, htphie, hhead])
+  exact M.φ.injective hφeq
+
+variable (hNT : NearTriangulation M) {u v : M.Vertex}
 
 /-- **The canonical `u → v` boundary dart-arc**, built from the chord via
 `dartArcOfNonBoundaryEdge` on the outer cycle.  Its darts are on `hNT.outerCycle.darts`, its tails
@@ -67,6 +124,41 @@ theorem canonicalOuterArc_len_ge_two
   (hNT.outerCycle.dartArcOfNonBoundaryEdge hNT.outer_simple
     data.chord.endpoints_ne data.chord.left_boundary data.chord.right_boundary
     data.chord.not_boundary_edge).2
+
+/-- Kept copy of an arc dart. -/
+def arcK (data : hNT.ChordSplitData u v)
+    (A : DartArc M hNT.outerCycle u v)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁) (i : Fin A.len) :
+    {d : D // d ∉ data.keptDel₁} :=
+  ⟨A.arcDart i, hArcKept i⟩
+
+/-- **The side-1 kept face permutation walks one step along the boundary arc.**
+`keptPhi = sideSigma₁ ∘ sideAlpha₁` sends the `i`-th arc dart to the `(i+1)`-th.  Route: the arc's
+head→tail `chain` upgrades to the outer-face `φ`-step (`phi_eq_of_boundary_chain`); `sideAlpha₁`
+restricts to `M.α`; `M.φ = M.σ ∘ M.α`; the next arc dart is kept, so `filteredRotation` agrees with
+`M.σ`. -/
+lemma sideSigma₁_alpha_arcDart_eq_next
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle u v)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
+    (i : Fin A.len) (hi : (i : ℕ) + 1 < A.len) :
+    data.sideSigma₁ (data.sideAlpha₁ hsep (arcK hNT data A hArcKept i))
+      = arcK hNT data A hArcKept ⟨i + 1, hi⟩ := by
+  classical
+  have hphi : M.φ (A.arcDart i) = A.arcDart ⟨i + 1, hi⟩ :=
+    phi_eq_of_boundary_chain hNT.outerCycle hNT.outer_simple
+      (A.boundary i) (A.boundary ⟨i + 1, hi⟩) (A.chain i hi)
+  have hαcoe : ((data.sideAlpha₁ hsep (arcK hNT data A hArcKept i)) : D) = M.α (A.arcDart i) := by
+    simpa [arcK] using data.sideAlpha₁_apply_coe hsep (arcK hNT data A hArcKept i)
+  have hσnext : M.σ ((data.sideAlpha₁ hsep (arcK hNT data A hArcKept i)) : D)
+      = A.arcDart ⟨i + 1, hi⟩ := by
+    rw [hαcoe]; exact hphi
+  have hσ_kept : M.σ ((data.sideAlpha₁ hsep (arcK hNT data A hArcKept i)) : D) ∉ data.keptDel₁ := by
+    rw [hσnext]; exact hArcKept ⟨i + 1, hi⟩
+  apply Subtype.ext
+  rw [show data.sideSigma₁ = FilteredRotation.filteredRotation M.σ data.keptDel₁ from rfl,
+    FilteredRotation.filteredRotation_apply_of_next_kept M.σ data.keptDel₁ _ hσ_kept]
+  exact hσnext
 
 /-- **The ordered orbit↔arc classifier** (the one genuine remaining bridge).  For the canonical
 side-1 anchors, every dart on the side-1 outer `φ`-orbit `S.faceDartList (inr 1)` is either the

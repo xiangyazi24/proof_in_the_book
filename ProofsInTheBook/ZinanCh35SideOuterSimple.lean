@@ -167,9 +167,20 @@ section Main
 variable {D : Type u} [Fintype D] [DecidableEq D] {M : CombMap D}
   (hNT : NearTriangulation M) {u v : M.Vertex}
 
-/-- **The isolated orbit-trace datum (R3c-ii geometric core).**  Every dart `x` on the side-1
-outer `φ`-orbit `(sideMap₁ … ).faceDartList (inr 1)` has its original underlying dart
-`(proj a₀ a₁ x).1` on the *original* outer boundary cycle `hNT.outerCycle`.
+/-- ⚠️ **UNSOUND / DEAD ROUTE — do NOT build on this** (2026-06-15 audit). This dart-level datum is
+**over-strong (likely unsatisfiable) for the canonical anchors**: the orbit's *root* `inr 1` has
+`proj a₀ a₁ (inr 1) = a₁` (`ChordSplitEuler.proj_inr_one`), so `OrbitProjOnOuterArc` *requires*
+`a₁.1 ∈ hNT.outerCycle.darts`.  But `a₁` is a **chord-region** anchor (the chord `s(u,v)` is NOT a
+boundary edge, `Chord.not_boundary_edge`; the canonical anchor derives from `face₁Dart = φ(chordDart)`,
+a dart of the chord-incident *inner* triangle).  Its `M.tail` is the boundary *vertex* `v`, but the
+*dart* `a₁.1` is not on the outer cycle.  Hence `outerTraceInjOn_of_decomposition` below is a clean-3
+conditional on a false premise (the §3.3 vacuity pattern) — it can never be discharged.  The genuine
+residual is the VERTEX-level `OuterTraceInjOn`, proven via the orbit↔boundary-arc *vertex*
+correspondence (the `inl`-darts of the orbit are the arc's boundary darts; `inr 1`/`inl(β a₁)` carry
+the endpoints `v`/`u`), NOT this dart-level containment.  Kept only as a documented dead end.
+
+Original (over-strong) statement: every dart `x` on the side-1 outer `φ`-orbit has its underlying
+dart `(proj a₀ a₁ x).1` on `hNT.outerCycle` — FALSE for `x = inr 1`. -/
 
 This is the discrete Jordan/Schoenflies content: the side outer boundary is the side arc of the
 original boundary together with the fresh chord (which collapses under `proj`/`(·).1` to the two

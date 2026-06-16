@@ -1,6 +1,8 @@
 import ProofsInTheBook.ZinanCh35Side2Confine
 import ProofsInTheBook.ZinanCh35Aligned
 import ProofsInTheBook.ZinanCh35Regions
+import ProofsInTheBook.ZinanCh35Iota
+import ProofsInTheBook.ZinanCh35OuterTraceProof
 
 /-!
 # Chapter 35 chord-branch supplier plumbing
@@ -24,6 +26,8 @@ open ProofsInTheBook.ChordReconClose
 open ProofsInTheBook.ZinanCh35Aligned.NearTriangulation
 open ProofsInTheBook.ZinanCh35Regions
 open ProofsInTheBook.ZinanCh35Side2Confine
+open ProofsInTheBook.ZinanCh35SideAnchors
+open ProofsInTheBook.ChordFaceCount
 open ProofsInTheBook.ThomassenLists
 open ProofsInTheBook.ThomassenLists.CombMap
 
@@ -31,6 +35,191 @@ universe u
 
 variable {D : Type u} [Fintype D] [DecidableEq D] {M : CombMap D}
   {hNT : NearTriangulation M} {u v p q : M.Vertex}
+
+theorem boundaryCycle_head_mem_vertices_of_mem_darts
+    {f : M.Face} (C : BoundaryCycle M f) {d : D} (hd : d ∈ C.darts) :
+    C.IsBoundaryVertex (M.head d) := by
+  classical
+  rw [BoundaryCycle.IsBoundaryVertex, C.vertices_eq]
+  rw [List.mem_iff_getElem] at hd
+  obtain ⟨n, hn, hdget⟩ := hd
+  set i : Fin C.darts.length := ⟨n, hn⟩ with hi
+  have hnext := C.consecutive_vertex i
+  have hdi : C.darts.get i = d := by
+    rw [List.get_eq_getElem]
+    exact hdget
+  rw [hdi] at hnext
+  rw [← hnext]
+  exact List.mem_map_of_mem (List.get_mem C.darts (cyclicNext C.normalized.length_pos i))
+
+theorem boundaryCycle_tail_mem_vertices_of_mem_darts
+    {f : M.Face} (C : BoundaryCycle M f) {d : D} (hd : d ∈ C.darts) :
+    C.IsBoundaryVertex (M.tail d) := by
+  rw [BoundaryCycle.IsBoundaryVertex, C.vertices_eq]
+  exact List.mem_map_of_mem hd
+
+theorem boundaryCycle_endpoints_boundary_of_edge
+    {f : M.Face} (C : BoundaryCycle M f) {a b : M.Vertex}
+    (h : C.IsBoundaryEdge s(a, b)) :
+    C.IsBoundaryVertex a ∧ C.IsBoundaryVertex b := by
+  classical
+  rw [BoundaryCycle.IsBoundaryEdge, C.edges_eq] at h
+  rw [List.mem_map] at h
+  obtain ⟨d, hd, hedge⟩ := h
+  have htail := boundaryCycle_tail_mem_vertices_of_mem_darts C hd
+  have hhead := boundaryCycle_head_mem_vertices_of_mem_darts C hd
+  have hedge' : (s(M.tail d, M.head d) : Sym2 M.Vertex) = s(a, b) := hedge
+  rcases Sym2.eq_iff.mp hedge' with ⟨hta, hhb⟩ | ⟨htb, hha⟩
+  · exact ⟨hta ▸ htail, hhb ▸ hhead⟩
+  · exact ⟨hha ▸ hhead, htb ▸ htail⟩
+
+/-- Dart-level classifier for the side-1 outer boundary after adding the two fresh chord darts. -/
+def Side₁OuterDart (data : hNT.ChordSplitData u v) (_hsep : data.Separates)
+    (_a₀ _a₁ : {d : D // d ∉ data.keptDel₁}) (_hne : _a₀ ≠ _a₁)
+    (x : {d : D // d ∉ data.keptDel₁} ⊕ Fin 2) : Prop :=
+  (∃ k : {d : D // d ∉ data.keptDel₁}, x = Sum.inl k ∧ k.1 ∈ data.outerArc₁) ∨
+    x = Sum.inr 0 ∨ x = Sum.inr 1
+
+@[simp] lemma sideVertexToM₁_tail_inl_apply
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (a₀ a₁ : {d : D // d ∉ data.keptDel₁}) (hne : a₀ ≠ a₁)
+    (k : {d : D // d ∉ data.keptDel₁}) :
+    sideVertexToM₁ data hsep a₀ a₁ hne
+        ((data.sideMap₁ hsep a₀ a₁ hne).tail (Sum.inl k))
+      = M.tail k.1 := by
+  exact sideVertexToM₁_inl data hsep a₀ a₁ hne k
+
+@[simp] lemma sideVertexToM₁_tail_inr_zero_apply
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (a₀ a₁ : {d : D // d ∉ data.keptDel₁}) (hne : a₀ ≠ a₁) :
+    sideVertexToM₁ data hsep a₀ a₁ hne
+        ((data.sideMap₁ hsep a₀ a₁ hne).tail (Sum.inr (0 : Fin 2)))
+      = M.tail a₀.1 := by
+  simpa using ProofsInTheBook.ZinanCh35Iota.sideVertexToM₁_tail_inr data hsep a₀ a₁ hne
+    (0 : Fin 2)
+
+@[simp] lemma sideVertexToM₁_tail_inr_one_apply
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (a₀ a₁ : {d : D // d ∉ data.keptDel₁}) (hne : a₀ ≠ a₁) :
+    sideVertexToM₁ data hsep a₀ a₁ hne
+        ((data.sideMap₁ hsep a₀ a₁ hne).tail (Sum.inr (1 : Fin 2)))
+      = M.tail a₁.1 := by
+  simpa using ProofsInTheBook.ZinanCh35Iota.sideVertexToM₁_tail_inr data hsep a₀ a₁ hne
+    (1 : Fin 2)
+
+/-- The canonical side-1 near-triangulation used by the recursion supplier. -/
+noncomputable def canonicalSide₁NT (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    NearTriangulation
+      (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)) :=
+  ProofsInTheBook.ChordSideNT.chordSideNearTriangulation_of_share data hsep
+    (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) (side₁Anchors_ne data hsep)
+    (side₁AnchorsShareFace_canonical data hsep)
+    (ProofsInTheBook.ZinanCh35OuterTraceProof.contiguousInterval₁_direct_canonical_uncond
+      hNT data hsep)
+
+@[simp] theorem canonicalSide₁NT_outerCycle_darts
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    (canonicalSide₁NT (hNT := hNT) data hsep).outerCycle.darts =
+      (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).faceDartList (Sum.inr 1) :=
+  rfl
+
+theorem canonicalSide₁_boundary_tail_of_faceDartList_mem
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    {x : {d : D // d ∉ data.keptDel₁} ⊕ Fin 2}
+    (hx : x ∈ (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+      (side₁Anchors_ne data hsep)).faceDartList (Sum.inr 1)) :
+    (canonicalSide₁NT (hNT := hNT) data hsep).outerCycle.IsBoundaryVertex
+      ((data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).tail x) := by
+  rw [BoundaryCycle.IsBoundaryVertex,
+    (canonicalSide₁NT (hNT := hNT) data hsep).outerCycle.vertices_eq]
+  exact List.mem_map_of_mem hx
+
+theorem canonicalSide₁_boundary_edge_of_faceDartList_mem
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    {x : {d : D // d ∉ data.keptDel₁} ⊕ Fin 2}
+    (hx : x ∈ (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+      (side₁Anchors_ne data hsep)).faceDartList (Sum.inr 1)) :
+    (canonicalSide₁NT (hNT := hNT) data hsep).outerCycle.IsBoundaryEdge
+      ((data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).dartEdge x) := by
+  rw [BoundaryCycle.IsBoundaryEdge,
+    (canonicalSide₁NT (hNT := hNT) data hsep).outerCycle.edges_eq]
+  exact List.mem_map_of_mem hx
+
+theorem canonicalSide₁_faceDartList_mem_of_outerArc₁
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (k : {d : D // d ∉ data.keptDel₁}) (hk : k.1 ∈ data.outerArc₁) :
+    (Sum.inl k : {d : D // d ∉ data.keptDel₁} ⊕ Fin 2) ∈
+      (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).faceDartList (Sum.inr 1) := by
+  classical
+  obtain ⟨i, hi⟩ :=
+    ProofsInTheBook.ZinanCh35OuterTraceProof.outerArc₁_mem_bwdArc_canonical
+      hNT data hsep hk
+  have hTA :=
+    ProofsInTheBook.ZinanCh35OuterTraceProof.canonicalTracePhiArc_bwdArc_uncond
+      hNT data hsep
+  have hkArc :
+      k =
+        ⟨(ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).arcDart i,
+          ProofsInTheBook.ZinanCh35OuterTraceProof.bwdArc_arcDart_notMem_keptDel₁
+            hNT data hsep i⟩ := by
+    apply Subtype.ext
+    exact hi
+  have hτ :
+      (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+          (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)).SameCycle
+        ((data.sideAlpha₁ hsep) (side₁Anchor₁ data hsep)) k :=
+    (hTA.mem_iff k).2 ⟨i, hkArc⟩
+  exact (ProofsInTheBook.ZinanCh35OuterTraceProof.canonical_side₁_outer_orbit_mem_iff
+    hNT data hsep (Sum.inl k)).2 (Or.inr ⟨k, rfl, hτ⟩)
+
+theorem canonicalSide₁_boundary_edge_lift_of_outerArc₁
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    {b : D} (hb : b ∈ data.outerArc₁) :
+    ∃ k : {d : D // d ∉ data.keptDel₁}, k.1 = b ∧
+      (canonicalSide₁NT (hNT := hNT) data hsep).outerCycle.IsBoundaryEdge
+        ((data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+          (side₁Anchors_ne data hsep)).dartEdge (Sum.inl k)) := by
+  let k : {d : D // d ∉ data.keptDel₁} :=
+    ⟨b, ProofsInTheBook.ChordSideClose.outerArc_notMem_keptDel₁ data hb.1 hb.2⟩
+  refine ⟨k, rfl, ?_⟩
+  exact canonicalSide₁_boundary_edge_of_faceDartList_mem (hNT := hNT) data hsep
+    (canonicalSide₁_faceDartList_mem_of_outerArc₁ (hNT := hNT) data hsep k hb)
+
+theorem canonicalSide₁_boundary_vertex_parent_boundary
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (hhv : M.head data.dart = v)
+    (W : (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+      (side₁Anchors_ne data hsep)).Vertex)
+    (hW : (canonicalSide₁NT (hNT := hNT) data hsep).outerCycle.IsBoundaryVertex W) :
+    hNT.outerCycle.IsBoundaryVertex
+      (sideVertexToM₁ data hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep) W) := by
+  classical
+  rw [BoundaryCycle.IsBoundaryVertex,
+    (canonicalSide₁NT (hNT := hNT) data hsep).outerCycle.vertices_eq,
+    canonicalSide₁NT_outerCycle_darts (hNT := hNT) data hsep] at hW
+  rw [List.mem_map] at hW
+  obtain ⟨x, hx, hxW⟩ := hW
+  rcases (ProofsInTheBook.ZinanCh35OuterTraceProof.canonical_side₁_outer_orbit_mem_iff
+      hNT data hsep x).1 hx with hroot | ⟨k, hxk, hτ⟩
+  · rw [← hxW, hroot]
+    rw [sideVertexToM₁_tail_inr_one_apply]
+    rw [ProofsInTheBook.ZinanCh35ChordResidue.canonicalAnchor₁_tail data hsep, hhv]
+    exact data.chord.right_boundary
+  · have hTA :=
+      ProofsInTheBook.ZinanCh35OuterTraceProof.canonicalTracePhiArc_bwdArc_uncond
+        hNT data hsep
+    rcases (hTA.mem_iff k).1 hτ with ⟨i, hk⟩
+    rw [← hxW, hxk]
+    rw [sideVertexToM₁_tail_inl_apply]
+    rw [hk]
+    exact boundaryCycle_tail_mem_vertices_of_mem_darts hNT.outerCycle
+      ((ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).boundary i)
 
 /-- If a boundary dart on `outerArc₁` carries the precoloured edge `pq`, then both endpoints of
 `pq` lie in the side-1 region.  The only extra hypothesis is that `pq` is not the chord edge; the

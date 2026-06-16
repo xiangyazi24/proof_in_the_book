@@ -442,3 +442,27 @@ weakened to selected anchors (PHASE A1, codex).
 **Build:** uisai2 isolated `~/repos/pbook-ch35`. Single-file `lake env lean` for leaf edits; for
 STRUCTURE changes use full `lake build <module>` (single-file typechecks against stale olean = false green).
 Helper `/tmp/ch35-codex-build-multi.sh <module>`.
+
+## Chapter 35 — CRITICAL §3.3 vacuity finding (2026-06-16)
+
+**The existing conditional headline `fiveColor_planar_of_recursionResiduals` / `fiveColor_of_branchSuppliers`
+is VACUOUS on the chordless side: `ChordRecursiveDichotomy` is UNINHABITABLE.**
+
+Verified (type-level + no unconditional inhabitant in 44k lines):
+- `ChordRecursiveDichotomy.decide` (ChordSplitNT.lean) is TOTAL over all NT — NO `3 < M.V` guard.
+- Driver `thomassen_aux_chordRecursive` handles M.V=3 via `base_case` and only calls `decide` in the
+  `3 < M.V` branch — but `decide`'s TYPE still demands totality.
+- Base triangle (M.V=3): chordless + satisfies ThomassenLists ⟹ `decide` must return `ChordlessOracle`
+  (left summand `ChordRecursionData` needs a chord the base triangle lacks).
+- `ChordlessOracle` needs `FanSurgeryReconstruction` which REQUIRES `3 < M.V` (PlanarMapFanSurgery:382,
+  FanExistence:439; deletion→NT producer PlanarMapNearTriangulation:384 returns `… ×' (1 ≤ fan.t)`).
+- ⟹ `decide` undefinable at M.V=3 ⟹ `ChordRecursiveDichotomy` uninhabitable ⟹ headline vacuous.
+
+NOT introduced by this session — latent architecture hole (0 sorry but unsatisfiable condition).
+Chord-side geometry (OuterTraceInjOn, both CIs, iso, canonicalChordBranchResidualData) is UNAFFECTED
+(ChordBranchSupplier guarded by `∃chord`, base triangle has none).
+
+**FIX**: add `3 < M.V` (or `¬IsBaseTriangle`) to `ChordRecursiveDichotomy.decide`; thread through
+`chordRecursiveDichotomy_of_suppliers` → `ChordlessBranchSupplier.supply` / `ChordlessOracleResidual.supply`.
+Driver call site is inside its `3 < M.V` branch (has `hV` in scope) → just pass it. Chord side unchanged.
+Only after this guard is the chordless residual satisfiable → PHASE C (DeletedSeamData) becomes meaningful.

@@ -725,6 +725,204 @@ theorem canonical_OuterTraceInjOn_of_alignment
   have htrace := canonical_arcTrace_of_tracePhiArc hNT data hsep A hArcKept hTA
   exact canonical_OuterTraceInjOn_of_arcTrace hNT data hsep A hArcKept hb htrace
 
+/-- A side-1 dart different from the chord dart is a kept side-1 dart. -/
+private lemma keptSet₁_of_side₁_ne_dart
+    (data : hNT.ChordSplitData u v) {d : D}
+    (hside : M.dartFace d ∈ data.side₁) (hne : d ≠ data.dart) :
+    d ∈ data.keptSet₁ := by
+  exact ⟨Or.inl hside, by simpa using hne⟩
+
+/-- The inverse `σ`-power stays in the same vertex star. -/
+private lemma tail_pow_sigma_inv (n : ℕ) (d : D) :
+    M.tail ((M.σ⁻¹ ^ n) d) = M.tail d := by
+  induction n with
+  | zero =>
+      simp
+  | succ n ih =>
+    rw [pow_succ', Equiv.Perm.mul_apply]
+    calc
+      M.tail (M.σ⁻¹ ((M.σ⁻¹ ^ n) d))
+          = M.tail (M.σ (M.σ⁻¹ ((M.σ⁻¹ ^ n) d))) := (M.tail_sigma _).symm
+      _ = M.tail ((M.σ⁻¹ ^ n) d) := by simp
+      _ = M.tail d := ih
+
+/-- The first inverse-`σ` step from `face₁Dart₁` is the deleted chord reverse. -/
+private lemma face₁Dart₁_inv_firstOutside_ge_two
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    2 ≤ Equiv.Perm.DeleteSet.firstOutside M.σ⁻¹ data.keptDel₁ (face₁Dart₁ data) := by
+  by_contra hlt
+  rw [Nat.not_le] at hlt
+  have hpos : 0 < Equiv.Perm.DeleteSet.firstOutside M.σ⁻¹ data.keptDel₁
+      (face₁Dart₁ data) :=
+    Equiv.Perm.DeleteSet.firstOutside_pos M.σ⁻¹ data.keptDel₁ _
+  have heq1 : Equiv.Perm.DeleteSet.firstOutside M.σ⁻¹ data.keptDel₁
+      (face₁Dart₁ data) = 1 := by omega
+  have hnot := Equiv.Perm.DeleteSet.firstOutside_notMem M.σ⁻¹ data.keptDel₁
+    (face₁Dart₁ data)
+  rw [heq1, pow_one] at hnot
+  have hstep : M.σ⁻¹ ((face₁Dart₁ data : {d : D // d ∉ data.keptDel₁}) : D)
+      = M.α data.dart := by
+    show M.σ⁻¹ (M.φ data.dart) = M.α data.dart
+    apply M.σ.injective
+    calc
+      M.σ (M.σ⁻¹ (M.φ data.dart)) = M.φ data.dart :=
+        Equiv.apply_symm_apply M.σ (M.φ data.dart)
+      _ = M.σ (M.α data.dart) := by
+        show M.φ data.dart = (M.σ * M.α) data.dart
+        rfl
+  have hdeleted : M.α data.dart ∈ data.keptDel₁ := by
+    by_contra hαdel
+    exact data.alphaDart_notMem_keptSet₁ hsep ((data.mem_keptDel₁_iff _).1 hαdel)
+  exact hnot (by rwa [hstep])
+
+/-- First endpoint face fact: the kept `σ`-successor of `a₀` is not a side-1 dart. -/
+theorem face_ρa₀_not_side₁
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    M.dartFace ((data.sideSigma₁ (side₁Anchor₀ data hsep)) : D) ∉ data.side₁ := by
+  classical
+  intro htarget
+  set x : {d : D // d ∉ data.keptDel₁} :=
+    data.sideAlpha₁ hsep (face₁Dart₂ data) with hx
+  set n := Equiv.Perm.DeleteSet.firstOutside M.σ data.keptDel₁ x with hn
+  set p : D := (M.σ ^ (n - 1)) x.1 with hp
+  have hn_ge : 2 ≤ n := by
+    rw [hn]
+    exact ProofsInTheBook.ChordBigonWrap.sideSigma₁_sideAlpha₁_firstOutside_ge_two data hsep
+  have hp_deleted : p ∈ data.keptDel₁ := by
+    by_contra hp_not
+    have hmin := Equiv.Perm.DeleteSet.firstOutside_min M.σ data.keptDel₁ x
+      (m := n - 1) (by rw [hn]; omega)
+    exact hmin ⟨by omega, by simpa [p] using hp_not⟩
+  have htarget_coe :
+      ((data.sideSigma₁ (side₁Anchor₀ data hsep)) : D) = (M.σ ^ n) x.1 := by
+    rw [sideSigma₁_side₁Anchor₀ data hsep]
+    change ((data.sideSigma₁ (data.sideAlpha₁ hsep (face₁Dart₂ data))) : D)
+        = (M.σ ^ n) x.1
+    rw [show data.sideSigma₁ = FilteredRotation.filteredRotation M.σ data.keptDel₁ from rfl]
+    rw [FilteredRotation.filteredRotation_apply_coe]
+  have htarget_side_pow : M.dartFace ((M.σ ^ n) x.1) ∈ data.side₁ := by
+    rw [htarget_coe] at htarget
+    exact htarget
+  have hσp : M.σ p = (M.σ ^ n) x.1 := by
+    rw [hp]
+    have hs : n - 1 + 1 = n := by omega
+    rw [← hs, pow_succ']
+    rfl
+  have hαp_side : M.dartFace (M.α p) ∈ data.side₁ := by
+    rw [← ProofsInTheBook.ZinanCh35StarConn.dartFace_sigma_eq_alpha (M := M) p]
+    rw [hσp]
+    exact htarget_side_pow
+  have hp_ne_dart : p ≠ data.dart := by
+    intro hpd
+    have hface₂_side : data.face₂ ∈ data.side₁ := by
+      have : M.dartFace (M.α data.dart) ∈ data.side₁ := by
+        rwa [hpd] at hαp_side
+      simpa [ChordSplitData.face₂] using this
+    exact hsep hface₂_side
+  have hx_coe : (x : D) = M.α (M.φ (M.φ data.dart)) := by
+    rw [hx, data.sideAlpha₁_apply_coe hsep]
+    rfl
+  have hp_tail : M.tail p = M.tail data.dart := by
+    rw [hp, ProofsInTheBook.ChordSigmaContig.tail_pow_sigma, hx_coe,
+      ProofsInTheBook.ChordSigmaContig.tail_alpha_phiSq_dart data]
+  have hp_ne_alpha_dart : p ≠ M.α data.dart := by
+    intro hpα
+    have htail_eq : M.tail data.dart = M.head data.dart := by
+      rw [← hp_tail, hpα, M.tail_alpha]
+    exact ProofsInTheBook.ChordSigmaContig.u_ne_v data htail_eq
+  have hp_kept : p ∈ data.keptSet₁ := by
+    by_cases hp_outer : M.dartFace p = hNT.outerFace
+    · exact ⟨Or.inr ⟨hp_outer, hαp_side⟩, by simpa using hp_ne_dart⟩
+    · have hp_not_boundary : ¬ hNT.outerCycle.IsBoundaryEdge (M.dartEdge p) := by
+        intro hbe
+        rcases data.boundaryEdge_dart_outer hbe with hpout | hαout
+        · exact hp_outer hpout
+        · exact data.side₁_subset_nonouter hαp_side hαout
+      have hp_not_chord : M.dartEdge p ≠ s(u, v) := by
+        intro hch
+        rcases data.chord_edge_darts hch with hpd | hpα
+        · exact hp_ne_dart hpd
+        · exact hp_ne_alpha_dart hpα
+      have hp_side : M.dartFace p ∈ data.side₁ := by
+        have hα_edge_not_boundary :
+            ¬ hNT.outerCycle.IsBoundaryEdge (M.dartEdge (M.α p)) := by
+          intro hbe
+          exact hp_not_boundary (by rwa [M.dartEdge_alpha] at hbe)
+        have hα_edge_not_chord : M.dartEdge (M.α p) ≠ s(u, v) := by
+          intro hch
+          exact hp_not_chord (by rwa [M.dartEdge_alpha] at hch)
+        have := data.alpha_mem_side₁_of_interior (e := M.α p) hαp_side
+          hα_edge_not_boundary hα_edge_not_chord
+        rwa [M.alpha_alpha] at this
+      exact keptSet₁_of_side₁_ne_dart hNT data hp_side hp_ne_dart
+  have hp_not_deleted : p ∉ data.keptDel₁ := (data.mem_keptDel₁_iff p).2 hp_kept
+  exact hp_not_deleted hp_deleted
+
+/-- Second endpoint face fact: the edge-reverse of `a₁` is not a side-1 dart. -/
+theorem face_βa₁_not_side₁
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    M.dartFace ((data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)) : D) ∉ data.side₁ := by
+  classical
+  intro hβside
+  set x : {d : D // d ∉ data.keptDel₁} := face₁Dart₁ data with hx
+  set n := Equiv.Perm.DeleteSet.firstOutside M.σ⁻¹ data.keptDel₁ x with hn
+  set p : D := (M.σ⁻¹ ^ (n - 1)) x.1 with hp
+  have hn_ge : 2 ≤ n := by
+    rw [hn, hx]
+    exact face₁Dart₁_inv_firstOutside_ge_two hNT data hsep
+  have hp_deleted : p ∈ data.keptDel₁ := by
+    by_contra hp_not
+    have hmin := Equiv.Perm.DeleteSet.firstOutside_min M.σ⁻¹ data.keptDel₁ x
+      (m := n - 1) (by rw [hn]; omega)
+    exact hmin ⟨by omega, by simpa [p] using hp_not⟩
+  have ha₁_coe : ((side₁Anchor₁ data hsep) : D) = (M.σ⁻¹ ^ n) x.1 := by
+    rw [side₁Anchor₁]
+    change ((Equiv.Perm.DeleteSet.deleteSetFun M.σ⁻¹ data.keptDel₁
+        (face₁Dart₁ data)) : D) = (M.σ⁻¹ ^ n) x.1
+    rw [Equiv.Perm.DeleteSet.deleteSetFun_coe]
+  have hσa₁ : M.σ ((side₁Anchor₁ data hsep : {d : D // d ∉ data.keptDel₁}) : D) = p := by
+    rw [ha₁_coe, hp]
+    have hs : n - 1 + 1 = n := by omega
+    have hpow : (M.σ⁻¹ ^ n) x.1 = M.σ⁻¹ ((M.σ⁻¹ ^ (n - 1)) x.1) := by
+      rw [← hs, pow_succ']
+      rfl
+    rw [hpow]
+    simp
+  have hβcoe : ((data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)) : D)
+      = M.α ((side₁Anchor₁ data hsep : {d : D // d ∉ data.keptDel₁}) : D) := by
+    rw [data.sideAlpha₁_apply_coe hsep]
+  have hp_side : M.dartFace p ∈ data.side₁ := by
+    rw [← hσa₁]
+    rw [ProofsInTheBook.ZinanCh35StarConn.dartFace_sigma_eq_alpha (M := M)]
+    rwa [← hβcoe]
+  have hp_tail : M.tail p = M.head data.dart := by
+    rw [hp, tail_pow_sigma_inv, hx]
+    exact ProofsInTheBook.ChordSigmaContig.face₁Dart₁_tail data
+  have hp_ne_dart : p ≠ data.dart := by
+    intro hpd
+    have htail_eq : M.tail data.dart = M.head data.dart := by
+      rw [← hp_tail, hpd]
+    exact ProofsInTheBook.ChordSigmaContig.u_ne_v data htail_eq
+  have hp_not_deleted : p ∉ data.keptDel₁ :=
+    (data.mem_keptDel₁_iff p).2 (keptSet₁_of_side₁_ne_dart hNT data hp_side hp_ne_dart)
+  exact hp_not_deleted hp_deleted
+
+/-- Canonical endpoint alignment with the two cyclic-order face facts discharged. -/
+theorem canonicalBwdArcEndpointAlignment_uncond
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    CanonicalBwdArcEndpointAlignment hNT data hsep :=
+  canonicalBwdArcEndpointAlignment_of_faces hNT data hsep
+    (face_ρa₀_not_side₁ hNT data hsep)
+    (face_βa₁_not_side₁ hNT data hsep)
+
+/-- Unconditional `OuterTraceInjOn` for the canonical anchors. -/
+theorem canonical_OuterTraceInjOn_uncond
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    OuterTraceInjOn hNT data hsep
+      (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) (side₁Anchors_ne data hsep) :=
+  canonical_OuterTraceInjOn_of_alignment hNT data hsep
+    (canonicalBwdArcEndpointAlignment_uncond hNT data hsep)
+
 end ProofsInTheBook.ZinanCh35OuterTraceProof
 
 /-! ## Axiom audit -/
@@ -735,3 +933,4 @@ end ProofsInTheBook.ZinanCh35OuterTraceProof
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.sideSigma₁_alpha_arcDart_eq_next
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonicalTracePhiArc_of_steps
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonical_OuterTraceInjOn_of_alignment
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonical_OuterTraceInjOn_uncond

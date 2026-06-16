@@ -203,3 +203,34 @@ SIDE-1 arc — orientation-sensitive; the dartArcOfNonBoundaryEdge(u,v) run may 
 which case build A from data.outerArc₁ instead). This + facts 4/5/6 + orientation is the genuine
 remaining discrete-geometry residue — ChatGPT life2 (focused re-fire, /tmp/ch35-ext-q.txt) computing it.
 ⚠️ NOTE: `OuterDartArc₁` ≠ a `DartArc` (it's the confinement Prop); do not confuse.
+
+---
+
+## ADDENDUM 2026-06-16 (3) — OuterTraceInjOn reduced to ONE residue: endpoint identification
+
+All committed clean-3 (6068e12..6fdb8a7). `ZinanCh35OuterTraceProof.lean` now has the WHOLE
+orbit↔arc machinery + these discharged:
+- **`hArcKept` DISCHARGED UNCONDITIONALLY** via `bwdArc_arcDart_notMem_keptDel₁`: the side-1 u→v arc
+  is `ZinanCh35ArcSide.bwdArc data` (type `DartArc M outerCycle (M.head (M.α dart)) (M.tail (M.α
+  dart))` = (M.tail dart)(M.head dart)); `bwdArc_reverse_face_mem_side₁` (UNCONDITIONAL, ArcSide:517)
+  gives α-reverse face ∈ side₁ → outerArc₁ ⊆ keptSet₁; `bwdArc_dartEdge_ne_chord` gives ≠ dart.
+- **`hnot_beta_a₀` DISCHARGED** (`hnot_beta_a₀_canonical`): β a₀ = face₁Dart₂ = ⟨φ²dart⟩, face =
+  face₁ ≠ outerFace (via dartFace_phi).
+
+REMAINING RESIDUE (one fact, ChatGPT life computing, /tmp/ch35-endpoint-q.txt):
+the ENDPOINT IDENTIFICATION
+- `hfirst : data.sideSigma₁ (side₁Anchor₀) = ⟨bwdArc.arcDart firstIdx, _⟩` (orbit's first inl dart
+  ρ a₀ = arc's first dart), and `hlast : data.sideAlpha₁ (side₁Anchor₁) = ⟨bwdArc.arcDart lastIdx,_⟩`.
+  My `canonical_trace_start/root_eq_arc` PROVE these via tail/head_injective_on_darts GIVEN the
+  boundary-memberships `hρa₀_boundary`/`hβa₁_boundary` ((sideSigma₁ a₀).1, (sideAlpha₁ a₁).1 ∈
+  outerCycle.darts) + orientation. So residue = those two boundary-memberships (NOT circular:
+  they need a structural "first kept-φ step off the chord-triangle lands on the boundary arc" argument).
+- ORIENTATION htu/hhv (M.tail dart=u, M.head dart=v): from the consumer via chordDart_orientation
+  (standard branch); keep as hypotheses. NOTE: bwdArc's type uses (M.tail dart)(M.head dart), so
+  stating the final theorem over those endpoints (not abstract u,v) AVOIDS the DartArc cast — preferred.
+
+Once hρa₀_boundary/hβa₁_boundary land: instantiate `canonical_OuterTraceInjOn_closed` with A = bwdArc
+(hArcKept = bwdArc_arcDart_notMem_keptDel₁, hnot_beta_a₀ = hnot_beta_a₀_canonical) → OuterTraceInjOn
+DONE → wire into `ZinanCh35SideOuterSimple.side₁_outer_simple_canonical` → `contiguousInterval_holds`'s
+outer_simple. (Chapter still also needs hsimple, inner_reps, hd, side-2 mirror, recursion fuel,
+chordless branch — OuterTraceInjOn is the outer_simple keystone of one side.)

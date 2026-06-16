@@ -109,6 +109,7 @@ lemma head_injective_on_darts
   exact M.φ.injective hφeq
 
 variable (hNT : NearTriangulation M) {u v : M.Vertex}
+variable {a b : M.Vertex}
 
 /-- **The canonical `u → v` boundary dart-arc**, built from the chord via
 `dartArcOfNonBoundaryEdge` on the outer cycle.  Its darts are on `hNT.outerCycle.darts`, its tails
@@ -130,7 +131,7 @@ theorem canonicalOuterArc_len_ge_two
 
 /-- Kept copy of an arc dart. -/
 def arcK (data : hNT.ChordSplitData u v)
-    (A : DartArc M hNT.outerCycle u v)
+    (A : DartArc M hNT.outerCycle a b)
     (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁) (i : Fin A.len) :
     {d : D // d ∉ data.keptDel₁} :=
   ⟨A.arcDart i, hArcKept i⟩
@@ -142,7 +143,7 @@ restricts to `M.α`; `M.φ = M.σ ∘ M.α`; the next arc dart is kept, so `filt
 `M.σ`. -/
 lemma sideSigma₁_alpha_arcDart_eq_next
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
-    (A : DartArc M hNT.outerCycle u v)
+    (A : DartArc M hNT.outerCycle a b)
     (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
     (i : Fin A.len) (hi : (i : ℕ) + 1 < A.len) :
     data.sideSigma₁ (data.sideAlpha₁ hsep (arcK hNT data A hArcKept i))
@@ -169,7 +170,7 @@ chord root `inr 1` or an `inl`-dart whose underlying dart is one of the boundary
 darts.  The `inl`-part of the orbit IS the `u → v` boundary arc. -/
 def CanonicalSide₁OuterArcTrace
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
-    (A : DartArc M hNT.outerCycle u v)
+    (A : DartArc M hNT.outerCycle a b)
     (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁) : Prop :=
   ∀ x, x ∈ (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
         (side₁Anchors_ne data hsep)).faceDartList (Sum.inr 1) →
@@ -181,16 +182,16 @@ each `inl`-dart carries an arc tail.  `v` is not an arc tail (`A.head_last_ne_ta
 arc cannot collide; two arc darts with equal tail are equal (`A.tail_nodup`). -/
 theorem canonical_OuterTraceInjOn_of_arcTrace
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
-    (A : DartArc M hNT.outerCycle u v)
+    (A : DartArc M hNT.outerCycle a b)
     (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
-    (hhv : M.head data.dart = v)
+    (hb : M.head data.dart = b)
     (htrace : CanonicalSide₁OuterArcTrace hNT data hsep A hArcKept) :
     OuterTraceInjOn hNT data hsep
       (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) (side₁Anchors_ne data hsep) := by
-  -- The root's projected tail is `v`.
+  -- The root's projected tail is `b` (the arc terminal).
   have hroot : M.tail (proj (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
-      (Sum.inr 1)).1 = v := by
-    rw [proj_inr_one, canonicalAnchor₁_tail data hsep, hhv]
+      (Sum.inr 1)).1 = b := by
+    rw [proj_inr_one, canonicalAnchor₁_tail data hsep, hb]
   intro x hx y hy htail
   rcases htrace x hx with hxr | ⟨i, hxi⟩ <;> rcases htrace y hy with hyr | ⟨j, hyj⟩
   · -- root, root
@@ -281,7 +282,7 @@ boundary dart-arc `A`** (the genuine remaining bridge — proved separately).  P
 so the classifier follows mechanically. -/
 structure CanonicalTracePhiArc
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
-    (A : DartArc M hNT.outerCycle u v)
+    (A : DartArc M hNT.outerCycle a b)
     (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁) : Prop where
   mem_iff : ∀ k : {d : D // d ∉ data.keptDel₁},
     (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
@@ -294,7 +295,7 @@ structure CanonicalTracePhiArc
 `inl k`; in the latter case `k`'s `tracePhi`-membership pins it to an arc dart. -/
 theorem canonical_arcTrace_of_tracePhiArc
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
-    (A : DartArc M hNT.outerCycle u v)
+    (A : DartArc M hNT.outerCycle a b)
     (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
     (hTA : CanonicalTracePhiArc hNT data hsep A hArcKept) :
     CanonicalSide₁OuterArcTrace hNT data hsep A hArcKept := by
@@ -308,7 +309,7 @@ theorem canonical_arcTrace_of_tracePhiArc
 
 /-- `arcK` is injective (its underlying darts have distinct tails). -/
 lemma arcK_injective (data : hNT.ChordSplitData u v)
-    (A : DartArc M hNT.outerCycle u v)
+    (A : DartArc M hNT.outerCycle a b)
     (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
     {i j : Fin A.len} (h : arcK hNT data A hArcKept i = arcK hNT data A hArcKept j) :
     i = j := by
@@ -322,7 +323,7 @@ lemma arcK_injective (data : hNT.ChordSplitData u v)
 chord-predecessor exceptions `β a₀, β a₁` are avoided) + the kept-σ walk. -/
 lemma tracePhi_arc_step
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
-    (A : DartArc M hNT.outerCycle u v)
+    (A : DartArc M hNT.outerCycle a b)
     (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
     (hlast : data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)
       = arcK hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩)
@@ -360,7 +361,7 @@ lemma tracePhi_arc_step
 /-- **`tracePhi` wraps from the last arc dart back to the first** (the splice step `β a₁ ↦ ρ a₀`). -/
 lemma tracePhi_arc_wrap
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
-    (A : DartArc M hNT.outerCycle u v)
+    (A : DartArc M hNT.outerCycle a b)
     (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
     (hfirst : data.sideSigma₁ (side₁Anchor₀ data hsep)
       = arcK hNT data A hArcKept ⟨0, A.len_pos⟩)
@@ -377,7 +378,7 @@ lemma tracePhi_arc_wrap
 /-- From the last arc dart, every `tracePhi`-iterate stays within the arc. -/
 lemma tracePhi_iterate_last_mem_arc
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
-    (A : DartArc M hNT.outerCycle u v)
+    (A : DartArc M hNT.outerCycle a b)
     (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
     (hstep : ∀ i : Fin A.len, ∀ hi : (i : ℕ) + 1 < A.len,
       (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
@@ -412,7 +413,7 @@ lemma tracePhi_iterate_last_mem_arc
 /-- Every arc dart is `tracePhi`-SameCycle to the last arc dart (walk first→i, wrap last→first). -/
 lemma tracePhi_sameCycle_last_arc
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
-    (A : DartArc M hNT.outerCycle u v)
+    (A : DartArc M hNT.outerCycle a b)
     (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
     (hstep : ∀ i : Fin A.len, ∀ hi : (i : ℕ) + 1 < A.len,
       (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
@@ -457,7 +458,7 @@ the two endpoint alignments, and the `β a₀`-exclusion, the `tracePhi`-orbit o
 arc darts. -/
 theorem canonicalTracePhiArc_of_steps
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
-    (A : DartArc M hNT.outerCycle u v)
+    (A : DartArc M hNT.outerCycle a b)
     (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
     (hfirst : data.sideSigma₁ (side₁Anchor₀ data hsep)
       = arcK hNT data A hArcKept ⟨0, A.len_pos⟩)
@@ -497,7 +498,7 @@ dart whose endpoints lie in `sideRegion₁` has its `α`-reverse face in `side�
 (the chord is not a boundary edge).  Reduces `hArcKept` to the vertex-level side-1 identification. -/
 lemma arcDart_notMem_keptDel₁_of_sideRegion
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
-    (A : DartArc M hNT.outerCycle u v) (i : Fin A.len)
+    (A : DartArc M hNT.outerCycle a b) (i : Fin A.len)
     (htail : M.tail (A.arcDart i) ∈ sideRegion₁ data)
     (hhead : M.head (A.arcDart i) ∈ sideRegion₁ data) :
     A.arcDart i ∉ data.keptDel₁ := by
@@ -527,7 +528,7 @@ lemma arcDart_notMem_keptDel₁_of_sideRegion
 chord-triangle dart whose face is `face₁ ≠ outerFace`; so it is none of the boundary arc darts. -/
 lemma hnot_beta_a₀_canonical
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
-    (A : DartArc M hNT.outerCycle u v)
+    (A : DartArc M hNT.outerCycle a b)
     (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
     (i : Fin A.len) :
     arcK hNT data A hArcKept i ≠ data.sideAlpha₁ hsep (side₁Anchor₀ data hsep) := by
@@ -631,9 +632,9 @@ lemma sideAlpha₁_anchor₁_eq_bwdArc_last
 Both have tail `u`; `tail_injective_on_darts` pins them equal. -/
 lemma canonical_trace_start_eq_first_arc
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
-    (A : DartArc M hNT.outerCycle u v)
+    (A : DartArc M hNT.outerCycle a b)
     (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
-    (htu : M.tail data.dart = u)
+    (ha : M.tail data.dart = a)
     (hρa₀_boundary : ((data.sideSigma₁ (side₁Anchor₀ data hsep)) : D) ∈ hNT.outerCycle.darts) :
     data.sideSigma₁ (side₁Anchor₀ data hsep) = arcK hNT data A hArcKept ⟨0, A.len_pos⟩ := by
   apply Subtype.ext
@@ -644,16 +645,16 @@ lemma canonical_trace_start_eq_first_arc
     rw [show data.sideSigma₁ = FilteredRotation.filteredRotation M.σ data.keptDel₁ from rfl,
       ProofsInTheBook.ChordSigmaContig.tail_filteredRotation data.keptDel₁
         (side₁Anchor₀ data hsep)]
-  rw [hfix, canonicalAnchor₀_tail data hsep, htu]
+  rw [hfix, canonicalAnchor₀_tail data hsep, ha]
   exact A.tail_first.symm
 
 /-- **Last endpoint:** `β a₁` (the α-partner of the canonical anchor `a₁`) is the last arc dart.
 Both have head `v`; `head_injective_on_darts` pins them equal. -/
 lemma canonical_trace_root_eq_last_arc
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
-    (A : DartArc M hNT.outerCycle u v)
+    (A : DartArc M hNT.outerCycle a b)
     (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
-    (hhv : M.head data.dart = v)
+    (hb : M.head data.dart = b)
     (hβa₁_boundary :
       ((data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)) : D) ∈ hNT.outerCycle.darts) :
     data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)
@@ -664,32 +665,33 @@ lemma canonical_trace_root_eq_last_arc
   have hαcoe : ((data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)) : D)
       = M.α (side₁Anchor₁ data hsep).1 := by
     simpa using data.sideAlpha₁_apply_coe hsep (side₁Anchor₁ data hsep)
-  rw [hαcoe, M.head_alpha, canonicalAnchor₁_tail data hsep, hhv]
+  rw [hαcoe, M.head_alpha, canonicalAnchor₁_tail data hsep, hb]
   exact A.head_last.symm
 
 /-- **`OuterTraceInjOn` for the canonical anchors, reduced to the genuine external facts.**  Ties
 the whole chain: endpoint alignment → `canonicalTracePhiArc_of_steps` → classifier → reduction.
 Remaining hypotheses are the honest discrete-geometry residue: the chord orientation, the arc's
 side-1-keptness, the two anchor boundary-membership facts, and the `β a₀`-exclusion. -/
-theorem canonical_OuterTraceInjOn_closed
+theorem canonical_OuterTraceInjOn_of_alignment
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
-    (htu : M.tail data.dart = u) (hhv : M.head data.dart = v)
-    (hArcKept : ∀ i : Fin (canonicalOuterArc hNT data hsep).len,
-      (canonicalOuterArc hNT data hsep).arcDart i ∉ data.keptDel₁)
-    (hρa₀_boundary : ((data.sideSigma₁ (side₁Anchor₀ data hsep)) : D) ∈ hNT.outerCycle.darts)
-    (hβa₁_boundary :
-      ((data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)) : D) ∈ hNT.outerCycle.darts)
-    (hnot_beta_a₀ : ∀ i : Fin (canonicalOuterArc hNT data hsep).len,
-      arcK hNT data (canonicalOuterArc hNT data hsep) hArcKept i
-        ≠ data.sideAlpha₁ hsep (side₁Anchor₀ data hsep)) :
+    (H : CanonicalBwdArcEndpointAlignment hNT data hsep) :
     OuterTraceInjOn hNT data hsep
       (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) (side₁Anchors_ne data hsep) := by
-  set A := canonicalOuterArc hNT data hsep with hA
-  have hfirst := canonical_trace_start_eq_first_arc hNT data hsep A hArcKept htu hρa₀_boundary
-  have hlast := canonical_trace_root_eq_last_arc hNT data hsep A hArcKept hhv hβa₁_boundary
-  have hTA := canonicalTracePhiArc_of_steps hNT data hsep A hArcKept hfirst hlast hnot_beta_a₀
+  set A := ProofsInTheBook.ZinanCh35ArcSide.bwdArc data with hA
+  -- A : DartArc M outerCycle (M.head (M.α data.dart)) (M.tail (M.α data.dart))
+  have hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁ :=
+    fun i => bwdArc_arcDart_notMem_keptDel₁ hNT data hsep i
+  -- endpoint relations (no orientation needed; bwdArc's endpoints are the chord dart's tail/head)
+  have ha : M.tail data.dart = M.head (M.α data.dart) := (M.head_alpha data.dart).symm
+  have hb : M.head data.dart = M.tail (M.α data.dart) := (M.tail_alpha data.dart).symm
+  have hfirst := canonical_trace_start_eq_first_arc hNT data hsep A hArcKept ha H.ρa₀_boundary
+  have hlast := canonical_trace_root_eq_last_arc hNT data hsep A hArcKept hb H.βa₁_boundary
+  have hnot : ∀ i : Fin A.len,
+      arcK hNT data A hArcKept i ≠ data.sideAlpha₁ hsep (side₁Anchor₀ data hsep) :=
+    fun i => hnot_beta_a₀_canonical hNT data hsep A hArcKept i
+  have hTA := canonicalTracePhiArc_of_steps hNT data hsep A hArcKept hfirst hlast hnot
   have htrace := canonical_arcTrace_of_tracePhiArc hNT data hsep A hArcKept hTA
-  exact canonical_OuterTraceInjOn_of_arcTrace hNT data hsep A hArcKept hhv htrace
+  exact canonical_OuterTraceInjOn_of_arcTrace hNT data hsep A hArcKept hb htrace
 
 end ProofsInTheBook.ZinanCh35OuterTraceProof
 
@@ -700,4 +702,4 @@ end ProofsInTheBook.ZinanCh35OuterTraceProof
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonical_arcTrace_of_tracePhiArc
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.sideSigma₁_alpha_arcDart_eq_next
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonicalTracePhiArc_of_steps
-#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonical_OuterTraceInjOn_closed
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonical_OuterTraceInjOn_of_alignment

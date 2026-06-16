@@ -301,6 +301,190 @@ theorem canonical_arcTrace_of_tracePhiArc
   · rcases (hTA.mem_iff k).1 hτ with ⟨i, hk⟩
     exact Or.inr ⟨i, by rw [hxk, hk]⟩
 
+/-! ## Assembly of `CanonicalTracePhiArc` from the walk + endpoint facts -/
+
+/-- `arcK` is injective (its underlying darts have distinct tails). -/
+lemma arcK_injective (data : hNT.ChordSplitData u v)
+    (A : DartArc M hNT.outerCycle u v)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
+    {i j : Fin A.len} (h : arcK hNT data A hArcKept i = arcK hNT data A hArcKept j) :
+    i = j := by
+  apply A.tail_nodup
+  show M.tail (A.arcDart i) = M.tail (A.arcDart j)
+  have hd : A.arcDart i = A.arcDart j := by
+    have := congrArg Subtype.val h; simpa [arcK] using this
+  rw [hd]
+
+/-- **`tracePhi` walks one step along the arc** (interior step).  Uses `tracePhi_other` (the two
+chord-predecessor exceptions `β a₀, β a₁` are avoided) + the kept-σ walk. -/
+lemma tracePhi_arc_step
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle u v)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
+    (hlast : data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)
+      = arcK hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩)
+    (hnot_beta_a₀ : ∀ i : Fin A.len,
+      arcK hNT data A hArcKept i ≠ data.sideAlpha₁ hsep (side₁Anchor₀ data hsep))
+    (i : Fin A.len) (hi : (i : ℕ) + 1 < A.len) :
+    (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+        (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep))
+        (arcK hNT data A hArcKept i)
+      = arcK hNT data A hArcKept ⟨i + 1, hi⟩ := by
+  classical
+  have hβinv : data.sideAlpha₁ hsep * data.sideAlpha₁ hsep = 1 := data.sideAlpha₁_involutive hsep
+  have hinv2 : ∀ x, data.sideAlpha₁ hsep (data.sideAlpha₁ hsep x) = x := by
+    intro x; rw [← Equiv.Perm.mul_apply, hβinv, Equiv.Perm.one_apply]
+  -- β (arcK i) ≠ ρ-anchor-predecessors a₀, a₁
+  have hnot0 : data.sideAlpha₁ hsep (arcK hNT data A hArcKept i) ≠ side₁Anchor₀ data hsep := by
+    intro h
+    apply hnot_beta_a₀ i
+    have h2 := congrArg (data.sideAlpha₁ hsep) h
+    rw [hinv2] at h2
+    exact h2
+  have hnot1 : data.sideAlpha₁ hsep (arcK hNT data A hArcKept i) ≠ side₁Anchor₁ data hsep := by
+    intro h
+    have h2 := congrArg (data.sideAlpha₁ hsep) h
+    rw [hinv2] at h2
+    rw [hlast] at h2
+    have hieq : i = (⟨A.len - 1, by have := A.len_pos; omega⟩ : Fin A.len) :=
+      arcK_injective hNT data A hArcKept h2
+    have hi2 : (i : ℕ) = A.len - 1 := by rw [hieq]
+    omega
+  rw [tracePhi_other (data.sideAlpha₁ hsep) data.sideSigma₁ (side₁Anchor₀ data hsep)
+    (side₁Anchor₁ data hsep) hnot0 hnot1]
+  exact sideSigma₁_alpha_arcDart_eq_next hNT data hsep A hArcKept i hi
+
+/-- **`tracePhi` wraps from the last arc dart back to the first** (the splice step `β a₁ ↦ ρ a₀`). -/
+lemma tracePhi_arc_wrap
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle u v)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
+    (hfirst : data.sideSigma₁ (side₁Anchor₀ data hsep)
+      = arcK hNT data A hArcKept ⟨0, A.len_pos⟩)
+    (hlast : data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)
+      = arcK hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩) :
+    (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+        (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep))
+        (arcK hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩)
+      = arcK hNT data A hArcKept ⟨0, A.len_pos⟩ := by
+  rw [← hlast, tracePhi_b1 (data.sideAlpha₁ hsep) data.sideSigma₁
+    (data.sideAlpha₁_involutive hsep) (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)]
+  exact hfirst
+
+/-- From the last arc dart, every `tracePhi`-iterate stays within the arc. -/
+lemma tracePhi_iterate_last_mem_arc
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle u v)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
+    (hstep : ∀ i : Fin A.len, ∀ hi : (i : ℕ) + 1 < A.len,
+      (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+          (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep))
+          (arcK hNT data A hArcKept i) = arcK hNT data A hArcKept ⟨i + 1, hi⟩)
+    (hwrap : (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+        (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep))
+        (arcK hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩)
+      = arcK hNT data A hArcKept ⟨0, A.len_pos⟩)
+    (n : ℕ) :
+    ∃ i : Fin A.len,
+      (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+          (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep))^[n]
+        (arcK hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩)
+        = arcK hNT data A hArcKept i := by
+  classical
+  induction n with
+  | zero => exact ⟨⟨A.len - 1, by have := A.len_pos; omega⟩, rfl⟩
+  | succ n ih =>
+      rcases ih with ⟨i, hi_eq⟩
+      rw [Function.iterate_succ_apply', hi_eq]
+      by_cases hlt : (i : ℕ) + 1 < A.len
+      · exact ⟨⟨i + 1, hlt⟩, hstep i hlt⟩
+      · have hi_last : i = (⟨A.len - 1, by have := A.len_pos; omega⟩ : Fin A.len) := by
+          apply Fin.ext
+          show (i : ℕ) = A.len - 1
+          have h1 := i.isLt
+          have h2 : ¬ ((i : ℕ) + 1 < A.len) := hlt
+          omega
+        rw [hi_last]; exact ⟨⟨0, A.len_pos⟩, hwrap⟩
+
+/-- Every arc dart is `tracePhi`-SameCycle to the last arc dart (walk first→i, wrap last→first). -/
+lemma tracePhi_sameCycle_last_arc
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle u v)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
+    (hstep : ∀ i : Fin A.len, ∀ hi : (i : ℕ) + 1 < A.len,
+      (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+          (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep))
+          (arcK hNT data A hArcKept i) = arcK hNT data A hArcKept ⟨i + 1, hi⟩)
+    (hwrap : (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+        (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep))
+        (arcK hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩)
+      = arcK hNT data A hArcKept ⟨0, A.len_pos⟩)
+    (i : Fin A.len) :
+    (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+        (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)).SameCycle
+      (arcK hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩)
+      (arcK hNT data A hArcKept i) := by
+  classical
+  set τ := tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+    (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) with hτdef
+  -- first reachable from last in one step (wrap)
+  have hlast_first : τ.SameCycle (arcK hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩)
+      (arcK hNT data A hArcKept ⟨0, A.len_pos⟩) := ⟨1, by rw [zpow_one]; exact hwrap⟩
+  -- from first, reach index n by walking n steps
+  have hfrom_first : ∀ n : ℕ, ∀ hn : n < A.len,
+      τ.SameCycle (arcK hNT data A hArcKept ⟨0, A.len_pos⟩) (arcK hNT data A hArcKept ⟨n, hn⟩) := by
+    intro n
+    induction n with
+    | zero => intro hn; exact Equiv.Perm.SameCycle.refl _ _
+    | succ m ih =>
+        intro hn
+        have hm : m < A.len := by omega
+        have hmstep : (m : ℕ) + 1 < A.len := by
+          simpa using hn
+        refine (ih hm).trans ?_
+        refine ⟨1, ?_⟩
+        rw [zpow_one]
+        have := hstep ⟨m, hm⟩ (by simpa using hmstep)
+        -- arcK ⟨m,hm⟩ → arcK ⟨m+1, _⟩ = arcK ⟨n, hn⟩
+        simpa using this
+  exact hlast_first.trans (hfrom_first i.1 i.2)
+
+/-- **`CanonicalTracePhiArc` from the step/wrap/endpoint data.**  Given the interior step, the wrap,
+the two endpoint alignments, and the `β a₀`-exclusion, the `tracePhi`-orbit of `β a₁` is exactly the
+arc darts. -/
+theorem canonicalTracePhiArc_of_steps
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle u v)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
+    (hfirst : data.sideSigma₁ (side₁Anchor₀ data hsep)
+      = arcK hNT data A hArcKept ⟨0, A.len_pos⟩)
+    (hlast : data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)
+      = arcK hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩)
+    (hnot_beta_a₀ : ∀ i : Fin A.len,
+      arcK hNT data A hArcKept i ≠ data.sideAlpha₁ hsep (side₁Anchor₀ data hsep)) :
+    CanonicalTracePhiArc hNT data hsep A hArcKept := by
+  classical
+  have hstep : ∀ i : Fin A.len, ∀ hi : (i : ℕ) + 1 < A.len,
+      (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+          (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep))
+          (arcK hNT data A hArcKept i) = arcK hNT data A hArcKept ⟨i + 1, hi⟩ :=
+    fun i hi => tracePhi_arc_step hNT data hsep A hArcKept hlast hnot_beta_a₀ i hi
+  have hwrap := tracePhi_arc_wrap hNT data hsep A hArcKept hfirst hlast
+  refine ⟨fun k => ?_⟩
+  constructor
+  · intro hk
+    obtain ⟨n, hn⟩ := hk.exists_nat_pow_eq
+    have hn' : (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+        (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep))^[n]
+        (arcK hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩) = k := by
+      rw [Equiv.Perm.coe_pow] at hn
+      rw [← hlast]; exact hn
+    obtain ⟨i, hi⟩ := tracePhi_iterate_last_mem_arc hNT data hsep A hArcKept hstep hwrap n
+    exact ⟨i, hn'.symm.trans hi⟩
+  · rintro ⟨i, rfl⟩
+    have hsc := tracePhi_sameCycle_last_arc hNT data hsep A hArcKept hstep hwrap i
+    rw [hlast]; exact hsc
+
 end ProofsInTheBook.ZinanCh35OuterTraceProof
 
 /-! ## Axiom audit -/

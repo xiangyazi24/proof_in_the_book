@@ -392,7 +392,9 @@ import ProofsInTheBook.ZinanCh35Final
 import ProofsInTheBook.ZinanCh35BoundaryAssembler
 import ProofsInTheBook.ZinanCh35ArcSplitUniversal
 import ProofsInTheBook.ZinanCh35Side2Anchors
+import ProofsInTheBook.ZinanCh35OuterV0Consecutive
 import ProofsInTheBook.ZinanCh35Contiguous
+import ProofsInTheBook.ZinanCh35SideOuterSimple
 import ProofsInTheBook.ZinanCh35DeletedBoundary
 import ProofsInTheBook.ZinanCh36Ears
 import ProofsInTheBook.ZinanFFCT87

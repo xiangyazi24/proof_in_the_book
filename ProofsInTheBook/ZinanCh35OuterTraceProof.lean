@@ -1,6 +1,7 @@
 import ProofsInTheBook.ZinanCh35SideOuterSimple
 import ProofsInTheBook.ZinanCh35ChordResidue
 import ProofsInTheBook.ZinanCh35ArcDartRun
+import ProofsInTheBook.ZinanCh35EdgeCoreFinal
 
 /-!
 # Chapter 35 — discharging `OuterTraceInjOn` via the orbit↔boundary-arc VERTEX correspondence
@@ -42,6 +43,7 @@ open ProofsInTheBook.ChordSplitEuler
 open ProofsInTheBook.ZinanCh35SideAnchors
 open ProofsInTheBook.ZinanCh35ChordResidue
 open ProofsInTheBook.ZinanCh35SideOuterSimple
+open ProofsInTheBook.ChordAnchor
 open ProofsInTheBook.ChordFaceCount
 open ProofsInTheBook.ZinanCh35OuterTrace
 
@@ -484,6 +486,69 @@ theorem canonicalTracePhiArc_of_steps
   · rintro ⟨i, rfl⟩
     have hsc := tracePhi_sameCycle_last_arc hNT data hsep A hArcKept hstep hwrap i
     rw [hlast]; exact hsc
+
+/-! ## hArcKept reduction (via the unconditional `outerDartArc₁_uncond`) + `hnot_beta_a₀` -/
+
+open ProofsInTheBook.ChordReconClose in
+/-- **`hArcKept` per arc dart, from side-1 region membership of its endpoints.**  A boundary arc
+dart whose endpoints lie in `sideRegion₁` has its `α`-reverse face in `side₁` (the unconditional
+`outerDartArc₁_uncond` confinement), so it lies in `outerArc₁ ⊆ keptSet₁`; it is not the chord dart
+(the chord is not a boundary edge).  Reduces `hArcKept` to the vertex-level side-1 identification. -/
+lemma arcDart_notMem_keptDel₁_of_sideRegion
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle u v) (i : Fin A.len)
+    (htail : M.tail (A.arcDart i) ∈ sideRegion₁ data)
+    (hhead : M.head (A.arcDart i) ∈ sideRegion₁ data) :
+    A.arcDart i ∉ data.keptDel₁ := by
+  classical
+  have hbmem : A.arcDart i ∈ hNT.outerCycle.darts := A.boundary i
+  have hface : M.dartFace (A.arcDart i) = hNT.outerFace :=
+    (hNT.outerCycle.mem_darts_iff (A.arcDart i)).mp hbmem
+  have hedge : M.dartEdge (A.arcDart i) ≠ s(u, v) := by
+    intro he
+    apply data.chord.not_boundary_edge
+    show s(u, v) ∈ hNT.outerCycle.edges
+    rw [← he, hNT.outerCycle.edges_eq]
+    exact List.mem_map_of_mem hbmem
+  have hne : A.arcDart i ≠ data.dart := by
+    intro he
+    have hno := hNT.chordDart_not_outer data.chord
+    rw [he] at hface
+    exact hno hface
+  have hconf : M.dartFace (M.α (A.arcDart i)) ∈ data.side₁ :=
+    ProofsInTheBook.ZinanCh35EdgeCoreFinal.outerDartArc₁_uncond data hsep hedge hface htail hhead
+  rw [data.mem_keptDel₁_iff]
+  refine ⟨Or.inr ?_, ?_⟩
+  · exact ⟨hface, hconf⟩
+  · simpa using hne
+
+/-- **`hnot_beta_a₀`** (self-contained): `β a₀ = sideAlpha₁ (side₁Anchor₀) = face₁Dart₂`, an inner
+chord-triangle dart whose face is `face₁ ≠ outerFace`; so it is none of the boundary arc darts. -/
+lemma hnot_beta_a₀_canonical
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle u v)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₁)
+    (i : Fin A.len) :
+    arcK hNT data A hArcKept i ≠ data.sideAlpha₁ hsep (side₁Anchor₀ data hsep) := by
+  intro h
+  have ha₀ : side₁Anchor₀ data hsep = data.sideAlpha₁ hsep (face₁Dart₂ data) := by
+    apply data.sideSigma₁.injective
+    rw [sideSigma₁_side₁Anchor₀ data hsep]
+    rfl
+  have hinv2 : ∀ x, data.sideAlpha₁ hsep (data.sideAlpha₁ hsep x) = x := by
+    intro x
+    rw [← Equiv.Perm.mul_apply, data.sideAlpha₁_involutive hsep, Equiv.Perm.one_apply]
+  have hβa₀ : data.sideAlpha₁ hsep (side₁Anchor₀ data hsep) = face₁Dart₂ data := by
+    rw [ha₀]; exact hinv2 _
+  -- arcK i = β a₀ (from h), so the arc dart's face = the inner chord face₁, but it is outerFace.
+  have houter : M.dartFace ((data.sideAlpha₁ hsep (side₁Anchor₀ data hsep)) : D) = hNT.outerFace := by
+    rw [← congrArg Subtype.val h]
+    exact (hNT.outerCycle.mem_darts_iff _).mp (A.boundary i)
+  have hinner : M.dartFace ((data.sideAlpha₁ hsep (side₁Anchor₀ data hsep)) : D) = data.face₁ := by
+    rw [hβa₀]
+    show M.dartFace (M.φ (M.φ data.dart)) = M.dartFace data.dart
+    rw [M.dartFace_phi, M.dartFace_phi]
+  exact data.face₁_not_outer (hinner.symm.trans houter)
 
 /-! ## Endpoint alignment + the full tie-together -/
 

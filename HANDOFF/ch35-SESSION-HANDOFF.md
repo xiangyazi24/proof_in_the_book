@@ -308,3 +308,28 @@ ZinanCh35StarRotation/StarConn but needs assembly):
   - Sub-pieces: (a) dartFace(α(φ²dart)) ∈ side₁ via ChordSplitAdj across the non-chord w-u edge +
     side₁_closed; (b) the deleted σ-run from the chord to the outer dart is contiguous; (c) the first
     kept σ-iterate is the outer dart (face outerFace). (b)+(c) are the genuine remaining work.
+
+---
+
+## ADDENDUM 2026-06-16 (7) — OuterTraceInjOn + side₁ outer_simple CLOSED UNCONDITIONALLY (clean-3)
+
+Commits 5e95f7b, <this>. `ZinanCh35OuterTraceProof.lean`:
+- `canonical_OuterTraceInjOn_uncond` : OuterTraceInjOn (canonical anchors), UNCONDITIONAL, clean-3.
+- `side₁_outer_simple_canonical_uncond` : the side-1 `outer_simple` keystone (the `(faceDartList(inr1).map
+  tail).Nodup` field consumed by `ZinanCh35Contiguous.contiguousInterval_holds`), UNCONDITIONAL, clean-3.
+
+The two σ-cyclic-order face-facts (F1/F2) were BUILT BY CODEX (gpt-5.5 high) and §3.3-audited by Opus
+(fresh build clean-3 transitive; no forbidden tokens; all cited lemmas pre-existing; statement faithful).
+CORRECTION to addenda (5),(6): the residue WAS closable from existing infra — the key
+`ChordBigonWrap.sideSigma₁_sideAlpha₁_firstOutside_ge_two` ("filteredRotation skips the chord seam")
+already existed; my/ChatGPT's "needs new multi-session development" was too pessimistic. Proof: assume
+dartFace(keptPhi face₁Dart₂) ∈ side₁ → the last DELETED dart p before the filteredRotation result is a
+KEPT side-1 dart (via dartFace_sigma_eq_alpha + alpha_mem_side₁_of_interior, p≠chord) → contradicts
+p ∈ keptDel₁. F2 = σ⁻¹ mirror via face₁Dart₁.
+
+REMAINING for the FULL chapter (Ch35 planar→FiveColorReducible): contiguousInterval_holds still needs
+`hsimple` (sideMap₁.IsSimpleGraph), `inner_reps` (InnerRepsAvoidBoundary), `hd`
+(Side₁ChordIncidenceNonDegenerate); plus the side-2 mirror (contiguousInterval₂_holds inputs), the
+recursion fuel (ChordRecursionInputSupplier), and the chordless branch (ChordlessOracleResidual). Next
+targets: hsimple, hd (likely small/combinatorial), then inner_reps, then the side-2 mirror of this whole
+OuterTraceInjOn development.

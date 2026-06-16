@@ -88,3 +88,43 @@ See `HANDOFF/ch35-residual-worklist.md` for the full map. Summary of genuine res
   arcSplit vacuity AND the dart-level `OrbitProjOnOuterArc` over-strength this way); independent
   verification of subagent reductions is mandatory; never leave clean-3 conditionals on false premises
   unmarked. The repo's history shows over-claim is the recurring failure mode — label honestly.
+
+---
+
+## ADDENDUM 2026-06-16 — broken HEAD fixed + OuterTraceInjOn REDUCTION landed
+
+**Build state corrected.** HEAD `bb29ffe` did NOT compile: `ZinanCh35SideOuterSimple.lean` had a
+syntax error (commit `be7fbb7` left orphan docstring prose outside any comment, before
+`def OrbitProjOnOuterArc`). The "full build GREEN ~8878 jobs" claim above was STALE (predated
+`be7fbb7`). FIXED + verified (full 8878-job build on uisai2, isolated clone `~/repos/pbook-ch35`,
+0 errors, file clean-3) + pushed: commit `6f3058d`.
+
+**Isolated build loop:** `uisai2:~/repos/pbook-ch35` (hardlinked mathlib packages from the main
+tree + `lake exe cache get`). Does NOT touch the other session's Ch13 WIP in `~/repos/proof_in_the_book`.
+Single-file check: `cd ~/repos/pbook-ch35 && lake env lean ProofsInTheBook/<F>.lean` (deps' oleans built).
+
+**OuterTraceInjOn REDUCTION (commit `55f675d`, clean-3, verified):** new file
+`ZinanCh35OuterTraceProof.lean`. `canonical_OuterTraceInjOn_of_arcTrace` proves OuterTraceInjOn
+(canonical anchors) from ONE sharply-isolated bridge:
+
+  `CanonicalSide₁OuterArcTrace data hsep A hArcKept` — the ordered orbit↔arc classifier:
+  every x ∈ S.faceDartList(inr 1) is `inr 1` OR `inl ⟨A.arcDart i, _⟩`, where
+  `A : DartArc M hNT.outerCycle u v` is the **u→v** boundary dart-arc.
+
+Why u→v (NOT the convenience `boundaryArcDartRun v u`): `A.head_last_ne_tail : ∀ i, v ≠ M.tail(A.arcDart i)`
+— `v` (carried by root `inr 1`) is not an arc tail, so root↔arc cannot collide. The v→u run's first
+tail IS v ⟹ would collide. This is the §3.3-critical orientation fact. `A.tail_nodup` closes arc↔arc.
+
+**REMAINING (the genuine discrete-Jordan bridge — ChatGPT `life` working on it, query
+`/tmp/ch35-classifier-q.txt`):**
+1. **Prove `CanonicalSide₁OuterArcTrace`** (ordered orbit↔arc trace). Orbit membership via
+   `freshFace_sameCycle_iff` (x∈orbit ↔ `tracePhi.SameCycle (β a₁) (faceProj x)`); `inr 0 ∉ orbit`
+   for canonical anchors (share-face ⟹ swap splits, `chordOrbits_eq_iff_tracePhi`); the inl-orbit =
+   arc via `keptPhi` walking the arc (`hstep: keptPhi(arcDart i)=arcDart(i+1)` from
+   `sideAlpha₁_apply_coe` + filteredRotation skip-deleted + arc consecutiveness `head(arc i)=tail(arc i+1)`).
+2. **`hArcKept : ∀ i, A.arcDart i ∉ keptDel₁`** = `arcDart i ∈ keptSet₁` (`mem_keptDel₁_iff`) — the
+   side-1 arc identification (which boundary arc belongs to side 1).
+3. **Orientation / `hhv`** — `chordDart_orientation` (ZinanCh35Aligned): chord dart is u→v OR v→u;
+   pin via `normalizedChordSplitData` so the arc terminal = `M.head data.dart` = `M.tail(a₁.1)`
+   (`canonicalAnchor₁_tail`). Reduction currently takes `hhv : M.head data.dart = v` as hypothesis.
+4. **Wire** `canonical_OuterTraceInjOn_of_arcTrace` → `side₁_outer_simple_canonical` (once 1–3 land).

@@ -181,13 +181,6 @@ the endpoints `v`/`u`), NOT this dart-level containment.  Kept only as a documen
 
 Original (over-strong) statement: every dart `x` on the side-1 outer `φ`-orbit has its underlying
 dart `(proj a₀ a₁ x).1` on `hNT.outerCycle` — FALSE for `x = inr 1`. -/
-
-This is the discrete Jordan/Schoenflies content: the side outer boundary is the side arc of the
-original boundary together with the fresh chord (which collapses under `proj`/`(·).1` to the two
-anchor darts, themselves boundary darts).  It is the lone non-combinatorial residue of the R3c-ii
-keystone — NOT a `Nodup`/genus-0 consequence (cf. `ZinanCh35Contiguous.lean:55-62`).  It is stated
-sharply and consumed honestly; it is *not* a posited conclusion (it is a containment of explicit
-darts in the boundary, satisfiable by the genuine geometry). -/
 def OrbitProjOnOuterArc
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
     (a₀ a₁ : {d : D // d ∉ data.keptDel₁}) (hne : a₀ ≠ a₁) : Prop :=

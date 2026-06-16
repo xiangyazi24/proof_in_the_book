@@ -923,6 +923,17 @@ theorem canonical_OuterTraceInjOn_uncond
   canonical_OuterTraceInjOn_of_alignment hNT data hsep
     (canonicalBwdArcEndpointAlignment_uncond hNT data hsep)
 
+/-- **The side-1 `outer_simple` keystone, UNCONDITIONAL** (canonical anchors).  Feeds the closed
+`OuterTraceInjOn` into `side₁_outer_simple_canonical`.  This is exactly the `outer_simple` field
+`ZinanCh35Contiguous.contiguousInterval_holds` consumes — no longer a residue. -/
+theorem side₁_outer_simple_canonical_uncond
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    (((data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).faceDartList (Sum.inr 1)).map
+      (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).tail).Nodup :=
+  side₁_outer_simple_canonical hNT data hsep (canonical_OuterTraceInjOn_uncond hNT data hsep)
+
 end ProofsInTheBook.ZinanCh35OuterTraceProof
 
 /-! ## Axiom audit -/
@@ -934,3 +945,5 @@ end ProofsInTheBook.ZinanCh35OuterTraceProof
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonicalTracePhiArc_of_steps
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonical_OuterTraceInjOn_of_alignment
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonical_OuterTraceInjOn_uncond
+
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.side₁_outer_simple_canonical_uncond

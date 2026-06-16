@@ -281,3 +281,30 @@ a sharp legitimate reduction; the residue is a single, satisfiable, genuine disc
 sublemma — likely needs the explicit σ-order of side-1 darts at a chord endpoint, relating the
 chord-triangle inner darts to the adjacent boundary-arc dart), then wire OuterTraceInjOn into
 `side₁_outer_simple_canonical`. Full chapter also needs hsimple/inner_reps/hd + side-2 + recursion + chordless.
+
+---
+
+## ADDENDUM 2026-06-16 (6) — residue sharpened to TWO face-facts; concrete σ-escape attack set up
+
+Commit 8031327. `OuterTraceInjOn` (canonical) now reduces (clean-3, all verified) via
+`canonical_OuterTraceInjOn_of_alignment ∘ canonicalBwdArcEndpointAlignment_of_faces` to exactly TWO
+face-facts (the cleanest form of the residue):
+  (F1) `M.dartFace ((data.sideSigma₁ (side₁Anchor₀ data hsep)) : D) ∉ data.side₁`
+  (F2) `M.dartFace ((data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)) : D) ∉ data.side₁`
+[via `kept_mem_outerCycle_of_face_not_side₁`: kept-by-type + keptSet₁=(sideDarts₁∪outerArc₁)\{dart}
++ sideDarts₁={dartFace∈side₁} ⟹ face∉side₁ forces outerArc₁ ⟹ dartFace=outerFace ⟹ boundary.]
+
+(F1) is `dartFace(keptPhi face₁Dart₂) ∉ side₁` = "the kept-σ step off the chord triangle exits the
+side-1 faces". CONCRETE ATTACK (the chapter's core discrete-Schoenflies content; toolkit IS present in
+ZinanCh35StarRotation/StarConn but needs assembly):
+  - keptPhi(face₁Dart₂) = filteredRotation M.σ keptDel₁ (α(φ²dart)); σ(α(φ²dart)) = dart (chord,
+    deleted) [ChordSigmaContig.sigma_alpha_phiSq_dart_eq_dart]. So filteredRotation skips the chord seam.
+  - Side-1 faces at u form a contiguous σ-block (`star_side₁_next_iff_of_not_seam` /
+    `starSide₁_constant_on_cut_free_walk`); α(φ²dart) is its last dart before the chord seam.
+  - filteredRotation skips chord + the (deleted) side-2 σ-block, lands on the side-1 boundary (outer)
+    dart at u, whose face = outerFace ∉ side₁.
+  - TOOLS: `star_escape_crosses_seam`, `sigma_pow_nonouter`/`outer_dart_unique`/`nonouter_of_ne_outer`
+    (StarConn), `starSigma_iterate_coe` (filteredRotation↔starSigma σ-iterates), `starFace_next_eq_alpha`.
+  - Sub-pieces: (a) dartFace(α(φ²dart)) ∈ side₁ via ChordSplitAdj across the non-chord w-u edge +
+    side₁_closed; (b) the deleted σ-run from the chord to the outer dart is contiguous; (c) the first
+    kept σ-iterate is the outer dart (face outerFace). (b)+(c) are the genuine remaining work.

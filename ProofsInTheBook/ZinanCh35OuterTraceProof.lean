@@ -931,8 +931,55 @@ theorem side₁_outer_simple_canonical_uncond
     (((data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
         (side₁Anchors_ne data hsep)).faceDartList (Sum.inr 1)).map
       (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
-        (side₁Anchors_ne data hsep)).tail).Nodup :=
+      (side₁Anchors_ne data hsep)).tail).Nodup :=
   side₁_outer_simple_canonical hNT data hsep (canonical_OuterTraceInjOn_uncond hNT data hsep)
+
+/-- **Canonical chord-incidence non-degeneracy.**  The two chord-incidence darts consumed by
+the Layer-B `outer_len` itinerary are the first and last darts of `bwdArc`; the arc has length at
+least two, so tail-injectivity keeps those endpoints distinct. -/
+theorem side₁ChordIncidenceNonDegenerate_canonical
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    ProofsInTheBook.ZinanCh35Contiguous.Side₁ChordIncidenceNonDegenerate data hsep
+      (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) := by
+  classical
+  intro h
+  have H := canonicalBwdArcEndpointAlignment_uncond hNT data hsep
+  have hfirst :
+      data.sideSigma₁ (side₁Anchor₀ data hsep)
+        = ⟨(ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).arcDart
+            (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).firstIdx,
+          bwdArc_arcDart_notMem_keptDel₁ hNT data hsep _⟩ :=
+    sideSigma₁_anchor₀_eq_bwdArc_first hNT data hsep H.ρa₀_boundary
+  have hlast :
+      data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)
+        = ⟨(ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).arcDart
+            (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).lastIdx,
+          bwdArc_arcDart_notMem_keptDel₁ hNT data hsep _⟩ :=
+    sideAlpha₁_anchor₁_eq_bwdArc_last hNT data hsep H.βa₁_boundary
+  have htail_eq :
+      M.tail ((ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).arcDart
+          (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).firstIdx)
+        = M.tail ((ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).arcDart
+          (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).lastIdx) := by
+    have hval := congrArg Subtype.val h
+    rw [hfirst, hlast] at hval
+    exact congrArg M.tail hval
+  have hidx :
+      (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).firstIdx
+        = (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).lastIdx :=
+    (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).tail_nodup htail_eq
+  have hidx_val :
+      ((ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).firstIdx : ℕ)
+        = ((ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).lastIdx : ℕ) :=
+    congrArg Fin.val hidx
+  have hlen_ge : 2 ≤ (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).len :=
+    ProofsInTheBook.ZinanCh35ArcSide.bwdArc_len data
+  have hlast_val :
+      ((ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).lastIdx : ℕ)
+        = (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).len - 1 := rfl
+  have hfirst_val :
+      ((ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).firstIdx : ℕ) = 0 := rfl
+  omega
 
 end ProofsInTheBook.ZinanCh35OuterTraceProof
 
@@ -947,3 +994,4 @@ end ProofsInTheBook.ZinanCh35OuterTraceProof
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonical_OuterTraceInjOn_uncond
 
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.side₁_outer_simple_canonical_uncond
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.side₁ChordIncidenceNonDegenerate_canonical

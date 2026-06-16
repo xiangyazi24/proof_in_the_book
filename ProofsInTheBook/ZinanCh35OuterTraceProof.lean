@@ -3,6 +3,7 @@ import ProofsInTheBook.ZinanCh35ChordResidue
 import ProofsInTheBook.ZinanCh35ArcDartRun
 import ProofsInTheBook.ZinanCh35EdgeCoreFinal
 import ProofsInTheBook.ZinanCh35ArcSide
+import ProofsInTheBook.ZinanCh35BoundaryAssembler
 
 /-!
 # Chapter 35 — discharging `OuterTraceInjOn` via the orbit↔boundary-arc VERTEX correspondence
@@ -1224,6 +1225,148 @@ theorem innerRepsAvoidBoundary_canonical_false
     exact hkf
   exact hkface₁ (touched_face₁_reps_all_face₁_canonical hNT data hsep k hkf₀)
 
+/-- The canonical one-fresh indicator for the touched `face₁` side face, stated without the
+old `Side₁OuterTraceData` bundle. -/
+theorem side₁Anchors_oneFresh_canonical_direct
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    ((if (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+            (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)).SameCycle
+          (face₁Dart₁ data)
+          ((data.sideAlpha₁ hsep) (side₁Anchor₀ data hsep)) then 1 else 0)
+      + (if (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+            (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)).SameCycle
+          (face₁Dart₁ data)
+          ((data.sideAlpha₁ hsep) (side₁Anchor₁ data hsep)) then 1 else 0)) = 1 := by
+  classical
+  have hfirst : (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+      (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)).SameCycle
+        (face₁Dart₁ data) ((data.sideAlpha₁ hsep) (side₁Anchor₀ data hsep)) :=
+    (ProofsInTheBook.ZinanCh35Hclass.side₁_betaA0_sameCycle_face₁Dart₁ data hsep).symm
+  have hsecond : ¬ (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+      (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)).SameCycle
+        (face₁Dart₁ data) ((data.sideAlpha₁ hsep) (side₁Anchor₁ data hsep)) := by
+    intro hsc
+    have hface : (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+          (side₁Anchors_ne data hsep)).dartFace (Sum.inl (face₁Dart₁ data))
+        = (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+            (side₁Anchors_ne data hsep)).dartFace
+            (Sum.inl ((data.sideAlpha₁ hsep) (side₁Anchor₁ data hsep))) :=
+      (ProofsInTheBook.ChordBoundaryOrbit.sideFace_inl_eq_iff_tracePhi
+        (data.sideAlpha₁ hsep) data.sideSigma₁
+        (data.sideAlpha₁_involutive hsep) (data.sideAlpha₁_no_fixed hsep)
+        (side₁Anchors_ne data hsep) _ _).2 hsc
+    have hb1 : (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+          (side₁Anchors_ne data hsep)).dartFace
+            (Sum.inl ((data.sideAlpha₁ hsep) (side₁Anchor₁ data hsep)))
+        = (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+            (side₁Anchors_ne data hsep)).dartFace (Sum.inr 1) :=
+      (ProofsInTheBook.ChordBoundaryOrbit.chordDart_face_eq_b1
+        (data.sideAlpha₁ hsep) data.sideSigma₁
+        (data.sideAlpha₁_involutive hsep) (data.sideAlpha₁_no_fixed hsep)
+        (side₁Anchors_ne data hsep)).symm
+    exact side₁_face₁_not_outer_canonical data hsep (hface.trans hb1)
+  rw [if_pos hfirst, if_neg hsecond]
+
+/-- The touched side face is a triangle, directly from the canonical `face₁` two-cycle and
+one-fresh count. -/
+theorem side₁_touched_faceLen_three_canonical
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).faceLen
+      ((data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).dartFace (Sum.inl (face₁Dart₁ data))) = 3 := by
+  classical
+  let S := data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+    (side₁Anchors_ne data hsep)
+  let f₀ : S.Face := S.dartFace (Sum.inl (face₁Dart₁ data))
+  have htri := ProofsInTheBook.ChordAnchor.face₁_sideTriangle_ofFace₁Cycle
+    data hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+    (side₁Anchors_ne data hsep) f₀
+    (side₁Anchors_trace12 data hsep) (side₁Anchors_trace21 data hsep)
+    rfl (side₁Anchors_oneFresh_canonical_direct hNT data hsep)
+  obtain ⟨k, hkf, hlen⟩ := htri
+  exact by simpa [S, f₀, hkf] using hlen
+
+/-- The remaining direct-`inner_tri` residue after the touched face is handled by count:
+every other non-outer side face has a splice-untouched side-1 representative avoiding `face₁`. -/
+def CanonicalSide₁NonTouchedInnerClassifier
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) : Prop :=
+  let S := data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+    (side₁Anchors_ne data hsep)
+  ∀ f : S.Face,
+    f ≠ S.dartFace (Sum.inr 1) →
+    f ≠ S.dartFace (Sum.inl (face₁Dart₁ data)) →
+      ∃ k : {d : D // d ∉ data.keptDel₁},
+        S.dartFace (Sum.inl k) = f ∧
+        M.dartFace k.1 ∈ data.side₁ ∧
+        M.dartFace k.1 ≠ data.face₁ ∧
+        ProofsInTheBook.ChordInnerTri.SpliceUntouched
+          (data.sideAlpha₁ hsep) data.sideSigma₁
+          (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) k
+
+/-- Direct `inner_tri` from the exact remaining non-touched classifier. -/
+theorem side₁_inner_tri_of_nonTouchedClassifier
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (hclass : CanonicalSide₁NonTouchedInnerClassifier hNT data hsep) :
+    ∀ f : (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).Face,
+      f ≠ (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+          (side₁Anchors_ne data hsep)).dartFace (Sum.inr 1) →
+      (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).faceLen f = 3 := by
+  intro f hf
+  by_cases hf₀ :
+      f = (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+          (side₁Anchors_ne data hsep)).dartFace (Sum.inl (face₁Dart₁ data))
+  · rw [hf₀]
+    exact side₁_touched_faceLen_three_canonical hNT data hsep
+  · obtain ⟨k, hkf, hside, hface₁, huntouched⟩ := hclass f hf hf₀
+    rw [← hkf]
+    exact ProofsInTheBook.ChordInnerTri.sideMap₁_faceLen_inl_three_of_side₁
+      data hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+      (side₁Anchors_ne data hsep) k hside hface₁ huntouched
+
+/-- **Direct side-1 `ContiguousInterval` assembler, bypassing `InnerRepsAvoidBoundary`.**
+If the side-map `inner_tri` field is supplied directly, all other canonical side-1 inputs are
+now proved unconditionally (`sphere`, `simpleGraph`, `outer_simple`, `outer_len`). -/
+noncomputable def contiguousInterval₁_direct_of_inner_tri
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (inner_tri : ∀ f :
+      (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).Face,
+        f ≠ (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+          (side₁Anchors_ne data hsep)).dartFace (Sum.inr 1) →
+        (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+          (side₁Anchors_ne data hsep)).faceLen f = 3) :
+    ChordSideNT.ContiguousInterval data hsep
+      (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) (side₁Anchors_ne data hsep) :=
+  ChordSideNT.contiguousInterval_of_nearTriangulation data hsep
+    (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) (side₁Anchors_ne data hsep)
+    (ProofsInTheBook.ZinanCh35BoundaryAssembler.nearTriangulation_of_explicit_boundary_classification
+      (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep))
+      (ChordSideNT.side₁_sphere_unconditional data hsep
+        (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) (side₁Anchors_ne data hsep)
+        (side₁AnchorsShareFace_canonical data hsep))
+      (sideMap₁_isSimpleGraph_canonical hNT data hsep)
+      ((data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).dartFace (Sum.inr 1))
+      (Sum.inr 1) rfl
+      (side₁_outer_simple_canonical_uncond hNT data hsep)
+      (ProofsInTheBook.ZinanCh35Contiguous.side₁_outerLen_ge_three data hsep
+        (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) (side₁Anchors_ne data hsep)
+        (side₁ChordIncidenceNonDegenerate_canonical hNT data hsep))
+      inner_tri)
+
+/-- `ContiguousInterval` from the precise remaining non-touched inner-face classifier. -/
+noncomputable def contiguousInterval₁_direct_of_nonTouchedClassifier
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (hclass : CanonicalSide₁NonTouchedInnerClassifier hNT data hsep) :
+    ChordSideNT.ContiguousInterval data hsep
+      (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) (side₁Anchors_ne data hsep) :=
+  contiguousInterval₁_direct_of_inner_tri hNT data hsep
+    (side₁_inner_tri_of_nonTouchedClassifier hNT data hsep hclass)
+
 end ProofsInTheBook.ZinanCh35OuterTraceProof
 
 /-! ## Axiom audit -/
@@ -1241,3 +1384,7 @@ end ProofsInTheBook.ZinanCh35OuterTraceProof
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.sideMap₁_isSimpleGraph_canonical
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.touched_face₁_reps_all_face₁_canonical
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.innerRepsAvoidBoundary_canonical_false
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.side₁_touched_faceLen_three_canonical
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.side₁_inner_tri_of_nonTouchedClassifier
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.contiguousInterval₁_direct_of_inner_tri
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.contiguousInterval₁_direct_of_nonTouchedClassifier

@@ -3338,6 +3338,86 @@ noncomputable def contiguousInterval₂_direct_canonical_uncond
     (side₂_isSphereMap_canonical_uncond hNT data hsep)
     (side₂_inner_tri_canonical_uncond hNT data hsep)
 
+/-! ## Canonical recursion-input constructors -/
+
+variable {α : Type u} [DecidableEq α]
+
+/-- Canonical side-1 `Side₁InputsNoConf`, with only the Thomassen recursion fuel left as input.
+This threads the closed canonical `ContiguousInterval`, canonical share-face, chord adjacency,
+endpoint equations, and `OuterDartArc₁`; it does not solve the supplier's universal-arbitrary
+anchor quantifier. -/
+noncomputable def canonicalSide₁InputsNoConf_of_fuel
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) (L : M.Vertex → Finset α)
+    (htu : M.tail data.dart = u) (hhv : M.head data.dart = v)
+    (pₛ qₛ :
+      (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).Vertex)
+    (cpₛ cqₛ : α)
+    (hLₛ : ProofsInTheBook.ThomassenLists.CombMap.ThomassenLists
+      (ProofsInTheBook.ChordSideNT.chordSideNearTriangulation_of_share data hsep
+        (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) (side₁Anchors_ne data hsep)
+        (side₁AnchorsShareFace_canonical data hsep)
+        (contiguousInterval₁_direct_canonical_uncond hNT data hsep))
+      pₛ qₛ
+      (fun x => L (ProofsInTheBook.ChordReconClose.sideVertexToM₁ data hsep
+        (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) (side₁Anchors_ne data hsep) x))
+      cpₛ cqₛ) :
+    ProofsInTheBook.ZinanCh35ChordBranch.Side₁InputsNoConf data hsep
+      (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) (side₁Anchors_ne data hsep) L where
+  ci := contiguousInterval₁_direct_canonical_uncond hNT data hsep
+  hshare := side₁AnchorsShareFace_canonical data hsep
+  hchord := by
+    have h0 := ProofsInTheBook.ZinanCh35ChordResidue.canonicalAnchor₀_tail data hsep
+    have h1 := ProofsInTheBook.ZinanCh35ChordResidue.canonicalAnchor₁_tail data hsep
+    simpa [h0, h1, htu, hhv] using (ProofsInTheBook.ChordContiguous.chordChoice_adj data).2
+  ha₀ := (ProofsInTheBook.ZinanCh35ChordResidue.canonicalAnchor₀_tail data hsep).trans htu
+  ha₁ := (ProofsInTheBook.ZinanCh35ChordResidue.canonicalAnchor₁_tail data hsep).trans hhv
+  pₛ := pₛ
+  qₛ := qₛ
+  cpₛ := cpₛ
+  cqₛ := cqₛ
+  hLₛ := hLₛ
+  houter := ProofsInTheBook.ZinanCh35EdgeCoreFinal.outerDartArc₁_uncond data hsep
+
+/-- Canonical side-2 `Side₂InputsNoConf` in the endpoint order its canonical anchors realize:
+`side₂Anchor₀` is at `head dart` and `side₂Anchor₁` is at `tail dart`.  Thus this constructor
+threads the closed canonical `ContiguousInterval₂` only for the reversed endpoint order; the
+standard `ChordRecursionInputs` side-2 field still needs either swapped-anchor CI or a weakened
+selected-anchor interface. -/
+noncomputable def canonicalSide₂InputsNoConf_reversed_of_fuel
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) (L : M.Vertex → Finset α)
+    (hhead : M.head data.dart = u) (htail : M.tail data.dart = v)
+    (pₛ qₛ :
+      (data.sideMap₂ hsep (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)
+        (side₂Anchors_ne hNT data hsep)).Vertex)
+    (cpₛ cqₛ : α)
+    (hLₛ : ProofsInTheBook.ThomassenLists.CombMap.ThomassenLists
+      (ProofsInTheBook.ZinanCh35Side2.chordSideNearTriangulation₂_of_share data hsep
+        (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) (side₂Anchors_ne hNT data hsep)
+        (ProofsInTheBook.ChordSideClose.side₂IsDisk_unconditional data hsep)
+        (side₂AnchorsShareFace_canonical data hsep)
+        (contiguousInterval₂_direct_canonical_uncond hNT data hsep))
+      pₛ qₛ
+      (fun x => L (ProofsInTheBook.ZinanCh35Side2.sideVertexToM₂ data hsep
+        (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) (side₂Anchors_ne hNT data hsep) x))
+      cpₛ cqₛ) :
+    ProofsInTheBook.ZinanCh35ChordBranch.Side₂InputsNoConf data hsep
+      (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) (side₂Anchors_ne hNT data hsep) L where
+  hdisk := ProofsInTheBook.ChordSideClose.side₂IsDisk_unconditional data hsep
+  hshare := side₂AnchorsShareFace_canonical data hsep
+  ci := contiguousInterval₂_direct_canonical_uncond hNT data hsep
+  hchord := by
+    have h0 := canonicalSide₂Anchor₀_tail hNT data hsep
+    have h1 := canonicalSide₂Anchor₁_tail hNT data hsep
+    simpa [h0, h1, hhead, htail] using (ProofsInTheBook.ChordContiguous.chordChoice_adj data).2
+  ha₀ := (canonicalSide₂Anchor₀_tail hNT data hsep).trans hhead
+  ha₁ := (canonicalSide₂Anchor₁_tail hNT data hsep).trans htail
+  pₛ := pₛ
+  qₛ := qₛ
+  cpₛ := cpₛ
+  cqₛ := cqₛ
+  hLₛ := hLₛ
+
 end ProofsInTheBook.ZinanCh35OuterTraceProof
 
 /-! ## Axiom audit -/

@@ -261,14 +261,24 @@ noncomputable def chordBranchResidualData_of_recursionInputs
     (normSep h) I.htu I.hhv I.regionsRes (L := L) (cp := cp) (cq := cq)
   regions_s₁ := rfl
   regions_s₂ := rfl
+  a₁₀ := side₁Anchor₀ (normalizedChordSplitData h) (normSep h)
+  a₁₁ := side₁Anchor₁ (normalizedChordSplitData h) (normSep h)
+  ha₁₀ := (canonicalAnchor₀_tail (normalizedChordSplitData h) (normSep h)).trans I.htu
+  ha₁₁ := (canonicalAnchor₁_tail (normalizedChordSplitData h) (normSep h)).trans I.hhv
+  hne₁ := side₁Anchors_ne (normalizedChordSplitData h) (normSep h)
   side₁ := I.side₁Inputs
-  side₂ := I.side₂Inputs
-  anchors₁ := ⟨side₁Anchor₀ (normalizedChordSplitData h) (normSep h),
-    side₁Anchor₁ (normalizedChordSplitData h) (normSep h),
-    side₁Anchors_ne (normalizedChordSplitData h) (normSep h),
-    ⟨(canonicalAnchor₀_tail (normalizedChordSplitData h) (normSep h)).trans I.htu,
-     (canonicalAnchor₁_tail (normalizedChordSplitData h) (normSep h)).trans I.hhv⟩⟩
-  anchors₂ := I.anchors₂
+    (side₁Anchor₀ (normalizedChordSplitData h) (normSep h))
+    (side₁Anchor₁ (normalizedChordSplitData h) (normSep h))
+    (side₁Anchors_ne (normalizedChordSplitData h) (normSep h))
+    ((canonicalAnchor₀_tail (normalizedChordSplitData h) (normSep h)).trans I.htu)
+    ((canonicalAnchor₁_tail (normalizedChordSplitData h) (normSep h)).trans I.hhv)
+  a₂₀ := I.anchors₂.1
+  a₂₁ := I.anchors₂.2.1
+  ha₂₀ := I.anchors₂.2.2.2.1
+  ha₂₁ := I.anchors₂.2.2.2.2
+  hne₂ := I.anchors₂.2.2.1
+  side₂ := fun c₁ => I.side₂Inputs c₁ I.anchors₂.1 I.anchors₂.2.1 I.anchors₂.2.2.1
+    I.anchors₂.2.2.2.1 I.anchors₂.2.2.2.2
   uv_ne := I.uv_ne
 
 /-! ## Section 4.  The uniform residual supplier from a uniform recursion-input supplier

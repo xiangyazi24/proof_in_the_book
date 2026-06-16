@@ -192,19 +192,26 @@ structure ChordBranchResidualData (h : hNT.outerCycle.Chord u v)
   regions : ChordSplitRegions hNT u v p q L cp cq
   regions_s₁ : regions.s₁ = sideRegion₁ (ND h)
   regions_s₂ : regions.s₂ = sideRegion₂ (ND h)
-  /-- The side-1 certificate inputs WITHOUT confinement, at any anchors realizing the endpoints. -/
-  side₁ : ∀ (a₀ a₁ : {d : D // d ∉ (ND h).keptDel₁}) (hne : a₀ ≠ a₁),
-    M.tail a₀.1 = u → M.tail a₁.1 = v → Side₁InputsNoConf (ND h) hsep a₀ a₁ hne L
-  /-- The side-2 certificate inputs WITHOUT confinement, for each forced-list coloring. -/
-  side₂ : ∀ (c₁ : M.Vertex → α) (a₀ a₁ : {d : D // d ∉ (ND h).keptDel₂}) (hne : a₀ ≠ a₁),
-    M.tail a₀.1 = u → M.tail a₁.1 = v →
-      Side₂InputsNoConf (ND h) hsep a₀ a₁ hne (regions.forcedLists c₁ L)
-  /-- Anchor darts realizing the chord endpoints on side 1. -/
-  anchors₁ : Σ' (a₀ a₁ : {d : D // d ∉ (ND h).keptDel₁}) (_ : a₀ ≠ a₁),
-    M.tail a₀.1 = u ∧ M.tail a₁.1 = v
-  /-- Anchor darts realizing the chord endpoints on side 2. -/
-  anchors₂ : Σ' (a₀ a₁ : {d : D // d ∉ (ND h).keptDel₂}) (_ : a₀ ≠ a₁),
-    M.tail a₀.1 = u ∧ M.tail a₁.1 = v
+  /-- The selected side-1 anchor realizing `u`. -/
+  a₁₀ : {d : D // d ∉ (ND h).keptDel₁}
+  /-- The selected side-1 anchor realizing `v`. -/
+  a₁₁ : {d : D // d ∉ (ND h).keptDel₁}
+  ha₁₀ : M.tail a₁₀.1 = u
+  ha₁₁ : M.tail a₁₁.1 = v
+  hne₁ : a₁₀ ≠ a₁₁
+  /-- The side-1 certificate inputs WITHOUT confinement, at the stored anchors. -/
+  side₁ : Side₁InputsNoConf (ND h) hsep a₁₀ a₁₁ hne₁ L
+  /-- The selected side-2 anchor realizing `u`. -/
+  a₂₀ : {d : D // d ∉ (ND h).keptDel₂}
+  /-- The selected side-2 anchor realizing `v`. -/
+  a₂₁ : {d : D // d ∉ (ND h).keptDel₂}
+  ha₂₀ : M.tail a₂₀.1 = u
+  ha₂₁ : M.tail a₂₁.1 = v
+  hne₂ : a₂₀ ≠ a₂₁
+  /-- The side-2 certificate inputs WITHOUT confinement, at the stored anchors and for each
+  forced-list coloring. -/
+  side₂ : ∀ c₁ : M.Vertex → α,
+    Side₂InputsNoConf (ND h) hsep a₂₀ a₂₁ hne₂ (regions.forcedLists c₁ L)
   uv_ne : u ≠ v
 
 /-- **The chord-branch residue from the residual bundle (confinements produced).**  Assembles a
@@ -222,10 +229,8 @@ noncomputable def chordBranchResidue_of_residualData {h : hNT.outerCycle.Chord u
   obtain ⟨conf₁, conf₂⟩ :=
     ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.bothConfinements_normalized
       h R.hsep R.htu R.hhv
-  -- side-1 anchors and reconstruction on `sideRegion₁ (ND h)`, transported to `regions.s₁`.
-  obtain ⟨a₀, a₁, hne, ha₀, ha₁⟩ := R.anchors₁
   have rec₁₀ : ChordSplitNT.ChordSideReconstruction hNT (sideRegion₁ (ND h)) L :=
-    side₁Reconstruction_of_noConf (ND h) R.hsep a₀ a₁ hne L (R.side₁ a₀ a₁ hne ha₀ ha₁) conf₁
+    side₁Reconstruction_of_noConf (ND h) R.hsep R.a₁₀ R.a₁₁ R.hne₁ L R.side₁ conf₁
   refine
     { regions := R.regions
       uv_ne := R.uv_ne
@@ -234,11 +239,10 @@ noncomputable def chordBranchResidue_of_residualData {h : hNT.outerCycle.Chord u
   -- side-2 reconstruction family on `sideRegion₂ (ND h)`, transported to `regions.s₂`,
   -- with the forced lists from `regions`.
   intro c₁
-  obtain ⟨b₀, b₁, hbne, hb₀, hb₁⟩ := R.anchors₂
   have rec₂₀ : ChordSplitNT.ChordSideReconstruction hNT (sideRegion₂ (ND h))
       (R.regions.forcedLists c₁ L) :=
-    side₂Reconstruction_of_noConf (ND h) R.hsep b₀ b₁ hbne (R.regions.forcedLists c₁ L)
-      (R.side₂ c₁ b₀ b₁ hbne hb₀ hb₁) conf₂
+    side₂Reconstruction_of_noConf (ND h) R.hsep R.a₂₀ R.a₂₁ R.hne₂
+      (R.regions.forcedLists c₁ L) (R.side₂ c₁) conf₂
   exact R.regions_s₂ ▸ rec₂₀
 
 /-! ## Section 5.  The uniform residual supplier and the `ChordBranchSupplier`

@@ -1529,6 +1529,107 @@ theorem sideMap₂_isSimpleGraph_canonical
               rfl
             · exact Equiv.Perm.SameCycle.refl _ _
 
+/-- **Side-map simplicity for the swapped canonical side-2 anchors.** -/
+theorem sideMap₂_isSimpleGraph_canonical_swapped
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+      (side₂Anchors_ne hNT data hsep).symm).IsSimpleGraph := by
+  classical
+  let a₀ : {d : D // d ∉ data.keptDel₂} := side₂Anchor₁ data hsep
+  let a₁ : {d : D // d ∉ data.keptDel₂} := side₂Anchor₀ data hsep
+  let hne : a₀ ≠ a₁ := (side₂Anchors_ne hNT data hsep).symm
+  change (data.sideMap₂ hsep a₀ a₁ hne).IsSimpleGraph
+  have ha₀ : M.tail a₀.1 = M.tail data.dart := by
+    dsimp [a₀]
+    exact canonicalSide₂Anchor₁_tail hNT data hsep
+  have ha₁ : M.tail a₁.1 = M.head data.dart := by
+    dsimp [a₁]
+    exact canonicalSide₂Anchor₀_tail hNT data hsep
+  refine ⟨?_, ?_⟩
+  · intro x hloop
+    have htail :
+        (data.sideMap₂ hsep a₀ a₁ hne).tail x
+          = (data.sideMap₂ hsep a₀ a₁ hne).tail (freshAlpha (data.sideAlpha₂ hsep) x) := by
+      simpa [CombMap.head] using hloop
+    have hMtail := (sideMap₂_tail_eq_iff_M_tail_proj hNT data hsep a₀ a₁ hne x
+      (freshAlpha (data.sideAlpha₂ hsep) x)).1 htail
+    cases x with
+    | inl k =>
+        apply hNT.simpleGraph.no_loop k.1
+        simpa [freshAlpha_inl, data.sideAlpha₂_apply_coe hsep, M.tail_alpha] using hMtail
+    | inr j =>
+        fin_cases j
+        · have huv : M.tail data.dart = M.head data.dart := by
+            simpa [freshAlpha_inr, proj, ha₀, ha₁] using hMtail
+          exact ProofsInTheBook.ChordSigmaContig.u_ne_v data huv
+        · have hvu : M.head data.dart = M.tail data.dart := by
+            simpa [freshAlpha_inr, proj, ha₀, ha₁] using hMtail
+          exact ProofsInTheBook.ChordSigmaContig.u_ne_v data hvu.symm
+  · intro x y hxy
+    have hMedge := sideMap₂_dartEdge_eq_to_M_proj_edge hNT data hsep a₀ a₁ hne hxy
+    cases x with
+    | inl kx =>
+        cases y with
+        | inl ky =>
+            have hM : M.dartEdge kx.1 = M.dartEdge ky.1 := by
+              simpa [CombMap.dartEdge, freshAlpha_inl, data.sideAlpha₂_apply_coe hsep,
+                M.tail_alpha] using hMedge
+            have hsc : M.α.SameCycle kx.1 ky.1 := hNT.simpleGraph.no_parallel hM
+            rcases (M.alpha_sameCycle_iff kx.1 ky.1).mp hsc with hsame | halpha
+            · have hky : ky = kx := Subtype.ext hsame
+              rw [hky]
+            · have hky : ky = data.sideAlpha₂ hsep kx := by
+                apply Subtype.ext
+                rw [data.sideAlpha₂_apply_coe hsep]
+                exact halpha
+              refine ⟨1, ?_⟩
+              rw [zpow_one]
+              change freshAlpha (data.sideAlpha₂ hsep) (Sum.inl kx) = Sum.inl ky
+              rw [freshAlpha_inl, hky]
+        | inr jy =>
+            fin_cases jy
+            · have hxedge : M.dartEdge kx.1 = M.dartEdge data.dart := by
+                unfold CombMap.dartEdge
+                simpa [CombMap.dartEdge, freshAlpha_inl, freshAlpha_inr,
+                  data.sideAlpha₂_apply_coe hsep, M.tail_alpha, proj, ha₀, ha₁] using hMedge
+              exact False.elim (no_kept_dart_on_chord_edge₂ hNT data hsep kx hxedge)
+            · have hxedge : M.dartEdge kx.1 = M.dartEdge data.dart := by
+                unfold CombMap.dartEdge
+                simpa [CombMap.dartEdge, freshAlpha_inl, freshAlpha_inr,
+                  data.sideAlpha₂_apply_coe hsep, M.tail_alpha, proj, ha₀, ha₁,
+                  Sym2.eq_swap] using hMedge
+              exact False.elim (no_kept_dart_on_chord_edge₂ hNT data hsep kx hxedge)
+    | inr jx =>
+        cases y with
+        | inl ky =>
+            fin_cases jx
+            · have hyedge : M.dartEdge ky.1 = M.dartEdge data.dart := by
+                unfold CombMap.dartEdge
+                simpa [CombMap.dartEdge, freshAlpha_inl, freshAlpha_inr,
+                  data.sideAlpha₂_apply_coe hsep, M.tail_alpha, proj, ha₀, ha₁] using hMedge.symm
+              exact False.elim (no_kept_dart_on_chord_edge₂ hNT data hsep ky hyedge)
+            · have hyedge : M.dartEdge ky.1 = M.dartEdge data.dart := by
+                unfold CombMap.dartEdge
+                simpa [CombMap.dartEdge, freshAlpha_inl, freshAlpha_inr,
+                  data.sideAlpha₂_apply_coe hsep, M.tail_alpha, proj, ha₀, ha₁,
+                  Sym2.eq_swap] using hMedge.symm
+              exact False.elim (no_kept_dart_on_chord_edge₂ hNT data hsep ky hyedge)
+        | inr jy =>
+            fin_cases jx <;> fin_cases jy
+            · exact Equiv.Perm.SameCycle.refl _ _
+            · refine ⟨1, ?_⟩
+              rw [zpow_one]
+              change freshAlpha (data.sideAlpha₂ hsep) (Sum.inr 0) = Sum.inr 1
+              rw [freshAlpha_inr]
+              rfl
+            · refine ⟨1, ?_⟩
+              rw [zpow_one]
+              change freshAlpha (data.sideAlpha₂ hsep) (Sum.inr 1) = Sum.inr 0
+              rw [freshAlpha_inr]
+              rfl
+            · exact Equiv.Perm.SameCycle.refl _ _
+
 /-- **`hArcKept` for the side-2 arc `fwdArc`, UNCONDITIONAL.**  Each `fwdArc` dart's
 `α`-reverse face is in `side₂`, so it lies in `outerArc₂ ⊆ keptSet₂`; it is not the side-2 seam
 dart `α dart` because its edge is not the chord. -/
@@ -2370,6 +2471,25 @@ theorem side₂_isSphereMap_canonical_uncond
     (ProofsInTheBook.ChordSideClose.side₂IsDisk_unconditional data hsep)
     (side₂AnchorsShareFace_canonical data hsep)
 
+/-- Canonical side-2 share-face fact for the swapped endpoint order. -/
+theorem side₂AnchorsShareFace_canonical_swapped
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    ProofsInTheBook.ChordDisk.Side₂AnchorsShareFace data hsep
+      (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep) := by
+  exact (side₂AnchorsShareFace_canonical data hsep).symm
+
+/-- Unconditional side-2 sphere-map fact for the swapped canonical anchors. -/
+theorem side₂_isSphereMap_canonical_swapped_uncond
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+      (side₂Anchors_ne hNT data hsep).symm).IsSphereMap :=
+  ProofsInTheBook.ChordDisk.side₂_isSphereMap_of_disk
+    data hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+    (side₂Anchors_ne hNT data hsep).symm
+    (ProofsInTheBook.ChordSideClose.side₂IsDisk_unconditional data hsep)
+    (side₂AnchorsShareFace_canonical_swapped (hNT := hNT) data hsep)
+
 /-- Side-2 `ContiguousInterval₂` with exactly the two still-unmirrored inputs explicit:
 `hsphere` (deferred because the single-file remote build lacks the side-2 disk `.olean`) and
 `inner_tri` (the missing side-2 faceLen/inner-triangle mirror).  All other canonical side-2 fields
@@ -3036,6 +3156,87 @@ lemma sideAlpha₂_anchor₀_eq_face₂Dart₂
   have := congrArg (fun f : Equiv.Perm {d : D // d ∉ data.keptDel₂} =>
       f (face₂Dart₂ data)) hinv
   simpa [Equiv.Perm.mul_apply] using this
+
+/-- In the swapped side-2 map, the assembler root `inr 1` is the chord orbit through
+`face₂Dart₂`, not the original canonical boundary orbit. -/
+theorem side₂_swapped_inr1_face_eq_face₂Dart₂
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inr 1)
+      =
+    (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).dartFace
+      (Sum.inl (face₂Dart₂ data)) := by
+  have hβa₁ :
+      data.sideAlpha₂ hsep (side₂Anchor₀ data hsep) = face₂Dart₂ data :=
+    sideAlpha₂_anchor₀_eq_face₂Dart₂ hNT data hsep
+  change
+      (freshMap (data.sideAlpha₂ hsep) data.sideSigma₂
+          (data.sideAlpha₂_involutive hsep) (data.sideAlpha₂_no_fixed hsep)
+          (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+          (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inr 1)
+        =
+      (freshMap (data.sideAlpha₂ hsep) data.sideSigma₂
+          (data.sideAlpha₂_involutive hsep) (data.sideAlpha₂_no_fixed hsep)
+          (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+          (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inl (face₂Dart₂ data))
+  simpa [hβa₁] using
+    (ProofsInTheBook.ChordBoundaryOrbit.chordDart_face_eq_b1
+      (data.sideAlpha₂ hsep) data.sideSigma₂
+      (data.sideAlpha₂_involutive hsep) (data.sideAlpha₂_no_fixed hsep)
+      ((side₂Anchors_ne hNT data hsep).symm))
+
+/-- The swapped side-2 chord predecessors are still in distinct `tracePhi` orbits. -/
+theorem side₂_chordPred_notSameCycle_canonical_swapped
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    ¬ (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+        (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)).SameCycle
+      ((data.sideAlpha₂ hsep) (side₂Anchor₁ data hsep))
+      ((data.sideAlpha₂ hsep) (side₂Anchor₀ data hsep)) := by
+  classical
+  set β := data.sideAlpha₂ hsep with hβ
+  set ρ := data.sideSigma₂ with hρ
+  set a₀ := side₂Anchor₁ data hsep with ha₀
+  set a₁ := side₂Anchor₀ data hsep with ha₁
+  have hshare : (keptPhi β ρ).SameCycle (ρ a₀) (ρ a₁) := by
+    have h := side₂AnchorsShareFace_canonical_swapped (hNT := hNT) data hsep
+    simpa [hβ, hρ, ha₀, ha₁, ProofsInTheBook.ChordDisk.Side₂AnchorsShareFace, keptPhi]
+      using h
+  have hne : ρ a₀ ≠ ρ a₁ := ρa₀_ne_ρa₁ ρ (side₂Anchors_ne hNT data hsep).symm
+  have hsplit : ¬ (tracePhi β ρ a₀ a₁).SameCycle (ρ a₀) (ρ a₁) := by
+    rw [show tracePhi β ρ a₀ a₁ = Equiv.swap (ρ a₀) (ρ a₁) * keptPhi β ρ from rfl]
+    exact notSameCycle_swap_mul_left_of_sameCycle (keptPhi β ρ) hne hshare
+  intro hsc
+  apply hsplit
+  have hb0 : tracePhi β ρ a₀ a₁ (β a₀) = ρ a₁ :=
+    tracePhi_b0 β ρ (data.sideAlpha₂_involutive hsep) a₀ a₁
+  have hb1 : tracePhi β ρ a₀ a₁ (β a₁) = ρ a₀ :=
+    tracePhi_b1 β ρ (data.sideAlpha₂_involutive hsep) a₀ a₁
+  have hstep : (tracePhi β ρ a₀ a₁).SameCycle
+      (tracePhi β ρ a₀ a₁ (β a₀)) (tracePhi β ρ a₀ a₁ (β a₁)) :=
+    hsc.apply_left.apply_right
+  rw [hb0, hb1] at hstep
+  exact hstep.symm
+
+/-- The swapped side-2 fresh chord faces `inr 0` and `inr 1` are distinct. -/
+theorem side₂_swapped_chord_faces_distinct
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inr 0)
+      ≠
+    (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inr 1) := by
+  intro hfaces
+  have htrace :
+      (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+        (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)).SameCycle
+      ((data.sideAlpha₂ hsep) (side₂Anchor₁ data hsep))
+      ((data.sideAlpha₂ hsep) (side₂Anchor₀ data hsep)) := by
+    exact (ProofsInTheBook.ChordBoundaryOrbit.chordOrbits_eq_iff_tracePhi
+      (data.sideAlpha₂ hsep) data.sideSigma₂
+      (data.sideAlpha₂_involutive hsep) (data.sideAlpha₂_no_fixed hsep)
+      ((side₂Anchors_ne hNT data hsep).symm)).1 hfaces
+  exact side₂_chordPred_notSameCycle_canonical_swapped hNT data hsep htrace
 
 theorem side₂Anchors_trace12 (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
     tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂

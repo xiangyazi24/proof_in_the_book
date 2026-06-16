@@ -128,3 +128,42 @@ tail IS v ⟹ would collide. This is the §3.3-critical orientation fact. `A.tai
    pin via `normalizedChordSplitData` so the arc terminal = `M.head data.dart` = `M.tail(a₁.1)`
    (`canonicalAnchor₁_tail`). Reduction currently takes `hhv : M.head data.dart = v` as hypothesis.
 4. **Wire** `canonical_OuterTraceInjOn_of_arcTrace` → `side₁_outer_simple_canonical` (once 1–3 land).
+
+### Classifier roadmap (ChatGPT life RUN#528, 2026-06-16) + SOURCE-VERIFIED corrections
+
+Full answer saved: `HANDOFF/ch35-classifier-chatgpt-2026-06-16.md`. Decomposition of the bridge
+`CanonicalSide₁OuterArcTrace`:
+- `canonical_side₁_outer_orbit_mem_iff`: x∈orbit ↔ x=inr 1 ∨ ∃k, x=inl k ∧ tracePhi.SameCycle(β a₁) k.
+  Full proof sketch given; KEY missing piece = `¬ tracePhi.SameCycle (β a₁) (β a₀)` (excludes inr 0).
+- `CanonicalTracePhiArc` (structure): tracePhi-orbit of β a₁ = kept copies of A.arcDart i. THE bridge.
+- `canonical_arcTrace_of_tracePhiArc`: classifier ← mem_iff + CanonicalTracePhiArc (trivial wrapper).
+
+**SOURCE-VERIFIED corrections to the ChatGPT answer (verify-don't-transcribe — it had 2 errors):**
+1. ⚠️ `OuterDartArc₁` is NOT a `DartArc` — it is an *edge-confinement Prop* (ZinanCh35Schoenflies:246:
+   `∀ e, dartEdge≠chord → dartFace=outerFace → tail,head∈sideRegion₁ → dartFace(α e)∈side₁`).
+   `outerDartArc₁_uncond` (EdgeCoreFinal:42, REAL + unconditional) produces THAT Prop, NOT the
+   arc+keptness. So `canonicalSide₁ArcWithKept := outerDartArc₁_uncond` does NOT typecheck. `hArcKept`
+   (A.arcDart i ∈ keptSet₁, via `mem_keptDel₁_iff`) is genuinely to-prove = "the u→v boundary arc
+   belongs to side 1" (discrete-Schoenflies-flavored, tied to Separates/sideRegion₁).
+2. ⚠️ `chordOrbits_distinct_of_sameFace` and `BoundaryCycle.head_injective_on_darts` DO NOT EXIST
+   (guessed). Must build head_injective_on_darts (mirror of tail_injective_on_darts via cyclic
+   successor). For the distinctness, use `freshMap_F_same_face` (ChordFaceCount:399, the +1 split) +
+   `chordOrbits_eq_iff_tracePhi` (ChordBoundaryOrbit:447) + a count→distinctness step.
+
+**Genuinely available (verified):** `side₁AnchorsShareFace_canonical` (SideAnchors:39),
+`filteredRotation_apply_of_next_kept` (PlanarMapFilteredRotation:87 — the walk tool, already used
+for a side-1 σ-step in ChordInnerTri:231-259), `dartArcOfNonBoundaryEdge` (ChordCycle:211),
+`freshFace_sameCycle_iff` (ChordFaceCount:322), `canonicalAnchor₀/₁_tail`, `tail_injective_on_darts`.
+
+**Genuinely NEW sublemmas (the tower, ~multi-session):**
+(a) `¬ tracePhi.SameCycle (β a₁) (β a₀)` for canonical anchors (count→distinctness from the F-split).
+(b) `hArcKept`: arc darts are side-1-kept (arc-is-side-1 identification).
+(c) `sideSigma₁_alpha_arcDart_eq_next` (keptPhi walks the arc) — THE hard one; route via
+    filteredRotation_apply_of_next_kept + "no deleted dart between consecutive boundary-arc darts".
+(d) endpoint alignment (exact dart eqns) via tail_injective_on_darts + NEW head_injective_on_darts.
+(e) `CanonicalTracePhiArc` assembly (forward walk closes the orbit = arc).
+(f) orientation hhv via chordDart_orientation / normalizedChordSplitData.
+
+**Verdict:** OuterTraceInjOn is genuinely TRUE; reduction LANDED (55f675d, clean-3). The bridge is a
+real tower — NOT "moderate bookkeeping". Resume by building (a)+(b)+(d-head) first (self-contained,
+verifiable), then the hard walk (c)+(e), then orientation+wire.

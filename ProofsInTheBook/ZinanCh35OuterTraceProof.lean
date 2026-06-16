@@ -50,6 +50,24 @@ universe u
 variable {D : Type u} [Fintype D] [DecidableEq D] {M : CombMap D}
   (hNT : NearTriangulation M) {u v : M.Vertex}
 
+/-- **The canonical `u → v` boundary dart-arc**, built from the chord via
+`dartArcOfNonBoundaryEdge` on the outer cycle.  Its darts are on `hNT.outerCycle.darts`, its tails
+are distinct (`tail_nodup`), and the terminal `v` is not an arc tail (`head_last_ne_tail`). -/
+noncomputable def canonicalOuterArc
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    DartArc M hNT.outerCycle u v :=
+  (hNT.outerCycle.dartArcOfNonBoundaryEdge hNT.outer_simple
+    data.chord.endpoints_ne data.chord.left_boundary data.chord.right_boundary
+    data.chord.not_boundary_edge).1
+
+/-- The canonical outer arc has length `≥ 2` (the chord is not a boundary edge). -/
+theorem canonicalOuterArc_len_ge_two
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    2 ≤ (canonicalOuterArc hNT data hsep).len :=
+  (hNT.outerCycle.dartArcOfNonBoundaryEdge hNT.outer_simple
+    data.chord.endpoints_ne data.chord.left_boundary data.chord.right_boundary
+    data.chord.not_boundary_edge).2
+
 /-- **The ordered orbit↔arc classifier** (the one genuine remaining bridge).  For the canonical
 side-1 anchors, every dart on the side-1 outer `φ`-orbit `S.faceDartList (inr 1)` is either the
 chord root `inr 1` or an `inl`-dart whose underlying dart is one of the boundary dart-arc `A`'s

@@ -575,6 +575,29 @@ lemma bwdArc_arcDart_notMem_keptDel₁
   rw [data.mem_keptDel₁_iff]
   exact ⟨Or.inr ⟨hface, hconf⟩, by simpa using hne⟩
 
+/-! ## Sharpening the residue: boundary membership ⟸ face ∉ side₁
+
+A canonical splice dart is KEPT by type (`(sideSigma₁ _).2 : ∉ keptDel₁`).  `keptSet₁ =
+(sideDarts₁ ∪ outerArc₁) \ {dart}`, and `sideDarts₁ = {d | dartFace d ∈ side₁}`.  So if the dart's
+face is NOT in `side₁`, it cannot be a `sideDarts₁` dart, hence it is an `outerArc₁` dart
+(`dartFace = outerFace`), hence on the boundary.  This reduces each boundary-membership residue to a
+single face-fact `dartFace ∉ side₁` (the kept-σ step off the chord-triangle leaves the side-1 faces). -/
+
+/-- Boundary membership of a kept dart from `dartFace ∉ side₁`. -/
+lemma kept_mem_outerCycle_of_face_not_side₁
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (k : {d : D // d ∉ data.keptDel₁})
+    (hface : M.dartFace (k : D) ∉ data.side₁) :
+    (k : D) ∈ hNT.outerCycle.darts := by
+  classical
+  have hkept : (k : D) ∈ data.keptSet₁ := (data.mem_keptDel₁_iff _).1 k.2
+  have hmem : (k : D) ∈ data.sideDarts₁ ∪ data.outerArc₁ := hkept.1
+  rcases hmem with hsd | hoa
+  · -- ∈ sideDarts₁ = {d | dartFace d ∈ side₁} contradicts hface
+    exact absurd hsd hface
+  · -- ∈ outerArc₁ ⟹ dartFace = outerFace ⟹ boundary
+    exact (hNT.outerCycle.mem_darts_iff _).2 hoa.1
+
 /-! ## bwdArc endpoint identification (from boundary membership — the lone residue) -/
 
 /-- **The lone remaining residue**: the canonical splice darts `ρ a₀`, `β a₁` are boundary darts
@@ -668,10 +691,19 @@ lemma canonical_trace_root_eq_last_arc
   rw [hαcoe, M.head_alpha, canonicalAnchor₁_tail data hsep, hb]
   exact A.head_last.symm
 
+/-- **The residue, sharpened to two face-facts.**  `CanonicalBwdArcEndpointAlignment` follows from
+the canonical splice darts' faces not lying in `side₁` (the genuine cyclic-order content: the
+kept-σ step off the chord triangle exits the side-1 faces onto the outer boundary). -/
+theorem canonicalBwdArcEndpointAlignment_of_faces
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (hρ : M.dartFace ((data.sideSigma₁ (side₁Anchor₀ data hsep)) : D) ∉ data.side₁)
+    (hβ : M.dartFace ((data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)) : D) ∉ data.side₁) :
+    CanonicalBwdArcEndpointAlignment hNT data hsep :=
+  ⟨kept_mem_outerCycle_of_face_not_side₁ hNT data hsep _ hρ,
+   kept_mem_outerCycle_of_face_not_side₁ hNT data hsep _ hβ⟩
+
 /-- **`OuterTraceInjOn` for the canonical anchors, reduced to the genuine external facts.**  Ties
-the whole chain: endpoint alignment → `canonicalTracePhiArc_of_steps` → classifier → reduction.
-Remaining hypotheses are the honest discrete-geometry residue: the chord orientation, the arc's
-side-1-keptness, the two anchor boundary-membership facts, and the `β a₀`-exclusion. -/
+the whole chain: endpoint alignment → `canonicalTracePhiArc_of_steps` → classifier → reduction. -/
 theorem canonical_OuterTraceInjOn_of_alignment
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
     (H : CanonicalBwdArcEndpointAlignment hNT data hsep) :

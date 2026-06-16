@@ -574,6 +574,57 @@ lemma bwdArc_arcDart_notMem_keptDel₁
   rw [data.mem_keptDel₁_iff]
   exact ⟨Or.inr ⟨hface, hconf⟩, by simpa using hne⟩
 
+/-! ## bwdArc endpoint identification (from boundary membership — the lone residue) -/
+
+/-- **The lone remaining residue**: the canonical splice darts `ρ a₀`, `β a₁` are boundary darts
+(equivalently, they are the first/last darts of the side-1 arc `bwdArc`).  This is the vertex-star →
+boundary endpoint alignment — NOT derivable from the arc/orbit machinery (which is all proved). -/
+structure CanonicalBwdArcEndpointAlignment
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) : Prop where
+  ρa₀_boundary : ((data.sideSigma₁ (side₁Anchor₀ data hsep)) : D) ∈ hNT.outerCycle.darts
+  βa₁_boundary : ((data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)) : D) ∈ hNT.outerCycle.darts
+
+/-- `ρ a₀ = bwdArc's first dart` (from `ρ a₀` boundary; both have tail `M.tail data.dart`). -/
+lemma sideSigma₁_anchor₀_eq_bwdArc_first
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (hρa₀ : ((data.sideSigma₁ (side₁Anchor₀ data hsep)) : D) ∈ hNT.outerCycle.darts) :
+    data.sideSigma₁ (side₁Anchor₀ data hsep)
+      = ⟨(ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).arcDart
+          (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).firstIdx,
+          bwdArc_arcDart_notMem_keptDel₁ hNT data hsep _⟩ := by
+  apply Subtype.ext
+  apply hNT.outerCycle.tail_injective_on_darts hNT.outer_simple hρa₀
+    ((ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).boundary _)
+  have hL : M.tail ((data.sideSigma₁ (side₁Anchor₀ data hsep)) : D) = M.tail data.dart := by
+    rw [show data.sideSigma₁ = FilteredRotation.filteredRotation M.σ data.keptDel₁ from rfl,
+      ProofsInTheBook.ChordSigmaContig.tail_filteredRotation data.keptDel₁ (side₁Anchor₀ data hsep)]
+    exact canonicalAnchor₀_tail data hsep
+  have hR : M.tail ((ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).arcDart
+      (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).firstIdx) = M.tail data.dart := by
+    rw [(ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).tail_firstIdx, M.head_alpha]
+  rw [hL, hR]
+
+/-- `β a₁ = bwdArc's last dart` (from `β a₁` boundary; both have head `M.head data.dart`). -/
+lemma sideAlpha₁_anchor₁_eq_bwdArc_last
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (hβa₁ : ((data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)) : D) ∈ hNT.outerCycle.darts) :
+    data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)
+      = ⟨(ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).arcDart
+          (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).lastIdx,
+          bwdArc_arcDart_notMem_keptDel₁ hNT data hsep _⟩ := by
+  apply Subtype.ext
+  apply head_injective_on_darts hNT.outerCycle hNT.outer_simple hβa₁
+    ((ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).boundary _)
+  have hL : M.head ((data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)) : D) = M.head data.dart := by
+    have hαcoe : ((data.sideAlpha₁ hsep (side₁Anchor₁ data hsep)) : D)
+        = M.α (side₁Anchor₁ data hsep).1 := by
+      simpa using data.sideAlpha₁_apply_coe hsep (side₁Anchor₁ data hsep)
+    rw [hαcoe, M.head_alpha, canonicalAnchor₁_tail data hsep]
+  have hR : M.head ((ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).arcDart
+      (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).lastIdx) = M.head data.dart := by
+    rw [(ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).head_lastIdx, M.tail_alpha]
+  rw [hL, hR]
+
 /-! ## Endpoint alignment + the full tie-together -/
 
 /-- **First endpoint:** `ρ a₀` (the σ-successor of the canonical anchor `a₀`) is the first arc dart.

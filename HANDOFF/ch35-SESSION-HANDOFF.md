@@ -260,3 +260,24 @@ Once CanonicalBwdArcEndpointAlignment lands → OuterTraceInjOn closed → wire 
 `ZinanCh35SideOuterSimple.side₁_outer_simple_canonical` (its `hresidual := OuterTraceInjOn` arg) →
 `contiguousInterval_holds`'s `outer_simple` field. (Chapter still needs hsimple/inner_reps/hd +
 side-2 mirror + recursion fuel + chordless branch.)
+
+---
+
+## ADDENDUM 2026-06-16 (5) — residue verdict (repo-grounded ChatGPT RUN#563)
+
+`CanonicalBwdArcEndpointAlignment` is **NOT closable from existing landed facts** (verified, repo-grounded).
+It is a genuine new sublemma: the **σ-rotation cyclic-order at the chord endpoints** —
+  `sideSigma₁ (sideAlpha₁ (face₁Dart₂)) = bwdArc's first dart` (at u), and
+  `sideAlpha₁ (side₁Anchor₁) = bwdArc's last dart` (at v).
+The star-region infrastructure (sideRegionInterChordEnds, Side₁StarConfinement, outerArc₁) gives
+region/face membership + keptness, but NOT the cyclic-ORDER statement that the canonical splice darts
+are the first/last `bwdArc` darts. ChatGPT (file:line grounded) could not derive it; "the next
+mathematical target is the endpoint-star equality package, not another orbit/side-region argument."
+
+So the session end-state for the OuterTraceInjOn front:
+  **`OuterTraceInjOn` (canonical) ⟸ `CanonicalBwdArcEndpointAlignment`** (clean-3, verified, commit 9064a19),
+a sharp legitimate reduction; the residue is a single, satisfiable, genuine discrete-geometry fact
+(local σ-cyclic-order at u/v). NOT vacuous. NEXT: prove the endpoint-star equality (a new local-rotation
+sublemma — likely needs the explicit σ-order of side-1 darts at a chord endpoint, relating the
+chord-triangle inner darts to the adjacent boundary-arc dart), then wire OuterTraceInjOn into
+`side₁_outer_simple_canonical`. Full chapter also needs hsimple/inner_reps/hd + side-2 + recursion + chordless.

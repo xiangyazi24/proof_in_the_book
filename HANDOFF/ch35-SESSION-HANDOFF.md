@@ -234,3 +234,29 @@ Once hρa₀_boundary/hβa₁_boundary land: instantiate `canonical_OuterTraceIn
 DONE → wire into `ZinanCh35SideOuterSimple.side₁_outer_simple_canonical` → `contiguousInterval_holds`'s
 outer_simple. (Chapter still also needs hsimple, inner_reps, hd, side-2 mirror, recursion fuel,
 chordless branch — OuterTraceInjOn is the outer_simple keystone of one side.)
+
+---
+
+## ADDENDUM 2026-06-16 (4) — OuterTraceInjOn FULLY REDUCED to ONE residue (clean-3)
+
+Commit 9064a19. `ZinanCh35OuterTraceProof.lean` now proves (clean-3, verified):
+  `canonical_OuterTraceInjOn_of_alignment : CanonicalBwdArcEndpointAlignment hNT data hsep →
+     OuterTraceInjOn hNT data hsep (side₁Anchor₀) (side₁Anchor₁) (side₁Anchors_ne)`
+ELIMINATED (all clean-3): orbit↔arc walk, membership-iff, `hArcKept` (via `bwdArc_reverse_face_mem_side₁`),
+`hnot_beta_a₀` (β a₀ = face₁Dart₂), AND orientation (use `bwdArc`, whose endpoints ARE the chord
+dart's tail/head — matches `canonicalAnchor₀/₁_tail` directly, no htu/hhv). Arc endpoints generalized
+`u v → {a b}`.
+
+**THE SOLE REMAINING RESIDUE:**
+  `CanonicalBwdArcEndpointAlignment` = `ρa₀_boundary : (sideSigma₁ (side₁Anchor₀)).1 ∈ outerCycle.darts`
+   ∧ `βa₁_boundary : (sideAlpha₁ (side₁Anchor₁)).1 ∈ outerCycle.darts`.
+The vertex-star→boundary endpoint alignment: the kept-σ step off the chord-triangle inner darts
+(face₁Dart₁/₂ = ⟨φ dart⟩/⟨φ² dart⟩) lands on the boundary arc darts at the chord endpoints. ChatGPT
+flagged this as a genuine sublemma (the σ-star at u/v), possibly tied to the chapter's open
+Side₁SchoenfliesConfinementInput. If so, OuterTraceInjOn ⟸ that bottleneck (legit reduction).
+ChatGPT life computing whether it's independently provable (/tmp/ch35-residue-q.txt).
+
+Once CanonicalBwdArcEndpointAlignment lands → OuterTraceInjOn closed → wire into
+`ZinanCh35SideOuterSimple.side₁_outer_simple_canonical` (its `hresidual := OuterTraceInjOn` arg) →
+`contiguousInterval_holds`'s `outer_simple` field. (Chapter still needs hsimple/inner_reps/hd +
+side-2 mirror + recursion fuel + chordless branch.)

@@ -2,6 +2,7 @@ import ProofsInTheBook.ZinanCh35SideOuterSimple
 import ProofsInTheBook.ZinanCh35ChordResidue
 import ProofsInTheBook.ZinanCh35ArcDartRun
 import ProofsInTheBook.ZinanCh35EdgeCoreFinal
+import ProofsInTheBook.ZinanCh35ArcSide
 
 /-!
 # Chapter 35 — discharging `OuterTraceInjOn` via the orbit↔boundary-arc VERTEX correspondence
@@ -549,6 +550,29 @@ lemma hnot_beta_a₀_canonical
     show M.dartFace (M.φ (M.φ data.dart)) = M.dartFace data.dart
     rw [M.dartFace_phi, M.dartFace_phi]
   exact data.face₁_not_outer (hinner.symm.trans houter)
+
+/-- **`hArcKept` for the side-1 arc `bwdArc`, UNCONDITIONAL.**  Each `bwdArc` dart's `α`-reverse
+face is in `side₁` (`bwdArc_reverse_face_mem_side₁`), so it lies in `outerArc₁ ⊆ keptSet₁`; it is
+not the chord dart (`bwdArc_dartEdge_ne_chord`).  No orientation / region hypothesis. -/
+lemma bwdArc_arcDart_notMem_keptDel₁
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (i : Fin (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).len) :
+    (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).arcDart i ∉ data.keptDel₁ := by
+  classical
+  have hbmem : (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).arcDart i ∈ hNT.outerCycle.darts :=
+    (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).boundary i
+  have hface : M.dartFace ((ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).arcDart i)
+      = hNT.outerFace :=
+    (hNT.outerCycle.mem_darts_iff _).mp hbmem
+  have hconf : M.dartFace (M.α ((ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).arcDart i))
+      ∈ data.side₁ :=
+    ProofsInTheBook.ZinanCh35ArcSide.bwdArc_reverse_face_mem_side₁ data i
+  have hne : (ProofsInTheBook.ZinanCh35ArcSide.bwdArc data).arcDart i ≠ data.dart := by
+    intro he
+    apply ProofsInTheBook.ZinanCh35ArcSide.bwdArc_dartEdge_ne_chord data i
+    rw [he]; exact hNT.chordDart_edge data.chord
+  rw [data.mem_keptDel₁_iff]
+  exact ⟨Or.inr ⟨hface, hconf⟩, by simpa using hne⟩
 
 /-! ## Endpoint alignment + the full tie-together -/
 

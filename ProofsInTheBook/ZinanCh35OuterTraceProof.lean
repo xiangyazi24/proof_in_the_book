@@ -1527,6 +1527,863 @@ theorem sideMap₂_isSimpleGraph_canonical
               rfl
             · exact Equiv.Perm.SameCycle.refl _ _
 
+/-- **`hArcKept` for the side-2 arc `fwdArc`, UNCONDITIONAL.**  Each `fwdArc` dart's
+`α`-reverse face is in `side₂`, so it lies in `outerArc₂ ⊆ keptSet₂`; it is not the side-2 seam
+dart `α dart` because its edge is not the chord. -/
+lemma fwdArc_arcDart_notMem_keptDel₂
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (i : Fin (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).len) :
+    (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).arcDart i ∉ data.keptDel₂ := by
+  classical
+  have hfmem : (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).arcDart i ∈ hNT.outerCycle.darts :=
+    (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).boundary i
+  have hface : M.dartFace ((ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).arcDart i)
+      = hNT.outerFace :=
+    (hNT.outerCycle.mem_darts_iff _).mp hfmem
+  have hconf : M.dartFace (M.α ((ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).arcDart i))
+      ∈ data.side₂ :=
+    ProofsInTheBook.ZinanCh35ArcSide.fwdArc_reverse_face_mem_side₂ data i
+  have hne : (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).arcDart i ≠ M.α data.dart := by
+    intro he
+    apply ProofsInTheBook.ZinanCh35ArcSide.fwdArc_dartEdge_ne_chord data i
+    rw [he, M.dartEdge_alpha]
+    exact hNT.chordDart_edge data.chord
+  rw [data.mem_keptDel₂_iff]
+  exact ⟨Or.inr ⟨hface, hconf⟩, by simpa using hne⟩
+
+/-- `ρ₂ a₀` is the first dart of the canonical side-2 forward boundary arc. -/
+lemma sideSigma₂_anchor₀_eq_fwdArc_first
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (hρa₀ : ((data.sideSigma₂ (side₂Anchor₀ data hsep)) : D) ∈ hNT.outerCycle.darts) :
+    data.sideSigma₂ (side₂Anchor₀ data hsep)
+      = ⟨(ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).arcDart
+          (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).firstIdx,
+          fwdArc_arcDart_notMem_keptDel₂ hNT data hsep _⟩ := by
+  apply Subtype.ext
+  apply hNT.outerCycle.tail_injective_on_darts hNT.outer_simple hρa₀
+    ((ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).boundary _)
+  have hL : M.tail ((data.sideSigma₂ (side₂Anchor₀ data hsep)) : D) = M.head data.dart := by
+    rw [show data.sideSigma₂ = FilteredRotation.filteredRotation M.σ data.keptDel₂ from rfl,
+      ProofsInTheBook.ChordSigmaContig.tail_filteredRotation data.keptDel₂ (side₂Anchor₀ data hsep)]
+    exact canonicalSide₂Anchor₀_tail hNT data hsep
+  have hR : M.tail ((ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).arcDart
+      (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).firstIdx) = M.head data.dart :=
+    (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).tail_firstIdx
+  rw [hL, hR]
+
+/-- `β₂ a₁` is the last dart of the canonical side-2 forward boundary arc. -/
+lemma sideAlpha₂_anchor₁_eq_fwdArc_last
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (hβa₁ : ((data.sideAlpha₂ hsep (side₂Anchor₁ data hsep)) : D) ∈ hNT.outerCycle.darts) :
+    data.sideAlpha₂ hsep (side₂Anchor₁ data hsep)
+      = ⟨(ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).arcDart
+          (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).lastIdx,
+          fwdArc_arcDart_notMem_keptDel₂ hNT data hsep _⟩ := by
+  apply Subtype.ext
+  apply head_injective_on_darts hNT.outerCycle hNT.outer_simple hβa₁
+    ((ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).boundary _)
+  have hL : M.head ((data.sideAlpha₂ hsep (side₂Anchor₁ data hsep)) : D) = M.tail data.dart := by
+    have hαcoe : ((data.sideAlpha₂ hsep (side₂Anchor₁ data hsep)) : D)
+        = M.α (side₂Anchor₁ data hsep).1 := by
+      simpa using data.sideAlpha₂_apply_coe hsep (side₂Anchor₁ data hsep)
+    rw [hαcoe, M.head_alpha, canonicalSide₂Anchor₁_tail hNT data hsep]
+  have hR : M.head ((ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).arcDart
+      (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).lastIdx) = M.tail data.dart :=
+    (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).head_lastIdx
+  rw [hL, hR]
+
+/-- **Canonical side-2 chord-incidence non-degeneracy.** -/
+theorem side₂ChordIncidenceNonDegenerate_canonical
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (hρa₀ : ((data.sideSigma₂ (side₂Anchor₀ data hsep)) : D) ∈ hNT.outerCycle.darts)
+    (hβa₁ : ((data.sideAlpha₂ hsep (side₂Anchor₁ data hsep)) : D) ∈ hNT.outerCycle.darts) :
+    ProofsInTheBook.ZinanCh35Contiguous.Side₂ChordIncidenceNonDegenerate data hsep
+      (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) := by
+  classical
+  intro h
+  have hfirst :
+      data.sideSigma₂ (side₂Anchor₀ data hsep)
+        = ⟨(ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).arcDart
+            (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).firstIdx,
+          fwdArc_arcDart_notMem_keptDel₂ hNT data hsep _⟩ :=
+    sideSigma₂_anchor₀_eq_fwdArc_first hNT data hsep hρa₀
+  have hlast :
+      data.sideAlpha₂ hsep (side₂Anchor₁ data hsep)
+        = ⟨(ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).arcDart
+            (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).lastIdx,
+          fwdArc_arcDart_notMem_keptDel₂ hNT data hsep _⟩ :=
+    sideAlpha₂_anchor₁_eq_fwdArc_last hNT data hsep hβa₁
+  have htail_eq :
+      M.tail ((ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).arcDart
+          (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).firstIdx)
+        = M.tail ((ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).arcDart
+          (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).lastIdx) := by
+    have hval := congrArg Subtype.val h
+    rw [hfirst, hlast] at hval
+    exact congrArg M.tail hval
+  have hidx :
+      (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).firstIdx
+        = (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).lastIdx :=
+    (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).tail_nodup htail_eq
+  have hidx_val :
+      ((ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).firstIdx : ℕ)
+        = ((ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).lastIdx : ℕ) :=
+    congrArg Fin.val hidx
+  have hlen_ge : 2 ≤ (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).len :=
+    ProofsInTheBook.ZinanCh35ArcSide.fwdArc_len data
+  have hlast_val :
+      ((ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).lastIdx : ℕ)
+        = (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).len - 1 := rfl
+  have hfirst_val :
+      ((ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).firstIdx : ℕ) = 0 := rfl
+  omega
+
+/-- **The canonical side-2 chord predecessors are not `tracePhi`-SameCycle.** -/
+theorem side₂_chordPred_notSameCycle_canonical
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    ¬ (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+        (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)).SameCycle
+      ((data.sideAlpha₂ hsep) (side₂Anchor₀ data hsep))
+      ((data.sideAlpha₂ hsep) (side₂Anchor₁ data hsep)) := by
+  classical
+  set β := data.sideAlpha₂ hsep with hβ
+  set ρ := data.sideSigma₂ with hρ
+  set a₀ := side₂Anchor₀ data hsep with ha₀
+  set a₁ := side₂Anchor₁ data hsep with ha₁
+  have hshare : (keptPhi β ρ).SameCycle (ρ a₀) (ρ a₁) := by
+    have h := side₂AnchorsShareFace_canonical data hsep
+    simpa [hβ, hρ, ha₀, ha₁, ProofsInTheBook.ChordDisk.Side₂AnchorsShareFace, keptPhi]
+      using h
+  have hne : ρ a₀ ≠ ρ a₁ := ρa₀_ne_ρa₁ ρ (side₂Anchors_ne hNT data hsep)
+  have hsplit : ¬ (tracePhi β ρ a₀ a₁).SameCycle (ρ a₀) (ρ a₁) := by
+    rw [show tracePhi β ρ a₀ a₁ = Equiv.swap (ρ a₀) (ρ a₁) * keptPhi β ρ from rfl]
+    exact notSameCycle_swap_mul_left_of_sameCycle (keptPhi β ρ) hne hshare
+  intro hsc
+  apply hsplit
+  have hb0 : tracePhi β ρ a₀ a₁ (β a₀) = ρ a₁ :=
+    tracePhi_b0 β ρ (data.sideAlpha₂_involutive hsep) a₀ a₁
+  have hb1 : tracePhi β ρ a₀ a₁ (β a₁) = ρ a₀ :=
+    tracePhi_b1 β ρ (data.sideAlpha₂_involutive hsep) a₀ a₁
+  have hstep : (tracePhi β ρ a₀ a₁).SameCycle
+      (tracePhi β ρ a₀ a₁ (β a₀)) (tracePhi β ρ a₀ a₁ (β a₁)) :=
+    hsc.apply_left.apply_right
+  rw [hb0, hb1] at hstep
+  exact hstep.symm
+
+/-- Kept side-2 copy of an arc dart. -/
+def arcK₂ (data : hNT.ChordSplitData u v)
+    (A : DartArc M hNT.outerCycle a b)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₂) (i : Fin A.len) :
+    {d : D // d ∉ data.keptDel₂} :=
+  ⟨A.arcDart i, hArcKept i⟩
+
+/-- The side-2 kept face permutation walks one step along a kept boundary arc. -/
+lemma sideSigma₂_alpha_arcDart_eq_next
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle a b)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₂)
+    (i : Fin A.len) (hi : (i : ℕ) + 1 < A.len) :
+    data.sideSigma₂ (data.sideAlpha₂ hsep (arcK₂ hNT data A hArcKept i))
+      = arcK₂ hNT data A hArcKept ⟨i + 1, hi⟩ := by
+  classical
+  have hphi : M.φ (A.arcDart i) = A.arcDart ⟨i + 1, hi⟩ :=
+    phi_eq_of_boundary_chain hNT.outerCycle hNT.outer_simple
+      (A.boundary i) (A.boundary ⟨i + 1, hi⟩) (A.chain i hi)
+  have hαcoe : ((data.sideAlpha₂ hsep (arcK₂ hNT data A hArcKept i)) : D)
+      = M.α (A.arcDart i) := by
+    simpa [arcK₂] using data.sideAlpha₂_apply_coe hsep (arcK₂ hNT data A hArcKept i)
+  have hσnext : M.σ ((data.sideAlpha₂ hsep (arcK₂ hNT data A hArcKept i)) : D)
+      = A.arcDart ⟨i + 1, hi⟩ := by
+    rw [hαcoe]; exact hphi
+  have hσ_kept : M.σ ((data.sideAlpha₂ hsep (arcK₂ hNT data A hArcKept i)) : D)
+      ∉ data.keptDel₂ := by
+    rw [hσnext]; exact hArcKept ⟨i + 1, hi⟩
+  apply Subtype.ext
+  rw [show data.sideSigma₂ = FilteredRotation.filteredRotation M.σ data.keptDel₂ from rfl,
+    FilteredRotation.filteredRotation_apply_of_next_kept M.σ data.keptDel₂ _ hσ_kept]
+  exact hσnext
+
+/-- `arcK₂` is injective along a dart arc. -/
+lemma arcK₂_injective (data : hNT.ChordSplitData u v)
+    (A : DartArc M hNT.outerCycle a b)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₂)
+    {i j : Fin A.len} (h : arcK₂ hNT data A hArcKept i = arcK₂ hNT data A hArcKept j) :
+    i = j := by
+  apply A.tail_nodup
+  show M.tail (A.arcDart i) = M.tail (A.arcDart j)
+  have hd : A.arcDart i = A.arcDart j := by
+    have := congrArg Subtype.val h; simpa [arcK₂] using this
+  rw [hd]
+
+/-- Side-2 canonical outer-orbit membership iff: root `inr 1`, or an `inl` dart in the
+`tracePhi₂` orbit of `β₂ a₁`. -/
+theorem canonical_side₂_outer_orbit_mem_iff
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (x : {d : D // d ∉ data.keptDel₂} ⊕ Fin 2) :
+    x ∈ (data.sideMap₂ hsep (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)
+        (side₂Anchors_ne hNT data hsep)).faceDartList (Sum.inr 1)
+      ↔ x = Sum.inr 1 ∨
+        ∃ k : {d : D // d ∉ data.keptDel₂}, x = Sum.inl k ∧
+          (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+              (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)).SameCycle
+            ((data.sideAlpha₂ hsep) (side₂Anchor₁ data hsep)) k := by
+  classical
+  set a₀ := side₂Anchor₀ data hsep with ha₀
+  set a₁ := side₂Anchor₁ data hsep with ha₁
+  set hne := side₂Anchors_ne hNT data hsep with hhne
+  set β := data.sideAlpha₂ hsep with hβ
+  set ρ := data.sideSigma₂ with hρ
+  have hinv : β * β = 1 := data.sideAlpha₂_involutive hsep
+  have hfix : ∀ k, β k ≠ k := data.sideAlpha₂_no_fixed hsep
+  have hSeq : data.sideMap₂ hsep a₀ a₁ hne = freshMap β ρ hinv hfix a₀ a₁ hne := rfl
+  have hsplit : ¬ (tracePhi β ρ a₀ a₁).SameCycle (β a₁) (β a₀) := by
+    intro h
+    exact side₂_chordPred_notSameCycle_canonical hNT data hsep h.symm
+  have hroot_support :
+      (Sum.inr 1 : {d : D // d ∉ data.keptDel₂} ⊕ Fin 2)
+        ∈ (freshMap β ρ hinv hfix a₀ a₁ hne).φ.support := by
+    rw [Equiv.Perm.mem_support, freshMap_phi_inr_one β ρ hinv hfix hne]
+    exact Sum.inl_ne_inr
+  rw [hSeq, CombMap.faceDartList]
+  constructor
+  · intro hx
+    rw [Equiv.Perm.mem_toList_iff] at hx
+    obtain ⟨hcyc, _⟩ := hx
+    have hτ : (tracePhi β ρ a₀ a₁).SameCycle (β a₁) (faceProj β a₀ a₁ x) := by
+      have h := (freshFace_sameCycle_iff β ρ hinv hfix hne (Sum.inr 1) x).1 hcyc
+      simpa [faceProj_inr_one] using h
+    cases x with
+    | inl k =>
+        right
+        exact ⟨k, rfl, by simpa [faceProj_inl] using hτ⟩
+    | inr j =>
+        fin_cases j
+        · exact absurd (by simpa [faceProj_inr_zero] using hτ) hsplit
+        · left; rfl
+  · intro hx
+    rw [Equiv.Perm.mem_toList_iff]
+    refine ⟨?_, hroot_support⟩
+    rcases hx with hroot | ⟨k, hxk, hk⟩
+    · rw [hroot]
+    · rw [hxk]
+      refine (freshFace_sameCycle_iff β ρ hinv hfix hne (Sum.inr 1) (Sum.inl k)).2 ?_
+      simpa [faceProj_inl, faceProj_inr_one] using hk
+
+/-- The side-2 outer-orbit classifier against a concrete kept boundary arc. -/
+def CanonicalSide₂OuterArcTrace
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle a b)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₂) : Prop :=
+  ∀ x, x ∈ (data.sideMap₂ hsep (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)
+        (side₂Anchors_ne hNT data hsep)).faceDartList (Sum.inr 1) →
+    x = Sum.inr 1 ∨ ∃ i : Fin A.len, x = Sum.inl ⟨A.arcDart i, hArcKept i⟩
+
+/-- Side-2 `tracePhi` orbit through `β₂ a₁` is exactly the kept copies of `A`. -/
+structure CanonicalTracePhiArc₂
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle a b)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₂) : Prop where
+  mem_iff : ∀ k : {d : D // d ∉ data.keptDel₂},
+    (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+        (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)).SameCycle
+      ((data.sideAlpha₂ hsep) (side₂Anchor₁ data hsep)) k
+    ↔ ∃ i : Fin A.len, k = ⟨A.arcDart i, hArcKept i⟩
+
+/-- Side-2 classifier from the `tracePhi`-orbit ↔ arc identification. -/
+theorem canonical_arcTrace₂_of_tracePhiArc
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle a b)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₂)
+    (hTA : CanonicalTracePhiArc₂ hNT data hsep A hArcKept) :
+    CanonicalSide₂OuterArcTrace hNT data hsep A hArcKept := by
+  intro x hx
+  rcases (canonical_side₂_outer_orbit_mem_iff hNT data hsep x).1 hx with hroot | ⟨k, hxk, hτ⟩
+  · exact Or.inl hroot
+  · rcases (hTA.mem_iff k).1 hτ with ⟨i, hk⟩
+    exact Or.inr ⟨i, by rw [hxk, hk]⟩
+
+/-- Side-2 `OuterTraceInjOn` analog for canonical anchors, from the orbit↔arc classifier. -/
+def OuterTraceInjOn₂
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (a₀ a₁ : {d : D // d ∉ data.keptDel₂}) (hne : a₀ ≠ a₁) : Prop :=
+  ∀ x ∈ (data.sideMap₂ hsep a₀ a₁ hne).faceDartList (Sum.inr 1),
+    ∀ y ∈ (data.sideMap₂ hsep a₀ a₁ hne).faceDartList (Sum.inr 1),
+      M.tail (proj a₀ a₁ x).1 = M.tail (proj a₀ a₁ y).1 → x = y
+
+/-- Side-2 `OuterTraceInjOn` for canonical anchors from the side-2 outer-arc classifier. -/
+theorem canonical_OuterTraceInjOn₂_of_arcTrace
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle a b)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₂)
+    (hb : M.tail data.dart = b)
+    (htrace : CanonicalSide₂OuterArcTrace hNT data hsep A hArcKept) :
+    OuterTraceInjOn₂ hNT data hsep
+      (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) (side₂Anchors_ne hNT data hsep) := by
+  have hroot : M.tail (proj (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)
+      (Sum.inr 1)).1 = b := by
+    rw [proj_inr_one, canonicalSide₂Anchor₁_tail hNT data hsep, hb]
+  intro x hx y hy htail
+  rcases htrace x hx with hxr | ⟨i, hxi⟩ <;> rcases htrace y hy with hyr | ⟨j, hyj⟩
+  · rw [hxr, hyr]
+  · exfalso
+    rw [hxr] at htail
+    rw [hyj] at htail
+    simp only [proj_inl, hroot] at htail
+    exact A.head_last_ne_tail j htail
+  · exfalso
+    rw [hyr] at htail
+    rw [hxi] at htail
+    simp only [proj_inl, hroot] at htail
+    exact A.head_last_ne_tail i htail.symm
+  · rw [hxi, hyj]
+    rw [hxi, hyj] at htail
+    simp only [proj_inl] at htail
+    have hij : i = j := A.tail_nodup htail
+    rw [hij]
+
+/-- Side-2 canonical `outer_simple`, from the side-2 `OuterTraceInjOn₂` residual. -/
+theorem side₂_outer_simple_canonical_of_orbitTrace
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (hresidual : OuterTraceInjOn₂ hNT data hsep
+      (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) (side₂Anchors_ne hNT data hsep)) :
+    (((data.sideMap₂ hsep (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)
+        (side₂Anchors_ne hNT data hsep)).faceDartList (Sum.inr 1)).map
+      (data.sideMap₂ hsep (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)
+        (side₂Anchors_ne hNT data hsep)).tail).Nodup := by
+  have hL : ((data.sideMap₂ hsep (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)
+      (side₂Anchors_ne hNT data hsep)).faceDartList (Sum.inr 1)).Nodup := by
+    rw [ProofsInTheBook.PlanarMap.CombMap.faceDartList]
+    exact Equiv.Perm.nodup_toList _ _
+  rw [List.nodup_map_iff_inj_on hL]
+  intro x hx y hy htail
+  have hMtail : M.tail (proj (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) x).1
+      = M.tail (proj (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) y).1 :=
+    (sideMap₂_tail_eq_iff_M_tail_proj hNT data hsep
+      (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) (side₂Anchors_ne hNT data hsep) x y).1 htail
+  exact hresidual x hx y hy hMtail
+
+/-- Side-2 `tracePhi` walks one step along the arc. -/
+lemma tracePhi₂_arc_step
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle a b)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₂)
+    (hlast : data.sideAlpha₂ hsep (side₂Anchor₁ data hsep)
+      = arcK₂ hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩)
+    (hnot_beta_a₀ : ∀ i : Fin A.len,
+      arcK₂ hNT data A hArcKept i ≠ data.sideAlpha₂ hsep (side₂Anchor₀ data hsep))
+    (i : Fin A.len) (hi : (i : ℕ) + 1 < A.len) :
+    (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+        (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep))
+        (arcK₂ hNT data A hArcKept i)
+      = arcK₂ hNT data A hArcKept ⟨i + 1, hi⟩ := by
+  classical
+  have hβinv : data.sideAlpha₂ hsep * data.sideAlpha₂ hsep = 1 := data.sideAlpha₂_involutive hsep
+  have hinv2 : ∀ x, data.sideAlpha₂ hsep (data.sideAlpha₂ hsep x) = x := by
+    intro x; rw [← Equiv.Perm.mul_apply, hβinv, Equiv.Perm.one_apply]
+  have hnot0 : data.sideAlpha₂ hsep (arcK₂ hNT data A hArcKept i) ≠ side₂Anchor₀ data hsep := by
+    intro h
+    apply hnot_beta_a₀ i
+    have h2 := congrArg (data.sideAlpha₂ hsep) h
+    rw [hinv2] at h2
+    exact h2
+  have hnot1 : data.sideAlpha₂ hsep (arcK₂ hNT data A hArcKept i) ≠ side₂Anchor₁ data hsep := by
+    intro h
+    have h2 := congrArg (data.sideAlpha₂ hsep) h
+    rw [hinv2] at h2
+    rw [hlast] at h2
+    have hieq : i = (⟨A.len - 1, by have := A.len_pos; omega⟩ : Fin A.len) :=
+      arcK₂_injective hNT data A hArcKept h2
+    have hi2 : (i : ℕ) = A.len - 1 := by rw [hieq]
+    omega
+  rw [tracePhi_other (data.sideAlpha₂ hsep) data.sideSigma₂ (side₂Anchor₀ data hsep)
+    (side₂Anchor₁ data hsep) hnot0 hnot1]
+  exact sideSigma₂_alpha_arcDart_eq_next hNT data hsep A hArcKept i hi
+
+/-- Side-2 `tracePhi` wraps from the last arc dart back to the first. -/
+lemma tracePhi₂_arc_wrap
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle a b)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₂)
+    (hfirst : data.sideSigma₂ (side₂Anchor₀ data hsep)
+      = arcK₂ hNT data A hArcKept ⟨0, A.len_pos⟩)
+    (hlast : data.sideAlpha₂ hsep (side₂Anchor₁ data hsep)
+      = arcK₂ hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩) :
+    (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+        (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep))
+        (arcK₂ hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩)
+      = arcK₂ hNT data A hArcKept ⟨0, A.len_pos⟩ := by
+  rw [← hlast, tracePhi_b1 (data.sideAlpha₂ hsep) data.sideSigma₂
+    (data.sideAlpha₂_involutive hsep) (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)]
+  exact hfirst
+
+lemma tracePhi₂_iterate_last_mem_arc
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle a b)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₂)
+    (hstep : ∀ i : Fin A.len, ∀ hi : (i : ℕ) + 1 < A.len,
+      (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+          (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep))
+          (arcK₂ hNT data A hArcKept i) = arcK₂ hNT data A hArcKept ⟨i + 1, hi⟩)
+    (hwrap : (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+        (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep))
+        (arcK₂ hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩)
+      = arcK₂ hNT data A hArcKept ⟨0, A.len_pos⟩)
+    (n : ℕ) :
+    ∃ i : Fin A.len,
+      (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+          (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep))^[n]
+        (arcK₂ hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩)
+        = arcK₂ hNT data A hArcKept i := by
+  classical
+  induction n with
+  | zero => exact ⟨⟨A.len - 1, by have := A.len_pos; omega⟩, rfl⟩
+  | succ n ih =>
+      rcases ih with ⟨i, hi_eq⟩
+      rw [Function.iterate_succ_apply', hi_eq]
+      by_cases hlt : (i : ℕ) + 1 < A.len
+      · exact ⟨⟨i + 1, hlt⟩, hstep i hlt⟩
+      · have hi_last : i = (⟨A.len - 1, by have := A.len_pos; omega⟩ : Fin A.len) := by
+          apply Fin.ext
+          show (i : ℕ) = A.len - 1
+          have h1 := i.isLt
+          have h2 : ¬ ((i : ℕ) + 1 < A.len) := hlt
+          omega
+        rw [hi_last]; exact ⟨⟨0, A.len_pos⟩, hwrap⟩
+
+lemma tracePhi₂_sameCycle_last_arc
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle a b)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₂)
+    (hstep : ∀ i : Fin A.len, ∀ hi : (i : ℕ) + 1 < A.len,
+      (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+          (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep))
+          (arcK₂ hNT data A hArcKept i) = arcK₂ hNT data A hArcKept ⟨i + 1, hi⟩)
+    (hwrap : (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+        (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep))
+        (arcK₂ hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩)
+      = arcK₂ hNT data A hArcKept ⟨0, A.len_pos⟩)
+    (i : Fin A.len) :
+    (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+        (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)).SameCycle
+      (arcK₂ hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩)
+      (arcK₂ hNT data A hArcKept i) := by
+  classical
+  set τ := tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+    (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) with hτdef
+  have hlast_first : τ.SameCycle (arcK₂ hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩)
+      (arcK₂ hNT data A hArcKept ⟨0, A.len_pos⟩) := ⟨1, by rw [zpow_one]; exact hwrap⟩
+  have hfrom_first : ∀ n : ℕ, ∀ hn : n < A.len,
+      τ.SameCycle (arcK₂ hNT data A hArcKept ⟨0, A.len_pos⟩) (arcK₂ hNT data A hArcKept ⟨n, hn⟩) := by
+    intro n
+    induction n with
+    | zero => intro hn; exact Equiv.Perm.SameCycle.refl _ _
+    | succ m ih =>
+        intro hn
+        have hm : m < A.len := by omega
+        have hmstep : (m : ℕ) + 1 < A.len := by simpa using hn
+        refine (ih hm).trans ?_
+        refine ⟨1, ?_⟩
+        rw [zpow_one]
+        have := hstep ⟨m, hm⟩ (by simpa using hmstep)
+        simpa using this
+  exact hlast_first.trans (hfrom_first i.1 i.2)
+
+/-- Side-2 `CanonicalTracePhiArc₂` from endpoint/step data. -/
+theorem canonicalTracePhiArc₂_of_steps
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle a b)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₂)
+    (hfirst : data.sideSigma₂ (side₂Anchor₀ data hsep)
+      = arcK₂ hNT data A hArcKept ⟨0, A.len_pos⟩)
+    (hlast : data.sideAlpha₂ hsep (side₂Anchor₁ data hsep)
+      = arcK₂ hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩)
+    (hnot_beta_a₀ : ∀ i : Fin A.len,
+      arcK₂ hNT data A hArcKept i ≠ data.sideAlpha₂ hsep (side₂Anchor₀ data hsep)) :
+    CanonicalTracePhiArc₂ hNT data hsep A hArcKept := by
+  classical
+  have hstep : ∀ i : Fin A.len, ∀ hi : (i : ℕ) + 1 < A.len,
+      (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+          (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep))
+          (arcK₂ hNT data A hArcKept i) = arcK₂ hNT data A hArcKept ⟨i + 1, hi⟩ :=
+    fun i hi => tracePhi₂_arc_step hNT data hsep A hArcKept hlast hnot_beta_a₀ i hi
+  have hwrap := tracePhi₂_arc_wrap hNT data hsep A hArcKept hfirst hlast
+  refine ⟨fun k => ?_⟩
+  constructor
+  · intro hk
+    obtain ⟨n, hn⟩ := hk.exists_nat_pow_eq
+    have hn' : (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+        (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep))^[n]
+        (arcK₂ hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩) = k := by
+      rw [Equiv.Perm.coe_pow] at hn
+      rw [← hlast]; exact hn
+    obtain ⟨i, hi⟩ := tracePhi₂_iterate_last_mem_arc hNT data hsep A hArcKept hstep hwrap n
+    exact ⟨i, hn'.symm.trans hi⟩
+  · rintro ⟨i, rfl⟩
+    have hsc := tracePhi₂_sameCycle_last_arc hNT data hsep A hArcKept hstep hwrap i
+    rw [hlast]; exact hsc
+
+/-- For side 2, `β₂ a₀ = face₂Dart₂`, so no outer boundary arc dart can equal it. -/
+lemma hnot_beta₂_a₀_canonical
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (A : DartArc M hNT.outerCycle a b)
+    (hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₂)
+    (i : Fin A.len) :
+    arcK₂ hNT data A hArcKept i ≠ data.sideAlpha₂ hsep (side₂Anchor₀ data hsep) := by
+  intro h
+  have ha₀ : side₂Anchor₀ data hsep = data.sideAlpha₂ hsep (face₂Dart₂ data) := by
+    apply data.sideSigma₂.injective
+    rw [sideSigma₂_side₂Anchor₀ data hsep]
+    rfl
+  have hinv2 : ∀ x, data.sideAlpha₂ hsep (data.sideAlpha₂ hsep x) = x := by
+    intro x
+    rw [← Equiv.Perm.mul_apply, data.sideAlpha₂_involutive hsep, Equiv.Perm.one_apply]
+  have hβa₀ : data.sideAlpha₂ hsep (side₂Anchor₀ data hsep) = face₂Dart₂ data := by
+    rw [ha₀]; exact hinv2 _
+  have houter : M.dartFace ((data.sideAlpha₂ hsep (side₂Anchor₀ data hsep)) : D)
+      = hNT.outerFace := by
+    rw [← congrArg Subtype.val h]
+    exact (hNT.outerCycle.mem_darts_iff _).mp (A.boundary i)
+  have hinner : M.dartFace ((data.sideAlpha₂ hsep (side₂Anchor₀ data hsep)) : D)
+      = data.face₂ := by
+    rw [hβa₀]
+    show M.dartFace (M.φ (M.φ (M.α data.dart))) = M.dartFace (M.α data.dart)
+    rw [M.dartFace_phi, M.dartFace_phi]
+  exact data.face₂_not_outer (hinner.symm.trans houter)
+
+/-- Side-2 `tracePhi` orbit ↔ canonical `fwdArc`, under the two endpoint boundary facts. -/
+theorem canonicalTracePhiArc₂_fwdArc_of_alignment
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (hρa₀ : ((data.sideSigma₂ (side₂Anchor₀ data hsep)) : D) ∈ hNT.outerCycle.darts)
+    (hβa₁ : ((data.sideAlpha₂ hsep (side₂Anchor₁ data hsep)) : D) ∈ hNT.outerCycle.darts) :
+    CanonicalTracePhiArc₂ hNT data hsep
+      (ProofsInTheBook.ZinanCh35ArcSide.fwdArc data)
+      (fun i => fwdArc_arcDart_notMem_keptDel₂ hNT data hsep i) := by
+  classical
+  set A := ProofsInTheBook.ZinanCh35ArcSide.fwdArc data
+  set hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₂ :=
+    fun i => fwdArc_arcDart_notMem_keptDel₂ hNT data hsep i
+  have hfirst :
+      data.sideSigma₂ (side₂Anchor₀ data hsep) =
+        arcK₂ hNT data A hArcKept ⟨0, A.len_pos⟩ := by
+    simpa [A, hArcKept, arcK₂] using
+      sideSigma₂_anchor₀_eq_fwdArc_first hNT data hsep hρa₀
+  have hlast :
+      data.sideAlpha₂ hsep (side₂Anchor₁ data hsep) =
+        arcK₂ hNT data A hArcKept ⟨A.len - 1, by have := A.len_pos; omega⟩ := by
+    simpa [A, hArcKept, arcK₂, DartArc.lastIdx] using
+      sideAlpha₂_anchor₁_eq_fwdArc_last hNT data hsep hβa₁
+  have hnot : ∀ i : Fin A.len,
+      arcK₂ hNT data A hArcKept i ≠ data.sideAlpha₂ hsep (side₂Anchor₀ data hsep) :=
+    fun i => hnot_beta₂_a₀_canonical hNT data hsep A hArcKept i
+  exact canonicalTracePhiArc₂_of_steps hNT data hsep A hArcKept hfirst hlast hnot
+
+/-- Side-2 `OuterTraceInjOn₂` for canonical anchors from endpoint boundary alignment. -/
+theorem canonical_OuterTraceInjOn₂_of_alignment
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (hρa₀ : ((data.sideSigma₂ (side₂Anchor₀ data hsep)) : D) ∈ hNT.outerCycle.darts)
+    (hβa₁ : ((data.sideAlpha₂ hsep (side₂Anchor₁ data hsep)) : D) ∈ hNT.outerCycle.darts) :
+    OuterTraceInjOn₂ hNT data hsep
+      (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) (side₂Anchors_ne hNT data hsep) := by
+  set A := ProofsInTheBook.ZinanCh35ArcSide.fwdArc data
+  set hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₂ :=
+    fun i => fwdArc_arcDart_notMem_keptDel₂ hNT data hsep i
+  have hTA := canonicalTracePhiArc₂_fwdArc_of_alignment hNT data hsep hρa₀ hβa₁
+  have htrace := canonical_arcTrace₂_of_tracePhiArc hNT data hsep A hArcKept hTA
+  have hb : M.tail data.dart = M.tail data.dart := rfl
+  exact canonical_OuterTraceInjOn₂_of_arcTrace hNT data hsep A hArcKept hb htrace
+
+/-- Conditional side-2 canonical `outer_simple`; the remaining hypotheses are exactly the two
+side-2 endpoint boundary-alignment facts. -/
+theorem side₂_outer_simple_canonical_of_alignment
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (hρa₀ : ((data.sideSigma₂ (side₂Anchor₀ data hsep)) : D) ∈ hNT.outerCycle.darts)
+    (hβa₁ : ((data.sideAlpha₂ hsep (side₂Anchor₁ data hsep)) : D) ∈ hNT.outerCycle.darts) :
+    (((data.sideMap₂ hsep (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)
+        (side₂Anchors_ne hNT data hsep)).faceDartList (Sum.inr 1)).map
+      (data.sideMap₂ hsep (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)
+        (side₂Anchors_ne hNT data hsep)).tail).Nodup :=
+  side₂_outer_simple_canonical_of_orbitTrace hNT data hsep
+    (canonical_OuterTraceInjOn₂_of_alignment hNT data hsep hρa₀ hβa₁)
+
+/-- Boundary membership of a side-2 kept dart from `dartFace ∉ side₂`. -/
+lemma kept_mem_outerCycle_of_face_not_side₂
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (k : {d : D // d ∉ data.keptDel₂})
+    (hface : M.dartFace (k : D) ∉ data.side₂) :
+    (k : D) ∈ hNT.outerCycle.darts := by
+  classical
+  have hkept : (k : D) ∈ data.keptSet₂ := (data.mem_keptDel₂_iff _).1 k.2
+  have hmem : (k : D) ∈ data.sideDarts₂ ∪ data.outerArc₂ := hkept.1
+  rcases hmem with hsd | hoa
+  · exact absurd hsd hface
+  · exact (hNT.outerCycle.mem_darts_iff _).2 hoa.1
+
+private lemma keptSet₂_of_side₂_ne_alphaDart
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) {d : D}
+    (hside : M.dartFace d ∈ data.side₂) (hne : d ≠ M.α data.dart) :
+    d ∈ data.keptSet₂ := by
+  exact ⟨Or.inl hside, by simpa using hne⟩
+
+/-- The first `σ` step from `sideAlpha₂ face₂Dart₂` hits the deleted side-2 seam `α dart`. -/
+private lemma sideSigma₂_sideAlpha₂_firstOutside_ge_two
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    2 ≤ Equiv.Perm.DeleteSet.firstOutside M.σ data.keptDel₂
+      (data.sideAlpha₂ hsep (face₂Dart₂ data)) := by
+  by_contra hlt
+  rw [Nat.not_le] at hlt
+  have hpos : 0 < Equiv.Perm.DeleteSet.firstOutside M.σ data.keptDel₂
+      (data.sideAlpha₂ hsep (face₂Dart₂ data)) :=
+    Equiv.Perm.DeleteSet.firstOutside_pos M.σ data.keptDel₂ _
+  have heq1 : Equiv.Perm.DeleteSet.firstOutside M.σ data.keptDel₂
+      (data.sideAlpha₂ hsep (face₂Dart₂ data)) = 1 := by omega
+  have hnot := Equiv.Perm.DeleteSet.firstOutside_notMem M.σ data.keptDel₂
+    (data.sideAlpha₂ hsep (face₂Dart₂ data))
+  rw [heq1, pow_one] at hnot
+  have hstep : M.σ ((data.sideAlpha₂ hsep (face₂Dart₂ data)) : D) = M.α data.dart := by
+    rw [data.sideAlpha₂_apply_coe hsep]
+    obtain ⟨_, _, h20⟩ := face₂_isFaceTriangle data
+    change M.φ (M.φ (M.φ (M.α data.dart))) = M.α data.dart
+    exact h20
+  have hdeleted : M.α data.dart ∈ data.keptDel₂ := by
+    by_contra hnotdel
+    rw [data.mem_keptDel₂_iff] at hnotdel
+    exact hnotdel.2 rfl
+  exact hnot (by rwa [hstep])
+
+/-- The first inverse-`σ` step from `face₂Dart₁` is the deleted chord dart `dart`. -/
+private lemma face₂Dart₁_inv_firstOutside_ge_two
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    2 ≤ Equiv.Perm.DeleteSet.firstOutside M.σ⁻¹ data.keptDel₂ (face₂Dart₁ data) := by
+  by_contra hlt
+  rw [Nat.not_le] at hlt
+  have hpos : 0 < Equiv.Perm.DeleteSet.firstOutside M.σ⁻¹ data.keptDel₂
+      (face₂Dart₁ data) :=
+    Equiv.Perm.DeleteSet.firstOutside_pos M.σ⁻¹ data.keptDel₂ _
+  have heq1 : Equiv.Perm.DeleteSet.firstOutside M.σ⁻¹ data.keptDel₂
+      (face₂Dart₁ data) = 1 := by omega
+  have hnot := Equiv.Perm.DeleteSet.firstOutside_notMem M.σ⁻¹ data.keptDel₂
+    (face₂Dart₁ data)
+  rw [heq1, pow_one] at hnot
+  have hstep : M.σ⁻¹ ((face₂Dart₁ data : {d : D // d ∉ data.keptDel₂}) : D)
+      = data.dart := by
+    show M.σ⁻¹ (M.φ (M.α data.dart)) = data.dart
+    apply M.σ.injective
+    calc
+      M.σ (M.σ⁻¹ (M.φ (M.α data.dart))) = M.φ (M.α data.dart) :=
+        Equiv.apply_symm_apply M.σ (M.φ (M.α data.dart))
+      _ = M.σ data.dart := by
+        change (M.σ * M.α) (M.α data.dart) = M.σ data.dart
+        rw [Equiv.Perm.mul_apply, M.alpha_alpha]
+  have hdeleted : data.dart ∈ data.keptDel₂ := by
+    by_contra hnotdel
+    exact data.dart_notMem_keptSet₂ hsep ((data.mem_keptDel₂_iff _).1 hnotdel)
+  exact hnot (by rwa [hstep])
+
+/-- First side-2 endpoint face fact: the kept `σ`-successor of `a₀` is not a side-2 dart. -/
+theorem face_ρ₂a₀_not_side₂
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    M.dartFace ((data.sideSigma₂ (side₂Anchor₀ data hsep)) : D) ∉ data.side₂ := by
+  classical
+  intro htarget
+  set x : {d : D // d ∉ data.keptDel₂} :=
+    data.sideAlpha₂ hsep (face₂Dart₂ data) with hx
+  set n := Equiv.Perm.DeleteSet.firstOutside M.σ data.keptDel₂ x with hn
+  set p : D := (M.σ ^ (n - 1)) x.1 with hp
+  have hn_ge : 2 ≤ n := by
+    rw [hn, hx]
+    exact sideSigma₂_sideAlpha₂_firstOutside_ge_two hNT data hsep
+  have hp_deleted : p ∈ data.keptDel₂ := by
+    by_contra hp_not
+    have hmin := Equiv.Perm.DeleteSet.firstOutside_min M.σ data.keptDel₂ x
+      (m := n - 1) (by rw [hn]; omega)
+    exact hmin ⟨by omega, by simpa [p] using hp_not⟩
+  have htarget_coe :
+      ((data.sideSigma₂ (side₂Anchor₀ data hsep)) : D) = (M.σ ^ n) x.1 := by
+    rw [sideSigma₂_side₂Anchor₀ data hsep]
+    change ((data.sideSigma₂ (data.sideAlpha₂ hsep (face₂Dart₂ data))) : D)
+        = (M.σ ^ n) x.1
+    rw [show data.sideSigma₂ = FilteredRotation.filteredRotation M.σ data.keptDel₂ from rfl]
+    rw [FilteredRotation.filteredRotation_apply_coe]
+  have htarget_side_pow : M.dartFace ((M.σ ^ n) x.1) ∈ data.side₂ := by
+    rw [htarget_coe] at htarget
+    exact htarget
+  have hσp : M.σ p = (M.σ ^ n) x.1 := by
+    rw [hp]
+    have hs : n - 1 + 1 = n := by omega
+    rw [← hs, pow_succ']
+    rfl
+  have hαp_side : M.dartFace (M.α p) ∈ data.side₂ := by
+    rw [← ProofsInTheBook.ZinanCh35StarConn.dartFace_sigma_eq_alpha (M := M) p]
+    rw [hσp]
+    exact htarget_side_pow
+  have hp_ne_alpha_dart : p ≠ M.α data.dart := by
+    intro hpα
+    have hface₁_side : data.face₁ ∈ data.side₂ := by
+      have : M.dartFace (M.α p) ∈ data.side₂ := hαp_side
+      rw [hpα, M.alpha_alpha] at this
+      simpa [ChordSplitData.face₁] using this
+    exact data.separates_symm hsep hface₁_side
+  have hx_coe : (x : D) = M.α (M.φ (M.φ (M.α data.dart))) := by
+    rw [hx, data.sideAlpha₂_apply_coe hsep]
+    rfl
+  have hp_tail : M.tail p = M.head data.dart := by
+    rw [hp, ProofsInTheBook.ChordSigmaContig.tail_pow_sigma, hx_coe,
+      tail_alpha_phiSq_alphaDart hNT data, M.tail_alpha]
+  have hp_ne_dart : p ≠ data.dart := by
+    intro hpd
+    have htail_eq : M.tail data.dart = M.head data.dart := by
+      rw [← hp_tail, hpd]
+    exact ProofsInTheBook.ChordSigmaContig.u_ne_v data htail_eq
+  have hp_kept : p ∈ data.keptSet₂ := by
+    by_cases hp_outer : M.dartFace p = hNT.outerFace
+    · exact ⟨Or.inr ⟨hp_outer, hαp_side⟩, by simpa using hp_ne_alpha_dart⟩
+    · have hp_not_boundary : ¬ hNT.outerCycle.IsBoundaryEdge (M.dartEdge p) := by
+        intro hbe
+        rcases data.boundaryEdge_dart_outer hbe with hpout | hαout
+        · exact hp_outer hpout
+        · exact data.side₂_subset_nonouter hαp_side hαout
+      have hp_not_chord : M.dartEdge p ≠ s(u, v) := by
+        intro hch
+        rcases data.chord_edge_darts hch with hpd | hpα
+        · exact hp_ne_dart hpd
+        · exact hp_ne_alpha_dart hpα
+      have hp_side : M.dartFace p ∈ data.side₂ := by
+        have hα_edge_not_boundary :
+            ¬ hNT.outerCycle.IsBoundaryEdge (M.dartEdge (M.α p)) := by
+          intro hbe
+          exact hp_not_boundary (by rwa [M.dartEdge_alpha] at hbe)
+        have hα_edge_not_chord : M.dartEdge (M.α p) ≠ s(u, v) := by
+          intro hch
+          exact hp_not_chord (by rwa [M.dartEdge_alpha] at hch)
+        have := data.alpha_mem_side₂_of_interior (e := M.α p) hαp_side
+          hα_edge_not_boundary hα_edge_not_chord
+        rwa [M.alpha_alpha] at this
+      exact keptSet₂_of_side₂_ne_alphaDart hNT data hp_side hp_ne_alpha_dart
+  have hp_not_deleted : p ∉ data.keptDel₂ := (data.mem_keptDel₂_iff p).2 hp_kept
+  exact hp_not_deleted hp_deleted
+
+/-- Second side-2 endpoint face fact: the edge-reverse of `a₁` is not a side-2 dart. -/
+theorem face_β₂a₁_not_side₂
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    M.dartFace ((data.sideAlpha₂ hsep (side₂Anchor₁ data hsep)) : D) ∉ data.side₂ := by
+  classical
+  intro hβside
+  set x : {d : D // d ∉ data.keptDel₂} := face₂Dart₁ data with hx
+  set n := Equiv.Perm.DeleteSet.firstOutside M.σ⁻¹ data.keptDel₂ x with hn
+  set p : D := (M.σ⁻¹ ^ (n - 1)) x.1 with hp
+  have hn_ge : 2 ≤ n := by
+    rw [hn, hx]
+    exact face₂Dart₁_inv_firstOutside_ge_two hNT data hsep
+  have hp_deleted : p ∈ data.keptDel₂ := by
+    by_contra hp_not
+    have hmin := Equiv.Perm.DeleteSet.firstOutside_min M.σ⁻¹ data.keptDel₂ x
+      (m := n - 1) (by rw [hn]; omega)
+    exact hmin ⟨by omega, by simpa [p] using hp_not⟩
+  have ha₁_coe : ((side₂Anchor₁ data hsep) : D) = (M.σ⁻¹ ^ n) x.1 := by
+    rw [side₂Anchor₁]
+    change ((Equiv.Perm.DeleteSet.deleteSetFun M.σ⁻¹ data.keptDel₂
+        (face₂Dart₁ data)) : D) = (M.σ⁻¹ ^ n) x.1
+    rw [Equiv.Perm.DeleteSet.deleteSetFun_coe]
+  have hσa₁ : M.σ ((side₂Anchor₁ data hsep : {d : D // d ∉ data.keptDel₂}) : D) = p := by
+    rw [ha₁_coe, hp]
+    have hs : n - 1 + 1 = n := by omega
+    have hpow : (M.σ⁻¹ ^ n) x.1 = M.σ⁻¹ ((M.σ⁻¹ ^ (n - 1)) x.1) := by
+      rw [← hs, pow_succ']
+      rfl
+    rw [hpow]
+    simp
+  have hβcoe : ((data.sideAlpha₂ hsep (side₂Anchor₁ data hsep)) : D)
+      = M.α ((side₂Anchor₁ data hsep : {d : D // d ∉ data.keptDel₂}) : D) := by
+    rw [data.sideAlpha₂_apply_coe hsep]
+  have hp_side : M.dartFace p ∈ data.side₂ := by
+    rw [← hσa₁]
+    rw [ProofsInTheBook.ZinanCh35StarConn.dartFace_sigma_eq_alpha (M := M)]
+    rwa [← hβcoe]
+  have hp_tail : M.tail p = M.tail data.dart := by
+    rw [hp, tail_pow_sigma_inv, hx]
+    rw [face₂Dart₁_tail hNT data, M.head_alpha]
+  have hp_ne_alpha_dart : p ≠ M.α data.dart := by
+    intro hpα
+    have htail_eq : M.tail data.dart = M.head data.dart := by
+      rw [← hp_tail, hpα, M.tail_alpha]
+    exact ProofsInTheBook.ChordSigmaContig.u_ne_v data htail_eq
+  have hp_not_deleted : p ∉ data.keptDel₂ :=
+    (data.mem_keptDel₂_iff p).2 (keptSet₂_of_side₂_ne_alphaDart hNT data hp_side hp_ne_alpha_dart)
+  exact hp_not_deleted hp_deleted
+
+/-- Canonical side-2 endpoint boundary alignment with the two cyclic-order face facts discharged. -/
+theorem side₂EndpointBoundaryAlignment_uncond
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    ((data.sideSigma₂ (side₂Anchor₀ data hsep)) : D) ∈ hNT.outerCycle.darts ∧
+    ((data.sideAlpha₂ hsep (side₂Anchor₁ data hsep)) : D) ∈ hNT.outerCycle.darts :=
+  ⟨kept_mem_outerCycle_of_face_not_side₂ hNT data hsep _
+      (face_ρ₂a₀_not_side₂ hNT data hsep),
+   kept_mem_outerCycle_of_face_not_side₂ hNT data hsep _
+      (face_β₂a₁_not_side₂ hNT data hsep)⟩
+
+/-- Unconditional side-2 canonical `outer_simple`. -/
+theorem side₂_outer_simple_canonical_uncond
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    (((data.sideMap₂ hsep (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)
+        (side₂Anchors_ne hNT data hsep)).faceDartList (Sum.inr 1)).map
+      (data.sideMap₂ hsep (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)
+        (side₂Anchors_ne hNT data hsep)).tail).Nodup := by
+  have H := side₂EndpointBoundaryAlignment_uncond hNT data hsep
+  exact side₂_outer_simple_canonical_of_alignment hNT data hsep H.1 H.2
+
+/-- Side-2 `ContiguousInterval₂` with exactly the two still-unmirrored inputs explicit:
+`hsphere` (deferred because the single-file remote build lacks the side-2 disk `.olean`) and
+`inner_tri` (the missing side-2 faceLen/inner-triangle mirror).  All other canonical side-2 fields
+are discharged here. -/
+noncomputable def contiguousInterval₂_direct_canonical_of_sphere_and_inner_tri
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (hsphere :
+      (data.sideMap₂ hsep (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)
+        (side₂Anchors_ne hNT data hsep)).IsSphereMap)
+    (inner_tri : ∀ f :
+      (data.sideMap₂ hsep (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)
+        (side₂Anchors_ne hNT data hsep)).Face,
+        f ≠ (data.sideMap₂ hsep (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)
+          (side₂Anchors_ne hNT data hsep)).dartFace (Sum.inr 1) →
+        (data.sideMap₂ hsep (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)
+          (side₂Anchors_ne hNT data hsep)).faceLen f = 3) :
+    ProofsInTheBook.ZinanCh35Side2.ContiguousInterval₂ data hsep
+      (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) (side₂Anchors_ne hNT data hsep) := by
+  have H := side₂EndpointBoundaryAlignment_uncond hNT data hsep
+  exact ProofsInTheBook.ZinanCh35Contiguous.contiguousInterval₂_holds data hsep
+    (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) (side₂Anchors_ne hNT data hsep)
+    hsphere
+    (sideMap₂_isSimpleGraph_canonical hNT data hsep)
+    (side₂_outer_simple_canonical_uncond hNT data hsep)
+    inner_tri
+    (side₂ChordIncidenceNonDegenerate_canonical hNT data hsep H.1 H.2)
+
 /-- `g.SameCycle k₀ c` with `g` swapping `k₀ ↔ k₁` forces `c` to be one of the two
 swapped points.  This is the membership half of `ChordAnchor.twoCycle_orbit_card`, exposed here
 because the original helper is private. -/
@@ -1892,6 +2749,18 @@ end ProofsInTheBook.ZinanCh35OuterTraceProof
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.side₂Anchors_ne
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.sideMap₂_tail_eq_iff_M_tail_proj
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.sideMap₂_isSimpleGraph_canonical
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.fwdArc_arcDart_notMem_keptDel₂
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.side₂ChordIncidenceNonDegenerate_canonical
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.side₂_chordPred_notSameCycle_canonical
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonical_side₂_outer_orbit_mem_iff
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonicalTracePhiArc₂_of_steps
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonicalTracePhiArc₂_fwdArc_of_alignment
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonical_OuterTraceInjOn₂_of_alignment
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.face_ρ₂a₀_not_side₂
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.face_β₂a₁_not_side₂
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.side₂EndpointBoundaryAlignment_uncond
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.side₂_outer_simple_canonical_uncond
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.contiguousInterval₂_direct_canonical_of_sphere_and_inner_tri
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.touched_face₁_reps_all_face₁_canonical
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.innerRepsAvoidBoundary_canonical_false
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.side₁_touched_faceLen_three_canonical

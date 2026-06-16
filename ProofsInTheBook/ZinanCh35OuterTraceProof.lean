@@ -7,6 +7,7 @@ import ProofsInTheBook.ZinanCh35BoundaryAssembler
 import ProofsInTheBook.ZinanCh35Side2Anchors
 import ProofsInTheBook.ChordDisk
 import ProofsInTheBook.ZinanCh35Side2Disk
+import ProofsInTheBook.ZinanCh35Regions
 
 /-!
 # Chapter 35 — discharging `OuterTraceInjOn` via the orbit↔boundary-arc VERTEX correspondence
@@ -56,6 +57,158 @@ open ProofsInTheBook.ZinanCh35Side2Anchors
 universe u
 
 variable {D : Type u} [Fintype D] [DecidableEq D] {M : CombMap D}
+
+/-! ## Fresh-dart swap isomorphism helpers -/
+
+/-- Swap the two fresh darts and leave the kept summand fixed. -/
+def freshSwap (K : Type u) : Equiv.Perm (K ⊕ Fin 2) :=
+  Equiv.sumCongr (Equiv.refl K) (Equiv.swap (0 : Fin 2) 1)
+
+@[simp]
+theorem freshSwap_inl {K : Type u} (k : K) : freshSwap K (Sum.inl k) = Sum.inl k :=
+  rfl
+
+@[simp]
+theorem freshSwap_inr_zero {K : Type u} : freshSwap K (Sum.inr (0 : Fin 2)) = Sum.inr 1 := by
+  simp [freshSwap]
+
+@[simp]
+theorem freshSwap_inr_one {K : Type u} : freshSwap K (Sum.inr (1 : Fin 2)) = Sum.inr 0 := by
+  simp [freshSwap]
+
+@[simp]
+theorem freshSwap_symm {K : Type u} : (freshSwap K).symm = freshSwap K := by
+  ext x
+  cases x with
+  | inl k => rfl
+  | inr j => fin_cases j <;> simp [freshSwap]
+
+@[simp]
+theorem freshInrSwap_inl {K : Type u} [DecidableEq K] (k : K) :
+    (Equiv.swap (Sum.inr (0 : Fin 2) : K ⊕ Fin 2) (Sum.inr 1)) (Sum.inl k) = Sum.inl k := by
+  simp [Equiv.swap_apply_def]
+
+@[simp]
+theorem freshInrSwap_zero {K : Type u} [DecidableEq K] :
+    (Equiv.swap (Sum.inr (0 : Fin 2) : K ⊕ Fin 2) (Sum.inr 1)) (Sum.inr 0) = Sum.inr 1 := by
+  simp
+
+@[simp]
+theorem freshInrSwap_one {K : Type u} [DecidableEq K] :
+    (Equiv.swap (Sum.inr (0 : Fin 2) : K ⊕ Fin 2) (Sum.inr 1)) (Sum.inr 1) = Sum.inr 0 := by
+  simp
+
+/-- Conjugating the swapped-anchor fresh rotation by `freshSwap` gives the original fresh
+rotation. -/
+theorem freshSigma_swap_conj {K : Type u} [Fintype K] [DecidableEq K]
+    (ρ : Equiv.Perm K) {a₀ a₁ : K} (hne : a₀ ≠ a₁) :
+    freshSwap K * freshSigma ρ a₁ a₀ hne.symm * (freshSwap K).symm
+      = freshSigma ρ a₀ a₁ hne := by
+  ext x
+  rw [freshSwap_symm]
+  change (freshSwap K) (freshSigma ρ a₁ a₀ hne.symm ((freshSwap K).symm x))
+      = freshSigma ρ a₀ a₁ hne x
+  rw [freshSwap_symm]
+  cases x with
+  | inl k =>
+      by_cases h0 : k = a₀
+      · subst h0
+        simp [freshSwap, freshSigma, freshSigmaFun, Equiv.Perm.mul_apply,
+          Function.comp_apply, hne, hne.symm]
+      · by_cases h1 : k = a₁
+        · subst h1
+          simp [freshSwap, freshSigma, freshSigmaFun, Equiv.Perm.mul_apply,
+            Function.comp_apply, hne, hne.symm]
+        · simp [freshSwap, freshSigma, freshSigmaFun, Equiv.Perm.mul_apply,
+            Function.comp_apply, h0, h1]
+  | inr j =>
+      fin_cases j <;> simp [freshSwap, freshSigma, freshSigmaFun, Equiv.Perm.mul_apply,
+        Function.comp_apply, hne, hne.symm]
+
+/-- The fresh edge involution is unchanged by the fresh-dart swap conjugation. -/
+theorem freshAlpha_swap_conj {K : Type u} [Fintype K] [DecidableEq K]
+    (β : Equiv.Perm K) :
+    freshSwap K * freshAlpha β * (freshSwap K).symm = freshAlpha β := by
+  ext x
+  rw [freshSwap_symm]
+  change (freshSwap K) (freshAlpha β ((freshSwap K).symm x)) = freshAlpha β x
+  rw [freshSwap_symm]
+  cases x with
+  | inl k => rfl
+  | inr j =>
+      fin_cases j <;> rfl
+
+/-- The traced face permutation is unchanged when the two anchors are swapped. -/
+theorem tracePhi_swap_anchors {K : Type u} [Fintype K] [DecidableEq K]
+    (β ρ : Equiv.Perm K) (a₀ a₁ : K) :
+    tracePhi β ρ a₁ a₀ = tracePhi β ρ a₀ a₁ := by
+  ext k
+  by_cases h0 : β k = a₀
+  · simp [tracePhi, Equiv.swap_apply_def, h0]
+  · by_cases h1 : β k = a₁
+    · simp [tracePhi, Equiv.swap_apply_def, h0, h1]
+    · simp [tracePhi, Equiv.swap_apply_def, h0, h1]
+
+/-- Root-`inr 0` version of the fresh-map outer-length itinerary. -/
+lemma freshMap_outerLen_zero_ge_three {K : Type u} [Fintype K] [DecidableEq K]
+    (β ρ : Equiv.Perm K) (hβinv : β * β = 1) (hβfix : ∀ k, β k ≠ k)
+    {a₀ a₁ : K} (hne : a₀ ≠ a₁) (hd : ρ a₁ ≠ β a₀) :
+    3 ≤ ((freshMap β ρ hβinv hβfix a₀ a₁ hne).faceDartList (Sum.inr 0)).length := by
+  classical
+  have hroot_support :
+      (Sum.inr 0 : K ⊕ Fin 2) ∈ (freshMap β ρ hβinv hβfix a₀ a₁ hne).φ.support := by
+    rw [Equiv.Perm.mem_support, freshMap_phi_inr_zero β ρ hβinv hβfix hne]
+    exact Sum.inl_ne_inr
+  have hroot :
+      (Sum.inr 0 : K ⊕ Fin 2)
+        ∈ (freshMap β ρ hβinv hβfix a₀ a₁ hne).φ.toList (Sum.inr 0) := by
+    rw [Equiv.Perm.mem_toList_iff]
+    exact ⟨Equiv.Perm.SameCycle.refl _ _, hroot_support⟩
+  have hρ :
+      (Sum.inl (ρ a₁) : K ⊕ Fin 2)
+        ∈ (freshMap β ρ hβinv hβfix a₀ a₁ hne).φ.toList (Sum.inr 0) := by
+    rw [Equiv.Perm.mem_toList_iff]
+    refine ⟨⟨1, ?_⟩, hroot_support⟩
+    rw [zpow_one, freshMap_phi_inr_zero β ρ hβinv hβfix hne]
+  have hβ :
+      (Sum.inl (β a₀) : K ⊕ Fin 2)
+        ∈ (freshMap β ρ hβinv hβfix a₀ a₁ hne).φ.toList (Sum.inr 0) := by
+    rw [Equiv.Perm.mem_toList_iff]
+    refine ⟨⟨-1, ?_⟩, hroot_support⟩
+    rw [zpow_neg, zpow_one, Equiv.Perm.inv_eq_iff_eq,
+      freshMap_phi_inl_b0 β ρ hβinv hβfix hne]
+  have hdistinct :
+      [(Sum.inr 0 : K ⊕ Fin 2), Sum.inl (ρ a₁), Sum.inl (β a₀)].Nodup := by
+    have h01 : (Sum.inr 0 : K ⊕ Fin 2) ≠ Sum.inl (ρ a₁) := Sum.inr_ne_inl
+    have h02 : (Sum.inr 0 : K ⊕ Fin 2) ≠ Sum.inl (β a₀) := Sum.inr_ne_inl
+    have h12 : (Sum.inl (ρ a₁) : K ⊕ Fin 2) ≠ Sum.inl (β a₀) := by
+      intro h; exact hd (Sum.inl.inj h)
+    refine List.nodup_cons.mpr ⟨?_, List.nodup_cons.mpr ⟨?_, ?_⟩⟩
+    · simp only [List.mem_cons, List.mem_singleton, List.not_mem_nil, or_false, not_or]
+      exact ⟨h01, h02⟩
+    · simp only [List.mem_singleton]; exact h12
+    · simp
+  have hsub : [(Sum.inr 0 : K ⊕ Fin 2), Sum.inl (ρ a₁), Sum.inl (β a₀)]
+      ⊆ (freshMap β ρ hβinv hβfix a₀ a₁ hne).φ.toList (Sum.inr 0) := by
+    intro x hx
+    simp only [List.mem_cons, List.mem_singleton, List.not_mem_nil, or_false] at hx
+    rcases hx with h | h | h
+    · rw [h]; exact hroot
+    · rw [h]; exact hρ
+    · rw [h]; exact hβ
+  have hcard : ([(Sum.inr 0 : K ⊕ Fin 2), Sum.inl (ρ a₁), Sum.inl (β a₀)]).length
+      ≤ ((freshMap β ρ hβinv hβfix a₀ a₁ hne).φ.toList (Sum.inr 0)).length :=
+    (List.subperm_of_subset hdistinct hsub).length_le
+  rw [ProofsInTheBook.PlanarMap.CombMap.faceDartList]
+  simpa using hcard
+
+/-- Minimal local combinatorial-map isomorphism record: `toPerm` conjugates both dart
+permutations of `source` to those of `target`. -/
+structure CombMapIso {K : Type u} [Fintype K] [DecidableEq K]
+    (source target : CombMap K) where
+  toPerm : Equiv.Perm K
+  alpha_conj : toPerm * source.α * toPerm.symm = target.α
+  sigma_conj : toPerm * source.σ * toPerm.symm = target.σ
 
 /-! ## Boundary-cycle helpers (general `BoundaryCycle`) -/
 
@@ -1354,6 +1507,18 @@ theorem side₂Anchors_ne (data : hNT.ChordSplitData u v) (hsep : data.Separates
     congrArg (fun x : {d : D // d ∉ data.keptDel₂} => M.tail x.1) h
   rw [canonicalSide₂Anchor₀_tail hNT data hsep, canonicalSide₂Anchor₁_tail hNT data hsep] at htail
   exact ProofsInTheBook.ChordSigmaContig.u_ne_v data htail.symm
+
+/-- The swapped side-2 fresh map is isomorphic to the original canonical side-2 fresh map by
+swapping the two fresh darts. -/
+def sideMap₂_swapIso (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    CombMapIso
+      (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm)
+      (data.sideMap₂ hsep (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)
+        (side₂Anchors_ne hNT data hsep)) where
+  toPerm := freshSwap {d : D // d ∉ data.keptDel₂}
+  alpha_conj := freshAlpha_swap_conj (data.sideAlpha₂ hsep)
+  sigma_conj := freshSigma_swap_conj data.sideSigma₂ (side₂Anchors_ne hNT data hsep)
 
 /-- Side-2 mirror of `sideMap₁_tail_eq_iff_M_tail_proj`. -/
 lemma sideMap₂_tail_eq_iff_M_tail_proj
@@ -3238,6 +3403,155 @@ theorem side₂_swapped_chord_faces_distinct
       ((side₂Anchors_ne hNT data hsep).symm)).1 hfaces
   exact side₂_chordPred_notSameCycle_canonical_swapped hNT data hsep htrace
 
+/-- Swapped side-2 outer-orbit membership iff for the root `inr 0`. -/
+theorem canonical_side₂_outer_orbit_mem_iff_swapped_root0
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (x : {d : D // d ∉ data.keptDel₂} ⊕ Fin 2) :
+    x ∈ (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).faceDartList (Sum.inr 0)
+      ↔ x = Sum.inr 0 ∨
+        ∃ k : {d : D // d ∉ data.keptDel₂}, x = Sum.inl k ∧
+          (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+              (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)).SameCycle
+            ((data.sideAlpha₂ hsep) (side₂Anchor₁ data hsep)) k := by
+  classical
+  set a₀ := side₂Anchor₁ data hsep with ha₀
+  set a₁ := side₂Anchor₀ data hsep with ha₁
+  set hne := (side₂Anchors_ne hNT data hsep).symm with hhne
+  set β := data.sideAlpha₂ hsep with hβ
+  set ρ := data.sideSigma₂ with hρ
+  have hinv : β * β = 1 := data.sideAlpha₂_involutive hsep
+  have hfix : ∀ k, β k ≠ k := data.sideAlpha₂_no_fixed hsep
+  have hSeq : data.sideMap₂ hsep a₀ a₁ hne = freshMap β ρ hinv hfix a₀ a₁ hne := rfl
+  have hsplit : ¬ (tracePhi β ρ a₀ a₁).SameCycle (β a₀) (β a₁) := by
+    simpa [hβ, hρ, ha₀, ha₁, hhne] using
+      side₂_chordPred_notSameCycle_canonical_swapped hNT data hsep
+  have hroot_support :
+      (Sum.inr 0 : {d : D // d ∉ data.keptDel₂} ⊕ Fin 2)
+        ∈ (freshMap β ρ hinv hfix a₀ a₁ hne).φ.support := by
+    rw [Equiv.Perm.mem_support, freshMap_phi_inr_zero β ρ hinv hfix hne]
+    exact Sum.inl_ne_inr
+  rw [hSeq, CombMap.faceDartList]
+  constructor
+  · intro hx
+    rw [Equiv.Perm.mem_toList_iff] at hx
+    obtain ⟨hcyc, _⟩ := hx
+    have hτ : (tracePhi β ρ a₀ a₁).SameCycle (β a₀) (faceProj β a₀ a₁ x) := by
+      have h := (freshFace_sameCycle_iff β ρ hinv hfix hne (Sum.inr 0) x).1 hcyc
+      simpa [faceProj_inr_zero] using h
+    cases x with
+    | inl k =>
+        right
+        exact ⟨k, rfl, by simpa [faceProj_inl] using hτ⟩
+    | inr j =>
+        fin_cases j
+        · left; rfl
+        · exact absurd (by simpa [faceProj_inr_one] using hτ) hsplit
+  · intro hx
+    rw [Equiv.Perm.mem_toList_iff]
+    refine ⟨?_, hroot_support⟩
+    rcases hx with hroot | ⟨k, hxk, hk⟩
+    · rw [hroot]
+    · rw [hxk]
+      refine (freshFace_sameCycle_iff β ρ hinv hfix hne (Sum.inr 0) (Sum.inl k)).2 ?_
+      simpa [faceProj_inl, faceProj_inr_zero] using hk
+
+/-- Swapped side-2 `OuterTraceInjOn` rooted at `inr 0`. -/
+def OuterTraceInjOn₂SwappedRoot0
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) : Prop :=
+  ∀ x ∈ (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).faceDartList (Sum.inr 0),
+    ∀ y ∈ (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).faceDartList (Sum.inr 0),
+      M.tail (proj (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep) x).1 =
+        M.tail (proj (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep) y).1 → x = y
+
+/-- Swapped side-2 root-`inr 0` `OuterTraceInjOn`, from the original fwd-arc trace. -/
+theorem canonical_OuterTraceInjOn₂_swapped_root0_uncond
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    OuterTraceInjOn₂SwappedRoot0 hNT data hsep := by
+  classical
+  set A := ProofsInTheBook.ZinanCh35ArcSide.fwdArc data
+  set hArcKept : ∀ i : Fin A.len, A.arcDart i ∉ data.keptDel₂ :=
+    fun i => fwdArc_arcDart_notMem_keptDel₂ hNT data hsep i
+  have H := side₂EndpointBoundaryAlignment_uncond hNT data hsep
+  have hTA := canonicalTracePhiArc₂_fwdArc_of_alignment hNT data hsep H.1 H.2
+  have hroot : M.tail (proj (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+      (Sum.inr 0)).1 = M.tail data.dart := by
+    rw [proj_inr_zero, canonicalSide₂Anchor₁_tail hNT data hsep]
+  intro x hx y hy htail
+  rcases (canonical_side₂_outer_orbit_mem_iff_swapped_root0 hNT data hsep x).1 hx with
+    hxr | ⟨kx, hxk, hτx⟩
+  <;> rcases (canonical_side₂_outer_orbit_mem_iff_swapped_root0 hNT data hsep y).1 hy with
+    hyr | ⟨ky, hyk, hτy⟩
+  · rw [hxr, hyr]
+  · exfalso
+    rw [hxr, hyk] at htail
+    simp only [proj_inl, hroot] at htail
+    have hτy' :
+        (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+            (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)).SameCycle
+          ((data.sideAlpha₂ hsep) (side₂Anchor₁ data hsep)) ky := by
+      simpa [tracePhi_swap_anchors (data.sideAlpha₂ hsep) data.sideSigma₂
+          (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)] using hτy
+    rcases (hTA.mem_iff ky).1 hτy' with ⟨j, hyj⟩
+    rw [hyj] at htail
+    exact A.head_last_ne_tail j htail
+  · exfalso
+    rw [hyr, hxk] at htail
+    simp only [proj_inl, hroot] at htail
+    have hτx' :
+        (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+            (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)).SameCycle
+          ((data.sideAlpha₂ hsep) (side₂Anchor₁ data hsep)) kx := by
+      simpa [tracePhi_swap_anchors (data.sideAlpha₂ hsep) data.sideSigma₂
+          (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)] using hτx
+    rcases (hTA.mem_iff kx).1 hτx' with ⟨i, hxi⟩
+    rw [hxi] at htail
+    exact A.head_last_ne_tail i htail.symm
+  · rw [hxk, hyk]
+    rw [hxk, hyk] at htail
+    simp only [proj_inl] at htail
+    have hτx' :
+        (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+            (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)).SameCycle
+          ((data.sideAlpha₂ hsep) (side₂Anchor₁ data hsep)) kx := by
+      simpa [tracePhi_swap_anchors (data.sideAlpha₂ hsep) data.sideSigma₂
+          (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)] using hτx
+    have hτy' :
+        (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+            (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)).SameCycle
+          ((data.sideAlpha₂ hsep) (side₂Anchor₁ data hsep)) ky := by
+      simpa [tracePhi_swap_anchors (data.sideAlpha₂ hsep) data.sideSigma₂
+          (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)] using hτy
+    rcases (hTA.mem_iff kx).1 hτx' with ⟨i, hxi⟩
+    rcases (hTA.mem_iff ky).1 hτy' with ⟨j, hyj⟩
+    rw [hxi, hyj]
+    rw [hxi, hyj] at htail
+    simp only [A, hArcKept, arcK₂] at htail
+    have hij : i = j := A.tail_nodup htail
+    rw [hij]
+
+/-- Swapped side-2 root-`inr 0` `outer_simple`. -/
+theorem side₂_outer_simple_canonical_swapped_root0_uncond
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    (((data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).faceDartList (Sum.inr 0)).map
+      (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).tail).Nodup := by
+  have hL : ((data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+      (side₂Anchors_ne hNT data hsep).symm).faceDartList (Sum.inr 0)).Nodup := by
+    rw [ProofsInTheBook.PlanarMap.CombMap.faceDartList]
+    exact Equiv.Perm.nodup_toList _ _
+  rw [List.nodup_map_iff_inj_on hL]
+  intro x hx y hy htail
+  have hMtail : M.tail (proj (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep) x).1
+      = M.tail (proj (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep) y).1 :=
+    (sideMap₂_tail_eq_iff_M_tail_proj hNT data hsep
+      (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+      (side₂Anchors_ne hNT data hsep).symm x y).1 htail
+  exact canonical_OuterTraceInjOn₂_swapped_root0_uncond hNT data hsep x hx y hy hMtail
+
 theorem side₂Anchors_trace12 (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
     tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
       (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) (face₂Dart₁ data)
@@ -3364,6 +3678,68 @@ theorem side₂_touched_faceLen_three_canonical
     (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) (side₂Anchors_ne hNT data hsep)
     (face₂Dart₁ data) htwo (side₂Anchors_oneFresh_canonical_direct hNT data hsep)
 
+/-- The non-outer touched side-2 face in the swapped canonical map is triangular. -/
+theorem side₂_touched_faceLen_three_canonical_swapped
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).faceLen
+      ((data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inl (face₂Dart₂ data))) = 3 := by
+  have h12 :
+      tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+        (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep) (face₂Dart₁ data)
+        = face₂Dart₂ data := by
+    simpa [tracePhi_swap_anchors (data.sideAlpha₂ hsep) data.sideSigma₂
+        (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)] using
+      side₂Anchors_trace12 hNT data hsep
+  have h21 :
+      tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+        (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep) (face₂Dart₂ data)
+        = face₂Dart₁ data := by
+    simpa [tracePhi_swap_anchors (data.sideAlpha₂ hsep) data.sideSigma₂
+        (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)] using
+      side₂Anchors_trace21 hNT data hsep
+  have htwo : ProofsInTheBook.ChordFaceFinal.tOrbitCard
+      (data.sideAlpha₂ hsep) data.sideSigma₂
+      (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep) (face₂Dart₂ data) = 2 :=
+    ProofsInTheBook.ChordAnchor.tOrbitCard_eq_two_of_tracePhi_swap
+      (data.sideAlpha₂ hsep) data.sideSigma₂ (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+      h21 h12 (face₂Dart_distinct hNT data).symm
+  have hone : ((if (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+            (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)).SameCycle
+          (face₂Dart₂ data)
+          ((data.sideAlpha₂ hsep) (side₂Anchor₁ data hsep)) then 1 else 0)
+      + (if (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+            (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)).SameCycle
+          (face₂Dart₂ data)
+          ((data.sideAlpha₂ hsep) (side₂Anchor₀ data hsep)) then 1 else 0)) = 1 := by
+    classical
+    have hβa₁ :
+        data.sideAlpha₂ hsep (side₂Anchor₀ data hsep) = face₂Dart₂ data :=
+      sideAlpha₂_anchor₀_eq_face₂Dart₂ hNT data hsep
+    have hfirst : ¬
+        (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+          (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)).SameCycle
+            (face₂Dart₂ data) ((data.sideAlpha₂ hsep) (side₂Anchor₁ data hsep)) := by
+      intro h
+      have hpred :
+          (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+            (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)).SameCycle
+            ((data.sideAlpha₂ hsep) (side₂Anchor₁ data hsep))
+            ((data.sideAlpha₂ hsep) (side₂Anchor₀ data hsep)) := by
+        rw [hβa₁]
+        exact h.symm
+      exact side₂_chordPred_notSameCycle_canonical_swapped hNT data hsep hpred
+    have hsecond :
+        (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+          (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)).SameCycle
+            (face₂Dart₂ data) ((data.sideAlpha₂ hsep) (side₂Anchor₀ data hsep)) := by
+      rw [hβa₁]
+    rw [if_neg hfirst, if_pos hsecond]
+  exact sideMap₂_faceLen_three_of_count hNT data hsep
+    (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep) (side₂Anchors_ne hNT data hsep).symm
+    (face₂Dart₂ data) htwo hone
+
 theorem face₂_rep_touched_canonical
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
     (k : {d : D // d ∉ data.keptDel₂})
@@ -3391,8 +3767,42 @@ theorem face₂_rep_touched_canonical
     exact (ProofsInTheBook.ChordBoundaryOrbit.sideFace_inl_eq_iff_tracePhi
       (data.sideAlpha₂ hsep) data.sideSigma₂
       (data.sideAlpha₂_involutive hsep) (data.sideAlpha₂_no_fixed hsep)
-      (side₂Anchors_ne hNT data hsep) (face₂Dart₂ data) (face₂Dart₁ data)).2
-      ⟨1, by rw [zpow_one, side₂Anchors_trace21 hNT data hsep]⟩
+        (side₂Anchors_ne hNT data hsep) (face₂Dart₂ data) (face₂Dart₁ data)).2
+        ⟨1, by rw [zpow_one, side₂Anchors_trace21 hNT data hsep]⟩
+
+theorem face₂_rep_touched_canonical_swapped
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (k : {d : D // d ∉ data.keptDel₂})
+    (hface₂ : M.dartFace k.1 = data.face₂) :
+    (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inl k)
+      =
+    (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inl (face₂Dart₂ data)) := by
+  classical
+  have hsc : M.φ.SameCycle (M.α data.dart) k.1 := by
+    have hf : M.dartFace k.1 = M.dartFace (M.α data.dart) := by
+      rw [hface₂]; rfl
+    exact (Quotient.exact hf).symm
+  rcases ProofsInTheBook.ChordSideClose.face₂_dart_cases data hsc with hk | hk | hk
+  · exact False.elim (k.2 (hk ▸ ProofsInTheBook.ChordSideClose.alphaDart_mem_keptDel₂ data))
+  · have hk' : k = face₂Dart₁ data := by
+      apply Subtype.ext
+      exact hk
+    rw [hk']
+    exact (ProofsInTheBook.ChordBoundaryOrbit.sideFace_inl_eq_iff_tracePhi
+      (data.sideAlpha₂ hsep) data.sideSigma₂
+      (data.sideAlpha₂_involutive hsep) (data.sideAlpha₂_no_fixed hsep)
+      (side₂Anchors_ne hNT data hsep).symm (face₂Dart₁ data) (face₂Dart₂ data)).2
+      ⟨1, by
+        rw [zpow_one]
+        simpa [tracePhi_swap_anchors (data.sideAlpha₂ hsep) data.sideSigma₂
+            (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)]
+          using side₂Anchors_trace12 hNT data hsep⟩
+  · have hk' : k = face₂Dart₂ data := by
+      apply Subtype.ext
+      exact hk
+    rw [hk']
 
 def CanonicalSide₂NonTouchedInnerClassifier
     (data : hNT.ChordSplitData u v) (hsep : data.Separates) : Prop :=
@@ -3405,9 +3815,24 @@ def CanonicalSide₂NonTouchedInnerClassifier
         S.dartFace (Sum.inl k) = f ∧
         M.dartFace k.1 ∈ data.side₂ ∧
         M.dartFace k.1 ≠ data.face₂ ∧
+          ProofsInTheBook.ChordInnerTri.SpliceUntouched
+            (data.sideAlpha₂ hsep) data.sideSigma₂
+            (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) k
+
+def CanonicalSide₂NonTouchedInnerClassifierSwappedRoot0
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) : Prop :=
+  let S := data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+    (side₂Anchors_ne hNT data hsep).symm
+  ∀ f : S.Face,
+    f ≠ S.dartFace (Sum.inr 0) →
+    f ≠ S.dartFace (Sum.inl (face₂Dart₂ data)) →
+      ∃ k : {d : D // d ∉ data.keptDel₂},
+        S.dartFace (Sum.inl k) = f ∧
+        M.dartFace k.1 ∈ data.side₂ ∧
+        M.dartFace k.1 ≠ data.face₂ ∧
         ProofsInTheBook.ChordInnerTri.SpliceUntouched
           (data.sideAlpha₂ hsep) data.sideSigma₂
-          (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) k
+          (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep) k
 
 theorem canonicalSide₂NonTouchedInnerClassifier_uncond
     (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
@@ -3499,6 +3924,92 @@ theorem canonicalSide₂NonTouchedInnerClassifier_uncond
     (data.sideAlpha₂_involutive hsep) (data.sideAlpha₂_no_fixed hsep)
     (side₂Anchors_ne hNT data hsep) h0 h1
 
+theorem canonicalSide₂NonTouchedInnerClassifier_swapped_root0_uncond
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    CanonicalSide₂NonTouchedInnerClassifierSwappedRoot0 hNT data hsep := by
+  classical
+  intro f hfOuter hfTouched
+  obtain ⟨k, hkf⟩ :=
+    sideFace₂_has_inl_rep hNT data hsep
+      (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+      (side₂Anchors_ne hNT data hsep).symm f
+  have hnotOuterM : M.dartFace k.1 ≠ hNT.outerFace := by
+    intro hkOuterFace
+    have hkKept : k.1 ∈ data.keptSet₂ := (data.mem_keptDel₂_iff k.1).1 k.2
+    rcases hkKept.1 with hside | houterArc
+    · exact data.side₂_subset_nonouter hside hkOuterFace
+    · obtain ⟨i, hi⟩ := outerArc₂_mem_fwdArc_canonical hNT data hsep houterArc
+      have H := side₂EndpointBoundaryAlignment_uncond hNT data hsep
+      have hTA := canonicalTracePhiArc₂_fwdArc_of_alignment hNT data hsep H.1 H.2
+      have hkArc :
+          k =
+            ⟨(ProofsInTheBook.ZinanCh35ArcSide.fwdArc data).arcDart i,
+              fwdArc_arcDart_notMem_keptDel₂ hNT data hsep i⟩ := by
+        apply Subtype.ext
+        exact hi
+      have hτ :
+          (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+            (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)).SameCycle
+            ((data.sideAlpha₂ hsep) (side₂Anchor₁ data hsep)) k :=
+        (hTA.mem_iff k).2 ⟨i, hkArc⟩
+      have hτswapped :
+          (tracePhi (data.sideAlpha₂ hsep) data.sideSigma₂
+            (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)).SameCycle
+            ((data.sideAlpha₂ hsep) (side₂Anchor₁ data hsep)) k := by
+        simpa [tracePhi_swap_anchors (data.sideAlpha₂ hsep) data.sideSigma₂
+            (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)] using hτ
+      have hfaceOuter :
+          (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+              (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inl k)
+            =
+          (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+              (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inr 0) :=
+        (ProofsInTheBook.ChordBoundaryOrbit.sideFace_eq_chordOrbit0_iff
+          (data.sideAlpha₂ hsep) data.sideSigma₂
+          (data.sideAlpha₂_involutive hsep) (data.sideAlpha₂_no_fixed hsep)
+          (side₂Anchors_ne hNT data hsep).symm k).2 hτswapped.symm
+      exact hfOuter (hkf.symm.trans hfaceOuter)
+  have hside : M.dartFace k.1 ∈ data.side₂ :=
+    keptDart_face_mem_side₂ hNT data k hnotOuterM
+  have hnotFace₂ : M.dartFace k.1 ≠ data.face₂ := by
+    intro hkFace₂
+    have htouch :
+        (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+            (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inl k)
+          =
+        (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+            (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inl (face₂Dart₂ data)) :=
+      face₂_rep_touched_canonical_swapped hNT data hsep k hkFace₂
+    exact hfTouched (hkf.symm.trans htouch)
+  have h0 :
+      (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+          (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inl k)
+        ≠
+      (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+          (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inr 0) := by
+    intro h
+    exact hfOuter (hkf.symm.trans h)
+  have h1 :
+      (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+          (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inl k)
+        ≠
+      (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+          (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inr 1) := by
+    intro h
+    have htouch :
+        (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+            (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inl k)
+          =
+        (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+            (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inl (face₂Dart₂ data)) :=
+      h.trans (side₂_swapped_inr1_face_eq_face₂Dart₂ hNT data hsep)
+    exact hfTouched (hkf.symm.trans htouch)
+  refine ⟨k, hkf, hside, hnotFace₂, ?_⟩
+  exact ProofsInTheBook.ChordBoundaryOrbit.spliceUntouched_of_face_ne_chordOrbits
+    (data.sideAlpha₂ hsep) data.sideSigma₂
+    (data.sideAlpha₂_involutive hsep) (data.sideAlpha₂_no_fixed hsep)
+    (side₂Anchors_ne hNT data hsep).symm h0 h1
+
 theorem side₂_inner_tri_of_nonTouchedClassifier
     (data : hNT.ChordSplitData u v) (hsep : data.Separates)
     (hclass : CanonicalSide₂NonTouchedInnerClassifier hNT data hsep) :
@@ -3531,6 +4042,38 @@ theorem side₂_inner_tri_canonical_uncond
   side₂_inner_tri_of_nonTouchedClassifier hNT data hsep
     (canonicalSide₂NonTouchedInnerClassifier_uncond hNT data hsep)
 
+theorem side₂_inner_tri_of_nonTouchedClassifier_swapped_root0
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (hclass : CanonicalSide₂NonTouchedInnerClassifierSwappedRoot0 hNT data hsep) :
+    ∀ f : (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).Face,
+      f ≠ (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+          (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inr 0) →
+      (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).faceLen f = 3 := by
+  intro f hf
+  by_cases hf₀ :
+      f = (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+          (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inl (face₂Dart₂ data))
+  · rw [hf₀]
+    exact side₂_touched_faceLen_three_canonical_swapped hNT data hsep
+  · obtain ⟨k, hkf, hside, hface₂, huntouched⟩ := hclass f hf hf₀
+    rw [← hkf]
+    exact sideMap₂_faceLen_inl_three_of_side₂ hNT data hsep
+      (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+      (side₂Anchors_ne hNT data hsep).symm k hside hface₂ huntouched
+
+theorem side₂_inner_tri_canonical_swapped_root0_uncond
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    ∀ f : (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).Face,
+      f ≠ (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+          (side₂Anchors_ne hNT data hsep).symm).dartFace (Sum.inr 0) →
+      (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).faceLen f = 3 :=
+  side₂_inner_tri_of_nonTouchedClassifier_swapped_root0 hNT data hsep
+    (canonicalSide₂NonTouchedInnerClassifier_swapped_root0_uncond hNT data hsep)
+
 noncomputable def contiguousInterval₂_direct_canonical_uncond
     (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
     ProofsInTheBook.ZinanCh35Side2.ContiguousInterval₂ data hsep
@@ -3538,6 +4081,39 @@ noncomputable def contiguousInterval₂_direct_canonical_uncond
   contiguousInterval₂_direct_canonical_of_sphere_and_inner_tri hNT data hsep
     (side₂_isSphereMap_canonical_uncond hNT data hsep)
     (side₂_inner_tri_canonical_uncond hNT data hsep)
+
+noncomputable def contiguousInterval₂_direct_canonical_swapped_uncond
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    ProofsInTheBook.ZinanCh35Side2.ContiguousInterval₂ data hsep
+      (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+      (side₂Anchors_ne hNT data hsep).symm := by
+  let S := data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+    (side₂Anchors_ne hNT data hsep).symm
+  have H := side₂EndpointBoundaryAlignment_uncond hNT data hsep
+  have hd :
+      ProofsInTheBook.ZinanCh35Contiguous.Side₂ChordIncidenceNonDegenerate data hsep
+        (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep) :=
+    side₂ChordIncidenceNonDegenerate_canonical hNT data hsep H.1 H.2
+  have hlen : 3 ≤ (S.faceDartList (Sum.inr 0)).length := by
+    change 3 ≤ ((freshMap (data.sideAlpha₂ hsep) data.sideSigma₂
+      (data.sideAlpha₂_involutive hsep) (data.sideAlpha₂_no_fixed hsep)
+      (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+      (side₂Anchors_ne hNT data hsep).symm).faceDartList (Sum.inr 0)).length
+    exact freshMap_outerLen_zero_ge_three
+      (data.sideAlpha₂ hsep) data.sideSigma₂
+      (data.sideAlpha₂_involutive hsep) (data.sideAlpha₂_no_fixed hsep)
+      (side₂Anchors_ne hNT data hsep).symm hd
+  exact ProofsInTheBook.ZinanCh35Side2.contiguousInterval₂_of_nearTriangulation data hsep
+    (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+    (side₂Anchors_ne hNT data hsep).symm
+    (ProofsInTheBook.ZinanCh35BoundaryAssembler.nearTriangulation_of_explicit_boundary_classification
+      S
+      (side₂_isSphereMap_canonical_swapped_uncond hNT data hsep)
+      (sideMap₂_isSimpleGraph_canonical_swapped hNT data hsep)
+      (S.dartFace (Sum.inr 0)) (Sum.inr 0) rfl
+      (side₂_outer_simple_canonical_swapped_root0_uncond hNT data hsep)
+      hlen
+      (side₂_inner_tri_canonical_swapped_root0_uncond hNT data hsep))
 
 /-! ## Canonical recursion-input constructors -/
 
@@ -3618,6 +4194,178 @@ noncomputable def canonicalSide₂InputsNoConf_reversed_of_fuel
   cpₛ := cpₛ
   cqₛ := cqₛ
   hLₛ := hLₛ
+
+/-- Canonical side-2 `Side₂InputsNoConf` in the standard chord endpoint order.  The canonical
+side-2 anchors realize this order only after swapping the fresh insertion order, so this constructor
+threads the swapped `ContiguousInterval₂`. -/
+noncomputable def canonicalSide₂InputsNoConf_of_fuel
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) (L : M.Vertex → Finset α)
+    (htu : M.tail data.dart = u) (hhv : M.head data.dart = v)
+    (pₛ qₛ :
+      (data.sideMap₂ hsep (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm).Vertex)
+    (cpₛ cqₛ : α)
+    (hLₛ : ProofsInTheBook.ThomassenLists.CombMap.ThomassenLists
+      (ProofsInTheBook.ZinanCh35Side2.chordSideNearTriangulation₂_of_share data hsep
+        (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm
+        (ProofsInTheBook.ChordSideClose.side₂IsDisk_unconditional data hsep)
+        (side₂AnchorsShareFace_canonical_swapped (hNT := hNT) data hsep)
+        (contiguousInterval₂_direct_canonical_swapped_uncond hNT data hsep))
+      pₛ qₛ
+      (fun x => L (ProofsInTheBook.ZinanCh35Side2.sideVertexToM₂ data hsep
+        (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+        (side₂Anchors_ne hNT data hsep).symm x))
+      cpₛ cqₛ) :
+    ProofsInTheBook.ZinanCh35ChordBranch.Side₂InputsNoConf data hsep
+      (side₂Anchor₁ data hsep) (side₂Anchor₀ data hsep)
+      (side₂Anchors_ne hNT data hsep).symm L where
+  hdisk := ProofsInTheBook.ChordSideClose.side₂IsDisk_unconditional data hsep
+  hshare := side₂AnchorsShareFace_canonical_swapped (hNT := hNT) data hsep
+  ci := contiguousInterval₂_direct_canonical_swapped_uncond hNT data hsep
+  hchord := by
+    have h0 := canonicalSide₂Anchor₁_tail hNT data hsep
+    have h1 := canonicalSide₂Anchor₀_tail hNT data hsep
+    simpa [h0, h1, htu, hhv] using (ProofsInTheBook.ChordContiguous.chordChoice_adj data).2
+  ha₀ := (canonicalSide₂Anchor₁_tail hNT data hsep).trans htu
+  ha₁ := (canonicalSide₂Anchor₀_tail hNT data hsep).trans hhv
+  pₛ := pₛ
+  qₛ := qₛ
+  cpₛ := cpₛ
+  cqₛ := cqₛ
+  hLₛ := hLₛ
+
+/-- Canonical `ChordBranchResidualData` producer with only the genuine recursion fuel left explicit:
+precolored placement in side 1 and the two side Thomassen-list inputs. -/
+noncomputable def canonicalChordBranchResidualData_of_fuel
+    {h : hNT.outerCycle.Chord u v} {p q : M.Vertex}
+    (L : M.Vertex → Finset α) (cp cq : α)
+    (htu : M.tail (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h).dart = u)
+    (hhv : M.head (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h).dart = v)
+    (hp : p ∈ ProofsInTheBook.ChordReconClose.sideRegion₁
+      (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h))
+    (hq : q ∈ ProofsInTheBook.ChordReconClose.sideRegion₁
+      (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h))
+    (p₁ q₁ :
+      ((ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h).sideMap₁
+        (ProofsInTheBook.ZinanCh35ChordResidue.normSep h)
+        (side₁Anchor₀ (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+          (ProofsInTheBook.ZinanCh35ChordResidue.normSep h))
+        (side₁Anchor₁ (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+          (ProofsInTheBook.ZinanCh35ChordResidue.normSep h))
+        (side₁Anchors_ne (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+          (ProofsInTheBook.ZinanCh35ChordResidue.normSep h))).Vertex)
+    (cp₁ cq₁ : α)
+    (hL₁ : ProofsInTheBook.ThomassenLists.CombMap.ThomassenLists
+      (ProofsInTheBook.ChordSideNT.chordSideNearTriangulation_of_share
+        (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+        (ProofsInTheBook.ZinanCh35ChordResidue.normSep h)
+        (side₁Anchor₀ (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+          (ProofsInTheBook.ZinanCh35ChordResidue.normSep h))
+        (side₁Anchor₁ (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+          (ProofsInTheBook.ZinanCh35ChordResidue.normSep h))
+        (side₁Anchors_ne (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+          (ProofsInTheBook.ZinanCh35ChordResidue.normSep h))
+        (side₁AnchorsShareFace_canonical
+          (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+          (ProofsInTheBook.ZinanCh35ChordResidue.normSep h))
+        (contiguousInterval₁_direct_canonical_uncond hNT
+          (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+          (ProofsInTheBook.ZinanCh35ChordResidue.normSep h)))
+      p₁ q₁
+      (fun x => L (ProofsInTheBook.ChordReconClose.sideVertexToM₁
+        (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+        (ProofsInTheBook.ZinanCh35ChordResidue.normSep h)
+        (side₁Anchor₀ (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+          (ProofsInTheBook.ZinanCh35ChordResidue.normSep h))
+        (side₁Anchor₁ (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+          (ProofsInTheBook.ZinanCh35ChordResidue.normSep h))
+        (side₁Anchors_ne (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+          (ProofsInTheBook.ZinanCh35ChordResidue.normSep h)) x))
+      cp₁ cq₁)
+    (p₂ q₂ : ∀ c₁ : M.Vertex → α,
+      ((ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h).sideMap₂
+        (ProofsInTheBook.ZinanCh35ChordResidue.normSep h)
+        (side₂Anchor₁ (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+          (ProofsInTheBook.ZinanCh35ChordResidue.normSep h))
+        (side₂Anchor₀ (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+          (ProofsInTheBook.ZinanCh35ChordResidue.normSep h))
+        (side₂Anchors_ne hNT
+          (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+          (ProofsInTheBook.ZinanCh35ChordResidue.normSep h)).symm).Vertex)
+    (cp₂ cq₂ : ∀ c₁ : M.Vertex → α, α)
+    (hL₂ : ∀ c₁ : M.Vertex → α,
+      ProofsInTheBook.ThomassenLists.CombMap.ThomassenLists
+        (ProofsInTheBook.ZinanCh35Side2.chordSideNearTriangulation₂_of_share
+          (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+          (ProofsInTheBook.ZinanCh35ChordResidue.normSep h)
+          (side₂Anchor₁ (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+            (ProofsInTheBook.ZinanCh35ChordResidue.normSep h))
+          (side₂Anchor₀ (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+            (ProofsInTheBook.ZinanCh35ChordResidue.normSep h))
+          (side₂Anchors_ne hNT
+            (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+            (ProofsInTheBook.ZinanCh35ChordResidue.normSep h)).symm
+          (ProofsInTheBook.ChordSideClose.side₂IsDisk_unconditional
+            (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+            (ProofsInTheBook.ZinanCh35ChordResidue.normSep h))
+          (side₂AnchorsShareFace_canonical_swapped (hNT := hNT)
+            (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+            (ProofsInTheBook.ZinanCh35ChordResidue.normSep h))
+          (contiguousInterval₂_direct_canonical_swapped_uncond hNT
+            (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+            (ProofsInTheBook.ZinanCh35ChordResidue.normSep h)))
+        (p₂ c₁) (q₂ c₁)
+        (fun x =>
+          (ProofsInTheBook.ZinanCh35ChordResidue.chordSplitRegions_of_residue
+            (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+            (ProofsInTheBook.ZinanCh35ChordResidue.normSep h) htu hhv
+            (ProofsInTheBook.ZinanCh35Regions.chordSplitRegionsResidue_of_precolored
+              (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+              (ProofsInTheBook.ZinanCh35ChordResidue.normSep h) hp hq)
+            (L := L) (cp := cp) (cq := cq)).forcedLists c₁ L
+            (ProofsInTheBook.ZinanCh35Side2.sideVertexToM₂
+              (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+              (ProofsInTheBook.ZinanCh35ChordResidue.normSep h)
+              (side₂Anchor₁ (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+                (ProofsInTheBook.ZinanCh35ChordResidue.normSep h))
+              (side₂Anchor₀ (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+                (ProofsInTheBook.ZinanCh35ChordResidue.normSep h))
+              (side₂Anchors_ne hNT
+                (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
+                (ProofsInTheBook.ZinanCh35ChordResidue.normSep h)).symm x))
+        (cp₂ c₁) (cq₂ c₁)) :
+    ProofsInTheBook.ZinanCh35ChordBranch.ChordBranchResidualData h p q L cp cq := by
+  let data := ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h
+  let hsep := ProofsInTheBook.ZinanCh35ChordResidue.normSep h
+  let res := ProofsInTheBook.ZinanCh35Regions.chordSplitRegionsResidue_of_precolored data hsep hp hq
+  let regions := ProofsInTheBook.ZinanCh35ChordResidue.chordSplitRegions_of_residue
+    data hsep htu hhv res (L := L) (cp := cp) (cq := cq)
+  refine
+    { hsep := hsep
+      htu := htu
+      hhv := hhv
+      regions := regions
+      regions_s₁ := rfl
+      regions_s₂ := rfl
+      a₁₀ := side₁Anchor₀ data hsep
+      a₁₁ := side₁Anchor₁ data hsep
+      ha₁₀ := (ProofsInTheBook.ZinanCh35ChordResidue.canonicalAnchor₀_tail data hsep).trans htu
+      ha₁₁ := (ProofsInTheBook.ZinanCh35ChordResidue.canonicalAnchor₁_tail data hsep).trans hhv
+      hne₁ := side₁Anchors_ne data hsep
+      side₁ := canonicalSide₁InputsNoConf_of_fuel hNT data hsep L htu hhv p₁ q₁ cp₁ cq₁ hL₁
+      a₂₀ := side₂Anchor₁ data hsep
+      a₂₁ := side₂Anchor₀ data hsep
+      ha₂₀ := (canonicalSide₂Anchor₁_tail hNT data hsep).trans htu
+      ha₂₁ := (canonicalSide₂Anchor₀_tail hNT data hsep).trans hhv
+      hne₂ := (side₂Anchors_ne hNT data hsep).symm
+      side₂ := fun c₁ =>
+        canonicalSide₂InputsNoConf_of_fuel hNT data hsep (regions.forcedLists c₁ L)
+          htu hhv (p₂ c₁) (q₂ c₁) (cp₂ c₁) (cq₂ c₁) (hL₂ c₁)
+      uv_ne := by
+        intro huv
+        have hne := ProofsInTheBook.ChordSigmaContig.u_ne_v data
+        exact hne (by rw [htu, hhv, huv]) }
 
 end ProofsInTheBook.ZinanCh35OuterTraceProof
 

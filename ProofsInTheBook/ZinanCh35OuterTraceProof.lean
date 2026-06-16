@@ -1139,6 +1139,91 @@ theorem sideMap₁_isSimpleGraph_canonical
               rfl
             · exact Equiv.Perm.SameCycle.refl _ _
 
+/-- `g.SameCycle k₀ c` with `g` swapping `k₀ ↔ k₁` forces `c` to be one of the two
+swapped points.  This is the membership half of `ChordAnchor.twoCycle_orbit_card`, exposed here
+because the original helper is private. -/
+lemma sameCycle_mem_of_twoCycle {K : Type u} [Fintype K] {g : Equiv.Perm K} {k₀ k₁ c : K}
+    (h01 : g k₀ = k₁) (h10 : g k₁ = k₀) (h : g.SameCycle k₀ c) :
+    c = k₀ ∨ c = k₁ := by
+  obtain ⟨n, hn⟩ := h.exists_nat_pow_eq
+  rw [Equiv.Perm.coe_pow] at hn
+  have hiter : ∀ m : ℕ, g^[m] k₀ = k₀ ∨ g^[m] k₀ = k₁ := by
+    intro m
+    induction m with
+    | zero =>
+        simp
+    | succ m ih =>
+        rw [Function.iterate_succ_apply']
+        rcases ih with hmk₀ | hmk₁
+        · rw [hmk₀]; exact Or.inr h01
+        · rw [hmk₁]; exact Or.inl h10
+  rcases hiter n with hnk₀ | hnk₁
+  · exact Or.inl (by rw [← hn, hnk₀])
+  · exact Or.inr (by rw [← hn, hnk₁])
+
+/-- The touched side face
+`f₀ = S.dartFace (Sum.inl (face₁Dart₁ data))` has only kept-`inl` representatives whose
+underlying `M`-face is `data.face₁`, for the canonical side-1 anchors. -/
+theorem touched_face₁_reps_all_face₁_canonical
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (k : {d : D // d ∉ data.keptDel₁})
+    (hk :
+      (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).dartFace (Sum.inl k)
+        =
+      (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).dartFace (Sum.inl (face₁Dart₁ data))) :
+    M.dartFace k.1 = data.face₁ := by
+  classical
+  have hτ :
+      (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+        (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)).SameCycle
+        k (face₁Dart₁ data) :=
+    (ProofsInTheBook.ChordBoundaryOrbit.sideFace_inl_eq_iff_tracePhi
+      (data.sideAlpha₁ hsep) data.sideSigma₁
+      (data.sideAlpha₁_involutive hsep) (data.sideAlpha₁_no_fixed hsep)
+      (side₁Anchors_ne data hsep) k (face₁Dart₁ data)).1 hk
+  have hmem :
+      k = face₁Dart₁ data ∨ k = face₁Dart₂ data :=
+    sameCycle_mem_of_twoCycle
+      (side₁Anchors_trace12 data hsep) (side₁Anchors_trace21 data hsep) hτ.symm
+  rcases hmem with hk1 | hk2
+  · rw [hk1]
+    exact (ProofsInTheBook.ChordFaceFinal.face₁_two_kept_darts data).2.2.2.1
+  · rw [hk2]
+    exact (ProofsInTheBook.ChordFaceFinal.face₁_two_kept_darts data).2.2.2.2
+
+/-- **Definite verdict for §3.3:** canonical `InnerRepsAvoidBoundary` is false.  The witness is
+the touched face `f₀ = S.dartFace (Sum.inl (face₁Dart₁ data))`, which is non-outer but whose
+kept-`inl` representatives all map back to `data.face₁`. -/
+theorem innerRepsAvoidBoundary_canonical_false
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    ¬ ProofsInTheBook.ChordBoundaryOrbit.InnerRepsAvoidBoundary data hsep
+      (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep) (side₁Anchors_ne data hsep)
+      ((data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).dartFace (Sum.inr 1)) := by
+  classical
+  intro hreps
+  set S := data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+    (side₁Anchors_ne data hsep) with hS
+  set f₀ : S.Face := S.dartFace (Sum.inl (face₁Dart₁ data)) with hf₀
+  have hf₀_ne :
+      f₀ ≠ S.dartFace (Sum.inr 1) := by
+    subst f₀
+    subst S
+    exact side₁_face₁_not_outer_canonical data hsep
+  obtain ⟨k, hkf, _, hkface₁⟩ := hreps f₀ hf₀_ne
+  have hkf₀ :
+      (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).dartFace (Sum.inl k)
+        =
+      (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).dartFace (Sum.inl (face₁Dart₁ data)) := by
+    subst f₀
+    subst S
+    exact hkf
+  exact hkface₁ (touched_face₁_reps_all_face₁_canonical hNT data hsep k hkf₀)
+
 end ProofsInTheBook.ZinanCh35OuterTraceProof
 
 /-! ## Axiom audit -/
@@ -1154,3 +1239,5 @@ end ProofsInTheBook.ZinanCh35OuterTraceProof
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.side₁_outer_simple_canonical_uncond
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.side₁ChordIncidenceNonDegenerate_canonical
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.sideMap₁_isSimpleGraph_canonical
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.touched_face₁_reps_all_face₁_canonical
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.innerRepsAvoidBoundary_canonical_false

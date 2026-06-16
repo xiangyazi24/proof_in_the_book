@@ -35,12 +35,15 @@ namespace ProofsInTheBook.ZinanCh35OuterTraceProof
 
 open ProofsInTheBook.PlanarMap
 open ProofsInTheBook.PlanarMap.CombMap
+open ProofsInTheBook.PlanarMap.FilteredRotation
 open ProofsInTheBook.PlanarMap.CombMap.NearTriangulation
 open ProofsInTheBook.PlanarMap.CombMap.NearTriangulation.ChordSplitData
 open ProofsInTheBook.ChordSplitEuler
 open ProofsInTheBook.ZinanCh35SideAnchors
 open ProofsInTheBook.ZinanCh35ChordResidue
 open ProofsInTheBook.ZinanCh35SideOuterSimple
+open ProofsInTheBook.ChordFaceCount
+open ProofsInTheBook.ZinanCh35OuterTrace
 
 universe u
 
@@ -98,8 +101,71 @@ theorem canonical_OuterTraceInjOn_of_arcTrace
     have hij : i = j := A.tail_nodup htail
     rw [hij]
 
+/-- **Orbit membership iff** (canonical anchors).  A dart is on the side-1 outer `φ`-orbit
+`S.faceDartList (inr 1)` iff it is the chord root `inr 1` or an `inl`-dart `inl k` with `k` in the
+`tracePhi`-orbit of `β a₁`.  The negative case `inr 0` is excluded by the splice-split fact
+`side₁_chordPred_notSameCycle_canonical` (the two chord predecessors are NOT `tracePhi`-SameCycle). -/
+theorem canonical_side₁_outer_orbit_mem_iff
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (x : {d : D // d ∉ data.keptDel₁} ⊕ Fin 2) :
+    x ∈ (data.sideMap₁ hsep (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)
+        (side₁Anchors_ne data hsep)).faceDartList (Sum.inr 1)
+      ↔ x = Sum.inr 1 ∨
+        ∃ k : {d : D // d ∉ data.keptDel₁}, x = Sum.inl k ∧
+          (tracePhi (data.sideAlpha₁ hsep) data.sideSigma₁
+              (side₁Anchor₀ data hsep) (side₁Anchor₁ data hsep)).SameCycle
+            ((data.sideAlpha₁ hsep) (side₁Anchor₁ data hsep)) k := by
+  classical
+  -- shorthands
+  set a₀ := side₁Anchor₀ data hsep with ha₀
+  set a₁ := side₁Anchor₁ data hsep with ha₁
+  set hne := side₁Anchors_ne data hsep with hhne
+  set β := data.sideAlpha₁ hsep with hβ
+  set ρ := data.sideSigma₁ with hρ
+  have hinv : β * β = 1 := data.sideAlpha₁_involutive hsep
+  have hfix : ∀ k, β k ≠ k := data.sideAlpha₁_no_fixed hsep
+  -- the side map IS the fresh map.
+  have hSeq : data.sideMap₁ hsep a₀ a₁ hne = freshMap β ρ hinv hfix a₀ a₁ hne := rfl
+  -- the splice-split: ¬ τ.SameCycle (β a₁) (β a₀).
+  have hsplit : ¬ (tracePhi β ρ a₀ a₁).SameCycle (β a₁) (β a₀) := by
+    intro h
+    exact side₁_chordPred_notSameCycle_canonical data hsep h.symm
+  -- root in the support of φ.
+  have hroot_support :
+      (Sum.inr 1 : {d : D // d ∉ data.keptDel₁} ⊕ Fin 2)
+        ∈ (freshMap β ρ hinv hfix a₀ a₁ hne).φ.support := by
+    rw [Equiv.Perm.mem_support, freshMap_phi_inr_one β ρ hinv hfix hne]
+    exact Sum.inl_ne_inr
+  rw [hSeq, CombMap.faceDartList]
+  constructor
+  · intro hx
+    rw [Equiv.Perm.mem_toList_iff] at hx
+    obtain ⟨hcyc, _⟩ := hx
+    -- transport the φ-SameCycle (inr 1 → x) to a tracePhi-SameCycle of faceProjs.
+    have hτ : (tracePhi β ρ a₀ a₁).SameCycle (β a₁) (faceProj β a₀ a₁ x) := by
+      have h := (freshFace_sameCycle_iff β ρ hinv hfix hne (Sum.inr 1) x).1 hcyc
+      simpa [faceProj_inr_one] using h
+    cases x with
+    | inl k =>
+        right
+        exact ⟨k, rfl, by simpa [faceProj_inl] using hτ⟩
+    | inr j =>
+        fin_cases j
+        · -- inr 0, excluded by the splice-split fact
+          exact absurd (by simpa [faceProj_inr_zero] using hτ) hsplit
+        · left; rfl
+  · intro hx
+    rw [Equiv.Perm.mem_toList_iff]
+    refine ⟨?_, hroot_support⟩
+    rcases hx with hroot | ⟨k, hxk, hk⟩
+    · rw [hroot]
+    · rw [hxk]
+      refine (freshFace_sameCycle_iff β ρ hinv hfix hne (Sum.inr 1) (Sum.inl k)).2 ?_
+      simpa [faceProj_inl, faceProj_inr_one] using hk
+
 end ProofsInTheBook.ZinanCh35OuterTraceProof
 
 /-! ## Axiom audit -/
 
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonical_OuterTraceInjOn_of_arcTrace
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonical_side₁_outer_orbit_mem_iff

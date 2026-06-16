@@ -4,6 +4,7 @@ import ProofsInTheBook.ZinanCh35ArcDartRun
 import ProofsInTheBook.ZinanCh35EdgeCoreFinal
 import ProofsInTheBook.ZinanCh35ArcSide
 import ProofsInTheBook.ZinanCh35BoundaryAssembler
+import ProofsInTheBook.ZinanCh35Side2Anchors
 
 /-!
 # Chapter 35 — discharging `OuterTraceInjOn` via the orbit↔boundary-arc VERTEX correspondence
@@ -48,6 +49,7 @@ open ProofsInTheBook.ZinanCh35SideOuterSimple
 open ProofsInTheBook.ChordAnchor
 open ProofsInTheBook.ChordFaceCount
 open ProofsInTheBook.ZinanCh35OuterTrace
+open ProofsInTheBook.ZinanCh35Side2Anchors
 
 universe u
 
@@ -1280,6 +1282,251 @@ theorem sideMap₁_isSimpleGraph_canonical
               rfl
             · exact Equiv.Perm.SameCycle.refl _ _
 
+/-! ## Canonical side-2 anchor endpoint geometry -/
+
+/-- The side-2 `face₂` mirror of `tail_alpha_phiSq_dart`: the dart
+`α (φ² (α dart))` lives at the tail vertex of `α dart`. -/
+lemma tail_alpha_phiSq_alphaDart (data : hNT.ChordSplitData u v) :
+    M.tail (M.α (M.φ (M.φ (M.α data.dart)))) = M.tail (M.α data.dart) := by
+  have h : M.σ (M.α (M.φ (M.φ (M.α data.dart)))) = M.α data.dart := by
+    obtain ⟨_, _, h20⟩ := face₂_isFaceTriangle data
+    change M.φ (M.φ (M.φ (M.α data.dart))) = M.α data.dart
+    exact h20
+  calc
+    M.tail (M.α (M.φ (M.φ (M.α data.dart))))
+        = M.tail (M.σ (M.α (M.φ (M.φ (M.α data.dart))))) := (M.tail_sigma _).symm
+    _ = M.tail (M.α data.dart) := by rw [h]
+
+/-- The filtered side-2 successor of `face₂Dart₂` lands at the vertex of `α dart`,
+i.e. at the chord endpoint `head dart`. -/
+theorem keptPhi_face₂Dart₂_tail
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    M.tail ((keptPhi (data.sideAlpha₂ hsep) data.sideSigma₂ (face₂Dart₂ data) :
+        {d : D // d ∉ data.keptDel₂}) : D)
+      = M.tail (M.α data.dart) := by
+  show M.tail ((data.sideSigma₂ (data.sideAlpha₂ hsep (face₂Dart₂ data)) :
+      {d : D // d ∉ data.keptDel₂}) : D) = M.tail (M.α data.dart)
+  rw [show data.sideSigma₂ = FilteredRotation.filteredRotation M.σ data.keptDel₂ from rfl,
+    ProofsInTheBook.ChordSigmaContig.tail_filteredRotation data.keptDel₂
+      (data.sideAlpha₂ hsep (face₂Dart₂ data))]
+  rw [sideAlpha₂_apply_coe]
+  show M.tail (M.α (M.φ (M.φ (M.α data.dart)))) = M.tail (M.α data.dart)
+  exact tail_alpha_phiSq_alphaDart hNT data
+
+/-- `face₂Dart₁ = φ (α dart)` lives at the head vertex of `α dart`,
+i.e. at the chord endpoint `tail dart`. -/
+theorem face₂Dart₁_tail (data : hNT.ChordSplitData u v) :
+    M.tail ((face₂Dart₁ data : {d : D // d ∉ data.keptDel₂}) : D)
+      = M.head (M.α data.dart) := by
+  show M.tail (M.φ (M.α data.dart)) = M.head (M.α data.dart)
+  exact M.tail_phi (M.α data.dart)
+
+/-- The canonical side-2 anchor `a₀` sits at the chord endpoint `head dart`. -/
+theorem canonicalSide₂Anchor₀_tail
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    M.tail (side₂Anchor₀ data hsep).1 = M.head data.dart := by
+  have hfix : M.tail (data.sideSigma₂ (side₂Anchor₀ data hsep) : D)
+      = M.tail (side₂Anchor₀ data hsep).1 := by
+    rw [show data.sideSigma₂ = FilteredRotation.filteredRotation M.σ data.keptDel₂ from rfl,
+      ProofsInTheBook.ChordSigmaContig.tail_filteredRotation data.keptDel₂
+        (side₂Anchor₀ data hsep)]
+  rw [← hfix, sideSigma₂_side₂Anchor₀ data hsep, keptPhi_face₂Dart₂_tail hNT data hsep,
+    M.tail_alpha]
+
+/-- The canonical side-2 anchor `a₁` sits at the chord endpoint `tail dart`. -/
+theorem canonicalSide₂Anchor₁_tail
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    M.tail (side₂Anchor₁ data hsep).1 = M.tail data.dart := by
+  have hfix : M.tail (data.sideSigma₂ (side₂Anchor₁ data hsep) : D)
+      = M.tail (side₂Anchor₁ data hsep).1 := by
+    rw [show data.sideSigma₂ = FilteredRotation.filteredRotation M.σ data.keptDel₂ from rfl,
+      ProofsInTheBook.ChordSigmaContig.tail_filteredRotation data.keptDel₂
+        (side₂Anchor₁ data hsep)]
+  rw [← hfix, sideSigma₂_side₂Anchor₁ data hsep, face₂Dart₁_tail hNT data, M.head_alpha]
+
+/-- The canonical side-2 anchors are distinct. -/
+theorem side₂Anchors_ne (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    side₂Anchor₀ data hsep ≠ side₂Anchor₁ data hsep := by
+  intro h
+  have htail : M.tail (side₂Anchor₀ data hsep).1 = M.tail (side₂Anchor₁ data hsep).1 :=
+    congrArg (fun x : {d : D // d ∉ data.keptDel₂} => M.tail x.1) h
+  rw [canonicalSide₂Anchor₀_tail hNT data hsep, canonicalSide₂Anchor₁_tail hNT data hsep] at htail
+  exact ProofsInTheBook.ChordSigmaContig.u_ne_v data htail.symm
+
+/-- Side-2 mirror of `sideMap₁_tail_eq_iff_M_tail_proj`. -/
+lemma sideMap₂_tail_eq_iff_M_tail_proj
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (a₀ a₁ : {d : D // d ∉ data.keptDel₂}) (hne : a₀ ≠ a₁)
+    (x y : {d : D // d ∉ data.keptDel₂} ⊕ Fin 2) :
+    (data.sideMap₂ hsep a₀ a₁ hne).tail x = (data.sideMap₂ hsep a₀ a₁ hne).tail y
+      ↔ M.tail (proj a₀ a₁ x).1 = M.tail (proj a₀ a₁ y).1 := by
+  rw [show data.sideMap₂ hsep a₀ a₁ hne
+        = freshMap (data.sideAlpha₂ hsep) data.sideSigma₂
+            (data.sideAlpha₂_involutive hsep) (data.sideAlpha₂_no_fixed hsep) a₀ a₁ hne from rfl]
+  rw [freshMap_tail_eq_iff_rho_sameCycle (data.sideAlpha₂ hsep) data.sideSigma₂
+        (data.sideAlpha₂_involutive hsep) (data.sideAlpha₂_no_fixed hsep) hne x y]
+  rw [show data.sideSigma₂ = FilteredRotation.filteredRotation M.σ data.keptDel₂ from rfl]
+  rw [filteredRotation_sameCycle_iff M.σ data.keptDel₂ (proj a₀ a₁ x) (proj a₀ a₁ y)]
+  rw [tail_eq_iff_sigma_sameCycle]
+
+private lemma sideMap₂_dartEdge_eq_to_M_proj_edge
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (a₀ a₁ : {d : D // d ∉ data.keptDel₂}) (hne : a₀ ≠ a₁)
+    {x y : {d : D // d ∉ data.keptDel₂} ⊕ Fin 2}
+    (h : (data.sideMap₂ hsep a₀ a₁ hne).dartEdge x
+        = (data.sideMap₂ hsep a₀ a₁ hne).dartEdge y) :
+    s(M.tail (proj a₀ a₁ x).1,
+        M.tail (proj a₀ a₁ (freshAlpha (data.sideAlpha₂ hsep) x)).1)
+      =
+    s(M.tail (proj a₀ a₁ y).1,
+        M.tail (proj a₀ a₁ (freshAlpha (data.sideAlpha₂ hsep) y)).1) := by
+  classical
+  unfold CombMap.dartEdge at h
+  rcases Sym2.eq_iff.1 h with ⟨ht, hh⟩ | ⟨ht, hh⟩
+  · have htM := (sideMap₂_tail_eq_iff_M_tail_proj hNT data hsep a₀ a₁ hne x y).1 ht
+    have hhTail :
+        (data.sideMap₂ hsep a₀ a₁ hne).tail (freshAlpha (data.sideAlpha₂ hsep) x)
+          = (data.sideMap₂ hsep a₀ a₁ hne).tail (freshAlpha (data.sideAlpha₂ hsep) y) := by
+      simpa [CombMap.head] using hh
+    have hhM := (sideMap₂_tail_eq_iff_M_tail_proj hNT data hsep a₀ a₁ hne
+      (freshAlpha (data.sideAlpha₂ hsep) x) (freshAlpha (data.sideAlpha₂ hsep) y)).1 hhTail
+    exact Sym2.eq_iff.2 (Or.inl ⟨htM, hhM⟩)
+  · have htTail :
+        (data.sideMap₂ hsep a₀ a₁ hne).tail x
+          = (data.sideMap₂ hsep a₀ a₁ hne).tail (freshAlpha (data.sideAlpha₂ hsep) y) := by
+      simpa [CombMap.head] using ht
+    have htM := (sideMap₂_tail_eq_iff_M_tail_proj hNT data hsep a₀ a₁ hne x
+      (freshAlpha (data.sideAlpha₂ hsep) y)).1 htTail
+    have hhTail :
+        (data.sideMap₂ hsep a₀ a₁ hne).tail (freshAlpha (data.sideAlpha₂ hsep) x)
+          = (data.sideMap₂ hsep a₀ a₁ hne).tail y := by
+      simpa [CombMap.head] using hh
+    have hhM := (sideMap₂_tail_eq_iff_M_tail_proj hNT data hsep a₀ a₁ hne
+      (freshAlpha (data.sideAlpha₂ hsep) x) y).1 hhTail
+    exact Sym2.eq_iff.2 (Or.inr ⟨htM, hhM⟩)
+
+/-- The chord dart and its reverse are not side-2 kept darts. -/
+private lemma no_kept_dart_on_chord_edge₂
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates)
+    (x : {d : D // d ∉ data.keptDel₂})
+    (hxedge : M.dartEdge x.1 = M.dartEdge data.dart) : False := by
+  have hchord : M.dartEdge x.1 = s(u, v) := by
+    exact hxedge.trans (hNT.chordDart_edge data.chord)
+  rcases data.chord_edge_darts hchord with hx | hx
+  · have hdart_del : data.dart ∈ data.keptDel₂ := by
+      by_contra hnot
+      exact data.dart_notMem_keptSet₂ hsep ((data.mem_keptDel₂_iff _).1 hnot)
+    exact x.2 (hx ▸ hdart_del)
+  · have hαdart_del : M.α data.dart ∈ data.keptDel₂ := by
+      by_contra hnot
+      rw [data.mem_keptDel₂_iff] at hnot
+      exact hnot.2 rfl
+    exact x.2 (hx ▸ hαdart_del)
+
+/-- **Side-map simplicity for the canonical side-2 anchors.** -/
+theorem sideMap₂_isSimpleGraph_canonical
+    (hNT : NearTriangulation M) {u v : M.Vertex}
+    (data : hNT.ChordSplitData u v) (hsep : data.Separates) :
+    (data.sideMap₂ hsep (side₂Anchor₀ data hsep) (side₂Anchor₁ data hsep)
+      (side₂Anchors_ne hNT data hsep)).IsSimpleGraph := by
+  classical
+  let a₀ : {d : D // d ∉ data.keptDel₂} := side₂Anchor₀ data hsep
+  let a₁ : {d : D // d ∉ data.keptDel₂} := side₂Anchor₁ data hsep
+  let hne : a₀ ≠ a₁ := side₂Anchors_ne hNT data hsep
+  change (data.sideMap₂ hsep a₀ a₁ hne).IsSimpleGraph
+  have ha₀ : M.tail a₀.1 = M.head data.dart := by
+    dsimp [a₀]
+    exact canonicalSide₂Anchor₀_tail hNT data hsep
+  have ha₁ : M.tail a₁.1 = M.tail data.dart := by
+    dsimp [a₁]
+    exact canonicalSide₂Anchor₁_tail hNT data hsep
+  refine ⟨?_, ?_⟩
+  · intro x hloop
+    have htail :
+        (data.sideMap₂ hsep a₀ a₁ hne).tail x
+          = (data.sideMap₂ hsep a₀ a₁ hne).tail (freshAlpha (data.sideAlpha₂ hsep) x) := by
+      simpa [CombMap.head] using hloop
+    have hMtail := (sideMap₂_tail_eq_iff_M_tail_proj hNT data hsep a₀ a₁ hne x
+      (freshAlpha (data.sideAlpha₂ hsep) x)).1 htail
+    cases x with
+    | inl k =>
+        apply hNT.simpleGraph.no_loop k.1
+        simpa [freshAlpha_inl, data.sideAlpha₂_apply_coe hsep, M.tail_alpha] using hMtail
+    | inr j =>
+        fin_cases j
+        · have hvu : M.head data.dart = M.tail data.dart := by
+            simpa [freshAlpha_inr, proj, ha₀, ha₁] using hMtail
+          exact ProofsInTheBook.ChordSigmaContig.u_ne_v data hvu.symm
+        · have huv : M.tail data.dart = M.head data.dart := by
+            simpa [freshAlpha_inr, proj, ha₀, ha₁] using hMtail
+          exact ProofsInTheBook.ChordSigmaContig.u_ne_v data huv
+  · intro x y hxy
+    have hMedge := sideMap₂_dartEdge_eq_to_M_proj_edge hNT data hsep a₀ a₁ hne hxy
+    cases x with
+    | inl kx =>
+        cases y with
+        | inl ky =>
+            have hM : M.dartEdge kx.1 = M.dartEdge ky.1 := by
+              simpa [CombMap.dartEdge, freshAlpha_inl, data.sideAlpha₂_apply_coe hsep,
+                M.tail_alpha] using hMedge
+            have hsc : M.α.SameCycle kx.1 ky.1 := hNT.simpleGraph.no_parallel hM
+            rcases (M.alpha_sameCycle_iff kx.1 ky.1).mp hsc with hsame | halpha
+            · have hky : ky = kx := Subtype.ext hsame
+              rw [hky]
+            · have hky : ky = data.sideAlpha₂ hsep kx := by
+                apply Subtype.ext
+                rw [data.sideAlpha₂_apply_coe hsep]
+                exact halpha
+              refine ⟨1, ?_⟩
+              rw [zpow_one]
+              change freshAlpha (data.sideAlpha₂ hsep) (Sum.inl kx) = Sum.inl ky
+              rw [freshAlpha_inl, hky]
+        | inr jy =>
+            fin_cases jy
+            · have hxedge : M.dartEdge kx.1 = M.dartEdge data.dart := by
+                unfold CombMap.dartEdge
+                simpa [CombMap.dartEdge, freshAlpha_inl, freshAlpha_inr,
+                  data.sideAlpha₂_apply_coe hsep, M.tail_alpha, proj, ha₀, ha₁,
+                  Sym2.eq_swap] using hMedge
+              exact False.elim (no_kept_dart_on_chord_edge₂ hNT data hsep kx hxedge)
+            · have hxedge : M.dartEdge kx.1 = M.dartEdge data.dart := by
+                unfold CombMap.dartEdge
+                simpa [CombMap.dartEdge, freshAlpha_inl, freshAlpha_inr,
+                  data.sideAlpha₂_apply_coe hsep, M.tail_alpha, proj, ha₀, ha₁] using hMedge
+              exact False.elim (no_kept_dart_on_chord_edge₂ hNT data hsep kx hxedge)
+    | inr jx =>
+        cases y with
+        | inl ky =>
+            fin_cases jx
+            · have hyedge : M.dartEdge ky.1 = M.dartEdge data.dart := by
+                unfold CombMap.dartEdge
+                simpa [CombMap.dartEdge, freshAlpha_inl, freshAlpha_inr,
+                  data.sideAlpha₂_apply_coe hsep, M.tail_alpha, proj, ha₀, ha₁,
+                  Sym2.eq_swap] using hMedge.symm
+              exact False.elim (no_kept_dart_on_chord_edge₂ hNT data hsep ky hyedge)
+            · have hyedge : M.dartEdge ky.1 = M.dartEdge data.dart := by
+                unfold CombMap.dartEdge
+                simpa [CombMap.dartEdge, freshAlpha_inl, freshAlpha_inr,
+                  data.sideAlpha₂_apply_coe hsep, M.tail_alpha, proj, ha₀, ha₁] using hMedge.symm
+              exact False.elim (no_kept_dart_on_chord_edge₂ hNT data hsep ky hyedge)
+        | inr jy =>
+            fin_cases jx <;> fin_cases jy
+            · exact Equiv.Perm.SameCycle.refl _ _
+            · refine ⟨1, ?_⟩
+              rw [zpow_one]
+              change freshAlpha (data.sideAlpha₂ hsep) (Sum.inr 0) = Sum.inr 1
+              rw [freshAlpha_inr]
+              rfl
+            · refine ⟨1, ?_⟩
+              rw [zpow_one]
+              change freshAlpha (data.sideAlpha₂ hsep) (Sum.inr 1) = Sum.inr 0
+              rw [freshAlpha_inr]
+              rfl
+            · exact Equiv.Perm.SameCycle.refl _ _
+
 /-- `g.SameCycle k₀ c` with `g` swapping `k₀ ↔ k₁` forces `c` to be one of the two
 swapped points.  This is the membership half of `ChordAnchor.twoCycle_orbit_card`, exposed here
 because the original helper is private. -/
@@ -1637,6 +1884,14 @@ end ProofsInTheBook.ZinanCh35OuterTraceProof
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.side₁_outer_simple_canonical_uncond
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.side₁ChordIncidenceNonDegenerate_canonical
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.sideMap₁_isSimpleGraph_canonical
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.tail_alpha_phiSq_alphaDart
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.keptPhi_face₂Dart₂_tail
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.face₂Dart₁_tail
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonicalSide₂Anchor₀_tail
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.canonicalSide₂Anchor₁_tail
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.side₂Anchors_ne
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.sideMap₂_tail_eq_iff_M_tail_proj
+#print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.sideMap₂_isSimpleGraph_canonical
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.touched_face₁_reps_all_face₁_canonical
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.innerRepsAvoidBoundary_canonical_false
 #print axioms ProofsInTheBook.ZinanCh35OuterTraceProof.side₁_touched_faceLen_three_canonical

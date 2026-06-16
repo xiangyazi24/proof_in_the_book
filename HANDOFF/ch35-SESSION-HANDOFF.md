@@ -167,3 +167,39 @@ for a side-1 σ-step in ChordInnerTri:231-259), `dartArcOfNonBoundaryEdge` (Chor
 **Verdict:** OuterTraceInjOn is genuinely TRUE; reduction LANDED (55f675d, clean-3). The bridge is a
 real tower — NOT "moderate bookkeeping". Resume by building (a)+(b)+(d-head) first (self-contained,
 verifiable), then the hard walk (c)+(e), then orientation+wire.
+
+---
+
+## ADDENDUM 2026-06-16 (2) — OuterTraceInjOn machinery FULLY PROVEN, reduced to 6 geometric facts
+
+`ZinanCh35OuterTraceProof.lean` now proves (all clean-3, verified `lake env lean` on uisai2) the
+ENTIRE orbit↔arc machinery. `canonical_OuterTraceInjOn_closed` reduces `OuterTraceInjOn` (canonical
+anchors) to exactly SIX concrete geometric facts (carried as hypotheses):
+
+1. `htu : M.tail data.dart = u`, 2. `hhv : M.head data.dart = v` — chord orientation
+   (via `ZinanCh35Aligned.chordDart_orientation` / `normalizedChordSplitData`).
+3. `hArcKept : ∀ i, (canonicalOuterArc).arcDart i ∉ data.keptDel₁` — THE CRUX.
+4. `hρa₀_boundary : (sideSigma₁ side₁Anchor₀).1 ∈ outerCycle.darts`.
+5. `hβa₁_boundary : (sideAlpha₁ side₁Anchor₁).1 ∈ outerCycle.darts`.
+6. `hnot_beta_a₀ : ∀ i, arcK i ≠ sideAlpha₁ side₁Anchor₀` (β a₀ not on the u→v arc).
+
+PROVEN (clean-3) this session: `phi_eq_of_boundary_chain` (chain⟹φ-step via consecutive_phi +
+tail_injective), `head_injective_on_darts`, `sideSigma₁_alpha_arcDart_eq_next` (keptPhi walks the
+arc, via filteredRotation_apply_of_next_kept), `tracePhi_arc_step`/`_wrap`,
+`tracePhi_iterate_last_mem_arc`, `tracePhi_sameCycle_last_arc`, `canonicalTracePhiArc_of_steps`,
+`canonical_side₁_outer_orbit_mem_iff` (inr0 excluded via `side₁_chordPred_notSameCycle_canonical`),
+`canonical_arcTrace_of_tracePhiArc`, `arcK`/`arcK_injective`, `canonicalOuterArc`,
+endpoint alignment `canonical_trace_start/root_eq_arc`. Commits 6068e12..326951a.
+
+### hArcKept analysis (the crux, source-verified)
+`keptSet₁ = (sideDarts₁ ∪ outerArc₁)\{dart}`; `outerArc₁ = {b | dartFace b = outerFace ∧
+dartFace(α b) ∈ side₁}` (PlanarMapChordSplit:403). A boundary arc dart `b` (dartFace = outerFace) is
+in keptSet₁ ⟺ `dartFace(α b) ∈ side₁` ∧ `b ≠ dart`. The first is EXACTLY the conclusion of the
+UNCONDITIONAL `ZinanCh35EdgeCoreFinal.outerDartArc₁_uncond : OuterDartArc₁` (a Prop:
+`∀ e, dartEdge e ≠ s(u,v) → dartFace e = outerFace → tail e ∈ sideRegion₁ → head e ∈ sideRegion₁ →
+dartFace(α e) ∈ side₁`). So hArcKept reduces to: each arc dart's endpoints ∈ sideRegion₁ + edge ≠
+chord + ≠ dart. The substantive piece = **the u→v arc vertices ∈ sideRegion₁** (= the arc is the
+SIDE-1 arc — orientation-sensitive; the dartArcOfNonBoundaryEdge(u,v) run may be wrong-side, in
+which case build A from data.outerArc₁ instead). This + facts 4/5/6 + orientation is the genuine
+remaining discrete-geometry residue — ChatGPT life2 (focused re-fire, /tmp/ch35-ext-q.txt) computing it.
+⚠️ NOTE: `OuterDartArc₁` ≠ a `DartArc` (it's the confinement Prop); do not confuse.

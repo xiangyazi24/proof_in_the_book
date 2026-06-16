@@ -406,3 +406,39 @@ c660f88 TODO: mark Ch33 premise as done
 81088fa Chapter33: PROVE Hall condition internally — 1st premise eliminated
 c2322c1 add TODO.md (8 premises to prove) + update UNDERSTANDING.md
 ```
+
+## Chapter 35 (five-color theorem) — architecture map (2026-06-16)
+
+**Headline (PROVEN, conditional):** `ZinanCh35Final.fiveColor_planar_of_recursionResiduals` —
+every near-triangulation is 5-colorable GIVEN `Ch35RecursionResiduals` = a `ChordRecursionInputSupplier`
++ a `ChordlessOracleResidual`. Recursion driver `ChordSplitNT.thomassen_aux_chordRecursive` is PROVEN
+(well-foundedness handled). All discrete-Schoenflies geometry + chord-split structure is unconditional.
+
+**Discrete-Schoenflies CORE — DONE (clean-3):** OuterTraceInjOn (`canonical_OuterTraceInjOn_uncond`),
+both ContiguousIntervals (`contiguousInterval₁/₂_direct_canonical_uncond`), both side `outer_simple`,
+`side₂IsDisk_unconditional`, separation, `outerDartArc₁_uncond`, canonical anchors, region pinning.
+Edge separation CLOSED: `ZinanCh35Regions.chordSplitRegionsResidue_of_precolored` produces
+`cover` + `edge_confined` unconditionally (`cover_holds`/`edge_confined_holds`), inputs only the
+precolored placement `p,q ∈ sideRegion₁` (genuine recursion fuel). Side-NT surgery EXISTS:
+`ChordSideNT` proves `NearTriangulation (sideMap₁)` from the predicate.
+
+**Recursion wiring landed (clean-3):** `canonicalSide₁InputsNoConf_of_fuel`,
+`canonicalSide₂InputsNoConf_reversed_of_fuel` (ZinanCh35OuterTraceProof.lean) build the
+`ChordBranch.Side₁/₂InputsNoConf` at canonical anchors, only ThomassenLists fuel (pₛ/qₛ/cpₛ/cqₛ/hLₛ)
+remaining. §3.3 finding: `ChordBranchResidualData.side₁/side₂` had an OVER-STRONG `∀-anchors`
+quantification; sole consumer `chordBranchResidue_of_residualData` only uses selected anchors₁/₂ —
+weakened to selected anchors (PHASE A1, codex).
+
+**REMAINING for unconditional `chapter35`:**
+- A2: `canonicalChordBranchResidualData_of_fuel` — blocked on side-2 endpoint ORDER. Canonical side-2
+  anchors realize (v,u); `Side₂InputsNoConf` swap is NOT field-symmetric (bundles ci+hLₛ over a
+  different sideMap/NT). Need either swapped-order canonical CI₂ or pick anchors realizing (u,v).
+- (b) Pullback ThomassenLists to side maps (Lₛ/pₛ/qₛ/cpₛ/cqₛ) + assemble `ChordRecursionInputSupplier`.
+  Side NTs exist (ChordSideNT); this is list-pullback bookkeeping, not re-proving Thomassen.
+- (c) `ChordlessOracleResidual` — Thomassen's chordless branch (`ChordlessOracle` producer); the
+  other induction case (fan list-coloring + w-deletion surgery). `ZinanCh35ChordlessOracle` has 2 sorry;
+  `fanIncidenceData_sigma_derived` landed. Less developed than chord branch.
+
+**Build:** uisai2 isolated `~/repos/pbook-ch35`. Single-file `lake env lean` for leaf edits; for
+STRUCTURE changes use full `lake build <module>` (single-file typechecks against stale olean = false green).
+Helper `/tmp/ch35-codex-build-multi.sh <module>`.

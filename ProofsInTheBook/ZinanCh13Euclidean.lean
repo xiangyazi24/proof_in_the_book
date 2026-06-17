@@ -1,6 +1,7 @@
 import ProofsInTheBook.Ch13Realization
 import ProofsInTheBook.Ch13ComponentClose
 import Mathlib.Analysis.InnerProductSpace.PiL2
+import Mathlib.Geometry.Euclidean.Angle.Unoriented.Basic
 import Mathlib.LinearAlgebra.AffineSpace.Independent
 import Mathlib.LinearAlgebra.LinearIndependent.Lemmas
 import Mathlib.Data.Fin.Tuple.Reflection
@@ -324,6 +325,176 @@ def tetraEuclideanPolyhedron : TriangulatedEuclideanPolyhedron tetraMap where
   face_plane := tetra_face_plane
   face_supporting_halfspace := tetra_supporting_halfspace
 
+/-! ## Dihedral angles -/
+
+/-- The outward normal on the face to the left of a dart. -/
+def dartNormal {M : CombMap D} (P : TriangulatedEuclideanPolyhedron M) (d : D) : E3 :=
+  P.outward_normal (M.dartFace d)
+
+/-- The cosine of the interior dihedral angle along a dart-represented edge. -/
+def dihedralCosAtDart {M : CombMap D} (P : TriangulatedEuclideanPolyhedron M) (d : D) : ℝ :=
+  - inner ℝ (dartNormal P d) (dartNormal P (M.α d)) /
+    (‖dartNormal P d‖ * ‖dartNormal P (M.α d)‖)
+
+/--
+The interior dihedral angle along a dart-represented edge.
+
+With outward normals `n_f,n_g`, this is `π - angle n_f n_g`.
+-/
+def dihedralAngleAtDart {M : CombMap D} (P : TriangulatedEuclideanPolyhedron M) (d : D) : ℝ :=
+  Real.pi - InnerProductGeometry.angle (dartNormal P d) (dartNormal P (M.α d))
+
+theorem dihedralAngleAtDart_nonneg {M : CombMap D}
+    (P : TriangulatedEuclideanPolyhedron M) (d : D) :
+    0 ≤ dihedralAngleAtDart P d := by
+  unfold dihedralAngleAtDart
+  linarith [InnerProductGeometry.angle_le_pi (dartNormal P d) (dartNormal P (M.α d))]
+
+theorem dihedralAngleAtDart_le_pi {M : CombMap D}
+    (P : TriangulatedEuclideanPolyhedron M) (d : D) :
+    dihedralAngleAtDart P d ≤ Real.pi := by
+  unfold dihedralAngleAtDart
+  linarith [InnerProductGeometry.angle_nonneg (dartNormal P d) (dartNormal P (M.α d))]
+
+theorem dihedralAngleAtDart_alpha {M : CombMap D}
+    (P : TriangulatedEuclideanPolyhedron M) (d : D) :
+    dihedralAngleAtDart P (M.α d) = dihedralAngleAtDart P d := by
+  unfold dihedralAngleAtDart dartNormal
+  rw [M.alpha_alpha, InnerProductGeometry.angle_comm]
+
+theorem dihedralCosAtDart_alpha {M : CombMap D}
+    (P : TriangulatedEuclideanPolyhedron M) (d : D) :
+    dihedralCosAtDart P (M.α d) = dihedralCosAtDart P d := by
+  unfold dihedralCosAtDart dartNormal
+  rw [M.alpha_alpha, real_inner_comm, mul_comm]
+
+theorem cos_dihedralAngleAtDart {M : CombMap D}
+    (P : TriangulatedEuclideanPolyhedron M) (d : D) :
+    Real.cos (dihedralAngleAtDart P d) = dihedralCosAtDart P d := by
+  unfold dihedralAngleAtDart dihedralCosAtDart
+  rw [Real.cos_pi_sub, InnerProductGeometry.cos_angle]
+  ring
+
+/-- The dihedral-difference sign carried by a dart. -/
+def dihedralSignAtDart {M : CombMap D}
+    (P Q : TriangulatedEuclideanPolyhedron M) (d : D) : ProofsInTheBook.Chapter13.EdgeSign :=
+  ProofsInTheBook.Ch13Realization.realSignToEdgeSign
+    (dihedralAngleAtDart Q d - dihedralAngleAtDart P d)
+
+theorem dihedralSignAtDart_alpha {M : CombMap D}
+    (P Q : TriangulatedEuclideanPolyhedron M) (d : D) :
+    dihedralSignAtDart P Q (M.α d) = dihedralSignAtDart P Q d := by
+  unfold dihedralSignAtDart
+  rw [dihedralAngleAtDart_alpha P d, dihedralAngleAtDart_alpha Q d]
+
+private theorem tetraPoint_norm₀ : ‖tetraPoint₀‖ = Real.sqrt 3 := by
+  rw [norm_eq_sqrt_real_inner, PiLp.inner_apply, Fin.sum_univ_three]
+  simp [tetraPoint₀]
+  norm_num
+
+private theorem tetraPoint_norm₁ : ‖tetraPoint₁‖ = Real.sqrt 3 := by
+  rw [norm_eq_sqrt_real_inner, PiLp.inner_apply, Fin.sum_univ_three]
+  simp [tetraPoint₁]
+  norm_num
+
+private theorem tetraPoint_norm₂ : ‖tetraPoint₂‖ = Real.sqrt 3 := by
+  rw [norm_eq_sqrt_real_inner, PiLp.inner_apply, Fin.sum_univ_three]
+  simp [tetraPoint₂]
+  norm_num
+
+private theorem tetraPoint_norm₃ : ‖tetraPoint₃‖ = Real.sqrt 3 := by
+  rw [norm_eq_sqrt_real_inner, PiLp.inner_apply, Fin.sum_univ_three]
+  simp [tetraPoint₃]
+  norm_num
+
+private theorem sqrt_three_mul_sqrt_three : Real.sqrt 3 * Real.sqrt 3 = (3 : ℝ) := by
+  rw [← sq, Real.sq_sqrt (by norm_num : (0 : ℝ) ≤ 3)]
+
+private theorem tetra_dihedralCos_pair₀₁ :
+    - inner ℝ tetraPoint₀ tetraPoint₁ / (‖tetraPoint₀‖ * ‖tetraPoint₁‖)
+      = (1 : ℝ) / 3 := by
+  rw [tetraPoint_norm₀, tetraPoint_norm₁]
+  rw [show inner ℝ tetraPoint₀ tetraPoint₁ = (-1 : ℝ) by
+    rw [PiLp.inner_apply, Fin.sum_univ_three]
+    simp [tetraPoint₀, tetraPoint₁]]
+  rw [sqrt_three_mul_sqrt_three]
+  norm_num
+
+private theorem tetra_dihedralCos_pair₀₂ :
+    - inner ℝ tetraPoint₀ tetraPoint₂ / (‖tetraPoint₀‖ * ‖tetraPoint₂‖)
+      = (1 : ℝ) / 3 := by
+  rw [tetraPoint_norm₀, tetraPoint_norm₂]
+  rw [show inner ℝ tetraPoint₀ tetraPoint₂ = (-1 : ℝ) by
+    rw [PiLp.inner_apply, Fin.sum_univ_three]
+    simp [tetraPoint₀, tetraPoint₂]]
+  rw [sqrt_three_mul_sqrt_three]
+  norm_num
+
+private theorem tetra_dihedralCos_pair₀₃ :
+    - inner ℝ tetraPoint₀ tetraPoint₃ / (‖tetraPoint₀‖ * ‖tetraPoint₃‖)
+      = (1 : ℝ) / 3 := by
+  rw [tetraPoint_norm₀, tetraPoint_norm₃]
+  rw [show inner ℝ tetraPoint₀ tetraPoint₃ = (-1 : ℝ) by
+    rw [PiLp.inner_apply, Fin.sum_univ_three]
+    simp [tetraPoint₀, tetraPoint₃]]
+  rw [sqrt_three_mul_sqrt_three]
+  norm_num
+
+private theorem tetra_dihedralCos_pair₁₂ :
+    - inner ℝ tetraPoint₁ tetraPoint₂ / (‖tetraPoint₁‖ * ‖tetraPoint₂‖)
+      = (1 : ℝ) / 3 := by
+  rw [tetraPoint_norm₁, tetraPoint_norm₂]
+  rw [show inner ℝ tetraPoint₁ tetraPoint₂ = (-1 : ℝ) by
+    rw [PiLp.inner_apply, Fin.sum_univ_three]
+    simp [tetraPoint₁, tetraPoint₂]]
+  rw [sqrt_three_mul_sqrt_three]
+  norm_num
+
+private theorem tetra_dihedralCos_pair₁₃ :
+    - inner ℝ tetraPoint₁ tetraPoint₃ / (‖tetraPoint₁‖ * ‖tetraPoint₃‖)
+      = (1 : ℝ) / 3 := by
+  rw [tetraPoint_norm₁, tetraPoint_norm₃]
+  rw [show inner ℝ tetraPoint₁ tetraPoint₃ = (-1 : ℝ) by
+    rw [PiLp.inner_apply, Fin.sum_univ_three]
+    simp [tetraPoint₁, tetraPoint₃]]
+  rw [sqrt_three_mul_sqrt_three]
+  norm_num
+
+private theorem tetra_dihedralCos_pair₂₃ :
+    - inner ℝ tetraPoint₂ tetraPoint₃ / (‖tetraPoint₂‖ * ‖tetraPoint₃‖)
+      = (1 : ℝ) / 3 := by
+  rw [tetraPoint_norm₂, tetraPoint_norm₃]
+  rw [show inner ℝ tetraPoint₂ tetraPoint₃ = (-1 : ℝ) by
+    rw [PiLp.inner_apply, Fin.sum_univ_three]
+    simp [tetraPoint₂, tetraPoint₃]]
+  rw [sqrt_three_mul_sqrt_three]
+  norm_num
+
+theorem tetra_dihedralCosAtDart (d : Fin 12) :
+    dihedralCosAtDart tetraEuclideanPolyhedron d = (1 : ℝ) / 3 := by
+  fin_cases d <;>
+    simp [dihedralCosAtDart, dartNormal, tetraEuclideanPolyhedron, tetraOutwardNormal,
+      tetraFaceDart, tetraFaceRepDart, tetraMap, CombMap.dartFace, tetraAlpha_apply] <;>
+    first
+    | exact tetra_dihedralCos_pair₀₁
+    | exact tetra_dihedralCos_pair₀₂
+    | exact tetra_dihedralCos_pair₀₃
+    | exact tetra_dihedralCos_pair₁₂
+    | exact tetra_dihedralCos_pair₁₃
+    | exact tetra_dihedralCos_pair₂₃
+    | simpa [real_inner_comm, mul_comm] using tetra_dihedralCos_pair₀₁
+    | simpa [real_inner_comm, mul_comm] using tetra_dihedralCos_pair₀₂
+    | simpa [real_inner_comm, mul_comm] using tetra_dihedralCos_pair₀₃
+    | simpa [real_inner_comm, mul_comm] using tetra_dihedralCos_pair₁₂
+    | simpa [real_inner_comm, mul_comm] using tetra_dihedralCos_pair₁₃
+    | simpa [real_inner_comm, mul_comm] using tetra_dihedralCos_pair₂₃
+
+theorem tetra_cos_dihedralAngleAtDart (d : Fin 12) :
+    Real.cos (dihedralAngleAtDart tetraEuclideanPolyhedron d) = (1 : ℝ) / 3 := by
+  rw [cos_dihedralAngleAtDart, tetra_dihedralCosAtDart]
+
 #print axioms tetraEuclideanPolyhedron
+#print axioms tetra_dihedralCosAtDart
+#print axioms tetra_cos_dihedralAngleAtDart
 
 end ProofsInTheBook.Ch13Euclidean

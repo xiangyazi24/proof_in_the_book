@@ -3,6 +3,7 @@ import ProofsInTheBook.ZinanCh35Regions
 import ProofsInTheBook.ZinanCh35ChordSupplier
 import ProofsInTheBook.ZinanCh35ChordSupplier2
 import ProofsInTheBook.ZinanCh35MergedArc
+import ProofsInTheBook.ZinanCh35DeletedAssembly
 import ProofsInTheBook.ZinanCh35ChordlessOracle
 
 /-!

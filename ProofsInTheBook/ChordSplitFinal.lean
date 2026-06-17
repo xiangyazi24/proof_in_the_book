@@ -280,8 +280,9 @@ structure ChordBranchResidue (hNT : NearTriangulation M) (u v p q : M.Vertex)
   uv_ne : u ≠ v
   /-- The side-1 reconstruction (on region `s₁`, lists `L`). -/
   R₁ : ChordSplitNT.ChordSideReconstruction hNT regions.s₁ L
-  /-- For each side-1 coloring, a side-2 reconstruction on `s₂` with the forced lists. -/
-  R₂ : (c₁ : M.Vertex → α) → ChordSplitNT.ChordSideReconstruction hNT regions.s₂
+  /-- For each side-1 coloring with distinct chord-endpoint colors, a side-2 reconstruction
+  on `s₂` with the forced lists. -/
+  R₂ : (c₁ : M.Vertex → α) → c₁ u ≠ c₁ v → ChordSplitNT.ChordSideReconstruction hNT regions.s₂
     (regions.forcedLists c₁ L)
 
 /-- **The recursion datum, assembled from the chord-branch residue.**  This is exactly

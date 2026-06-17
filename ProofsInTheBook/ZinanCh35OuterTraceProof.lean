@@ -4283,7 +4283,7 @@ noncomputable def canonicalChordBranchResidualData_of_fuel
         (side₁Anchors_ne (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
           (ProofsInTheBook.ZinanCh35ChordResidue.normSep h)) x))
       cp₁ cq₁)
-    (p₂ q₂ : ∀ c₁ : M.Vertex → α,
+    (p₂ q₂ : ∀ c₁ : M.Vertex → α, c₁ u ≠ c₁ v →
       ((ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h).sideMap₂
         (ProofsInTheBook.ZinanCh35ChordResidue.normSep h)
         (side₂Anchor₁ (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
@@ -4293,8 +4293,8 @@ noncomputable def canonicalChordBranchResidualData_of_fuel
         (side₂Anchors_ne hNT
           (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
           (ProofsInTheBook.ZinanCh35ChordResidue.normSep h)).symm).Vertex)
-    (cp₂ cq₂ : ∀ c₁ : M.Vertex → α, α)
-    (hL₂ : ∀ c₁ : M.Vertex → α,
+    (cp₂ cq₂ : ∀ c₁ : M.Vertex → α, c₁ u ≠ c₁ v → α)
+    (hL₂ : ∀ (c₁ : M.Vertex → α) (hcuv : c₁ u ≠ c₁ v),
       ProofsInTheBook.ThomassenLists.CombMap.ThomassenLists
         (ProofsInTheBook.ZinanCh35Side2.chordSideNearTriangulation₂_of_share
           (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
@@ -4315,7 +4315,7 @@ noncomputable def canonicalChordBranchResidualData_of_fuel
           (contiguousInterval₂_direct_canonical_swapped_uncond hNT
             (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
             (ProofsInTheBook.ZinanCh35ChordResidue.normSep h)))
-        (p₂ c₁) (q₂ c₁)
+        (p₂ c₁ hcuv) (q₂ c₁ hcuv)
         (fun x =>
           (ProofsInTheBook.ZinanCh35ChordResidue.chordSplitRegions_of_residue
             (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
@@ -4334,7 +4334,7 @@ noncomputable def canonicalChordBranchResidualData_of_fuel
               (side₂Anchors_ne hNT
                 (ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h)
                 (ProofsInTheBook.ZinanCh35ChordResidue.normSep h)).symm x))
-        (cp₂ c₁) (cq₂ c₁)) :
+        (cp₂ c₁ hcuv) (cq₂ c₁ hcuv)) :
     ProofsInTheBook.ZinanCh35ChordBranch.ChordBranchResidualData h p q L cp cq := by
   let data := ProofsInTheBook.ZinanCh35Aligned.NearTriangulation.normalizedChordSplitData h
   let hsep := ProofsInTheBook.ZinanCh35ChordResidue.normSep h
@@ -4359,9 +4359,10 @@ noncomputable def canonicalChordBranchResidualData_of_fuel
       ha₂₀ := (canonicalSide₂Anchor₁_tail hNT data hsep).trans htu
       ha₂₁ := (canonicalSide₂Anchor₀_tail hNT data hsep).trans hhv
       hne₂ := (side₂Anchors_ne hNT data hsep).symm
-      side₂ := fun c₁ =>
+      side₂ := fun c₁ hcuv =>
         canonicalSide₂InputsNoConf_of_fuel hNT data hsep (regions.forcedLists c₁ L)
-          htu hhv (p₂ c₁) (q₂ c₁) (cp₂ c₁) (cq₂ c₁) (hL₂ c₁)
+          htu hhv (p₂ c₁ hcuv) (q₂ c₁ hcuv) (cp₂ c₁ hcuv) (cq₂ c₁ hcuv)
+          (hL₂ c₁ hcuv)
       uv_ne := by
         intro huv
         have hne := ProofsInTheBook.ChordSigmaContig.u_ne_v data

@@ -209,8 +209,8 @@ structure ChordBranchResidualData (h : hNT.outerCycle.Chord u v)
   ha₂₁ : M.tail a₂₁.1 = v
   hne₂ : a₂₀ ≠ a₂₁
   /-- The side-2 certificate inputs WITHOUT confinement, at the stored anchors and for each
-  forced-list coloring. -/
-  side₂ : ∀ c₁ : M.Vertex → α,
+  forced-list coloring whose chord-endpoint colors are distinct. -/
+  side₂ : ∀ c₁ : M.Vertex → α, c₁ u ≠ c₁ v →
     Side₂InputsNoConf (ND h) hsep a₂₀ a₂₁ hne₂ (regions.forcedLists c₁ L)
   uv_ne : u ≠ v
 
@@ -238,11 +238,11 @@ noncomputable def chordBranchResidue_of_residualData {h : hNT.outerCycle.Chord u
       R₂ := ?_ }
   -- side-2 reconstruction family on `sideRegion₂ (ND h)`, transported to `regions.s₂`,
   -- with the forced lists from `regions`.
-  intro c₁
+  intro c₁ hcuv
   have rec₂₀ : ChordSplitNT.ChordSideReconstruction hNT (sideRegion₂ (ND h))
       (R.regions.forcedLists c₁ L) :=
     side₂Reconstruction_of_noConf (ND h) R.hsep R.a₂₀ R.a₂₁ R.hne₂
-      (R.regions.forcedLists c₁ L) (R.side₂ c₁) conf₂
+      (R.regions.forcedLists c₁ L) (R.side₂ c₁ hcuv) conf₂
   exact R.regions_s₂ ▸ rec₂₀
 
 /-! ## Section 5.  The uniform residual supplier and the `ChordBranchSupplier`

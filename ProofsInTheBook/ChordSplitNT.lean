@@ -278,10 +278,11 @@ structure ChordRecursionData (hNT : NearTriangulation M)
   uv_ne : u ≠ v
   /-- The side-1 reconstruction (region `s₁`, lists `L`). -/
   R₁ : ChordSideReconstruction hNT regions.s₁ L
-  /-- For each side-1 coloring `c₁`, a side-2 reconstruction whose region is `s₂`
+  /-- For each side-1 coloring `c₁` with distinct chord-endpoint colors, a side-2
+  reconstruction whose region is `s₂`
   and whose lists are the chord-endpoint-forced lists `forcedLists c₁ L`.  This
   encodes "force `u, v` to the side-1 colors, then color side 2 by recursion". -/
-  R₂ : (c₁ : M.Vertex → α) → ChordSideReconstruction hNT regions.s₂
+  R₂ : (c₁ : M.Vertex → α) → c₁ u ≠ c₁ v → ChordSideReconstruction hNT regions.s₂
     (regions.forcedLists c₁ L)
 
 namespace ChordRecursionData
@@ -352,8 +353,9 @@ theorem chord_case_recursive (data : ChordRecursionData hNT u v p q L cp cq)
   -- side 1 by recursion.
   set c₁ := data.color₁ d0 ih with hc₁
   obtain ⟨hc₁p, hc₁L⟩ := data.color₁_spec d0 ih
+  have hcuv : c₁ u ≠ c₁ v := data.regions.chord_endpoints_colors_ne hc₁p
   -- side 2 by recursion, on the forced lists.
-  set R₂ := data.R₂ c₁ with hR₂
+  set R₂ := data.R₂ c₁ hcuv with hR₂
   have hcol₂ : ListColorable R₂.N.toSimpleGraph R₂.Lₛ :=
     ih R₂.N.V R₂.smaller R₂.hN R₂.pₛ R₂.qₛ R₂.Lₛ R₂.cpₛ R₂.cqₛ le_rfl R₂.hLₛ
   set c₂ := R₂.colorRegion hcol₂.choose d0 with hc₂
@@ -484,7 +486,7 @@ def ChordRecursionData.ofComponents {u v p q : M.Vertex} {L : M.Vertex → Finse
     {cp cq : α}
     (regions : ChordSplitRegions hNT u v p q L cp cq) (uv_ne : u ≠ v)
     (R₁ : ChordSideReconstruction hNT regions.s₁ L)
-    (R₂ : (c₁ : M.Vertex → α) →
+    (R₂ : (c₁ : M.Vertex → α) → c₁ u ≠ c₁ v →
       ChordSideReconstruction hNT regions.s₂ (regions.forcedLists c₁ L)) :
     ChordRecursionData hNT u v p q L cp cq :=
   { regions := regions, uv_ne := uv_ne, R₁ := R₁, R₂ := R₂ }

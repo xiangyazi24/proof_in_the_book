@@ -230,7 +230,7 @@ structure ChordRecursionInputs (h : hNT.outerCycle.Chord u v)
     M.tail a₀.1 = u ∧ M.tail a₁.1 = v
   /-- Per-side, per-forced-list side-2 certificate inputs (the pullback Thomassen lists are the
   recursion fuel; the side-2 confinement is excluded — it is produced in the supplier). -/
-  side₂Inputs : ∀ (c₁ : M.Vertex → α)
+  side₂Inputs : ∀ (c₁ : M.Vertex → α) (_ : c₁ u ≠ c₁ v)
       (a₀ a₁ : {d : D // d ∉ (normalizedChordSplitData h).keptDel₂}) (hne : a₀ ≠ a₁),
       M.tail a₀.1 = u → M.tail a₁.1 = v →
       Side₂InputsNoConf (normalizedChordSplitData h) (normSep h) a₀ a₁ hne
@@ -277,7 +277,7 @@ noncomputable def chordBranchResidualData_of_recursionInputs
   ha₂₀ := I.anchors₂.2.2.2.1
   ha₂₁ := I.anchors₂.2.2.2.2
   hne₂ := I.anchors₂.2.2.1
-  side₂ := fun c₁ => I.side₂Inputs c₁ I.anchors₂.1 I.anchors₂.2.1 I.anchors₂.2.2.1
+  side₂ := fun c₁ hcuv => I.side₂Inputs c₁ hcuv I.anchors₂.1 I.anchors₂.2.1 I.anchors₂.2.2.1
     I.anchors₂.2.2.2.1 I.anchors₂.2.2.2.2
   uv_ne := I.uv_ne
 

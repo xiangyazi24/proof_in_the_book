@@ -199,3 +199,13 @@ is a real finite instance), so kneser's htucker use is faithful — but Ch39 nee
 - Classical chapters (01-09,16,17,28): concrete conclusions (primes/QR/Bertrand/irrationality/Borsuk/Cantor) — genuine.
 - CONCLUSION: the §3.3 vacuities were confined to ch35 + ch13 (both fixed this run). No further hidden
   vacuity found in the audited geometric chapters. (Exhaustive per-chapter codex audit can run at codex reset.)
+
+### §3.3 vacuity sweep COMPLETE (2026-06-17, codex on uisai2) — verdict NONE
+Swept all chapter headlines 08-40 (+ earlier 12/36 spot-check + 01-07 concrete). Verdict: CH_SWEEP_DONE NONE.
+Every other chapter GENUINE — concrete conclusions, OR structure-hypotheses verified inhabitable
+(ch10 OffLineTriple, ch14 PerlesFacetSeparationData, ch20 MonskyCertificate[IsEmpty only n=0],
+ch24 HerglotzClass, ch30 BadInvolutionCertificate[discharged], ch40 Friendship), OR conditional
+headlines with *_unconditional dischargers (ch22 Gurvits, ch33 Evans→ryser_hypothesis_holds,
+ch39 Tucker→tuckerLemma_pos). Full per-chapter verdicts in AUDIT-sweep-2026-06-17.md.
+CONCLUSION: the §3.3 vacuities in proof_in_the_book were CONFINED to ch35 + ch13 — both fixed this run.
+The entire repo's chapter headlines are now certified vacuity-free.

@@ -35,3 +35,25 @@ as unconditional as feasible, like ch35 was driven to.
 
 ## Note
 Start AFTER ch35 closes (user's order). cx2 scopes the realization interface in parallel.
+
+## Avenue (b) SCOPED (2026-06-17, ChatGPT survey AUDIT-ch13-r3-2026-06-17.md)
+VERDICT: full ℝ³ is NOT a bounded grind — a from-scratch ℝ³/polyhedral-geometry layer. Mathlib has
+Convex/convexHull/IsExposed/Euclidean/Isometry/InnerProductGeometry.angle but NO polytope-face/incidence/
+boundary-complex API, NO spherical-trig, NO dihedral-angle abstraction. 7 bridge pieces; hardest = piece1
+(boundary complex from convexHull) OR piece6 (vertex-link↔combinatorial-order + spherical-arm bridge).
+The genuinely-nontrivial flex CANNOT be instantiated (Cauchy: no convex flex) — the theorem is the
+contradiction direction (congruent-faced ⟹ congruent), needing the full bridge + the repo's arm lemma.
+Smaller faithful target: TriangulatedEuclideanPolyhedron (coords + face planes/normals + supporting-
+halfspace convexity + vertex-link order) + CongruentTriangulatedRealizations(P,Q, equal edge lengths).
+
+### Bounded first sub-goals (b1 → b…), ranked:
+(b1) [START] Define TriangulatedEuclideanPolyhedron M (geometric realization: pos:Vertex→EuclideanSpace ℝ (Fin 3),
+     face planes/outward normals, supporting-halfspace convexity, nondegeneracy) + construct the TETRAHEDRON
+     instance (concrete ℝ³ coords, verify certificates). Real-ℝ³ witness (stronger than abstract tetraCubeCorner).
+(b2) dihedralAngle on edges (from oriented face normals / perpendicular-plane 2D angle).
+(b3) vertex-link bridge: geometric cyclic order around v = combinatorial link order (piece 6, the hard gate).
+(b4) edgeSign from real dihedral-angle difference; count bridge from one incidence structure.
+(b5) wire into chapter13_realization's R: ConvexPolytopeRealization ← TriangulatedEuclideanPolyhedron (+CongruentRealizations)
+     so the headline is about REAL ℝ³ polyhedra, not the abstract certificate.
+SCALE: a major multi-session campaign. (b1) is bounded + valuable groundwork; pieces (b3)/(b4) are the hard core.
+STRATEGIC: surfaced to Xiang — full (b) is a from-scratch ℝ³ geometry build; his call whether to push past (b1).

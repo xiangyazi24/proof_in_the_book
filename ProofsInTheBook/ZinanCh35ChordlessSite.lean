@@ -143,17 +143,19 @@ private theorem outer_darts_consecutive (hNT : NearTriangulation M)
 
 end NearTriangulation
 
-/-- A boundary vertex and an oriented dart into `p` suitable for the chordless
-deletion branch. -/
+/-- A boundary vertex and an outgoing outer dart into one of the precolored
+endpoints, suitable for the chordless deletion branch. -/
 structure ChordlessDeletionSite (hNT : NearTriangulation M) (p q : M.Vertex) where
   v0 : M.Vertex
   d0 : D
   hv0_boundary : hNT.outerCycle.IsBoundaryVertex v0
   d0_tail : M.tail d0 = v0
-  d0_head : M.head d0 = p
+  d0_face : M.dartFace d0 = hNT.outerFace
+  d0_head_precolored : M.head d0 = p ∨ M.head d0 = q
   v0_ne_p : v0 ≠ p
   v0_ne_q : v0 ≠ q
-  edge_v0p : hNT.outerCycle.IsBoundaryEdge s(v0, p)
+  edge_precolored :
+    hNT.outerCycle.IsBoundaryEdge s(v0, p) ∨ hNT.outerCycle.IsBoundaryEdge s(v0, q)
 
 /-- The predecessor and successor boundary neighbors of `p` are distinct. -/
 private lemma boundary_neighbors_distinct {bin bout : D}
@@ -243,26 +245,61 @@ theorem exists_chordlessDeletionSite_nonempty {p q : M.Vertex} {L : M.Vertex →
       left
       rw [← hetail, he_eq_bin]
   rcases hq_is_neighbor with hxq | hyq
-  · refine ⟨
-      { v0 := y
-        d0 := M.α bout
-        hv0_boundary := hy_boundary
-        d0_tail := by simp [y]
-        d0_head := by simp [hbout_tail]
-        v0_ne_p := hy_ne_p
-        v0_ne_q := ?_
-        edge_v0p := hedge_yp }⟩
-    intro hyq
-    exact hxy (hxq.trans hyq.symm)
+  · obtain ⟨qbin, qbout, hqbin, hqbin_unique, hqbout, hqbout_unique, hqbin_phi⟩ :=
+      NearTriangulation.outer_darts_consecutive hNT hTL.q_boundary
+    rcases hqbin with ⟨hqbin_mem, hqbin_head⟩
+    rcases hqbout with ⟨hqbout_mem, hqbout_tail⟩
+    have hbin_eq_qbout : bin = qbout := by
+      exact hqbout_unique bin hbin_mem (by
+        show M.tail bin = q
+        exact hxq)
+    have hq_tail_ne_p : M.tail qbin ≠ p := by
+      have hne := boundary_neighbors_distinct hqbin_mem hqbout_mem hqbin_phi
+      intro hp
+      apply hne
+      rw [hp, ← hbin_eq_qbout, hbin_head]
+    have hq_tail_ne_q : M.tail qbin ≠ q := by
+      intro hq
+      exact hNT.simpleGraph.no_loop qbin (by simp [hq, hqbin_head])
+    have hq_tail_boundary : hNT.outerCycle.IsBoundaryVertex (M.tail qbin) := by
+      show M.tail qbin ∈ hNT.outerCycle.vertices
+      rw [hNT.outerCycle.vertices_eq]
+      exact List.mem_map_of_mem hqbin_mem
+    have hedge_q : hNT.outerCycle.IsBoundaryEdge s(M.tail qbin, q) := by
+      show s(M.tail qbin, q) ∈ hNT.outerCycle.edges
+      rw [hNT.outerCycle.edges_eq]
+      have hedge : M.dartEdge qbin = s(M.tail qbin, q) := by
+        simp [CombMap.dartEdge, hqbin_head]
+      rw [← hedge]
+      exact List.mem_map_of_mem hqbin_mem
+    refine ⟨
+      { v0 := M.tail qbin
+        d0 := qbin
+        hv0_boundary := hq_tail_boundary
+        d0_tail := rfl
+        d0_face := hNT.outerCycle.dartFace_of_mem_darts hqbin_mem
+        d0_head_precolored := by
+          right
+          exact hqbin_head
+        v0_ne_p := hq_tail_ne_p
+        v0_ne_q := hq_tail_ne_q
+        edge_precolored := by
+          right
+          exact hedge_q }⟩
   · refine ⟨
       { v0 := x
         d0 := bin
         hv0_boundary := hx_boundary
         d0_tail := rfl
-        d0_head := hbin_head
+        d0_face := hNT.outerCycle.dartFace_of_mem_darts hbin_mem
+        d0_head_precolored := by
+          left
+          exact hbin_head
         v0_ne_p := hx_ne_p
         v0_ne_q := ?_
-        edge_v0p := hedge_xp }⟩
+        edge_precolored := by
+          left
+          exact hedge_xp }⟩
     intro hxq
     exact hxy (hxq.trans hyq.symm)
 

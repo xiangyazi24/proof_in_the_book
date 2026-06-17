@@ -5,6 +5,7 @@ import ProofsInTheBook.ZinanCh35ChordSupplier2
 import ProofsInTheBook.ZinanCh35MergedArc
 import ProofsInTheBook.ZinanCh35DeletedAssembly
 import ProofsInTheBook.ZinanCh35ChordlessOracle
+import ProofsInTheBook.ZinanCh35ChordlessSupplier
 
 /-!
 # Chapter 35 (Five Colour Theorem): the final recursion-structural assembly
@@ -236,6 +237,32 @@ theorem planarInputs_of_residuals_recursiveDichotomy (R : Ch35RecursionResiduals
     (planarInputs_of_residuals R).recursiveDichotomy = chordRecursiveDichotomy_of_residuals R :=
   rfl
 
+/-! ## Section 7.  Canonical chordless closure
+
+The chordless residual has been discharged by `ZinanCh35ChordlessSupplier`.
+Together with the already-produced canonical chord residual supplier, this gives
+the direct Chapter-35 endpoint through the older residual-level entry point. -/
+
+/-- The canonical chordless branch supplier produced by the Phase-C deletion
+assembly. -/
+noncomputable def canonicalChordlessBranchSupplier (α : Type u) [DecidableEq α] :
+    ChordlessBranchSupplier α :=
+  chordlessBranchSupplier_of_residual
+    (ProofsInTheBook.ZinanCh35ChordlessSupplier.canonicalChordlessOracleResidual
+      (α := α))
+
+/-- The direct canonical Chapter-35 endpoint: the chord branch uses the already
+closed canonical chord residual supplier, and the chordless branch uses the
+closed Phase-C deletion supplier. -/
+theorem fiveColor_planar_canonical
+    {D : Type u} [Fintype D] [DecidableEq D] {M : CombMap D}
+    (hNT : NearTriangulation M) :
+    M.toSimpleGraph.Colorable 5 :=
+  ProofsInTheBook.ZinanCh35ChordBranch.fiveColor_of_residual hNT
+    (ProofsInTheBook.ZinanCh35ChordSupplier2.canonicalChordBranchResidualSupplier
+      (ULift.{u} (Fin 5)))
+    (canonicalChordlessBranchSupplier (ULift.{u} (Fin 5)))
+
 end ProofsInTheBook.ZinanCh35Final
 
 /-! ## Axiom audit (expect clean-3: `propext`, `Classical.choice`, `Quot.sound`). -/
@@ -247,3 +274,5 @@ end ProofsInTheBook.ZinanCh35Final
 #print axioms ProofsInTheBook.ZinanCh35Final.fiveColor_planar_of_recursionResiduals_eq_suppliers
 #print axioms ProofsInTheBook.ZinanCh35Final.chordlessSupplier_of_residuals
 #print axioms ProofsInTheBook.ZinanCh35Final.planarInputs_of_residuals_recursiveDichotomy
+#print axioms ProofsInTheBook.ZinanCh35Final.canonicalChordlessBranchSupplier
+#print axioms ProofsInTheBook.ZinanCh35Final.fiveColor_planar_canonical

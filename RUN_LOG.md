@@ -166,3 +166,11 @@ is a real finite instance), so kneser's htucker use is faithful — but Ch39 nee
 - 2026-06-14 layer-D: Steps 1-3 DONE+verified clean-3 (Ch13VertexStar 592e445, Ch13Dihedral 47deb91, Ch13LinkSides ad2c985). Both §3.3 bridges (A: sideLen=face angle, B: jointAngle=dihedral) are THEOREMS, verified independent/non-vacuous. Step 4 (Ch13LemmaII, Cauchy sign-change lemma, hard sub-lemma #3) dispatched. Design insights captured (closed-polygon chord=closing side; active-subgraph subtlety for Step 5). Steps 5-6 (CombMap assembly + octahedron non-vacuity) gate on Step 4.
 
 - 2026-06-14 layer-D Step 4 DONE+verified (Ch13LemmaII 031f228): Cauchy Lemma II both sign-change cases clean-3; subagent caught+fixed a spec bug (chord=closing edge, needs explicit hclose=fixed_chord). 2-case takes sub-arcs as hyps pending subArc constructor (dispatched). GEOMETRIC FOUNDATION (Steps 1-4) COMPLETE+verified. Remaining: subArc -> wire 2-case -> Step 5 CombMap assembly (active subgraph + double-count) -> Step 6 rigidity + octahedron non-vacuity.
+
+## Run 2026-06-17 (overnight autonomous) — Ch35 PHASE C close
+- doctrine: DOCTRINE.md (this commit)
+- approval: /automode "继续跑, 我要睡觉去了" (explicit)
+- starting avenue: (a) finish PHASE C straight
+- resources: Mac codex pbookch35cx (critical path) + uisai2 cx2 (independent plumbing) + ChatGPT life/life2
+- end: <fill on close>
+- final result: <fill on close>

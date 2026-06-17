@@ -17,6 +17,8 @@ strict vertex-cone convexity predicates are derived from `VertexLinkGeometry`.
 
 noncomputable section
 
+set_option maxHeartbeats 800000
+
 open scoped Classical RealInnerProductSpace
 open ProofsInTheBook.PlanarMap ProofsInTheBook.PlanarMap.CombMap
 open ProofsInTheBook.Ch13Euclidean
@@ -344,18 +346,54 @@ theorem tetra_sigma_order_det_negative (d : Fin 12) :
       Matrix.tail_cons,
       ProofsInTheBook.SphericalKernel.det3]
 
+/-- Concrete reverse on `Fin 3`, used to keep tetrahedron coordinate proofs reducible. -/
+def fin3Rev : Fin 3 → Fin 3
+  | 0 => 2
+  | 1 => 1
+  | _ => 0
+
 /-- The reversed `σ` order has the positive determinant required by `VertexStar`. -/
 theorem tetra_sigma_reverse_order_det_positive (d : Fin 12) :
     ProofsInTheBook.SphericalKernel.det3
-      (tetraSigmaVec d (Fin.rev 0)) (tetraSigmaVec d (Fin.rev 1))
-      (tetraSigmaVec d (Fin.rev 2)) = (16 : ℝ) := by
+      (tetraSigmaVec d (fin3Rev 0)) (tetraSigmaVec d (fin3Rev 1))
+      (tetraSigmaVec d (fin3Rev 2)) = (16 : ℝ) := by
   fin_cases d <;>
-    norm_num [tetraSigmaVec, tetraSigmaDart, tetraMap_sigma_toList, tetraSigma_toList,
+    norm_num [fin3Rev, tetraSigmaVec, tetraSigmaDart, tetraMap_sigma_toList, tetraSigma_toList,
       tetraEuclideanPolyhedron, tetraPos, tetraDartPoint, tetraMap, CombMap.tail, CombMap.head,
       tetraPoint₀, tetraPoint₁, tetraPoint₂, tetraPoint₃,
       Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.cons_val_two, Matrix.head_cons,
       Matrix.tail_cons,
       ProofsInTheBook.SphericalKernel.det3]
+
+/-- The reversed-`σ` neighbour vertex at a tetrahedron dart root. -/
+def tetraRevNbr (d : Fin 12) (i : Fin 3) : tetraMap.Vertex :=
+  tetraMap.head (tetraSigmaDart d (fin3Rev i))
+
+/-- The supporting face normal for the oriented triangle
+`tail d, tetraRevNbr d i, tetraRevNbr d (i+1)`, normalized to unit length. -/
+def tetraSupportNormal (d : Fin 12) (i : Fin 3) : E3 :=
+  (Real.sqrt 3)⁻¹ •
+    (tetraEuclideanPolyhedron.pos (tetraMap.tail d)
+      + tetraEuclideanPolyhedron.pos (tetraRevNbr d i)
+      + tetraEuclideanPolyhedron.pos (tetraRevNbr d (i + 1)))
+
+theorem tetraSupportNormal_unit (d : Fin 12) (i : Fin 3) :
+    ‖tetraSupportNormal d i‖ = 1 := by
+  fin_cases d <;> fin_cases i <;>
+    rw [tetraSupportNormal, norm_smul, Real.norm_eq_abs,
+      abs_of_nonneg (inv_nonneg.mpr (Real.sqrt_nonneg 3)),
+      EuclideanSpace.norm_eq, Fin.sum_univ_three] <;>
+    norm_num [fin3Rev, Fin.add_def, tetraRevNbr, tetraSigmaDart, tetraMap_sigma_toList, tetraSigma_toList,
+      tetraEuclideanPolyhedron, tetraPos, tetraDartPoint, tetraMap, CombMap.tail, CombMap.head,
+      tetraPoint₀, tetraPoint₁, tetraPoint₂, tetraPoint₃,
+      Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.cons_val_two, Matrix.head_cons,
+      Matrix.tail_cons, Real.sq_sqrt (by norm_num : (0 : ℝ) ≤ 3)]
+
+private theorem sqrt_three_ne_zero : Real.sqrt 3 ≠ 0 := by
+  positivity
+
+private theorem sqrt_three_mul_inv : Real.sqrt 3 * (Real.sqrt 3)⁻¹ = (1 : ℝ) :=
+  mul_inv_cancel₀ sqrt_three_ne_zero
 
 /-!
 ### General residual for the next geometry round

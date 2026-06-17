@@ -1,59 +1,37 @@
-# DOCTRINE — Ch13 Cauchy rigidity: wire the real arm lemma in
+# Ch13 (Cauchy rigidity) — doctrine (2026-06-17, after §3.3 audit)
 
-## Main goal (one sentence)
-Make Chapter 13's Cauchy-rigidity chain genuinely rest on the PROVEN spherical arm lemma
-(`ZinanFFCT111.spherical_arm_mono_final_ch13`), eliminating the §3.3 gap where
-`CauchyArmOpeningObstruction.arm_conclusion` POSITS the arm lemma's conclusion as a structure field
-instead of deriving it — and push Ch13 toward unconditional.
+## Finding (AUDIT-ch13-2026-06-17.md, codex verdict COMBINATORIAL-CORE-ONLY)
+`chapter13` / `chapter13_rigidity` are VACUOUS as stated: `CauchyRigidityCertificate.isEmpty` proves
+the cert premise is EMPTY for any edgeSigns, so the implications say nothing about real convex
+polyhedra. The combinatorial sign-counting + arm-obstruction core IS proven (46 thms clean-3); what's
+missing is the flex→certificate GEOMETRY bridge (line-454 TODO). `Ch13Realization.lean` has a
+CONDITIONAL `ConvexPolytopeRealization` interface + `realization_rigid` (534-543), but "not a full ℝ³
+polytope model, conditional on a realization datum" (header 16-18, 34-39).
 
-## Audit finding that motivates this
-`chapter13 : CauchyRigidityCertificate → False` is the faithful COMBINATORIAL skeleton (sign-count +
-Euler double-count), but the geometric arm lemma is posited: `CauchyArmOpeningObstruction` has a field
-`arm_conclusion : chord < newChord ∨ (∀ i, angles i = newAngles i)`, and `.contradiction` is a 3-line
-trivial unpacking. Chapter13.lean does not even import FFCT111. `CauchyRigidityCertificate` is mentioned
-ONLY in Chapter13.lean — never constructed from geometry.
+## Goal (one sentence)
+Make Chapter 13's rigidity headline NON-VACUOUS (not conditional on an uninhabitable cert) — ideally
+as unconditional as feasible, like ch35 was driven to.
 
-## Avenues (ranked)
+## Avenues
+(a) [PRIMARY, tractable] Route the headline through the SATISFIABLE realization interface: a theorem
+    `chapter13_realization (R : ConvexPolytopeRealization …) : Rigid …` via `realization_rigid`, where
+    `ConvexPolytopeRealization` is VERIFIED satisfiable (inhabitable for an actual polytope — unlike the
+    empty cert). This removes the empty-cert vacuity; residual = the realization datum (analogous to
+    ch35's recursion residuals — a satisfiable interface, not a False). FIRST verify ConvexPolytopeRealization
+    is not ALSO empty/vacuous (§3.3 check).
+(b) [big] Build the full ℝ³ convex-polytope model + flex→certificate bridge: convex polytope type, two
+    isometric embeddings, dihedral-angle signs, vertex-link↔combinatorial-cyclic-order bridge,
+    incidence-derived face/vertex sign counts. Major geometry formalization (separate campaign).
+(c) [honest middle] If (a)'s interface is itself only conditionally satisfiable, document chapter13 as
+    the combinatorial core + the realization interface as the named residual, with the precise ℝ³ gap
+    enumerated (the audit's §5 list). No vacuity hidden.
 
-### (a) PRIMARY — strict arm lemma → genuine spherical-arm obstruction
-Prove the STRICT arm lemma and use it to refute a genuine obstruction that carries real spherical-arm data.
-- (a1) `endpt_openTail_interior_mono_strict`: `0 < θ` (strict interior opening, oriented sign STRICT
-  negative from strict convexity) ⟹ `endpt A < endpt (openTail A K (-θ))`. Built from strict variants of
-  `openedAngle_ge_of_oriented_neg` (θ>0 ⟹ sphAngle strictly larger) and `reach_base_endpoint_mono`
-  (sphAngle strictly larger ⟹ sDist strictly larger; spherical law of cosines, cos strict-antitone on (0,π)).
-- (a2) `spherical_arm_mono_strict : SphericalArmMonotoneStrict` — joints A ≤ B (equal sides, both strict
-  convex), SOME joint strict ⟹ `sDist(A 0)(A last) < sDist(B 0)(B last)`. Thread (a1) through the
-  per-joint opening induction of FFCT111's monotone proof: the strictly-opened joint contributes `<`,
-  the rest `≤`.
-- (a3) From (a2): the dichotomy `chord < newChord ∨ all joints equal` is a THEOREM, not a field. Restate
-  `CauchyArmOpeningObstruction`/`ClosingObstruction` to carry the two spherical arms (A,B with equal sides)
-  instead of abstract `angles : Fin n → ℝ`; `.contradiction` then uses (a2) + fixed_chord.
-- (a4) Rewire `CauchyArmVertex` so `zero/two_sign_changes_obstruction` are derived (the 0/2-sign-change
-  combinatorial→arm reduction), shrinking the certificate to genuine geometric+sign content.
-- Terminal SUCCESS: a clean-3 theorem deriving the fixed-chord contradiction from
-  `spherical_arm_mono_final_ch13` with NO posited arm conclusion; FFCT111 actually used in the Ch13 chain.
-- Terminal FAILURE: a concrete proof that the strict arm lemma is false (it is NOT — it's standard) — so
-  failure here can only be "this specific Lean threading blocked at tactic X", which is then a new vector.
+## Terminal conditions
+- SUCCESS: a non-vacuous Cauchy rigidity headline — `chapter13_realization` conditional on a VERIFIED-
+  satisfiable realization interface (clean-3), with any residual a genuine satisfiable interface (not
+  an empty cert). Full ℝ³ (b) is the stretch goal.
+- §3.3: verify EVERY interface (ConvexPolytopeRealization) is satisfiable before banking — the empty-cert
+  trap already bit here once.
 
-### (b) Equality-case route (if (a2) threading is awkward)
-Instead of strict, prove the EQUALITY characterization directly: joints A ≤ B, equal sides, `sDist A = sDist B`
-⟹ `∀ i, jointAngle A i = jointAngle B i`. This IS the dichotomy's second branch and suffices for `arm_conclusion`.
-Same base lemma (a1) in equality form (`endpt A = endpt(openTail) ⟹ θ = 0`).
-
-### (c) Polytope-level assembly (the large layer D)
-Define convex polytope vertex spherical links, dihedral-angle sign data, and construct
-`CauchyRigidityCertificate` from two combinatorially-equivalent non-congruent convex polytopes with
-congruent faces. Produces genuine `CauchyArmVertex` data via the link arms. LARGE. Pursue after (a).
-
-### (d) Fallback — faithfulness-only improvement
-If full realization blocks, at minimum replace the posited `arm_conclusion` field with the real arm
-lemma applied to an explicitly-carried spherical arm in the obstruction, and document the exact remaining
-(c) gap. Strictly better faithfulness than the current posited stub.
-
-## Fallbacks if all blocked
-Dispatch the strict-arm-lemma threading to ChatGPT 5.5 Pro (math audit) / a fresh Opus subagent (Lean grind).
-The arm lemma core (FFCT111) is done; (a) is bounded geometric work, not open research.
-
-## Working location
-New file `ProofsInTheBook/ZinanFFCT112.lean` (one writer = me). Build LOCAL `command lake`. Commit per
-milestone on branch zinan-overnight. clean-3 acceptance via `#print axioms`.
+## Note
+Start AFTER ch35 closes (user's order). cx2 scopes the realization interface in parallel.

@@ -101,13 +101,16 @@ and the clean-face classification. -/
 structure DeletedSeamData (fan : BoundaryVertexFan hNT v0)
     (hchord : BoundaryChordless hNT.outerCycle) {d0 : D} (htail0 : M.tail d0 = v0)
     where
-  /-- For every head-triangle reference dart, the outer-arc reconnection data: the
-  surviving old-outer arc is one contiguous forward `M.φ`-run whose Case-B exit
-  jump lands on the fan-triangle chain.  (R10 Layer B seam.) -/
-  mergedArc : ∀ (r : {d : D // d ∉ M.deleteVertexSet d0}),
-    (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 b a)
-      (_hp : (a, b) ∈ consecutivePairs fan.path), r.1 = T.d1) →
-    MergedOuterArcData M d0 r hNT.outerFace
+  /-- The actual fan-triangle edge where the surviving old-outer arc enters the
+  fan chain. -/
+  seamEdge : {d : D // d ∉ M.deleteVertexSet d0}
+  /-- The seam edge is one of the fan's canonical triangle edge darts. -/
+  seamEdge_fan : FanTriangleEdge fan seamEdge
+  /-- The outer-arc reconnection data at the actual seam edge: the surviving
+  old-outer arc is one contiguous forward `M.φ`-run whose Case-B exit jump lands
+  on `seamEdge`.  The fan-chain calculus transports this edge to the rest of the
+  fan internally.  (R10 Layer B seam.) -/
+  mergedArc : MergedOuterArcData M d0 seamEdge hNT.outerFace
   /-- The merged outer face of the deleted map. -/
   outerFace : (M.deleteVertex d0).Face
   /-- The normalized `φ'`-boundary cycle of the merged outer face. -/
@@ -135,7 +138,8 @@ itinerary of the merged boundary — not a posited single-orbit assertion, but t
 reconnection derived by the proved `φ'`-iterate calculus. -/
 theorem mergedFaceSingleOrbit (data : DeletedSeamData fan hchord htail0) :
     DeleteVertexMergedFaceSingleOrbit M d0 :=
-  deleteVertexMergedFaceSingleOrbit_of_fan_of_outerArc fan hchord htail0 data.mergedArc
+  deleteVertexMergedFaceSingleOrbit_of_fan_of_outerArc_edge fan hchord htail0
+    data.seamEdge data.seamEdge_fan data.mergedArc
 
 /-! ## 3.  The full deleted outer boundary, σ-derived (the SECOND named target) -/
 

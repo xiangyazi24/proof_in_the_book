@@ -103,7 +103,16 @@ def tetraCubeCornerRealization : ConvexPolytopeRealization tetraMap where
     omega
   linkOrder := by
     intro Q
-    calc
+    left
+    have h :
+        (tetraMap.σ.toList (tetraVertexRep Q)).map (fun _ => EdgeSign.zero)
+          =
+        (List.ofFn
+          (linkDiff cubeCornerStar.vertexLink
+            (linkQcast tetraMap (fun _ : tetraMap.Vertex => cubeCornerStar)
+              (fun _ : tetraMap.Vertex => cubeCornerStar) (fun _ => rfl) Q))).map
+          realSignToEdgeSign := by
+      calc
       (tetraMap.σ.toList (tetraVertexRep Q)).map (fun _ => EdgeSign.zero)
           = [EdgeSign.zero, EdgeSign.zero, EdgeSign.zero] :=
             tetra_zero_vertexSignList (tetraVertexRep Q)
@@ -113,6 +122,7 @@ def tetraCubeCornerRealization : ConvexPolytopeRealization tetraMap where
                 (fun _ : tetraMap.Vertex => cubeCornerStar) (fun _ => rfl) Q))).map
             realSignToEdgeSign := by
             simpa [linkQcast] using cubeCornerStar_self_linkSigns.symm
+    rw [h]
 
 theorem convexPolytopeRealization_inhabited :
     ∃ (M : CombMap (Fin 12)), Nonempty (ConvexPolytopeRealization M) :=

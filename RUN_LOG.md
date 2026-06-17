@@ -174,3 +174,17 @@ is a real finite instance), so kneser's htucker use is faithful — but Ch39 nee
 - resources: Mac codex pbookch35cx (critical path) + uisai2 cx2 (independent plumbing) + ChatGPT life/life2
 - end: <fill on close>
 - final result: <fill on close>
+
+### Final result (2026-06-17 overnight)
+- end: avenue (a) — PHASE C closed, ch35 UNCONDITIONAL.
+- final result: SUCCESS.
+  * ch35: `ZinanCh35Final.fiveColor_planar_canonical (hNT : NearTriangulation M) : M.toSimpleGraph.Colorable 5`
+    — UNCONDITIONAL, #print axioms = {propext, Classical.choice, Quot.sound}, full build 8552 jobs.
+    Both branches unconditional: canonicalChordBranchResidualSupplier (chord) + canonicalChordlessBranchSupplier
+    (chordless, via canonicalChordlessOracleResidual). Three §3.3 vacuities found+repaired: FIX1 (chordless
+    decide 3<M.V guard), FIX2 (chord side-2 c₁≠), FIX3 (chordless mergedArc ∀→single-seam). DeletedSeamData
+    constructed; chord-side geometry (OuterTraceInjOn/both CIs/iso) done.
+  * ch13: `Ch13Realization.chapter13_realization (R : ConvexPolytopeRealization M)` non-vacuous (empty-cert
+    vacuity removed), convexPolytopeRealization_inhabited (genuine tetrahedron witness). Full ℝ³ flex theorem = stretch.
+- branch: zinan-overnight (origin/zinan-overnight @ 9ba0771). NOT merged to main (deliberate — verified-only-to-main rule).
+- subagents: Mac codex pbookch35cx (critical path) + uisai2 cx2 (plumbing + ch13 wire + audit) + ChatGPT life/life2.

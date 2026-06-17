@@ -150,7 +150,7 @@ structure ChordlessBranchSupplier (α : Type u) [DecidableEq α] : Type (u + 1) 
   supply :
     ∀ {D : Type u} [Fintype D] [DecidableEq D] {M : CombMap D}
       (hNT : NearTriangulation M) (p q : M.Vertex) (L : M.Vertex → Finset α)
-      (cp cq : α), ThomassenLists hNT p q L cp cq →
+      (cp cq : α), 3 < M.V → ThomassenLists hNT p q L cp cq →
       BoundaryChordless hNT.outerCycle →
         ChordlessOracle hNT p q L cp cq
 
@@ -175,7 +175,7 @@ noncomputable def chordRecursiveDichotomy_of_suppliers
     ChordRecursiveDichotomy α where
   decide := by
     classical
-    intro D _ _ M hNT p q L cp cq h
+    intro D _ _ M hNT p q L cp cq hV h
     -- The decision `∃ u v, Chord u v` is a Prop; eliminate it into the `Type`-valued
     -- target via `Classical.dec` (the unconditional chord/chordless EM).
     by_cases hchord : ∃ u v : M.Vertex, hNT.outerCycle.Chord u v
@@ -185,7 +185,7 @@ noncomputable def chordRecursiveDichotomy_of_suppliers
     · -- chordless case: the boundary is chordless; produce the fan oracle.
       have hchordless : BoundaryChordless hNT.outerCycle := by
         intro u v hc; exact hchord ⟨u, v, hc⟩
-      exact Sum.inr (Sl.supply hNT p q L cp cq h hchordless)
+      exact Sum.inr (Sl.supply hNT p q L cp cq hV h hchordless)
 
 /-- **Non-vacuity of the assembled dichotomy.**  Given the two branch suppliers, a
 `ChordRecursiveDichotomy` is inhabited.  This certifies the assembly is not a hidden

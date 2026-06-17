@@ -247,7 +247,7 @@ structure ChordlessOracleResidual (α : Type u) [DecidableEq α] : Type (u + 1) 
   supply :
     ∀ {D : Type u} [Fintype D] [DecidableEq D] {M : CombMap D}
       (hNT : NearTriangulation M) (p q : M.Vertex) (L : M.Vertex → Finset α)
-      (cp cq : α), ThomassenLists hNT p q L cp cq →
+      (cp cq : α), 3 < M.V → ThomassenLists hNT p q L cp cq →
       BoundaryChordless hNT.outerCycle →
         ChordlessOracle hNT p q L cp cq
 
@@ -262,7 +262,7 @@ returns the same `ChordlessOracle`.  This is the maximal constructor: combined w
 (chord side, and this chordless interface-refactor residue). -/
 def chordlessBranchSupplier_of_residual (R : ChordlessOracleResidual α) :
     ChordlessBranchSupplier α where
-  supply hNT p q L cp cq hT hchordless := R.supply hNT p q L cp cq hT hchordless
+  supply hNT p q L cp cq hV hT hchordless := R.supply hNT p q L cp cq hV hT hchordless
 
 /-- **Non-vacuity of the supplier routing.**  Given the interface residual, a
 `ChordlessBranchSupplier` is inhabited — the routing genuinely terminates in a

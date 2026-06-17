@@ -414,7 +414,7 @@ structure ChordRecursiveDichotomy (α : Type u) [DecidableEq α] : Type (u + 1) 
     ∀ {D : Type u} [Fintype D] [DecidableEq D] {M : CombMap D}
       (hNT : NearTriangulation M) (p q : M.Vertex) (L : M.Vertex → Finset α)
       (cp cq : α),
-      ThomassenLists hNT p q L cp cq →
+      3 < M.V → ThomassenLists hNT p q L cp cq →
         (Σ' u v : M.Vertex, ChordRecursionData hNT u v p q L cp cq) ⊕
           ChordlessOracle hNT p q L cp cq
 
@@ -439,7 +439,7 @@ theorem thomassen_aux_chordRecursive (O : ChordRecursiveDichotomy α) :
     · -- base case `M.V = 3`
       exact base_case h hV.symm
     · -- `3 < M.V`: use the recursive dichotomy.
-      rcases O.decide hNT p q L cp cq h with ⟨u, v, data⟩ | cod
+      rcases O.decide hNT p q L cp cq hV h with ⟨u, v, data⟩ | cod
       · -- chord case: RECURSE on the two side near-triangulations.
         refine data.chord_case_recursive h ?_
         -- supply the strong-induction hypothesis in the side-recursion shape.

@@ -188,3 +188,14 @@ is a real finite instance), so kneser's htucker use is faithful — but Ch39 nee
     vacuity removed), convexPolytopeRealization_inhabited (genuine tetrahedron witness). Full ℝ³ flex theorem = stretch.
 - branch: zinan-overnight (origin/zinan-overnight @ 9ba0771). NOT merged to main (deliberate — verified-only-to-main rule).
 - subagents: Mac codex pbookch35cx (critical path) + uisai2 cx2 (plumbing + ch13 wire + audit) + ChatGPT life/life2.
+
+### §3.3 audit sweep of OTHER geometric chapters (2026-06-17, Opus — codex usage-limited until 1:51 AM)
+- ch12 (Platonic): GENUINE. chapter12_platonic_solids = concrete unconditional finiteness; chapter12
+  (M:CombMap)(sphere+regular)→(p,q)∈{5 pairs} has SATISFIABLE hypotheses (sphere maps exist, tetraMap-style)
+  — not vacuous.
+- ch36 (Art Gallery): GENUINE combinatorial-core. chapter36 (h:TriangulatedPolygon n S)→∃guards≤n/3 is
+  conditional on TriangulatedPolygon which IS inhabitable (unitTriangle/unitSquare witnesses). Honest
+  documented frontier = geometric triangulability of arbitrary simple polygon (Mathlib planar geom). Not vacuous.
+- Classical chapters (01-09,16,17,28): concrete conclusions (primes/QR/Bertrand/irrationality/Borsuk/Cantor) — genuine.
+- CONCLUSION: the §3.3 vacuities were confined to ch35 + ch13 (both fixed this run). No further hidden
+  vacuity found in the audited geometric chapters. (Exhaustive per-chapter codex audit can run at codex reset.)

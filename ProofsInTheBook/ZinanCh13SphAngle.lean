@@ -257,6 +257,42 @@ theorem normal_eq_pos_smul_neg_cross_of_support {n u v w : E3}
   rw [hs]
   module
 
+theorem face_normal_eq_pos_smul_neg_cross_of_coplanar_edges
+    {D : Type*} [Fintype D] [DecidableEq D] {M : CombMap D}
+    (P : TriangulatedEuclideanPolyhedron M) (f : M.Face)
+    (v a b w : M.Vertex)
+    (hv : inner ℝ (P.outward_normal f) (P.pos v - P.face_point f) = 0)
+    (ha : inner ℝ (P.outward_normal f) (P.pos a - P.face_point f) = 0)
+    (hb : inner ℝ (P.outward_normal f) (P.pos b - P.face_point f) = 0)
+    (hli : LinearIndependent ℝ ![P.pos a - P.pos v, P.pos b - P.pos v])
+    (hw : ∀ i, w ≠ P.faceVertex f i)
+    (hdet : 0 < inner ℝ (cross (P.pos a - P.pos v) (P.pos b - P.pos v))
+      (P.pos w - P.pos v)) :
+    ∃ lam : ℝ, 0 < lam ∧
+      P.outward_normal f = lam • (-(cross (P.pos a - P.pos v) (P.pos b - P.pos v))) := by
+  have hstrict0 := P.face_support_strict f w hw
+  have hstrict : inner ℝ (P.outward_normal f) (P.pos w - P.pos v) < 0 := by
+    have hrewrite :
+        inner ℝ (P.outward_normal f) (P.pos w - P.pos v) =
+          inner ℝ (P.outward_normal f) (P.pos w - P.face_point f) -
+            inner ℝ (P.outward_normal f) (P.pos v - P.face_point f) := by
+      calc
+        inner ℝ (P.outward_normal f) (P.pos w - P.pos v)
+            = inner ℝ (P.outward_normal f)
+                ((P.pos w - P.face_point f) - (P.pos v - P.face_point f)) := by
+                congr 1
+                module
+        _ = inner ℝ (P.outward_normal f) (P.pos w - P.face_point f) -
+              inner ℝ (P.outward_normal f) (P.pos v - P.face_point f) := by
+                rw [inner_sub_right]
+    rw [hrewrite, hv, sub_zero]
+    exact hstrict0
+  have hperp1 : inner ℝ (P.outward_normal f) (P.pos a - P.pos v) = 0 :=
+    inner_sub_of_plane_eq ha hv
+  have hperp2 : inner ℝ (P.outward_normal f) (P.pos b - P.pos v) = 0 :=
+    inner_sub_of_plane_eq hb hv
+  exact normal_eq_pos_smul_neg_cross_of_support hperp1 hperp2 hli hstrict hdet
+
 theorem face_normal_eq_pos_smul_neg_cross_of_strict_support
     {D : Type*} [Fintype D] [DecidableEq D] {M : CombMap D}
     (P : TriangulatedEuclideanPolyhedron M) (f : M.Face) (w : M.Vertex)
@@ -533,6 +569,7 @@ theorem tangent_angle_eq_dihedralAngleAtDart_of_oriented
 #print axioms ProofsInTheBook.Ch13SphAngle.outward_normal_parallel_faceDart_cross
 #print axioms ProofsInTheBook.Ch13SphAngle.face_parallel_scalar_support_le
 #print axioms ProofsInTheBook.Ch13SphAngle.normal_eq_pos_smul_neg_cross_of_support
+#print axioms ProofsInTheBook.Ch13SphAngle.face_normal_eq_pos_smul_neg_cross_of_coplanar_edges
 #print axioms ProofsInTheBook.Ch13SphAngle.face_normal_eq_pos_smul_neg_cross_of_strict_support
 
 end ProofsInTheBook.Ch13SphAngle

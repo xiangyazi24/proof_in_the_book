@@ -85,6 +85,40 @@ theorem incidentDartOfStarIndex_tail (P : TriangulatedEuclideanPolyhedron M) (v 
   unfold incidentDartOfStarIndex
   exact incidentDart_tail P v (starIndexToDeg P v hdeg i)
 
+theorem starN_add_one_eq_vDeg (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) :
+    starN P v + 1 = vDeg P v := by
+  unfold starN
+  omega
+
+def incidentIndexOfDart (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (d : D) (hd : d ∈ incidentDarts P v) : Fin (vDeg P v) :=
+  ⟨(incidentDarts P v).idxOf d, by
+    unfold vDeg
+    exact List.idxOf_lt_length_iff.mpr hd⟩
+
+theorem incidentDart_incidentIndexOfDart
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (d : D) (hd : d ∈ incidentDarts P v) :
+    incidentDart P v (incidentIndexOfDart P v d hd) = d := by
+  unfold incidentDart incidentIndexOfDart
+  exact List.idxOf_get (List.idxOf_lt_length_iff.mpr hd)
+
+def reverseStarIndexOfDart (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (d : D) (hd : d ∈ incidentDarts P v) :
+    Fin (starN P v + 1) :=
+  Fin.rev (Fin.cast (starN_add_one_eq_vDeg P v hdeg).symm
+    (incidentIndexOfDart P v d hd))
+
+theorem incidentDartOfStarIndex_reverseStarIndexOfDart
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (d : D) (hd : d ∈ incidentDarts P v) :
+    incidentDartOfStarIndex P v hdeg
+      (Fin.rev (reverseStarIndexOfDart P v hdeg d hd)) = d := by
+  unfold reverseStarIndexOfDart incidentDartOfStarIndex starIndexToDeg
+  simpa [Fin.rev_rev, Fin.cast_trans, Fin.cast_eq_self] using
+    incidentDart_incidentIndexOfDart P v d hd
+
 /-- Candidate neighbour point in the `σ`-ordered Euclidean vertex link. -/
 def linkPoint (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
     (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) : E3 :=
@@ -709,6 +743,7 @@ It must prove the strict exposed-vertex open hemisphere and the oriented
 end ProofsInTheBook.Ch13EuclLink
 
 #print axioms ProofsInTheBook.Ch13EuclLink.vertexStarOfEuclidean
+#print axioms ProofsInTheBook.Ch13EuclLink.incidentDartOfStarIndex_reverseStarIndexOfDart
 #print axioms ProofsInTheBook.Ch13EuclLink.tetra_vDeg
 #print axioms ProofsInTheBook.Ch13EuclLink.tetraVertexLinkGeometry
 #print axioms ProofsInTheBook.Ch13EuclLink.tetraVertexStar

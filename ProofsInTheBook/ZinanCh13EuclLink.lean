@@ -363,6 +363,9 @@ def fin3Rev : Fin 3 → Fin 3
   | 1 => 1
   | _ => 0
 
+theorem fin3Rev_eq_rev (i : Fin 3) : fin3Rev i = Fin.rev i := by
+  fin_cases i <;> rfl
+
 /-- The reversed `σ` order has the positive determinant required by `VertexStar`. -/
 theorem tetra_sigma_reverse_order_det_positive (d : Fin 12) :
     ProofsInTheBook.SphericalKernel.det3
@@ -425,6 +428,270 @@ theorem tetra_cross_eq_neg_smul_normal (d : Fin 12) (i : Fin 3) :
     rw [show Real.sqrt 3 * (Real.sqrt 3)⁻¹ = (1 : ℝ) from sqrt_three_mul_inv] <;>
     ring
 
+/-- The four vertex-coordinate classes carried by tetrahedron darts. -/
+def tetraDartClass : Fin 12 → Fin 4
+  | 0 | 1 | 2 => 0
+  | 3 | 4 | 5 => 1
+  | 6 | 7 | 8 => 2
+  | _ => 3
+
+/-- The point attached to a tetrahedron vertex class. -/
+def tetraClassPoint : Fin 4 → E3
+  | 0 => tetraPoint₀
+  | 1 => tetraPoint₁
+  | 2 => tetraPoint₂
+  | _ => tetraPoint₃
+
+theorem tetraDartPoint_eq_classPoint (d : Fin 12) :
+    tetraDartPoint d = tetraClassPoint (tetraDartClass d) := by
+  fin_cases d <;> rfl
+
+theorem tetraClassPoint_inner (a b : Fin 4) :
+    inner ℝ (tetraClassPoint a) (tetraClassPoint b) =
+      if a = b then (3 : ℝ) else (-1 : ℝ) := by
+  fin_cases a <;> fin_cases b <;>
+    rw [PiLp.inner_apply, Fin.sum_univ_three] <;>
+    simp [tetraClassPoint, tetraPoint₀, tetraPoint₁, tetraPoint₂, tetraPoint₃] <;>
+    norm_num
+
+/-- The omitted vertex class of the oriented tetrahedron face at `(d,i)`. -/
+def tetraOmitClass : Fin 12 → Fin 3 → Fin 4
+  | 0, 0 => 1 | 0, 1 => 3 | 0, _ => 2
+  | 1, 0 => 2 | 1, 1 => 1 | 1, _ => 3
+  | 2, 0 => 3 | 2, 1 => 2 | 2, _ => 1
+  | 3, 0 => 0 | 3, 1 => 2 | 3, _ => 3
+  | 4, 0 => 2 | 4, 1 => 3 | 4, _ => 0
+  | 5, 0 => 3 | 5, 1 => 0 | 5, _ => 2
+  | 6, 0 => 0 | 6, 1 => 3 | 6, _ => 1
+  | 7, 0 => 1 | 7, 1 => 0 | 7, _ => 3
+  | 8, 0 => 3 | 8, 1 => 1 | 8, _ => 0
+  | 9, 0 => 0 | 9, 1 => 1 | 9, _ => 2
+  | 10, 0 => 1 | 10, 1 => 2 | 10, _ => 0
+  | _, 0 => 2 | _, 1 => 0 | _, _ => 1
+
+theorem tetraOmitClass_ne_tail (d : Fin 12) (i : Fin 3) :
+    tetraOmitClass d i ≠ tetraDartClass d := by
+  fin_cases d <;> fin_cases i <;> decide
+
+theorem tetraSupportNormal_eq_omit (d : Fin 12) (i : Fin 3) :
+    tetraSupportNormal d i =
+      -((Real.sqrt 3)⁻¹) • tetraClassPoint (tetraOmitClass d i) := by
+  fin_cases d <;> fin_cases i <;>
+    apply ext_coord <;>
+    norm_num [fin3Rev, Fin.add_def, tetraSupportNormal, tetraRevNbr, tetraSigmaDart,
+      tetraMap_sigma_toList, tetraSigma_toList, tetraEuclideanPolyhedron, tetraPos,
+      tetraDartPoint, tetraMap, CombMap.tail, CombMap.head, tetraDartClass, tetraClassPoint,
+      tetraOmitClass, tetraPoint₀, tetraPoint₁, tetraPoint₂, tetraPoint₃,
+      Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.cons_val_two, Matrix.head_cons,
+      Matrix.tail_cons]
+
+theorem tetraSupportNormal_support (d : Fin 12) (i : Fin 3) (w : tetraMap.Vertex) :
+    inner ℝ (tetraSupportNormal d i)
+      (tetraEuclideanPolyhedron.pos w - tetraEuclideanPolyhedron.pos (tetraMap.tail d)) ≤ 0 := by
+  refine Quotient.inductionOn w ?_
+  intro x
+  rw [tetraSupportNormal_eq_omit]
+  change inner ℝ (-((Real.sqrt 3)⁻¹) • tetraClassPoint (tetraOmitClass d i))
+      (tetraDartPoint x - tetraDartPoint d) ≤ 0
+  rw [tetraDartPoint_eq_classPoint x, tetraDartPoint_eq_classPoint d]
+  rw [real_inner_smul_left, inner_sub_right, tetraClassPoint_inner, tetraClassPoint_inner]
+  have htail : tetraOmitClass d i ≠ tetraDartClass d := tetraOmitClass_ne_tail d i
+  have hpos : 0 < (Real.sqrt 3)⁻¹ := by positivity
+  by_cases hx : tetraOmitClass d i = tetraDartClass x
+  · rw [if_pos hx, if_neg htail]
+    ring_nf
+    have hnonneg : 0 ≤ (Real.sqrt 3)⁻¹ := le_of_lt hpos
+    nlinarith [hnonneg]
+  · rw [if_neg hx, if_neg htail]
+    ring_nf
+    nlinarith [le_of_lt hpos]
+
+theorem tetra_vertex_eq_iff_class (x y : Fin 12) :
+    (Quotient.mk (cycleSetoid tetraMap.σ) x = Quotient.mk (cycleSetoid tetraMap.σ) y) ↔
+      tetraDartClass x = tetraDartClass y := by
+  fin_cases x <;> fin_cases y <;> decide
+
+theorem tetra_nonomit_iff_face_class (d : Fin 12) (i : Fin 3) (c : Fin 4) :
+    c ≠ tetraOmitClass d i ↔
+      c = tetraDartClass d ∨
+        c = tetraDartClass (tetraAlpha (tetraSigmaDart d (fin3Rev i))) ∨
+        c = tetraDartClass (tetraAlpha (tetraSigmaDart d (fin3Rev (i + 1)))) := by
+  fin_cases d <;> fin_cases i <;> fin_cases c <;>
+    simp [fin3Rev, Fin.add_def, tetraOmitClass, tetraDartClass, tetraSigmaDart,
+      tetraMap_sigma_toList, tetraSigma_toList, tetraAlpha_apply_link] <;>
+    decide
+
+theorem tetraSupportNormal_inner_zero_iff_class (d : Fin 12) (i : Fin 3) (x : Fin 12) :
+    inner ℝ (tetraSupportNormal d i) (tetraDartPoint x - tetraDartPoint d) = 0 ↔
+      tetraDartClass x ≠ tetraOmitClass d i := by
+  rw [tetraSupportNormal_eq_omit]
+  rw [tetraDartPoint_eq_classPoint x, tetraDartPoint_eq_classPoint d]
+  rw [real_inner_smul_left, inner_sub_right, tetraClassPoint_inner, tetraClassPoint_inner]
+  have htail : tetraOmitClass d i ≠ tetraDartClass d := tetraOmitClass_ne_tail d i
+  have hpos : 0 < (Real.sqrt 3)⁻¹ := by positivity
+  by_cases hx : tetraOmitClass d i = tetraDartClass x
+  · rw [if_pos hx, if_neg htail]
+    constructor
+    · intro hzero
+      ring_nf at hzero
+      nlinarith [hpos]
+    · intro hne
+      exact False.elim (hne hx.symm)
+  · rw [if_neg hx, if_neg htail]
+    ring_nf
+    exact ⟨fun _ => fun h => hx h.symm, fun _ => trivial⟩
+
+theorem tetraSupportNormal_eq_iff (d : Fin 12) (i : Fin 3) (w : tetraMap.Vertex) :
+    inner ℝ (tetraSupportNormal d i)
+        (tetraEuclideanPolyhedron.pos w - tetraEuclideanPolyhedron.pos (tetraMap.tail d)) = 0 ↔
+      (w = tetraMap.tail d ∨ w = tetraRevNbr d i ∨ w = tetraRevNbr d (i + 1)) := by
+  refine Quotient.inductionOn w ?_
+  intro x
+  change inner ℝ (tetraSupportNormal d i) (tetraDartPoint x - tetraDartPoint d) = 0 ↔
+      (Quotient.mk (cycleSetoid tetraMap.σ) x = tetraMap.tail d ∨
+        Quotient.mk (cycleSetoid tetraMap.σ) x = tetraRevNbr d i ∨
+        Quotient.mk (cycleSetoid tetraMap.σ) x = tetraRevNbr d (i + 1))
+  rw [tetraSupportNormal_inner_zero_iff_class]
+  rw [tetra_nonomit_iff_face_class d i (tetraDartClass x)]
+  constructor
+  · rintro (h | h | h)
+    · left
+      change Quotient.mk (cycleSetoid tetraMap.σ) x =
+        Quotient.mk (cycleSetoid tetraMap.σ) d
+      exact (tetra_vertex_eq_iff_class x d).2 h
+    · right; left
+      change Quotient.mk (cycleSetoid tetraMap.σ) x =
+        Quotient.mk (cycleSetoid tetraMap.σ) (tetraAlpha (tetraSigmaDart d (fin3Rev i)))
+      exact (tetra_vertex_eq_iff_class x
+        (tetraAlpha (tetraSigmaDart d (fin3Rev i)))).2 h
+    · right; right
+      change Quotient.mk (cycleSetoid tetraMap.σ) x =
+        Quotient.mk (cycleSetoid tetraMap.σ)
+          (tetraAlpha (tetraSigmaDart d (fin3Rev (i + 1))))
+      exact (tetra_vertex_eq_iff_class x
+        (tetraAlpha (tetraSigmaDart d (fin3Rev (i + 1))))).2 h
+  · rintro (h | h | h)
+    · left
+      change Quotient.mk (cycleSetoid tetraMap.σ) x =
+        Quotient.mk (cycleSetoid tetraMap.σ) d at h
+      exact (tetra_vertex_eq_iff_class x d).1 h
+    · right; left
+      change Quotient.mk (cycleSetoid tetraMap.σ) x =
+        Quotient.mk (cycleSetoid tetraMap.σ) (tetraAlpha (tetraSigmaDart d (fin3Rev i))) at h
+      exact (tetra_vertex_eq_iff_class x
+        (tetraAlpha (tetraSigmaDart d (fin3Rev i)))).1 h
+    · right; right
+      change Quotient.mk (cycleSetoid tetraMap.σ) x =
+        Quotient.mk (cycleSetoid tetraMap.σ)
+          (tetraAlpha (tetraSigmaDart d (fin3Rev (i + 1)))) at h
+      exact (tetra_vertex_eq_iff_class x
+        (tetraAlpha (tetraSigmaDart d (fin3Rev (i + 1))))).1 h
+
+/-- Oriented supporting-face certificate for the tetrahedron at a dart-rooted reversed σ edge. -/
+def tetraOrientedSupportDart (d : Fin 12) (i : Fin 3) :
+    OrientedTriangleSupport tetraEuclideanPolyhedron (tetraMap.tail d)
+      (tetraRevNbr d i) (tetraRevNbr d (i + 1)) where
+  normal := tetraSupportNormal d i
+  normal_unit := tetraSupportNormal_unit d i
+  c := 4 * Real.sqrt 3
+  c_pos := by positivity
+  det_eq := by
+    intro z
+    rw [det3_eq_inner_cross, tetra_cross_eq_neg_smul_normal]
+    rw [real_inner_smul_left]
+  support := tetraSupportNormal_support d i
+  eq_iff := tetraSupportNormal_eq_iff d i
+
+theorem tetraSigmaDart_tail_eq (d : Fin 12) (i : Fin 3) :
+    tetraMap.tail (tetraSigmaDart d (fin3Rev i)) = tetraMap.tail d := by
+  fin_cases d <;> fin_cases i <;> decide
+
+theorem tetraRevNbr_ne_tail (d : Fin 12) (i : Fin 3) :
+    tetraRevNbr d i ≠ tetraMap.tail d := by
+  intro h
+  have hc : tetraDartClass (tetraAlpha (tetraSigmaDart d (fin3Rev i))) =
+      tetraDartClass d := by
+    exact (tetra_vertex_eq_iff_class
+      (tetraAlpha (tetraSigmaDart d (fin3Rev i))) d).1 h
+  revert hc
+  fin_cases d <;> fin_cases i <;>
+    simp [fin3Rev, tetraDartClass, tetraSigmaDart, tetraMap_sigma_toList,
+      tetraAlpha_apply_link] <;>
+    decide
+
+theorem tetraRevNbr_class_injective (d : Fin 12) :
+    Function.Injective
+      (fun i : Fin 3 => tetraDartClass (tetraAlpha (tetraSigmaDart d (fin3Rev i)))) := by
+  intro i j h
+  fin_cases d <;> fin_cases i <;> fin_cases j <;>
+    simp [fin3Rev, tetraDartClass, tetraSigmaDart, tetraMap_sigma_toList,
+      tetraSigma_toList, tetraAlpha_apply_link] at h <;>
+    decide
+
+theorem tetraRevNbr_injective (d : Fin 12) : Function.Injective (tetraRevNbr d) := by
+  intro i j h
+  have hc : tetraDartClass (tetraAlpha (tetraSigmaDart d (fin3Rev i))) =
+      tetraDartClass (tetraAlpha (tetraSigmaDart d (fin3Rev j))) :=
+    (tetra_vertex_eq_iff_class
+      (tetraAlpha (tetraSigmaDart d (fin3Rev i)))
+      (tetraAlpha (tetraSigmaDart d (fin3Rev j)))).1 h
+  exact tetraRevNbr_class_injective d hc
+
+theorem tetraRevNbr_reverse_incident (v : tetraMap.Vertex) (i : Fin 3) :
+    tetraRevNbr (Quotient.out v) i =
+      tetraMap.head
+        (incidentDartOfStarIndex tetraEuclideanPolyhedron v
+          (tetra_vDeg_ge_three v)
+          (Fin.rev (Fin.cast (by rw [starN, tetra_vDeg]) i))) := by
+  apply Quotient.sound
+  generalize hd : Quotient.out v = d
+  fin_cases d <;> fin_cases i <;>
+    simp [hd, fin3Rev, tetraRevNbr, incidentDartOfStarIndex, incidentDart, starIndexToDeg,
+      incidentDarts, vDeg, starN, tetra_vDeg, tetraSigmaDart, tetraMap_sigma_toList,
+      tetraSigma_toList] <;>
+    decide
+
+/-- The tetrahedron vertex-link geometry, in the outward-normal (reverse-σ) order. -/
+def tetraVertexLinkGeometry (v : tetraMap.Vertex) :
+    VertexLinkGeometry tetraEuclideanPolyhedron v := by
+  let d : Fin 12 := Quotient.out v
+  have hv : tetraMap.tail d = v := Quotient.out_eq v
+  refine
+    { n := 2
+      hn := le_rfl
+      nbr := fun i => tetraRevNbr d i
+      nbr_is_sigma := ?_
+      oriented := ?_
+      nbr_apex_ne := ?_
+      nonincident := ?_ }
+  · refine ⟨tetra_vDeg_ge_three v, ?_, ?_⟩
+    · rw [starN, tetra_vDeg]
+    · intro i
+      exact tetraRevNbr_reverse_incident v i
+  · intro i
+    rw [← hv]
+    exact tetraOrientedSupportDart d i
+  · intro i h
+    rw [← hv] at h
+    have hnd := tetraEuclideanPolyhedron.edge_nondegenerate (tetraSigmaDart d (fin3Rev i))
+    exact hnd (by
+      change tetraEuclideanPolyhedron.pos (tetraMap.tail (tetraSigmaDart d (fin3Rev i))) =
+        tetraEuclideanPolyhedron.pos (tetraMap.head (tetraSigmaDart d (fin3Rev i)))
+      rw [tetraSigmaDart_tail_eq d i]
+      exact h.symm)
+  · intro i j hji hjnext hbad
+    rcases hbad with htail | heq | hnext
+    · have htail' : tetraRevNbr d j = tetraMap.tail d := by
+        rw [hv]
+        exact htail
+      exact tetraRevNbr_ne_tail d j htail'
+    · exact hji ((tetraRevNbr_injective d heq))
+    · exact hjnext ((tetraRevNbr_injective d hnext))
+
+/-- The concrete tetrahedron vertex star obtained from Euclidean coordinates. -/
+def tetraVertexStar (v : tetraMap.Vertex) : VertexStar :=
+  vertexStarOfEuclidean tetraEuclideanPolyhedron v (tetraVertexLinkGeometry v)
+
 /-!
 ### General residual for the next geometry round
 
@@ -443,3 +710,5 @@ end ProofsInTheBook.Ch13EuclLink
 
 #print axioms ProofsInTheBook.Ch13EuclLink.vertexStarOfEuclidean
 #print axioms ProofsInTheBook.Ch13EuclLink.tetra_vDeg
+#print axioms ProofsInTheBook.Ch13EuclLink.tetraVertexLinkGeometry
+#print axioms ProofsInTheBook.Ch13EuclLink.tetraVertexStar

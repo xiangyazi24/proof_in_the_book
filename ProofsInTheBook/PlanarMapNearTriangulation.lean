@@ -204,6 +204,38 @@ lemma inner_faceLen_eq_three {f : M.Face} (hf : f ≠ hNT.outerFace) :
     M.faceLen f = 3 :=
   hNT.inner_tri f hf
 
+/-- A near-triangulation has all face lengths at least three: the distinguished
+outer face has length at least three, and every other face is triangular. -/
+lemma faceLengthGe_three (hNT : NearTriangulation M) : M.FaceLengthGe 3 := by
+  intro f
+  by_cases hf : f = hNT.outerFace
+  · subst f
+    rw [hNT.outer_faceLen_eq_outerCycle_length]
+    exact hNT.outer_len
+  · rw [hNT.inner_faceLen_eq_three hf]
+
+/-- A near-triangulation has at least three vertices, witnessed by the simple
+outer boundary cycle. -/
+lemma three_le_V (hNT : NearTriangulation M) : 3 ≤ M.V := by
+  classical
+  have hnodup : hNT.outerCycle.vertices.Nodup := hNT.outer_simple
+  have hlen : 3 ≤ hNT.outerCycle.vertices.length := by
+    rw [hNT.outerCycle.vertices_length]
+    exact hNT.outer_len
+  have hcard : 3 ≤ hNT.outerCycle.vertices.toFinset.card := by
+    rw [List.toFinset_card_of_nodup hnodup]
+    exact hlen
+  calc
+    3 ≤ hNT.outerCycle.vertices.toFinset.card := hcard
+    _ ≤ Fintype.card M.Vertex := Finset.card_le_univ _
+    _ = M.V := rfl
+
+/-- Euler's degree seed specialized to near-triangulations. -/
+lemma exists_vertexDegree_le_five (hNT : NearTriangulation M) :
+    ∃ v : M.Vertex, M.vertexDegree v ≤ 5 :=
+  _root_.ProofsInTheBook.PlanarMap.CombMap.exists_vertexDegree_le_five M
+    hNT.sphere (faceLengthGe_three hNT) (three_le_V hNT)
+
 lemma inner_face_isFaceTriangle {d : D}
     (hd : M.dartFace d ≠ hNT.outerFace) :
     M.IsFaceTriangle d (M.φ d) (M.φ (M.φ d)) := by

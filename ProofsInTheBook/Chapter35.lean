@@ -142,6 +142,12 @@ theorem colorable_five_iff_exists_proper_coloring {V : Type u} (G : SimpleGraph 
   · rintro ⟨color, hproper⟩
     exact ⟨SimpleGraph.Coloring.mk color (by intro u v huv; exact hproper u v huv)⟩
 
+/-- Five-colorability restricts to a subgraph on the same vertex type. -/
+theorem colorable_five_of_le {V : Type u} {G H : SimpleGraph V}
+    (hGH : G ≤ H) (hH : H.Colorable 5) :
+    G.Colorable 5 :=
+  SimpleGraph.Colorable.mono_left hGH hH
+
 /-- The complete graph on six vertices is not 5-colorable. -/
 theorem completeGraph_fin_six_not_colorable_five :
     ¬ (⊤ : SimpleGraph (Fin 6)).Colorable 5 := by

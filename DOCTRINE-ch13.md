@@ -57,3 +57,44 @@ halfspace convexity + vertex-link order) + CongruentTriangulatedRealizations(P,Q
      so the headline is about REAL ℝ³ polyhedra, not the abstract certificate.
 SCALE: a major multi-session campaign. (b1) is bounded + valuable groundwork; pieces (b3)/(b4) are the hard core.
 STRATEGIC: surfaced to Xiang — full (b) is a from-scratch ℝ³ geometry build; his call whether to push past (b1).
+
+## Avenue (b) ROUND PLAN to convergence (2026-06-17, after b1+b2 done; ConvexPolytopeRealization spec read)
+TARGET (干干净净): construct `ConvexPolytopeRealization M` from a pair of congruent ℝ³
+`TriangulatedEuclideanPolyhedron` (P,Q) → `chapter13_realization` becomes a theorem about GENUINE ℝ³
+convex polyhedra (Cauchy: congruent-faced convex triangulated polyhedra are congruent), inhabited by the
+real tetrahedron. The abstract Cauchy core (46 thms, Ch13*.lean) + realization_rigid are ALREADY clean-3;
+the bridge is the only gap. Fields to produce (from Ch13Realization.ConvexPolytopeRealization):
+  starP/starQ (VertexStar from ℝ³ link), hnn, edgeSign+edgeSign_inv, sides_eq, close_eq, dartRep,
+  interiorActive, twoArc, linkOrder (load-bearing), isSphere/triangle/isSimple.
+
+ROUND R1 (b3a — VertexStar from ℝ³): for a TriangulatedEuclideanPolyhedron P and vertex v, build the
+  spherical link = unit vectors (neighbor − pos v)/‖·‖ ∈ S2 in link order → `VertexStar`. Geometric
+  sideLen/jointAngle/sDist from real coords. Gives starP/starQ. Verify on tetrahedron.
+ROUND R2 (b3b — linkOrder, THE HARD GATE): σ.toList(dartRep v).map edgeSign = link-ordered real-sign list.
+  geometric rotational order around v in ℝ³ = combinatorial σ order. The §3.3-load-bearing field.
+ROUND R3 (b4 — edgeSign + congruence fields): edgeSign d := sign(dihedralAngleAtDart Q − …P) (b2's
+  dihedralSignAtDart), edgeSign_inv; sides_eq/close_eq from CongruentFaces P Q (equal edge lengths);
+  interiorActive; twoArc (TwoArcSplitData when signChangesFull=2).
+ROUND R4 (b5 — assemble + wire): convexPolytopeRealization_of_euclideanPair (P Q) (hcong) :
+  ConvexPolytopeRealization M; chapter13_euclidean via realization_rigid; inhabit w/ tetrahedron pair.
+DISPATCH: codex max, single coherent line (hard proof, no parallel splintering). R2 is the gate — if it
+  needs spherical-trig Mathlib gaps, dispatch ChatGPT (life/life2) in parallel for the lemma, codex grinds.
+
+## R2/R3 decomposition (2026-06-17, after reading realization_rigid + linkDiff + b2 edgeSign)
+KEY INSIGHT: edgeSign is ALREADY b2's `dihedralSignAtDart P Q d = realSignToEdgeSign(dihedralAngleAtDart Q d − dihedralAngleAtDart P d)`.
+The linkOrder field `(M.σ.toList dartRep).map edgeSign = (List.ofFn (linkDiff starP-link Q-link)).map realSignToEdgeSign`
+decomposes into:
+  R2a (HARD geometry → codex-max): `dihedralAngleAtDart P d = (vertexStarOfEuclidean P (tail d)).linkAngle (link-index of d)`
+       — the standard fact "dihedral angle at edge e = interior angle of the spherical vertex-figure at the
+       link-vertex corresponding to e". Given R2a, linkDiff_i = dihedral_Q − dihedral_P = the exact quantity
+       edgeSign uses ⇒ the VALUE match is automatic.
+  R2b (order bridge): M.σ.toList(dartRep Q) order = the vertexStarOfEuclidean link order (List.ofFn index) —
+       this is the R1d orientation/chirality convention, extended to the full σ-cycle = link cycle.
+R3 (mostly mechanical given b2): edgeSign := dihedralSignAtDart; edgeSign_inv (dihedral is α/edge-invariant:
+   dihedralAngleAtDart d depends only on the edge of d — prove dihedralAngleAtDart (α d) = dihedralAngleAtDart d);
+   sides_eq/close_eq from CongruentFaces P Q (equal edge lengths ⇒ equal spherical link side lengths sDist/sideLen);
+   interiorActive (nonzero edgeSign ⇒ some interior jointAngle differs — from R2a + the arm structure);
+   twoArc (TwoArcSplitData when signChangesFull=2 — from the abstract Ch13ArmVertex machinery).
+R4: assemble ConvexPolytopeRealization (P Q : TriangulatedEuclideanPolyhedron) (hcong : CongruentFaces) →
+   realization_rigid gives dihedral_P = dihedral_Q at every vertex ⇒ chapter13_euclidean; inhabit w/ tetra pair.
+ROUTING: R2a → codex-max (hard geometry). R2b/R3 → Mac codex or codex-max. R1 must land first.

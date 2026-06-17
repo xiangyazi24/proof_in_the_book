@@ -1,29 +1,40 @@
-# DOCTRINE — 全书 formalization 收官(36/40 → 40/40)
+# Ch35 — Unconditional chapter35: autonomous-run doctrine (2026-06-17)
 
-主目标:四个开放章节(09, 13, 35, 36)全部以 0-sorry、axioms={propext, Classical.choice, Quot.sound}、
-非 fragment 的 headline 定理关闭。
+## Main goal (one sentence)
+Make `chapter35` UNCONDITIONAL: every near-triangulation is 5-colorable with NO residual
+hypotheses, clean-3 ({propext, Classical.choice, Quot.sound}).
 
-## Ch35(主攻,引擎几乎齐装)
-(a) F 计数 NumCyclesCutPhi2:genus-free 路线(pbook a249330d 设计中)或应用层 genus-0 注入。
-    终态:cutCapMap2_F 无条件 ⟹ jordan_simple_cycle2 ⟹ Separates。
-    已证:抽象链定理×2、纯圈引理、双因子装配、SeamDecomposition⟹计数。
-(b) witness 应用层:SidesReach2 + FragmentCompatible2 从近三角剖分结构(面=三角形枚举)discharge。
-(c) 删除链定向数据:FanIncidenceData / MergedOuterArcData / DeletedOuterBoundary——同族 Jordan 定向,
-    候选:从(a)(b)的同套机制或补充 fan-certificate 字段。
-(d) 装配:f11 JordanOracle discharge → thomassen 主定理 → f13–16 bridge → 书面五色推论。
-fallback:若 genus-free 路线终不可形式化,Separates 经由(b)的 witness + 连通性矛盾仍可绕过 F 等式
-(witness ⟹ connected ⟹ chi'≤2 与 chi'=chi+(F'−F)…需 F'≥F+2 下界——记为待验证支线)。
+## State at run start
+- Chord branch CLOSED unconditional (canonicalChordBranchResidualSupplier, 69416e6).
+- All three §3.3 vacuities REPAIRED + committed: FIX1 (chordless 3<M.V, 5127f15), FIX2 (chord c₁,
+  b9dc3a2), FIX3 (chordless mergedArc ∀, 41b0694).
+- Chordless seam DONE (mergedArc + merged-orbit, ZinanCh35MergedArc, 41b0694).
+- PHASE C STAGE C-E helpers landed (ZinanCh35DeletedAssembly): deleted_outer_vertices_nodup_M
+  (outer_simple core), cleanFaceClass_of_fan_pair_mergedOrbit (cleanFaceClass, non-circular),
+  exists_head/terminal_fan_pair.
+- REMAINING: (1) φ'-itinerary [e₀..e_k]++oldArc → DeletedSeamData; (2) ChordlessOracle assembly;
+  (3) ChordlessOracleResidual; (4) endgame fiveColor_of_residual (Path B, verified).
 
-## Ch09
-(e) pearl 角度分类(pearlclass 在跑:截面机制 + SectorSum 对接)。
-(f) Bricard 条件组装:pearl_lemma + 分类 + TetDihedral 具体值 + Chapter09 代数层 → headline
-    (正四面体与等体积立方体不可等剖分)。TetVolume 已证供体积归一。
+## Avenues
+(a) [PRIMARY] Finish PHASE C straight: itinerary (route b: mergedDarts membership↔SameCycle +
+    merged-orbit card + Nodup-perm → faceDartList r₀ ~ mergedDarts) → DeletedSeamData →
+    DeletedBoundaryClassification API (boundary_iff via σ-orbit technique, mirror committed side-1
+    parent_boundary_to_side_boundary) → ChordlessOracle (ChordlessDeletionSite +
+    choose_two_reserved_colors + deleted_thomassenLists) → ChordlessOracleResidual →
+    fiveColor_of_residual hNT canonicalChordBranchResidualSupplier (chordlessBranchSupplier_of_residual ·)
+    = unconditional chapter35.
+(b) [fallback if route-b itinerary stalls after 3 concrete attempts] route-a literal φ'.toList
+    equality via cyclic-itinerary lemma; OR strengthen via explicit getElem enumeration.
+(c) [fallback if oracle assembly stalls] isolate remaining oracle fields as a named residual
+    structure (like the chord side's fuel) + discharge each field; never stop at decomposition.
 
-## Ch36
-(g) parity round-2 基础层(polyparity 在跑)→ A3/A4 scaffold discharge → EarTriangulation 存在
-    → artGallery_strict。
-## Ch13
-(h) WeakConvexArm 识别定理(多边形 B 层)→ cauchy_arm 点级;球面 arm + vertex-link 基底设计
-    (pbook 后续回合)。
+## Fallbacks / parallel resources
+- ChatGPT Pro life/life2 (ask-gpt.py) for hard sub-points (NO effort cap in briefs).
+- uisai2 codex (cx2, ISOLATED checkout ~/repos/pbook-ch35-cx2, NEW files only) for INDEPENDENT
+  plumbing (ChordlessDeletionSite, choose_two_reserved_colors, fan_w_ne_v0) — one-file-one-writer.
+- Mac codex (pbookch35cx) stays on the hard critical path (itinerary → DeletedSeamData → boundary_iff).
 
-终止条件:每章 headline `#print axioms` clean-3 + AUDIT.md 计入。
+## Terminal conditions
+- SUCCESS: `chapter35` (or fiveColor_planar_NT) unconditional, clean-3, full build green.
+- Per-residual: clean-3 + non-vacuity verified (no carried unsatisfiable premise — the §3.3 trap
+  that already bit 3×; verify EVERY new residual is satisfiable before banking).

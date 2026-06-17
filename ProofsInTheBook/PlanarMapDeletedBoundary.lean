@@ -1,4 +1,5 @@
 import ProofsInTheBook.PlanarMapFanFaces
+import ProofsInTheBook.PlanarMapBoundaryArcSplit
 
 /-!
 # The normalized boundary cycle of the deleted map (the last deletion-chain input)
@@ -187,26 +188,24 @@ lemma faceDartList_consecutive_vertex (M : CombMap D) {root : D} (hφ : M.φ roo
 
 /-- **Generic normalized boundary cycle from a single nontrivial face orbit.**
 The explicit cyclic dart list is `[root, φ root, φ² root, …]`; all orbit-algebraic
-fields are discharged, and the Jordan-arc split is supplied as `arcSplit`. -/
-def boundaryCycleOfFace (M : CombMap D) (f : M.Face) {root : D}
+fields are discharged, and the Jordan-arc split `arcSplit` is now DERIVED from boundary
+simplicity (`hnodup`) via `BoundaryCycleData.toBoundaryCycle` — it is no longer a
+parameter (`ZinanCh35ArcSplitUniversal` / `PlanarMapBoundaryArcSplit`). -/
+noncomputable def boundaryCycleOfFace (M : CombMap D) (f : M.Face) {root : D}
     (hφ : M.φ root ≠ root) (hroot : M.dartFace root = f)
-    (arcSplit :
-      ∀ ⦃u v : M.Vertex⦄, u ≠ v →
-        u ∈ (M.faceDartList root).map M.tail →
-        v ∈ (M.faceDartList root).map M.tail →
-        BoundaryArcSplit M ((M.faceDartList root).map M.tail)
-          ((M.faceDartList root).map M.dartEdge) u v) :
-    BoundaryCycle M f where
-  root := root
-  darts := M.faceDartList root
-  vertices := (M.faceDartList root).map M.tail
-  edges := (M.faceDartList root).map M.dartEdge
-  normalized := M.faceDartList_normalized f hφ hroot
-  vertices_eq := rfl
-  edges_eq := rfl
-  consecutive_phi := M.faceDartList_consecutive_phi hφ
-  consecutive_vertex := M.faceDartList_consecutive_vertex hφ
-  arcSplit := arcSplit
+    (hnodup : ((M.faceDartList root).map M.tail).Nodup) :
+    BoundaryCycle M f :=
+  BoundaryCycleData.toBoundaryCycle
+    { root := root
+      darts := M.faceDartList root
+      vertices := (M.faceDartList root).map M.tail
+      edges := (M.faceDartList root).map M.dartEdge
+      normalized := M.faceDartList_normalized f hφ hroot
+      vertices_eq := rfl
+      edges_eq := rfl
+      consecutive_phi := M.faceDartList_consecutive_phi hφ
+      consecutive_vertex := M.faceDartList_consecutive_vertex hφ }
+    hnodup
 
 namespace NearTriangulation
 
@@ -243,13 +242,6 @@ noncomputable def DeletedOuterBoundary.ofMergedFace (hNT : NearTriangulation M)
     (d0 : D) (outerFace : (M.deleteVertex d0).Face)
     (root : {d : D // d ∉ M.deleteVertexSet d0})
     (hroot : (M.deleteVertex d0).dartFace root = outerFace)
-    (arcSplit :
-      ∀ ⦃u v : (M.deleteVertex d0).Vertex⦄, u ≠ v →
-        u ∈ ((M.deleteVertex d0).faceDartList root).map (M.deleteVertex d0).tail →
-        v ∈ ((M.deleteVertex d0).faceDartList root).map (M.deleteVertex d0).tail →
-        BoundaryArcSplit (M.deleteVertex d0)
-          (((M.deleteVertex d0).faceDartList root).map (M.deleteVertex d0).tail)
-          (((M.deleteVertex d0).faceDartList root).map (M.deleteVertex d0).dartEdge) u v)
     (outer_simple :
       (((M.deleteVertex d0).faceDartList root).map (M.deleteVertex d0).tail).Nodup)
     (outer_len_ge_three : 3 ≤ ((M.deleteVertex d0).faceDartList root).length)
@@ -259,7 +251,7 @@ noncomputable def DeletedOuterBoundary.ofMergedFace (hNT : NearTriangulation M)
   outerFace := outerFace
   outerCycle :=
     (M.deleteVertex d0).boundaryCycleOfFace outerFace
-      (hNT.deleteVertex_phi_ne_self d0 root) hroot arcSplit
+      (hNT.deleteVertex_phi_ne_self d0 root) hroot outer_simple
   outer_simple := outer_simple
   outer_len_ge_three := outer_len_ge_three
   inner_tri := inner_tri

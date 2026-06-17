@@ -109,20 +109,25 @@ structure BoundaryArcSplit (M : CombMap D)
   internally_disjoint :
     ∀ ⦃w : M.Vertex⦄,
       w ∈ path₁.internalVertices → w ∈ path₂.internalVertices → False
-  /-- The first arc is nontrivial exactly when the endpoint pair is not a boundary edge. -/
-  path₁_internal_iff_proper :
-    path₁.HasInternalVertex ↔ s(u, v) ∉ boundaryEdges
-  /-- The second arc is nontrivial exactly when the endpoint pair is not a boundary edge. -/
-  path₂_internal_iff_proper :
-    path₂.HasInternalVertex ↔ s(u, v) ∉ boundaryEdges
+  /-- The first arc is nontrivial when the endpoint pair is not a boundary edge.
+  (One-directional: a *proper* — non-adjacent — pair forces an internal vertex.  The
+  converse `HasInternalVertex → proper` is intentionally NOT required: for a *consecutive*
+  pair the long complementary arc must still carry the cycle's other vertices internally,
+  so demanding `↔` would make `BoundaryArcSplit`, hence `BoundaryCycle`/`NearTriangulation`,
+  uninhabited whenever the cycle has a third vertex.  See `ZinanCh35VacuityObstruction`.) -/
+  path₁_internal_of_proper :
+    s(u, v) ∉ boundaryEdges → path₁.HasInternalVertex
+  /-- The second arc is nontrivial when the endpoint pair is not a boundary edge
+  (one-directional, same rationale as `path₁_internal_of_proper`). -/
+  path₂_internal_of_proper :
+    s(u, v) ∉ boundaryEdges → path₂.HasInternalVertex
 
-/-- A boundary cycle for the selected face `f`.
-
-The dart list is a normalized cyclic enumeration of the `φ`-orbit of `f`.
-The vertex and edge lists are exposed so later files can reason about the
-boundary without repeatedly unfolding quotient-orbit facts.
--/
-structure BoundaryCycle (M : CombMap D) (f : M.Face) where
+/-- The orbit-algebraic **core** of a boundary cycle — every field except the
+`arcSplit` certificate.  Split out (2026-06-15) so the universal arc-split
+(`arcSplit_of_nodup`, derivable from `VertexNodup`) can be proved over the core and
+installed into the full `BoundaryCycle` without the `boundaryCycleOfFace ↔ arcSplit`
+self-reference.  See `HANDOFF/ch35-arcsplit-core-refactor.md`. -/
+structure BoundaryCycleData (M : CombMap D) (f : M.Face) where
   /-- Chosen dart representative fixing the cyclic rotation. -/
   root : D
   /-- Normalized cyclic dart list enumerating the selected face orbit. -/
@@ -145,6 +150,15 @@ structure BoundaryCycle (M : CombMap D) (f : M.Face) where
   consecutive_vertex :
     ∀ i : Fin darts.length,
       M.tail (darts.get (cyclicNext normalized.length_pos i)) = M.head (darts.get i)
+
+/-- A boundary cycle for the selected face `f`: the orbit-algebraic core
+(`BoundaryCycleData`) together with the arc-splitting certificate.
+
+The dart list is a normalized cyclic enumeration of the `φ`-orbit of `f`.
+The vertex and edge lists are exposed so later files can reason about the
+boundary without repeatedly unfolding quotient-orbit facts.
+-/
+structure BoundaryCycle (M : CombMap D) (f : M.Face) extends BoundaryCycleData M f where
   /-- Arc-splitting certificate for any two distinct listed boundary vertices. -/
   arcSplit :
     ∀ ⦃u v : M.Vertex⦄,
@@ -261,23 +275,21 @@ namespace BoundaryArcSplit
 
 variable {M : CombMap D} {f : M.Face} {C : BoundaryCycle M f} {u v : M.Vertex}
 
-lemma path₁_internal_iff_proper_boundary (S : BoundaryArcSplit M C.vertices C.edges u v) :
-    S.path₁.HasInternalVertex ↔ C.ProperBoundaryPair u v := by
-  simpa [BoundaryCycle.ProperBoundaryPair, BoundaryCycle.IsBoundaryEdge] using
-    S.path₁_internal_iff_proper
+lemma path₁_internal_of_proper_boundary (S : BoundaryArcSplit M C.vertices C.edges u v)
+    (h : C.ProperBoundaryPair u v) : S.path₁.HasInternalVertex :=
+  S.path₁_internal_of_proper (by simpa [BoundaryCycle.IsBoundaryEdge] using h)
 
-lemma path₂_internal_iff_proper_boundary (S : BoundaryArcSplit M C.vertices C.edges u v) :
-    S.path₂.HasInternalVertex ↔ C.ProperBoundaryPair u v := by
-  simpa [BoundaryCycle.ProperBoundaryPair, BoundaryCycle.IsBoundaryEdge] using
-    S.path₂_internal_iff_proper
+lemma path₂_internal_of_proper_boundary (S : BoundaryArcSplit M C.vertices C.edges u v)
+    (h : C.ProperBoundaryPair u v) : S.path₂.HasInternalVertex :=
+  S.path₂_internal_of_proper (by simpa [BoundaryCycle.IsBoundaryEdge] using h)
 
 lemma path₁_internal_of_chord (S : BoundaryArcSplit M C.vertices C.edges u v)
     (h : C.Chord u v) : S.path₁.HasInternalVertex :=
-  (S.path₁_internal_iff_proper_boundary).2 h.proper
+  S.path₁_internal_of_proper_boundary h.proper
 
 lemma path₂_internal_of_chord (S : BoundaryArcSplit M C.vertices C.edges u v)
     (h : C.Chord u v) : S.path₂.HasInternalVertex :=
-  (S.path₂_internal_iff_proper_boundary).2 h.proper
+  S.path₂_internal_of_proper_boundary h.proper
 
 end BoundaryArcSplit
 
@@ -312,13 +324,13 @@ lemma two_arcs_internally_nonempty_of_chord (h : C.Chord u v) :
     boundary_cycle_two_arcs C h.endpoints_ne h.left_boundary h.right_boundary
   exact ⟨S, S.path₁_internal_of_chord h, S.path₂_internal_of_chord h⟩
 
-lemma arc₁_internal_iff_proper (S : BoundaryArcSplit M C.vertices C.edges u v) :
-    S.path₁.HasInternalVertex ↔ C.ProperBoundaryPair u v :=
-  S.path₁_internal_iff_proper_boundary
+lemma arc₁_internal_of_proper (S : BoundaryArcSplit M C.vertices C.edges u v)
+    (h : C.ProperBoundaryPair u v) : S.path₁.HasInternalVertex :=
+  S.path₁_internal_of_proper_boundary h
 
-lemma arc₂_internal_iff_proper (S : BoundaryArcSplit M C.vertices C.edges u v) :
-    S.path₂.HasInternalVertex ↔ C.ProperBoundaryPair u v :=
-  S.path₂_internal_iff_proper_boundary
+lemma arc₂_internal_of_proper (S : BoundaryArcSplit M C.vertices C.edges u v)
+    (h : C.ProperBoundaryPair u v) : S.path₂.HasInternalVertex :=
+  S.path₂_internal_of_proper_boundary h
 
 end BoundaryCycle
 

@@ -141,15 +141,13 @@ structure ChordlessOracle {D : Type u} [Fintype D] [DecidableEq D] {α : Type u}
   /-- The fan endpoints differ from `v0`. -/
   x_ne : (NearTriangulation.boundaryVertexFan_of_incidenceData fanData).x ≠ v0
   w_ne : (NearTriangulation.boundaryVertexFan_of_incidenceData fanData).w ≠ v0
-  /-- The precolored vertex `p` is the first fan endpoint `x` (the deleted vertex
-  `v0` is the boundary neighbour of `p`, so `p` is the path endpoint adjacent to
-  `v0`). -/
-  x_eq_p : (NearTriangulation.boundaryVertexFan_of_incidenceData fanData).x = p
-  /-- The precolored color `cp` is distinct from both reserved colors
-  (`γ, δ ∈ L v0 \ {cp}`, the review's reservation), so the precolored endpoint `p`
-  avoids them. -/
-  cp_ne_γ : cp ≠ γ
-  cp_ne_δ : cp ≠ δ
+  /-- The first fan endpoint is one of the precolored endpoints, and that endpoint's
+  precolored color avoids the two reserved colors. -/
+  x_precolored :
+    ((NearTriangulation.boundaryVertexFan_of_incidenceData fanData).x = p ∧
+      cp ≠ γ ∧ cp ≠ δ) ∨
+    ((NearTriangulation.boundaryVertexFan_of_incidenceData fanData).x = q ∧
+      cq ≠ γ ∧ cq ≠ δ)
   /-- **The deletion's boundary bookkeeping (the one isolated Jordan residue).**  The
   deleted near-triangulation, with the fan-deleted lists, again satisfies the
   Thomassen list hypotheses for *some* precolored boundary edge.  This is the
@@ -366,10 +364,10 @@ lemma fanX_notMem_interior (cod : ChordlessOracle hNT p q L cp cq) :
   rw [List.nodup_cons] at hleft
   exact hleft.1
 
-/-- **The precolored endpoint `p` avoids both reserved colors in the extension.**
-`p = x` survives the deletion and is not a fan-interior vertex, so its fan-deleted
-list there is `L p = {cp}`; hence the deleted coloring `c` colors `p`'s image `cp`,
-and `cp ≠ γ, δ` by the reservation. -/
+/-- **The fan endpoint `x` avoids both reserved colors in the extension.**
+`x` is one of the two precolored endpoints, survives the deletion, and is not a
+fan-interior vertex.  The fan-deleted list there is the corresponding singleton,
+so the deleted coloring assigns the corresponding precolored color. -/
 lemma chordless_hx_avoid (cod : ChordlessOracle hNT p q L cp cq)
     (h : ThomassenLists hNT p q L cp cq)
     {c : (M.deleteVertex cod.fanData.d0).Vertex → α}
@@ -388,20 +386,27 @@ lemma chordless_hx_avoid (cod : ChordlessOracle hNT p q L cp cq)
   -- `x`'s image is not a fan-interior vertex.
   have hnotfan : deletedVertexToM M cod.fanData.d0 q' ∉ (codFan cod).interior.toFinset := by
     rw [hq'toM, List.mem_toFinset]; exact fanX_notMem_interior cod
-  -- so the fan-deleted list at `q'` is `L x = L p = {cp}`.
+  -- so the fan-deleted list at `q'` is the old list at `x`.
   have hlistx : codLists cod q' = L (codFan cod).x := by
     rw [codLists, deleteFanLists_other M cod.fanData.d0 (codFan cod).interior.toFinset L
       cod.γ cod.δ hnotfan, hq'toM]
-  -- the deleted coloring at `q'` is in that singleton, hence equals `cp`.
+  -- the deleted coloring at `q'` is in the appropriate singleton.
   have hmem : c q' ∈ L (codFan cod).x := hlistx ▸ hc.1 q'
-  rw [show (codFan cod).x = p from cod.x_eq_p, h.list_p, Finset.mem_singleton] at hmem
   -- `extendColoring _ c a x = c q'` (survivor) for any reserved color.
   have hext : ∀ a : α, extendColoring cod.recon c a (codFan cod).x = c q' := by
     intro a
     rw [extendColoring_other cod.recon c a hxne]
-  constructor
-  · rw [hext cod.γ, hmem]; exact cod.cp_ne_γ
-  · rw [hext cod.δ, hmem]; exact cod.cp_ne_δ
+  rcases cod.x_precolored with ⟨hx, hcpγ, hcpδ⟩ | ⟨hx, hcqγ, hcqδ⟩
+  · have hmem_cp : c q' = cp := by
+      simpa [codFan, hx, h.list_p] using hmem
+    constructor
+    · rw [hext cod.γ, hmem_cp]; exact hcpγ
+    · rw [hext cod.δ, hmem_cp]; exact hcpδ
+  · have hmem_cq : c q' = cq := by
+      simpa [codFan, hx, h.list_q] using hmem
+    constructor
+    · rw [hext cod.γ, hmem_cq]; exact hcqγ
+    · rw [hext cod.δ, hmem_cq]; exact hcqδ
 
 /-- **The chordless case.**  Given that the deleted map is list-colorable from the
 fan-deleted lists `codLists`, the coloring extends across `v0` to a list coloring of

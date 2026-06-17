@@ -364,13 +364,22 @@ private lemma fanTriangle_witness_snd {a b : M.Vertex}
   show M.tail (M.α T.d1) = b
   rw [tail_alpha, hh, T.tail2]
 
+/-- A `FanTriangle` provides a surviving dart whose vertex is its first non-`v0`
+vertex `a` (the surviving edge dart `T.d1` itself, tail `a`). -/
+private lemma fanTriangle_witness_fst {a b : M.Vertex}
+    (T : FanTriangle hNT v0 a b) {d0 : D} (htail0 : M.tail d0 = v0) :
+    ∃ p : {d : D // d ∉ M.deleteVertexSet d0}, M.tail p.1 = a :=
+  ⟨⟨T.d1, fanTriangle_edge_dart_survives T htail0⟩, T.tail1⟩
+
 /-- Chaining: if consecutive pairs of a list `L` (with at least the head vertex
-present) all carry fan triangles, then every vertex of `L` is `VConn` to the
-head of `L`.  Proved by induction maintaining a surviving witness at the head. -/
+present) all carry fan triangles in the **σ-predecessor** orientation
+(`(a, b) ↦ FanTriangle v0 b a`, the fixed `triangle_of_pair` convention), then every
+vertex of `L` is `VConn` to the head of `L`.  Proved by induction maintaining a
+surviving witness at the head; `VConn` is symmetric so the orientation is immaterial. -/
 private lemma vconn_head_of_pairs {d0 : D} (htail0 : M.tail d0 = v0) :
     ∀ (L : List M.Vertex) (hd : M.Vertex),
       (∀ a b : M.Vertex, (a, b) ∈ consecutivePairs (hd :: L) →
-        FanTriangle hNT v0 a b) →
+        FanTriangle hNT v0 b a) →
       ∀ u : M.Vertex, u ∈ (hd :: L) → VConn (M := M) (d0 := d0) u hd := by
   intro L
   induction L with
@@ -383,14 +392,14 @@ private lemma vconn_head_of_pairs {d0 : D} (htail0 : M.tail d0 = v0) :
         (Quotient.exact (show M.tail p.1 = M.tail q.1 by rw [hp, hq]))
   | cons b l ih =>
       intro hd htri u hu
-      -- The first pair `(hd, b)` carries a fan triangle.
+      -- The first pair `(hd, b)` carries a (predecessor-oriented) fan triangle.
       have hpair0 : (hd, b) ∈ consecutivePairs (hd :: b :: l) := by
         rw [consecutivePairs_cons_cons]; exact List.mem_cons.mpr (Or.inl rfl)
-      have T0 : FanTriangle hNT v0 hd b := htri hd b hpair0
-      have hVhd_b : VConn (M := M) (d0 := d0) hd b := fanTriangle_vconn T0 htail0
+      have T0 : FanTriangle hNT v0 b hd := htri hd b hpair0
+      have hVhd_b : VConn (M := M) (d0 := d0) hd b := (fanTriangle_vconn T0 htail0).symm
       -- triangles for the tail list `b :: l`.
       have htri' : ∀ a c : M.Vertex, (a, c) ∈ consecutivePairs (b :: l) →
-          FanTriangle hNT v0 a c := by
+          FanTriangle hNT v0 c a := by
         intro a c hac
         apply htri a c
         rw [consecutivePairs_cons_cons]
@@ -405,9 +414,9 @@ private lemma vconn_head_of_pairs {d0 : D} (htail0 : M.tail d0 = v0) :
       · -- u ∈ b :: l: connect u → b (by IH) then b → hd (by T0).
         have hVu_b : VConn (M := M) (d0 := d0) u b := ihrun u hurest
         intro p q hp hq
-        -- need a witness at `b`.
+        -- need a witness at `b` (the first label of the swapped triangle `T0`).
         obtain ⟨m, hm⟩ : ∃ m : {d : D // d ∉ M.deleteVertexSet d0}, M.tail m.1 = b :=
-          fanTriangle_witness_snd T0 htail0
+          fanTriangle_witness_fst T0 htail0
         have h1 : Relation.ReflTransGen (M.deleteVertex d0).dartStep p m :=
           hVu_b p m hp hm
         have h2 : Relation.ReflTransGen (M.deleteVertex d0).dartStep m q :=
@@ -458,7 +467,7 @@ theorem deleteVertex_neighborsConnected_of_fan (fan : BoundaryVertexFan hNT v0)
   have hpath : fan.path = fan.x :: L := by
     rw [BoundaryVertexFan.path, fanPath, hL, List.cons_append]
   have htri : ∀ a b : M.Vertex,
-      (a, b) ∈ consecutivePairs (fan.x :: L) → FanTriangle hNT v0 a b := by
+      (a, b) ∈ consecutivePairs (fan.x :: L) → FanTriangle hNT v0 b a := by
     intro a b hab
     have hab' : (a, b) ∈ consecutivePairs fan.path := by rw [hpath]; exact hab
     exact fan.incident_faces_exact.triangle_of_pair (by
@@ -485,9 +494,9 @@ theorem deleteVertex_neighborsConnected_of_fan (fan : BoundaryVertexFan hNT v0)
     | cons c t => exact ⟨c, t ++ [fan.w], rfl⟩
   have hpair0 : (fan.x, b) ∈ consecutivePairs (fan.x :: L) := by
     rw [hLb, consecutivePairs_cons_cons]; exact List.mem_cons.mpr (Or.inl rfl)
-  have T0 : FanTriangle hNT v0 fan.x b := htri fan.x b hpair0
+  have T0 : FanTriangle hNT v0 b fan.x := htri fan.x b hpair0
   obtain ⟨m, hm⟩ : ∃ m : {d : D // d ∉ M.deleteVertexSet d0}, M.tail m.1 = fan.x :=
-    ⟨⟨T0.d1, fanTriangle_edge_dart_survives T0 htail0⟩, T0.tail1⟩
+    fanTriangle_witness_snd T0 htail0
   have h1 : Relation.ReflTransGen (M.deleteVertex d0).dartStep x m :=
     hVx x m rfl hm
   have h2 : Relation.ReflTransGen (M.deleteVertex d0).dartStep m y :=

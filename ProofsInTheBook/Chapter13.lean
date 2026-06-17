@@ -1,4 +1,5 @@
 import Mathlib
+import ProofsInTheBook.ZinanFFCT112
 
 /-!
 # Chapter 13: Cauchy's rigidity theorem
@@ -41,6 +42,8 @@ convex-polyhedron rigidity layer.
 -/
 
 namespace ProofsInTheBook.Chapter13
+
+open ProofsInTheBook.SphericalKernel ProofsInTheBook.SphericalArm
 
 /-- Edge signs in Cauchy's rigidity proof. -/
 inductive EdgeSign where
@@ -190,52 +193,56 @@ theorem arm_lemma_forbids_strict_closing_with_fixed_chord {n : ℕ}
   exact (lt_irrefl chord) hlt
 
 /--
-The concrete data needed to invoke the opening direction of Cauchy's arm
-lemma at a vertex link while the endpoint chord is fixed by congruent faces.
+The concrete GEOMETRIC data for the opening direction of Cauchy's arm lemma at a vertex link while the
+endpoint chord is fixed by congruent faces: two equal-sided strictly convex spherical arms whose joints
+are nondecreasing (some strictly wider) yet share the same endpoint chord.  Such a configuration is
+impossible — refuted by the **proven** spherical arm lemma
+`ZinanFFCT112.cauchy_arm_fixed_chord_contradiction_uncond` (unconditional, clean-3).  The arm-lemma
+conclusion is now DERIVED, not posited (cf. the former `arm_conclusion` field).
 -/
 structure CauchyArmOpeningObstruction where
   n : ℕ
-  angles : Fin n → ℝ
-  newAngles : Fin n → ℝ
-  chord : ℝ
-  newChord : ℝ
-  fixed_chord : newChord = chord
-  opened : ∀ i, angles i ≤ newAngles i
-  some_angle_strictly_opened : ∃ i, angles i < newAngles i
-  convex_new_angles : ∀ i, newAngles i < Real.pi
-  arm_conclusion : chord < newChord ∨ (∀ i, angles i = newAngles i)
+  hn : 2 ≤ n
+  A : Fin (n + 1) → S2
+  B : Fin (n + 1) → S2
+  hA : StrictConvexSphArm A
+  hB : StrictConvexSphArm B
+  equal_sides : ∀ i : Fin n, sideLen A i = sideLen B i
+  opened : ∀ i : Fin (n - 1), jointAngle A i ≤ jointAngle B i
+  some_angle_strictly_opened : ∃ i : Fin (n - 1), jointAngle A i < jointAngle B i
+  fixed_chord : sDist (A 0) (A (Fin.last n)) = sDist (B 0) (B (Fin.last n))
 
 namespace CauchyArmOpeningObstruction
 
 theorem contradiction (obs : CauchyArmOpeningObstruction) : False :=
-  arm_lemma_forbids_strict_opening_with_fixed_chord obs.angles obs.newAngles
-    obs.chord obs.newChord obs.fixed_chord obs.opened
-    obs.some_angle_strictly_opened obs.convex_new_angles obs.arm_conclusion
+  ZinanFFCT112.cauchy_arm_fixed_chord_contradiction_uncond obs.hn obs.A obs.B obs.hA obs.hB
+    obs.equal_sides obs.opened obs.some_angle_strictly_opened obs.fixed_chord
 
 end CauchyArmOpeningObstruction
 
 /--
-The corresponding data for the closing direction.  This is the same arm lemma
-with the old and new angle arrays swapped.
+The corresponding GEOMETRIC data for the closing direction: the same impossibility with the arm closing
+(`B`'s joints no wider than `A`'s, some strictly narrower) at a fixed chord — refuted by the same proven
+arm lemma applied with the two arms swapped.
 -/
 structure CauchyArmClosingObstruction where
   n : ℕ
-  angles : Fin n → ℝ
-  newAngles : Fin n → ℝ
-  chord : ℝ
-  newChord : ℝ
-  fixed_chord : newChord = chord
-  closed : ∀ i, newAngles i ≤ angles i
-  some_angle_strictly_closed : ∃ i, newAngles i < angles i
-  convex_old_angles : ∀ i, angles i < Real.pi
-  arm_conclusion : newChord < chord ∨ (∀ i, newAngles i = angles i)
+  hn : 2 ≤ n
+  A : Fin (n + 1) → S2
+  B : Fin (n + 1) → S2
+  hA : StrictConvexSphArm A
+  hB : StrictConvexSphArm B
+  equal_sides : ∀ i : Fin n, sideLen A i = sideLen B i
+  closed : ∀ i : Fin (n - 1), jointAngle B i ≤ jointAngle A i
+  some_angle_strictly_closed : ∃ i : Fin (n - 1), jointAngle B i < jointAngle A i
+  fixed_chord : sDist (A 0) (A (Fin.last n)) = sDist (B 0) (B (Fin.last n))
 
 namespace CauchyArmClosingObstruction
 
 theorem contradiction (obs : CauchyArmClosingObstruction) : False :=
-  arm_lemma_forbids_strict_closing_with_fixed_chord obs.angles obs.newAngles
-    obs.chord obs.newChord obs.fixed_chord obs.closed
-    obs.some_angle_strictly_closed obs.convex_old_angles obs.arm_conclusion
+  ZinanFFCT112.cauchy_arm_fixed_chord_contradiction_uncond obs.hn obs.B obs.A obs.hB obs.hA
+    (fun i => (obs.equal_sides i).symm) obs.closed obs.some_angle_strictly_closed
+    obs.fixed_chord.symm
 
 end CauchyArmClosingObstruction
 

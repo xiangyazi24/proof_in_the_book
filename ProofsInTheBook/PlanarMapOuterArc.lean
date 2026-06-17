@@ -167,12 +167,24 @@ theorem deleteVertexMergedFaceSingleOrbit_of_fan_of_outerArc
     (fan : BoundaryVertexFan hNT v0) (hchord : BoundaryChordless hNT.outerCycle)
     {d0 : D} (htail0 : M.tail d0 = v0)
     (hdata : ∀ (r : {d : D // d ∉ M.deleteVertexSet d0}),
-      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 a b)
-        (_hp : (a, b) ∈ consecutivePairs fan.path), r.1 = T.d1) →
+      HeadFanTriangleEdge fan r →
       MergedOuterArcData M d0 r hNT.outerFace) :
     DeleteVertexMergedFaceSingleOrbit M d0 :=
   deleteVertexMergedFaceSingleOrbit_of_fan fan hchord htail0
     (fun r hr => (hdata r hr).mergedOuterArcReconnects)
+
+/-- **The merged-face single-orbit fact from the actual seam edge.**  The
+`MergedOuterArcData.exit_jump` equality must be stated at the concrete fan edge
+where the old outer arc enters the fan chain.  The fan-chain calculus then
+transports that entry point to the head reference internally. -/
+theorem deleteVertexMergedFaceSingleOrbit_of_fan_of_outerArc_edge
+    (fan : BoundaryVertexFan hNT v0) (hchord : BoundaryChordless hNT.outerCycle)
+    {d0 : D} (htail0 : M.tail d0 = v0)
+    (r : {d : D // d ∉ M.deleteVertexSet d0}) (hr : FanTriangleEdge fan r)
+    (data : MergedOuterArcData M d0 r hNT.outerFace) :
+    DeleteVertexMergedFaceSingleOrbit M d0 :=
+  deleteVertexMergedFaceSingleOrbit_of_fan_from_edge fan hchord htail0 r hr
+    data.mergedOuterArcReconnects
 
 /-! ## Assembly into the full reconstruction
 
@@ -187,8 +199,7 @@ noncomputable def DeletedMergedBoundaryCertificate.ofOuterArc
     (fan : BoundaryVertexFan hNT v0) (hchord : BoundaryChordless hNT.outerCycle)
     {d0 : D} (htail0 : M.tail d0 = v0)
     (hdata : ∀ (r : {d : D // d ∉ M.deleteVertexSet d0}),
-      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 a b)
-        (_hp : (a, b) ∈ consecutivePairs fan.path), r.1 = T.d1) →
+      HeadFanTriangleEdge fan r →
       MergedOuterArcData M d0 r hNT.outerFace)
     (boundary : DeletedOuterBoundary hNT d0) :
     DeletedMergedBoundaryCertificate hNT d0 where
@@ -205,8 +216,7 @@ noncomputable def deleteBoundaryVertex_nearTriangulation_of_outerArc
     (fan : BoundaryVertexFan hNT v0) (hchord : BoundaryChordless hNT.outerCycle)
     {d0 : D} (htail0 : M.tail d0 = v0)
     (hdata : ∀ (r : {d : D // d ∉ M.deleteVertexSet d0}),
-      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 a b)
-        (_hp : (a, b) ∈ consecutivePairs fan.path), r.1 = T.d1) →
+      HeadFanTriangleEdge fan r →
       MergedOuterArcData M d0 r hNT.outerFace)
     (boundary : DeletedOuterBoundary hNT d0) :
     NearTriangulation (M.deleteVertex d0) :=
@@ -218,8 +228,7 @@ theorem deleteBoundaryVertex_smaller_of_outerArc
     (fan : BoundaryVertexFan hNT v0) (hchord : BoundaryChordless hNT.outerCycle)
     {d0 : D} (htail0 : M.tail d0 = v0)
     (hdata : ∀ (r : {d : D // d ∉ M.deleteVertexSet d0}),
-      (∃ (a b : M.Vertex) (T : FanTriangle hNT v0 a b)
-        (_hp : (a, b) ∈ consecutivePairs fan.path), r.1 = T.d1) →
+      HeadFanTriangleEdge fan r →
       MergedOuterArcData M d0 r hNT.outerFace)
     (boundary : DeletedOuterBoundary hNT d0) :
     (M.deleteVertex d0).V = M.V - 1 :=

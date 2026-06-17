@@ -1,91 +1,50 @@
 # UNDERSTANDING.md — Proofs in the Book Formalization
+> **2026-06-14 SUPERSEDES the Ch13/Ch35 blocks below — see `AUDIT-2026-06-14.md`.** Ch13: spherical arm lemma FULLY proven (both halves, clean-3) + wired into chapter13; the OLD certificate is UNFAITHFUL (special-case, ChatGPT audit) — real residual = the `cauchy_marked_sphere_low_active_vertex` discrete combinatorial lemma. Ch35: the count/NumCyclesCutPhi2 residue is CLOSED clean-3 (this block is stale); real residual = `Side1SchoenfliesConfinementInput` discrete-Schoenflies bundle.
+
 
 ## Project overview
+
+**2026-06-09 — AUDIT + REROUTE session (supersedes the per-chapter blocks below for Ch13/Ch35).**
+Open chapters: **13, 35, 36** (37/40 closed). Branch `zinan-overnight` is canonical (superset of
+`main`). uisai1 offline; interim build server = uisai2 (see HANDOFF specs; git relays through the
+Mac because uisai2's GitHub connectivity is flaky).
+
+- **Ch13**: the overnight supporting-line route's core is **vacuous** — `PlanarWeakNoflatStrictEdge`
+  (FFCT8) is FALSE (kernel-anchored, two rational counterexamples in `ZinanFFCT10.lean`), and the
+  instance-level `WeakNonflatStrictCore.planar_interior` (FFCT7) is also false (numerically verified
+  with an explicit equal-sides strictly-convex companion `B`, β = 105°). Repair: corrected residue
+  `PlanarWeakNoflatStrictEdgeCore` (injectivity + first/last-edge collinearity exclusions, each
+  certified non-removable) is TRUE and fully designed — `HANDOFF/ffct12-assembly-spec.md`; bridges
+  landed in `ZinanFFCT12.lean`. Still open: the assembly (FFCT13), the corrected-core rewiring of
+  the FFCT7 consumers, and deriving the three new exclusions from the SZ-process invariants.
+- **Ch35**: **count-route pivot** — the `SeamDecomposition` data target is abandoned.
+  `ZinanCh35CountRoute.lean` (11 results, clean-3) reduces the chapter's topological side to ONE
+  residue: the actual-split count bound `concatLen Ls + 2 ≤ 2·card(actualSplitFinset C Ls) + 2·C.len`,
+  **conjecturally genus-free** (`ZinanCh35TorusAnchor.lean`: kernel-checked `F' − F = 2` on the
+  sphere AND the K₄ torus; `ZinanCh35F.lean`'s header claim that the count fails at genus 1 is wrong —
+  it conflated the seam-factorisation failure with a count failure). Attack design: run-decomposition
+  of each `faceCorr₂` cycle through the `cutCapPhi2_*` action lemmas. `EndpointCapLink` (the
+  connectivity side of `gateCompat'`) is a separate open residue, unchanged.
+- **Ch36**: unchanged — simple-polygon winding bound (Jordan kernel); the (B) campaign
+  (Homotopy.Lifting + Cauchy + ear-escape) is designed but not started.
+- **Meta (twice this session): do not build on header/doc claims without kernel anchors.** Both
+  blockers above hid behind a wrong recorded claim ("numerically verified" / "false at genus 1").
 
 Full-book formalization of *Proofs from THE BOOK* (Aigner & Ziegler) in Lean 4.
 40 chapters, each formalizing one "book proof."
 
-**2026-06-04 — Open-chapter campaign status (honest).**
-After Ch20 closed, the 6 remaining open chapters (09, 13, 22, 35, 36, 39) each
-reduce to a research-frontier core that codex (gpt-5.5) cannot grind and that
-must NOT be rushed (rushing produces degenerate/empty-type formalizations — see
-Ch39 below):
-- **Ch39 Kneser/Tucker**: `TuckerLemmaStatement` is the genuine signed Tucker
-  (faithful; kneser's `htucker` is legitimate). `Chapter39Tucker.lean` has a
-  SOUND, verified base (`495afd8`): pigeonhole (`exists_same_index_in_prefixChain`)
-  + `tuckerLemmaStatement_of_chain_complementary` (Tucker ⟸ some chain has a
-  same-index OPPOSITE-sign comparable pair). Remaining core = forcing opposite
-  signs (the global Ky Fan path/parity argument ≈ Borsuk-Ulam). Codex failed it
-  5 rounds; its earlier "endpoint-pairing" framework was DEGENERATE (the
-  alternating-prefix types are provably empty: `StrictMono (Fin n → Fin (n-1))`
-  is impossible) — reverted (`39fd2fe`). Needs the genuine path argument
-  (master-formalized or a stronger model).
-- **Ch09 Dehn**: gap = 3-D scissors-congruence invariance of the Dehn invariant
-  on real polytopes (algebraic value-inequality `chapter09` already done).
-- **Ch22 vdW permanent**: gap = Gurvits capacity / real-stable polynomials
-  (`Matrix.permanent` + Birkhoff available; the analytic core is not).
-- **Ch13 Cauchy**: 3-D convex-polytope rigidity / arm lemma.
-- **Ch35 five-color**: planar graph type + Euler ⟹ degree-≤5 vertex (no Mathlib
-  planarity).
-- **Ch36 art gallery**: simple-polygon triangulation existence (ear theorem).
-Each is a Ch20-scale-or-harder formalization requiring a correct master-designed
-strategy before codex can build sound (non-degenerate) infrastructure. The
-ChatGPT bridge backup (channel `ssem`) was offline this run.
+**Current status after Ch11 reduction work (2026-05-19):**
 
-**2026-06-04 — Ch20 Monsky CLOSED unconditionally.** `monsky_dissection`
-(`ProofsInTheBook/Chapter20DissectionFinal.lean`): no dissection of the unit
-square into an odd number of equal-area triangles, the genuine T-vertex-allowing
-theorem replacing the edge-to-edge `RealEqualAreaUnitSquareTriangulation` escape.
-`#print axioms monsky_dissection = [propext, Classical.choice, Quot.sound]`,
-0 sorry across the dissection chain (Engine, E2Frontier/Cover/Boundary/Diagonal,
-Dissection/Colors/AtomicCount/SideGeom/Sperner/Final). Built via a 9-round
-master/worker codex collaboration (geometric lemma infrastructure) + master-side
-proof design and the final incidence assembly. Open chapters now: 09, 13, 22, 35,
-36, 39.
-
-**CURRENT STATUS (2026-05-26 — supersedes the old Ch11-era block below).**
-Whole repo: 0 sorry / 0 axiom. ~32 chapters fully closed & unconditional
-(incl. Ch03, Ch10, Ch11 Ungar, Ch16 Borsuk-via-constructed-Kahn-Kalai, Ch24,
-Ch25 Buffon, Ch29, Ch31, Ch34, Ch37). The authoritative per-chapter status is
-the dated re-verification block at the TOP of `FORMALIZATION_AUDIT.md` —
-**read that first; the table just below here is historical.**
-
-**2026-05-27 INCREMENTAL PROGRESS (frontier-side, non-codex chapters)**:
-- **Ch20 Monsky**: measure-theoretic bridge landed
-  (`volume_convexHull_triangle = ENNReal.ofReal realTriangleArea`) via
-  Brick 1 (filled-2-simplex Fubini volume), Brick 2 (convex-hull = affine
-  image), Brick 3 (`addHaar_image_linearMap` glue). Frontier-input
-  packaged as `RealEqualAreaUnitSquareTriangulation α n` + `not_odd_size`
-  wrapper; concrete witnesses `diagonalSplit` (n=2) and `centerSplit`
-  (n=4, X-pattern with interior centroid vertex).
-- **Ch35 five-color**: small `FiveColorReducible` witnesses (`bot_pempty`,
-  `bot_finZero`, `bot_finOne`) exercising both inductive constructors.
-- **Ch36 art gallery**: concrete `TriangulatedPolygon` witnesses
-  (`unitTriangle`, `unitQuadrilateral`) exercising `.single` and `.glue`.
-- **TuckerLemmaCore** (codex's territory — minor): extracted
-  `topPrefixChainEndpointAntipode_fixedPointFree` helper.
-- **Library-wide lint**: 75 warnings cleared (Ch03, Ch11, Ch31).
-None of these advance the deep math frontier — the unproven walls below
-are unchanged — but they tighten the API surface and validate the
-hypothesis shape of each frontier theorem with concrete instances.
-
-Genuinely-open chapters (canonical endpoint still takes an escape hypothesis /
-is a fragment), each blocked on large missing Mathlib infrastructure:
-
-| Chapter | Escape / gap | Missing infra (the wall) |
-|---------|--------------|--------------------------|
-| Ch09 Dehn | `chapter09` algebraic, disconnected from geometry | 3-D dihedral geometry + scissors-congruence |
-| Ch13 Cauchy | `cert : CauchyRigidityCertificate` | 3-D convex polyhedron geometry + arm lemma |
-| Ch20 Monsky | `cert : MonskyCertificate` (2-adic+coloring+Sperner all built) | finite "square equidissection" object: interior edges even Sym2-mult / boundary odd + equal-area⟹doubleArea=±2/n. NARROW, finite/affine, no measure/topology. Best non-live target. |
-| Ch35 five-color | `hG : FiveColorReducible G` | planar graph type + Euler ⟹ degree-≤5 vertex |
-| Ch36 art gallery | `h : TriangulatedPolygon` | simple-polygon triangulation existence |
-| Ch22 VdW permanent | only n≤2 done | Gurvits capacity / real-stable polys — **LIVE codex** |
-| Ch39 Kneser | general takes `htucker` | Tucker/Borsuk-Ulam — **LIVE codex (TuckerLemmaCore.lean)** |
-
-No Mathlib/Archive shortcut exists for the non-live open chapters (checked
-2026-05-26 — Buffon was the only Wiedijk-100 match, now used).
-
---- historical (pre-2026-05-26) ---
+- 40 chapters compiled before the current Ch11 push; Ch11 is currently
+  remote single-file checked with no `sorry`/`admit` and no axioms. The Ungar
+  theorem still has a geometric rotating-sweep premise, now narrowed to a
+  concrete cyclic generalized allowable-sequence certificate.
+- Ch31 Cayley upper bound has been eliminated via Joyal's endofunction injection.
+- Ch34 Dinitz/Galvin premise has been eliminated via kernel-perfect orientation
+  and stable-matching kernels.
+- Ch33 Hall's condition premise eliminated.
+- Ch03 Sylvester-Schur premise eliminated; `sylvester_general` now proves the binomial coefficient form directly from `2 * k ≤ n` and `0 < k`.
+- Next target: Ch11 rotating calipers / slopes count.
 
 ## Premises to eliminate (from TODO.md)
 
@@ -95,10 +54,10 @@ No Mathlib/Archive shortcut exists for the non-live open chapters (checked
 | Ch03 | Sylvester smoothness | Medium-Hard | ✅ DONE |
 | Ch31 | Joyal/Cayley upper bound | Medium | ✅ DONE |
 | Ch34 | Kernel-perfect extension | Medium-Hard | ✅ DONE |
-| Ch11 | Rotating calipers | Medium | ✅ DONE (CyclicEndGap closed 05-25) |
-| Ch09 | arccos(1/3) irrationality | Hard | ⬜ (algebraic core done) |
-| Ch10 | Gallai geometry | Hard | ✅ DONE (05-24) |
-| Ch39 | Kneser lower bound | Very Hard | ⬜ LIVE |
+| Ch11 | Rotating calipers | Medium | ⬜ |
+| Ch09 | arccos(1/3) irrationality | Hard | ⬜ |
+| Ch10 | Gallai geometry | Hard | ⬜ |
+| Ch39 | Kneser lower bound | Very Hard | ⬜ |
 
 ## Ch33 — Hall's condition (DONE)
 
@@ -447,3 +406,63 @@ c660f88 TODO: mark Ch33 premise as done
 81088fa Chapter33: PROVE Hall condition internally — 1st premise eliminated
 c2322c1 add TODO.md (8 premises to prove) + update UNDERSTANDING.md
 ```
+
+## Chapter 35 (five-color theorem) — architecture map (2026-06-16)
+
+**Headline (PROVEN, conditional):** `ZinanCh35Final.fiveColor_planar_of_recursionResiduals` —
+every near-triangulation is 5-colorable GIVEN `Ch35RecursionResiduals` = a `ChordRecursionInputSupplier`
++ a `ChordlessOracleResidual`. Recursion driver `ChordSplitNT.thomassen_aux_chordRecursive` is PROVEN
+(well-foundedness handled). All discrete-Schoenflies geometry + chord-split structure is unconditional.
+
+**Discrete-Schoenflies CORE — DONE (clean-3):** OuterTraceInjOn (`canonical_OuterTraceInjOn_uncond`),
+both ContiguousIntervals (`contiguousInterval₁/₂_direct_canonical_uncond`), both side `outer_simple`,
+`side₂IsDisk_unconditional`, separation, `outerDartArc₁_uncond`, canonical anchors, region pinning.
+Edge separation CLOSED: `ZinanCh35Regions.chordSplitRegionsResidue_of_precolored` produces
+`cover` + `edge_confined` unconditionally (`cover_holds`/`edge_confined_holds`), inputs only the
+precolored placement `p,q ∈ sideRegion₁` (genuine recursion fuel). Side-NT surgery EXISTS:
+`ChordSideNT` proves `NearTriangulation (sideMap₁)` from the predicate.
+
+**Recursion wiring landed (clean-3):** `canonicalSide₁InputsNoConf_of_fuel`,
+`canonicalSide₂InputsNoConf_reversed_of_fuel` (ZinanCh35OuterTraceProof.lean) build the
+`ChordBranch.Side₁/₂InputsNoConf` at canonical anchors, only ThomassenLists fuel (pₛ/qₛ/cpₛ/cqₛ/hLₛ)
+remaining. §3.3 finding: `ChordBranchResidualData.side₁/side₂` had an OVER-STRONG `∀-anchors`
+quantification; sole consumer `chordBranchResidue_of_residualData` only uses selected anchors₁/₂ —
+weakened to selected anchors (PHASE A1, codex).
+
+**REMAINING for unconditional `chapter35`:**
+- A2: `canonicalChordBranchResidualData_of_fuel` — blocked on side-2 endpoint ORDER. Canonical side-2
+  anchors realize (v,u); `Side₂InputsNoConf` swap is NOT field-symmetric (bundles ci+hLₛ over a
+  different sideMap/NT). Need either swapped-order canonical CI₂ or pick anchors realizing (u,v).
+- (b) Pullback ThomassenLists to side maps (Lₛ/pₛ/qₛ/cpₛ/cqₛ) + assemble `ChordRecursionInputSupplier`.
+  Side NTs exist (ChordSideNT); this is list-pullback bookkeeping, not re-proving Thomassen.
+- (c) `ChordlessOracleResidual` — Thomassen's chordless branch (`ChordlessOracle` producer); the
+  other induction case (fan list-coloring + w-deletion surgery). `ZinanCh35ChordlessOracle` has 2 sorry;
+  `fanIncidenceData_sigma_derived` landed. Less developed than chord branch.
+
+**Build:** uisai2 isolated `~/repos/pbook-ch35`. Single-file `lake env lean` for leaf edits; for
+STRUCTURE changes use full `lake build <module>` (single-file typechecks against stale olean = false green).
+Helper `/tmp/ch35-codex-build-multi.sh <module>`.
+
+## Chapter 35 — CRITICAL §3.3 vacuity finding (2026-06-16)
+
+**The existing conditional headline `fiveColor_planar_of_recursionResiduals` / `fiveColor_of_branchSuppliers`
+is VACUOUS on the chordless side: `ChordRecursiveDichotomy` is UNINHABITABLE.**
+
+Verified (type-level + no unconditional inhabitant in 44k lines):
+- `ChordRecursiveDichotomy.decide` (ChordSplitNT.lean) is TOTAL over all NT — NO `3 < M.V` guard.
+- Driver `thomassen_aux_chordRecursive` handles M.V=3 via `base_case` and only calls `decide` in the
+  `3 < M.V` branch — but `decide`'s TYPE still demands totality.
+- Base triangle (M.V=3): chordless + satisfies ThomassenLists ⟹ `decide` must return `ChordlessOracle`
+  (left summand `ChordRecursionData` needs a chord the base triangle lacks).
+- `ChordlessOracle` needs `FanSurgeryReconstruction` which REQUIRES `3 < M.V` (PlanarMapFanSurgery:382,
+  FanExistence:439; deletion→NT producer PlanarMapNearTriangulation:384 returns `… ×' (1 ≤ fan.t)`).
+- ⟹ `decide` undefinable at M.V=3 ⟹ `ChordRecursiveDichotomy` uninhabitable ⟹ headline vacuous.
+
+NOT introduced by this session — latent architecture hole (0 sorry but unsatisfiable condition).
+Chord-side geometry (OuterTraceInjOn, both CIs, iso, canonicalChordBranchResidualData) is UNAFFECTED
+(ChordBranchSupplier guarded by `∃chord`, base triangle has none).
+
+**FIX**: add `3 < M.V` (or `¬IsBaseTriangle`) to `ChordRecursiveDichotomy.decide`; thread through
+`chordRecursiveDichotomy_of_suppliers` → `ChordlessBranchSupplier.supply` / `ChordlessOracleResidual.supply`.
+Driver call site is inside its `3 < M.V` branch (has `hV` in scope) → just pass it. Chord side unchanged.
+Only after this guard is the chordless residual satisfiable → PHASE C (DeletedSeamData) becomes meaningful.

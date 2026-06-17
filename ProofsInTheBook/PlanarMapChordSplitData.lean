@@ -59,11 +59,43 @@ variable {u v : M.Vertex} (h : hNT.outerCycle.Chord u v)
 
 /-- A dart realizing the chord edge `s(u, v)` in the ambient map. -/
 noncomputable def chordDart : D :=
-  (h.adj.2).choose
+  let c₀ := (h.adj.2).choose
+  if M.tail c₀ = u then c₀ else M.α c₀
 
 /-- The chosen chord dart has unoriented endpoints `s(u, v)`. -/
-lemma chordDart_edge : M.dartEdge (hNT.chordDart h) = s(u, v) :=
-  (h.adj.2).choose_spec
+lemma chordDart_edge : M.dartEdge (hNT.chordDart h) = s(u, v) := by
+  classical
+  let c₀ := (h.adj.2).choose
+  have hedge : M.dartEdge c₀ = s(u, v) := (h.adj.2).choose_spec
+  by_cases htail : M.tail c₀ = u
+  · simp [chordDart, c₀, htail, hedge]
+  · simp [chordDart, c₀, htail, M.dartEdge_alpha, hedge]
+
+/-- The chosen chord dart is oriented from the first endpoint to the second. -/
+lemma chordDart_tail : M.tail (hNT.chordDart h) = u := by
+  classical
+  let c₀ := (h.adj.2).choose
+  have hedge : M.dartEdge c₀ = s(u, v) := (h.adj.2).choose_spec
+  have hxy : s(M.tail c₀, M.head c₀) = s(u, v) := hedge
+  rcases Sym2.eq_iff.mp hxy with ⟨ht, hh⟩ | ⟨ht, hh⟩
+  · simp [chordDart, c₀, ht]
+  · have htail_ne : M.tail c₀ ≠ u := by
+      intro htu
+      exact h.endpoints_ne ((ht.symm.trans htu).symm)
+    simp [chordDart, c₀, htail_ne, M.tail_alpha, hh]
+
+/-- The chosen chord dart is oriented from the first endpoint to the second. -/
+lemma chordDart_head : M.head (hNT.chordDart h) = v := by
+  classical
+  let c₀ := (h.adj.2).choose
+  have hedge : M.dartEdge c₀ = s(u, v) := (h.adj.2).choose_spec
+  have hxy : s(M.tail c₀, M.head c₀) = s(u, v) := hedge
+  rcases Sym2.eq_iff.mp hxy with ⟨ht, hh⟩ | ⟨ht, hh⟩
+  · simp [chordDart, c₀, ht, hh]
+  · have htail_ne : M.tail c₀ ≠ u := by
+      intro htu
+      exact h.endpoints_ne ((ht.symm.trans htu).symm)
+    simp [chordDart, c₀, ht, h.endpoints_ne.symm, M.head_alpha]
 
 /-- The chord's `α`-image dart has the same unoriented endpoints. -/
 lemma chordDart_alpha_edge : M.dartEdge (M.α (hNT.chordDart h)) = s(u, v) := by

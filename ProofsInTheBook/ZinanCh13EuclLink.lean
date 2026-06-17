@@ -1,6 +1,7 @@
 import ProofsInTheBook.ZinanCh13Euclidean
 import ProofsInTheBook.Ch13VertexStar
 import ProofsInTheBook.Ch13Realization
+import Mathlib.Data.Fin.Rev
 
 /-!
 # Chapter 13 Euclidean vertex links
@@ -136,7 +137,8 @@ structure OrientedTriangleSupport (P : TriangulatedEuclideanPolyhedron M)
       inner ℝ normal (P.pos w - P.pos v) = 0 ↔ (w = v ∨ w = a ∨ w = b)
 
 /--
-Local vertex-link geometry in σ order.  The determinant and hemisphere fields of
+Local vertex-link geometry in the outward-normal orientation, i.e. the reverse
+of the map's `σ` order at the vertex.  The determinant and hemisphere fields of
 `VertexStar` are derived from the oriented triangle supports below.
 -/
 structure VertexLinkGeometry (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex) where
@@ -148,7 +150,7 @@ structure VertexLinkGeometry (P : TriangulatedEuclideanPolyhedron M) (v : M.Vert
       ∀ i : Fin (n + 1),
         nbr i =
           M.head (incidentDartOfStarIndex P v hdeg
-            (Fin.cast (by rw [← e]) i))
+            (Fin.rev (Fin.cast (by rw [← e]) i)))
   oriented : ∀ i : Fin (n + 1), OrientedTriangleSupport P v (nbr i) (nbr (i + 1))
   nbr_apex_ne : ∀ i : Fin (n + 1), P.pos (nbr i) ≠ P.pos v
   nonincident :
@@ -334,6 +336,19 @@ stated; the reversed cyclic order would have the positive sign.
 theorem tetra_sigma_order_det_negative (d : Fin 12) :
     ProofsInTheBook.SphericalKernel.det3
       (tetraSigmaVec d 0) (tetraSigmaVec d 1) (tetraSigmaVec d 2) = (-16 : ℝ) := by
+  fin_cases d <;>
+    norm_num [tetraSigmaVec, tetraSigmaDart, tetraMap_sigma_toList, tetraSigma_toList,
+      tetraEuclideanPolyhedron, tetraPos, tetraDartPoint, tetraMap, CombMap.tail, CombMap.head,
+      tetraPoint₀, tetraPoint₁, tetraPoint₂, tetraPoint₃,
+      Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.cons_val_two, Matrix.head_cons,
+      Matrix.tail_cons,
+      ProofsInTheBook.SphericalKernel.det3]
+
+/-- The reversed `σ` order has the positive determinant required by `VertexStar`. -/
+theorem tetra_sigma_reverse_order_det_positive (d : Fin 12) :
+    ProofsInTheBook.SphericalKernel.det3
+      (tetraSigmaVec d (Fin.rev 0)) (tetraSigmaVec d (Fin.rev 1))
+      (tetraSigmaVec d (Fin.rev 2)) = (16 : ℝ) := by
   fin_cases d <;>
     norm_num [tetraSigmaVec, tetraSigmaDart, tetraMap_sigma_toList, tetraSigma_toList,
       tetraEuclideanPolyhedron, tetraPos, tetraDartPoint, tetraMap, CombMap.tail, CombMap.head,

@@ -32,6 +32,77 @@ namespace ProofsInTheBook.Ch13EuclLink
 variable {D : Type*} [Fintype D] [DecidableEq D]
 variable {M : CombMap D}
 
+private lemma prev_mod_succ_mod {N k : ℕ} (hN : 0 < N) (hk : k < N) :
+    (((k + N - 1) % N + 1) % N) = k := by
+  by_cases hk0 : k = 0
+  · subst hk0
+    have hNm1 : (N - 1) % N = N - 1 := Nat.mod_eq_of_lt (Nat.sub_lt hN Nat.zero_lt_one)
+    rw [zero_add, hNm1]
+    have hN' : N - 1 + 1 = N := Nat.sub_add_cancel (Nat.succ_le_of_lt hN)
+    rw [hN', Nat.mod_self]
+  · have hkpos : 0 < k := Nat.pos_of_ne_zero hk0
+    have hsplit : k + N - 1 = (k - 1) + N := by omega
+    rw [hsplit, Nat.add_mod_right]
+    have hkpred : k - 1 < N := by omega
+    rw [Nat.mod_eq_of_lt hkpred]
+    have hks : k - 1 + 1 = k := Nat.sub_add_cancel hkpos
+    rw [hks, Nat.mod_eq_of_lt hk]
+
+private def finOneOfThree {N : ℕ} (hN : 3 ≤ N) : Fin N :=
+  ⟨1, by omega⟩
+
+private lemma rev_add_one_rev_val {N : ℕ} (hN : 3 ≤ N) (i : Fin N) :
+    ((Fin.rev (Fin.rev i + finOneOfThree hN) : Fin N) : ℕ) =
+      (i.val + N - 1) % N := by
+  rw [Fin.val_rev, Fin.val_add, Fin.val_rev]
+  simp only [finOneOfThree, Fin.val_mk]
+  by_cases hi0 : i.val = 0
+  · rw [hi0]
+    have hinner : (N - (0 + 1) + 1) % N = 0 := by
+      have hNpos : 0 < N := by omega
+      have heq : N - (0 + 1) + 1 = N := by omega
+      rw [heq, Nat.mod_self]
+    rw [hinner]
+    have hrhs : (0 + N - 1) % N = N - 1 := by
+      rw [zero_add, Nat.mod_eq_of_lt (by omega)]
+    rw [hrhs]
+  · have hipos : 0 < i.val := Nat.pos_of_ne_zero hi0
+    have hinner : (N - (i.val + 1) + 1) % N = N - i.val := by
+      have heq : N - (i.val + 1) + 1 = N - i.val := by omega
+      rw [heq, Nat.mod_eq_of_lt (by omega)]
+    have hrhs : (i.val + N - 1) % N = i.val - 1 := by
+      have heq : i.val + N - 1 = (i.val - 1) + N := by omega
+      rw [heq, Nat.add_mod_right, Nat.mod_eq_of_lt (by omega)]
+    rw [hinner, hrhs]
+    omega
+
+private lemma rev_sub_one_rev_val {N : ℕ} (hN : 3 ≤ N) (i : Fin N) :
+    ((Fin.rev (Fin.rev i - finOneOfThree hN) : Fin N) : ℕ) =
+      (i.val + 1) % N := by
+  rw [Fin.val_rev, Fin.sub_def, Fin.val_rev]
+  simp only [finOneOfThree, Fin.val_mk]
+  have hinner : (N - 1 + (N - (i.val + 1))) % N =
+      (N - (i.val + 1) + (N - 1)) % N := by
+    rw [Nat.add_comm]
+  rw [hinner]
+  by_cases hilast : i.val + 1 = N
+  · have hi : i.val = N - 1 := by omega
+    rw [hi]
+    have hmod : (N - (N - 1 + 1) + (N - 1)) % N = N - 1 := by
+      have heq : N - (N - 1 + 1) + (N - 1) = N - 1 := by omega
+      rw [heq, Nat.mod_eq_of_lt (by omega)]
+    rw [hmod]
+    rw [show (N - 1 + 1) % N = 0 by rw [Nat.sub_add_cancel (by omega), Nat.mod_self]]
+    omega
+  · have hi1lt : i.val + 1 < N := by omega
+    have hmod1 : (N - (i.val + 1) + (N - 1)) % N = N - (i.val + 2) := by
+      have hsum : N - (i.val + 1) + (N - 1) = (N - (i.val + 2)) + N := by omega
+      rw [hsum, Nat.add_mod_right, Nat.mod_eq_of_lt (by omega)]
+    rw [hmod1]
+    have htarget : (i.val + 1) % N = i.val + 1 := Nat.mod_eq_of_lt hi1lt
+    rw [htarget]
+    omega
+
 /-! ## Part 1: σ-ordered incident darts and candidate neighbour data -/
 
 /-- The incident darts at a vertex, rooted at `Quotient.out v` and ordered by `σ`. -/
@@ -118,6 +189,183 @@ theorem incidentDartOfStarIndex_reverseStarIndexOfDart
   unfold reverseStarIndexOfDart incidentDartOfStarIndex starIndexToDeg
   simpa [Fin.rev_rev, Fin.cast_trans, Fin.cast_eq_self] using
     incidentDart_incidentIndexOfDart P v d hd
+
+/-- The cyclic step `1` in the eventual vertex-star index type. -/
+def starOne (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) : Fin (starN P v + 1) :=
+  ⟨1, by
+    unfold starN
+    omega⟩
+
+theorem incidentDartOfStarIndex_reverseStarIndexOfDart_add_one
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (d : D) (hd : d ∈ incidentDarts P v) :
+    incidentDartOfStarIndex P v hdeg
+      (Fin.rev (reverseStarIndexOfDart P v hdeg d hd + starOne P v hdeg)) = M.σ.symm d := by
+  set root : D := Quotient.out v
+  set L : List D := incidentDarts P v
+  set N : ℕ := vDeg P v
+  set k : ℕ := L.idxOf d
+  have hL : L = M.σ.toList root := by
+    simp [L, incidentDarts, root]
+  have hN : N = L.length := by
+    simp [N, vDeg, L]
+  have hNpos : 0 < N := by
+    have := hdeg
+    omega
+  have hklt : k < N := by
+    rw [hN]
+    exact List.idxOf_lt_length_iff.mpr (by simpa [L] using hd)
+  have hroot_support : root ∈ M.σ.support := by
+    have hmem : d ∈ M.σ.toList root := by simpa [hL] using (by simpa [L] using hd)
+    exact (Equiv.Perm.mem_toList_iff.mp hmem).2
+  have hcard : (M.σ.cycleOf root).support.card = N := by
+    rw [← Equiv.Perm.length_toList M.σ root, ← hL, hN]
+  have hd_pow : d = (M.σ ^ k) root := by
+    have hkltL : k < L.length := by rwa [← hN]
+    have hget_idx : L.get ⟨k, hkltL⟩ = d := by
+      simpa [k] using List.idxOf_get hkltL
+    have hget_pow :
+        L.get ⟨k, hkltL⟩ = (M.σ ^ k) root := by
+      simpa [hL] using Equiv.Perm.getElem_toList M.σ root k (by simpa [hL] using hkltL)
+    exact hget_idx.symm.trans hget_pow
+  apply M.σ.injective
+  rw [Equiv.apply_symm_apply]
+  unfold incidentDartOfStarIndex incidentDart starIndexToDeg reverseStarIndexOfDart
+  set j : Fin N := incidentIndexOfDart P v d hd
+  have hjval : j.val = k := by
+    simp [j, incidentIndexOfDart, k, L]
+  have hN3 : 3 ≤ N := hdeg
+  have hval :
+      ((starIndexToDeg P v hdeg
+        (Fin.rev (Fin.rev (Fin.cast (starN_add_one_eq_vDeg P v hdeg).symm j)
+          + starOne P v hdeg))) : ℕ) = (k + N - 1) % N := by
+    unfold starIndexToDeg starOne
+    have hrev :
+        (((Fin.rev (Fin.rev (Fin.cast (starN_add_one_eq_vDeg P v hdeg).symm j)
+          + ⟨1, by unfold starN; omega⟩)) :
+            Fin (starN P v + 1)) : ℕ)
+          =
+        (((Fin.cast (starN_add_one_eq_vDeg P v hdeg).symm j).val + (starN P v + 1) - 1)
+          % (starN P v + 1)) :=
+      rev_add_one_rev_val (by unfold starN; omega)
+        (Fin.cast (starN_add_one_eq_vDeg P v hdeg).symm j)
+    rw [hrev]
+    simp [hjval, starN_add_one_eq_vDeg P v hdeg, N]
+  have hget :
+      (incidentDarts P v).get
+        (starIndexToDeg P v hdeg
+          (Fin.rev (Fin.rev (Fin.cast (starN_add_one_eq_vDeg P v hdeg).symm j)
+            + starOne P v hdeg))) =
+        (M.σ ^ ((k + N - 1) % N)) root := by
+    have hget0 := Equiv.Perm.getElem_toList M.σ root
+      ((starIndexToDeg P v hdeg
+        (Fin.rev (Fin.rev (Fin.cast (starN_add_one_eq_vDeg P v hdeg).symm j)
+          + starOne P v hdeg))) : ℕ)
+      (by
+        have hlt := (starIndexToDeg P v hdeg
+          (Fin.rev (Fin.rev (Fin.cast (starN_add_one_eq_vDeg P v hdeg).symm j)
+            + starOne P v hdeg))).2
+        have hlenTo : (M.σ.toList root).length = vDeg P v := by
+          rw [← hL]
+          simp [vDeg, L]
+        simpa [hlenTo] using hlt)
+    simpa [hL, hval] using hget0
+  change M.σ ((incidentDarts P v).get
+    (starIndexToDeg P v hdeg
+      (Fin.rev (Fin.rev (Fin.cast (starN_add_one_eq_vDeg P v hdeg).symm j)
+        + starOne P v hdeg)))) = d
+  rw [hget]
+  change ((M.σ * (M.σ ^ ((k + N - 1) % N))) root) = d
+  rw [← pow_succ']
+  have hmod : (((k + N - 1) % N + 1) % (M.σ.cycleOf root).support.card) = k := by
+    rw [hcard]
+    exact prev_mod_succ_mod hNpos hklt
+  calc
+    (M.σ ^ (((k + N - 1) % N) + 1)) root
+        = (M.σ ^ ((((k + N - 1) % N) + 1) % (M.σ.cycleOf root).support.card)) root := by
+            rw [Equiv.Perm.pow_mod_card_support_cycleOf_self_apply]
+    _ = (M.σ ^ k) root := by rw [hmod]
+    _ = d := hd_pow.symm
+
+theorem incidentDartOfStarIndex_reverseStarIndexOfDart_sub_one
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (d : D) (hd : d ∈ incidentDarts P v) :
+    incidentDartOfStarIndex P v hdeg
+      (Fin.rev (reverseStarIndexOfDart P v hdeg d hd - starOne P v hdeg)) = M.σ d := by
+  set root : D := Quotient.out v
+  set L : List D := incidentDarts P v
+  set N : ℕ := vDeg P v
+  set k : ℕ := L.idxOf d
+  have hL : L = M.σ.toList root := by
+    simp [L, incidentDarts, root]
+  have hN : N = L.length := by
+    simp [N, vDeg, L]
+  have hklt : k < N := by
+    rw [hN]
+    exact List.idxOf_lt_length_iff.mpr (by simpa [L] using hd)
+  have hcard : (M.σ.cycleOf root).support.card = N := by
+    rw [← Equiv.Perm.length_toList M.σ root, ← hL, hN]
+  have hd_pow : d = (M.σ ^ k) root := by
+    have hkltL : k < L.length := by rwa [← hN]
+    have hget_idx : L.get ⟨k, hkltL⟩ = d := by
+      simpa [k] using List.idxOf_get hkltL
+    have hget_pow :
+        L.get ⟨k, hkltL⟩ = (M.σ ^ k) root := by
+      simpa [hL] using Equiv.Perm.getElem_toList M.σ root k (by simpa [hL] using hkltL)
+    exact hget_idx.symm.trans hget_pow
+  unfold incidentDartOfStarIndex incidentDart starIndexToDeg reverseStarIndexOfDart
+  set j : Fin N := incidentIndexOfDart P v d hd
+  have hjval : j.val = k := by
+    simp [j, incidentIndexOfDart, k, L]
+  have hval :
+      ((starIndexToDeg P v hdeg
+        (Fin.rev (Fin.rev (Fin.cast (starN_add_one_eq_vDeg P v hdeg).symm j)
+          - starOne P v hdeg))) : ℕ) = (k + 1) % N := by
+    unfold starIndexToDeg starOne
+    have hrev :
+        (((Fin.rev (Fin.rev (Fin.cast (starN_add_one_eq_vDeg P v hdeg).symm j)
+          - ⟨1, by unfold starN; omega⟩)) :
+            Fin (starN P v + 1)) : ℕ)
+          =
+        (((Fin.cast (starN_add_one_eq_vDeg P v hdeg).symm j).val + 1)
+          % (starN P v + 1)) :=
+      rev_sub_one_rev_val (by unfold starN; omega)
+        (Fin.cast (starN_add_one_eq_vDeg P v hdeg).symm j)
+    rw [hrev]
+    simp [hjval, starN_add_one_eq_vDeg P v hdeg, N]
+  have hget :
+      (incidentDarts P v).get
+        (starIndexToDeg P v hdeg
+          (Fin.rev (Fin.rev (Fin.cast (starN_add_one_eq_vDeg P v hdeg).symm j)
+            - starOne P v hdeg))) =
+        (M.σ ^ ((k + 1) % N)) root := by
+    have hget0 := Equiv.Perm.getElem_toList M.σ root
+      ((starIndexToDeg P v hdeg
+        (Fin.rev (Fin.rev (Fin.cast (starN_add_one_eq_vDeg P v hdeg).symm j)
+          - starOne P v hdeg))) : ℕ)
+      (by
+        have hlt := (starIndexToDeg P v hdeg
+          (Fin.rev (Fin.rev (Fin.cast (starN_add_one_eq_vDeg P v hdeg).symm j)
+            - starOne P v hdeg))).2
+        have hlenTo : (M.σ.toList root).length = vDeg P v := by
+          rw [← hL]
+          simp [vDeg, L]
+        simpa [hlenTo] using hlt)
+    simpa [hL, hval] using hget0
+  change (incidentDarts P v).get
+    (starIndexToDeg P v hdeg
+      (Fin.rev (Fin.rev (Fin.cast (starN_add_one_eq_vDeg P v hdeg).symm j)
+        - starOne P v hdeg))) = M.σ d
+  rw [hget]
+  calc
+    (M.σ ^ ((k + 1) % N)) root
+        = (M.σ ^ ((k + 1) % (M.σ.cycleOf root).support.card)) root := by rw [hcard]
+    _ = (M.σ ^ (k + 1)) root := by
+          rw [Equiv.Perm.pow_mod_card_support_cycleOf_self_apply]
+    _ = M.σ d := by
+          rw [hd_pow]
+          rw [pow_succ', Equiv.Perm.coe_mul, Function.comp_apply]
 
 /-- Candidate neighbour point in the `σ`-ordered Euclidean vertex link. -/
 def linkPoint (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
@@ -744,6 +992,8 @@ end ProofsInTheBook.Ch13EuclLink
 
 #print axioms ProofsInTheBook.Ch13EuclLink.vertexStarOfEuclidean
 #print axioms ProofsInTheBook.Ch13EuclLink.incidentDartOfStarIndex_reverseStarIndexOfDart
+#print axioms ProofsInTheBook.Ch13EuclLink.incidentDartOfStarIndex_reverseStarIndexOfDart_add_one
+#print axioms ProofsInTheBook.Ch13EuclLink.incidentDartOfStarIndex_reverseStarIndexOfDart_sub_one
 #print axioms ProofsInTheBook.Ch13EuclLink.tetra_vDeg
 #print axioms ProofsInTheBook.Ch13EuclLink.tetraVertexLinkGeometry
 #print axioms ProofsInTheBook.Ch13EuclLink.tetraVertexStar

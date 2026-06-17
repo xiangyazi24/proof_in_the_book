@@ -1,5 +1,6 @@
 import ProofsInTheBook.ZinanCh13EuclLink
 import ProofsInTheBook.SphericalCongruence
+import ProofsInTheBook.Ch13ArmVertexFull
 
 /-!
 # Chapter 13 spherical link angles and dihedral angles
@@ -15,6 +16,7 @@ open scoped Classical RealInnerProductSpace
 open ProofsInTheBook.PlanarMap ProofsInTheBook.PlanarMap.CombMap
 open ProofsInTheBook.Ch13Euclidean
 open ProofsInTheBook.Ch13VertexStar
+open ProofsInTheBook.Ch13ArmVertexFull (linkAngle)
 open ProofsInTheBook.SphericalKernel (S2 tangentTo tangentTo_eq jointAngle sphAngle)
 open ProofsInTheBook.SphericalRotation
 
@@ -541,6 +543,38 @@ theorem jointAngle_vertexLink_eq_pi_sub_normal_angle
     (S.edgeDir (S.jIdx0 i)).2 (S.edgeDir (S.jIdx1 i)).2 (S.edgeDir (S.jIdx2 i)).2
     hta htc hX hY horient
 
+theorem linkAngle_vertexLink_eq_pi_sub_normal_angle
+    (S : VertexStar) (i : Fin (S.n + 1)) {n_f n_g : E3}
+    (hta :
+      tangentToVec (S.edgeDir i : E3) (S.edgeDir (i - 1) : E3) ≠ 0)
+    (htc :
+      tangentToVec (S.edgeDir i : E3) (S.edgeDir (i + 1) : E3) ≠ 0)
+    (hX : cross (S.edgeDir (i - 1) : E3) (S.edgeDir i : E3) ≠ 0)
+    (hY : cross (S.edgeDir i : E3) (S.edgeDir (i + 1) : E3) ≠ 0)
+    (horient :
+      ∃ l m : ℝ,
+        0 < l ∧ 0 < m ∧
+          ((n_f = l • cross (S.edgeDir (i - 1) : E3) (S.edgeDir i : E3) ∧
+              n_g = m • cross (S.edgeDir i : E3) (S.edgeDir (i + 1) : E3)) ∨
+           (n_f = l • (-(cross (S.edgeDir (i - 1) : E3) (S.edgeDir i : E3))) ∧
+              n_g = m • (-(cross (S.edgeDir i : E3) (S.edgeDir (i + 1) : E3)))))) :
+    linkAngle S.vertexLink i = Real.pi - InnerProductGeometry.angle n_f n_g := by
+  rw [linkAngle]
+  simp only [VertexStar.vertexLink_apply]
+  rw [sphAngle]
+  show InnerProductGeometry.angle
+      (tangentTo (S.edgeDir i) (S.edgeDir (i - 1)))
+      (tangentTo (S.edgeDir i) (S.edgeDir (i + 1)))
+        = Real.pi - InnerProductGeometry.angle n_f n_g
+  rw [tangentTo_eq_tangentToVec, tangentTo_eq_tangentToVec]
+  exact sphAngle_eq_pi_sub_normal_angle
+    (a := (S.edgeDir (i - 1) : E3))
+    (b := (S.edgeDir i : E3))
+    (c := (S.edgeDir (i + 1) : E3))
+    (n_f := n_f) (n_g := n_g)
+    (S.edgeDir (i - 1)).2 (S.edgeDir i).2 (S.edgeDir (i + 1)).2
+    hta htc hX hY horient
+
 theorem tangent_angle_eq_dihedralAngleAtDart_of_oriented
     {D : Type*} [Fintype D] [DecidableEq D] {M : CombMap D}
     (P : TriangulatedEuclideanPolyhedron M) (d : D) {a b c : E3}
@@ -564,6 +598,7 @@ theorem tangent_angle_eq_dihedralAngleAtDart_of_oriented
 
 #print axioms ProofsInTheBook.Ch13SphAngle.sphAngle_eq_pi_sub_normal_angle
 #print axioms ProofsInTheBook.Ch13SphAngle.jointAngle_vertexLink_eq_pi_sub_normal_angle
+#print axioms ProofsInTheBook.Ch13SphAngle.linkAngle_vertexLink_eq_pi_sub_normal_angle
 #print axioms ProofsInTheBook.Ch13SphAngle.tangent_angle_eq_dihedralAngleAtDart_of_oriented
 #print axioms ProofsInTheBook.Ch13SphAngle.perp_two_imp_parallel_cross
 #print axioms ProofsInTheBook.Ch13SphAngle.outward_normal_parallel_faceDart_cross

@@ -209,3 +209,12 @@ headlines with *_unconditional dischargers (ch22 Gurvits, ch33 Evans→ryser_hyp
 ch39 Tucker→tuckerLemma_pos). Full per-chapter verdicts in AUDIT-sweep-2026-06-17.md.
 CONCLUSION: the §3.3 vacuities in proof_in_the_book were CONFINED to ch35 + ch13 — both fixed this run.
 The entire repo's chapter headlines are now certified vacuity-free.
+
+### Avenue (b) ch13-ℝ³ — bounded foundation done; HOLDING at b3 gate (2026-06-17)
+- b1 DONE (11c41e9): TriangulatedEuclideanPolyhedron + real-ℝ³ tetrahedron instance, clean-3.
+- b2 DONE (a2fbb9b): dihedralAngleAtDart + cos value + dihedralSignAtDart (EdgeSign bridge), clean-3.
+- b3 (vertex-link↔combinatorial-order bridge) = HARD GATE / multi-session ℝ³ campaign core. HOLDING for
+  Xiang's strategic call (push full ℝ³ build b3-b5, or consolidate). b3-b5 are not bounded (scope:
+  AUDIT-ch13-r3). Not committing the run to a multi-session geometry build without his nod.
+- OVERNIGHT RUN RESULT (complete, major): ch35 UNCONDITIONAL + ch13 non-vacuous + repo §3.3-clean
+  (sweep NONE) + ch13-ℝ³ foundations (b1,b2). All on origin/zinan-overnight (NOT merged to main).

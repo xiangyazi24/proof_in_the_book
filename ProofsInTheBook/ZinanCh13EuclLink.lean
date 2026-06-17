@@ -1,6 +1,7 @@
 import ProofsInTheBook.ZinanCh13Euclidean
 import ProofsInTheBook.Ch13VertexStar
 import ProofsInTheBook.Ch13Realization
+import ProofsInTheBook.SphericalRotation
 import Mathlib.Data.Fin.Rev
 
 /-!
@@ -17,13 +18,14 @@ strict vertex-cone convexity predicates are derived from `VertexLinkGeometry`.
 
 noncomputable section
 
-set_option maxHeartbeats 800000
+set_option maxHeartbeats 3000000
 
 open scoped Classical RealInnerProductSpace
 open ProofsInTheBook.PlanarMap ProofsInTheBook.PlanarMap.CombMap
 open ProofsInTheBook.Ch13Euclidean
 open ProofsInTheBook.Ch13VertexStar
 open ProofsInTheBook.Ch13MarkedSphere
+open ProofsInTheBook.SphericalRotation
 
 namespace ProofsInTheBook.Ch13EuclLink
 
@@ -116,6 +118,15 @@ def det3 (u v w : E3) : ℝ :=
 
 theorem det3_eq_spherical (u v w : E3) :
     det3 u v w = ProofsInTheBook.SphericalKernel.det3 u v w := rfl
+
+theorem det3_eq_inner_cross (u v z : E3) :
+    det3 u v z = (⟪cross u v, z⟫ : ℝ) := by
+  rw [det3_eq_spherical]
+  calc
+    ProofsInTheBook.SphericalKernel.det3 u v z = (⟪u, cross v z⟫ : ℝ) := by
+      rw [inner_cross_eq_det3]
+    _ = (⟪z, cross u v⟫ : ℝ) := inner_cross_cyclic u v z
+    _ = (⟪cross u v, z⟫ : ℝ) := (real_inner_comm z (cross u v)).symm
 
 /--
 An oriented supporting triangle through `v,a,b`.
@@ -394,6 +405,25 @@ private theorem sqrt_three_ne_zero : Real.sqrt 3 ≠ 0 := by
 
 private theorem sqrt_three_mul_inv : Real.sqrt 3 * (Real.sqrt 3)⁻¹ = (1 : ℝ) :=
   mul_inv_cancel₀ sqrt_three_ne_zero
+
+theorem tetra_cross_eq_neg_smul_normal (d : Fin 12) (i : Fin 3) :
+    cross
+        (tetraEuclideanPolyhedron.pos (tetraRevNbr d i)
+          - tetraEuclideanPolyhedron.pos (tetraMap.tail d))
+        (tetraEuclideanPolyhedron.pos (tetraRevNbr d (i + 1))
+          - tetraEuclideanPolyhedron.pos (tetraMap.tail d))
+      = -(4 * Real.sqrt 3) • tetraSupportNormal d i := by
+  fin_cases d <;> fin_cases i <;>
+    apply ext_coord <;>
+    simp only [cross_apply_zero, cross_apply_one, cross_apply_two, neg_smul,
+      PiLp.smul_apply, PiLp.neg_apply] <;>
+    norm_num [fin3Rev, Fin.add_def, tetraSupportNormal, tetraRevNbr, tetraSigmaDart,
+      tetraMap_sigma_toList, tetraSigma_toList, tetraEuclideanPolyhedron, tetraPos,
+      tetraDartPoint, tetraMap, CombMap.tail, CombMap.head, tetraPoint₀, tetraPoint₁,
+      tetraPoint₂, tetraPoint₃, Matrix.cons_val_zero, Matrix.cons_val_one,
+      Matrix.cons_val_two, Matrix.head_cons, Matrix.tail_cons] <;>
+    rw [show Real.sqrt 3 * (Real.sqrt 3)⁻¹ = (1 : ℝ) from sqrt_three_mul_inv] <;>
+    ring
 
 /-!
 ### General residual for the next geometry round

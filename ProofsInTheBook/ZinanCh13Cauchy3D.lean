@@ -1,0 +1,2580 @@
+import ProofsInTheBook.ZinanCh13SphAngle
+import ProofsInTheBook.ZinanCh13EuclLink
+import ProofsInTheBook.Ch13Realization
+import ProofsInTheBook.Ch13LinkSides
+import ProofsInTheBook.Ch13SubArcWrap
+import Mathlib.Geometry.Euclidean.Triangle
+
+/-!
+# Chapter 13 Euclidean Cauchy assembly
+
+This file starts the final Euclidean assembly layer.  The fully automatic
+extraction of the local vertex-link geometry and the two-arc cut is not hidden:
+those are explicit inputs to the honest assembler below.
+-/
+
+noncomputable section
+
+open scoped Classical RealInnerProductSpace
+open ProofsInTheBook.PlanarMap ProofsInTheBook.PlanarMap.CombMap
+open ProofsInTheBook.Chapter13
+open ProofsInTheBook.Ch13Euclidean
+open ProofsInTheBook.Ch13EuclLink
+open ProofsInTheBook.Ch13Realization
+open ProofsInTheBook.Ch13VertexStar
+open ProofsInTheBook.Ch13ArmVertexFull
+open ProofsInTheBook.Ch13ArmVertex
+open ProofsInTheBook.Ch13SubArc
+open ProofsInTheBook.Ch13SubArcWrap
+open ProofsInTheBook.Ch13MarkedSphere
+open ProofsInTheBook.SphericalKernel
+
+namespace ProofsInTheBook.Ch13VertexStar
+
+namespace VertexStar
+
+/-- Rotate the cyclic neighbor order of a vertex star. -/
+noncomputable abbrev rotate (S : VertexStar) (k : Fin (S.n + 1)) : VertexStar where
+  n := S.n
+  hn := S.hn
+  o := S.o
+  p := fun i => S.p (i + k)
+  apex_ne := fun i => S.apex_ne (i + k)
+  open_hemi := by
+    rcases S.open_hemi with ⟨h, hnorm, hpos⟩
+    exact ⟨h, hnorm, fun i => hpos (i + k)⟩
+  turn_support := by
+    intro i j
+    have hnext : (i + 1 : Fin (S.n + 1)) + k = (i + k) + 1 := by
+      rw [add_right_comm]
+    simpa [hnext] using S.turn_support (i + k) (j + k)
+  turn_strict := by
+    intro i j hji hji1
+    have hnext : (i + 1 : Fin (S.n + 1)) + k = (i + k) + 1 := by
+      rw [add_right_comm]
+    have hne0 : j + k ≠ i + k := by
+      intro h
+      exact hji (add_right_cancel h)
+    have hne1 : j + k ≠ (i + k) + 1 := by
+      intro h
+      apply hji1
+      apply add_right_cancel (b := k)
+      rw [hnext]
+      exact h
+    simpa [hnext] using S.turn_strict (i + k) (j + k) hne0 hne1
+
+theorem vertexLink_rotate (S : VertexStar) (k : Fin (S.n + 1)) :
+    (S.rotate k).vertexLink = rotPoly S.vertexLink k := by
+  funext i
+  rfl
+
+end VertexStar
+
+end ProofsInTheBook.Ch13VertexStar
+
+namespace ProofsInTheBook.Ch13Cauchy3D
+
+variable {D : Type*} [Fintype D] [DecidableEq D]
+variable {M : CombMap D}
+
+/--
+A convex Euclidean polyhedron is a triangulated Euclidean realization together
+with the local vertex-link convexity certificates needed to build `VertexStar`s.
+
+The `isSimple` field is included because the downstream Cauchy realization
+interface requires a simple triangulated sphere.
+-/
+structure ConvexEuclideanPolyhedron (M : CombMap D)
+    extends TriangulatedEuclideanPolyhedron M where
+  degree_ge_three :
+    ∀ (v : M.Vertex), 3 ≤ vDeg toTriangulatedEuclideanPolyhedron v
+  vertexLinkGeom :
+    ∀ (v : M.Vertex), 3 ≤ vDeg toTriangulatedEuclideanPolyhedron v →
+      VertexLinkGeometry toTriangulatedEuclideanPolyhedron v
+  sphere : M.IsSphereMap
+  triangle : M.FaceRegular 3
+  isSimple : M.IsSimpleGraph
+
+namespace ConvexEuclideanPolyhedron
+
+/-- The underlying triangulated Euclidean realization. -/
+abbrev toTri (P : ConvexEuclideanPolyhedron M) : TriangulatedEuclideanPolyhedron M :=
+  P.toTriangulatedEuclideanPolyhedron
+
+/-- The stored local vertex-link geometry at a vertex. -/
+def linkGeom (P : ConvexEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P.toTri v) : VertexLinkGeometry P.toTri v :=
+  P.vertexLinkGeom v hdeg
+
+/-- The stored vertex-link geometry with the stored degree lower bound supplied. -/
+def linkGeomAt (P : ConvexEuclideanPolyhedron M) (v : M.Vertex) :
+    VertexLinkGeometry P.toTri v :=
+  P.vertexLinkGeom v (P.degree_ge_three v)
+
+/-- The Euclidean vertex star attached to a convex Euclidean polyhedron. -/
+def vertexStar (P : ConvexEuclideanPolyhedron M) (v : M.Vertex) : VertexStar :=
+  vertexStarOfEuclidean P.toTri v (P.linkGeomAt v)
+
+end ConvexEuclideanPolyhedron
+
+/-- The regular tetrahedron as a convex Euclidean polyhedron. -/
+def tetraConvexEuclideanPolyhedron : ConvexEuclideanPolyhedron tetraMap where
+  toTriangulatedEuclideanPolyhedron := tetraEuclideanPolyhedron
+  degree_ge_three := tetra_vDeg_ge_three
+  vertexLinkGeom := fun v _ => tetraVertexLinkGeometry v
+  sphere := tetraMap_isSphereMap
+  triangle := tetraMap_faceRegular_three
+  isSimple := ProofsInTheBook.Ch13ComponentClose.tetraMap_isSimpleGraph
+
+/-- Edge-length congruence for two Euclidean realizations on the same combinatorial map. -/
+def CongruentFaces (P Q : TriangulatedEuclideanPolyhedron M) : Prop :=
+  ∀ d : D,
+    ‖P.pos (M.head d) - P.pos (M.tail d)‖ =
+      ‖Q.pos (M.head d) - Q.pos (M.tail d)‖
+
+theorem euclidean_angle_eq_of_three_dist_eq
+    {a b c a' b' c' : Ch13Euclidean.E3}
+    (hab : dist b a = dist b' a')
+    (hac : dist c a = dist c' a')
+    (hbc : dist b c = dist b' c')
+    (hba : b ≠ a) (hca : c ≠ a) :
+    EuclideanGeometry.angle b a c = EuclideanGeometry.angle b' a' c' := by
+  have hcos₁ := EuclideanGeometry.law_cos b a c
+  have hcos₂ := EuclideanGeometry.law_cos b' a' c'
+  rw [← hab, ← hac, ← hbc] at hcos₂
+  have hprod : 2 * dist b a * dist c a ≠ 0 := by
+    exact mul_ne_zero (mul_ne_zero (by norm_num) (dist_ne_zero.mpr hba))
+      (dist_ne_zero.mpr hca)
+  have hcos :
+      Real.cos (EuclideanGeometry.angle b a c) =
+        Real.cos (EuclideanGeometry.angle b' a' c') := by
+    have hmul :
+        (2 * dist b a * dist c a) * Real.cos (EuclideanGeometry.angle b a c) =
+          (2 * dist b a * dist c a) * Real.cos (EuclideanGeometry.angle b' a' c') := by
+      nlinarith
+    exact mul_left_cancel₀ hprod hmul
+  exact Real.injOn_cos
+    ⟨EuclideanGeometry.angle_nonneg b a c, EuclideanGeometry.angle_le_pi b a c⟩
+    ⟨EuclideanGeometry.angle_nonneg b' a' c', EuclideanGeometry.angle_le_pi b' a' c'⟩
+    hcos
+
+theorem congruentFaces_face_angle_at_dart
+    (P Q : TriangulatedEuclideanPolyhedron M) (hcong : CongruentFaces P Q) (d : D) :
+    EuclideanGeometry.angle
+        (P.pos (M.head d)) (P.pos (M.tail d)) (P.pos (M.head (M.σ.symm d)))
+      =
+    EuclideanGeometry.angle
+        (Q.pos (M.head d)) (Q.pos (M.tail d)) (Q.pos (M.head (M.σ.symm d))) := by
+  have htail_symm : M.tail (M.σ.symm d) = M.tail d := by
+    have h := M.tail_sigma (M.σ.symm d)
+    simpa using h.symm
+  have htail_phi2 :
+      M.tail (M.φ (M.φ d)) = M.head (M.σ.symm d) :=
+    Ch13SphAngle.tail_phi_phi_eq_head_sigma_symm_of_triangular_euclidean P d
+  have hhead_phi :
+      M.head (M.φ d) = M.head (M.σ.symm d) := by
+    simpa [M.tail_phi] using htail_phi2
+  have hab :
+      dist (P.pos (M.head d)) (P.pos (M.tail d)) =
+        dist (Q.pos (M.head d)) (Q.pos (M.tail d)) := by
+    simpa [dist_eq_norm] using hcong d
+  have hac :
+      dist (P.pos (M.head (M.σ.symm d))) (P.pos (M.tail d)) =
+        dist (Q.pos (M.head (M.σ.symm d))) (Q.pos (M.tail d)) := by
+    have h := hcong (M.σ.symm d)
+    simpa [dist_eq_norm, htail_symm] using h
+  have hbc :
+      dist (P.pos (M.head d)) (P.pos (M.head (M.σ.symm d))) =
+        dist (Q.pos (M.head d)) (Q.pos (M.head (M.σ.symm d))) := by
+    have h := hcong (M.φ d)
+    simpa [dist_eq_norm, M.tail_phi, hhead_phi, norm_sub_rev] using h
+  have hba : P.pos (M.head d) ≠ P.pos (M.tail d) := by
+    exact (P.edge_nondegenerate d).symm
+  have hca : P.pos (M.head (M.σ.symm d)) ≠ P.pos (M.tail d) := by
+    have hnd := P.edge_nondegenerate (M.σ.symm d)
+    simpa [htail_symm] using hnd.symm
+  exact euclidean_angle_eq_of_three_dist_eq hab hac hbc hba hca
+
+/-- The Euclidean dart sign used by the Cauchy marked sphere. -/
+def euclideanEdgeSign (P Q : TriangulatedEuclideanPolyhedron M) : D → EdgeSign :=
+  dihedralSignAtDart P Q
+
+theorem euclideanEdgeSign_alpha
+    (P Q : TriangulatedEuclideanPolyhedron M) (d : D) :
+    euclideanEdgeSign P Q (M.α d) = euclideanEdgeSign P Q d := by
+  unfold euclideanEdgeSign
+  exact dihedralSignAtDart_alpha P Q d
+
+/-- A canonical representative dart for a vertex. -/
+def vertexDartRep (v : M.Vertex) : D :=
+  Quotient.out v
+
+theorem vertexDartRep_tail (v : M.Vertex) :
+    M.tail (vertexDartRep (M := M) v) = v :=
+  Quotient.out_eq v
+
+/-- Reading a finite list through `Fin.rev` gives its reverse. -/
+theorem ofFn_get_rev {α : Type*} (L : List α) :
+    List.ofFn (fun i : Fin L.length => L.get (Fin.rev i)) = L.reverse := by
+  apply (List.ext_get_iff).2
+  constructor
+  · simp
+  · intro n hn₁ hn₂
+    simp only [List.length_ofFn, List.length_reverse] at hn₁ hn₂
+    rw [List.get_ofFn]
+    rw [List.get_reverse' L ⟨n, by simpa using hn₂⟩ (by omega)]
+    simp [Fin.rev]
+    have hidx : L.length - (n + 1) = L.length - 1 - n := by omega
+    simp [hidx]
+
+theorem ofFn_cast {α : Type*} {n m : ℕ} (e : n = m) (f : Fin m → α) :
+    List.ofFn (fun i : Fin n => f (Fin.cast e i)) = List.ofFn f := by
+  subst e
+  rfl
+
+/-- The dart in the actual Euclidean vertex-star order, i.e. the reverse of the
+combinatorial `σ` order used by `incidentDartOfStarIndex`. -/
+def starDart (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) : D :=
+  incidentDartOfStarIndex P v hdeg (Fin.rev i)
+
+theorem starDart_tail (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) :
+    M.tail (starDart P v hdeg i) = v := by
+  unfold starDart
+  exact incidentDartOfStarIndex_tail P v hdeg (Fin.rev i)
+
+theorem starDart_eq_of_index
+    (P Q : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdegP : 3 ≤ vDeg P v) (hdegQ : 3 ≤ vDeg Q v)
+    {i : Fin (starN P v + 1)} {j : Fin (starN Q v + 1)}
+    (hij : HEq i j) :
+    starDart P v hdegP i = starDart Q v hdegQ j := by
+  cases hij
+  simp [starDart, incidentDartOfStarIndex, incidentDart, starIndexToDeg,
+    incidentDarts, vDeg, starN]
+
+theorem incidentDarts_mem_of_tail
+    (P : TriangulatedEuclideanPolyhedron M) {v : M.Vertex} {d : D}
+    (hdeg : 3 ≤ vDeg P v) (htail : M.tail d = v) :
+    d ∈ incidentDarts P v := by
+  unfold incidentDarts
+  rw [Equiv.Perm.mem_toList_iff]
+  constructor
+  · exact Quotient.exact ((Quotient.out_eq v).trans htail.symm)
+  · rw [← Equiv.Perm.two_le_length_toList_iff_mem_support]
+    unfold vDeg incidentDarts at hdeg
+    omega
+
+theorem starDart_reverseStarIndexOfDart
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (d : D) (hd : d ∈ incidentDarts P v) :
+    starDart P v hdeg (reverseStarIndexOfDart P v hdeg d hd) = d := by
+  unfold starDart
+  exact incidentDartOfStarIndex_reverseStarIndexOfDart P v hdeg d hd
+
+theorem starDart_reverseStarIndexOfDart_add_one
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (d : D) (hd : d ∈ incidentDarts P v) :
+    starDart P v hdeg
+        (reverseStarIndexOfDart P v hdeg d hd + starOne P v hdeg) =
+      M.σ.symm d := by
+  unfold starDart
+  exact incidentDartOfStarIndex_reverseStarIndexOfDart_add_one P v hdeg d hd
+
+theorem starDart_reverseStarIndexOfDart_sub_one
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (d : D) (hd : d ∈ incidentDarts P v) :
+    starDart P v hdeg
+        (reverseStarIndexOfDart P v hdeg d hd - starOne P v hdeg) =
+      M.σ d := by
+  unfold starDart
+  exact incidentDartOfStarIndex_reverseStarIndexOfDart_sub_one P v hdeg d hd
+
+theorem starOne_eq_one
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) :
+    starOne P v hdeg = (1 : Fin (starN P v + 1)) := by
+  ext
+  unfold starOne starN
+  simp [Nat.mod_eq_of_lt (by omega : 1 < vDeg P v - 1 + 1)]
+
+theorem fin_cast_sub_one_starN
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) {n : ℕ} (e : n = starN P v)
+    (i : Fin (n + 1)) :
+    Fin.cast (congrArg Nat.succ e) (i - 1) =
+      Fin.cast (congrArg Nat.succ e) i - starOne P v hdeg := by
+  subst e
+  rw [starOne_eq_one P v hdeg]
+  rfl
+
+theorem fin_cast_add_one_starN
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) {n : ℕ} (e : n = starN P v)
+    (i : Fin (n + 1)) :
+    Fin.cast (congrArg Nat.succ e) (i + 1) =
+      Fin.cast (congrArg Nat.succ e) i + starOne P v hdeg := by
+  subst e
+  rw [starOne_eq_one P v hdeg]
+  rfl
+
+theorem fin_cast_zero_eq_last_add_one_starN
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) {n : ℕ} (e : n = starN P v) :
+    Fin.cast (congrArg Nat.succ e) (0 : Fin (n + 1)) =
+      Fin.cast (congrArg Nat.succ e) (Fin.last n) + starOne P v hdeg := by
+  subst e
+  rw [starOne_eq_one P v hdeg]
+  ext
+  simp
+
+theorem fin_cast_merge_starN
+    {nP nQ s : ℕ} (eP : nP = s) (eQ : nQ = s) (h : nQ = nP)
+    (i : Fin (nP + 1)) :
+    Fin.cast (congrArg Nat.succ eP) i =
+      Fin.cast (congrArg Nat.succ eQ)
+        (Fin.cast (congrArg Nat.succ h.symm) i) := by
+  subst eP
+  subst eQ
+  rfl
+
+theorem fin_cast_merge_starN_linkQcast
+    {nP nQ s : ℕ} (eP : nP = s) (eQ : nQ = s) (h : nQ = nP)
+    (i : Fin (nP + 1)) :
+    Fin.cast (congrArg Nat.succ eP) i =
+      Fin.cast (congrArg Nat.succ eQ) (Fin.cast (by rw [h]) i) := by
+  subst eP
+  subst eQ
+  rfl
+
+theorem fin_cast_merge_starN_of_PQ
+    {nP nQ s : ℕ} (eP : nP = s) (eQ : nQ = s) (h : nP = nQ)
+    (i : Fin (nP + 1)) :
+    Fin.cast (congrArg Nat.succ eP) i =
+      Fin.cast (congrArg Nat.succ eQ) (Fin.cast (congrArg Nat.succ h) i) := by
+  subst eP
+  subst eQ
+  rfl
+
+theorem fin_cast_add {n m : ℕ} (h : n = m) (i j : Fin (n + 1)) :
+    Fin.cast (congrArg Nat.succ h) (i + j) =
+      Fin.cast (congrArg Nat.succ h) i + Fin.cast (congrArg Nat.succ h) j := by
+  subst h
+  rfl
+
+theorem starDart_mem
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) :
+    starDart P v hdeg i ∈ incidentDarts P v := by
+  unfold starDart incidentDartOfStarIndex incidentDart
+  exact List.get_mem _ _
+
+theorem reverseStarIndexOfDart_starDart
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) :
+    reverseStarIndexOfDart P v hdeg (starDart P v hdeg i)
+        (starDart_mem P v hdeg i) = i := by
+  unfold reverseStarIndexOfDart incidentIndexOfDart starDart incidentDartOfStarIndex
+    incidentDart starIndexToDeg
+  apply Fin.rev_injective
+  apply Fin.ext
+  have hnodup : (incidentDarts P v).Nodup := by
+    unfold incidentDarts
+    exact Equiv.Perm.nodup_toList M.σ (Quotient.out v)
+  simp [hnodup.idxOf_getElem]
+
+theorem starDart_add_one
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) :
+    starDart P v hdeg (i + starOne P v hdeg) =
+      M.σ.symm (starDart P v hdeg i) := by
+  have hidx := reverseStarIndexOfDart_starDart P v hdeg i
+  calc
+    starDart P v hdeg (i + starOne P v hdeg)
+        = starDart P v hdeg
+            (reverseStarIndexOfDart P v hdeg (starDart P v hdeg i)
+                (starDart_mem P v hdeg i) + starOne P v hdeg) := by
+            rw [hidx]
+    _ = M.σ.symm (starDart P v hdeg i) :=
+        starDart_reverseStarIndexOfDart_add_one P v hdeg
+          (starDart P v hdeg i) (starDart_mem P v hdeg i)
+
+theorem starDart_sub_one
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) :
+    starDart P v hdeg (i - starOne P v hdeg) =
+      M.σ (starDart P v hdeg i) := by
+  have hidx := reverseStarIndexOfDart_starDart P v hdeg i
+  calc
+    starDart P v hdeg (i - starOne P v hdeg)
+        = starDart P v hdeg
+            (reverseStarIndexOfDart P v hdeg (starDart P v hdeg i)
+                (starDart_mem P v hdeg i) - starOne P v hdeg) := by
+            rw [hidx]
+    _ = M.σ (starDart P v hdeg i) :=
+        starDart_reverseStarIndexOfDart_sub_one P v hdeg
+          (starDart P v hdeg i) (starDart_mem P v hdeg i)
+
+theorem starDart_order (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) :
+    (M.σ.toList (vertexDartRep (M := M) v)).reverse ~r
+      List.ofFn (starDart P v hdeg) := by
+  have hLen : starN P v + 1 = (incidentDarts P v).length := by
+    rw [starN_add_one_eq_vDeg P v hdeg]
+    rfl
+  have hEq :
+      List.ofFn (starDart P v hdeg) = (incidentDarts P v).reverse := by
+    rw [List.ofFn_congr hLen (starDart P v hdeg)]
+    rw [← ofFn_get_rev (incidentDarts P v)]
+    rw [List.ofFn_inj]
+    funext i
+    simp [starDart, incidentDartOfStarIndex, incidentDart, starIndexToDeg, hLen]
+  rw [hEq]
+  change (incidentDarts P v).reverse ~r (incidentDarts P v).reverse
+  exact List.IsRotated.refl _
+
+theorem dihedralRotated_of_starDart_order
+    {n : ℕ} (root : D) (edgeSign : D → EdgeSign)
+    (starDart : Fin n → D) (geomDiff : Fin n → ℝ)
+    (horder : (M.σ.toList root).reverse ~r List.ofFn starDart)
+    (hval : ∀ i : Fin n,
+      edgeSign (starDart i) = realSignToEdgeSign (geomDiff i)) :
+    List.DihedralRotated ((M.σ.toList root).map edgeSign)
+      ((List.ofFn geomDiff).map realSignToEdgeSign) := by
+  right
+  have horderSign :
+      ((M.σ.toList root).reverse.map edgeSign) ~r
+        ((List.ofFn starDart).map edgeSign) :=
+    horder.map edgeSign
+  have hleft :
+      ((M.σ.toList root).map edgeSign).reverse =
+        (M.σ.toList root).reverse.map edgeSign := by
+    simp [List.map_reverse]
+  have hright :
+      (List.ofFn starDart).map edgeSign =
+        (List.ofFn geomDiff).map realSignToEdgeSign := by
+    apply List.ext_getElem
+    · simp
+    · intro k hk₁ hk₂
+      simp only [List.length_map, List.length_ofFn] at hk₁ hk₂
+      simp only [List.getElem_map, List.getElem_ofFn]
+      exact hval ⟨k, hk₂⟩
+  rw [hleft]
+  exact horderSign.trans (by rw [hright])
+
+/-- The neighbour list stored in a `VertexLinkGeometry` is the head list of the
+corresponding `starDart`s. -/
+theorem vertexLinkGeometry_nbr_eq_head_starDart
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (LG : VertexLinkGeometry P v) :
+    ∃ hdeg : 3 ≤ vDeg P v, ∃ e : LG.n = starN P v,
+      ∀ i : Fin (LG.n + 1),
+        LG.nbr i =
+          M.head (starDart P v hdeg (Fin.cast (congrArg Nat.succ e) i)) := by
+  rcases LG.nbr_is_sigma with ⟨hdeg, e, h⟩
+  refine ⟨hdeg, e, ?_⟩
+  intro i
+  simpa [starDart] using h i
+
+/-- The `VertexStar.p` points are exactly the positions of heads of `starDart`s. -/
+theorem vertexStar_p_eq_head_starDart
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (LG : VertexLinkGeometry P v) :
+    ∃ hdeg : 3 ≤ vDeg P v, ∃ e : LG.n = starN P v,
+      ∀ i : Fin ((vertexStarOfEuclidean P v LG).n + 1),
+        (vertexStarOfEuclidean P v LG).p i =
+          P.pos (M.head (starDart P v hdeg (Fin.cast (congrArg Nat.succ e) i))) := by
+  rcases vertexLinkGeometry_nbr_eq_head_starDart P v LG with ⟨hdeg, e, h⟩
+  refine ⟨hdeg, e, ?_⟩
+  intro i
+  unfold vertexStarOfEuclidean VertexLinkGeometry.toVertexStar
+  change P.pos (LG.nbr i) =
+    P.pos (M.head (starDart P v hdeg (Fin.cast (congrArg Nat.succ e) i)))
+  rw [h i]
+
+theorem vertexStarOfEuclidean_n
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (LG : VertexLinkGeometry P v) :
+    (vertexStarOfEuclidean P v LG).n = LG.n := rfl
+
+theorem dihedralAngleAtDart_eq_linkAngle_at_vertex
+    (P : TriangulatedEuclideanPolyhedron M) (d : D) {v : M.Vertex}
+    (htail : M.tail d = v) (LG : VertexLinkGeometry P v) (J : Fin (LG.n + 1))
+    (hprev : LG.nbr (J - 1) = M.head (M.σ d))
+    (hcenter : LG.nbr J = M.head d)
+    (hnext : LG.nbr (J + 1) = M.head (M.σ.symm d)) :
+    dihedralAngleAtDart P d =
+      linkAngle (vertexStarOfEuclidean P v LG).vertexLink J := by
+  subst v
+  exact ProofsInTheBook.Ch13SphAngle.dihedralAngleAtDart_eq_linkAngle
+    P d LG J hprev hcenter hnext
+
+theorem dihedralAngleAt_starDart_eq_linkAngle
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (LG : VertexLinkGeometry P v) :
+    ∃ hdeg : 3 ≤ vDeg P v, ∃ e : LG.n = starN P v,
+      ∀ J : Fin (LG.n + 1),
+        dihedralAngleAtDart P
+            (starDart P v hdeg (Fin.cast (congrArg Nat.succ e) J)) =
+          linkAngle (vertexStarOfEuclidean P v LG).vertexLink J := by
+  rcases vertexLinkGeometry_nbr_eq_head_starDart P v LG with ⟨hdeg, e, hnbr⟩
+  refine ⟨hdeg, e, ?_⟩
+  intro J
+  let J' : Fin (starN P v + 1) := Fin.cast (congrArg Nat.succ e) J
+  let d : D := starDart P v hdeg J'
+  have htail_d : M.tail d = v := by
+    simpa [d] using starDart_tail P v hdeg J'
+  have hcenter :
+      LG.nbr J = M.head d := by
+    simpa [d, J'] using hnbr J
+  have hprev :
+      LG.nbr (J - 1) = M.head (M.σ d) := by
+    have h := hnbr (J - 1)
+    rw [fin_cast_sub_one_starN P v hdeg e J] at h
+    rw [starDart_sub_one P v hdeg J'] at h
+    simpa [d, J'] using h
+  have hnext :
+      LG.nbr (J + 1) = M.head (M.σ.symm d) := by
+    have h := hnbr (J + 1)
+    rw [fin_cast_add_one_starN P v hdeg e J] at h
+    rw [starDart_add_one P v hdeg J'] at h
+    simpa [d, J'] using h
+  have hlink := dihedralAngleAtDart_eq_linkAngle_at_vertex P d htail_d
+    LG J hprev hcenter hnext
+  simpa [d, J'] using hlink
+
+theorem vertexStar_side_angle_eq_dart_angle
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (LG : VertexLinkGeometry P v) :
+    ∃ hdeg : 3 ≤ vDeg P v, ∃ e : LG.n = starN P v,
+      ∀ i : Fin LG.n,
+        let d := starDart P v hdeg (Fin.cast (congrArg Nat.succ e) i.castSucc)
+        EuclideanGeometry.angle
+            ((vertexStarOfEuclidean P v LG).p i.castSucc)
+            (vertexStarOfEuclidean P v LG).o
+            ((vertexStarOfEuclidean P v LG).p i.succ)
+          =
+        EuclideanGeometry.angle
+            (P.pos (M.head d)) (P.pos (M.tail d)) (P.pos (M.head (M.σ.symm d))) := by
+  rcases vertexStar_p_eq_head_starDart P v LG with ⟨hdeg, e, hp⟩
+  refine ⟨hdeg, e, ?_⟩
+  intro i
+  let J : Fin (LG.n + 1) := i.castSucc
+  let J' : Fin (starN P v + 1) := Fin.cast (congrArg Nat.succ e) J
+  let d : D := starDart P v hdeg J'
+  have hsucc :
+      Fin.cast (congrArg Nat.succ e) i.succ = J' + starOne P v hdeg := by
+    simpa [J, J'] using fin_cast_add_one_starN P v hdeg e J
+  have hp0 := hp i.castSucc
+  have hp1 := hp i.succ
+  rw [hsucc] at hp1
+  rw [starDart_add_one P v hdeg J'] at hp1
+  have htail : M.tail d = v := by
+    simpa [d] using starDart_tail P v hdeg J'
+  have htail' :
+      M.tail (starDart P v hdeg (Fin.cast (congrArg Nat.succ e) i.castSucc)) = v := by
+    simpa [d, J, J'] using htail
+  rw [hp0, hp1]
+  dsimp [d, J']
+  unfold vertexStarOfEuclidean VertexLinkGeometry.toVertexStar
+  change EuclideanGeometry.angle
+      (P.pos (M.head (starDart P v hdeg (Fin.cast (congrArg Nat.succ e) i.castSucc))))
+      (P.pos v)
+      (P.pos (M.head (M.σ.symm
+        (starDart P v hdeg (Fin.cast (congrArg Nat.succ e) i.castSucc))))) =
+    EuclideanGeometry.angle
+      (P.pos (M.head (starDart P v hdeg (Fin.cast (congrArg Nat.succ e) i.castSucc))))
+      (P.pos (M.tail (starDart P v hdeg (Fin.cast (congrArg Nat.succ e) i.castSucc))))
+      (P.pos (M.head (M.σ.symm
+        (starDart P v hdeg (Fin.cast (congrArg Nat.succ e) i.castSucc)))))
+  rw [htail']
+
+theorem vertexLinkGeometry_n_eq
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (v : M.Vertex) :
+    (LGQ v).n = (LGP v).n := by
+  rcases (LGP v).nbr_is_sigma with ⟨hdegP, eP, _⟩
+  rcases (LGQ v).nbr_is_sigma with ⟨hdegQ, eQ, _⟩
+  have hstar : starN P v = starN Q v := by
+    rfl
+  calc
+    (LGQ v).n = starN Q v := eQ
+    _ = starN P v := hstar.symm
+    _ = (LGP v).n := eP.symm
+
+theorem linkAngle_reindex {n m : ℕ} (h : n = m) (A : Fin (m + 1) → S2)
+    (i : Fin (n + 1)) :
+    linkAngle (fun j : Fin (n + 1) => A (Fin.cast (by rw [h]) j)) i =
+      linkAngle A (Fin.cast (by rw [h]) i) := by
+  subst h
+  simp
+
+theorem sideLen_reindex {n m : ℕ} (h : n = m) (A : Fin (m + 1) → S2)
+    (i : Fin n) :
+    sideLen (fun j : Fin (n + 1) => A (Fin.cast (by rw [h]) j)) i =
+      sideLen A (Fin.cast (by rw [h]) i) := by
+  subst h
+  simp [sideLen]
+
+theorem vertexStar_sDist_vertexLink_eq_angle
+    (S : VertexStar) (i j : Fin (S.n + 1)) :
+    sDist (S.vertexLink i) (S.vertexLink j) =
+      EuclideanGeometry.angle (S.p i) S.o (S.p j) := by
+  rw [ProofsInTheBook.SphericalArm.sDist_eq_angle]
+  rw [VertexStar.vertexLink_apply, VertexStar.vertexLink_apply]
+  rw [VertexStar.edgeDir_coe, VertexStar.edgeDir_coe]
+  rw [InnerProductGeometry.angle_smul_left_of_pos _ _ (S.inv_norm_pos _),
+      InnerProductGeometry.angle_smul_right_of_pos _ _ (S.inv_norm_pos _)]
+  rw [EuclideanGeometry.angle]
+  rfl
+
+theorem euclidean_sides_eq
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (hcong : CongruentFaces P Q) :
+    ∀ (v : M.Vertex) (i : Fin (vertexStarOfEuclidean P v (LGP v)).n),
+      sideLen (vertexStarOfEuclidean P v (LGP v)).vertexLink i =
+        sideLen (linkQcast M
+          (fun w => vertexStarOfEuclidean P w (LGP w))
+          (fun w => vertexStarOfEuclidean Q w (LGQ w))
+          (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) i := by
+  intro v i
+  let S := vertexStarOfEuclidean P v (LGP v)
+  let T := vertexStarOfEuclidean Q v (LGQ v)
+  let hnn := vertexLinkGeometry_n_eq P Q LGP LGQ v
+  let hPQ : S.n = T.n := by
+    change (LGP v).n = (LGQ v).n
+    rw [hnn]
+  have hside := sideLen_vertexLink_eq_of_faceAngle_eq S T hnn ?_ i
+  · have hcast :
+        sideLen (linkQcast M
+          (fun w => vertexStarOfEuclidean P w (LGP w))
+          (fun w => vertexStarOfEuclidean Q w (LGQ w))
+          (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) i =
+        sideLen T.vertexLink (i.cast hnn.symm) := by
+      dsimp [S, T]
+      unfold linkQcast
+      exact sideLen_reindex
+        (by
+          change (LGP v).n = (LGQ v).n
+          rw [hnn])
+        (vertexStarOfEuclidean Q v (LGQ v)).edgeDir i
+    rw [hside]
+    exact hcast.symm
+  · intro j
+    rcases vertexStar_side_angle_eq_dart_angle P v (LGP v) with ⟨hdegP, eP, hPangle⟩
+    rcases vertexStar_side_angle_eq_dart_angle Q v (LGQ v) with ⟨hdegQ, eQ, hQangle⟩
+    let jQ : Fin (LGQ v).n := j.cast hnn.symm
+    let dP : D := starDart P v hdegP
+      (Fin.cast (congrArg Nat.succ eP) j.castSucc)
+    let dQ : D := starDart Q v hdegQ
+      (Fin.cast (congrArg Nat.succ eQ) jQ.castSucc)
+    have hidx :
+        Fin.cast (congrArg Nat.succ eP) j.castSucc =
+          Fin.cast (congrArg Nat.succ eQ) jQ.castSucc := by
+      dsimp [jQ]
+      exact fin_cast_merge_starN_of_PQ eP eQ
+        (by
+          change (LGP v).n = (LGQ v).n
+          rw [hnn]) j.castSucc
+    have hd : dP = dQ := by
+      dsimp [dP, dQ]
+      exact starDart_eq_of_index P Q v hdegP hdegQ (heq_of_eq hidx)
+    have hPj := hPangle j
+    have hQj := hQangle jQ
+    dsimp [S, T] at *
+    calc
+      EuclideanGeometry.angle ((vertexStarOfEuclidean P v (LGP v)).p j.castSucc)
+          (vertexStarOfEuclidean P v (LGP v)).o
+          ((vertexStarOfEuclidean P v (LGP v)).p j.succ)
+          =
+        EuclideanGeometry.angle (P.pos (M.head dP)) (P.pos (M.tail dP))
+          (P.pos (M.head (M.σ.symm dP))) := hPj
+      _ =
+        EuclideanGeometry.angle (Q.pos (M.head dP)) (Q.pos (M.tail dP))
+          (Q.pos (M.head (M.σ.symm dP))) :=
+            congruentFaces_face_angle_at_dart P Q hcong dP
+      _ =
+        EuclideanGeometry.angle (Q.pos (M.head dQ)) (Q.pos (M.tail dQ))
+          (Q.pos (M.head (M.σ.symm dQ))) := by rw [hd]
+      _ =
+        EuclideanGeometry.angle ((vertexStarOfEuclidean Q v (LGQ v)).p jQ.castSucc)
+          (vertexStarOfEuclidean Q v (LGQ v)).o
+          ((vertexStarOfEuclidean Q v (LGQ v)).p jQ.succ) := hQj.symm
+
+theorem euclidean_close_eq
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (hcong : CongruentFaces P Q) :
+    ∀ (v : M.Vertex),
+      sDist ((vertexStarOfEuclidean P v (LGP v)).vertexLink 0)
+          ((vertexStarOfEuclidean P v (LGP v)).vertexLink
+            (Fin.last (vertexStarOfEuclidean P v (LGP v)).n))
+        =
+      sDist ((linkQcast M
+          (fun w => vertexStarOfEuclidean P w (LGP w))
+          (fun w => vertexStarOfEuclidean Q w (LGQ w))
+          (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) 0)
+        ((linkQcast M
+          (fun w => vertexStarOfEuclidean P w (LGP w))
+          (fun w => vertexStarOfEuclidean Q w (LGQ w))
+          (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v)
+            (Fin.last (vertexStarOfEuclidean P v (LGP v)).n)) := by
+  intro v
+  let S := vertexStarOfEuclidean P v (LGP v)
+  let T := vertexStarOfEuclidean Q v (LGQ v)
+  let hnn := vertexLinkGeometry_n_eq P Q LGP LGQ v
+  let hPQ : S.n = T.n := by
+    change (LGP v).n = (LGQ v).n
+    rw [hnn]
+  rcases vertexStar_p_eq_head_starDart P v (LGP v) with ⟨hdegP, eP, hpP⟩
+  rcases vertexStar_p_eq_head_starDart Q v (LGQ v) with ⟨hdegQ, eQ, hpQ⟩
+  let lastP : Fin ((LGP v).n + 1) := Fin.last (LGP v).n
+  let lastQ : Fin ((LGQ v).n + 1) := Fin.last (LGQ v).n
+  let dP : D := starDart P v hdegP (Fin.cast (congrArg Nat.succ eP) lastP)
+  let dQ : D := starDart Q v hdegQ (Fin.cast (congrArg Nat.succ eQ) lastQ)
+  have hidx_last :
+      Fin.cast (congrArg Nat.succ eP) lastP =
+        Fin.cast (congrArg Nat.succ eQ) lastQ := by
+    dsimp [lastP, lastQ]
+    apply Fin.ext
+    simp [eP, eQ, starN, vDeg, incidentDarts]
+  have hd : dP = dQ := by
+    dsimp [dP, dQ]
+    exact starDart_eq_of_index P Q v hdegP hdegQ (heq_of_eq hidx_last)
+  have hwrapP :
+      starDart P v hdegP (Fin.cast (congrArg Nat.succ eP) (0 : Fin ((LGP v).n + 1))) =
+        M.σ.symm dP := by
+    have hwrap := fin_cast_zero_eq_last_add_one_starN P v hdegP eP
+    rw [hwrap]
+    dsimp [dP, lastP]
+    exact starDart_add_one P v hdegP (Fin.cast (congrArg Nat.succ eP) (Fin.last (LGP v).n))
+  have hwrapQ :
+      starDart Q v hdegQ (Fin.cast (congrArg Nat.succ eQ) (0 : Fin ((LGQ v).n + 1))) =
+        M.σ.symm dQ := by
+    have hwrap := fin_cast_zero_eq_last_add_one_starN Q v hdegQ eQ
+    rw [hwrap]
+    dsimp [dQ, lastQ]
+    exact starDart_add_one Q v hdegQ (Fin.cast (congrArg Nat.succ eQ) (Fin.last (LGQ v).n))
+  have hpP0 := hpP (0 : Fin ((LGP v).n + 1))
+  have hpPL := hpP lastP
+  have hpQ0 := hpQ (0 : Fin ((LGQ v).n + 1))
+  have hpQL := hpQ lastQ
+  rw [hwrapP] at hpP0
+  rw [hwrapQ] at hpQ0
+  have htailP : M.tail dP = v := by
+    simpa [dP] using starDart_tail P v hdegP (Fin.cast (congrArg Nat.succ eP) lastP)
+  have htailQ : M.tail dQ = v := by
+    simpa [dQ] using starDart_tail Q v hdegQ (Fin.cast (congrArg Nat.succ eQ) lastQ)
+  have hcloseCast :
+      sDist ((linkQcast M
+          (fun w => vertexStarOfEuclidean P w (LGP w))
+          (fun w => vertexStarOfEuclidean Q w (LGQ w))
+          (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) 0)
+        ((linkQcast M
+          (fun w => vertexStarOfEuclidean P w (LGP w))
+          (fun w => vertexStarOfEuclidean Q w (LGQ w))
+          (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v)
+            (Fin.last (vertexStarOfEuclidean P v (LGP v)).n))
+        =
+      sDist (T.vertexLink 0) (T.vertexLink (Fin.last T.n)) := by
+    dsimp [T]
+    have h0 :
+        Fin.cast (congrArg Nat.succ (by
+          change (vertexStarOfEuclidean P v (LGP v)).n =
+            (vertexStarOfEuclidean Q v (LGQ v)).n
+          change (LGP v).n = (LGQ v).n
+          rw [vertexLinkGeometry_n_eq P Q LGP LGQ v]))
+          (0 : Fin ((vertexStarOfEuclidean P v (LGP v)).n + 1))
+          =
+        (0 : Fin ((vertexStarOfEuclidean Q v (LGQ v)).n + 1)) := by
+      ext
+      simp
+    have hlast :
+        Fin.cast (congrArg Nat.succ (by
+          change (vertexStarOfEuclidean P v (LGP v)).n =
+            (vertexStarOfEuclidean Q v (LGQ v)).n
+          change (LGP v).n = (LGQ v).n
+          rw [vertexLinkGeometry_n_eq P Q LGP LGQ v]))
+          (Fin.last (vertexStarOfEuclidean P v (LGP v)).n)
+          =
+        Fin.last (vertexStarOfEuclidean Q v (LGQ v)).n := by
+      ext
+      change (vertexStarOfEuclidean P v (LGP v)).n =
+        (vertexStarOfEuclidean Q v (LGQ v)).n
+      change (LGP v).n = (LGQ v).n
+      rw [vertexLinkGeometry_n_eq P Q LGP LGQ v]
+    rw [hlast]
+  have hPclose :
+      EuclideanGeometry.angle ((vertexStarOfEuclidean P v (LGP v)).p 0)
+          (vertexStarOfEuclidean P v (LGP v)).o
+          ((vertexStarOfEuclidean P v (LGP v)).p
+            (Fin.last (vertexStarOfEuclidean P v (LGP v)).n)) =
+        EuclideanGeometry.angle (P.pos (M.head (M.σ.symm dP))) (P.pos (M.tail dP))
+          (P.pos (M.head dP)) := by
+    unfold vertexStarOfEuclidean VertexLinkGeometry.toVertexStar at hpP0 hpPL ⊢
+    change EuclideanGeometry.angle (P.pos ((LGP v).nbr 0)) (P.pos v)
+        (P.pos ((LGP v).nbr (Fin.last (LGP v).n))) =
+      EuclideanGeometry.angle (P.pos (M.head (M.σ.symm dP))) (P.pos (M.tail dP))
+        (P.pos (M.head dP))
+    have hpP0' : P.pos ((LGP v).nbr 0) = P.pos (M.head (M.σ.symm dP)) := by
+      simpa using hpP0
+    have hpPL' : P.pos ((LGP v).nbr (Fin.last (LGP v).n)) = P.pos (M.head dP) := by
+      simpa [lastP, dP] using hpPL
+    rw [hpP0', hpPL', htailP]
+  have hQclose :
+      EuclideanGeometry.angle ((vertexStarOfEuclidean Q v (LGQ v)).p 0)
+          (vertexStarOfEuclidean Q v (LGQ v)).o
+          ((vertexStarOfEuclidean Q v (LGQ v)).p
+            (Fin.last (vertexStarOfEuclidean Q v (LGQ v)).n)) =
+        EuclideanGeometry.angle (Q.pos (M.head (M.σ.symm dQ))) (Q.pos (M.tail dQ))
+          (Q.pos (M.head dQ)) := by
+    unfold vertexStarOfEuclidean VertexLinkGeometry.toVertexStar at hpQ0 hpQL ⊢
+    change EuclideanGeometry.angle (Q.pos ((LGQ v).nbr 0)) (Q.pos v)
+        (Q.pos ((LGQ v).nbr (Fin.last (LGQ v).n))) =
+      EuclideanGeometry.angle (Q.pos (M.head (M.σ.symm dQ))) (Q.pos (M.tail dQ))
+        (Q.pos (M.head dQ))
+    have hpQ0' : Q.pos ((LGQ v).nbr 0) = Q.pos (M.head (M.σ.symm dQ)) := by
+      simpa using hpQ0
+    have hpQL' : Q.pos ((LGQ v).nbr (Fin.last (LGQ v).n)) = Q.pos (M.head dQ) := by
+      simpa [lastQ, dQ] using hpQL
+    rw [hpQ0', hpQL', htailQ]
+  calc
+    sDist (S.vertexLink 0) (S.vertexLink (Fin.last S.n))
+        = EuclideanGeometry.angle (S.p 0) S.o (S.p (Fin.last S.n)) :=
+            vertexStar_sDist_vertexLink_eq_angle S 0 (Fin.last S.n)
+    _ = EuclideanGeometry.angle (P.pos (M.head (M.σ.symm dP))) (P.pos (M.tail dP))
+          (P.pos (M.head dP)) := by
+            dsimp [S]
+            exact hPclose
+    _ = EuclideanGeometry.angle (P.pos (M.head dP)) (P.pos (M.tail dP))
+          (P.pos (M.head (M.σ.symm dP))) := by
+            rw [EuclideanGeometry.angle_comm]
+    _ = EuclideanGeometry.angle (Q.pos (M.head dP)) (Q.pos (M.tail dP))
+          (Q.pos (M.head (M.σ.symm dP))) :=
+            congruentFaces_face_angle_at_dart P Q hcong dP
+    _ = EuclideanGeometry.angle (Q.pos (M.head (M.σ.symm dQ))) (Q.pos (M.tail dQ))
+          (Q.pos (M.head dQ)) := by
+            rw [hd, EuclideanGeometry.angle_comm]
+    _ = EuclideanGeometry.angle (T.p 0) T.o (T.p (Fin.last T.n)) := by
+            dsimp [T]
+            exact hQclose.symm
+    _ = sDist (T.vertexLink 0) (T.vertexLink (Fin.last T.n)) := by
+            rw [vertexStar_sDist_vertexLink_eq_angle T 0 (Fin.last T.n)]
+    _ = sDist ((linkQcast M
+          (fun w => vertexStarOfEuclidean P w (LGP w))
+          (fun w => vertexStarOfEuclidean Q w (LGQ w))
+          (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) 0)
+        ((linkQcast M
+          (fun w => vertexStarOfEuclidean P w (LGP w))
+          (fun w => vertexStarOfEuclidean Q w (LGQ w))
+          (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v)
+            (Fin.last (vertexStarOfEuclidean P v (LGP v)).n)) := hcloseCast.symm
+
+theorem euclidean_linkOrder_at_root
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (v : M.Vertex) (root : D) (hroot : M.tail root = v) :
+      List.DihedralRotated
+        ((M.σ.toList root).map (euclideanEdgeSign P Q))
+        ((List.ofFn
+          (linkDiff (vertexStarOfEuclidean P v (LGP v)).vertexLink
+            (linkQcast M
+              (fun w => vertexStarOfEuclidean P w (LGP w))
+              (fun w => vertexStarOfEuclidean Q w (LGQ w))
+              (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v))).map realSignToEdgeSign) := by
+  rcases dihedralAngleAt_starDart_eq_linkAngle P v (LGP v) with ⟨hdegP, eP, hP⟩
+  rcases dihedralAngleAt_starDart_eq_linkAngle Q v (LGQ v) with ⟨hdegQ, eQ, hQ⟩
+  let hnn := vertexLinkGeometry_n_eq P Q LGP LGQ v
+  let hPQ : (LGP v).n = (LGQ v).n := by rw [hnn]
+  let starP := fun i : Fin ((LGP v).n + 1) =>
+    starDart P v hdegP (Fin.cast (congrArg Nat.succ eP) i)
+  let geomDiff := linkDiff (vertexStarOfEuclidean P v (LGP v)).vertexLink
+    (linkQcast M
+      (fun w => vertexStarOfEuclidean P w (LGP w))
+      (fun w => vertexStarOfEuclidean Q w (LGQ w))
+      (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v)
+  have horder :
+      (M.σ.toList root).reverse ~r List.ofFn starP := by
+    have h := starDart_order P v hdegP
+    have hsc : M.σ.SameCycle (vertexDartRep (M := M) v) root :=
+      Quotient.exact ((vertexDartRep_tail (M := M) v).trans hroot.symm)
+    have hrot :
+        (M.σ.toList root).reverse ~r
+          (M.σ.toList (vertexDartRep (M := M) v)).reverse :=
+      (hsc.toList_isRotated.reverse).symm
+    have hofn :
+        List.ofFn starP = List.ofFn (starDart P v hdegP) := by
+      dsimp [starP]
+      rw [ofFn_cast (congrArg Nat.succ eP) (starDart P v hdegP)]
+    rw [hofn]
+    exact hrot.trans h
+  have hval :
+      ∀ i : Fin ((LGP v).n + 1),
+        euclideanEdgeSign P Q (starP i) = realSignToEdgeSign (geomDiff i) := by
+    intro i
+    have hidx :
+        Fin.cast (congrArg Nat.succ eP) i =
+          Fin.cast (congrArg Nat.succ eQ)
+            (Fin.cast (congrArg Nat.succ hPQ) i) :=
+      fin_cast_merge_starN_of_PQ eP eQ hPQ i
+    have hPi := hP i
+    let iQ : Fin ((LGQ v).n + 1) := Fin.cast (congrArg Nat.succ hPQ) i
+    have hQi := hQ iQ
+    have hstarQ :
+        starP i =
+          starDart Q v hdegQ (Fin.cast (congrArg Nat.succ eQ) iQ) := by
+      dsimp [starP]
+      exact starDart_eq_of_index P Q v hdegP hdegQ (heq_of_eq hidx)
+    unfold euclideanEdgeSign dihedralSignAtDart
+    rw [hPi]
+    rw [hstarQ, hQi]
+    have hgeom :
+        geomDiff i =
+          linkAngle (vertexStarOfEuclidean Q v (LGQ v)).vertexLink iQ -
+            linkAngle (vertexStarOfEuclidean P v (LGP v)).vertexLink i := by
+      dsimp [geomDiff, linkDiff]
+      unfold linkQcast
+      dsimp [iQ, hPQ]
+      exact congrArg
+        (fun x => x - linkAngle (vertexStarOfEuclidean P v (LGP v)).vertexLink i)
+        (linkAngle_reindex
+          (by
+            change (LGP v).n = (LGQ v).n
+            exact hPQ)
+          (vertexStarOfEuclidean Q v (LGQ v)).edgeDir i)
+    rw [hgeom]
+  exact dihedralRotated_of_starDart_order (M := M)
+    root (euclideanEdgeSign P Q) starP geomDiff horder hval
+
+theorem euclidean_linkOrder
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v) :
+    ∀ (v : M.Vertex),
+      List.DihedralRotated
+        ((M.σ.toList (vertexDartRep v)).map (euclideanEdgeSign P Q))
+        ((List.ofFn
+          (linkDiff (vertexStarOfEuclidean P v (LGP v)).vertexLink
+            (linkQcast M
+              (fun w => vertexStarOfEuclidean P w (LGP w))
+              (fun w => vertexStarOfEuclidean Q w (LGQ w))
+              (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v))).map realSignToEdgeSign) := by
+  intro v
+  exact euclidean_linkOrder_at_root P Q LGP LGQ v (vertexDartRep v) (vertexDartRep_tail v)
+
+theorem linkAngle_rotPoly {n : ℕ} (A : Fin (n + 1) → S2)
+    (k i : Fin (n + 1)) :
+    linkAngle (rotPoly A k) i = linkAngle A (i + k) := by
+  unfold linkAngle rotPoly
+  have hprev : (i - 1 : Fin (n + 1)) + k = (i + k) - 1 := by
+    rw [sub_eq_add_neg, sub_eq_add_neg]
+    abel
+  have hnext : (i + 1 : Fin (n + 1)) + k = (i + k) + 1 := by
+    rw [add_right_comm]
+  rw [hprev, hnext]
+
+theorem linkDiff_rotPoly {n : ℕ} (A B : Fin (n + 1) → S2)
+    (k i : Fin (n + 1)) :
+    linkDiff (rotPoly A k) (rotPoly B k) i = linkDiff A B (i + k) := by
+  unfold linkDiff
+  rw [linkAngle_rotPoly B k i, linkAngle_rotPoly A k i]
+
+theorem ofFn_add_isRotated {α : Type*} {n : ℕ} (f : Fin n → α) (k : Fin n) :
+    List.ofFn f ~r List.ofFn (fun i : Fin n => f (i + k)) := by
+  refine ⟨k.val, ?_⟩
+  apply List.ext_getElem
+  · simp [List.length_rotate]
+  · intro m hm₁ hm₂
+    simp only [List.length_rotate, List.length_ofFn] at hm₁ hm₂
+    rw [List.getElem_rotate]
+    simp only [List.getElem_ofFn]
+    apply congrArg f
+    apply Fin.ext
+    simp [Fin.val_add]
+
+theorem dihedralRotated_trans_right {α : Type*} {l m m' : List α}
+    (h : List.DihedralRotated l m) (hr : m ~r m') :
+    List.DihedralRotated l m' := by
+  rcases h with hrot | hrev
+  · exact Or.inl (hrot.trans hr)
+  · exact Or.inr (hrev.trans hr)
+
+theorem euclideanEdgeSign_starDart_eq_linkDiff
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (v : M.Vertex) :
+    ∃ hdeg : 3 ≤ vDeg P v, ∃ e : (LGP v).n = starN P v,
+      ∀ i : Fin ((LGP v).n + 1),
+        euclideanEdgeSign P Q
+            (starDart P v hdeg (Fin.cast (congrArg Nat.succ e) i))
+          =
+        realSignToEdgeSign
+          (linkDiff (vertexStarOfEuclidean P v (LGP v)).vertexLink
+            (linkQcast M
+              (fun w => vertexStarOfEuclidean P w (LGP w))
+              (fun w => vertexStarOfEuclidean Q w (LGQ w))
+              (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) i) := by
+  rcases dihedralAngleAt_starDart_eq_linkAngle P v (LGP v) with ⟨hdegP, eP, hP⟩
+  rcases dihedralAngleAt_starDart_eq_linkAngle Q v (LGQ v) with ⟨hdegQ, eQ, hQ⟩
+  refine ⟨hdegP, eP, ?_⟩
+  intro i
+  let hnn := vertexLinkGeometry_n_eq P Q LGP LGQ v
+  let hPQ : (LGP v).n = (LGQ v).n := by rw [hnn]
+  have hidx :
+      Fin.cast (congrArg Nat.succ eP) i =
+        Fin.cast (congrArg Nat.succ eQ)
+          (Fin.cast (congrArg Nat.succ hPQ) i) :=
+    fin_cast_merge_starN_of_PQ eP eQ hPQ i
+  have hPi := hP i
+  let iQ : Fin ((LGQ v).n + 1) := Fin.cast (congrArg Nat.succ hPQ) i
+  have hQi := hQ iQ
+  have hstarQ :
+      starDart P v hdegP (Fin.cast (congrArg Nat.succ eP) i) =
+        starDart Q v hdegQ (Fin.cast (congrArg Nat.succ eQ) iQ) := by
+    exact starDart_eq_of_index P Q v hdegP hdegQ (heq_of_eq hidx)
+  unfold euclideanEdgeSign dihedralSignAtDart
+  rw [hPi]
+  rw [hstarQ, hQi]
+  have hgeom :
+      linkDiff (vertexStarOfEuclidean P v (LGP v)).vertexLink
+          (linkQcast M
+            (fun w => vertexStarOfEuclidean P w (LGP w))
+            (fun w => vertexStarOfEuclidean Q w (LGQ w))
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) i =
+        linkAngle (vertexStarOfEuclidean Q v (LGQ v)).vertexLink iQ -
+          linkAngle (vertexStarOfEuclidean P v (LGP v)).vertexLink i := by
+    dsimp [linkDiff]
+    unfold linkQcast
+    dsimp [iQ, hPQ]
+    exact congrArg
+      (fun x => x - linkAngle (vertexStarOfEuclidean P v (LGP v)).vertexLink i)
+      (linkAngle_reindex
+        (by
+          change (LGP v).n = (LGQ v).n
+          exact hPQ)
+        (vertexStarOfEuclidean Q v (LGQ v)).edgeDir i)
+  rw [hgeom]
+
+/-- There is a nonzero edge sign in the canonical `σ`-cycle of `v`. -/
+def baseActiveExists (P Q : TriangulatedEuclideanPolyhedron M) (v : M.Vertex) : Prop :=
+  ∃ x, M.σ.SameCycle (vertexDartRep (M := M) v) x ∧ euclideanEdgeSign P Q x ≠ EdgeSign.zero
+
+noncomputable def adaptiveActiveDart
+    (P Q : TriangulatedEuclideanPolyhedron M) (v : M.Vertex) : D :=
+  if h : baseActiveExists P Q v then h.choose else vertexDartRep (M := M) v
+
+noncomputable def adaptiveDartRep
+    (P Q : TriangulatedEuclideanPolyhedron M) (v : M.Vertex) : D :=
+  if h : baseActiveExists P Q v then M.σ (M.σ h.choose) else vertexDartRep (M := M) v
+
+theorem tail_eq_of_sigma_sameCycle {a b : D} (h : M.σ.SameCycle a b) :
+    M.tail b = M.tail a := by
+  change Quotient.mk (cycleSetoid M.σ) b = Quotient.mk (cycleSetoid M.σ) a
+  exact Quotient.sound h.symm
+
+theorem adaptiveActiveDart_spec
+    (P Q : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (h : baseActiveExists P Q v) :
+    M.σ.SameCycle (vertexDartRep (M := M) v) (adaptiveActiveDart P Q v) ∧
+      euclideanEdgeSign P Q (adaptiveActiveDart P Q v) ≠ EdgeSign.zero := by
+  unfold adaptiveActiveDart
+  simpa [h] using h.choose_spec
+
+theorem adaptiveActiveDart_tail
+    (P Q : TriangulatedEuclideanPolyhedron M) (v : M.Vertex) :
+    M.tail (adaptiveActiveDart P Q v) = v := by
+  by_cases h : baseActiveExists P Q v
+  · have hs := (adaptiveActiveDart_spec P Q v h).1
+    rw [tail_eq_of_sigma_sameCycle hs, vertexDartRep_tail]
+  · simp [adaptiveActiveDart, h, vertexDartRep_tail]
+
+theorem adaptiveDartRep_tail
+    (P Q : TriangulatedEuclideanPolyhedron M) (v : M.Vertex) :
+    M.tail (adaptiveDartRep P Q v) = v := by
+  by_cases h : baseActiveExists P Q v
+  · unfold adaptiveDartRep
+    simp [h]
+    have htail : M.tail h.choose = v := by
+      have hs : M.σ.SameCycle (vertexDartRep (M := M) v) h.choose := h.choose_spec.1
+      rw [tail_eq_of_sigma_sameCycle hs, vertexDartRep_tail]
+    exact htail
+  · simp [adaptiveDartRep, h, vertexDartRep_tail]
+
+noncomputable def signDartHdeg
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (v : M.Vertex) : 3 ≤ vDeg P v :=
+  (euclideanEdgeSign_starDart_eq_linkDiff P Q LGP LGQ v).choose
+
+noncomputable def signDartE
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (v : M.Vertex) :
+    (LGP v).n = starN P v :=
+  ((euclideanEdgeSign_starDart_eq_linkDiff P Q LGP LGQ v).choose_spec).choose
+
+theorem signDart_value
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (v : M.Vertex) :
+    ∀ i : Fin ((LGP v).n + 1),
+      euclideanEdgeSign P Q
+          (starDart P v (signDartHdeg P Q LGP LGQ v)
+            (Fin.cast (congrArg Nat.succ (signDartE P Q LGP LGQ v)) i))
+        =
+      realSignToEdgeSign
+        (linkDiff (vertexStarOfEuclidean P v (LGP v)).vertexLink
+          (linkQcast M
+            (fun w => vertexStarOfEuclidean P w (LGP w))
+            (fun w => vertexStarOfEuclidean Q w (LGQ w))
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) i) :=
+  ((euclideanEdgeSign_starDart_eq_linkDiff P Q LGP LGQ v).choose_spec).choose_spec
+
+noncomputable def adaptiveOffset
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (v : M.Vertex) :
+    Fin ((LGP v).n + 1) :=
+  let hdeg := signDartHdeg P Q LGP LGQ v
+  let e := signDartE P Q LGP LGQ v
+  let x := adaptiveActiveDart P Q v
+  let hx : x ∈ incidentDarts P v :=
+    incidentDarts_mem_of_tail P hdeg (adaptiveActiveDart_tail P Q v)
+  Fin.cast (congrArg Nat.succ e.symm)
+    (reverseStarIndexOfDart P v hdeg x hx) - 1
+
+theorem interiorActive_of_link_index_one {n : ℕ} (A B : Fin (n + 1) → S2)
+    (hn : 2 ≤ n)
+    (hneq :
+      realSignToEdgeSign
+        (linkDiff A B ⟨1, by omega⟩) ≠ EdgeSign.zero) :
+    ∃ i : Fin (n - 1), jointAngle A i ≠ jointAngle B i := by
+  let i : Fin (n - 1) := ⟨0, by omega⟩
+  refine ⟨i, ?_⟩
+  have hdiff : linkDiff A B ⟨1, by omega⟩ ≠ 0 := by
+    intro h0
+    exact hneq ((realSignToEdgeSign_eq_zero_iff _).2 h0)
+  have hidx :
+      (⟨1, by omega⟩ : Fin (n + 1)) =
+        (⟨i.val + 1, by have := i.isLt; omega⟩ : Fin (n + 1)) := by
+    ext
+    simp [i]
+  have hJD : jointDiff A B i ≠ 0 := by
+    have h := hdiff
+    rw [hidx, linkDiff_interior A B i] at h
+    exact h
+  unfold jointDiff at hJD
+  intro heq
+  apply hJD
+  rw [heq]
+  ring
+
+/-- A concrete, non-circular two-arc cut for a full cyclic link-difference sequence.
+
+The non-wrapping arc is the opening arc (`A ≤ B`, strictly somewhere), and the wrapping arc is the
+closing arc (`B ≤ A`).  This is the honest residual needed by the abstract two-arc assembler. -/
+structure TwoArcCut {n : ℕ} (d : Fin (n + 1) → ℝ) where
+  tIdx : ℕ
+  sIdx : ℕ
+  hts : tIdx < sIdx
+  hsn : sIdx ≤ n
+  hm1 : 2 ≤ sIdx - tIdx
+  hm2 : 2 ≤ wrapLen n sIdx tIdx
+  nonwrap_nonneg :
+    ∀ i : Fin (sIdx - tIdx - 1),
+      0 ≤ d ⟨tIdx + i.val + 1, by have := i.isLt; omega⟩
+  nonwrap_pos :
+    ∃ i : Fin (sIdx - tIdx - 1),
+      0 < d ⟨tIdx + i.val + 1, by have := i.isLt; omega⟩
+  wrap_nonpos :
+    ∀ i : Fin (wrapLen n sIdx tIdx - 1),
+      d ((⟨i.val + 1, by
+            have := i.isLt
+            unfold wrapLen at this
+            omega⟩ : Fin (n + 1)) + ⟨sIdx, by omega⟩) ≤ 0
+
+lemma twoArcCut_mono1 {n : ℕ} (A B : Fin (n + 1) → S2)
+    (cut : TwoArcCut (linkDiff A B)) :
+    ∀ i : Fin (cut.sIdx - cut.tIdx - 1),
+      jointAngle (subArc A cut.tIdx cut.sIdx cut.hts cut.hsn) i
+        ≤ jointAngle (subArc B cut.tIdx cut.sIdx cut.hts cut.hsn) i := by
+  intro i
+  let j : Fin (n - 1) := ⟨cut.tIdx + i.val, by
+    have hi := i.isLt
+    have hsn := cut.hsn
+    omega⟩
+  have hidx :
+      (⟨cut.tIdx + i.val + 1, by
+        have hi := i.isLt
+        have hsn := cut.hsn
+        omega⟩ : Fin (n + 1))
+        =
+      (⟨j.val + 1, by have := j.isLt; omega⟩ : Fin (n + 1)) := by
+    ext
+    simp [j]
+  have hld : 0 ≤ jointDiff A B j := by
+    have h := cut.nonwrap_nonneg i
+    rw [hidx, linkDiff_interior] at h
+    exact h
+  rw [subArc_jointAngle, subArc_jointAngle]
+  unfold jointDiff at hld
+  linarith
+
+lemma twoArcCut_strict1 {n : ℕ} (A B : Fin (n + 1) → S2)
+    (cut : TwoArcCut (linkDiff A B)) :
+    ∃ i : Fin (cut.sIdx - cut.tIdx - 1),
+      jointAngle (subArc A cut.tIdx cut.sIdx cut.hts cut.hsn) i
+        < jointAngle (subArc B cut.tIdx cut.sIdx cut.hts cut.hsn) i := by
+  obtain ⟨i, hi⟩ := cut.nonwrap_pos
+  refine ⟨i, ?_⟩
+  let j : Fin (n - 1) := ⟨cut.tIdx + i.val, by
+    have hi' := i.isLt
+    have hsn := cut.hsn
+    omega⟩
+  have hidx :
+      (⟨cut.tIdx + i.val + 1, by
+        have hi' := i.isLt
+        have hsn := cut.hsn
+        omega⟩ : Fin (n + 1))
+        =
+      (⟨j.val + 1, by have := j.isLt; omega⟩ : Fin (n + 1)) := by
+    ext
+    simp [j]
+  have hld : 0 < jointDiff A B j := by
+    rw [hidx, linkDiff_interior] at hi
+    exact hi
+  rw [subArc_jointAngle, subArc_jointAngle]
+  unfold jointDiff at hld
+  linarith
+
+lemma linkDiff_wrap_joint {n : ℕ} (A B : Fin (n + 1) → S2)
+    {t s : ℕ} (hts : t < s) (hsn : s ≤ n)
+    (i : Fin (wrapLen n s t - 1)) :
+    linkDiff A B
+      ((⟨i.val + 1, by
+          have := i.isLt
+          unfold wrapLen at this
+          omega⟩ : Fin (n + 1)) + ⟨s, by omega⟩)
+      =
+    jointAngle (subArcWrap B t s hts hsn) i
+      -
+    jointAngle (subArcWrap A t s hts hsn) i := by
+  let k : Fin (n + 1) :=
+    (⟨i.val + 1, by
+      have := i.isLt
+      unfold wrapLen at this
+      omega⟩ : Fin (n + 1)) + ⟨s, by omega⟩
+  have hkprev :
+      k - 1 =
+        (⟨i.val, by
+          have := i.isLt
+          unfold wrapLen at this
+          omega⟩ : Fin (n + 1)) + ⟨s, by omega⟩ := by
+    apply Fin.ext
+    rw [Fin.sub_def, Fin.val_one', Nat.mod_eq_of_lt (show 1 < n + 1 by omega)]
+    simp only [k]
+    rw [Fin.val_add, Fin.val_add]
+    simp only [Fin.val_mk]
+    show (n + 1 - 1 + ((i.val + 1 + s) % (n + 1))) % (n + 1) =
+      (i.val + s) % (n + 1)
+    have hstep :
+        (n + 1 - 1 + ((i.val + 1 + s) % (n + 1))) % (n + 1) =
+          (n + 1 - 1 + (i.val + 1 + s)) % (n + 1) := by
+      have h := (Nat.add_mod (n + 1 - 1) (i.val + 1 + s) (n + 1)).symm
+      have h0 : (n + 1 - 1) % (n + 1) = n + 1 - 1 := by
+        exact Nat.mod_eq_of_lt (show n + 1 - 1 < n + 1 by omega)
+      simpa [h0] using h
+    rw [hstep]
+    have hsum : n + 1 - 1 + (i.val + 1 + s) = i.val + s + (n + 1) := by omega
+    rw [hsum, Nat.add_mod_right]
+  have hkcur :
+      k =
+        (⟨i.val + 1, by
+          have := i.isLt
+          unfold wrapLen at this
+          omega⟩ : Fin (n + 1)) + ⟨s, by omega⟩ := rfl
+  have hknext :
+      k + 1 =
+        (⟨i.val + 2, by
+          have := i.isLt
+          unfold wrapLen at this
+          omega⟩ : Fin (n + 1)) + ⟨s, by omega⟩ := by
+    apply Fin.ext
+    simp only [k]
+    rw [Fin.val_add, Fin.val_add, Fin.val_add]
+    simp only [Fin.val_mk, Fin.val_one']
+    rw [Nat.mod_eq_of_lt (show 1 < n + 1 by omega)]
+    show (((i.val + 1 + s) % (n + 1) + 1) % (n + 1)) =
+      (i.val + 2 + s) % (n + 1)
+    have hstep :
+        (((i.val + 1 + s) % (n + 1) + 1) % (n + 1)) =
+          (i.val + 1 + s + 1) % (n + 1) := by
+      have h := (Nat.add_mod (i.val + 1 + s) 1 (n + 1)).symm
+      have h1 : 1 % (n + 1) = 1 := Nat.mod_eq_of_lt (show 1 < n + 1 by omega)
+      simpa [h1, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using h
+    rw [hstep]
+    congr 1
+    omega
+  change linkDiff A B k =
+    jointAngle (subArcWrap B t s hts hsn) i
+      -
+    jointAngle (subArcWrap A t s hts hsn) i
+  unfold linkDiff
+  rw [subArcWrap_jointAngle, subArcWrap_jointAngle]
+  rw [rotPoly_jointAngle, rotPoly_jointAngle]
+  unfold linkAngle
+  rw [hkprev, hkcur, hknext]
+
+lemma twoArcCut_mono2 {n : ℕ} (A B : Fin (n + 1) → S2)
+    (cut : TwoArcCut (linkDiff A B)) :
+    ∀ i : Fin (wrapLen n cut.sIdx cut.tIdx - 1),
+      jointAngle (subArcWrap B cut.tIdx cut.sIdx cut.hts cut.hsn) i
+        ≤ jointAngle (subArcWrap A cut.tIdx cut.sIdx cut.hts cut.hsn) i := by
+  intro i
+  have h := cut.wrap_nonpos i
+  rw [linkDiff_wrap_joint A B cut.hts cut.hsn i] at h
+  linarith
+
+noncomputable def twoArcSplitData_of_cut {n : ℕ} (hn : 1 ≤ n) (A B : Fin (n + 1) → S2)
+    (hA : StrictConvexSphArm A) (hB : StrictConvexSphArm B)
+    (hsides : ∀ i : Fin n, sideLen A i = sideLen B i)
+    (hclose : sDist (A 0) (A (Fin.last n)) = sDist (B 0) (B (Fin.last n)))
+    (cut : TwoArcCut (linkDiff A B)) :
+    TwoArcSplitData A B :=
+  twoArcSplitData_of_indices hn A B hA hB hsides hclose
+    cut.tIdx cut.sIdx cut.hts cut.hsn cut.hm1 cut.hm2
+    (twoArcCut_mono1 A B cut)
+    (twoArcCut_strict1 A B cut)
+    (twoArcCut_mono2 A B cut)
+
+/-- Route-B two-arc input: the realization carries only the sign-definite cut certificate. -/
+structure EuclideanTwoArcCutData
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v) where
+  twoArcCutData : ∀ (v : M.Vertex),
+    signChangesFull (vertexStarOfEuclidean P v (LGP v)).vertexLink
+        (linkQcast M
+          (fun w => vertexStarOfEuclidean P w (LGP w))
+          (fun w => vertexStarOfEuclidean Q w (LGQ w))
+          (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) = 2 →
+      TwoArcCut
+        (linkDiff (vertexStarOfEuclidean P v (LGP v)).vertexLink
+          (linkQcast M
+            (fun w => vertexStarOfEuclidean P w (LGP w))
+            (fun w => vertexStarOfEuclidean Q w (LGQ w))
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v))
+
+noncomputable def euclidean_twoArc_of_cutData
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (hsides : ∀ (v : M.Vertex) (i : Fin (vertexStarOfEuclidean P v (LGP v)).n),
+      sideLen (vertexStarOfEuclidean P v (LGP v)).vertexLink i =
+        sideLen (linkQcast M
+          (fun w => vertexStarOfEuclidean P w (LGP w))
+          (fun w => vertexStarOfEuclidean Q w (LGQ w))
+          (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) i)
+    (hclose : ∀ (v : M.Vertex),
+      sDist ((vertexStarOfEuclidean P v (LGP v)).vertexLink 0)
+          ((vertexStarOfEuclidean P v (LGP v)).vertexLink
+            (Fin.last (vertexStarOfEuclidean P v (LGP v)).n))
+        =
+      sDist ((linkQcast M
+          (fun w => vertexStarOfEuclidean P w (LGP w))
+          (fun w => vertexStarOfEuclidean Q w (LGQ w))
+          (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) 0)
+        ((linkQcast M
+          (fun w => vertexStarOfEuclidean P w (LGP w))
+          (fun w => vertexStarOfEuclidean Q w (LGQ w))
+          (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v)
+            (Fin.last (vertexStarOfEuclidean P v (LGP v)).n)))
+    (C : EuclideanTwoArcCutData P Q LGP LGQ) :
+    ∀ (v : M.Vertex),
+      signChangesFull (vertexStarOfEuclidean P v (LGP v)).vertexLink
+          (linkQcast M
+            (fun w => vertexStarOfEuclidean P w (LGP w))
+            (fun w => vertexStarOfEuclidean Q w (LGQ w))
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) = 2 →
+        TwoArcSplitData (vertexStarOfEuclidean P v (LGP v)).vertexLink
+          (linkQcast M
+            (fun w => vertexStarOfEuclidean P w (LGP w))
+            (fun w => vertexStarOfEuclidean Q w (LGQ w))
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) := by
+  intro v h2
+  let S := vertexStarOfEuclidean P v (LGP v)
+  let T :=
+    linkQcast M
+      (fun w => vertexStarOfEuclidean P w (LGP w))
+      (fun w => vertexStarOfEuclidean Q w (LGQ w))
+      (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v
+  have hn : 1 ≤ S.n := by
+    have := S.hn
+    omega
+  exact twoArcSplitData_of_cut hn S.vertexLink T S.vertexLink_strictArm
+    (linkQcast_strictArm M
+      (fun w => vertexStarOfEuclidean P w (LGP w))
+      (fun w => vertexStarOfEuclidean Q w (LGQ w))
+      (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v)
+    (hsides v) (hclose v) (C.twoArcCutData v h2)
+
+abbrev rotatedStarP
+    (P : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (offset : ∀ v : M.Vertex, Fin ((LGP v).n + 1))
+    (v : M.Vertex) : VertexStar :=
+  (vertexStarOfEuclidean P v (LGP v)).rotate (offset v)
+
+abbrev rotatedStarQ
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (offset : ∀ v : M.Vertex, Fin ((LGP v).n + 1))
+    (v : M.Vertex) : VertexStar :=
+  (vertexStarOfEuclidean Q v (LGQ v)).rotate
+    (Fin.cast
+      (congrArg Nat.succ
+        (vertexLinkGeometry_n_eq P Q LGP LGQ v).symm)
+      (offset v))
+
+abbrev fixedLinkQcast
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (v : M.Vertex) : Fin ((LGP v).n + 1) → S2 :=
+  fun i => (vertexStarOfEuclidean Q v (LGQ v)).vertexLink
+    (Fin.cast
+      (congrArg Nat.succ (vertexLinkGeometry_n_eq P Q LGP LGQ v).symm) i)
+
+abbrev rotatedHnn
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (offset : ∀ v : M.Vertex, Fin ((LGP v).n + 1)) :
+    ∀ v : M.Vertex,
+      (rotatedStarQ P Q LGP LGQ offset v).n = (rotatedStarP P LGP offset v).n :=
+  fun v => by
+    unfold rotatedStarP rotatedStarQ VertexStar.rotate
+    change (LGQ v).n = (LGP v).n
+    exact vertexLinkGeometry_n_eq P Q LGP LGQ v
+
+theorem rotatedStarP_n
+    (P : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (offset : ∀ v : M.Vertex, Fin ((LGP v).n + 1))
+    (v : M.Vertex) :
+    (rotatedStarP P LGP offset v).n = (LGP v).n := by
+  unfold rotatedStarP VertexStar.rotate
+  rfl
+
+theorem linkQcast_rotated_eq
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (offset : ∀ v : M.Vertex, Fin ((LGP v).n + 1))
+    (v : M.Vertex) :
+    (fun i : Fin ((LGP v).n + 1) =>
+      (linkQcast M
+        (rotatedStarP P LGP offset)
+        (rotatedStarQ P Q LGP LGQ offset)
+        (rotatedHnn P Q LGP LGQ offset) v)
+        (Fin.cast (congrArg Nat.succ (rotatedStarP_n P LGP offset v).symm) i))
+      =
+    rotPoly (n := (LGP v).n)
+      (fixedLinkQcast P Q LGP LGQ v)
+      (offset v) := by
+  unfold rotatedStarP VertexStar.rotate
+  funext i
+  let i0 : Fin ((LGP v).n + 1) := i
+  let hQP := vertexLinkGeometry_n_eq P Q LGP LGQ v
+  let hPQ : (LGP v).n = (LGQ v).n := hQP.symm
+  let offQ : Fin ((LGQ v).n + 1) := Fin.cast (congrArg Nat.succ hPQ) (offset v)
+  unfold linkQcast rotatedStarQ rotPoly
+  change ((vertexStarOfEuclidean Q v (LGQ v)).rotate offQ).vertexLink
+      (Fin.cast (congrArg Nat.succ hPQ) i0)
+    =
+    (vertexStarOfEuclidean Q v (LGQ v)).vertexLink
+      (Fin.cast (congrArg Nat.succ hPQ) (i0 + offset v))
+  rw [VertexStar.vertexLink_rotate]
+  unfold rotPoly
+  apply congrArg (vertexStarOfEuclidean Q v (LGQ v)).vertexLink
+  dsimp [offQ]
+  exact (fin_cast_add hPQ i0 (offset v)).symm
+
+theorem rotated_sides_eq
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (offset : ∀ v : M.Vertex, Fin ((LGP v).n + 1))
+    (hcong : CongruentFaces P Q) :
+    ∀ (v : M.Vertex) (i : Fin ((rotatedStarP P LGP offset v).n)),
+      sideLen (rotatedStarP P LGP offset v).vertexLink i =
+        sideLen (linkQcast M
+          (rotatedStarP P LGP offset)
+          (rotatedStarQ P Q LGP LGQ offset)
+          (rotatedHnn P Q LGP LGQ offset) v) i := by
+  intro v i
+  let A := (vertexStarOfEuclidean P v (LGP v)).vertexLink
+  let B := fixedLinkQcast P Q LGP LGQ v
+  have hsides0 := euclidean_sides_eq P Q LGP LGQ hcong v
+  have hclose0 := euclidean_close_eq P Q LGP LGQ hcong v
+  have hsides : ∀ i : Fin (LGP v).n, sideLen A i = sideLen B i := by
+    intro i
+    simpa [A, B] using hsides0 i
+  have hclose : sDist (A 0) (A (Fin.last (LGP v).n)) =
+      sDist (B 0) (B (Fin.last (LGP v).n)) := by
+    simpa [A, B] using hclose0
+  have hn : 1 ≤ (LGP v).n := by
+    have := (LGP v).hn
+    omega
+  change sideLen (rotatedStarP P LGP offset v).vertexLink i =
+    sideLen
+      (fun j : Fin ((LGP v).n + 1) =>
+        (linkQcast M
+          (rotatedStarP P LGP offset)
+          (rotatedStarQ P Q LGP LGQ offset)
+          (rotatedHnn P Q LGP LGQ offset) v)
+          (Fin.cast (congrArg Nat.succ (rotatedStarP_n P LGP offset v).symm) j)) i
+  rw [linkQcast_rotated_eq P Q LGP LGQ offset v]
+  unfold rotatedStarP
+  rw [VertexStar.vertexLink_rotate]
+  exact rotPoly_sideLen_eq hn A B hsides hclose (offset v) i
+
+theorem rotPoly_close_eq {n : ℕ} (hn : 1 ≤ n) (A B : Fin (n + 1) → S2)
+    (hsides : ∀ i : Fin n, sideLen A i = sideLen B i)
+    (hclose : sDist (A 0) (A (Fin.last n)) = sDist (B 0) (B (Fin.last n)))
+    (k : Fin (n + 1)) :
+    sDist ((rotPoly A k) 0) ((rotPoly A k) (Fin.last n)) =
+      sDist ((rotPoly B k) 0) ((rotPoly B k) (Fin.last n)) := by
+  let j : Fin (n + 1) := (Fin.last n) + k
+  have hnext : j + 1 = (0 : Fin (n + 1)) + k := by
+    have h := congrArg (fun x : Fin (n + 1) => x + k) (Fin.last_add_one n)
+    simpa [j, add_assoc, add_comm, add_left_comm] using h
+  have hcyc := all_cyclic_edges_eq hn A B hsides hclose j
+  unfold rotPoly
+  rw [← hnext]
+  rw [sDist_comm (A (j + 1)) (A j)]
+  rw [sDist_comm (B (j + 1)) (B j)]
+  exact hcyc
+
+theorem rotated_close_eq
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (offset : ∀ v : M.Vertex, Fin ((LGP v).n + 1))
+    (hcong : CongruentFaces P Q) :
+    ∀ (v : M.Vertex),
+      sDist ((rotatedStarP P LGP offset v).vertexLink 0)
+          ((rotatedStarP P LGP offset v).vertexLink
+            (Fin.last (rotatedStarP P LGP offset v).n))
+        =
+      sDist ((linkQcast M
+          (rotatedStarP P LGP offset)
+          (rotatedStarQ P Q LGP LGQ offset)
+          (rotatedHnn P Q LGP LGQ offset) v) 0)
+        ((linkQcast M
+          (rotatedStarP P LGP offset)
+          (rotatedStarQ P Q LGP LGQ offset)
+          (rotatedHnn P Q LGP LGQ offset) v)
+            (Fin.last (rotatedStarP P LGP offset v).n)) := by
+  intro v
+  let A := (vertexStarOfEuclidean P v (LGP v)).vertexLink
+  let B := fixedLinkQcast P Q LGP LGQ v
+  have hsides0 := euclidean_sides_eq P Q LGP LGQ hcong v
+  have hclose0 := euclidean_close_eq P Q LGP LGQ hcong v
+  have hsides : ∀ i : Fin (LGP v).n, sideLen A i = sideLen B i := by
+    intro i
+    simpa [A, B] using hsides0 i
+  have hclose : sDist (A 0) (A (Fin.last (LGP v).n)) =
+      sDist (B 0) (B (Fin.last (LGP v).n)) := by
+    simpa [A, B] using hclose0
+  have hn : 1 ≤ (LGP v).n := by
+    have := (LGP v).hn
+    omega
+  change sDist ((rotatedStarP P LGP offset v).vertexLink 0)
+      ((rotatedStarP P LGP offset v).vertexLink (Fin.last (rotatedStarP P LGP offset v).n))
+    =
+    sDist
+      ((fun j : Fin ((LGP v).n + 1) =>
+        (linkQcast M
+          (rotatedStarP P LGP offset)
+          (rotatedStarQ P Q LGP LGQ offset)
+          (rotatedHnn P Q LGP LGQ offset) v)
+          (Fin.cast (congrArg Nat.succ (rotatedStarP_n P LGP offset v).symm) j)) 0)
+      ((fun j : Fin ((LGP v).n + 1) =>
+        (linkQcast M
+          (rotatedStarP P LGP offset)
+          (rotatedStarQ P Q LGP LGQ offset)
+          (rotatedHnn P Q LGP LGQ offset) v)
+          (Fin.cast (congrArg Nat.succ (rotatedStarP_n P LGP offset v).symm) j))
+        (Fin.last (LGP v).n))
+  rw [linkQcast_rotated_eq P Q LGP LGQ offset v]
+  unfold rotatedStarP
+  rw [VertexStar.vertexLink_rotate]
+  exact rotPoly_close_eq hn A B hsides hclose (offset v)
+
+theorem rotated_linkOrder
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (offset : ∀ v : M.Vertex, Fin ((LGP v).n + 1))
+    (dartRep : M.Vertex → D)
+    (hdart : ∀ v : M.Vertex, M.tail (dartRep v) = v) :
+    ∀ (v : M.Vertex),
+      List.DihedralRotated
+        ((M.σ.toList (dartRep v)).map (euclideanEdgeSign P Q))
+        ((List.ofFn
+          (linkDiff (rotatedStarP P LGP offset v).vertexLink
+            (linkQcast M
+              (rotatedStarP P LGP offset)
+              (rotatedStarQ P Q LGP LGQ offset)
+              (rotatedHnn P Q LGP LGQ offset) v))).map realSignToEdgeSign) := by
+  intro v
+  let A := (vertexStarOfEuclidean P v (LGP v)).vertexLink
+  let B := fixedLinkQcast P Q LGP LGQ v
+  let fixedDiff := linkDiff A B
+  let rotatedDiff :=
+    linkDiff (rotatedStarP P LGP offset v).vertexLink
+      (linkQcast M
+        (rotatedStarP P LGP offset)
+        (rotatedStarQ P Q LGP LGQ offset)
+        (rotatedHnn P Q LGP LGQ offset) v)
+  have hfixed := euclidean_linkOrder_at_root P Q LGP LGQ v (dartRep v) (hdart v)
+  have hdiff :
+      ∀ i : Fin ((LGP v).n + 1), rotatedDiff i = fixedDiff (i + offset v) := by
+    intro i
+    dsimp [rotatedDiff, fixedDiff, A, B]
+    change linkDiff (rotatedStarP P LGP offset v).vertexLink
+        (fun j : Fin ((LGP v).n + 1) =>
+          (linkQcast M
+            (rotatedStarP P LGP offset)
+            (rotatedStarQ P Q LGP LGQ offset)
+            (rotatedHnn P Q LGP LGQ offset) v)
+            (Fin.cast (congrArg Nat.succ (rotatedStarP_n P LGP offset v).symm) j))
+        i =
+      fixedDiff (i + offset v)
+    rw [linkQcast_rotated_eq P Q LGP LGQ offset v]
+    unfold rotatedStarP
+    rw [VertexStar.vertexLink_rotate]
+    exact linkDiff_rotPoly A B (offset v) i
+  have hrot :
+      ((List.ofFn fixedDiff).map realSignToEdgeSign) ~r
+        ((List.ofFn rotatedDiff).map realSignToEdgeSign) := by
+    have hshift :
+        List.ofFn fixedDiff ~r List.ofFn (fun i : Fin ((LGP v).n + 1) => fixedDiff (i + offset v)) :=
+      ofFn_add_isRotated fixedDiff (offset v)
+    have hmap := hshift.map realSignToEdgeSign
+    have heq :
+        List.ofFn (fun i : Fin ((LGP v).n + 1) => fixedDiff (i + offset v)) =
+          List.ofFn rotatedDiff := by
+      exact (List.ofFn_inj).2 (funext fun i => (hdiff i).symm)
+    rw [heq] at hmap
+    exact hmap
+  exact dihedralRotated_trans_right hfixed hrot
+
+theorem adaptive_activeIndexOne
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (v : M.Vertex) :
+    ActiveVertex M (euclideanEdgeSign P Q) (adaptiveDartRep P Q v) →
+      realSignToEdgeSign
+        (linkDiff (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ) v).vertexLink
+          (linkQcast M
+            (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ))
+            (rotatedStarQ P Q LGP LGQ (adaptiveOffset P Q LGP LGQ))
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v)
+          ⟨1, by
+            have := (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ) v).hn
+            omega⟩) ≠ EdgeSign.zero := by
+  intro hact
+  have hbase : baseActiveExists P Q v := by
+    by_contra hnone
+    apply hnone
+    rcases hact with ⟨y, hy, hyne⟩
+    refine ⟨y, ?_, hyne⟩
+    simpa [adaptiveDartRep, hnone] using hy
+  let x : D := adaptiveActiveDart P Q v
+  have hxspec := adaptiveActiveDart_spec P Q v hbase
+  have hxnonzero : euclideanEdgeSign P Q x ≠ EdgeSign.zero := hxspec.2
+  let hdeg := signDartHdeg P Q LGP LGQ v
+  let e := signDartE P Q LGP LGQ v
+  have hxtail : M.tail x = v := by
+    simpa [x] using adaptiveActiveDart_tail P Q v
+  let hxmem : x ∈ incidentDarts P v := incidentDarts_mem_of_tail P hdeg hxtail
+  let Jstar : Fin (starN P v + 1) := reverseStarIndexOfDart P v hdeg x hxmem
+  let J : Fin ((LGP v).n + 1) := Fin.cast (congrArg Nat.succ e.symm) Jstar
+  have hcastJ : Fin.cast (congrArg Nat.succ e) J = Jstar := by
+    subst e
+    rfl
+  have hstar : starDart P v hdeg (Fin.cast (congrArg Nat.succ e) J) = x := by
+    rw [hcastJ]
+    exact starDart_reverseStarIndexOfDart P v hdeg x hxmem
+  have hval := signDart_value P Q LGP LGQ v J
+  have hneqJ :
+      realSignToEdgeSign
+        (linkDiff (vertexStarOfEuclidean P v (LGP v)).vertexLink
+          (linkQcast M
+            (fun w => vertexStarOfEuclidean P w (LGP w))
+            (fun w => vertexStarOfEuclidean Q w (LGQ w))
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) J) ≠ EdgeSign.zero := by
+    intro hz
+    have hxsign :
+        euclideanEdgeSign P Q x =
+          realSignToEdgeSign
+            (linkDiff (vertexStarOfEuclidean P v (LGP v)).vertexLink
+              (linkQcast M
+                (fun w => vertexStarOfEuclidean P w (LGP w))
+                (fun w => vertexStarOfEuclidean Q w (LGQ w))
+                (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) J) := by
+      simpa [hstar] using hval
+    apply hxnonzero
+    rw [hxsign, hz]
+  let one : Fin ((LGP v).n + 1) := ⟨1, by have := (LGP v).hn; omega⟩
+  have hoff :
+      adaptiveOffset P Q LGP LGQ v = J - 1 := by
+    unfold adaptiveOffset
+    change
+      (let hdeg := signDartHdeg P Q LGP LGQ v
+       let e := signDartE P Q LGP LGQ v
+       let x := adaptiveActiveDart P Q v
+       let hx : x ∈ incidentDarts P v :=
+         incidentDarts_mem_of_tail P hdeg (adaptiveActiveDart_tail P Q v)
+       Fin.cast (congrArg Nat.succ e.symm)
+         (reverseStarIndexOfDart P v hdeg x hx) - 1) = J - 1
+    rfl
+  have honeJ0 : one + (J - 1) = J := by
+    apply Fin.ext
+    rw [Fin.val_add, Fin.sub_def, Fin.val_one']
+    simp only [one, Fin.val_mk]
+    rw [Nat.mod_eq_of_lt (show 1 < (LGP v).n + 1 by have := (LGP v).hn; omega)]
+    show (1 + (((LGP v).n + 1 - 1 + J.val) % ((LGP v).n + 1))) %
+        ((LGP v).n + 1) = J.val
+    have hstep :
+        (1 + (((LGP v).n + 1 - 1 + J.val) % ((LGP v).n + 1))) %
+            ((LGP v).n + 1) =
+          (1 + ((LGP v).n + 1 - 1 + J.val)) % ((LGP v).n + 1) := by
+      have h := (Nat.add_mod 1 ((LGP v).n + 1 - 1 + J.val) ((LGP v).n + 1)).symm
+      have h1 : 1 % ((LGP v).n + 1) = 1 :=
+        Nat.mod_eq_of_lt (show 1 < (LGP v).n + 1 by have := (LGP v).hn; omega)
+      simpa [h1] using h
+    rw [hstep]
+    have hsum : 1 + ((LGP v).n + 1 - 1 + J.val) = J.val + ((LGP v).n + 1) := by
+      omega
+    rw [hsum, Nat.add_mod_right, Nat.mod_eq_of_lt J.isLt]
+  have hrot :
+      linkDiff (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ) v).vertexLink
+          (linkQcast M
+            (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ))
+            (rotatedStarQ P Q LGP LGQ (adaptiveOffset P Q LGP LGQ))
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v)
+          one
+        =
+      linkDiff (vertexStarOfEuclidean P v (LGP v)).vertexLink
+          (linkQcast M
+            (fun w => vertexStarOfEuclidean P w (LGP w))
+            (fun w => vertexStarOfEuclidean Q w (LGQ w))
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) J := by
+    let offP : Fin ((LGP v).n + 1) := adaptiveOffset P Q LGP LGQ v
+    have honeJ : one + offP = J := by
+      dsimp [offP]
+      rw [hoff]
+      exact honeJ0
+    have hPang :
+        linkAngle (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ) v).vertexLink one =
+          linkAngle (vertexStarOfEuclidean P v (LGP v)).vertexLink J := by
+      unfold rotatedStarP
+      rw [VertexStar.vertexLink_rotate]
+      calc
+        linkAngle
+            (rotPoly (vertexStarOfEuclidean P v (LGP v)).vertexLink
+              (adaptiveOffset P Q LGP LGQ v)) one
+            = linkAngle (vertexStarOfEuclidean P v (LGP v)).vertexLink
+                (one + adaptiveOffset P Q LGP LGQ v) :=
+              linkAngle_rotPoly (vertexStarOfEuclidean P v (LGP v)).vertexLink
+                (adaptiveOffset P Q LGP LGQ v) one
+        _ = linkAngle (vertexStarOfEuclidean P v (LGP v)).vertexLink J := by rw [honeJ]
+    have hQang :
+        linkAngle
+            (linkQcast M
+              (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ))
+              (rotatedStarQ P Q LGP LGQ (adaptiveOffset P Q LGP LGQ))
+              (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) one =
+          linkAngle
+            (linkQcast M
+              (fun w => vertexStarOfEuclidean P w (LGP w))
+              (fun w => vertexStarOfEuclidean Q w (LGQ w))
+              (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) J := by
+      let hQP := vertexLinkGeometry_n_eq P Q LGP LGQ v
+      let hPQ : (LGP v).n = (LGQ v).n := hQP.symm
+      let offQ : Fin ((LGQ v).n + 1) := Fin.cast (congrArg Nat.succ hPQ) offP
+      have hcast :
+          Fin.cast (congrArg Nat.succ hPQ) one + offQ =
+            Fin.cast (congrArg Nat.succ hPQ) J := by
+        apply Fin.ext
+        have hval := congrArg Fin.val honeJ
+        simpa [offQ, hPQ, Fin.val_add] using hval
+      unfold linkQcast rotatedStarQ
+      change
+        linkAngle
+            (fun i =>
+              ((vertexStarOfEuclidean Q v (LGQ v)).rotate offQ).vertexLink
+                (Fin.cast (congrArg Nat.succ hPQ) i)) one =
+          linkAngle
+            (fun i =>
+              (vertexStarOfEuclidean Q v (LGQ v)).vertexLink
+                (Fin.cast (congrArg Nat.succ hPQ) i)) J
+      calc
+        linkAngle
+            (fun i =>
+              ((vertexStarOfEuclidean Q v (LGQ v)).rotate offQ).vertexLink
+                (Fin.cast (congrArg Nat.succ hPQ) i)) one
+            =
+          linkAngle ((vertexStarOfEuclidean Q v (LGQ v)).rotate offQ).vertexLink
+            (Fin.cast (congrArg Nat.succ hPQ) one) :=
+              linkAngle_reindex hPQ
+                ((vertexStarOfEuclidean Q v (LGQ v)).rotate offQ).vertexLink one
+        _ =
+          linkAngle (rotPoly (vertexStarOfEuclidean Q v (LGQ v)).vertexLink offQ)
+            (Fin.cast (congrArg Nat.succ hPQ) one) := by
+              exact congrArg
+                (fun A => linkAngle A (Fin.cast (congrArg Nat.succ hPQ) one))
+                (VertexStar.vertexLink_rotate (vertexStarOfEuclidean Q v (LGQ v)) offQ)
+        _ =
+          linkAngle (vertexStarOfEuclidean Q v (LGQ v)).vertexLink
+            (Fin.cast (congrArg Nat.succ hPQ) one + offQ) :=
+              linkAngle_rotPoly (vertexStarOfEuclidean Q v (LGQ v)).vertexLink offQ
+                (Fin.cast (congrArg Nat.succ hPQ) one)
+        _ =
+          linkAngle (vertexStarOfEuclidean Q v (LGQ v)).vertexLink
+            (Fin.cast (congrArg Nat.succ hPQ) J) :=
+              congrArg
+                (fun idx => linkAngle (vertexStarOfEuclidean Q v (LGQ v)).vertexLink idx)
+                hcast
+        _ =
+          linkAngle
+            (fun i =>
+              (vertexStarOfEuclidean Q v (LGQ v)).vertexLink
+                (Fin.cast (congrArg Nat.succ hPQ) i)) J :=
+              (linkAngle_reindex hPQ (vertexStarOfEuclidean Q v (LGQ v)).vertexLink J).symm
+    unfold linkDiff
+    rw [hQang, hPang]
+  intro hz
+  apply hneqJ
+  rw [← hrot]
+  exact hz
+
+/-- Route-B rerooted fields: stars are really rotated, and active vertices only supply
+the index-one nonzero link-difference certificate. -/
+structure EuclideanRerootedCutFieldData
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v) where
+  isSphere : M.IsSphereMap
+  isSimple : M.IsSimpleGraph
+  offset : ∀ v : M.Vertex, Fin ((LGP v).n + 1)
+  dartRep : M.Vertex → D
+  dartRep_tail : ∀ v : M.Vertex, M.tail (dartRep v) = v
+  sides_eq : ∀ (v : M.Vertex) (i : Fin ((rotatedStarP P LGP offset v).n)),
+    sideLen (rotatedStarP P LGP offset v).vertexLink i =
+      sideLen (linkQcast M
+        (rotatedStarP P LGP offset)
+        (rotatedStarQ P Q LGP LGQ offset)
+        (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) i
+  close_eq : ∀ (v : M.Vertex),
+    sDist ((rotatedStarP P LGP offset v).vertexLink 0)
+        ((rotatedStarP P LGP offset v).vertexLink
+          (Fin.last (rotatedStarP P LGP offset v).n))
+      =
+    sDist ((linkQcast M
+        (rotatedStarP P LGP offset)
+        (rotatedStarQ P Q LGP LGQ offset)
+        (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) 0)
+      ((linkQcast M
+        (rotatedStarP P LGP offset)
+        (rotatedStarQ P Q LGP LGQ offset)
+        (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v)
+          (Fin.last (rotatedStarP P LGP offset v).n))
+  activeIndexOne : ∀ (v : M.Vertex),
+    ActiveVertex M (euclideanEdgeSign P Q) (dartRep v) →
+      realSignToEdgeSign
+        (linkDiff (rotatedStarP P LGP offset v).vertexLink
+          (linkQcast M
+            (rotatedStarP P LGP offset)
+            (rotatedStarQ P Q LGP LGQ offset)
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v)
+          ⟨1, by have := (rotatedStarP P LGP offset v).hn; omega⟩) ≠ EdgeSign.zero
+  twoArcCutData : ∀ (v : M.Vertex),
+    signChangesFull (rotatedStarP P LGP offset v).vertexLink
+        (linkQcast M
+          (rotatedStarP P LGP offset)
+          (rotatedStarQ P Q LGP LGQ offset)
+          (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) = 2 →
+      TwoArcCut
+        (linkDiff (rotatedStarP P LGP offset v).vertexLink
+          (linkQcast M
+            (rotatedStarP P LGP offset)
+            (rotatedStarQ P Q LGP LGQ offset)
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v))
+  linkOrder : ∀ (v : M.Vertex),
+    List.DihedralRotated
+      ((M.σ.toList (dartRep v)).map (euclideanEdgeSign P Q))
+      ((List.ofFn
+        (linkDiff (rotatedStarP P LGP offset v).vertexLink
+          (linkQcast M
+            (rotatedStarP P LGP offset)
+            (rotatedStarQ P Q LGP LGQ offset)
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v))).map realSignToEdgeSign)
+
+/-- Adaptive rerooted fields.  Unlike `EuclideanRerootedCutFieldData`, this does not carry
+`activeIndexOne`; the offset and dart representative are chosen from the edge-sign data, and
+`activeIndexOne` is derived by `adaptive_activeIndexOne`. -/
+structure EuclideanAdaptiveCutFieldData
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v) where
+  isSphere : M.IsSphereMap
+  isSimple : M.IsSimpleGraph
+  sides_eq : ∀ (v : M.Vertex)
+      (i : Fin ((rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ) v).n)),
+    sideLen (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ) v).vertexLink i =
+      sideLen (linkQcast M
+        (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ))
+        (rotatedStarQ P Q LGP LGQ (adaptiveOffset P Q LGP LGQ))
+        (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) i
+  close_eq : ∀ (v : M.Vertex),
+    sDist ((rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ) v).vertexLink 0)
+        ((rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ) v).vertexLink
+          (Fin.last (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ) v).n))
+      =
+    sDist ((linkQcast M
+        (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ))
+        (rotatedStarQ P Q LGP LGQ (adaptiveOffset P Q LGP LGQ))
+        (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) 0)
+      ((linkQcast M
+        (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ))
+        (rotatedStarQ P Q LGP LGQ (adaptiveOffset P Q LGP LGQ))
+        (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v)
+          (Fin.last (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ) v).n))
+  twoArcCutData : ∀ (v : M.Vertex),
+    signChangesFull (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ) v).vertexLink
+        (linkQcast M
+          (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ))
+          (rotatedStarQ P Q LGP LGQ (adaptiveOffset P Q LGP LGQ))
+          (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) = 2 →
+      TwoArcCut
+        (linkDiff (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ) v).vertexLink
+          (linkQcast M
+            (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ))
+            (rotatedStarQ P Q LGP LGQ (adaptiveOffset P Q LGP LGQ))
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v))
+  linkOrder : ∀ (v : M.Vertex),
+    List.DihedralRotated
+      ((M.σ.toList (adaptiveDartRep P Q v)).map (euclideanEdgeSign P Q))
+      ((List.ofFn
+        (linkDiff (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ) v).vertexLink
+          (linkQcast M
+            (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ))
+            (rotatedStarQ P Q LGP LGQ (adaptiveOffset P Q LGP LGQ))
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v))).map realSignToEdgeSign)
+
+noncomputable def euclideanAdaptiveCutFieldData_of_congruent
+    (P Q : ConvexEuclideanPolyhedron M)
+    (hcong : CongruentFaces P.toTri Q.toTri)
+    (htwoArcCut : ∀ (v : M.Vertex),
+      signChangesFull
+          (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+            (adaptiveOffset P.toTri Q.toTri
+              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink
+          (linkQcast M
+            (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+              (adaptiveOffset P.toTri Q.toTri
+                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+            (rotatedStarQ P.toTri Q.toTri
+              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
+              (adaptiveOffset P.toTri Q.toTri
+                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+            (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
+              (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v) = 2 →
+        TwoArcCut
+          (linkDiff
+            (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+              (adaptiveOffset P.toTri Q.toTri
+                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink
+            (linkQcast M
+              (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+                (adaptiveOffset P.toTri Q.toTri
+                  (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+              (rotatedStarQ P.toTri Q.toTri
+                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
+                (adaptiveOffset P.toTri Q.toTri
+                  (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+              (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
+                (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v))) :
+    EuclideanAdaptiveCutFieldData P.toTri Q.toTri
+      (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v) where
+  isSphere := P.sphere
+  isSimple := P.isSimple
+  sides_eq :=
+    rotated_sides_eq P.toTri Q.toTri
+      (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v)
+      (adaptiveOffset P.toTri Q.toTri
+        (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v))
+      hcong
+  close_eq :=
+    rotated_close_eq P.toTri Q.toTri
+      (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v)
+      (adaptiveOffset P.toTri Q.toTri
+        (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v))
+      hcong
+  twoArcCutData := htwoArcCut
+  linkOrder :=
+    rotated_linkOrder P.toTri Q.toTri
+      (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v)
+      (adaptiveOffset P.toTri Q.toTri
+        (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v))
+      (adaptiveDartRep P.toTri Q.toTri)
+      (adaptiveDartRep_tail P.toTri Q.toTri)
+
+noncomputable def rerootedCutFieldData_of_adaptive
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (F : EuclideanAdaptiveCutFieldData P Q LGP LGQ) :
+    EuclideanRerootedCutFieldData P Q LGP LGQ where
+  isSphere := F.isSphere
+  isSimple := F.isSimple
+  offset := adaptiveOffset P Q LGP LGQ
+  dartRep := adaptiveDartRep P Q
+  dartRep_tail := adaptiveDartRep_tail P Q
+  sides_eq := F.sides_eq
+  close_eq := F.close_eq
+  activeIndexOne := adaptive_activeIndexOne P Q LGP LGQ
+  twoArcCutData := F.twoArcCutData
+  linkOrder := F.linkOrder
+
+noncomputable def rotated_twoArc_of_cutData
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (F : EuclideanRerootedCutFieldData P Q LGP LGQ) :
+    ∀ (v : M.Vertex),
+      signChangesFull (rotatedStarP P LGP F.offset v).vertexLink
+          (linkQcast M
+            (rotatedStarP P LGP F.offset)
+            (rotatedStarQ P Q LGP LGQ F.offset)
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) = 2 →
+        TwoArcSplitData (rotatedStarP P LGP F.offset v).vertexLink
+          (linkQcast M
+            (rotatedStarP P LGP F.offset)
+            (rotatedStarQ P Q LGP LGQ F.offset)
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) := by
+  intro v h2
+  let S := rotatedStarP P LGP F.offset v
+  let T :=
+    linkQcast M
+      (rotatedStarP P LGP F.offset)
+      (rotatedStarQ P Q LGP LGQ F.offset)
+      (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v
+  have hn : 1 ≤ S.n := by
+    have := S.hn
+    omega
+  exact twoArcSplitData_of_cut hn S.vertexLink T S.vertexLink_strictArm
+    (linkQcast_strictArm M
+      (rotatedStarP P LGP F.offset)
+      (rotatedStarQ P Q LGP LGQ F.offset)
+      (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v)
+    (F.sides_eq v) (F.close_eq v) (F.twoArcCutData v h2)
+
+noncomputable def convexPolytopeRealization_of_rerooted_cutFields
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (F : EuclideanRerootedCutFieldData P Q LGP LGQ) :
+    ConvexPolytopeRealization M where
+  isSphere := F.isSphere
+  triangle := P.every_face_triangle
+  isSimple := F.isSimple
+  starP := rotatedStarP P LGP F.offset
+  starQ := rotatedStarQ P Q LGP LGQ F.offset
+  hnn := fun v => vertexLinkGeometry_n_eq P Q LGP LGQ v
+  edgeSign := euclideanEdgeSign P Q
+  edgeSign_inv := euclideanEdgeSign_alpha P Q
+  sides_eq := F.sides_eq
+  close_eq := F.close_eq
+  dartRep := F.dartRep
+  dartRep_tail := F.dartRep_tail
+  interiorActive := by
+    intro v hact
+    exact interiorActive_of_link_index_one
+      (rotatedStarP P LGP F.offset v).vertexLink
+      (linkQcast M
+        (rotatedStarP P LGP F.offset)
+        (rotatedStarQ P Q LGP LGQ F.offset)
+        (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v)
+      (rotatedStarP P LGP F.offset v).hn
+      (F.activeIndexOne v hact)
+  twoArc := rotated_twoArc_of_cutData P Q LGP LGQ F
+  linkOrder := F.linkOrder
+
+/-- Extra Euclidean-to-Cauchy field suppliers not yet derivable from `CongruentFaces` alone. -/
+structure EuclideanCauchyFieldData
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v) where
+  isSphere : M.IsSphereMap
+  isSimple : M.IsSimpleGraph
+  sides_eq : ∀ (v : M.Vertex) (i : Fin (vertexStarOfEuclidean P v (LGP v)).n),
+    sideLen (vertexStarOfEuclidean P v (LGP v)).vertexLink i =
+      sideLen (linkQcast M
+        (fun w => vertexStarOfEuclidean P w (LGP w))
+        (fun w => vertexStarOfEuclidean Q w (LGQ w))
+        (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) i
+  close_eq : ∀ (v : M.Vertex),
+    sDist ((vertexStarOfEuclidean P v (LGP v)).vertexLink 0)
+        ((vertexStarOfEuclidean P v (LGP v)).vertexLink
+          (Fin.last (vertexStarOfEuclidean P v (LGP v)).n))
+      =
+    sDist ((linkQcast M
+        (fun w => vertexStarOfEuclidean P w (LGP w))
+        (fun w => vertexStarOfEuclidean Q w (LGQ w))
+        (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) 0)
+      ((linkQcast M
+        (fun w => vertexStarOfEuclidean P w (LGP w))
+        (fun w => vertexStarOfEuclidean Q w (LGQ w))
+        (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v)
+          (Fin.last (vertexStarOfEuclidean P v (LGP v)).n))
+  interiorActive : ∀ (v : M.Vertex),
+    ActiveVertex M (euclideanEdgeSign P Q) (vertexDartRep v) →
+      ∃ i : Fin ((vertexStarOfEuclidean P v (LGP v)).n - 1),
+        jointAngle (vertexStarOfEuclidean P v (LGP v)).vertexLink i ≠
+          jointAngle (linkQcast M
+            (fun w => vertexStarOfEuclidean P w (LGP w))
+            (fun w => vertexStarOfEuclidean Q w (LGQ w))
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) i
+  twoArc : ∀ (v : M.Vertex),
+    signChangesFull (vertexStarOfEuclidean P v (LGP v)).vertexLink
+        (linkQcast M
+          (fun w => vertexStarOfEuclidean P w (LGP w))
+          (fun w => vertexStarOfEuclidean Q w (LGQ w))
+          (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) = 2 →
+      TwoArcSplitData (vertexStarOfEuclidean P v (LGP v)).vertexLink
+        (linkQcast M
+          (fun w => vertexStarOfEuclidean P w (LGP w))
+          (fun w => vertexStarOfEuclidean Q w (LGQ w))
+          (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v)
+  linkOrder : ∀ (v : M.Vertex),
+    List.DihedralRotated
+      ((M.σ.toList (vertexDartRep v)).map (euclideanEdgeSign P Q))
+      ((List.ofFn
+        (linkDiff (vertexStarOfEuclidean P v (LGP v)).vertexLink
+          (linkQcast M
+            (fun w => vertexStarOfEuclidean P w (LGP w))
+            (fun w => vertexStarOfEuclidean Q w (LGQ w))
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v))).map realSignToEdgeSign)
+
+/-- Route-B Euclidean-to-Cauchy suppliers: carry `TwoArcCut`, derive `TwoArcSplitData`. -/
+structure EuclideanCauchyCutFieldData
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v) where
+  isSphere : M.IsSphereMap
+  isSimple : M.IsSimpleGraph
+  sides_eq : ∀ (v : M.Vertex) (i : Fin (vertexStarOfEuclidean P v (LGP v)).n),
+    sideLen (vertexStarOfEuclidean P v (LGP v)).vertexLink i =
+      sideLen (linkQcast M
+        (fun w => vertexStarOfEuclidean P w (LGP w))
+        (fun w => vertexStarOfEuclidean Q w (LGQ w))
+        (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) i
+  close_eq : ∀ (v : M.Vertex),
+    sDist ((vertexStarOfEuclidean P v (LGP v)).vertexLink 0)
+        ((vertexStarOfEuclidean P v (LGP v)).vertexLink
+          (Fin.last (vertexStarOfEuclidean P v (LGP v)).n))
+      =
+    sDist ((linkQcast M
+        (fun w => vertexStarOfEuclidean P w (LGP w))
+        (fun w => vertexStarOfEuclidean Q w (LGQ w))
+        (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) 0)
+      ((linkQcast M
+        (fun w => vertexStarOfEuclidean P w (LGP w))
+        (fun w => vertexStarOfEuclidean Q w (LGQ w))
+        (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v)
+          (Fin.last (vertexStarOfEuclidean P v (LGP v)).n))
+  interiorActive : ∀ (v : M.Vertex),
+    ActiveVertex M (euclideanEdgeSign P Q) (vertexDartRep v) →
+      ∃ i : Fin ((vertexStarOfEuclidean P v (LGP v)).n - 1),
+        jointAngle (vertexStarOfEuclidean P v (LGP v)).vertexLink i ≠
+          jointAngle (linkQcast M
+            (fun w => vertexStarOfEuclidean P w (LGP w))
+            (fun w => vertexStarOfEuclidean Q w (LGQ w))
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) i
+  twoArcCut : EuclideanTwoArcCutData P Q LGP LGQ
+  linkOrder : ∀ (v : M.Vertex),
+    List.DihedralRotated
+      ((M.σ.toList (vertexDartRep v)).map (euclideanEdgeSign P Q))
+      ((List.ofFn
+        (linkDiff (vertexStarOfEuclidean P v (LGP v)).vertexLink
+          (linkQcast M
+            (fun w => vertexStarOfEuclidean P w (LGP w))
+            (fun w => vertexStarOfEuclidean Q w (LGQ w))
+            (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v))).map realSignToEdgeSign)
+
+noncomputable def euclideanFieldData_of_cutFieldData
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (F : EuclideanCauchyCutFieldData P Q LGP LGQ) :
+    EuclideanCauchyFieldData P Q LGP LGQ where
+  isSphere := F.isSphere
+  isSimple := F.isSimple
+  sides_eq := F.sides_eq
+  close_eq := F.close_eq
+  interiorActive := F.interiorActive
+  twoArc := euclidean_twoArc_of_cutData P Q LGP LGQ F.sides_eq F.close_eq F.twoArcCut
+  linkOrder := F.linkOrder
+
+/-- Assemble the abstract Cauchy realization interface from Euclidean local field suppliers. -/
+def convexPolytopeRealization_of_euclidean_fields
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (F : EuclideanCauchyFieldData P Q LGP LGQ) :
+    ConvexPolytopeRealization M where
+  isSphere := F.isSphere
+  triangle := P.every_face_triangle
+  isSimple := F.isSimple
+  starP := fun v => vertexStarOfEuclidean P v (LGP v)
+  starQ := fun v => vertexStarOfEuclidean Q v (LGQ v)
+  hnn := fun v => vertexLinkGeometry_n_eq P Q LGP LGQ v
+  edgeSign := euclideanEdgeSign P Q
+  edgeSign_inv := euclideanEdgeSign_alpha P Q
+  sides_eq := F.sides_eq
+  close_eq := F.close_eq
+  dartRep := vertexDartRep
+  dartRep_tail := vertexDartRep_tail
+  interiorActive := F.interiorActive
+  twoArc := F.twoArc
+  linkOrder := F.linkOrder
+
+/-- The 3D Cauchy conclusion once the remaining honest Euclidean field suppliers are available. -/
+theorem chapter13_euclidean_of_fields
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (F : EuclideanCauchyFieldData P Q LGP LGQ)
+    (v : M.Vertex) (i : Fin ((vertexStarOfEuclidean P v (LGP v)).n - 1)) :
+    (vertexStarOfEuclidean P v (LGP v)).dihedral i =
+      (vertexStarOfEuclidean Q v (LGQ v)).dihedral
+        (Fin.cast (by
+          unfold vertexStarOfEuclidean VertexLinkGeometry.toVertexStar
+          change (LGP v).n - 1 = (LGQ v).n - 1
+          rw [← vertexLinkGeometry_n_eq P Q LGP LGQ v]) i) := by
+  simpa [convexPolytopeRealization_of_euclidean_fields, vertexStarOfEuclidean,
+    VertexLinkGeometry.toVertexStar] using
+    (convexPolytopeRealization_of_euclidean_fields P Q LGP LGQ F).realization_rigid v i
+
+/-- Assemble the abstract Cauchy realization interface from convex Euclidean polyhedra
+once the remaining per-field Euclidean producers are supplied. -/
+def convexPolytopeRealization_of_convexEuclidean_fields
+    (P Q : ConvexEuclideanPolyhedron M)
+    (F : EuclideanCauchyFieldData P.toTri Q.toTri
+      (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v)) :
+    ConvexPolytopeRealization M :=
+  convexPolytopeRealization_of_euclidean_fields P.toTri Q.toTri
+    (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v)
+    { F with
+      isSphere := P.sphere
+      isSimple := P.isSimple }
+
+/-- The Euclidean Cauchy conclusion for convex Euclidean polyhedra, conditional
+only on the remaining honest field producers. -/
+theorem chapter13_euclidean_of_convexEuclidean_fields
+    (P Q : ConvexEuclideanPolyhedron M)
+    (F : EuclideanCauchyFieldData P.toTri Q.toTri
+      (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v))
+    (v : M.Vertex) (i : Fin ((P.vertexStar v).n - 1)) :
+    (P.vertexStar v).dihedral i =
+      (Q.vertexStar v).dihedral
+        (Fin.cast (by
+          change (P.linkGeomAt v).n - 1 = (Q.linkGeomAt v).n - 1
+          exact congrArg (fun n => n - 1)
+            (vertexLinkGeometry_n_eq P.toTri Q.toTri
+              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w) v).symm) i) := by
+  simpa [ConvexEuclideanPolyhedron.vertexStar,
+    convexPolytopeRealization_of_convexEuclidean_fields,
+    ConvexEuclideanPolyhedron.linkGeomAt] using
+    (convexPolytopeRealization_of_convexEuclidean_fields P Q F).realization_rigid v i
+
+def convexPolytopeRealization_of_convexEuclidean_cutFields
+    (P Q : ConvexEuclideanPolyhedron M)
+    (F : EuclideanCauchyCutFieldData P.toTri Q.toTri
+      (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v)) :
+    ConvexPolytopeRealization M :=
+  convexPolytopeRealization_of_convexEuclidean_fields P Q
+    (euclideanFieldData_of_cutFieldData P.toTri Q.toTri
+      (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v)
+      { F with
+        isSphere := P.sphere
+        isSimple := P.isSimple })
+
+theorem chapter13_euclidean_of_convexEuclidean_cutFields
+    (P Q : ConvexEuclideanPolyhedron M)
+    (F : EuclideanCauchyCutFieldData P.toTri Q.toTri
+      (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v))
+    (v : M.Vertex) (i : Fin ((P.vertexStar v).n - 1)) :
+    (P.vertexStar v).dihedral i =
+      (Q.vertexStar v).dihedral
+        (Fin.cast (by
+          change (P.linkGeomAt v).n - 1 = (Q.linkGeomAt v).n - 1
+          exact congrArg (fun n => n - 1)
+            (vertexLinkGeometry_n_eq P.toTri Q.toTri
+              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w) v).symm) i) := by
+  simpa [convexPolytopeRealization_of_convexEuclidean_cutFields] using
+    (convexPolytopeRealization_of_convexEuclidean_cutFields P Q F).realization_rigid v i
+
+theorem chapter13_euclidean_of_rerooted_cutFields
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (F : EuclideanRerootedCutFieldData P Q LGP LGQ)
+    (v : M.Vertex) (i : Fin ((rotatedStarP P LGP F.offset v).n - 1)) :
+    (rotatedStarP P LGP F.offset v).dihedral i =
+      (rotatedStarQ P Q LGP LGQ F.offset v).dihedral
+        (Fin.cast (by
+          change (LGP v).n - 1 = (LGQ v).n - 1
+          exact congrArg (fun n => n - 1)
+            (vertexLinkGeometry_n_eq P Q LGP LGQ v).symm) i) := by
+  simpa [convexPolytopeRealization_of_rerooted_cutFields] using
+    (convexPolytopeRealization_of_rerooted_cutFields P Q LGP LGQ F).realization_rigid v i
+
+def convexPolytopeRealization_of_adaptive_cutFields
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (F : EuclideanAdaptiveCutFieldData P Q LGP LGQ) :
+    ConvexPolytopeRealization M :=
+  convexPolytopeRealization_of_rerooted_cutFields P Q LGP LGQ
+    (rerootedCutFieldData_of_adaptive P Q LGP LGQ F)
+
+theorem chapter13_euclidean_of_adaptive_cutFields
+    (P Q : TriangulatedEuclideanPolyhedron M)
+    (LGP : ∀ v : M.Vertex, VertexLinkGeometry P v)
+    (LGQ : ∀ v : M.Vertex, VertexLinkGeometry Q v)
+    (F : EuclideanAdaptiveCutFieldData P Q LGP LGQ)
+    (v : M.Vertex)
+    (i : Fin ((rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ) v).n - 1)) :
+    (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ) v).dihedral i =
+      (rotatedStarQ P Q LGP LGQ (adaptiveOffset P Q LGP LGQ) v).dihedral
+        (Fin.cast (by
+          change (LGP v).n - 1 = (LGQ v).n - 1
+          exact congrArg (fun n => n - 1)
+            (vertexLinkGeometry_n_eq P Q LGP LGQ v).symm) i) := by
+  simpa [convexPolytopeRealization_of_adaptive_cutFields,
+    rerootedCutFieldData_of_adaptive] using
+    (convexPolytopeRealization_of_adaptive_cutFields P Q LGP LGQ F).realization_rigid v i
+
+def convexPolytopeRealization_of_convexEuclidean
+    (P Q : ConvexEuclideanPolyhedron M)
+    (hcong : CongruentFaces P.toTri Q.toTri)
+    (htwoArcCut : ∀ (v : M.Vertex),
+      signChangesFull
+          (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+            (adaptiveOffset P.toTri Q.toTri
+              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink
+          (linkQcast M
+            (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+              (adaptiveOffset P.toTri Q.toTri
+                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+            (rotatedStarQ P.toTri Q.toTri
+              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
+              (adaptiveOffset P.toTri Q.toTri
+                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+            (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
+              (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v) = 2 →
+        TwoArcCut
+          (linkDiff
+            (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+              (adaptiveOffset P.toTri Q.toTri
+                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink
+            (linkQcast M
+              (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+                (adaptiveOffset P.toTri Q.toTri
+                  (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+              (rotatedStarQ P.toTri Q.toTri
+                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
+                (adaptiveOffset P.toTri Q.toTri
+                  (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+              (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
+                (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v))) :
+    ConvexPolytopeRealization M :=
+  convexPolytopeRealization_of_adaptive_cutFields P.toTri Q.toTri
+    (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v)
+    (euclideanAdaptiveCutFieldData_of_congruent P Q hcong htwoArcCut)
+
+theorem chapter13_euclidean
+    (P Q : ConvexEuclideanPolyhedron M)
+    (hcong : CongruentFaces P.toTri Q.toTri)
+    (htwoArcCut : ∀ (v : M.Vertex),
+      signChangesFull
+          (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+            (adaptiveOffset P.toTri Q.toTri
+              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink
+          (linkQcast M
+            (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+              (adaptiveOffset P.toTri Q.toTri
+                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+            (rotatedStarQ P.toTri Q.toTri
+              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
+              (adaptiveOffset P.toTri Q.toTri
+                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+            (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
+              (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v) = 2 →
+        TwoArcCut
+          (linkDiff
+            (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+              (adaptiveOffset P.toTri Q.toTri
+                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink
+            (linkQcast M
+              (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+                (adaptiveOffset P.toTri Q.toTri
+                  (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+              (rotatedStarQ P.toTri Q.toTri
+                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
+                (adaptiveOffset P.toTri Q.toTri
+                  (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+              (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
+                (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v)))
+    (v : M.Vertex)
+    (i : Fin ((rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+      (adaptiveOffset P.toTri Q.toTri (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).n - 1)) :
+    (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+        (adaptiveOffset P.toTri Q.toTri (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).dihedral i =
+      (rotatedStarQ P.toTri Q.toTri (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
+        (adaptiveOffset P.toTri Q.toTri (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).dihedral
+        (Fin.cast (by
+          change (P.linkGeomAt v).n - 1 = (Q.linkGeomAt v).n - 1
+          exact congrArg (fun n => n - 1)
+            (vertexLinkGeometry_n_eq P.toTri Q.toTri
+              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w) v).symm) i) := by
+  simpa [convexPolytopeRealization_of_convexEuclidean] using
+    (convexPolytopeRealization_of_convexEuclidean P Q hcong htwoArcCut).realization_rigid v i
+
+theorem CongruentFaces.refl (P : TriangulatedEuclideanPolyhedron M) :
+    CongruentFaces P P := by
+  intro d
+  rfl
+
+theorem signChangesFull_self_local {n : ℕ} (A : Fin (n + 1) → S2) :
+    signChangesFull A A = 0 := by
+  unfold signChangesFull
+  have hdiff : linkDiff A A = fun _ => (0 : ℝ) := by
+    funext i
+    unfold linkDiff
+    ring
+  rw [hdiff]
+  simp [nzSigns, cyclicFlips]
+
+abbrev tetraAdaptiveOffset (v : tetraMap.Vertex) :
+    Fin ((tetraConvexEuclideanPolyhedron.linkGeomAt v).n + 1) :=
+  adaptiveOffset tetraConvexEuclideanPolyhedron.toTri tetraConvexEuclideanPolyhedron.toTri
+    (fun w => tetraConvexEuclideanPolyhedron.linkGeomAt w)
+    (fun w => tetraConvexEuclideanPolyhedron.linkGeomAt w) v
+
+abbrev tetraRotatedStarP (v : tetraMap.Vertex) : VertexStar :=
+  rotatedStarP tetraConvexEuclideanPolyhedron.toTri
+    (fun w => tetraConvexEuclideanPolyhedron.linkGeomAt w)
+    tetraAdaptiveOffset v
+
+abbrev tetraRotatedStarQ (v : tetraMap.Vertex) : VertexStar :=
+  rotatedStarQ tetraConvexEuclideanPolyhedron.toTri tetraConvexEuclideanPolyhedron.toTri
+    (fun w => tetraConvexEuclideanPolyhedron.linkGeomAt w)
+    (fun w => tetraConvexEuclideanPolyhedron.linkGeomAt w)
+    tetraAdaptiveOffset v
+
+theorem tetra_rotated_linkQcast_self (v : tetraMap.Vertex) :
+    linkQcast tetraMap tetraRotatedStarP tetraRotatedStarQ
+        (fun w => vertexLinkGeometry_n_eq tetraConvexEuclideanPolyhedron.toTri
+          tetraConvexEuclideanPolyhedron.toTri
+          (fun x => tetraConvexEuclideanPolyhedron.linkGeomAt x)
+          (fun x => tetraConvexEuclideanPolyhedron.linkGeomAt x) w) v
+      =
+    (tetraRotatedStarP v).vertexLink := by
+  funext i
+  unfold linkQcast tetraRotatedStarP tetraRotatedStarQ rotatedStarP rotatedStarQ
+  rw [VertexStar.vertexLink_rotate, VertexStar.vertexLink_rotate]
+  unfold rotPoly
+  apply congrArg (vertexStarOfEuclidean tetraConvexEuclideanPolyhedron.toTri v
+    (tetraConvexEuclideanPolyhedron.linkGeomAt v)).vertexLink
+  apply Fin.ext
+  simp [Fin.val_add]
+
+theorem chapter13_euclidean_tetra
+    (v : tetraMap.Vertex)
+    (i : Fin ((tetraConvexEuclideanPolyhedron.vertexStar v).n - 1)) :
+    (tetraConvexEuclideanPolyhedron.vertexStar v).dihedral i =
+      (tetraConvexEuclideanPolyhedron.vertexStar v).dihedral
+        (Fin.cast (by rfl) i) := by
+  rfl
+
+theorem chapter13_euclidean_tetra_genuine
+    (v : tetraMap.Vertex)
+    (i : Fin ((tetraRotatedStarP v).n - 1)) :
+    (tetraRotatedStarP v).dihedral i =
+      (tetraRotatedStarQ v).dihedral
+        (Fin.cast (by
+          change (tetraConvexEuclideanPolyhedron.linkGeomAt v).n - 1 =
+            (tetraConvexEuclideanPolyhedron.linkGeomAt v).n - 1
+          rfl) i) := by
+  refine chapter13_euclidean tetraConvexEuclideanPolyhedron tetraConvexEuclideanPolyhedron
+    (CongruentFaces.refl tetraConvexEuclideanPolyhedron.toTri) ?_ v i
+  intro w h2
+  have h0 :
+      signChangesFull (tetraRotatedStarP w).vertexLink
+        (linkQcast tetraMap tetraRotatedStarP tetraRotatedStarQ
+          (fun w => vertexLinkGeometry_n_eq tetraConvexEuclideanPolyhedron.toTri
+            tetraConvexEuclideanPolyhedron.toTri
+            (fun x => tetraConvexEuclideanPolyhedron.linkGeomAt x)
+          (fun x => tetraConvexEuclideanPolyhedron.linkGeomAt x) w) w) = 0 := by
+    rw [tetra_rotated_linkQcast_self]
+    exact signChangesFull_self_local (tetraRotatedStarP w).vertexLink
+  rw [h0] at h2
+  omega
+
+#print axioms ProofsInTheBook.Ch13Cauchy3D.CongruentFaces
+#print axioms ProofsInTheBook.Ch13Cauchy3D.euclideanEdgeSign_alpha
+#print axioms ProofsInTheBook.Ch13VertexStar.VertexStar.rotate
+#print axioms ProofsInTheBook.Ch13VertexStar.VertexStar.vertexLink_rotate
+#print axioms ProofsInTheBook.Ch13Cauchy3D.interiorActive_of_link_index_one
+#print axioms ProofsInTheBook.Ch13Cauchy3D.adaptive_activeIndexOne
+#print axioms ProofsInTheBook.Ch13Cauchy3D.twoArcSplitData_of_cut
+#print axioms ProofsInTheBook.Ch13Cauchy3D.euclideanFieldData_of_cutFieldData
+#print axioms ProofsInTheBook.Ch13Cauchy3D.rerootedCutFieldData_of_adaptive
+#print axioms ProofsInTheBook.Ch13Cauchy3D.convexPolytopeRealization_of_adaptive_cutFields
+#print axioms ProofsInTheBook.Ch13Cauchy3D.chapter13_euclidean_of_adaptive_cutFields
+#print axioms ProofsInTheBook.Ch13Cauchy3D.convexPolytopeRealization_of_convexEuclidean
+#print axioms ProofsInTheBook.Ch13Cauchy3D.chapter13_euclidean
+#print axioms ProofsInTheBook.Ch13Cauchy3D.chapter13_euclidean_tetra
+#print axioms ProofsInTheBook.Ch13Cauchy3D.chapter13_euclidean_tetra_genuine
+#print axioms ProofsInTheBook.Ch13Cauchy3D.convexPolytopeRealization_of_rerooted_cutFields
+#print axioms ProofsInTheBook.Ch13Cauchy3D.chapter13_euclidean_of_rerooted_cutFields
+#print axioms ProofsInTheBook.Ch13Cauchy3D.convexPolytopeRealization_of_euclidean_fields
+#print axioms ProofsInTheBook.Ch13Cauchy3D.chapter13_euclidean_of_fields
+#print axioms ProofsInTheBook.Ch13Cauchy3D.tetraConvexEuclideanPolyhedron
+#print axioms ProofsInTheBook.Ch13Cauchy3D.convexPolytopeRealization_of_convexEuclidean_fields
+#print axioms ProofsInTheBook.Ch13Cauchy3D.chapter13_euclidean_of_convexEuclidean_fields
+#print axioms ProofsInTheBook.Ch13Cauchy3D.convexPolytopeRealization_of_convexEuclidean_cutFields
+#print axioms ProofsInTheBook.Ch13Cauchy3D.chapter13_euclidean_of_convexEuclidean_cutFields
+
+end ProofsInTheBook.Ch13Cauchy3D

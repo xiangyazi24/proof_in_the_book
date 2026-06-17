@@ -1,108 +1,362 @@
 import ProofsInTheBook.ZinanCh13Euclidean
-import ProofsInTheBook.Ch13Realization
 import ProofsInTheBook.Ch13VertexStar
+import ProofsInTheBook.Ch13Realization
 
 /-!
-# Chapter 13 Euclidean vertex-link bridge frontier
+# Chapter 13 Euclidean vertex links
 
-This file records the exact extra local certificate needed to turn a b1
-`TriangulatedEuclideanPolyhedron` into the `VertexStar` input consumed by the
-Cauchy spherical-link core.
+This file separates the design-independent part of the Euclidean-to-`VertexStar`
+bridge from the genuine local convexity theorem still to be proved.
 
-The b1 Euclidean structure deliberately contains face planes, triangular faces,
-edge nondegeneracy, and convex supporting halfspaces, but it does not contain the
-vertex-link cyclic-order theorem or the strict vertex-link convexity theorem.
-Those are the b3 bridge.  Once supplied as the local certificate below, the
-assembly into `VertexStar` is direct and contains no further geometric content.
+The incident neighbours of a vertex are read in the combinatorial `σ` order from
+the dart orbit.  The easy `VertexStar` fields (`n`, `hn`, `o`, `p`, `apex_ne`)
+come directly from this data and from b1 edge nondegeneracy.  The remaining
+strict vertex-cone convexity predicates are derived from `VertexLinkGeometry`.
 -/
 
 noncomputable section
 
 open scoped Classical RealInnerProductSpace
 open ProofsInTheBook.PlanarMap ProofsInTheBook.PlanarMap.CombMap
-open ProofsInTheBook.TetPearls
 open ProofsInTheBook.Ch13Euclidean
 open ProofsInTheBook.Ch13VertexStar
+open ProofsInTheBook.Ch13MarkedSphere
 
 namespace ProofsInTheBook.Ch13EuclLink
 
 variable {D : Type*} [Fintype D] [DecidableEq D]
 variable {M : CombMap D}
 
+/-! ## Part 1: σ-ordered incident darts and candidate neighbour data -/
+
+/-- The incident darts at a vertex, rooted at `Quotient.out v` and ordered by `σ`. -/
+def incidentDarts (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex) : List D :=
+  M.σ.toList (Quotient.out v)
+
+/-- The combinatorial degree read from the `σ`-cycle list. -/
+def vDeg (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex) : ℕ :=
+  (incidentDarts P v).length
+
+/-- The `i`-th incident dart in the `σ`-cycle. -/
+def incidentDart (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (i : Fin (vDeg P v)) : D :=
+  (incidentDarts P v).get i
+
+/-- Every dart read from the incident list has tail `v`. -/
+theorem incidentDart_tail (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (i : Fin (vDeg P v)) :
+    M.tail (incidentDart P v i) = v := by
+  unfold incidentDart
+  have hmem : (incidentDarts P v).get i ∈ incidentDarts P v :=
+    List.get_mem _ _
+  unfold incidentDarts at hmem ⊢
+  have hsame : M.σ.SameCycle (Quotient.out v) ((M.σ.toList (Quotient.out v)).get i) :=
+    (Equiv.Perm.mem_toList_iff.mp hmem).1
+  calc
+    M.tail ((M.σ.toList (Quotient.out v)).get i) = M.tail (Quotient.out v) :=
+      Quotient.sound hsame.symm
+    _ = v := Quotient.out_eq v
+
+/-- The `VertexStar.n` associated to a vertex of degree `vDeg`: there are `n + 1` neighbours. -/
+def starN (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex) : ℕ :=
+  vDeg P v - 1
+
+/-- A `VertexStar` index converted to the corresponding degree-list index. -/
+def starIndexToDeg (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) : Fin (vDeg P v) :=
+  ⟨i.1, by
+    have hi := i.2
+    unfold starN at hi
+    omega⟩
+
+/-- The `i`-th incident dart, indexed in the eventual `VertexStar` convention. -/
+def incidentDartOfStarIndex (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) : D :=
+  incidentDart P v (starIndexToDeg P v hdeg i)
+
+theorem incidentDartOfStarIndex_tail (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) :
+    M.tail (incidentDartOfStarIndex P v hdeg i) = v := by
+  unfold incidentDartOfStarIndex
+  exact incidentDart_tail P v (starIndexToDeg P v hdeg i)
+
+/-- Candidate neighbour point in the `σ`-ordered Euclidean vertex link. -/
+def linkPoint (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) : E3 :=
+  P.pos (M.head (incidentDartOfStarIndex P v hdeg i))
+
+/-- Candidate raw edge vector in the `σ`-ordered Euclidean vertex link. -/
+def linkVec (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) : E3 :=
+  linkPoint P v hdeg i - P.pos v
+
+theorem starN_ge_two (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) : 2 ≤ starN P v := by
+  unfold starN
+  omega
+
+theorem linkPoint_apex_ne (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) :
+    linkPoint P v hdeg i ≠ P.pos v := by
+  intro h
+  exact P.edge_nondegenerate (incidentDartOfStarIndex P v hdeg i) (by
+    rw [incidentDartOfStarIndex_tail P v hdeg i]
+    exact h.symm)
+
+/-! ## Part 2: oriented face support and derived vertex-link geometry -/
+
+/-- Local scalar triple product, in the same coordinate convention as `SphericalKernel.det3`. -/
+def det3 (u v w : E3) : ℝ :=
+  u 0 * (v 1 * w 2 - v 2 * w 1)
+    - u 1 * (v 0 * w 2 - v 2 * w 0)
+    + u 2 * (v 0 * w 1 - v 1 * w 0)
+
+theorem det3_eq_spherical (u v w : E3) :
+    det3 u v w = ProofsInTheBook.SphericalKernel.det3 u v w := rfl
+
 /--
-The local Euclidean link certificate at one combinatorial vertex.
+An oriented supporting triangle through `v,a,b`.
 
-`dart` is the chosen cyclic list of incident darts, in the intended `σ` order.
-The last four fields are exactly the raw `VertexStar` predicates for the edge
-vectors `pos (head dart i) - pos v`.
+This is the non-circular local geometry: the determinant functional of the
+oriented triangle is identified with a supporting face normal, with a positive
+scale and exact equality set.
 -/
-structure EuclideanVertexStarCertificate
-    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex) where
-  /-- There are `n + 1` incident darts in the local link. -/
-  n : ℕ
-  /-- At least three incident darts. -/
-  hn : 2 ≤ n
-  /-- Incident darts in cyclic order. -/
-  dart : Fin (n + 1) → D
-  /-- Every chosen dart starts at the vertex. -/
-  dart_tail : ∀ i, M.tail (dart i) = v
-  /-- The chosen order is the `σ`-successor order. -/
-  sigma_next : ∀ i, M.σ (dart i) = dart (i + 1)
-  /-- The chosen darts exhaust the vertex orbit. -/
-  complete : ∀ d, M.tail d = v → ∃ i, dart i = d
-  /-- The raw link directions lie in an open hemisphere. -/
-  open_hemi :
-    ∃ h : E3, ‖h‖ = 1 ∧
-      ∀ i : Fin (n + 1),
-        0 < inner ℝ h (P.pos (M.head (dart i)) - P.pos v)
-  /-- Every oriented local edge weakly supports the whole raw link. -/
-  turn_support :
-    ∀ i j : Fin (n + 1),
-      0 ≤ ProofsInTheBook.SphericalKernel.det3
-        (P.pos (M.head (dart i)) - P.pos v)
-        (P.pos (M.head (dart (i + 1))) - P.pos v)
-        (P.pos (M.head (dart j)) - P.pos v)
-  /-- Non-incident raw directions lie strictly on the supported side. -/
-  turn_strict :
-    ∀ i j : Fin (n + 1), j ≠ i → j ≠ i + 1 →
-      0 < ProofsInTheBook.SphericalKernel.det3
-        (P.pos (M.head (dart i)) - P.pos v)
-        (P.pos (M.head (dart (i + 1))) - P.pos v)
-        (P.pos (M.head (dart j)) - P.pos v)
+structure OrientedTriangleSupport (P : TriangulatedEuclideanPolyhedron M)
+    (v a b : M.Vertex) where
+  normal : E3
+  normal_unit : ‖normal‖ = 1
+  c : ℝ
+  c_pos : 0 < c
+  det_eq :
+    ∀ z : E3,
+      det3 (P.pos a - P.pos v) (P.pos b - P.pos v) z = -c * inner ℝ normal z
+  support : ∀ w : M.Vertex, inner ℝ normal (P.pos w - P.pos v) ≤ 0
+  eq_iff :
+    ∀ w : M.Vertex,
+      inner ℝ normal (P.pos w - P.pos v) = 0 ↔ (w = v ∨ w = a ∨ w = b)
 
-namespace EuclideanVertexStarCertificate
+/--
+Local vertex-link geometry in σ order.  The determinant and hemisphere fields of
+`VertexStar` are derived from the oriented triangle supports below.
+-/
+structure VertexLinkGeometry (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex) where
+  n : ℕ
+  hn : 2 ≤ n
+  nbr : Fin (n + 1) → M.Vertex
+  nbr_is_sigma :
+    ∃ hdeg : 3 ≤ vDeg P v, ∃ e : n = starN P v,
+      ∀ i : Fin (n + 1),
+        nbr i =
+          M.head (incidentDartOfStarIndex P v hdeg
+            (Fin.cast (by rw [← e]) i))
+  oriented : ∀ i : Fin (n + 1), OrientedTriangleSupport P v (nbr i) (nbr (i + 1))
+  nbr_apex_ne : ∀ i : Fin (n + 1), P.pos (nbr i) ≠ P.pos v
+  nonincident :
+    ∀ i j : Fin (n + 1), j ≠ i → j ≠ i + 1 →
+      ¬(nbr j = v ∨ nbr j = nbr i ∨ nbr j = nbr (i + 1))
+
+namespace VertexLinkGeometry
 
 variable {P : TriangulatedEuclideanPolyhedron M} {v : M.Vertex}
-variable (C : EuclideanVertexStarCertificate P v)
+variable (LG : VertexLinkGeometry P v)
 
-/-- Edge nondegeneracy from b1 gives the `VertexStar.apex_ne` field. -/
-theorem apex_ne (i : Fin (C.n + 1)) :
-    P.pos (M.head (C.dart i)) ≠ P.pos v := by
-  intro h
-  exact P.edge_nondegenerate (C.dart i) (by
-    rw [C.dart_tail i, h])
+/-- Sum of oriented supporting normals around the vertex. -/
+def normalSum : E3 :=
+  ∑ i : Fin (LG.n + 1), (LG.oriented i).normal
 
-end EuclideanVertexStarCertificate
+theorem exists_nonincident (j : Fin (LG.n + 1)) :
+    ∃ i : Fin (LG.n + 1), j ≠ i ∧ j ≠ i + 1 := by
+  by_contra hcon
+  push_neg at hcon
+  have hsub : (Finset.univ : Finset (Fin (LG.n + 1))) ⊆ {j, j - 1} := by
+    intro i _
+    rcases eq_or_ne j i with hji | hji
+    · simp [hji]
+    · have hnext := hcon i hji
+      have him1 : i = j - 1 := by
+        rw [eq_sub_iff_add_eq]
+        exact hnext.symm
+      simp [him1]
+  have hle := Finset.card_le_card hsub
+  have hcard : ({j, j - 1} : Finset (Fin (LG.n + 1))).card ≤ 2 :=
+    le_trans (Finset.card_insert_le _ _) (by simp)
+  simp only [Finset.card_univ, Fintype.card_fin] at hle
+  have hle2 : LG.n + 1 ≤ 2 := le_trans hle hcard
+  have hn : 2 ≤ LG.n := LG.hn
+  omega
+
+theorem normal_inner_nbr_lt (j : Fin (LG.n + 1)) :
+    inner ℝ LG.normalSum (P.pos (LG.nbr j) - P.pos v) < 0 := by
+  rw [normalSum, sum_inner]
+  have hle :
+      ∀ i ∈ (Finset.univ : Finset (Fin (LG.n + 1))),
+        inner ℝ (LG.oriented i).normal (P.pos (LG.nbr j) - P.pos v) ≤ 0 := by
+    intro i _
+    exact (LG.oriented i).support (LG.nbr j)
+  have hlt :
+      ∃ i ∈ (Finset.univ : Finset (Fin (LG.n + 1))),
+        inner ℝ (LG.oriented i).normal (P.pos (LG.nbr j) - P.pos v) < 0 := by
+    obtain ⟨i, hji, hjnext⟩ := LG.exists_nonincident j
+    refine ⟨i, by simp, ?_⟩
+    have hle_i := (LG.oriented i).support (LG.nbr j)
+    have hne :
+        inner ℝ (LG.oriented i).normal (P.pos (LG.nbr j) - P.pos v) ≠ 0 := by
+      intro hz
+      exact LG.nonincident i j hji hjnext (((LG.oriented i).eq_iff (LG.nbr j)).1 hz)
+    exact lt_of_le_of_ne hle_i hne
+  have hsum := Finset.sum_lt_sum hle hlt
+  simpa using hsum
+
+theorem normalSum_ne_zero : LG.normalSum ≠ 0 := by
+  intro hzero
+  have hlt := LG.normal_inner_nbr_lt (0 : Fin (LG.n + 1))
+  rw [hzero] at hlt
+  simp at hlt
+
+theorem open_hemi :
+    ∃ h : E3, ‖h‖ = 1 ∧
+      ∀ i : Fin (LG.n + 1), 0 < inner ℝ h (P.pos (LG.nbr i) - P.pos v) := by
+  let N := LG.normalSum
+  have hN : N ≠ 0 := LG.normalSum_ne_zero
+  refine ⟨-(‖N‖)⁻¹ • N, ?_, ?_⟩
+  · rw [norm_smul, norm_neg, Real.norm_eq_abs,
+      abs_of_nonneg (inv_nonneg.mpr (norm_nonneg N))]
+    exact inv_mul_cancel₀ (norm_ne_zero_iff.mpr hN)
+  · intro i
+    have hlt : inner ℝ N (P.pos (LG.nbr i) - P.pos v) < 0 := LG.normal_inner_nbr_lt i
+    rw [real_inner_smul_left]
+    have hpos : 0 < (‖N‖)⁻¹ := inv_pos.mpr (norm_pos_iff.mpr hN)
+    nlinarith [mul_pos hpos (neg_pos.mpr hlt)]
+
+theorem turn_support (i j : Fin (LG.n + 1)) :
+    0 ≤ ProofsInTheBook.SphericalKernel.det3
+      (P.pos (LG.nbr i) - P.pos v)
+      (P.pos (LG.nbr (i + 1)) - P.pos v)
+      (P.pos (LG.nbr j) - P.pos v) := by
+  have hdet := (LG.oriented i).det_eq (P.pos (LG.nbr j) - P.pos v)
+  rw [det3_eq_spherical] at hdet
+  rw [hdet]
+  have hs := (LG.oriented i).support (LG.nbr j)
+  nlinarith [(LG.oriented i).c_pos, hs]
+
+theorem turn_strict (i j : Fin (LG.n + 1)) (hji : j ≠ i) (hjnext : j ≠ i + 1) :
+    0 < ProofsInTheBook.SphericalKernel.det3
+      (P.pos (LG.nbr i) - P.pos v)
+      (P.pos (LG.nbr (i + 1)) - P.pos v)
+      (P.pos (LG.nbr j) - P.pos v) := by
+  have hdet := (LG.oriented i).det_eq (P.pos (LG.nbr j) - P.pos v)
+  rw [det3_eq_spherical] at hdet
+  rw [hdet]
+  have hs_le := (LG.oriented i).support (LG.nbr j)
+  have hs_ne :
+      inner ℝ (LG.oriented i).normal (P.pos (LG.nbr j) - P.pos v) ≠ 0 := by
+    intro hz
+    exact LG.nonincident i j hji hjnext (((LG.oriented i).eq_iff (LG.nbr j)).1 hz)
+  have hs_lt : inner ℝ (LG.oriented i).normal (P.pos (LG.nbr j) - P.pos v) < 0 :=
+    lt_of_le_of_ne hs_le hs_ne
+  nlinarith [(LG.oriented i).c_pos, hs_lt]
+
+/-- Assemble the `VertexStar` from honest local vertex-link geometry. -/
+def toVertexStar : VertexStar where
+  n := LG.n
+  hn := LG.hn
+  o := P.pos v
+  p := fun i => P.pos (LG.nbr i)
+  apex_ne := LG.nbr_apex_ne
+  open_hemi := LG.open_hemi
+  turn_support := LG.turn_support
+  turn_strict := LG.turn_strict
+
+end VertexLinkGeometry
+
+/-- Public assembly name for the Euclidean vertex star bridge. -/
+def vertexStarOfEuclidean (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (LG : VertexLinkGeometry P v) : VertexStar :=
+  LG.toVertexStar
+
+/-! ## Part 3: tetrahedron diagnostics -/
+
+theorem tetra_sigma_toList_length (d : Fin 12) :
+    (tetraMap.σ.toList d).length = 3 := by
+  fin_cases d <;> decide
+
+theorem tetra_vDeg (v : tetraMap.Vertex) :
+    vDeg tetraEuclideanPolyhedron v = 3 := by
+  unfold vDeg incidentDarts
+  exact tetra_sigma_toList_length (Quotient.out v)
+
+theorem tetra_vDeg_ge_three (v : tetraMap.Vertex) :
+    3 ≤ vDeg tetraEuclideanPolyhedron v := by
+  rw [tetra_vDeg]
+
+@[simp] theorem tetraAlpha_apply_link (d : Fin 12) :
+    tetraAlpha d =
+      match d with
+      | 0 => 3 | 1 => 6 | 2 => 9 | 3 => 0 | 4 => 7 | 5 => 10
+      | 6 => 1 | 7 => 4 | 8 => 11 | 9 => 2 | 10 => 5 | _ => 8 := by
+  fin_cases d <;> decide
+
+theorem tetraSigma_toList (d : Fin 12) :
+    tetraSigma.toList d =
+      match d with
+      | 0 => [0, 1, 2] | 1 => [1, 2, 0] | 2 => [2, 0, 1]
+      | 3 => [3, 5, 4] | 4 => [4, 3, 5] | 5 => [5, 4, 3]
+      | 6 => [6, 7, 8] | 7 => [7, 8, 6] | 8 => [8, 6, 7]
+      | 9 => [9, 11, 10] | 10 => [10, 9, 11] | _ => [11, 10, 9] := by
+  fin_cases d <;> decide
+
+theorem tetraMap_sigma_toList (d : Fin 12) :
+    tetraMap.σ.toList d =
+      match d with
+      | 0 => [0, 1, 2] | 1 => [1, 2, 0] | 2 => [2, 0, 1]
+      | 3 => [3, 5, 4] | 4 => [4, 3, 5] | 5 => [5, 4, 3]
+      | 6 => [6, 7, 8] | 7 => [7, 8, 6] | 8 => [8, 6, 7]
+      | 9 => [9, 11, 10] | 10 => [10, 9, 11] | _ => [11, 10, 9] := by
+  simpa [tetraMap] using tetraSigma_toList d
+
+/-- The `i`-th dart in the tetrahedron `σ`-cycle rooted at `d`, reindexed by `Fin 3`. -/
+def tetraSigmaDart (d : Fin 12) (i : Fin 3) : Fin 12 :=
+  (tetraMap.σ.toList d).get ⟨i.1, by
+    rw [tetra_sigma_toList_length d]
+    exact i.2⟩
+
+/-- The Euclidean edge vector for the tetrahedron `σ`-cycle rooted at `d`. -/
+def tetraSigmaVec (d : Fin 12) (i : Fin 3) : E3 :=
+  tetraEuclideanPolyhedron.pos (tetraMap.head (tetraSigmaDart d i))
+    - tetraEuclideanPolyhedron.pos (tetraMap.tail d)
 
 /--
-Assemble a `VertexStar` from the exact Euclidean local certificate.
-
-This theorem is intentionally certificate-parametric: the present b1 interface
-does not yet prove the open-hemisphere and strict cyclic-turn fields from the
-global supporting-halfspace data.
+With the current tetrahedron coordinates and the map's `σ` orientation, the
+ordered vertex-link determinant is negative.  Thus the PART3 certificate with
+`turn_support : 0 ≤ det3 (p i) (p (i+1)) (p j)` is not true for the σ order as
+stated; the reversed cyclic order would have the positive sign.
 -/
-def vertexStarOfEuclidean_of_certificate
-    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
-    (C : EuclideanVertexStarCertificate P v) : VertexStar where
-  n := C.n
-  hn := C.hn
-  o := P.pos v
-  p := fun i => P.pos (M.head (C.dart i))
-  apex_ne := C.apex_ne
-  open_hemi := C.open_hemi
-  turn_support := C.turn_support
-  turn_strict := C.turn_strict
+theorem tetra_sigma_order_det_negative (d : Fin 12) :
+    ProofsInTheBook.SphericalKernel.det3
+      (tetraSigmaVec d 0) (tetraSigmaVec d 1) (tetraSigmaVec d 2) = (-16 : ℝ) := by
+  fin_cases d <;>
+    norm_num [tetraSigmaVec, tetraSigmaDart, tetraMap_sigma_toList, tetraSigma_toList,
+      tetraEuclideanPolyhedron, tetraPos, tetraDartPoint, tetraMap, CombMap.tail, CombMap.head,
+      tetraPoint₀, tetraPoint₁, tetraPoint₂, tetraPoint₃,
+      Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.cons_val_two, Matrix.head_cons,
+      Matrix.tail_cons,
+      ProofsInTheBook.SphericalKernel.det3]
+
+/-!
+### General residual for the next geometry round
+
+The remaining theorem should have the following shape:
+
+`theorem vertexLinkGeometry_of_supporting_halfspaces
+  (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+  (hSphere/simple/embedded-orientation hypotheses as needed) :
+  VertexLinkGeometry P v`
+
+It must prove the strict exposed-vertex open hemisphere and the oriented
+σ-link determinant inequalities from the face-level supporting halfspaces.
+-/
 
 end ProofsInTheBook.Ch13EuclLink
 
-#print axioms ProofsInTheBook.Ch13EuclLink.vertexStarOfEuclidean_of_certificate
+#print axioms ProofsInTheBook.Ch13EuclLink.vertexStarOfEuclidean
+#print axioms ProofsInTheBook.Ch13EuclLink.tetra_vDeg

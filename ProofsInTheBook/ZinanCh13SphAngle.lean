@@ -242,6 +242,102 @@ theorem face_parallel_scalar_support_le
   rw [hs, real_inner_smul_left] at hsupport
   exact hsupport
 
+theorem normal_eq_pos_smul_neg_cross_of_support {n u v w : E3}
+    (hnu : (⟪n, u⟫ : ℝ) = 0) (hnv : (⟪n, v⟫ : ℝ) = 0)
+    (hli : LinearIndependent ℝ ![u, v])
+    (hopp : (⟪n, w⟫ : ℝ) < 0)
+    (hdet : 0 < (⟪cross u v, w⟫ : ℝ)) :
+    ∃ lam : ℝ, 0 < lam ∧ n = lam • (-(cross u v)) := by
+  obtain ⟨s, hs⟩ := perp_two_imp_parallel_cross hnu hnv hli
+  have hsneg : s < 0 := by
+    have hdot : (⟪n, w⟫ : ℝ) = s * ⟪cross u v, w⟫ := by
+      rw [hs, real_inner_smul_left]
+    nlinarith
+  refine ⟨-s, by linarith, ?_⟩
+  rw [hs]
+  module
+
+theorem face_normal_eq_pos_smul_neg_cross_of_strict_support
+    {D : Type*} [Fintype D] [DecidableEq D] {M : CombMap D}
+    (P : TriangulatedEuclideanPolyhedron M) (f : M.Face) (w : M.Vertex)
+    (hw : ∀ i, w ≠ P.faceVertex f i)
+    (hdet : 0 < inner ℝ
+      (cross
+        (P.pos (M.tail (M.φ (P.faceDart f))) - P.pos (M.tail (P.faceDart f)))
+        (P.pos (M.tail (M.φ (M.φ (P.faceDart f)))) - P.pos (M.tail (P.faceDart f))))
+      (P.pos w - P.pos (M.tail (P.faceDart f)))) :
+    ∃ lam : ℝ, 0 < lam ∧
+      P.outward_normal f =
+        lam • (-
+          cross
+            (P.pos (M.tail (M.φ (P.faceDart f))) - P.pos (M.tail (P.faceDart f)))
+            (P.pos (M.tail (M.φ (M.φ (P.faceDart f)))) - P.pos (M.tail (P.faceDart f)))) := by
+  let u : E3 :=
+    P.pos (M.tail (M.φ (P.faceDart f))) - P.pos (M.tail (P.faceDart f))
+  let v : E3 :=
+    P.pos (M.tail (M.φ (M.φ (P.faceDart f)))) - P.pos (M.tail (P.faceDart f))
+  have hpar := outward_normal_parallel_faceDart_cross P f
+  obtain ⟨s, hs⟩ := hpar
+  have hv0 : P.faceVertex f 0 = M.tail (P.faceDart f) := by
+    have h := congrFun (P.face_vertices_match f) 0
+    simpa using h
+  have hp0 : inner ℝ (P.outward_normal f)
+      (P.pos (M.tail (P.faceDart f)) - P.face_point f) = 0 := by
+    simpa [hv0] using P.face_plane f 0
+  have hstrict0 := P.face_support_strict f w hw
+  have hstrict : inner ℝ (P.outward_normal f)
+      (P.pos w - P.pos (M.tail (P.faceDart f))) < 0 := by
+    have hrewrite :
+        inner ℝ (P.outward_normal f)
+          (P.pos w - P.pos (M.tail (P.faceDart f)))
+          =
+        inner ℝ (P.outward_normal f) (P.pos w - P.face_point f)
+          - inner ℝ (P.outward_normal f)
+            (P.pos (M.tail (P.faceDart f)) - P.face_point f) := by
+      calc
+        inner ℝ (P.outward_normal f)
+            (P.pos w - P.pos (M.tail (P.faceDart f)))
+            =
+          inner ℝ (P.outward_normal f)
+            ((P.pos w - P.face_point f)
+              - (P.pos (M.tail (P.faceDart f)) - P.face_point f)) := by
+              congr 1
+              module
+        _ =
+          inner ℝ (P.outward_normal f) (P.pos w - P.face_point f)
+            - inner ℝ (P.outward_normal f)
+              (P.pos (M.tail (P.faceDart f)) - P.face_point f) := by
+              rw [inner_sub_right]
+    rw [hrewrite, hp0, sub_zero]
+    exact hstrict0
+  have hli : LinearIndependent ℝ ![u, v] := by
+    let p : Fin 3 → E3 :=
+      ![P.pos (M.tail (P.faceDart f)),
+        P.pos (M.tail (M.φ (P.faceDart f))),
+        P.pos (M.tail (M.φ (M.φ (P.faceDart f))))]
+    have hli0 : LinearIndependent ℝ ![p 1 - p 0, p 2 - p 0] :=
+      linearIndependent_pair_vsub_of_affineIndependent_fin3 (P.face_nondegenerate f)
+    simpa [p, u, v] using hli0
+  have hperp1 : inner ℝ (P.outward_normal f) u = 0 := by
+    have hv1 : P.faceVertex f 1 = M.tail (M.φ (P.faceDart f)) := by
+      have h := congrFun (P.face_vertices_match f) 1
+      simpa using h
+    have hp1 : inner ℝ (P.outward_normal f)
+        (P.pos (M.tail (M.φ (P.faceDart f))) - P.face_point f) = 0 := by
+      simpa [hv1] using P.face_plane f 1
+    simpa [u] using inner_sub_of_plane_eq hp1 hp0
+  have hperp2 : inner ℝ (P.outward_normal f) v = 0 := by
+    have hv2 : P.faceVertex f 2 = M.tail (M.φ (M.φ (P.faceDart f))) := by
+      have h := congrFun (P.face_vertices_match f) 2
+      simpa using h
+    have hp2 : inner ℝ (P.outward_normal f)
+        (P.pos (M.tail (M.φ (M.φ (P.faceDart f)))) - P.face_point f) = 0 := by
+      simpa [hv2] using P.face_plane f 2
+    simpa [v] using inner_sub_of_plane_eq hp2 hp0
+  have hdet' : 0 < inner ℝ (cross u v) (P.pos w - P.pos (M.tail (P.faceDart f))) := by
+    simpa [u, v] using hdet
+  exact normal_eq_pos_smul_neg_cross_of_support hperp1 hperp2 hli hstrict hdet'
+
 lemma inner_tangent_tangent_unit {a b c : E3} (hb : ‖b‖ = 1) :
     inner ℝ (tangentToVec b a) (tangentToVec b c)
       = inner ℝ a c - inner ℝ a b * inner ℝ b c := by
@@ -436,5 +532,7 @@ theorem tangent_angle_eq_dihedralAngleAtDart_of_oriented
 #print axioms ProofsInTheBook.Ch13SphAngle.perp_two_imp_parallel_cross
 #print axioms ProofsInTheBook.Ch13SphAngle.outward_normal_parallel_faceDart_cross
 #print axioms ProofsInTheBook.Ch13SphAngle.face_parallel_scalar_support_le
+#print axioms ProofsInTheBook.Ch13SphAngle.normal_eq_pos_smul_neg_cross_of_support
+#print axioms ProofsInTheBook.Ch13SphAngle.face_normal_eq_pos_smul_neg_cross_of_strict_support
 
 end ProofsInTheBook.Ch13SphAngle

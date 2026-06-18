@@ -1,6 +1,7 @@
 import ProofsInTheBook.PlaneSimpleGraph
 import ProofsInTheBook.PlanarMapSimple
 import ProofsInTheBook.FaceDiagonalSurgery
+import ProofsInTheBook.Ch13ActiveComponent
 import ProofsInTheBook.ZinanCh35BoundaryAssembler
 import ProofsInTheBook.ZinanCh35Final
 
@@ -383,6 +384,665 @@ namespace CombMap
 
 variable {D : Type*} [Fintype D] [DecidableEq D]
 
+lemma three_le_of_two_le_choose_two (n : ℕ) (h : 2 ≤ n.choose 2) : 3 ≤ n := by
+  cases n with
+  | zero => simp at h
+  | succ n =>
+      cases n with
+      | zero => simp at h
+      | succ n =>
+          cases n with
+          | zero => simp at h
+          | succ n => omega
+
+lemma three_mul_sub_six_le_choose_two (n : ℕ) (hn : 3 ≤ n) :
+    3 * n - 6 ≤ n.choose 2 := by
+  obtain ⟨m, rfl⟩ := Nat.exists_eq_add_of_le hn
+  induction m with
+  | zero => norm_num
+  | succ m ih =>
+      rw [show 3 + Nat.succ m = (3 + m) + 1 by omega]
+      rw [Nat.choose_succ_succ]
+      simp [Nat.choose_one_right]
+      have hprev : 3 * (3 + m) - 6 ≤ (3 + m).choose 2 := ih (by omega)
+      omega
+
+/-- Local constructor for a valid face diagonal from two non-adjacent darts on a common face. -/
+def faceDiagonalChoice_of_pair (M : CombMap D) {f : M.Face} {d0 d1 : D}
+    (h0 : M.dartFace d0 = f) (h1 : M.dartFace d1 = f)
+    (hne : M.tail d0 ≠ M.tail d1)
+    (hnoedge : ¬ M.toSimpleGraph.Adj (M.tail d0) (M.tail d1))
+    (hsep : M.φ d0 ≠ d1 ∧ M.φ d1 ≠ d0) :
+    M.FaceDiagonalChoice where
+  f := f
+  d0 := d0
+  d1 := d1
+  same_face := h0
+  same_face' := h1
+  endpoints_distinct := hne
+  no_existing_edge := hnoedge
+  nonadjacent_on_face := hsep
+
+/-- If a face admits no diagonal choice, then every cyclically separated pair of distinct boundary
+occurrences on that face already has an edge between its endpoint vertices.  This is the local
+clique step needed by the Euler-count proof. -/
+theorem face_boundary_adj_of_no_diagonal (M : CombMap D) {f : M.Face}
+    (hNo : ¬ Nonempty (M.FaceDiagonalChoice))
+    {d0 d1 : D} (h0 : M.dartFace d0 = f) (h1 : M.dartFace d1 = f)
+    (hne : M.tail d0 ≠ M.tail d1)
+    (hsep : M.φ d0 ≠ d1 ∧ M.φ d1 ≠ d0) :
+    M.toSimpleGraph.Adj (M.tail d0) (M.tail d1) := by
+  by_contra hnoedge
+  exact hNo ⟨M.faceDiagonalChoice_of_pair h0 h1 hne hnoedge hsep⟩
+
+/-- The vertices appearing on the boundary of a face. -/
+noncomputable def faceVertexSet (M : CombMap D) (f : M.Face) : Finset M.Vertex := by
+  classical
+  exact Finset.univ.filter (fun v => ∃ d : D, M.dartFace d = f ∧ M.tail d = v)
+
+lemma mem_faceVertexSet_iff (M : CombMap D) (f : M.Face) (v : M.Vertex) :
+    v ∈ M.faceVertexSet f ↔ ∃ d : D, M.dartFace d = f ∧ M.tail d = v := by
+  classical
+  simp [faceVertexSet]
+
+theorem faceVertexSet_clique_of_no_diagonal (M : CombMap D) (hSimple : M.IsSimpleGraph)
+    {f : M.Face} (hNo : ¬ Nonempty (M.FaceDiagonalChoice)) :
+    ∀ u ∈ M.faceVertexSet f, ∀ v ∈ M.faceVertexSet f,
+      u ≠ v → M.toSimpleGraph.Adj u v := by
+  intro u hu v hv huv
+  rw [M.mem_faceVertexSet_iff] at hu hv
+  obtain ⟨d0, h0, ht0⟩ := hu
+  obtain ⟨d1, h1, ht1⟩ := hv
+  by_cases h01 : M.φ d0 = d1
+  · have hadj := M.toSimpleGraph_adj_of_dart hSimple d0
+    rw [ht0, ← M.tail_phi d0, h01, ht1] at hadj
+    exact hadj
+  · by_cases h10 : M.φ d1 = d0
+    · have hadj := M.toSimpleGraph_adj_of_dart hSimple d1
+      have hadj' : M.toSimpleGraph.Adj (M.tail d0) (M.tail d1) := by
+        rw [ht1, ← M.tail_phi d1, h10, ht0] at hadj
+        simpa [ht0, ht1] using M.toSimpleGraph.symm hadj
+      simpa [ht0, ht1] using hadj'
+    · have hne : M.tail d0 ≠ M.tail d1 := by
+        intro h
+        exact huv (ht0 ▸ ht1 ▸ h)
+      have hadj := M.face_boundary_adj_of_no_diagonal hNo h0 h1 hne ⟨h01, h10⟩
+      simpa [ht0, ht1] using hadj
+
+/-- Delete exactly the darts whose edge has at least one endpoint outside the selected face-vertex
+set.  The kept darts are the edges of the face-vertex induced submap. -/
+noncomputable def faceVertexDel (M : CombMap D) (f : M.Face) : Finset D := by
+  classical
+  exact Finset.univ.filter
+    (fun d => M.tail d ∉ M.faceVertexSet f ∨ M.head d ∉ M.faceVertexSet f)
+
+lemma mem_faceVertexDel_iff (M : CombMap D) (f : M.Face) (d : D) :
+    d ∈ M.faceVertexDel f ↔
+      M.tail d ∉ M.faceVertexSet f ∨ M.head d ∉ M.faceVertexSet f := by
+  classical
+  simp [faceVertexDel]
+
+/-- The face-vertex deletion set is closed under edge reversal. -/
+lemma faceVertexDel_alpha_iff (M : CombMap D) (f : M.Face) (d : D) :
+    M.α d ∈ M.faceVertexDel f ↔ d ∈ M.faceVertexDel f := by
+  rw [M.mem_faceVertexDel_iff, M.mem_faceVertexDel_iff]
+  simp [or_comm]
+
+/-- Every dart of the selected face survives in the face-vertex induced dart set. -/
+lemma notMem_faceVertexDel_of_dartFace (M : CombMap D) {f : M.Face} {d : D}
+    (hd : M.dartFace d = f) :
+    d ∉ M.faceVertexDel f := by
+  rw [M.mem_faceVertexDel_iff]
+  push_neg
+  constructor
+  · rw [M.mem_faceVertexSet_iff]
+    exact ⟨d, hd, rfl⟩
+  · rw [M.mem_faceVertexSet_iff]
+    refine ⟨M.φ d, ?_, ?_⟩
+    · rw [M.dartFace_phi, hd]
+    · rw [M.tail_phi]
+
+lemma faceVertexDel_sub (M : CombMap D) (f : M.Face) :
+    ∀ d : D, d ∈ M.faceVertexDel f ↔ M.α d ∈ M.faceVertexDel f := by
+  intro d
+  exact (M.faceVertexDel_alpha_iff f d).symm
+
+lemma faceVertexDel_closed (M : CombMap D) (f : M.Face) :
+    ∀ d : D, d ∈ M.faceVertexDel f → M.α d ∈ M.faceVertexDel f := by
+  intro d hd
+  exact (M.faceVertexDel_sub f d).1 hd
+
+/-- The kept combinatorial map induced by the vertices on a face boundary. -/
+noncomputable def faceVertexKeptMap (M : CombMap D) (f : M.Face) :
+    CombMap {d : D // d ∉ M.faceVertexDel f} :=
+  ProofsInTheBook.Ch13ActiveComponent.keptMap M (M.faceVertexDel f) (M.faceVertexDel_sub f)
+
+lemma faceVertexKeptMap_simple (M : CombMap D) (hSimple : M.IsSimpleGraph) (f : M.Face) :
+    (M.faceVertexKeptMap f).IsSimpleGraph :=
+  ProofsInTheBook.Ch13ComponentClose.keptMap_isSimpleGraph M hSimple
+    (M.faceVertexDel f) (M.faceVertexDel_sub f)
+
+lemma faceVertexKeptMap_euler_VEF (M : CombMap D) (hS : M.IsSphereMap) (f : M.Face)
+    (d : {d : D // d ∉ M.faceVertexDel f})
+    (hconn : (M.faceVertexKeptMap f).Connected) :
+    ((M.faceVertexKeptMap f).V : ℤ) - (M.faceVertexKeptMap f).E
+        + (M.faceVertexKeptMap f).F = 2 :=
+  ProofsInTheBook.Ch13ActiveComponent.keptMap_euler_VEF M (M.faceVertexDel f)
+    (M.faceVertexDel_sub f) (M.faceVertexDel_closed f) hS d hconn
+
+lemma faceVertexKept_tail_mem (M : CombMap D) (f : M.Face)
+    (x : {d : D // d ∉ M.faceVertexDel f}) :
+    M.tail x.1 ∈ M.faceVertexSet f := by
+  have hx := x.2
+  rw [M.mem_faceVertexDel_iff] at hx
+  push_neg at hx
+  exact hx.1
+
+lemma faceVertexKept_head_mem (M : CombMap D) (f : M.Face)
+    (x : {d : D // d ∉ M.faceVertexDel f}) :
+    M.head x.1 ∈ M.faceVertexSet f := by
+  have hx := x.2
+  rw [M.mem_faceVertexDel_iff] at hx
+  push_neg at hx
+  exact hx.2
+
+lemma notMem_faceVertexDel_of_endpoints (M : CombMap D) (f : M.Face) {d : D}
+    (ht : M.tail d ∈ M.faceVertexSet f) (hh : M.head d ∈ M.faceVertexSet f) :
+    d ∉ M.faceVertexDel f := by
+  rw [M.mem_faceVertexDel_iff]
+  push_neg
+  exact ⟨ht, hh⟩
+
+lemma exists_dart_tail_head_of_toSimpleGraph_adj (M : CombMap D)
+    {u v : M.Vertex} (h : M.toSimpleGraph.Adj u v) :
+    ∃ d : D, M.tail d = u ∧ M.head d = v := by
+  rcases h.2 with ⟨e, he⟩
+  unfold CombMap.dartEdge at he
+  rw [Sym2.eq_iff] at he
+  rcases he with ⟨ht, hh⟩ | ⟨ht, hh⟩
+  · exact ⟨e, ht, hh⟩
+  · refine ⟨M.α e, ?_, ?_⟩
+    · rw [M.tail_alpha, hh]
+    · rw [M.head_alpha, ht]
+
+lemma exists_dart_of_mem_toSimpleGraph_edgeSet (M : CombMap D)
+    {e : Sym2 M.Vertex} (he : e ∈ M.toSimpleGraph.edgeSet) :
+    ∃ d : D, M.dartEdge d = e := by
+  induction e using Sym2.ind with
+  | h u v =>
+      have hadj : M.toSimpleGraph.Adj u v := by simpa using he
+      obtain ⟨d, htail, hhead⟩ := M.exists_dart_tail_head_of_toSimpleGraph_adj hadj
+      refine ⟨d, ?_⟩
+      simp [CombMap.dartEdge, htail, hhead]
+
+/-- In a simple map, the map-edge quotient is the same finite set as the edge set of the
+underlying simple graph. -/
+noncomputable def edgeQuotEquivToSimpleGraphEdgeSet (M : CombMap D)
+    (hSimple : M.IsSimpleGraph) :
+    Quotient (cycleSetoid M.α) ≃ M.toSimpleGraph.edgeSet where
+  toFun := Quotient.lift
+    (fun d : D =>
+      ⟨M.dartEdge d, by
+        unfold CombMap.dartEdge
+        exact M.toSimpleGraph_adj_of_dart hSimple d⟩)
+    (by
+      intro d e hde
+      apply Subtype.ext
+      rcases (M.alpha_sameCycle_iff d e).1 hde with rfl | he
+      · rfl
+      · subst e
+        change M.dartEdge d = M.dartEdge (M.α d)
+        rw [M.dartEdge_alpha])
+  invFun := fun e =>
+    Quotient.mk (cycleSetoid M.α)
+      (Classical.choose (M.exists_dart_of_mem_toSimpleGraph_edgeSet e.2))
+  left_inv := by
+    intro q
+    refine Quotient.inductionOn q ?_
+    intro d
+    apply Quotient.sound
+    have hchosen :
+        M.dartEdge (Classical.choose
+          (M.exists_dart_of_mem_toSimpleGraph_edgeSet
+            (show M.dartEdge d ∈ M.toSimpleGraph.edgeSet by
+              unfold CombMap.dartEdge
+              exact M.toSimpleGraph_adj_of_dart hSimple d))) = M.dartEdge d :=
+      Classical.choose_spec
+        (M.exists_dart_of_mem_toSimpleGraph_edgeSet
+          (show M.dartEdge d ∈ M.toSimpleGraph.edgeSet by
+            unfold CombMap.dartEdge
+            exact M.toSimpleGraph_adj_of_dart hSimple d))
+    exact hSimple.no_parallel hchosen
+  right_inv := by
+    intro e
+    apply Subtype.ext
+    exact Classical.choose_spec (M.exists_dart_of_mem_toSimpleGraph_edgeSet e.2)
+
+lemma E_eq_card_toSimpleGraph_edgeFinset (M : CombMap D) (hSimple : M.IsSimpleGraph) :
+    M.E = M.toSimpleGraph.edgeFinset.card := by
+  classical
+  letI : Fintype M.toSimpleGraph.edgeSet := Fintype.ofFinite M.toSimpleGraph.edgeSet
+  calc
+    M.E = Fintype.card (Quotient (cycleSetoid M.α)) := rfl
+    _ = Fintype.card M.toSimpleGraph.edgeSet :=
+        Fintype.card_congr (M.edgeQuotEquivToSimpleGraphEdgeSet hSimple)
+    _ = M.toSimpleGraph.edgeFinset.card := by
+        simpa using (SimpleGraph.card_edgeSet (G := M.toSimpleGraph))
+
+lemma faceVertexKept_sigma_path_of_same_tail (M : CombMap D) (f : M.Face)
+    {x y : {d : D // d ∉ M.faceVertexDel f}} (h : M.tail x.1 = M.tail y.1) :
+    Relation.ReflTransGen (M.faceVertexKeptMap f).dartStep x y := by
+  apply Relation.ReflTransGen.single
+  left
+  have ht :
+      (M.faceVertexKeptMap f).tail x = (M.faceVertexKeptMap f).tail y := by
+    exact (ProofsInTheBook.Ch13ComponentClose.keptMap_tail_eq_iff
+      M (M.faceVertexDel f) (M.faceVertexDel_sub f) x y).2 h
+  exact Quotient.exact ht
+
+lemma faceVertexKeptMap_connected_of_clique (M : CombMap D) (f : M.Face)
+    (hClique : ∀ u ∈ M.faceVertexSet f, ∀ v ∈ M.faceVertexSet f,
+      u ≠ v → M.toSimpleGraph.Adj u v) :
+    (M.faceVertexKeptMap f).Connected := by
+  intro x y
+  by_cases htail : M.tail x.1 = M.tail y.1
+  · exact M.faceVertexKept_sigma_path_of_same_tail f htail
+  · have hxS := M.faceVertexKept_tail_mem f x
+    have hyS := M.faceVertexKept_tail_mem f y
+    have hadj : M.toSimpleGraph.Adj (M.tail x.1) (M.tail y.1) :=
+      hClique (M.tail x.1) hxS (M.tail y.1) hyS htail
+    obtain ⟨e, het, heh⟩ := M.exists_dart_tail_head_of_toSimpleGraph_adj hadj
+    have hekeep : e ∉ M.faceVertexDel f := by
+      apply M.notMem_faceVertexDel_of_endpoints f
+      · simpa [het] using hxS
+      · simpa [heh] using hyS
+    let z : {d : D // d ∉ M.faceVertexDel f} := ⟨e, hekeep⟩
+    have hzx : M.tail x.1 = M.tail z.1 := by simpa [z, het]
+    have hzy : M.tail ((M.faceVertexKeptMap f).α z).1 = M.tail y.1 := by
+      change M.tail (M.α e) = M.tail y.1
+      rw [M.tail_alpha, heh]
+    have p1 : Relation.ReflTransGen (M.faceVertexKeptMap f).dartStep x z :=
+      M.faceVertexKept_sigma_path_of_same_tail f hzx
+    have p2 : Relation.ReflTransGen (M.faceVertexKeptMap f).dartStep z
+        ((M.faceVertexKeptMap f).α z) :=
+      Relation.ReflTransGen.single (Or.inr rfl)
+    have p3 : Relation.ReflTransGen (M.faceVertexKeptMap f).dartStep
+        ((M.faceVertexKeptMap f).α z) y :=
+      M.faceVertexKept_sigma_path_of_same_tail f hzy
+    exact p1.trans (p2.trans p3)
+
+/-- Vertices of the face-vertex kept map are exactly the vertices in the selected face-vertex set. -/
+noncomputable def faceVertexKeptVertexEquiv (M : CombMap D) (f : M.Face) :
+    (M.faceVertexKeptMap f).Vertex ≃ {v : M.Vertex // v ∈ M.faceVertexSet f} where
+  toFun := Quotient.lift
+    (fun x : {d : D // d ∉ M.faceVertexDel f} =>
+      ⟨M.tail x.1, M.faceVertexKept_tail_mem f x⟩)
+    (by
+      intro x y hxy
+      apply Subtype.ext
+      have htail :
+          (M.faceVertexKeptMap f).tail x = (M.faceVertexKeptMap f).tail y :=
+        Quotient.sound hxy
+      exact (ProofsInTheBook.Ch13ComponentClose.keptMap_tail_eq_iff
+        M (M.faceVertexDel f) (M.faceVertexDel_sub f) x y).1 htail)
+  invFun := fun v =>
+    Quotient.mk (cycleSetoid (M.faceVertexKeptMap f).σ)
+      ⟨Classical.choose ((M.mem_faceVertexSet_iff f v.1).1 v.2),
+        M.notMem_faceVertexDel_of_dartFace
+          ((Classical.choose_spec ((M.mem_faceVertexSet_iff f v.1).1 v.2)).1)⟩
+  left_inv := by
+    intro q
+    refine Quotient.inductionOn q ?_
+    intro x
+    change Quotient.mk (cycleSetoid (M.faceVertexKeptMap f).σ)
+        ⟨Classical.choose ((M.mem_faceVertexSet_iff f (M.tail x.1)).1
+          (M.faceVertexKept_tail_mem f x)),
+          M.notMem_faceVertexDel_of_dartFace
+            ((Classical.choose_spec ((M.mem_faceVertexSet_iff f (M.tail x.1)).1
+              (M.faceVertexKept_tail_mem f x))).1)⟩
+        = Quotient.mk (cycleSetoid (M.faceVertexKeptMap f).σ) x
+    apply Quotient.sound
+    have htail :
+        M.tail (Classical.choose ((M.mem_faceVertexSet_iff f (M.tail x.1)).1
+          (M.faceVertexKept_tail_mem f x))) = M.tail x.1 :=
+      (Classical.choose_spec ((M.mem_faceVertexSet_iff f (M.tail x.1)).1
+        (M.faceVertexKept_tail_mem f x))).2
+    let y : {d : D // d ∉ M.faceVertexDel f} :=
+      ⟨Classical.choose ((M.mem_faceVertexSet_iff f (M.tail x.1)).1
+        (M.faceVertexKept_tail_mem f x)),
+        M.notMem_faceVertexDel_of_dartFace
+          ((Classical.choose_spec ((M.mem_faceVertexSet_iff f (M.tail x.1)).1
+            (M.faceVertexKept_tail_mem f x))).1)⟩
+    change (M.faceVertexKeptMap f).σ.SameCycle y x
+    exact (Quotient.exact ((ProofsInTheBook.Ch13ComponentClose.keptMap_tail_eq_iff
+      M (M.faceVertexDel f) (M.faceVertexDel_sub f) y x).2 htail))
+  right_inv := by
+    intro v
+    apply Subtype.ext
+    exact (Classical.choose_spec ((M.mem_faceVertexSet_iff f v.1).1 v.2)).2
+
+lemma faceVertexKeptMap_V_eq_card_faceVertexSet (M : CombMap D) (f : M.Face) :
+    (M.faceVertexKeptMap f).V = (M.faceVertexSet f).card := by
+  calc
+    (M.faceVertexKeptMap f).V
+        = Fintype.card {v : M.Vertex // v ∈ M.faceVertexSet f} :=
+          Fintype.card_congr (M.faceVertexKeptVertexEquiv f)
+    _ = (M.faceVertexSet f).card := Fintype.card_coe _
+
+lemma faceVertexKeptMap_complete_of_clique (M : CombMap D) (f : M.Face)
+    (hClique : ∀ u ∈ M.faceVertexSet f, ∀ v ∈ M.faceVertexSet f,
+      u ≠ v → M.toSimpleGraph.Adj u v) :
+    ∀ u v : (M.faceVertexKeptMap f).Vertex,
+      u ≠ v → (M.faceVertexKeptMap f).toSimpleGraph.Adj u v := by
+  intro u v huv
+  refine Quotient.inductionOn₂ u v ?_ huv
+  intro x y huv'
+  have htailne : M.tail x.1 ≠ M.tail y.1 := by
+    intro htail
+    apply huv'
+    exact (ProofsInTheBook.Ch13ComponentClose.keptMap_tail_eq_iff
+      M (M.faceVertexDel f) (M.faceVertexDel_sub f) x y).2 htail
+  have hxS := M.faceVertexKept_tail_mem f x
+  have hyS := M.faceVertexKept_tail_mem f y
+  have hadj : M.toSimpleGraph.Adj (M.tail x.1) (M.tail y.1) :=
+    hClique (M.tail x.1) hxS (M.tail y.1) hyS htailne
+  obtain ⟨e, het, heh⟩ := M.exists_dart_tail_head_of_toSimpleGraph_adj hadj
+  have hekeep : e ∉ M.faceVertexDel f := by
+    apply M.notMem_faceVertexDel_of_endpoints f
+    · simpa [het] using hxS
+    · simpa [heh] using hyS
+  let z : {d : D // d ∉ M.faceVertexDel f} := ⟨e, hekeep⟩
+  rw [CombMap.toSimpleGraph_adj]
+  refine ⟨huv', ?_⟩
+  refine ⟨z, ?_⟩
+  unfold CombMap.dartEdge
+  rw [Sym2.eq_iff]
+  left
+  constructor
+  · exact (ProofsInTheBook.Ch13ComponentClose.keptMap_tail_eq_iff
+      M (M.faceVertexDel f) (M.faceVertexDel_sub f) z x).2 (by simpa [z, het])
+  · rw [eq_comm]
+    exact (ProofsInTheBook.Ch13ComponentClose.keptMap_tail_eq_head_iff
+      M (M.faceVertexDel f) (M.faceVertexDel_sub f) y z).2 (by simpa [z, heh])
+
+lemma faceVertexKeptMap_toSimpleGraph_eq_top_of_clique (M : CombMap D) (f : M.Face)
+    (hClique : ∀ u ∈ M.faceVertexSet f, ∀ v ∈ M.faceVertexSet f,
+      u ≠ v → M.toSimpleGraph.Adj u v) :
+    (M.faceVertexKeptMap f).toSimpleGraph = ⊤ := by
+  ext u v
+  constructor
+  · intro h
+    exact (M.faceVertexKeptMap f).toSimpleGraph.ne_of_adj h
+  · intro huv
+    exact M.faceVertexKeptMap_complete_of_clique f hClique u v huv
+
+lemma faceVertexKeptMap_E_eq_choose_two_of_clique (M : CombMap D)
+    (hSimple : M.IsSimpleGraph) (f : M.Face)
+    (hClique : ∀ u ∈ M.faceVertexSet f, ∀ v ∈ M.faceVertexSet f,
+      u ≠ v → M.toSimpleGraph.Adj u v) :
+    (M.faceVertexKeptMap f).E = (M.faceVertexSet f).card.choose 2 := by
+  classical
+  let H := M.faceVertexKeptMap f
+  letI : Fintype H.toSimpleGraph.edgeSet := Fintype.ofFinite H.toSimpleGraph.edgeSet
+  have hHsimple : H.IsSimpleGraph := M.faceVertexKeptMap_simple hSimple f
+  have htop : H.toSimpleGraph = ⊤ :=
+    M.faceVertexKeptMap_toSimpleGraph_eq_top_of_clique f hClique
+  have hedgeFinset :
+      H.toSimpleGraph.edgeFinset = (⊤ : SimpleGraph H.Vertex).edgeFinset := by
+    ext e
+    rw [SimpleGraph.mem_edgeFinset, SimpleGraph.mem_edgeFinset, htop]
+  calc
+    H.E = H.toSimpleGraph.edgeFinset.card :=
+        H.E_eq_card_toSimpleGraph_edgeFinset hHsimple
+    _ = (Fintype.card H.Vertex).choose 2 := by
+        rw [hedgeFinset]
+        exact SimpleGraph.card_edgeFinset_top_eq_card_choose_two (V := H.Vertex)
+    _ = (M.faceVertexSet f).card.choose 2 := by
+        change H.V.choose 2 = (M.faceVertexSet f).card.choose 2
+        rw [M.faceVertexKeptMap_V_eq_card_faceVertexSet f]
+
+lemma faceVertexKept_phi_apply_of_dartFace (M : CombMap D) {f : M.Face} {d : D}
+    (hd : M.dartFace d = f) :
+    (((M.faceVertexKeptMap f).φ
+      ⟨d, M.notMem_faceVertexDel_of_dartFace hd⟩ :
+        {d : D // d ∉ M.faceVertexDel f}) : D) = M.φ d := by
+  unfold CombMap.φ faceVertexKeptMap ProofsInTheBook.Ch13ActiveComponent.keptMap
+  simp only [Equiv.Perm.coe_mul, Function.comp_apply]
+  have hαkeep : M.α d ∉ M.faceVertexDel f := by
+    exact fun h => (M.notMem_faceVertexDel_of_dartFace hd) ((M.faceVertexDel_sub f d).2 h)
+  change ((Equiv.Perm.deleteSet M.σ (M.faceVertexDel f))
+      ⟨M.α d, hαkeep⟩ : {d : D // d ∉ M.faceVertexDel f}).1 = M.φ d
+  rw [Equiv.Perm.deleteSet_apply_coe,
+    ProofsInTheBook.PlanarMap.FilteredRotation.firstOutside_eq_one_of_next_notMem,
+    pow_one]
+  rfl
+  change M.φ d ∉ M.faceVertexDel f
+  exact M.notMem_faceVertexDel_of_dartFace (by rw [M.dartFace_phi, hd])
+
+lemma dartFace_phi_pow (M : CombMap D) (d : D) (n : ℕ) :
+    M.dartFace ((M.φ ^ n) d) = M.dartFace d := by
+  exact Quotient.sound
+    ((Equiv.Perm.sameCycle_pow_left (f := M.φ) (x := d) (y := d) (n := n)).2
+      (Equiv.Perm.SameCycle.refl _ _))
+
+lemma faceVertexKept_phi_pow_apply_of_dartFace (M : CombMap D) {f : M.Face} {d : D}
+    (hd : M.dartFace d = f) (n : ℕ) :
+    (((M.faceVertexKeptMap f).φ ^ n)
+      ⟨d, M.notMem_faceVertexDel_of_dartFace hd⟩ :
+        {d : D // d ∉ M.faceVertexDel f}).1 = (M.φ ^ n) d := by
+  induction n with
+  | zero => simp
+  | succ n ih =>
+      rw [pow_succ', pow_succ', Equiv.Perm.mul_apply, Equiv.Perm.mul_apply]
+      have hface : M.dartFace ((M.φ ^ n) d) = f := by
+        rw [M.dartFace_phi_pow d n, hd]
+      have hy :
+          (((M.faceVertexKeptMap f).φ ^ n)
+            ⟨d, M.notMem_faceVertexDel_of_dartFace hd⟩ :
+              {d : D // d ∉ M.faceVertexDel f}) =
+            ⟨(M.φ ^ n) d, M.notMem_faceVertexDel_of_dartFace hface⟩ :=
+        Subtype.ext ih
+      rw [hy]
+      exact M.faceVertexKept_phi_apply_of_dartFace hface
+
+lemma faceVertexKept_sameCycle_to_old_of_dartFace (M : CombMap D) {f : M.Face}
+    {d : D} (hd : M.dartFace d = f)
+    {x : {d : D // d ∉ M.faceVertexDel f}}
+    (h : (M.faceVertexKeptMap f).φ.SameCycle
+        ⟨d, M.notMem_faceVertexDel_of_dartFace hd⟩ x) :
+    M.φ.SameCycle d x.1 := by
+  obtain ⟨n, hn⟩ := Equiv.Perm.SameCycle.exists_nat_pow_eq h
+  have hnat : (M.φ ^ n) d = x.1 := by
+    rw [← hn]
+    exact (M.faceVertexKept_phi_pow_apply_of_dartFace hd n).symm
+  refine ⟨(n : ℤ), ?_⟩
+  simpa [zpow_natCast] using hnat
+
+lemma faceVertexKept_sameCycle_of_old_sameCycle (M : CombMap D) {f : M.Face}
+    {d x : D} (hd : M.dartFace d = f) (hx : M.dartFace x = f)
+    (h : M.φ.SameCycle d x) :
+    (M.faceVertexKeptMap f).φ.SameCycle
+      ⟨d, M.notMem_faceVertexDel_of_dartFace hd⟩
+      ⟨x, M.notMem_faceVertexDel_of_dartFace hx⟩ := by
+  obtain ⟨n, hn⟩ := Equiv.Perm.SameCycle.exists_nat_pow_eq h
+  have hnat :
+      ((M.faceVertexKeptMap f).φ ^ n)
+        ⟨d, M.notMem_faceVertexDel_of_dartFace hd⟩ =
+        ⟨x, M.notMem_faceVertexDel_of_dartFace hx⟩ := by
+    apply Subtype.ext
+    rw [M.faceVertexKept_phi_pow_apply_of_dartFace hd n, hn]
+  refine ⟨(n : ℤ), ?_⟩
+  simpa [zpow_natCast] using hnat
+
+lemma faceLen_eq_card_dartFace_subtype (M : CombMap D) (Q : M.Face) :
+    M.faceLen Q = Fintype.card {d : D // M.dartFace d = Q} := by
+  classical
+  rw [Fintype.card_subtype]
+  rfl
+
+noncomputable def faceVertexKeptFaceDartEquiv (M : CombMap D) {f : M.Face}
+    {d : D} (hd : M.dartFace d = f) :
+    {x : {d : D // d ∉ M.faceVertexDel f} //
+        (M.faceVertexKeptMap f).dartFace x =
+          (M.faceVertexKeptMap f).dartFace
+            ⟨d, M.notMem_faceVertexDel_of_dartFace hd⟩}
+      ≃ {x : D // M.dartFace x = f} where
+  toFun := fun x =>
+    ⟨x.1.1, by
+      have hscH : (M.faceVertexKeptMap f).φ.SameCycle
+          ⟨d, M.notMem_faceVertexDel_of_dartFace hd⟩ x.1 :=
+        (Quotient.exact x.2.symm)
+      have hscM := M.faceVertexKept_sameCycle_to_old_of_dartFace hd hscH
+      exact (Quotient.sound hscM).symm.trans hd⟩
+  invFun := fun x =>
+    ⟨⟨x.1, M.notMem_faceVertexDel_of_dartFace x.2⟩, by
+      have hEq : M.dartFace d = M.dartFace x.1 := hd.trans x.2.symm
+      have hscM : M.φ.SameCycle d x.1 := Quotient.exact hEq
+      have hscH := M.faceVertexKept_sameCycle_of_old_sameCycle hd x.2 hscM
+      exact (Quotient.sound hscH).symm⟩
+  left_inv := by
+    intro x
+    cases x with
+    | mk x hx =>
+        rfl
+  right_inv := by
+    intro x
+    cases x
+    rfl
+
+lemma faceVertexKept_faceLen_selected_eq (M : CombMap D) {f : M.Face}
+    {d : D} (hd : M.dartFace d = f) :
+    (M.faceVertexKeptMap f).faceLen
+        ((M.faceVertexKeptMap f).dartFace
+          ⟨d, M.notMem_faceVertexDel_of_dartFace hd⟩)
+      = M.faceLen f := by
+  classical
+  rw [faceLen_eq_card_dartFace_subtype, M.faceLen_eq_card_dartFace_subtype f]
+  exact Fintype.card_congr (M.faceVertexKeptFaceDartEquiv hd)
+
+lemma faceVertexKeptMap_two_le_E_of_long_face (M : CombMap D) {f : M.Face}
+    {d : D} (hd : M.dartFace d = f) (hf : 3 < M.faceLen f) :
+    2 ≤ (M.faceVertexKeptMap f).E := by
+  classical
+  let H := M.faceVertexKeptMap f
+  let R0 : H.Face := H.dartFace ⟨d, M.notMem_faceVertexDel_of_dartFace hd⟩
+  have hlen : 3 < H.faceLen R0 := by
+    simpa [H, R0] using hf.trans_eq (M.faceVertexKept_faceLen_selected_eq hd).symm
+  have hle : H.faceLen R0 ≤ 2 * H.E := by
+    calc
+      H.faceLen R0 ≤ ∑ Q : H.Face, H.faceLen Q :=
+          Finset.single_le_sum (fun _ _ => Nat.zero_le _) (Finset.mem_univ R0)
+      _ = 2 * H.E := H.sum_faceLen
+  change 2 ≤ H.E
+  omega
+
+lemma faceVertexKeptMap_faceLengthGe_three_of_clique (M : CombMap D)
+    (hSimple : M.IsSimpleGraph) {f : M.Face} {d : D}
+    (hd : M.dartFace d = f) (hf : 3 < M.faceLen f)
+    (hClique : ∀ u ∈ M.faceVertexSet f, ∀ v ∈ M.faceVertexSet f,
+      u ≠ v → M.toSimpleGraph.Adj u v) :
+    (M.faceVertexKeptMap f).FaceLengthGe 3 := by
+  let H := M.faceVertexKeptMap f
+  have hHsimple : H.IsSimpleGraph := M.faceVertexKeptMap_simple hSimple f
+  have hconn : H.Connected := M.faceVertexKeptMap_connected_of_clique f hClique
+  have hE : 2 ≤ H.E := M.faceVertexKeptMap_two_le_E_of_long_face hd hf
+  intro R
+  simpa [ProofsInTheBook.Ch13ComponentClose.faceDeg_eq_faceLen] using
+    ProofsInTheBook.Ch13ComponentClose.three_le_faceDeg_of_connected_simple_twoEdge
+      hHsimple hconn hE R
+
+lemma faceVertexKeptMap_E_le_three_mul_V_sub_seven_of_long_face (M : CombMap D)
+    (hS : M.IsSphereMap) (hSimple : M.IsSimpleGraph) {f : M.Face} {d : D}
+    (hd : M.dartFace d = f) (hf : 3 < M.faceLen f)
+    (hClique : ∀ u ∈ M.faceVertexSet f, ∀ v ∈ M.faceVertexSet f,
+      u ≠ v → M.toSimpleGraph.Adj u v) :
+    (M.faceVertexKeptMap f).E ≤ 3 * (M.faceVertexKeptMap f).V - 7 := by
+  classical
+  let H := M.faceVertexKeptMap f
+  let R0 : H.Face := H.dartFace ⟨d, M.notMem_faceVertexDel_of_dartFace hd⟩
+  have hconn : H.Connected := M.faceVertexKeptMap_connected_of_clique f hClique
+  have hVEF : (H.V : ℤ) - H.E + H.F = 2 :=
+    M.faceVertexKeptMap_euler_VEF hS f
+      ⟨d, M.notMem_faceVertexDel_of_dartFace hd⟩ hconn
+  have h3 : H.FaceLengthGe 3 :=
+    M.faceVertexKeptMap_faceLengthGe_three_of_clique hSimple hd hf hClique
+  have hR0 : H.faceLen R0 = M.faceLen f := by
+    simpa [H, R0] using M.faceVertexKept_faceLen_selected_eq hd
+  have hR0ge4 : 4 ≤ H.faceLen R0 := by
+    rw [hR0]
+    omega
+  have hsumErase :
+      3 * (Finset.univ.erase R0).card ≤
+        ∑ Q ∈ Finset.univ.erase R0, H.faceLen Q := by
+    calc
+      3 * (Finset.univ.erase R0).card =
+          ∑ Q ∈ Finset.univ.erase R0, 3 := by
+            simp [Finset.sum_const, mul_comm]
+      _ ≤ ∑ Q ∈ Finset.univ.erase R0, H.faceLen Q :=
+          Finset.sum_le_sum (fun Q _ => h3 Q)
+  have hcardErase : (Finset.univ.erase R0).card = H.F - 1 := by
+    rw [Finset.card_erase_of_mem (Finset.mem_univ R0)]
+    simp [CombMap.F]
+  have hsumLower : H.faceLen R0 + 3 * (H.F - 1) ≤ 2 * H.E := by
+    calc
+      H.faceLen R0 + 3 * (H.F - 1)
+          = H.faceLen R0 + 3 * (Finset.univ.erase R0).card := by rw [hcardErase]
+      _ ≤ H.faceLen R0 + ∑ Q ∈ Finset.univ.erase R0, H.faceLen Q :=
+          Nat.add_le_add_left hsumErase _
+      _ = ∑ Q : H.Face, H.faceLen Q := by
+          rw [Finset.add_sum_erase _ _ (Finset.mem_univ R0)]
+      _ = 2 * H.E := H.sum_faceLen
+  have hFpos : 0 < H.F := by
+    change 0 < Fintype.card H.Face
+    exact Fintype.card_pos_iff.mpr ⟨R0⟩
+  have hsumLowerZ :
+      (H.faceLen R0 : ℤ) + 3 * ((H.F : ℤ) - 1) ≤ 2 * (H.E : ℤ) := by
+    have hcast : ((H.F - 1 : ℕ) : ℤ) = (H.F : ℤ) - 1 := by
+      rw [Nat.cast_sub (Nat.succ_le_of_lt hFpos)]
+      norm_num
+    have hsumLowerZ0 :
+        (H.faceLen R0 : ℤ) + 3 * ((H.F - 1 : ℕ) : ℤ) ≤ 2 * (H.E : ℤ) := by
+      exact_mod_cast hsumLower
+    rwa [hcast] at hsumLowerZ0
+  have hEstrictZ : (H.E : ℤ) ≤ 3 * (H.V : ℤ) - 7 := by
+    have hR0z : (4 : ℤ) ≤ (H.faceLen R0 : ℤ) := by exact_mod_cast hR0ge4
+    linarith
+  change H.E ≤ 3 * H.V - 7
+  omega
+
+noncomputable def faceDiagonalSupplier_of_simple_sphere : FaceDiagonalSupplier where
+  exists_choice := by
+    intro D _ _ M hS hSimple f hf
+    obtain ⟨d, rfl⟩ := f.exists_rep
+    by_contra hNo
+    let f : M.Face := M.dartFace d
+    let H := M.faceVertexKeptMap f
+    have hClique : ∀ u ∈ M.faceVertexSet f, ∀ v ∈ M.faceVertexSet f,
+        u ≠ v → M.toSimpleGraph.Adj u v :=
+      M.faceVertexSet_clique_of_no_diagonal hSimple hNo
+    have hEchoose : H.E = (M.faceVertexSet f).card.choose 2 :=
+      M.faceVertexKeptMap_E_eq_choose_two_of_clique hSimple f hClique
+    have hEupper : H.E ≤ 3 * H.V - 7 :=
+      M.faceVertexKeptMap_E_le_three_mul_V_sub_seven_of_long_face
+        hS hSimple (d := d) rfl hf hClique
+    have hE2 : 2 ≤ H.E :=
+      M.faceVertexKeptMap_two_le_E_of_long_face (d := d) rfl hf
+    let n : ℕ := (M.faceVertexSet f).card
+    have hn3 : 3 ≤ n := by
+      apply three_le_of_two_le_choose_two
+      rw [← hEchoose]
+      exact hE2
+    have hchooseLower : 3 * n - 6 ≤ n.choose 2 :=
+      three_mul_sub_six_le_choose_two n hn3
+    have hupperE : H.E ≤ 3 * n - 7 := by
+      have h := hEupper
+      rw [M.faceVertexKeptMap_V_eq_card_faceVertexSet f] at h
+      exact h
+    have hupperChoose : n.choose 2 ≤ 3 * n - 7 := by
+      rw [← hEchoose]
+      exact hupperE
+    omega
+
 lemma faceDartList_length_eq_faceLen (M : CombMap D) {root : D}
     (hφ : M.φ root ≠ root) :
     (M.faceDartList root).length = M.faceLen (M.dartFace root) := by
@@ -548,29 +1208,28 @@ noncomputable def triangulationExtensionOfCombMap (P : PlaneSimpleGraph V D)
     exact E.adj_embed (P.toCombMap_adj_embed hincident huv)
 
 /-- Produce a triangulation extension of a plane simple graph from the route-B diagonal
-supplier and the small face-length lower-bound side condition. -/
-noncomputable def triangulationExtensionOfSupplier (P : PlaneSimpleGraph V D)
+supplier theorem and the small face-length lower-bound side condition. -/
+noncomputable def triangulationExtension (P : PlaneSimpleGraph V D)
     (hsphere : P.IsSphereMap)
     (hincident : ∀ v : V, ∃ d : D, P.tail d = v)
     (h3 : P.toCombMap.FaceLengthGe 3)
-    (sup : FaceDiagonalSupplier.{u}) [Nonempty D] :
+    [Nonempty D] :
     PlaneTriangulationExtension P :=
   P.triangulationExtensionOfCombMap hincident
     (CombMap.triangulate D P.toCombMap
       (P.toCombMap_isSphereMap hsphere hincident)
-      P.toCombMap_isSimpleGraph h3 sup)
+      P.toCombMap_isSimpleGraph h3 CombMap.faceDiagonalSupplier_of_simple_sphere)
 
-/-- Conditional five-colour theorem for plane simple graphs from the uniform face-diagonal
-supplier.  The remaining residual is exactly the supplier; `h3` is the standard
-face-length lower bound needed to identify the all-triangular base case. -/
+/-- Five-colour theorem for plane simple graphs after producing face diagonals internally.
+`h3` is the standard face-length lower bound needed to identify the all-triangular base case. -/
 theorem fiveColor_planeSimpleGraph (P : PlaneSimpleGraph V D)
     (hsphere : P.IsSphereMap)
     (hincident : ∀ v : V, ∃ d : D, P.tail d = v)
     (h3 : P.toCombMap.FaceLengthGe 3)
-    (sup : FaceDiagonalSupplier.{u}) [Nonempty D] :
+    [Nonempty D] :
     P.G.Colorable 5 :=
   fiveColor_planeSimpleGraph_of_extension P
-    (P.triangulationExtensionOfSupplier hsphere hincident h3 sup)
+    (P.triangulationExtension hsphere hincident h3)
 
 end PlaneSimpleGraph
 
@@ -642,13 +1301,11 @@ theorem triangle_toCombMap_faceLengthGe_three :
   have h := triangle_toCombMap_faceRegular_three f
   simpa [CombMap.faceLen] using (le_of_eq h.symm)
 
-/-- The triangle witness also routes through the general triangulation producer, for any
-inhabited uniform diagonal supplier.  The supplier is not consumed because the map is already
-triangular. -/
-theorem fiveColor_triangle_via_triangulate (sup : FaceDiagonalSupplier.{0}) :
+/-- The triangle witness also routes through the general triangulation producer. -/
+theorem fiveColor_triangle_via_triangulate :
     trianglePlaneSimpleGraph.G.Colorable 5 :=
   trianglePlaneSimpleGraph.fiveColor_planeSimpleGraph triangle_plane_isSphere triangle_incident
-    triangle_toCombMap_faceLengthGe_three sup
+    triangle_toCombMap_faceLengthGe_three
 
 end TriangleWitness
 
@@ -660,6 +1317,7 @@ end TriangleWitness
 #print axioms ProofsInTheBook.PlanarMap.colorable_of_triangulationExtension
 #print axioms ProofsInTheBook.PlanarMap.fiveColor_planeSimpleGraph_of_extension
 #print axioms ProofsInTheBook.PlanarMap.FaceDiagonalSupplier
+#print axioms ProofsInTheBook.PlanarMap.CombMap.faceDiagonalSupplier_of_simple_sphere
 #print axioms ProofsInTheBook.PlanarMap.TriangleWitness.triangle_toCombMap_faceRegular_three
 #print axioms ProofsInTheBook.PlanarMap.TriangleWitness.triangle_no_long_face
 #print axioms ProofsInTheBook.PlanarMap.CombMap.buildNearTriangulationFromAllTriangular

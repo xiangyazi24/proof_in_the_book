@@ -1,529 +1,588 @@
-# Cauchy ch13 vertex rotation: the last sign lemma
+# Cauchy ch13: wiring out `RotationFaithful`
 
-This is the structural answer to the remaining orientation-free sign gap.  The main point is not a Lean nuisance: with the axis exactly as stated,
+This is the architecture I would implement to actually remove the carried orientation field from `ConvexEuclideanPolyhedron`.
 
-\[
-  n_v := -\sum_{f\ni v} N_f
-\]
+The current pipeline is:
 
-where the `N_f` are outward face normals, the desired positive-span statement is **false** from the listed hypotheses.  The clean route is therefore either:
+```text
+ConvexEuclideanPolyhedron.faithful : RotationFaithful P.toTri
+  → ZinanCh13EuclLink.orientedTriangleSupport_of_rotationFaithful
+  → ZinanCh13EuclLink.vertexLinkGeometryOfEuclidean
+  → VertexLinkGeometry.toVertexStar
+  → Ch13VertexStar.VertexStar.vertexLink_strictArm.closed_convex
+  → ch13 Cauchy assembly
+```
 
-1. change the angular-sort axis to a self-dual axis constructed from the edge cone, or
-2. add as an explicit hypothesis/certificate that the chosen axis lies in the interior of the positive cone of the edge rays.
+The end-state should be:
 
-Everything after such a certificate is small and should reuse the repo’s existing determinant/spherical machinery.
+```text
+face support + simple fan + degree≥3 + derived self-dual axis + angular/fan turn positivity
+  → rotationFaithful_of_convex : RotationFaithful P
+  → old downstream pipeline unchanged, except `P.faithful` is replaced by the theorem call
+```
 
-## 1. The stated positive-span lemma is false for `-∑ outward_normal`
+The minimal patch is therefore **not** to rewrite the whole Cauchy pipeline.  Prove `RotationFaithful` as a theorem, drop it as a structure field, and keep the existing consumers of `RotationFaithful` alive through the derived theorem.
 
-Let the vertex be the origin and take the three edge rays
+There is one dependency-order warning:
 
-\[
-  w_0=(0,0,-1),\qquad w_1=(0,-1,-9),\qquad w_2=(-1,0,-9).
-\]
+> Do not prove the needed per-dart turn sign from the same `StrictConvexSphPolygon` that currently depends on `RotationFaithful`.  That would be circular.  The turn sign used to prove `RotationFaithful` must come from the independent axis/angular-sort/fan-alignment layer: positive cone axis → projected rays surround → angular consecutive gaps `< π` → reverse-`σ` consecutive turn sign.
 
-This is the tangent cone of the tetrahedron with vertices `0, w₀, w₁, w₂`.  The three incident outward normals can be chosen as
+After `rotationFaithful_of_convex` is proved, the old `VertexStar.vertexLink_strictArm.closed_convex` route can be reused freely.
 
-\[
-  N_0=(1,0,0),\qquad N_1=(0,1,0),\qquad
-  N_2={(-9,-9,1)\over\sqrt{163}}.
-\]
+## 1. Is `RotationFaithful` exactly the per-dart sign?
 
-They satisfy the face-plane and strict support conditions at the vertex:
+Almost.  Syntactically, `RotationFaithful` is a vector equality:
 
-* `N₀` vanishes on the face spanned by `w₀,w₁`, and `N₀·w₂=-1<0`.
-* `N₁` vanishes on the face spanned by `w₀,w₂`, and `N₁·w₁=-1<0`.
-* `N₂` vanishes on the face spanned by `w₁,w₂`, and `N₂·w₀=-1/√163<0`.
+```lean
+structure RotationFaithful {M : CombMap D}
+    (P : TriangulatedEuclideanPolyhedron M) : Prop where
+  outward_normal_eq_pos_smul_reverse_cross :
+    ∀ d : D,
+      ∃ lam : ℝ, 0 < lam ∧
+        P.outward_normal (reverseFaceBetween M d) =
+          lam • cross (edgeVec P (M.σ.symm d)) (edgeVec P d)
+```
 
-Now form
+But once the face-plane facts and face nondegeneracy are available, this vector equality is equivalent to a single scalar orientation sign.  For a dart `d`, set
 
-\[
-  n=-N_0-N_1-N_2
-    =\left(-1+{9\over\sqrt{163}},\ -1+{9\over\sqrt{163}},\ -{1\over\sqrt{163}}\right).
-\]
+```text
+N  := P.outward_normal (M.dartFace d)
+Wd := edgeVec P d
+Ws := edgeVec P (M.σ.symm d)
+C  := cross Ws Wd
+```
+
+The face-plane lemmas already in `ZinanCh13EuclLink` give
+
+```lean
+face_plane_head_sub_tail P d
+face_plane_head_sigma_symm_sub_tail P d
+```
+
+so `N ⟂ Wd` and `N ⟂ Ws`.  Face nondegeneracy gives `Wd, Ws` independent, hence `C ≠ 0`; strict support against an off-face vertex gives `N ≠ 0`.  Therefore `C` and `N` are parallel.  Under these nondegeneracy facts,
+
+```text
+∃ λ > 0, N = λ • C
+```
+
+is equivalent to any of the following scalar signs:
+
+```text
+0 < ⟪N, C⟫,
+0 < det3 N Ws Wd,
+0 < det3 Wd Ws A  together with  ⟪N,A⟫ < 0,
+```
+
+where `A` is the chosen self-dual axis at `tail d`.  The last form is the one that matches the new architecture.
+
+### Exact derivation from the axis
+
+Let `A` be the self-dual axis at `v = M.tail d`, with
+
+```text
+A = ∑ e incident to v, α_e • edgeVec P e,      α_e > 0.
+```
+
+For the face `f = M.dartFace d`, face support gives
+
+```text
+⟪N, edgeVec P e⟫ ≤ 0
+```
+
+for every incident edge `e` at `v`, and strict support gives `< 0` for any incident edge whose head is not one of the three vertices of `f`.  Such an edge exists from the local degree `≥ 3` and the simple fan bookkeeping.  Hence
+
+```text
+⟪N,A⟫ = ∑ e, α_e * ⟪N, edgeVec P e⟫ < 0.
+```
+
+The independent angular/fan layer gives the positive turn for the reverse-`σ` consecutive face edge:
+
+```text
+0 < det3 Wd Ws A = ⟪cross Wd Ws, A⟫.
+```
+
+Since `cross Wd Ws` is parallel to `N`, write
+
+```text
+cross Wd Ws = ρ • N.
+```
 
 Then
 
-\[
-  n\cdot w_0={1\over\sqrt{163}}>0,
-  \qquad n\cdot w_1=1>0,
-  \qquad n\cdot w_2=1>0.
-\]
-
-So this example satisfies the positivity fact already proved in the repo: the face-normal-sum axis is strictly positive on all edge rays.
-
-But `n` is not in the positive cone of the edge rays.  Solving
-
-\[
-  n=\alpha_0 w_0+\alpha_1 w_1+\alpha_2 w_2
-\]
-
-gives
-
-\[
-  \alpha_0=\sqrt{163}-18<0,
-  \qquad \alpha_1=\alpha_2=1-{9\over\sqrt{163}}>0.
-\]
-
-Thus `n ∉ cone{w₀,w₁,w₂}`.  As explained below, this is exactly equivalent to failure of the projected rays to surround the origin in `nᵥᗮ`.  Geometrically, the three projections into `nᵥᗮ` lie in a very small angular sector; the wrap-around angular gap is about `6.12`, much larger than `π`.
-
-So there is no theorem of the form
-
-```lean
--- false as stated
-supporting_halfspaces + face_plane + (∀ d, 0 < ⟪n_v, w d⟫) + degree ≥ 3
-  ⟹ projections of w d to n_vᗮ positively span n_vᗮ
+```text
+0 < ⟪cross Wd Ws, A⟫ = ρ * ⟪N,A⟫.
 ```
 
-for `n_v = -∑ incident outward_normal`.
+Because `⟪N,A⟫ < 0`, we get `ρ < 0`.  Therefore
 
-The missing condition is not “degree ≥ 3”; it is primal-cone membership of the axis.  The face-normal sum is naturally a **dual-interior** vector: it is positive as a functional on the tangent cone.  Positive spanning of the projections requires the axis also to be in the **primal interior** of the tangent cone.
-
-## 2. Exact algebraic criterion for the projection surround property
-
-Let `C = cone{w_d}` be the nonnegative cone generated by the edge rays and let `a ≠ 0` be an axis with
-
-\[
-  \langle a,w_d\rangle>0
-\]
-
-for all edge rays.  Let
-
-\[
-  p_d = w_d - {\langle a,w_d\rangle\over \langle a,a\rangle}a
-\]
-
-be the projection of `w_d` to `aᗮ`.
-
-Then the useful equivalence is:
-
-\[
-  \{p_d\}\text{ positively spans }a^\perp
-  \quad\Longleftrightarrow\quad
-  a\in \operatorname{int}(C).
-\]
-
-For finite edge rays this can be packaged more concretely as:
-
-* `a` is a strictly positive combination of the edge rays, and
-* the projected rays span the two-dimensional plane `aᗮ` as an `ℝ`-vector space.
-
-The forward/backward algebra is very short.  If
-
-\[
-  a=\sum_d \lambda_d w_d,
-  \qquad \lambda_d>0,
-\]
-
-then linearity of projection gives
-
-\[
-  0=\operatorname{proj}_{a^\perp}(a)=\sum_d \lambda_d p_d.
-\]
-
-If a nonzero linear functional `ℓ` on `aᗮ` had `ℓ(p_d) ≥ 0` for all `d`, then applying `ℓ` to the strictly positive dependence gives `ℓ(p_d)=0` for all `d`.  If the `p_d` span `aᗮ`, this forces `ℓ=0`, contradiction.  Hence no closed half-plane through the origin contains all the projected rays.
-
-Conversely, if the projected rays surround the origin, the section of `C` by the affine hyperplane `⟪a,x⟫=⟪a,a⟫` contains `a` in the relative interior of the convex hull of the normalized edge rays.  Scaling back says exactly `a ∈ int C`.
-
-This is the lemma to formalize, not a theorem special to face normals.
-
-A Lean-facing interface that is cheaper than `0 ∈ interior (convexHull …)` is the following “no closed half-plane” predicate:
-
-```lean
-import ProofsInTheBook.SphericalConeMembership
-import Mathlib.Analysis.Convex.Combination
-
-noncomputable section
-open scoped RealInnerProductSpace NNReal BigOperators
-open ProofsInTheBook.SphericalKernel
-
-namespace ProofsInTheBook.Ch13VertexAxisDesign
-
-/-- Orthogonal projection to the plane perpendicular to `a`.
-For production code, reuse any existing `projOut`/projection API if it is already
-more convenient in the local file. -/
-def projPerp (a x : E3) : E3 :=
-  x - ((⟪a, x⟫ : ℝ) / (⟪a, a⟫ : ℝ)) • a
-
-/-- The projected rays surround the axis plane: every nonzero test vector in
-`aᗮ` sees rays on both strict sides.  This is often the most convenient
-replacement for `0 ∈ interior (convexHull ℝ (Set.range p))`. -/
-def SurroundsAxisPlane {ι : Type*} (w : ι → E3) (a : E3) : Prop :=
-  a ≠ 0 ∧
-  (∀ i, (⟪a, projPerp a (w i)⟫ : ℝ) = 0) ∧
-  (∀ u : E3,
-    (⟪a, u⟫ : ℝ) = 0 → u ≠ 0 →
-      (∃ i, (0 : ℝ) < ⟪u, projPerp a (w i)⟫) ∧
-      (∃ j, (⟪u, projPerp a (w j)⟫ : ℝ) < 0))
-
-/-- Suggested axis certificate for the angular-sort proof.  The `cone_pos`
-field puts the axis in the primal edge cone; `edge_pos` puts it in the dual
-interior.  The `proj_span` field can also be derived from the vertex being a
-true 3D polyhedral vertex, but keeping it explicit makes the downstream gap
-lemma tiny. -/
-structure SelfDualEdgeAxis {ι : Type*} [Fintype ι] (w : ι → E3) (a : E3) : Prop where
-  axis_ne : a ≠ 0
-  edge_pos : ∀ i, (0 : ℝ) < ⟪a, w i⟫
-  cone_pos : ∃ λ : ι → ℝ,
-    (∀ i, (0 : ℝ) < λ i) ∧ a = ∑ i, λ i • w i
-  proj_span : Submodule.span ℝ (Set.range fun i => projPerp a (w i)) =
-    {x : E3 | (⟪a, x⟫ : ℝ) = 0}
-
-end ProofsInTheBook.Ch13VertexAxisDesign
+```text
+cross Ws Wd = - cross Wd Ws = (-ρ) • N,     0 < -ρ,
 ```
 
-The `proj_span` target may need to be written as the actual submodule already used for `aᗮ` in your file; the mathematical content is just “the projected rays are not all collinear”.  For a genuine 3D vertex this should come from the three-dimensionality of the tangent cone, not from angular sorting.
+and hence
 
-## 3. Clean route to a good axis from convexity
+```text
+N = ((-ρ)⁻¹) • cross Ws Wd,
+```
 
-The right convex-geometric replacement for the false `-∑ normals` statement is:
+with positive scalar.  This is exactly the `RotationFaithful` field for dart `d`.
 
-> From the edge rays and the already-proved dual positivity witness, construct a noncomputable axis `a_v` such that
-> `a_v ∈ int cone{w_d}` and `∀ d, 0 < ⟪a_v,w_d⟫`.
+So the answer is:
 
-This is a self-dual axis: primal-interior plus dual-interior.
+* `orientedTriangleSupport_of_axisFace` contains enough information to prove `RotationFaithful`, **provided** it exposes that its `normal` is the stored outward normal up to positive rescaling, or provided the cross/normal equality is proved immediately before packaging the `OrientedTriangleSupport`.
+* Axis existence alone is not enough.  You also need the independent reverse-`σ` turn sign, or equivalently angular-order alignment between the geometry-sorted link and the combinatorial reverse-`σ` fan.
 
-The finite-dimensional proof can be done with a Stiemke/Gordan theorem of alternatives applied to the Gram matrix
+## 2. The theorem surfaces I would add
 
-\[
-  G_{ij}=\langle w_i,w_j\rangle.
-\]
-
-The support data and your lemma `∀ d, 0 < ⟪n_v,w_d⟫` imply pointedness of the edge cone:
-
-\[
-  \sum_i \beta_i w_i=0,\quad \beta_i\ge 0
-  \quad\Longrightarrow\quad
-  \beta_i=0\text{ for all }i,
-\]
-
-because dotting with `n_v` gives a sum of nonnegative terms, each coefficient multiplied by a strictly positive number.
-
-Stiemke’s theorem gives the alternative:
-
-* either there is `α ≥ 0` with `G α > 0` coordinatewise, or
-* there is `β ≥ 0`, `β ≠ 0`, with `G β ≤ 0` coordinatewise.
-
-The second alternative is impossible.  Indeed
-
-\[
-  0\le \left\|\sum_i\beta_i w_i\right\|^2
-    =\beta^T G\beta
-    =\sum_i \beta_i (G\beta)_i\le 0,
-\]
-
-so `∑ β_i w_i=0`, contradicting pointedness.
-
-Thus pick `α ≥ 0` with `G α > 0`.  Add a sufficiently small positive constant to every coefficient to make `α_i > 0` while preserving `G α > 0`.  Define
-
-\[
-  a_v=\sum_i \alpha_i w_i.
-\]
-
-Then
-
-\[
-  a_v\in\operatorname{int} cone\{w_i\}
-  \quad\text{and}\quad
-  \langle a_v,w_i\rangle=(G\alpha)_i>0.
-\]
-
-This is the cleanest “positive span from convexity” theorem.  It uses the face-normal-sum axis only as a **pointedness witness**, not as the final angular-sort axis.
-
-Lean surface:
+Put these near `ZinanCh13EuclLink`, or in a small successor file imported by `ZinanCh13Cauchy3D` before `ConvexEuclideanPolyhedron` is used.
 
 ```lean
+import ProofsInTheBook.ZinanCh13EuclLink
 import ProofsInTheBook.SphericalConeMembership
-import Mathlib.Analysis.Convex.Combination
-import Mathlib.LinearAlgebra.Matrix.DotProduct
+import ProofsInTheBook.Ch13VertexStar
 
 noncomputable section
-open scoped RealInnerProductSpace NNReal BigOperators
+open scoped Classical RealInnerProductSpace BigOperators
+open ProofsInTheBook.PlanarMap ProofsInTheBook.PlanarMap.CombMap
+open ProofsInTheBook.Ch13Euclidean
+open ProofsInTheBook.Ch13EuclLink
 open ProofsInTheBook.SphericalKernel
+open ProofsInTheBook.SphericalConeMembership
 
-namespace ProofsInTheBook.Ch13VertexAxisDesign
+namespace ProofsInTheBook.Ch13RotationFaithfulFree
 
-/-- The local finite theorem of alternatives you want as a reusable lemma.
-If this exact Stiemke/Gordan statement is not already in the pinned Mathlib,
-prove it once from finite-dimensional separation/Farkas. -/
-theorem exists_strict_copositive_combo_from_pointed
-    {ι : Type*} [Fintype ι] [DecidableEq ι] (w : ι → E3)
-    (hpointed : ∀ β : ι → ℝ,
-      (∀ i, 0 ≤ β i) →
-      (∑ i, β i • w i = 0) →
-      ∀ i, β i = 0) :
-    ∃ α : ι → ℝ,
-      (∀ i, 0 < α i) ∧
-      ∀ i, (0 : ℝ) < ⟪(∑ j, α j • w j), w i⟫ := by
-  -- Proof plan:
-  -- 1. Apply Stiemke/Gordan to the Gram matrix `G i j = ⟪w j, w i⟫`.
-  -- 2. Rule out the dual alternative `β ≥ 0`, `β ≠ 0`, `G β ≤ 0` by
-  --    `‖∑ i, β i • w i‖^2 = ∑ i, β i * (Gβ i) ≤ 0`.
-  -- 3. Obtain `α₀ ≥ 0` with `G α₀ > 0`.
-  -- 4. Replace `α₀` by `α₀ + ε` for small `ε > 0`; finite minima preserve
-  --    strict positivity of `G α`.
-  -- This is intentionally a theorem surface, not a finished proof body.
+variable {D : Type*} [Fintype D] [DecidableEq D]
+variable {M : CombMap D}
+
+/-- A local self-dual axis certificate at one vertex.
+
+The final implementation can use whatever `AxisPositiveConeForEdge` structure has
+already landed.  The important fields for this wiring layer are:
+
+* `axis_eq_posCone`: `axis` is a strictly positive combination of incident edge rays;
+* `edge_pos`: `axis` is in the dual interior, used by the angular-sort layer;
+* `reverseSigma_turn_pos`: the independent angular/fan theorem that the reverse-`σ`
+  consecutive pair has positive turn about `axis`.
+-/
+structure VertexSelfDualAxis
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex) where
+  axis : E3
+  axis_ne : axis ≠ 0
+  axis_eq_posCone :
+    ∃ μ : {d : D // M.tail d = v} → ℝ,
+      (∀ d, 0 < μ d) ∧
+        axis = ∑ d : {d : D // M.tail d = v}, μ d • edgeVec P d.1
+  edge_pos : ∀ d : D, M.tail d = v → 0 < inner ℝ axis (edgeVec P d)
+  reverseSigma_turn_pos :
+    ∀ d : D, M.tail d = v →
+      0 < det3 (edgeVec P d) (edgeVec P (M.σ.symm d)) axis
+
+/-- The finite-cone theorem: construct the self-dual axis at `v` from convexity.
+
+This is where the Stiemke/Gordan proof belongs.  The proof uses:
+
+1. the already-proved dual positive/pointedness witness for the incident edge cone;
+2. finite-dimensional Stiemke/Gordan on the Gram matrix;
+3. positive-span of projections and angular sorting;
+4. alignment of the angular fan with the reverse-`σ` face fan.
+
+It should not depend on `RotationFaithful` or on `StrictConvexSphPolygon` produced
+by `VertexStar.vertexLink_strictArm`; otherwise the architecture is circular.
+-/
+theorem selfDualAxis_of_convex
+    (P : TriangulatedEuclideanPolyhedron M)
+    (hsimple : M.IsSimpleGraph)
+    (hdeg : ∀ v : M.Vertex, 3 ≤ vDeg P v)
+    (v : M.Vertex) :
+    VertexSelfDualAxis P v := by
+  -- Stiemke/Gordan + angular-sort/fan-alignment layer.
+  -- No use of `RotationFaithful`.
   sorry
 
-/-- The support-normal axis gives pointedness of the edge cone. -/
-theorem pointed_of_dual_positive
-    {ι : Type*} [Fintype ι] (w : ι → E3) {n : E3}
-    (hdual : ∀ i, (0 : ℝ) < ⟪n, w i⟫) :
-    ∀ β : ι → ℝ,
-      (∀ i, 0 ≤ β i) →
-      (∑ i, β i • w i = 0) →
-      ∀ i, β i = 0 := by
-  intro β hβ hsum i
-  -- Dot `hsum` with `n`.
-  -- The result is `∑ i, β i * ⟪n,w i⟫ = 0`, a sum of nonnegative terms.
-  -- Since each `⟪n,w i⟫` is strictly positive, every `β i` is zero.
-  -- Use `Finset.sum_eq_zero_iff_of_nonneg` or its current Mathlib name.
+/-- A supporting face normal is strictly negative on the self-dual axis.
+
+This is the summation of face support over the positive-cone expression for the
+axis.  The strict summand comes from an off-face incident edge, supplied by
+`exists_fin_not_incident_edge`, `reverseLink_nonincident_of_simple`, and the
+triangular face-vertex classifier.
+-/
+theorem outward_normal_axis_neg
+    (P : TriangulatedEuclideanPolyhedron M)
+    (hsimple : M.IsSimpleGraph)
+    (hdeg : ∀ v : M.Vertex, 3 ≤ vDeg P v)
+    (A : ∀ v : M.Vertex, VertexSelfDualAxis P v)
+    (d : D) :
+    inner ℝ (P.outward_normal (M.dartFace d)) ((A (M.tail d)).axis) < 0 := by
+  -- Expand `(A (M.tail d)).axis_eq_posCone`.
+  -- For each incident edge use `face_support_from_dart_tail P d e`.
+  -- For one nonincident edge use strict support; the current code in
+  -- `vertexLinkGeometryOfEuclidean` already contains the off-face witness
+  -- construction:
+  --   exists_fin_not_incident_edge
+  --   reverseLink_nonincident_of_simple
+  --   faceVertex_eq_tail_or_head_or_tail_phi2_of_dartFace_eq
+  --   tail_phi_phi_eq_head_sigma_symm_of_triangular_euclidean
   sorry
 
-end ProofsInTheBook.Ch13VertexAxisDesign
+/-- Per-dart positive scalar relation between the outward normal and the reversed
+cross product.  This is the local theorem that replaces the old carried field.
+-/
+theorem outward_normal_eq_pos_smul_reverse_cross_of_axis
+    (P : TriangulatedEuclideanPolyhedron M)
+    (hsimple : M.IsSimpleGraph)
+    (hdeg : ∀ v : M.Vertex, 3 ≤ vDeg P v)
+    (A : ∀ v : M.Vertex, VertexSelfDualAxis P v)
+    (d : D) :
+    ∃ lam : ℝ, 0 < lam ∧
+      P.outward_normal (reverseFaceBetween M d) =
+        lam • cross (edgeVec P (M.σ.symm d)) (edgeVec P d) := by
+  -- Let `N := P.outward_normal (M.dartFace d)`, `Wd := edgeVec P d`,
+  -- `Ws := edgeVec P (M.σ.symm d)`, and `a := (A (M.tail d)).axis`.
+  --
+  -- 1. `N ⟂ Wd` from `face_plane_head_sub_tail P d`.
+  -- 2. `N ⟂ Ws` from `face_plane_head_sigma_symm_sub_tail P d`.
+  -- 3. `N ≠ 0` from strict support against an off-face incident edge.
+  -- 4. `cross_parallel_of_perp` gives
+  --      cross Wd Ws = ρ • N.
+  -- 5. `(A (M.tail d)).reverseSigma_turn_pos d rfl` gives
+  --      0 < det3 Wd Ws a = inner ℝ (cross Wd Ws) a.
+  -- 6. `outward_normal_axis_neg` gives `inner ℝ N a < 0`.
+  -- 7. Therefore `ρ < 0`, so `cross Ws Wd = (-ρ) • N` with `0 < -ρ`.
+  -- 8. Take `lam = (-ρ)⁻¹`.
+  sorry
+
+/-- The carried `RotationFaithful` field is derivable from the convex geometric
+payload.  This is the theorem downstream code should call after the field is
+dropped from `ConvexEuclideanPolyhedron`.
+-/
+theorem rotationFaithful_of_convex
+    (P : TriangulatedEuclideanPolyhedron M)
+    (hsimple : M.IsSimpleGraph)
+    (hdeg : ∀ v : M.Vertex, 3 ≤ vDeg P v) :
+    RotationFaithful P := by
+  let A : ∀ v : M.Vertex, VertexSelfDualAxis P v :=
+    fun v => selfDualAxis_of_convex P hsimple hdeg v
+  refine ⟨?_⟩
+  intro d
+  exact outward_normal_eq_pos_smul_reverse_cross_of_axis P hsimple hdeg A d
+
+end ProofsInTheBook.Ch13RotationFaithfulFree
 ```
 
-I would not spend time trying to force this through a `ConvexCone` abstraction.  For this local finite cone, explicit `Finset.sum` coefficients are clearer and match the repo’s existing `Submodule.span NNReal` style.
+If the landed axis certificate is named `AxisPositiveConeForEdge`, then `VertexSelfDualAxis` should disappear and `selfDualAxis_of_convex` should return that structure or a thin adapter around it.  What matters is that the rotation-faithful proof consumes these three facts:
 
-## 4. From positive span to consecutive angular gaps `< π`
+```text
+axis is a positive combination of incident edge rays,
+axis is dual-positive on incident edge rays,
+reverse-σ consecutive turn is positive about the axis.
+```
 
-Once `SurroundsAxisPlane w a` is available, every angular gap in the sorted list is `< π`, including the wrap-around gap.
+The third item must come from the independent angular-sort/fan-alignment proof, not from the post-`RotationFaithful` vertex-star link.
 
-Proof idea in the two-dimensional plane `aᗮ`:
+## 3. `orientedTriangleSupport_of_axisFace` vs `rotationFaithful_of_convex`
 
-* Suppose the sorted consecutive gap from angle `θ_i` to `θ_{i+1}` is `≥ π`.
-* Let `m` be the midpoint direction of that empty arc.
-* Every projected ray lies in the closed half-plane
+There are two equivalent ways to wire the local proof.
 
-  \[
-    \{x\in a^\perp : \langle u_m,x\rangle\le 0\},
-  \]
+### Option A: prove `RotationFaithful` first, keep existing consumers unchanged
 
-  where `u_m` is the unit vector at angle `m` in the chosen frame.
-* This contradicts `SurroundsAxisPlane`, because the nonzero test vector `u_m` sees no strictly positive projected ray.
-
-The equality case `gap = π` is killed the same way: all rays lie in a closed half-plane bounded by the line through the two endpoint rays.  Positive spanning forbids closed half-planes, not just open half-planes.
-
-Lean-wise this should be an elementary companion to the current `rayAngleKey` sort.  It is mainly trig bookkeeping with `Real.sin`/`Real.cos`, plus the sorted-list fact that no key lies in the open interval between consecutive keys.  The wrap-around case is the same statement after replacing the first key by `θ₀ + 2π`.
-
-Suggested theorem surface:
+This is the smallest code diff.
 
 ```lean
-import ProofsInTheBook.SphericalConeMembership
-import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
-
-noncomputable section
-open scoped RealInnerProductSpace NNReal BigOperators
-open ProofsInTheBook.SphericalKernel
-
-namespace ProofsInTheBook.Ch13VertexAxisDesign
-
-/-- The angular-sort theorem needed by the existing turn lemma.
-The actual statement should use your existing `rayAngleKey`, sorted cyclic list,
-and `σ_geo`; this is the intended contract. -/
-theorem angular_consecutive_gap_lt_pi_of_surrounds
-    {ι : Type*} [Fintype ι] [DecidableEq ι]
-    (w : ι → E3) {a : E3}
-    (hsurround : SurroundsAxisPlane w a) :
-    True := by
-  -- Replace `True` by:
-  --   ∀ d, angularGap (σ_geo⁻¹ d) d < Real.pi
-  -- including the wrap-around case.
-  -- Proof: a gap `≥ π` gives a nonzero test vector in `aᗮ` whose inner
-  -- product with every projected ray is `≤ 0`, contradicting `hsurround`.
-  trivial
-
-end ProofsInTheBook.Ch13VertexAxisDesign
+theorem rotationFaithful_of_convex ... : RotationFaithful P
 ```
 
-After this, your already-proved turn lemma fires for every pair `(σ_geo⁻¹ d, d)`.
-
-## 5. What existing repo machinery should be reused?
-
-### `ZinanFFCT73.intervalWrapData_of_positive_span`
-
-Do **not** use this to prove the vertex-link positive span.  It is a downstream consumer: given a positive real span relation inside an already-indexed spherical arm, it packages interval wrap data.  In `ZinanFFCT73`, it consumes a span relation
+Then keep using the existing theorem:
 
 ```lean
-(P i : E3) = a • (P (i+1) : E3) + b • (P j : E3)
+vertexLinkGeometryOfEuclidean P (rotationFaithful_of_convex P hsimple hdeg) hsimple v (hdeg v)
 ```
 
-with `b > 0`, and proves `IntervalWrapData`.  That is a different positive-span use: a local diagonal/interval cut, not the global surround property of edge rays around a vertex.
+This lets all of the following existing code remain unchanged:
 
-Likewise `diag_le_of_positive_span_at_level` is further downstream: it uses the interval wrap data to feed the folded-flat diagonal inequality.  It should not be pulled into the raw vertex-star sign lemma.
+* `ZinanCh13EuclLink.link_side_support_of_rotationFaithful`
+* `ZinanCh13EuclLink.link_side_strict_of_rotationFaithful`
+* `ZinanCh13EuclLink.orientedTriangleSupport_of_rotationFaithful`
+* `ZinanCh13EuclLink.vertexLinkGeometryOfEuclidean`
+* `ZinanCh13EuclLink.VertexLinkGeometry.toVertexStar`
+* `Ch13VertexStar.VertexStar.vertexLink_strictArm`
 
-### `SphericalKernel.StrictConvexSphPolygon`
+### Option B: bypass `RotationFaithful` in `VertexLinkGeometry`
 
-This is the right target **after** the cyclic order and sign are established.  Its fields are exactly the oriented spherical convex polygon data:
-
-* `edge_short`
-* `edge_support`
-* `strict_nonincident`
-* `open_hemisphere`
-
-But it cannot by itself discharge the missing sign lemma, because `edge_support` and `strict_nonincident` already contain the oriented determinant signs you are trying to recover.
-
-### `SphericalCyclicTriple` and `PlanarConvexDiag.cyclicTriplePos_unconditional`
-
-Once the vertex link is instantiated as a `StrictConvexSphPolygon` in the correct cyclic order, this is the best way to get all oriented triple/turn signs.  `CyclicTriplePos` is exactly the “all cyclic triples are positively oriented” interface:
+This is conceptually clean but touches more code.  Add:
 
 ```lean
-def CyclicTriplePos {n : ℕ} [NeZero n] (P : Fin n → S2) : Prop :=
-  ∀ i j k : Fin n, i < j → j < k → 0 < sOrient (P i) (P j) (P k)
+noncomputable def vertexLinkGeometryOfEuclidean_axis
+    (P : TriangulatedEuclideanPolyhedron M)
+    (hsimple : M.IsSimpleGraph)
+    (hdeg : 3 ≤ vDeg P v)
+    (A : VertexSelfDualAxis P v) :
+    VertexLinkGeometry P v := by
+  -- identical to `vertexLinkGeometryOfEuclidean`, except the `oriented` field
+  -- calls `orientedTriangleSupport_of_axisFace` instead of
+  -- `orientedTriangleSupport_of_rotationFaithful`.
+  sorry
 ```
 
-The repo already has downstream consumers such as `cyclicTriple_pos_of_diag`, `subseqDiag_support_pos`, and the cut-corner sign pattern.  So after the link order is certified, prefer this route over rebuilding determinant sign arguments by hand.
+Then prove `RotationFaithful` as a corollary of the same local cross/normal sign theorem.  This option is fine, but I would not choose it as the first patch because the current pipeline already factors around `RotationFaithful` and can be preserved with a single theorem call.
 
-### `SphericalConeMembership.mem_span_nnreal_of_planar_signs`
+## 4. Dropping the field from `ConvexEuclideanPolyhedron`
 
-This lemma is very relevant for **local between-ness** in a tangent plane.  It says that if `u,v,w` are all orthogonal to a common nonzero `m`, and the two determinant sign products agree with the orientation of the bounding pair `v,w`, then
+Current structure in `ZinanCh13Cauchy3D`:
 
 ```lean
-u ∈ Submodule.span NNReal ({v, w} : Set E3)
+structure ConvexEuclideanPolyhedron (M : CombMap D)
+    extends TriangulatedEuclideanPolyhedron M where
+  degree_ge_three :
+    ∀ (v : M.Vertex), 3 ≤ vDeg toTriangulatedEuclideanPolyhedron v
+  faithful : RotationFaithful toTriangulatedEuclideanPolyhedron
+  sphere : M.IsSphereMap
+  triangle : M.FaceRegular 3
+  isSimple : M.IsSimpleGraph
 ```
 
-This is excellent for a direct “ray lies between two rays” proof once the determinant signs are already known.  It does not replace the global surround/axis issue.  In other words, it helps after you know which side is the positive side.
-
-### `PolygonTurning` / Umlaufsatz
-
-For the narrow task “every consecutive angular gap is `< π`”, this is probably overkill.  The no-closed-half-plane argument above is shorter and avoids a full turning-number import chain.
-
-Use `PolygonTurning` only if you decide to package the sorted projected link as a strict planar convex polygon and want all turning signs as a global theorem.  For the current sign lemma, the finite half-plane contradiction is the better local bridge.
-
-## 6. Direct sign argument with a third edge
-
-For a face `f` bounded at `v` by the consecutive rays
-
-\[
-  a=w_{\sigma^{-1}d},\qquad b=w_d,
-\]
-
-suppose you already proved
-
-\[
-  N_f = \mu\,(a\times b),\qquad \mu\ne 0.
-\]
-
-Pick a third edge ray `e` not in `f`.  Strict support gives
-
-\[
-  \langle N_f,e\rangle < 0.
-\]
-
-Substituting the parallel relation gives
-
-\[
-  \mu\,\det(a,b,e)<0.
-\]
-
-Therefore
-
-\[
-  \mu>0 \quad\Longleftrightarrow\quad \det(a,b,e)<0
-\]
-
-with your determinant/cross convention.
-
-So the direct route only helps if you can prove the sign of `det(a,b,e)`.  But that determinant sign is precisely the oriented-link information: it says the off-face edge lies on the correct side of the oriented face edge.  For all off-face edges it is the same content as `edge_support`/`strict_nonincident` for the correctly oriented spherical link.
-
-Thus the direct route does **not** really sidestep link convexity.  It is less infrastructure only if you already have a trusted topological cyclic face order around the vertex.  If the order is the geometry-sorted order about `n_v = -∑ N_f`, the tetrahedron above shows the wrap-around face can be the bad one: strict support remains true, but the angular order about that axis does not surround, and the determinant sign needed for `μ > 0` is exactly what fails.
-
-## 7. Recommended implementation plan
-
-### Step A: Stop using `-∑ outward_normal` as the final sort axis
-
-Keep it as a dual-positive/pointedness witness.  Define a new noncomputable edge-cone axis `a_v` by the Gram/Stiemke theorem:
-
-\[
-  a_v=\sum_d \alpha_d w_d,
-  \qquad \alpha_d>0,
-  \qquad \langle a_v,w_d\rangle>0\quad\forall d.
-\]
-
-This axis is still constructed purely from `ℝ³` geometry, and it is the right axis for the angular sort.
-
-If changing the axis is too invasive, add the explicit hypothesis/certificate
+End-state structure:
 
 ```lean
-axis_in_edgeConeInterior : ∃ λ, (∀ d, 0 < λ d) ∧ n_v = ∑ d, λ d • w d
+structure ConvexEuclideanPolyhedron (M : CombMap D)
+    extends TriangulatedEuclideanPolyhedron M where
+  degree_ge_three :
+    ∀ (v : M.Vertex), 3 ≤ vDeg toTriangulatedEuclideanPolyhedron v
+  sphere : M.IsSphereMap
+  triangle : M.FaceRegular 3       -- optional/redundant with `toTri.every_face_triangle`
+  isSimple : M.IsSimpleGraph
 ```
 
-but do not try to prove it for `n_v = -∑ outward_normal`; it is false.
-
-### Step B: Prove the surround contract for `a_v`
-
-Use the positive combination `a_v = ∑ λ_d w_d` to get
-
-\[
-  \sum_d \lambda_d\,\operatorname{proj}_{a_v^\perp}(w_d)=0.
-\]
-
-Use full-dimensionality of the vertex tangent cone to show the projections span `a_vᗮ`.  Then prove the no-closed-half-plane version `SurroundsAxisPlane`.
-
-This avoids Mathlib’s topological `interior` API entirely.
-
-### Step C: Prove angular gaps `< π`
-
-Use the half-plane contradiction described in §4.  This is the only lemma the current `rayAngleKey` infrastructure should need.
-
-### Step D: Fire the existing turn lemma and conclude `μ > 0`
-
-With the gap `< π` for every consecutive pair, including wrap-around, your existing theorem
+Then add a derived theorem/abbrev in the namespace:
 
 ```lean
-rayAngleKey u < rayAngleKey v ∧ angularGap u v < Real.pi
-  ⟹ 0 < det3 u v axis
+namespace ConvexEuclideanPolyhedron
+
+abbrev toTri (P : ConvexEuclideanPolyhedron M) :
+    TriangulatedEuclideanPolyhedron M :=
+  P.toTriangulatedEuclideanPolyhedron
+
+/-- Derived replacement for the removed field. -/
+theorem rotationFaithful (P : ConvexEuclideanPolyhedron M) :
+    RotationFaithful P.toTri :=
+  ProofsInTheBook.Ch13RotationFaithfulFree.rotationFaithful_of_convex
+    P.toTri P.isSimple P.degree_ge_three
+
+/-- The derived local vertex-link geometry at a vertex. -/
+def linkGeom (P : ConvexEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P.toTri v) : VertexLinkGeometry P.toTri v :=
+  vertexLinkGeometryOfEuclidean P.toTri P.rotationFaithful P.isSimple v hdeg
+
+/-- The derived vertex-link geometry with the stored degree lower bound supplied. -/
+def linkGeomAt (P : ConvexEuclideanPolyhedron M) (v : M.Vertex) :
+    VertexLinkGeometry P.toTri v :=
+  P.linkGeom v (P.degree_ge_three v)
+
+/-- The Euclidean vertex star attached to a convex Euclidean polyhedron. -/
+def vertexStar (P : ConvexEuclideanPolyhedron M) (v : M.Vertex) : VertexStar :=
+  vertexStarOfEuclidean P.toTri v (P.linkGeomAt v)
+
+end ConvexEuclideanPolyhedron
 ```
 
-fires uniformly.  Then the already-reduced parallel-normal statement
+The regular tetrahedron instance becomes:
 
 ```lean
-outward_normal f = μ • cross(w_{σ⁻¹ d}, w_d)
+def tetraConvexEuclideanPolyhedron : ConvexEuclideanPolyhedron tetraMap where
+  toTriangulatedEuclideanPolyhedron := tetraEuclideanPolyhedron
+  degree_ge_three := tetra_vDeg_ge_three
+  sphere := tetraMap_isSphereMap
+  triangle := tetraMap_faceRegular_three
+  isSimple := ProofsInTheBook.Ch13ComponentClose.tetraMap_isSimpleGraph
 ```
 
-gets the desired sign with your current determinant/cross convention.
+The old theorem `tetra_rotationFaithful` can remain as a diagnostic, but it is no longer a field assignment.
 
-## 8. Mathlib/API notes
+## 5. Does the self-dual axis require a new field?
 
-Use the following APIs rather than searching for a high-level finite polygon interior theorem.
+No, provided the Stiemke/Gordan finite cone theorem is proved.
 
-* `Mathlib.Analysis.Convex.Basic`
-  * `Convex`
-  * `convex_halfSpace_le`, `convex_halfSpace_ge`
-  * `convex_hyperplane`
-  * `Convex.inter`, `convex_iInter`
-  * `Submodule.convex`
+The self-dual axis should be a **derived local theorem**, not a field of `ConvexEuclideanPolyhedron`:
 
-* `Mathlib.Analysis.Convex.Hull` and `Mathlib.Analysis.Convex.Combination`
-  * `convexHull`
-  * `convex_convexHull`, `subset_convexHull`
-  * `Finset.mem_convexHull`, `Finset.mem_convexHull'`
-  * `Set.Finite.convexHull_eq`
-  * `Finset.centerMass`, `Finset.centerMass_mem_convexHull`
+```lean
+theorem selfDualAxis_of_convex
+    (P : TriangulatedEuclideanPolyhedron M)
+    (hsimple : M.IsSimpleGraph)
+    (hdeg : ∀ v : M.Vertex, 3 ≤ vDeg P v)
+    (v : M.Vertex) :
+    VertexSelfDualAxis P v
+```
 
-* Existing repo cone/local-between-ness APIs
-  * `Submodule.span NNReal` and `Submodule.mem_span_pair`, already used in `ZinanFFCT73.span_mem_of_positive_coeffs` and `SphericalConeMembership.mem_span_nnreal_of_planar_signs`.
-  * `SphericalConeMembership.mem_span_nnreal_of_planar_signs` for two-ray tangent-cone membership from determinant signs.
-  * `SphericalConeMembership.det3_tangentTo_eq` for transporting spherical determinants to tangent-plane determinants.
-  * `SphericalConeMembership.det3_swap_right`, `det3_swap_left`, and the existing `sOrient_cyclic` lemmas for determinant reordering.
+The proof uses only existing geometric payload:
 
-For the global vertex-link surround step, I would avoid `convexHull`/`interior` unless you already have an interior API in the local file.  The half-plane formulation is exactly what the angular-gap proof needs and is much easier to maintain.
+* `pos`, `face_plane`, `face_supporting_halfspace`, `face_support_strict`, `face_nondegenerate`, `edge_nondegenerate` from `TriangulatedEuclideanPolyhedron`;
+* the local fan/noncollision facts from `M.IsSimpleGraph`;
+* the local degree hypothesis `degree_ge_three`.
+
+The finite-cone theorem supplies existence of `a_v = ∑ αᵢ wᵢ` with `αᵢ > 0` and `0 < ⟪a_v,wᵢ⟫`.  The angular-sort layer supplies `reverseSigma_turn_pos`.
+
+So the axis should not be stored.  Storing it would just replace one carried geometry witness by another.
+
+## 6. Is `4 ≤ V` needed?
+
+Not as the local hypothesis for this proof.
+
+The strict support step needs, for every link edge `(i,i+1)`, an incident edge `j` with
+
+```lean
+j ≠ i ∧ j ≠ i + 1.
+```
+
+The repo already has the local combinatorial lemma:
+
+```lean
+theorem exists_fin_not_incident_edge {n : ℕ} (hn : 2 ≤ n) (i : Fin (n + 1)) :
+    ∃ j : Fin (n + 1), j ≠ i ∧ j ≠ i + 1
+```
+
+and the simple-graph bookkeeping:
+
+```lean
+reverseLink_nonincident_of_simple
+reverseLinkNbr_injective_of_simple
+reverseLinkNbr_eq_apex_false_of_simple
+```
+
+Thus the local input is `degree_ge_three`, i.e. `2 ≤ starN P v`, not global `4 ≤ M.V`.
+
+A global `4 ≤ M.Vertex` theorem is true for a simple triangulated sphere and may be useful as a sanity theorem or for deriving other global facts, but it is not the right field to add for this architecture.  It is also not sufficient by itself: one vertex could have bad local degree in an abstract structure unless you also know the local degree lower bound.
+
+Recommended field policy:
+
+* Drop `faithful`.
+* Keep `degree_ge_three` for now.
+* Do not add `4≤V` as a field.
+* Later, if you prove `degree_ge_three` from `M.IsSphereMap + M.FaceRegular 3 + M.IsSimpleGraph`, then drop `degree_ge_three` too.
+* Consider dropping `triangle : M.FaceRegular 3` because `TriangulatedEuclideanPolyhedron.every_face_triangle` already stores the same property, but that is orthogonal to `RotationFaithful`.
+
+## 7. End-state theorem signatures
+
+The derived orientation theorem should be stated for the raw triangulated realization, because it is useful below and outside `ConvexEuclideanPolyhedron`:
+
+```lean
+namespace ProofsInTheBook.Ch13RotationFaithfulFree
+
+/-- Derived orientation compatibility: no carried `RotationFaithful` field. -/
+theorem rotationFaithful_of_convex
+    (P : TriangulatedEuclideanPolyhedron M)
+    (hsimple : M.IsSimpleGraph)
+    (hdeg : ∀ v : M.Vertex, 3 ≤ vDeg P v) :
+    RotationFaithful P := by
+  sorry
+
+end ProofsInTheBook.Ch13RotationFaithfulFree
+```
+
+If the angular/fan-alignment proof needs the sphere-map hypothesis, use this slightly wider signature:
+
+```lean
+theorem rotationFaithful_of_convex
+    (P : TriangulatedEuclideanPolyhedron M)
+    (hsphere : M.IsSphereMap)
+    (hsimple : M.IsSimpleGraph)
+    (hdeg : ∀ v : M.Vertex, 3 ≤ vDeg P v) :
+    RotationFaithful P := by
+  sorry
+```
+
+I would start without `hsphere`; add it only if the independent angular-order alignment theorem genuinely consumes it.
+
+The headline Cauchy theorem does **not** need a new signature once `ConvexEuclideanPolyhedron` is changed.  It remains:
+
+```lean
+theorem chapter13_cauchy_rigidity
+    (P Q : ConvexEuclideanPolyhedron M)
+    (hcong : CongruentFaces P.toTri Q.toTri)
+    (v : M.Vertex)
+    (i : Fin ((rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+      (adaptiveOffset P.toTri Q.toTri
+        (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).n - 1)) :
+    (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+        (adaptiveOffset P.toTri Q.toTri
+          (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).dihedral i =
+      (rotatedStarQ P.toTri Q.toTri
+        (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
+        (adaptiveOffset P.toTri Q.toTri
+          (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).dihedral
+        (Fin.cast (by
+          change (P.linkGeomAt v).n - 1 = (Q.linkGeomAt v).n - 1
+          exact congrArg (fun n => n - 1)
+            (vertexLinkGeometry_n_eq P.toTri Q.toTri
+              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w) v).symm) i)
+```
+
+The semantic change is only that `P.linkGeomAt` and `Q.linkGeomAt` now call `rotationFaithful_of_convex` internally instead of projecting a stored field.
+
+## 8. Concrete edit list
+
+1. Add the new orientation-free theorem layer, preferably in a new file such as:
+
+   ```lean
+   ProofsInTheBook/ZinanCh13RotationFree.lean
+   ```
+
+   with public theorem:
+
+   ```lean
+   rotationFaithful_of_convex
+   ```
+
+2. Import that file in `ZinanCh13Cauchy3D.lean`.
+
+3. Remove this field from `ConvexEuclideanPolyhedron`:
+
+   ```lean
+   faithful : RotationFaithful toTriangulatedEuclideanPolyhedron
+   ```
+
+4. Add the namespace theorem:
+
+   ```lean
+   theorem ConvexEuclideanPolyhedron.rotationFaithful
+       (P : ConvexEuclideanPolyhedron M) : RotationFaithful P.toTri :=
+     rotationFaithful_of_convex P.toTri P.isSimple P.degree_ge_three
+   ```
+
+   or with `P.sphere` if the theorem surface includes it.
+
+5. Change `linkGeom` from:
+
+   ```lean
+   vertexLinkGeometryOfEuclidean P.toTri P.faithful P.isSimple v hdeg
+   ```
+
+   to:
+
+   ```lean
+   vertexLinkGeometryOfEuclidean P.toTri P.rotationFaithful P.isSimple v hdeg
+   ```
+
+6. Remove `faithful := tetra_rotationFaithful` from `tetraConvexEuclideanPolyhedron`.
+
+7. Keep every downstream theorem unchanged unless Lean asks for unfolding help around the new theorem name.
 
 ## 9. Bottom line
 
-The irreducible core is **not** proving positive span for `n_v = -∑ outward_normal`; that statement is false.  The irreducible core is proving or packaging the existence of a self-dual edge-cone axis:
+`RotationFaithful` can be dropped as a field, but the theorem replacing it must be proved at the correct layer:
 
-\[
-  a_v\in\operatorname{int} cone\{w_d\}
-  \cap
-  \{x : \forall d,\ \langle x,w_d\rangle>0\}.
-\]
+```text
+self-dual axis + independent reverse-σ angular turn + face support
+  ⇒ outward_normal = positive scalar • reverse cross
+  ⇒ RotationFaithful
+```
 
-The cleanest Lean route is:
+Then the current repo pipeline can remain structurally unchanged:
 
-1. use your existing `∀ d, 0 < ⟪n_v,w_d⟫` only to prove the edge cone is pointed;
-2. use a finite Stiemke/Gordan alternative on the Gram matrix to get `a_v = ∑ α_d w_d`, `α_d>0`, and `∀d, 0<⟪a_v,w_d⟫`;
-3. prove `SurroundsAxisPlane` by the positive dependence of projections;
-4. derive all consecutive angular gaps `< π` by the no-closed-half-plane contradiction;
-5. reuse the current turn lemma and the parallel-normal lemma to get `μ > 0`.
+```text
+rotationFaithful_of_convex
+  → vertexLinkGeometryOfEuclidean
+  → VertexStar
+  → vertexLink_strictArm.closed_convex
+  → chapter13_cauchy_rigidity
+```
 
-That route is orientation-free, geometry-only, and isolates the only new nontrivial convex-geometry lemma as a small finite cone theorem rather than a spherical turning-number development.
+No new axis field is needed.  No `4≤V` field is needed for the local proof.  The only local well-formedness already needed is `degree_ge_three` plus `M.IsSimpleGraph`; `M.IsSphereMap` should be threaded only if the independent angular/fan-alignment theorem consumes it.

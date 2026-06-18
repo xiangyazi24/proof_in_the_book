@@ -1,234 +1,213 @@
-# Cauchy ch13 angular-gap lemma: status, obstruction, and corrected contract
+# Cauchy ch13 angular `turn_pos` chain: compile blockers and corrected Lean interfaces
 
-I cannot honestly provide a complete compiling Lean proof of the requested theorem as stated, for two independent reasons.
-
-1. The connected repo branch I can inspect does **not** contain the named files/definitions:
+I cannot honestly produce a complete compiling Lean proof for the requested angular-gap/turn-positive chain against the connected repo.  I checked the repository surface available through the GitHub connector and the named API is not present:
 
 ```text
-ProofsInTheBook/ZinanCh13AngularOrder.lean
-ProofsInTheBook/ZinanCh13ConeAxis.lean
-rayAngleKey
-angularList
-angularNextPerm
-SurroundsAxisPlane
+ProofsInTheBook/ZinanCh13AngularOrder.lean        -- fetch_file: Not Found
+ProofsInTheBook/ZinanCh13ConeAxis.lean            -- fetch/search: Not Found
+rayAngleKey                                      -- repo search: no hits
+angularList                                      -- repo search: no hits
+angularNextPerm                                  -- repo search: no hits
+SurroundsAxisPlane                               -- repo search: no hits
+projPerp in this angular API                     -- repo search: no hits
 ```
 
-`fetch_file` and repo search both fail for these names, so I cannot target the actual API or verify a compiling proof against it.
+So there is no exact target for a compiling proof.  More importantly, the requested item (1) has a dependency-order trap:
 
-2. More importantly, the requested final `turn_pos` theorem is **mathematically false** from only
+> `ProjectedAngleInjective` must **not** be proved from `StrictConvexSphPolygon` if that same strict spherical polygon is later proved using the angular `turn_pos` chain.  That would reintroduce the same orientation circularity that `RotationFaithful` is meant to eliminate.
 
-```lean
-hsur  : SurroundsAxisPlane w a
-hproj : ∀ i, projPerp a (w i) ≠ 0
-```
+The right proof of projected-angle injectivity must come directly from **edge extremality** of the convex vertex cone plus **axis interior positive-cone membership**, not from the already-oriented spherical link.
 
-because `SurroundsAxisPlane` does not exclude two distinct rays having the same projected direction / same `rayAngleKey`.  Such duplicates are consecutive in the sorted angular list, their cyclic gap is `0 < π`, but the determinant of the consecutive pair is `0`, not positive.  Therefore no Lean proof of the requested final conclusion can exist without an additional strictness/no-duplicate/extremality hypothesis.
+## 1. Correct source for projected-angle injectivity
 
-## 1. Concrete counterexample to the requested `turn_pos` conclusion
-
-Take the axis `a = e_z` and four rays in `ℝ³` with projections
+Let `v` be a vertex, `w_i = pos (nbr i) - pos v`, and let the axis satisfy
 
 ```text
-p₀ = eₓ
-p₁ = 2 eₓ          -- same angular direction as p₀
-p₂ = e_y
-p₃ = -eₓ - e_y
+a = ∑ i, λ_i • w_i,     λ_i > 0.
 ```
 
-For example use raw rays
+Suppose two projected rays have the same angular direction.  With nonzero projections this means
 
 ```text
-w₀ = e_z + eₓ
-w₁ = 2 e_z + 2 eₓ
-w₂ = e_z + e_y
-w₃ = e_z - eₓ - e_y
+projPerp a (w_j) = c • projPerp a (w_i),     c > 0.
 ```
 
-Every projection is nonzero.  The projections surround the axis plane: for any nonzero test vector `t = x eₓ + y e_y`, one of `p₀,p₂,p₃` has positive dot product with `t`:
-
-* if `x > 0`, then `⟪p₀,t⟫ > 0`;
-* if `y > 0`, then `⟪p₂,t⟫ > 0`;
-* if `x ≤ 0` and `y ≤ 0`, not both zero, then `⟪p₃,t⟫ = -x-y > 0`.
-
-So `SurroundsAxisPlane` holds.
-
-But `rayAngleKey a w₀ = rayAngleKey a w₁`, so the sorted angular list has a consecutive duplicate-angle pair.  For that pair,
+Since
 
 ```text
-det3 w₀ w₁ a = 0
+w = projPerp a w + k_w • a
 ```
 
-because `w₁` lies in the span of `w₀` and `a`.  Thus the requested conclusion
+for a scalar `k_w`, this gives
 
-```lean
-0 < det3 (w pred) (w cur) a
+```text
+w_j = c • w_i + t • a
 ```
 
-fails.  The gap lemma “every cyclic gap is `< π`” may still be true, but it is insufficient for the strict determinant turn unless the cyclic gap is also **positive**.
+for some real `t`.  Taking inner product with the axis, and using `0 < ⟪a,w_i⟫`, `0 < ⟪a,w_j⟫`, determines `t`.  The key extremality contradiction is obtained by substituting the positive-cone expression for `a`:
 
-## 2. What extra hypothesis is needed
-
-Add one of the following equivalent strictness assumptions to the angular layer:
-
-```lean
-/-- No two indexed rays have the same projected angular direction. -/
-def ProjectedAngleInjective (w : ι → E3) (a : E3) : Prop :=
-  Function.Injective (fun i => rayAngleKey a (w i))
+```text
+w_j = c • w_i + t • ∑ k, λ_k • w_k.
 ```
 
-or, better geometrically:
+If `t ≥ 0`, this expresses the edge ray `w_j` as a nonnegative combination involving other edge rays; strict face support for the face opposite `w_j` forces every coefficient except the `j` coefficient to vanish, contradiction with `c > 0` or with positive coefficients in `a`.
 
-```lean
-/-- Every projected ray is an extreme boundary ray of the projected cone; in
-particular, no two projected rays are positive multiples of each other. -/
-def ProjectedExtremeNoDuplicate (w : ι → E3) (a : E3) : Prop :=
-  ∀ i j, i ≠ j → ¬ ∃ c : ℝ, 0 < c ∧ projPerp a (w j) = c • projPerp a (w i)
+If `t < 0`, rearrange instead:
+
+```text
+(-t) • a + w_j = c • w_i
 ```
 
-For a genuine convex-polyhedron vertex this should be derived from face strict support / extremality of the edge rays, but it is **not** a consequence of `SurroundsAxisPlane` alone.
+and use the positive-cone expression of `a` to express `w_i` as a nonnegative combination involving other edge rays; edge extremality for `w_i` gives the contradiction.
 
-The corrected final theorem needs:
+This is the direct noncircular proof.  It needs a formal edge-extremality lemma:
 
 ```lean
-hsur       : SurroundsAxisPlane w a
-hproj      : ∀ i, projPerp a (w i) ≠ 0
-hangleInj  : Function.Injective (fun i => rayAngleKey a (w i))
--- or a no-positive-collinear-projections hypothesis that implies strict cyclic gaps
+/-- Edge ray extremality from strict support of the two incident faces.
+If `w_e` is written as a nonnegative combination of all incident edge rays,
+then every ray with positive coefficient must be the same edge. -/
+theorem edgeRay_extreme_of_face_support_strict
+    (P : TriangulatedEuclideanPolyhedron M)
+    (hsimple : M.IsSimpleGraph)
+    {v : M.Vertex} {e : D}
+    (he_tail : M.tail e = v)
+    {β : {d : D // M.tail d = v} → ℝ}
+    (hβ_nonneg : ∀ d, 0 ≤ β d)
+    (hrepr : edgeVec P e = ∑ d, β d • edgeVec P d.1) :
+    ∀ d, d.1 ≠ e → β d = 0 := by
+  -- Use the two face normals of the two faces incident to `e` at `v`.
+  -- For a triangular convex vertex fan, every other incident edge is strictly
+  -- negative for at least one of those supporting face normals; `e` itself is
+  -- zero for both.  Dotting the representation with those normals kills all
+  -- non-`e` coefficients.
+  -- This must be proved before using any oriented link theorem.
+  sorry
 ```
 
-Then each consecutive cyclic gap is in `(0,π)`, and the cyclic turn lemma can prove determinant positivity.
-
-## 3. Corrected definitions for the angular theorem
-
-The robust way to state the theorem is to use a cyclic gap function, not two separate non-wrap/wrap statements.
+Then the projected-angle injectivity theorem has this shape:
 
 ```lean
-import ProofsInTheBook.SphericalKernel
--- import ProofsInTheBook.ZinanCh13AngularOrder
--- import ProofsInTheBook.ZinanCh13ConeAxis
+/-- No duplicate projected angular directions.  This must be proved from axis
+interior plus raw edge extremality, not from `StrictConvexSphPolygon`. -/
+theorem projectedExtremeNoDuplicate_of_axisInterior
+    (P : TriangulatedEuclideanPolyhedron M)
+    (hsimple : M.IsSimpleGraph)
+    {v : M.Vertex}
+    (axis : E3)
+    (haxisCone : ∃ λ : {d : D // M.tail d = v} → ℝ,
+      (∀ d, 0 < λ d) ∧ axis = ∑ d, λ d • edgeVec P d.1)
+    (haxisDual : ∀ d : D, M.tail d = v → 0 < inner ℝ axis (edgeVec P d)) :
+    ∀ d e : {d : D // M.tail d = v}, d ≠ e →
+      ¬ ∃ c : ℝ, 0 < c ∧
+        projPerp axis (edgeVec P e.1) = c • projPerp axis (edgeVec P d.1) := by
+  -- Algebra described above, using `edgeRay_extreme_of_face_support_strict`.
+  sorry
+```
 
-noncomputable section
-open scoped Classical RealInnerProductSpace BigOperators
-open ProofsInTheBook.SphericalKernel
+Once the actual `rayAngleKey` API exists, this implies:
 
-namespace ProofsInTheBook.Ch13AngularGapContract
+```lean
+theorem projectedAngleInjective_of_noDuplicate
+    ... : Function.Injective (fun d => rayAngleKey axis (edgeVec P d.1)) := by
+  -- Use the `Complex.arg`/coordinate lemma:
+  -- same nonzero projected angle + same half-line ⇔ positive scalar multiple.
+  sorry
+```
 
-variable {ι : Type*} [Fintype ι] [DecidableEq ι]
+## 2. Correct angular-gap theorem statement
 
-/-- Cyclic forward angle gap from `u` to `v`, using `rayAngleKey` in `(-π,π]`.
-Replace this with the actual repo definition if one exists. -/
+The theorem should not be stated only as “gap `< π`”; the determinant-positive theorem also needs **positive gap**.  The corrected contract is:
+
+```lean
+/-- Cyclic forward angle gap from `u` to `v`, using keys in the repo's branch cut. -/
 noncomputable def cyclicRayGap (a u v : E3) : ℝ :=
   if rayAngleKey a u ≤ rayAngleKey a v then
     rayAngleKey a v - rayAngleKey a u
   else
     rayAngleKey a v + 2 * Real.pi - rayAngleKey a u
 
-/-- Correct contract: surround rules out cyclic consecutive gaps of length `≥ π`;
-angle injectivity rules out zero gaps. -/
+/-- Corrected gap theorem. -/
 theorem consecutive_cyclicRayGap_pos_lt_pi_of_surrounds
+    {ι : Type*} [Fintype ι] [DecidableEq ι]
     (w : ι → E3) (a : E3)
     (hsur : SurroundsAxisPlane w a)
     (hproj : ∀ i, projPerp a (w i) ≠ 0)
     (hangleInj : Function.Injective (fun i => rayAngleKey a (w i))) :
-    -- Replace this with the actual `angularList`/`angularNextPerm` statement:
     ∀ i : ι,
-      0 < cyclicRayGap a (w i) (w (angularNextPerm w a i)) ∧
-      cyclicRayGap a (w i) (w (angularNextPerm w a i)) < Real.pi := by
-  -- This cannot be completed here because the connected repo does not expose
-  -- `rayAngleKey`, `angularNextPerm`, or `SurroundsAxisPlane`.
-  -- The mathematical proof is in §4 below.
+      0 < cyclicRayGap a (w ((angularNextPerm w a).symm i)) (w i) ∧
+      cyclicRayGap a (w ((angularNextPerm w a).symm i)) (w i) < Real.pi := by
+  -- Needs actual definitions of `rayAngleKey`, `angularNextPerm`, and
+  -- sorted-list predecessor lemmas from `angularList`/`List.formPerm`.
   sorry
-
-end ProofsInTheBook.Ch13AngularGapContract
 ```
 
-The `0 <` half must come from sorted-list adjacency plus `hangleInj`; the `< π` half comes from the surround/no-closed-halfspace argument.
+The proof obligations are:
 
-## 4. Mathematical proof of the corrected gap lemma
+* `0 < gap`: predecessor/current are distinct by the permutation/list no-duplicate theorem, and `hangleInj` rules out equal angle keys.
+* `gap < π`: if a consecutive cyclic gap is `≥ π`, use the midpoint frame vector as a test vector in `aᗮ`; sorted adjacency puts every projected ray in the opposite closed halfspace; this contradicts `SurroundsAxisPlane`.
 
-Let the sorted projected angles be
+## 3. Required frame/trig lemmas
 
-```text
-θ₀ < θ₁ < ... < θₙ₋₁,       θᵢ ∈ (-π,π].
-```
-
-For non-wrap consecutive entries, the cyclic gap is
-
-```text
-Δᵢ = θᵢ₊₁ - θᵢ.
-```
-
-For the wrap pair, it is
-
-```text
-Δ_wrap = θ₀ + 2π - θₙ₋₁.
-```
-
-Strict positivity of the gaps follows from no duplicate angular directions.
-
-To prove `Δ < π`, suppose a consecutive cyclic gap has `π ≤ Δ`.  Let `m` be the midpoint angle of the empty arc.  Let `t_m` be the unit vector in the axis plane at angle `m` in the same right-handed frame used by `rayAngleKey`:
-
-```text
-t_m = cos(m) • e₁ + sin(m) • e₂,
-```
-
-or with `m` reduced modulo `2π` in the wrap case.  Then `t_m ∈ aᗮ` and `t_m ≠ 0`.
-
-For any projected ray with angle `θ`, since no sorted key lies in the empty open arc, the cyclic angular distance from `θ` to `m` is at least `Δ/2 ≥ π/2`.  Therefore
-
-```text
-⟪projPerp a (w j), t_m⟫ = ‖projPerp a (w j)‖ * cos(θ_j - m) ≤ 0.
-```
-
-So all projected rays lie in the closed halfspace
-
-```text
-{x ∈ aᗮ | ⟪x,t_m⟫ ≤ 0 }.
-```
-
-This contradicts `SurroundsAxisPlane`, which for the nonzero test vector `t_m ∈ aᗮ` gives some `j` with
-
-```text
-0 < ⟪projPerp a (w j), t_m⟫.
-```
-
-The wrap case is identical after replacing `θ₀` by `θ₀ + 2π` when computing the midpoint.
-
-This proof requires the following local trigonometric lemmas in the actual angular-order file:
+A complete compiling proof needs these lemmas in the angular-order file.  Their statements must match the actual right-handed frame used by `rayAngleKey`.
 
 ```lean
-/-- The frame vector of angle `t` lies in the axis plane and is nonzero. -/
-lemma angleFrameVec_mem_perp (a : E3) (t : ℝ) :
-    inner ℝ a (angleFrameVec a t) = 0 := by ...
+/-- Unit vector in the axis plane at angle `θ` in the same frame used by `rayAngleKey`. -/
+noncomputable def angleFrameVec (a : E3) (θ : ℝ) : E3 :=
+  Real.cos θ • perpSeed a + Real.sin θ • perpSeed₂ a
 
-lemma angleFrameVec_ne_zero (a : E3) (t : ℝ) :
-    angleFrameVec a t ≠ 0 := by ...
+lemma angleFrameVec_mem_perp (a : E3) (θ : ℝ) :
+    inner ℝ a (angleFrameVec a θ) = 0 := by
+  -- from `perpSeed` and `perpSeed₂` orthogonality to `a`
+  sorry
 
-/-- Inner product of a projected ray with a frame vector is radius times cosine
-of angle difference. -/
+lemma angleFrameVec_ne_zero (a : E3) (θ : ℝ) :
+    angleFrameVec a θ ≠ 0 := by
+  -- norm squared = cos² θ + sin² θ = 1
+  sorry
+
 lemma inner_projPerp_angleFrameVec
-    (a u : E3) (hproj : projPerp a u ≠ 0) (t : ℝ) :
-    inner ℝ (projPerp a u) (angleFrameVec a t) =
-      ‖projPerp a u‖ * Real.cos (rayAngleKey a u - t) := by ...
+    (a u : E3) (hu : projPerp a u ≠ 0) (θ : ℝ) :
+    inner ℝ (projPerp a u) (angleFrameVec a θ) =
+      ‖projPerp a u‖ * Real.cos (rayAngleKey a u - θ) := by
+  -- Expand projected coordinates, `Complex.arg`, and the frame basis.
+  sorry
+```
 
-/-- If an angle lies outside an empty arc of length at least `π`, then its cosine
-against the midpoint direction is nonpositive. -/
-lemma cos_nonpos_of_not_mem_gap
+Then the halfspace contradiction uses the elementary trig lemma:
+
+```lean
+lemma cos_nonpos_of_outside_gap_midpoint
     {lo hi θ : ℝ}
     (hlohi : lo < hi)
     (hgap : Real.pi ≤ hi - lo)
-    (hθ : θ ≤ lo ∨ hi ≤ θ)
-    (hrange : -Real.pi < θ ∧ θ ≤ Real.pi)
-    (hlo_range : -Real.pi < lo ∧ lo ≤ Real.pi)
-    (hhi_range : -Real.pi < hi ∧ hi ≤ Real.pi) :
-    Real.cos (θ - ((lo + hi) / 2)) ≤ 0 := by ...
+    (houtside : θ ≤ lo ∨ hi ≤ θ)
+    (hrangeθ : -Real.pi < θ ∧ θ ≤ Real.pi)
+    (hrangelo : -Real.pi < lo ∧ lo ≤ Real.pi)
+    (hrangehi : -Real.pi < hi ∧ hi ≤ Real.pi) :
+    Real.cos (θ - ((lo + hi) / 2)) ≤ 0 := by
+  -- Reduce to `|θ - mid| ∈ [π/2, π]` modulo the branch interval and use
+  -- `Real.cos_nonpos_of_mem_Icc` / `Real.cos_le_zero_of_pi_div_two_le_of_le`.
+  sorry
 ```
 
-Those are the proof obligations that must be discharged against the concrete `rayAngleKey` implementation.
+For the wrap gap, either reduce by adding `2π` to the smaller key before taking the midpoint, or define all gaps in a lifted coordinate system relative to the predecessor key.  The latter is cleaner:
 
-## 5. Correct cyclic determinant turn lemma
+```lean
+def liftFrom (base θ : ℝ) : ℝ :=
+  if base ≤ θ then θ else θ + 2 * Real.pi
+```
 
-The existing theorem only covers the non-wrap case:
+Then for a successor gap from `base` to `next`, use
+
+```lean
+liftedGap base next = liftFrom base next - base
+```
+
+and every other key is outside the open interval `(base, liftFrom base next)` in this lifted coordinate.
+
+## 4. Correct cyclic determinant lemma
+
+The existing non-wrap theorem is insufficient for the wrap case:
 
 ```lean
 det3_pos_of_rayAngleKey_lt_of_sub_lt_pi :
@@ -237,111 +216,78 @@ det3_pos_of_rayAngleKey_lt_of_sub_lt_pi :
   0 < det3 u v a
 ```
 
-The wrap case is not a formal consequence of that theorem alone.  Add the cyclic version at the same level as the existing turn lemma, proved from the same determinant/sine formula.
-
-```lean
-/-- Cyclic turn positivity.  This is the lemma the `formPerm` successor should use. -/
-theorem det3_pos_of_cyclicRayGap_pos_lt_pi
-    {a u v : E3}
-    (hu : projPerp a u ≠ 0)
-    (hv : projPerp a v ≠ 0)
-    (hgap_pos : 0 < cyclicRayGap a u v)
-    (hgap_lt : cyclicRayGap a u v < Real.pi) :
-    0 < det3 u v a := by
-  by_cases hle : rayAngleKey a u ≤ rayAngleKey a v
-  · have hlt : rayAngleKey a u < rayAngleKey a v := by
-      -- from `cyclicRayGap = θv - θu` and `0 < cyclicRayGap`
-      unfold cyclicRayGap at hgap_pos
-      simp [hle] at hgap_pos
-      linarith
-    have hsub : rayAngleKey a v - rayAngleKey a u < Real.pi := by
-      unfold cyclicRayGap at hgap_lt
-      simp [hle] at hgap_lt
-      exact hgap_lt
-    exact det3_pos_of_rayAngleKey_lt_of_sub_lt_pi hlt hsub
-  · -- wrap case.  This needs the sine/determinant formula; it cannot be
-    -- derived from the non-wrap lemma without changing the branch cut.
-    -- Prove from:
-    --   det3 u v a = K * sin (rayAngleKey v + 2π - rayAngleKey u)
-    -- where K > 0, and `sin` is positive on `(0,π)`.
-    sorry
-```
-
-For the wrap branch, the actual proof should use a repo lemma of this shape, or add it:
+Add the cyclic sine-factor lemma:
 
 ```lean
 lemma det3_eq_posFactor_mul_sin_cyclicGap
-    {a u v : E3} (hu : projPerp a u ≠ 0) (hv : projPerp a v ≠ 0) :
+    {a u v : E3}
+    (hu : projPerp a u ≠ 0) (hv : projPerp a v ≠ 0) :
     ∃ K : ℝ, 0 < K ∧
       det3 u v a = K * Real.sin (cyclicRayGap a u v) := by
-  -- Same coordinate expansion as the existing non-wrap turn lemma.
+  -- This is the coordinate calculation already underlying the non-wrap theorem.
+  -- The factor is `‖projPerp a u‖ * ‖projPerp a v‖ * ‖a‖` up to the
+  -- orientation sign of the right-handed frame.  It must be positive because
+  -- the frame is right-handed and both projections are nonzero.
   sorry
 ```
 
-Then the cyclic turn lemma is immediate:
+Then the cyclic turn lemma is short:
 
 ```lean
-rcases det3_eq_posFactor_mul_sin_cyclicGap hu hv with ⟨K, hK, hdet⟩
-rw [hdet]
-exact mul_pos hK (Real.sin_pos_of_pos_of_lt_pi hgap_pos hgap_lt)
+theorem det3_pos_cyclic
+    {a u v : E3}
+    (hu : projPerp a u ≠ 0)
+    (hv : projPerp a v ≠ 0)
+    (hgap0 : 0 < cyclicRayGap a u v)
+    (hgappi : cyclicRayGap a u v < Real.pi) :
+    0 < det3 u v a := by
+  rcases det3_eq_posFactor_mul_sin_cyclicGap (a := a) (u := u) (v := v) hu hv with
+    ⟨K, hK, hdet⟩
+  rw [hdet]
+  exact mul_pos hK (Real.sin_pos_of_pos_of_lt_pi hgap0 hgappi)
 ```
 
-## 6. Final corrected turn-positive theorem
+This proof is complete once the sine-factor lemma exists.
 
-With the corrected gap theorem and cyclic turn lemma, the final theorem should be:
+## 5. Final `turn_pos` shape
 
-```lean
-theorem turn_pos_of_angularNextPerm_of_surrounds
-    (w : ι → E3) (a : E3)
-    (hsur : SurroundsAxisPlane w a)
-    (hproj : ∀ i, projPerp a (w i) ≠ 0)
-    (hangleInj : Function.Injective (fun i => rayAngleKey a (w i))) :
-    ∀ i : ι,
-      0 < det3 (w i) (w (angularNextPerm w a i)) a := by
-  intro i
-  have hgap := consecutive_cyclicRayGap_pos_lt_pi_of_surrounds
-    (w := w) (a := a) hsur hproj hangleInj i
-  exact det3_pos_of_cyclicRayGap_pos_lt_pi
-    (hu := hproj i)
-    (hv := hproj (angularNextPerm w a i))
-    hgap.1 hgap.2
-```
-
-If the desired orientation is predecessor-to-current rather than current-to-successor, instantiate this theorem at the predecessor:
+With the corrected gap theorem and cyclic determinant lemma, the final theorem is:
 
 ```lean
 theorem turn_pos_pred_current_of_angularNextPerm_of_surrounds
+    {ι : Type*} [Fintype ι] [DecidableEq ι]
     (w : ι → E3) (a : E3)
     (hsur : SurroundsAxisPlane w a)
     (hproj : ∀ i, projPerp a (w i) ≠ 0)
     (hangleInj : Function.Injective (fun i => rayAngleKey a (w i))) :
     ∀ i : ι,
-      0 < det3 (w (angularNextPerm w a).symm i) (w i) a := by
+      0 < det3 (w ((angularNextPerm w a).symm i)) (w i) a := by
   intro i
-  have h := turn_pos_of_angularNextPerm_of_surrounds
-    (w := w) (a := a) hsur hproj hangleInj ((angularNextPerm w a).symm i)
-  simpa using h
+  rcases consecutive_cyclicRayGap_pos_lt_pi_of_surrounds
+      (w := w) (a := a) hsur hproj hangleInj i with
+    ⟨hgap0, hgappi⟩
+  exact det3_pos_cyclic
+    (hu := hproj ((angularNextPerm w a).symm i))
+    (hv := hproj i)
+    hgap0 hgappi
 ```
 
-The exact notation for `angularNextPerm w a` may differ in the landed file.  The key is that `formPerm` successor must satisfy
+If the repo’s `angularNextPerm` has type `Equiv.Perm ι`, the predecessor simplification is just `Equiv.apply_symm_apply`.  If it is packaged as `List.formPerm angularList`, a small bridge lemma is needed:
 
 ```lean
-angularNextPerm w a ((angularNextPerm w a).symm i) = i
+lemma angularNextPerm_apply_symm (i : ι) :
+    angularNextPerm w a ((angularNextPerm w a).symm i) = i := by
+  exact Equiv.apply_symm_apply _ _
 ```
 
-which is just `Equiv.apply_symm_apply`.
+## 6. Why this cannot be filled in here as a compiling proof
 
-## 7. Summary of what must be added before a full compiling proof exists
+A no-`sorry` proof of the requested theorem requires concrete definitions and lemmas that are not in the inspectable repo:
 
-A complete compiling proof of the requested result requires these additional ingredients in the actual angular-order file:
+* actual `rayAngleKey` definition and range theorem;
+* actual `perpSeed`/`perpSeed₂` right-handed frame lemmas;
+* actual `projPerp` theorem connecting raw `det3` to projected coordinates;
+* actual `angularList` sorted/no-duplicate/formPerm predecessor lemmas;
+* actual `SurroundsAxisPlane` statement, including whether it quantifies both positive and negative sides or only the positive side for every nonzero test vector.
 
-1. A strict no-duplicate projected-angle assumption or theorem.  Without it the final determinant-positive statement is false.
-2. A cyclic gap definition and a cyclic determinant/sine lemma covering the wrap branch.
-3. Frame-vector trig lemmas connecting `rayAngleKey` to closed halfplanes:
-   * `angleFrameVec_mem_perp`,
-   * `angleFrameVec_ne_zero`,
-   * `inner_projPerp_angleFrameVec`,
-   * `cos_nonpos_of_not_mem_gap` / wrap variant.
-4. Sorted-list/formPerm adjacency lemmas saying no key lies in the open arc between consecutive entries, including wrap.
-
-After these are present, the proof is short and follows the contract in §6.  But with only `SurroundsAxisPlane` and `hproj`, the requested theorem cannot be true and therefore cannot have a Lean proof.
+Without those declarations, any “complete Lean proof” would be fabricated and would not compile.  The theorem also cannot be proved from `SurroundsAxisPlane + projPerp≠0` alone; it requires the no-duplicate projected-angle theorem above.  The correct next patch is therefore to add the frame/trig and sorted-list lemmas in `ZinanCh13AngularOrder.lean`, then the final `turn_pos` theorem is exactly the short assembly in §5.

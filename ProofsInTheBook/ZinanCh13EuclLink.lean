@@ -410,6 +410,119 @@ theorem det3_eq_inner_cross (u v z : E3) :
     _ = (⟪z, cross u v⟫ : ℝ) := inner_cross_cyclic u v z
     _ = (⟪cross u v, z⟫ : ℝ) := (real_inner_comm z (cross u v)).symm
 
+theorem reverseFaceBetween_support_edgeVec_le
+    (P : TriangulatedEuclideanPolyhedron M) (d e : D)
+    (he_tail : M.tail e = M.tail d) :
+    inner ℝ (P.outward_normal (reverseFaceBetween M d)) (edgeVec P e) ≤ 0 := by
+  have htail_plane :
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.tail d) - P.face_point (M.dartFace d)) = 0 :=
+    face_plane_dart P d
+  have hsupport := P.face_supporting_halfspace (M.dartFace d) (M.head e)
+  have hrewrite :
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.head e) - P.pos (M.tail e))
+        =
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.head e) - P.face_point (M.dartFace d))
+        -
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.tail d) - P.face_point (M.dartFace d)) := by
+    rw [he_tail]
+    calc
+      inner ℝ (P.outward_normal (M.dartFace d))
+          (P.pos (M.head e) - P.pos (M.tail d))
+          =
+        inner ℝ (P.outward_normal (M.dartFace d))
+          ((P.pos (M.head e) - P.face_point (M.dartFace d))
+            - (P.pos (M.tail d) - P.face_point (M.dartFace d))) := by
+            congr 1
+            module
+      _ =
+        inner ℝ (P.outward_normal (M.dartFace d))
+          (P.pos (M.head e) - P.face_point (M.dartFace d))
+          -
+        inner ℝ (P.outward_normal (M.dartFace d))
+          (P.pos (M.tail d) - P.face_point (M.dartFace d)) := by
+            rw [inner_sub_right]
+  simpa [reverseFaceBetween, edgeVec, hrewrite, htail_plane] using hsupport
+
+theorem reverseFaceBetween_support_edgeVec_lt
+    (P : TriangulatedEuclideanPolyhedron M) (d e : D)
+    (he_tail : M.tail e = M.tail d)
+    (hoff : ∀ i, M.head e ≠ P.faceVertex (reverseFaceBetween M d) i) :
+    inner ℝ (P.outward_normal (reverseFaceBetween M d)) (edgeVec P e) < 0 := by
+  have htail_plane :
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.tail d) - P.face_point (M.dartFace d)) = 0 :=
+    face_plane_dart P d
+  have hstrict := P.face_support_strict (M.dartFace d) (M.head e) (by
+    simpa [reverseFaceBetween] using hoff)
+  have hrewrite :
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.head e) - P.pos (M.tail e))
+        =
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.head e) - P.face_point (M.dartFace d))
+        -
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.tail d) - P.face_point (M.dartFace d)) := by
+    rw [he_tail]
+    calc
+      inner ℝ (P.outward_normal (M.dartFace d))
+          (P.pos (M.head e) - P.pos (M.tail d))
+          =
+        inner ℝ (P.outward_normal (M.dartFace d))
+          ((P.pos (M.head e) - P.face_point (M.dartFace d))
+            - (P.pos (M.tail d) - P.face_point (M.dartFace d))) := by
+            congr 1
+            module
+      _ =
+        inner ℝ (P.outward_normal (M.dartFace d))
+          (P.pos (M.head e) - P.face_point (M.dartFace d))
+          -
+        inner ℝ (P.outward_normal (M.dartFace d))
+          (P.pos (M.tail d) - P.face_point (M.dartFace d)) := by
+            rw [inner_sub_right]
+  simpa [reverseFaceBetween, edgeVec, hrewrite, htail_plane] using hstrict
+
+/--
+Face-level support plus reverse-`σ` rotation faithfulness gives the non-strict
+determinant inequality for one raw vertex-link side.
+-/
+theorem link_side_support_of_rotationFaithful
+    (P : TriangulatedEuclideanPolyhedron M) (hfaith : RotationFaithful P)
+    (d e : D) (he_tail : M.tail e = M.tail d) :
+    0 ≤ det3 (edgeVec P d) (edgeVec P (M.σ.symm d)) (edgeVec P e) := by
+  obtain ⟨lam, hlam, hnormal⟩ :=
+    hfaith.outward_normal_eq_pos_smul_reverse_cross d
+  have hs := reverseFaceBetween_support_edgeVec_le P d e he_tail
+  rw [hnormal, real_inner_smul_left] at hs
+  have hcross :
+      inner ℝ (cross (edgeVec P (M.σ.symm d)) (edgeVec P d)) (edgeVec P e) ≤ 0 := by
+    nlinarith
+  rw [det3_eq_inner_cross, cross_antisymm, inner_neg_left]
+  nlinarith
+
+/--
+Strict face support plus reverse-`σ` rotation faithfulness gives strict
+determinant positivity once the tested vertex is off the supporting triangle.
+-/
+theorem link_side_strict_of_rotationFaithful
+    (P : TriangulatedEuclideanPolyhedron M) (hfaith : RotationFaithful P)
+    (d e : D) (he_tail : M.tail e = M.tail d)
+    (hoff : ∀ i, M.head e ≠ P.faceVertex (reverseFaceBetween M d) i) :
+    0 < det3 (edgeVec P d) (edgeVec P (M.σ.symm d)) (edgeVec P e) := by
+  obtain ⟨lam, hlam, hnormal⟩ :=
+    hfaith.outward_normal_eq_pos_smul_reverse_cross d
+  have hs := reverseFaceBetween_support_edgeVec_lt P d e he_tail hoff
+  rw [hnormal, real_inner_smul_left] at hs
+  have hcross :
+      inner ℝ (cross (edgeVec P (M.σ.symm d)) (edgeVec P d)) (edgeVec P e) < 0 := by
+    nlinarith
+  rw [det3_eq_inner_cross, cross_antisymm, inner_neg_left]
+  nlinarith
+
 /--
 An oriented supporting triangle through `v,a,b`.
 
@@ -989,11 +1102,3 @@ It must prove the strict exposed-vertex open hemisphere and the oriented
 -/
 
 end ProofsInTheBook.Ch13EuclLink
-
-#print axioms ProofsInTheBook.Ch13EuclLink.vertexStarOfEuclidean
-#print axioms ProofsInTheBook.Ch13EuclLink.incidentDartOfStarIndex_reverseStarIndexOfDart
-#print axioms ProofsInTheBook.Ch13EuclLink.incidentDartOfStarIndex_reverseStarIndexOfDart_add_one
-#print axioms ProofsInTheBook.Ch13EuclLink.incidentDartOfStarIndex_reverseStarIndexOfDart_sub_one
-#print axioms ProofsInTheBook.Ch13EuclLink.tetra_vDeg
-#print axioms ProofsInTheBook.Ch13EuclLink.tetraVertexLinkGeometry
-#print axioms ProofsInTheBook.Ch13EuclLink.tetraVertexStar

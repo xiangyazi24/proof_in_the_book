@@ -390,6 +390,174 @@ theorem linkPoint_apex_ne (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
     rw [incidentDartOfStarIndex_tail P v hdeg i]
     exact h.symm)
 
+theorem incidentDartOfStarIndex_injective
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) :
+    Function.Injective (incidentDartOfStarIndex P v hdeg) := by
+  intro i j hij
+  have hnodup : (incidentDarts P v).Nodup := by
+    unfold incidentDarts
+    exact Equiv.Perm.nodup_toList M.σ (Quotient.out v)
+  unfold incidentDartOfStarIndex incidentDart at hij
+  have hidx :=
+    (List.Nodup.getElem_inj_iff hnodup).mp hij
+  exact Fin.ext hidx
+
+theorem dart_eq_of_same_tail_head_of_isSimpleGraph
+    (hsimple : M.IsSimpleGraph) {d e : D}
+    (htail : M.tail d = M.tail e) (hhead : M.head d = M.head e) :
+    d = e := by
+  have hsc : M.α.SameCycle d e :=
+    M.alpha_sameCycle_of_same_endpoints hsimple htail hhead
+  rcases (M.alpha_sameCycle_iff d e).mp hsc with heq | halpha
+  · exact heq.symm
+  · exfalso
+    apply hsimple.no_loop d
+    have hloop : M.tail d = M.head d := by
+      calc
+        M.tail d = M.tail e := htail
+        _ = M.tail (M.α d) := by rw [halpha]
+        _ = M.head d := M.tail_alpha d
+    exact hloop
+
+/-- The dart read by the Euclidean bridge's reverse-`σ` link order. -/
+def reverseLinkDart (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) : D :=
+  incidentDartOfStarIndex P v hdeg (Fin.rev i)
+
+/-- The neighbour read by the Euclidean bridge's reverse-`σ` link order. -/
+def reverseLinkNbr (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) : M.Vertex :=
+  M.head (reverseLinkDart P v hdeg i)
+
+theorem reverseLinkDart_tail (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) :
+    M.tail (reverseLinkDart P v hdeg i) = v := by
+  exact incidentDartOfStarIndex_tail P v hdeg (Fin.rev i)
+
+theorem reverseLinkDart_mem_incident (P : TriangulatedEuclideanPolyhedron M)
+    (v : M.Vertex) (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) :
+    reverseLinkDart P v hdeg i ∈ incidentDarts P v := by
+  unfold reverseLinkDart incidentDartOfStarIndex incidentDart
+  exact List.get_mem _ _
+
+theorem reverseLinkNbr_apex_ne (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) :
+    P.pos (reverseLinkNbr P v hdeg i) ≠ P.pos v := by
+  intro h
+  exact P.edge_nondegenerate (reverseLinkDart P v hdeg i) (by
+    rw [reverseLinkDart_tail P v hdeg i]
+    exact h.symm)
+
+theorem reverseLinkDart_injective (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) :
+    Function.Injective (reverseLinkDart P v hdeg) := by
+  intro i j h
+  have hidx := incidentDartOfStarIndex_injective P v hdeg h
+  exact Fin.rev_injective hidx
+
+theorem reverseLinkDart_add_one (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) :
+    reverseLinkDart P v hdeg (i + 1) = M.σ.symm (reverseLinkDart P v hdeg i) := by
+  let d := reverseLinkDart P v hdeg i
+  have hdmem : d ∈ incidentDarts P v := by
+    simpa [d] using reverseLinkDart_mem_incident P v hdeg i
+  have hidx : reverseStarIndexOfDart P v hdeg d hdmem = i := by
+    have hbase :=
+      incidentDartOfStarIndex_reverseStarIndexOfDart P v hdeg d hdmem
+    have hsame :
+        incidentDartOfStarIndex P v hdeg
+            (Fin.rev (reverseStarIndexOfDart P v hdeg d hdmem)) =
+          incidentDartOfStarIndex P v hdeg (Fin.rev i) := by
+      simpa [d, reverseLinkDart] using hbase
+    have hrev := incidentDartOfStarIndex_injective P v hdeg hsame
+    exact Fin.rev_injective hrev
+  have hstep :=
+    incidentDartOfStarIndex_reverseStarIndexOfDart_add_one P v hdeg d hdmem
+  have hidx_add :
+      reverseStarIndexOfDart P v hdeg d hdmem + starOne P v hdeg = i + 1 := by
+    rw [hidx]
+    apply Fin.ext
+    simp [Fin.add_def, starOne]
+  rw [hidx_add] at hstep
+  simpa [reverseLinkDart, d] using hstep
+
+theorem reverseLinkNbr_add_one (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) :
+    reverseLinkNbr P v hdeg (i + 1) =
+      M.head (M.σ.symm (reverseLinkDart P v hdeg i)) := by
+  unfold reverseLinkNbr
+  rw [reverseLinkDart_add_one P v hdeg i]
+
+theorem reverseLinkNbr_eq_apex_false_of_simple
+    (P : TriangulatedEuclideanPolyhedron M) (hsimple : M.IsSimpleGraph)
+    (v : M.Vertex) (hdeg : 3 ≤ vDeg P v) (i : Fin (starN P v + 1)) :
+    reverseLinkNbr P v hdeg i ≠ v := by
+  intro h
+  exact hsimple.no_loop (reverseLinkDart P v hdeg i)
+    ((reverseLinkDart_tail P v hdeg i).trans h.symm)
+
+theorem reverseLinkNbr_injective_of_simple
+    (P : TriangulatedEuclideanPolyhedron M) (hsimple : M.IsSimpleGraph)
+    (v : M.Vertex) (hdeg : 3 ≤ vDeg P v) :
+    Function.Injective (reverseLinkNbr P v hdeg) := by
+  intro i j hhead
+  have hdart : reverseLinkDart P v hdeg i = reverseLinkDart P v hdeg j :=
+    dart_eq_of_same_tail_head_of_isSimpleGraph hsimple
+      ((reverseLinkDart_tail P v hdeg i).trans (reverseLinkDart_tail P v hdeg j).symm)
+      hhead
+  exact reverseLinkDart_injective P v hdeg hdart
+
+theorem reverseLink_nonincident_of_simple
+    (P : TriangulatedEuclideanPolyhedron M) (hsimple : M.IsSimpleGraph)
+    (v : M.Vertex) (hdeg : 3 ≤ vDeg P v) :
+    ∀ i j : Fin (starN P v + 1), j ≠ i → j ≠ i + 1 →
+      ¬(reverseLinkNbr P v hdeg j = v ∨
+        reverseLinkNbr P v hdeg j = reverseLinkNbr P v hdeg i ∨
+        reverseLinkNbr P v hdeg j = reverseLinkNbr P v hdeg (i + 1)) := by
+  intro i j hji hjnext hbad
+  rcases hbad with hapex | heq | hnext
+  · exact reverseLinkNbr_eq_apex_false_of_simple P hsimple v hdeg j hapex
+  · exact hji (reverseLinkNbr_injective_of_simple P hsimple v hdeg heq)
+  · exact hjnext (reverseLinkNbr_injective_of_simple P hsimple v hdeg hnext)
+
+theorem exists_fin_nonadjacent {n : ℕ} (hn : 2 ≤ n) (j : Fin (n + 1)) :
+    ∃ i : Fin (n + 1), j ≠ i ∧ j ≠ i + 1 := by
+  by_contra hcon
+  push_neg at hcon
+  have hsub : (Finset.univ : Finset (Fin (n + 1))) ⊆ {j, j - 1} := by
+    intro i _
+    rcases eq_or_ne j i with hji | hji
+    · simp [hji]
+    · have hnext := hcon i hji
+      have him1 : i = j - 1 := by
+        rw [eq_sub_iff_add_eq]
+        exact hnext.symm
+      simp [him1]
+  have hle := Finset.card_le_card hsub
+  have hcard : ({j, j - 1} : Finset (Fin (n + 1))).card ≤ 2 :=
+    le_trans (Finset.card_insert_le _ _) (by simp)
+  simp only [Finset.card_univ, Fintype.card_fin] at hle
+  have hle2 : n + 1 ≤ 2 := le_trans hle hcard
+  omega
+
+theorem exists_fin_not_incident_edge {n : ℕ} (hn : 2 ≤ n) (i : Fin (n + 1)) :
+    ∃ j : Fin (n + 1), j ≠ i ∧ j ≠ i + 1 := by
+  by_contra hcon
+  push_neg at hcon
+  have hsub : (Finset.univ : Finset (Fin (n + 1))) ⊆ {i, i + 1} := by
+    intro j _
+    by_cases hji : j = i
+    · simp [hji]
+    · have hjnext := hcon j hji
+      simp [hjnext]
+  have hle := Finset.card_le_card hsub
+  have hcard : ({i, i + 1} : Finset (Fin (n + 1))).card ≤ 2 :=
+    le_trans (Finset.card_insert_le _ _) (by simp)
+  simp only [Finset.card_univ, Fintype.card_fin] at hle
+  have hle2 : n + 1 ≤ 2 := le_trans hle hcard
+  omega
+
 /-! ## Part 2: oriented face support and derived vertex-link geometry -/
 
 /-- Local scalar triple product, in the same coordinate convention as `SphericalKernel.det3`. -/
@@ -409,6 +577,343 @@ theorem det3_eq_inner_cross (u v z : E3) :
       rw [inner_cross_eq_det3]
     _ = (⟪z, cross u v⟫ : ℝ) := inner_cross_cyclic u v z
     _ = (⟪cross u v, z⟫ : ℝ) := (real_inner_comm z (cross u v)).symm
+
+def fin2NeZeroFin3Equiv : Fin 2 ≃ {x : Fin 3 // x ≠ 0} where
+  toFun
+    | 0 => ⟨1, by decide⟩
+    | _ => ⟨2, by decide⟩
+  invFun
+    | ⟨1, _⟩ => 0
+    | ⟨2, _⟩ => 1
+    | ⟨0, h⟩ => False.elim (h rfl)
+  left_inv := by
+    intro i
+    fin_cases i <;> rfl
+  right_inv := by
+    intro x
+    rcases x with ⟨x, hx⟩
+    fin_cases x
+    · exact False.elim (hx rfl)
+    · rfl
+    · rfl
+
+lemma linearIndependent_pair_vsub_of_affineIndependent_fin3 {p : Fin 3 → E3}
+    (hai : AffineIndependent ℝ p) :
+    LinearIndependent ℝ ![p 1 - p 0, p 2 - p 0] := by
+  rw [affineIndependent_iff_linearIndependent_vsub ℝ p (0 : Fin 3)] at hai
+  convert (linearIndependent_equiv (R := ℝ) (M := E3)
+    fin2NeZeroFin3Equiv
+    (f := fun i : {x : Fin 3 // x ≠ 0} => (p i -ᵥ p (0 : Fin 3) : E3))).mpr hai using 1
+  funext i
+  fin_cases i <;> rfl
+
+private theorem faceDart_phi_ne_self_link
+    (P : TriangulatedEuclideanPolyhedron M) (f : M.Face) :
+    M.φ (P.faceDart f) ≠ P.faceDart f := by
+  intro h
+  let p : Fin 3 → E3 :=
+    ![P.pos (M.tail (P.faceDart f)),
+      P.pos (M.tail (M.φ (P.faceDart f))),
+      P.pos (M.tail (M.φ (M.φ (P.faceDart f))))]
+  have hinj : Function.Injective p := (P.face_nondegenerate f).injective
+  have hpts : p 1 = p 0 := by
+    simp [p, h]
+  have h10 : (1 : Fin 3) = 0 := hinj hpts
+  norm_num at h10
+
+private theorem faceDart_phi_cube_eq_self
+    (P : TriangulatedEuclideanPolyhedron M) (f : M.Face) :
+    (M.φ ^ 3) (P.faceDart f) = P.faceDart f := by
+  let fd := P.faceDart f
+  have hφne : M.φ fd ≠ fd := by
+    simpa [fd] using faceDart_phi_ne_self_link P f
+  have hlen : M.faceLen f = 3 := by
+    simpa [CombMap.faceLen] using P.every_face_triangle f
+  have hcard : (M.φ.cycleOf fd).support.card = 3 := by
+    rw [← faceLen_dartFace_eq_card_support_cycleOf M hφne]
+    simpa [fd, P.faceDart_face f] using hlen
+  have hpow := Equiv.Perm.pow_mod_card_support_cycleOf_self_apply M.φ 3 fd
+  rw [hcard, Nat.mod_self] at hpow
+  simpa [fd] using hpow.symm
+
+theorem phi_cube_eq_self_of_triangular_euclidean
+    (P : TriangulatedEuclideanPolyhedron M) (d : D) :
+    (M.φ ^ 3) d = d := by
+  rcases dart_eq_faceDart_or_phi_or_phi2_of_dartFace_eq
+      P (f := M.dartFace d) (d := d) rfl with h | h | h
+  · rw [h]
+    exact faceDart_phi_cube_eq_self P (M.dartFace d)
+  · rw [h]
+    exact congrArg M.φ (faceDart_phi_cube_eq_self P (M.dartFace d))
+  · rw [h]
+    exact congrArg (fun x => M.φ (M.φ x))
+      (faceDart_phi_cube_eq_self P (M.dartFace d))
+
+theorem tail_phi_phi_eq_head_sigma_symm_of_triangular_euclidean
+    (P : TriangulatedEuclideanPolyhedron M) (d : D) :
+    M.tail (M.φ (M.φ d)) = M.head (M.σ.symm d) := by
+  have hcube := phi_cube_eq_self_of_triangular_euclidean P d
+  have hpred : M.φ (M.φ d) = M.φ.symm d := by
+    apply M.φ.injective
+    rw [Equiv.apply_symm_apply]
+    simpa [pow_succ, Equiv.Perm.coe_mul, Function.comp_apply] using hcube
+  have hsymm : M.φ.symm d = M.α (M.σ.symm d) := by
+    apply M.φ.injective
+    rw [Equiv.apply_symm_apply]
+    symm
+    change (M.σ * M.α) (M.α (M.σ.symm d)) = d
+    rw [Equiv.Perm.mul_apply, M.alpha_alpha, Equiv.apply_symm_apply]
+  rw [hpred, hsymm, M.tail_alpha]
+
+/-- The stored face vertices are the three tails of any dart on the same
+triangular face, up to cyclic rotation. -/
+theorem faceVertex_eq_tail_or_head_or_tail_phi2_of_dartFace_eq
+    (P : TriangulatedEuclideanPolyhedron M) {f : M.Face} {e : D}
+    (he : M.dartFace e = f) (k : Fin 3) :
+    P.faceVertex f k = M.tail e ∨
+      P.faceVertex f k = M.head e ∨
+      P.faceVertex f k = M.tail (M.φ (M.φ e)) := by
+  rcases dart_eq_faceDart_or_phi_or_phi2_of_dartFace_eq P (f := f) (d := e) he with
+    h | h | h
+  · subst h
+    fin_cases k
+    · left
+      have hv := congrFun (P.face_vertices_match f) 0
+      simpa using hv
+    · right; left
+      have hv := congrFun (P.face_vertices_match f) 1
+      simpa [M.tail_phi] using hv
+    · right; right
+      have hv := congrFun (P.face_vertices_match f) 2
+      simpa using hv
+  · subst h
+    fin_cases k
+    · right; right
+      have hv := congrFun (P.face_vertices_match f) 0
+      have hcube := faceDart_phi_cube_eq_self P f
+      have hcube' : M.φ (M.φ (M.φ (P.faceDart f))) = P.faceDart f := by
+        simpa [pow_succ, Equiv.Perm.coe_mul, Function.comp_apply] using hcube
+      have htail : M.tail (P.faceDart f) =
+          M.tail (M.φ (M.φ (M.φ (P.faceDart f)))) := by
+        rw [hcube']
+      exact hv.trans htail
+    · left
+      have hv := congrFun (P.face_vertices_match f) 1
+      simpa [M.tail_phi] using hv
+    · right; left
+      have hv := congrFun (P.face_vertices_match f) 2
+      simpa [M.tail_phi] using hv
+  · subst h
+    fin_cases k
+    · right; left
+      have hv := congrFun (P.face_vertices_match f) 0
+      have hcube := faceDart_phi_cube_eq_self P f
+      have hcube' : M.φ (M.φ (M.φ (P.faceDart f))) = P.faceDart f := by
+        simpa [pow_succ, Equiv.Perm.coe_mul, Function.comp_apply] using hcube
+      have htail : M.tail (P.faceDart f) =
+          M.head (M.φ (M.φ (P.faceDart f))) := by
+        rw [← M.tail_phi (M.φ (M.φ (P.faceDart f))), hcube']
+      exact hv.trans htail
+    · right; right
+      have hv := congrFun (P.face_vertices_match f) 1
+      have hcube := faceDart_phi_cube_eq_self P f
+      have hcube' : M.φ (M.φ (M.φ (P.faceDart f))) = P.faceDart f := by
+        simpa [pow_succ, Equiv.Perm.coe_mul, Function.comp_apply] using hcube
+      have htail : M.tail (M.φ (P.faceDart f)) =
+          M.tail (M.φ (M.φ (M.φ (M.φ (P.faceDart f))))) := by
+        rw [hcube']
+      exact hv.trans htail
+    · left
+      have hv := congrFun (P.face_vertices_match f) 2
+      simpa using hv
+
+theorem reverseFaceBetween_support_edgeVec_le
+    (P : TriangulatedEuclideanPolyhedron M) (d e : D)
+    (he_tail : M.tail e = M.tail d) :
+    inner ℝ (P.outward_normal (reverseFaceBetween M d)) (edgeVec P e) ≤ 0 := by
+  have htail_plane :
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.tail d) - P.face_point (M.dartFace d)) = 0 :=
+    face_plane_dart P d
+  have hsupport := P.face_supporting_halfspace (M.dartFace d) (M.head e)
+  have hrewrite :
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.head e) - P.pos (M.tail e))
+        =
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.head e) - P.face_point (M.dartFace d))
+        -
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.tail d) - P.face_point (M.dartFace d)) := by
+    rw [he_tail]
+    calc
+      inner ℝ (P.outward_normal (M.dartFace d))
+          (P.pos (M.head e) - P.pos (M.tail d))
+          =
+        inner ℝ (P.outward_normal (M.dartFace d))
+          ((P.pos (M.head e) - P.face_point (M.dartFace d))
+            - (P.pos (M.tail d) - P.face_point (M.dartFace d))) := by
+            congr 1
+            module
+      _ =
+        inner ℝ (P.outward_normal (M.dartFace d))
+          (P.pos (M.head e) - P.face_point (M.dartFace d))
+          -
+        inner ℝ (P.outward_normal (M.dartFace d))
+          (P.pos (M.tail d) - P.face_point (M.dartFace d)) := by
+            rw [inner_sub_right]
+  simpa [reverseFaceBetween, edgeVec, hrewrite, htail_plane] using hsupport
+
+theorem reverseFaceBetween_support_edgeVec_lt
+    (P : TriangulatedEuclideanPolyhedron M) (d e : D)
+    (he_tail : M.tail e = M.tail d)
+    (hoff : ∀ i, M.head e ≠ P.faceVertex (reverseFaceBetween M d) i) :
+    inner ℝ (P.outward_normal (reverseFaceBetween M d)) (edgeVec P e) < 0 := by
+  have htail_plane :
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.tail d) - P.face_point (M.dartFace d)) = 0 :=
+    face_plane_dart P d
+  have hstrict := P.face_support_strict (M.dartFace d) (M.head e) (by
+    simpa [reverseFaceBetween] using hoff)
+  have hrewrite :
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.head e) - P.pos (M.tail e))
+        =
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.head e) - P.face_point (M.dartFace d))
+        -
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.tail d) - P.face_point (M.dartFace d)) := by
+    rw [he_tail]
+    calc
+      inner ℝ (P.outward_normal (M.dartFace d))
+          (P.pos (M.head e) - P.pos (M.tail d))
+          =
+        inner ℝ (P.outward_normal (M.dartFace d))
+          ((P.pos (M.head e) - P.face_point (M.dartFace d))
+            - (P.pos (M.tail d) - P.face_point (M.dartFace d))) := by
+            congr 1
+            module
+      _ =
+        inner ℝ (P.outward_normal (M.dartFace d))
+          (P.pos (M.head e) - P.face_point (M.dartFace d))
+          -
+        inner ℝ (P.outward_normal (M.dartFace d))
+          (P.pos (M.tail d) - P.face_point (M.dartFace d)) := by
+            rw [inner_sub_right]
+  simpa [reverseFaceBetween, edgeVec, hrewrite, htail_plane] using hstrict
+
+/--
+Face-level support plus reverse-`σ` rotation faithfulness gives the non-strict
+determinant inequality for one raw vertex-link side.
+-/
+theorem link_side_support_of_rotationFaithful
+    (P : TriangulatedEuclideanPolyhedron M) (hfaith : RotationFaithful P)
+    (d e : D) (he_tail : M.tail e = M.tail d) :
+    0 ≤ det3 (edgeVec P d) (edgeVec P (M.σ.symm d)) (edgeVec P e) := by
+  obtain ⟨lam, hlam, hnormal⟩ :=
+    hfaith.outward_normal_eq_pos_smul_reverse_cross d
+  have hs := reverseFaceBetween_support_edgeVec_le P d e he_tail
+  rw [hnormal, real_inner_smul_left] at hs
+  have hcross :
+      inner ℝ (cross (edgeVec P (M.σ.symm d)) (edgeVec P d)) (edgeVec P e) ≤ 0 := by
+    nlinarith
+  rw [det3_eq_inner_cross, cross_antisymm, inner_neg_left]
+  nlinarith
+
+/--
+Strict face support plus reverse-`σ` rotation faithfulness gives strict
+determinant positivity once the tested vertex is off the supporting triangle.
+-/
+theorem link_side_strict_of_rotationFaithful
+    (P : TriangulatedEuclideanPolyhedron M) (hfaith : RotationFaithful P)
+    (d e : D) (he_tail : M.tail e = M.tail d)
+    (hoff : ∀ i, M.head e ≠ P.faceVertex (reverseFaceBetween M d) i) :
+    0 < det3 (edgeVec P d) (edgeVec P (M.σ.symm d)) (edgeVec P e) := by
+  obtain ⟨lam, hlam, hnormal⟩ :=
+    hfaith.outward_normal_eq_pos_smul_reverse_cross d
+  have hs := reverseFaceBetween_support_edgeVec_lt P d e he_tail hoff
+  rw [hnormal, real_inner_smul_left] at hs
+  have hcross :
+      inner ℝ (cross (edgeVec P (M.σ.symm d)) (edgeVec P d)) (edgeVec P e) < 0 := by
+    nlinarith
+  rw [det3_eq_inner_cross, cross_antisymm, inner_neg_left]
+  nlinarith
+
+theorem face_support_from_dart_tail
+    (P : TriangulatedEuclideanPolyhedron M) (d : D) (w : M.Vertex) :
+    inner ℝ (P.outward_normal (M.dartFace d)) (P.pos w - P.pos (M.tail d)) ≤ 0 := by
+  have htail_plane := face_plane_dart P d
+  have hsupport := P.face_supporting_halfspace (M.dartFace d) w
+  have hrewrite :
+      inner ℝ (P.outward_normal (M.dartFace d)) (P.pos w - P.pos (M.tail d)) =
+        inner ℝ (P.outward_normal (M.dartFace d)) (P.pos w - P.face_point (M.dartFace d)) -
+          inner ℝ (P.outward_normal (M.dartFace d))
+            (P.pos (M.tail d) - P.face_point (M.dartFace d)) := by
+    calc
+      inner ℝ (P.outward_normal (M.dartFace d)) (P.pos w - P.pos (M.tail d))
+          = inner ℝ (P.outward_normal (M.dartFace d))
+              ((P.pos w - P.face_point (M.dartFace d)) -
+                (P.pos (M.tail d) - P.face_point (M.dartFace d))) := by
+                congr 1
+                module
+      _ = inner ℝ (P.outward_normal (M.dartFace d)) (P.pos w - P.face_point (M.dartFace d)) -
+            inner ℝ (P.outward_normal (M.dartFace d))
+              (P.pos (M.tail d) - P.face_point (M.dartFace d)) := by
+            rw [inner_sub_right]
+  rw [hrewrite, htail_plane, sub_zero]
+  exact hsupport
+
+theorem face_plane_head_sub_tail
+    (P : TriangulatedEuclideanPolyhedron M) (d : D) :
+    inner ℝ (P.outward_normal (M.dartFace d))
+      (P.pos (M.head d) - P.pos (M.tail d)) = 0 := by
+  have htail := face_plane_dart P d
+  have hhead0 := face_plane_dart P (M.φ d)
+  have hhead :
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.head d) - P.face_point (M.dartFace d)) = 0 := by
+    simpa [M.tail_phi] using hhead0
+  calc
+    inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.head d) - P.pos (M.tail d))
+        = inner ℝ (P.outward_normal (M.dartFace d))
+            ((P.pos (M.head d) - P.face_point (M.dartFace d)) -
+              (P.pos (M.tail d) - P.face_point (M.dartFace d))) := by
+              congr 1
+              module
+    _ = inner ℝ (P.outward_normal (M.dartFace d))
+          (P.pos (M.head d) - P.face_point (M.dartFace d)) -
+        inner ℝ (P.outward_normal (M.dartFace d))
+          (P.pos (M.tail d) - P.face_point (M.dartFace d)) := by
+          rw [inner_sub_right]
+    _ = 0 := by rw [hhead, htail, sub_self]
+
+theorem face_plane_head_sigma_symm_sub_tail
+    (P : TriangulatedEuclideanPolyhedron M) (d : D) :
+    inner ℝ (P.outward_normal (M.dartFace d))
+      (P.pos (M.head (M.σ.symm d)) - P.pos (M.tail d)) = 0 := by
+  have htail := face_plane_dart P d
+  have hhead0 := face_plane_dart P (M.φ (M.φ d))
+  have htail_phi2 := tail_phi_phi_eq_head_sigma_symm_of_triangular_euclidean P d
+  have hhead :
+      inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.head (M.σ.symm d)) - P.face_point (M.dartFace d)) = 0 := by
+    simpa [htail_phi2] using hhead0
+  calc
+    inner ℝ (P.outward_normal (M.dartFace d))
+        (P.pos (M.head (M.σ.symm d)) - P.pos (M.tail d))
+        = inner ℝ (P.outward_normal (M.dartFace d))
+            ((P.pos (M.head (M.σ.symm d)) - P.face_point (M.dartFace d)) -
+              (P.pos (M.tail d) - P.face_point (M.dartFace d))) := by
+              congr 1
+              module
+    _ = inner ℝ (P.outward_normal (M.dartFace d))
+          (P.pos (M.head (M.σ.symm d)) - P.face_point (M.dartFace d)) -
+        inner ℝ (P.outward_normal (M.dartFace d))
+          (P.pos (M.tail d) - P.face_point (M.dartFace d)) := by
+          rw [inner_sub_right]
+    _ = 0 := by rw [hhead, htail, sub_self]
 
 /--
 An oriented supporting triangle through `v,a,b`.
@@ -431,6 +936,128 @@ structure OrientedTriangleSupport (P : TriangulatedEuclideanPolyhedron M)
     ∀ w : M.Vertex,
       inner ℝ normal (P.pos w - P.pos v) = 0 ↔ (w = v ∨ w = a ∨ w = b)
 
+noncomputable def orientedTriangleSupport_of_rotationFaithful
+    (P : TriangulatedEuclideanPolyhedron M) (hfaith : RotationFaithful P)
+    (d e : D) (he_tail : M.tail e = M.tail d)
+    (hoff : ∀ i, M.head e ≠ P.faceVertex (M.dartFace d) i) :
+    OrientedTriangleSupport P (M.tail d) (M.head d) (M.head (M.σ.symm d)) := by
+  classical
+  let N : E3 := P.outward_normal (M.dartFace d)
+  let rot := hfaith.outward_normal_eq_pos_smul_reverse_cross d
+  let lam : ℝ := Classical.choose rot
+  have hlam : 0 < lam := (Classical.choose_spec rot).1
+  have hnormal :
+      P.outward_normal (reverseFaceBetween M d) =
+        lam • cross (edgeVec P (M.σ.symm d)) (edgeVec P d) :=
+    (Classical.choose_spec rot).2
+  have hlam_ne : lam ≠ 0 := ne_of_gt hlam
+  have hdetpos :
+      0 < det3 (edgeVec P d) (edgeVec P (M.σ.symm d)) (edgeVec P e) :=
+    link_side_strict_of_rotationFaithful P hfaith d e he_tail (by
+      simpa [reverseFaceBetween] using hoff)
+  have hNne : N ≠ 0 := by
+    intro hNzero
+    have hprev0 : cross (edgeVec P (M.σ.symm d)) (edgeVec P d) = 0 := by
+      have hsmul : lam • cross (edgeVec P (M.σ.symm d)) (edgeVec P d) = 0 := by
+        rw [← hnormal]
+        exact hNzero
+      rcases smul_eq_zero.mp hsmul with hlam0 | hcross0
+      · exact False.elim (hlam_ne hlam0)
+      · exact hcross0
+    have hcross0 : cross (edgeVec P d) (edgeVec P (M.σ.symm d)) = 0 := by
+      rw [cross_antisymm, hprev0, neg_zero]
+    have hdet0 : det3 (edgeVec P d) (edgeVec P (M.σ.symm d)) (edgeVec P e) = 0 := by
+      rw [det3_eq_inner_cross, hcross0, inner_zero_left]
+    nlinarith
+  have hnorm_pos : 0 < ‖N‖ := norm_pos_iff.mpr hNne
+  have hnorm_ne : ‖N‖ ≠ 0 := ne_of_gt hnorm_pos
+  refine
+    { normal := (‖N‖)⁻¹ • N
+      normal_unit := ?_
+      c := ‖N‖ * lam⁻¹
+      c_pos := ?_
+      det_eq := ?_
+      support := ?_
+      eq_iff := ?_ }
+  · rw [norm_smul, Real.norm_eq_abs,
+      abs_of_nonneg (inv_nonneg.mpr (norm_nonneg N))]
+    exact inv_mul_cancel₀ hnorm_ne
+  · exact mul_pos hnorm_pos (inv_pos.mpr hlam)
+  · intro z
+    rw [det3_eq_inner_cross]
+    have hprev :
+        cross (edgeVec P (M.σ.symm d)) (edgeVec P d) = lam⁻¹ • N := by
+      have hN :
+          N = lam • cross (edgeVec P (M.σ.symm d)) (edgeVec P d) := by
+        simpa [N, reverseFaceBetween] using hnormal
+      rw [hN]
+      rw [smul_smul]
+      rw [inv_mul_cancel₀ hlam_ne, one_smul]
+    have hcross :
+        cross (edgeVec P d) (edgeVec P (M.σ.symm d)) = -(lam⁻¹) • N := by
+      rw [cross_antisymm, hprev, neg_smul]
+    have htail_symm : M.tail (M.σ.symm d) = M.tail d := by
+      rw [← M.tail_sigma (M.σ.symm d), Equiv.apply_symm_apply]
+    have hcross' :
+        cross (P.pos (M.head d) - P.pos (M.tail d))
+            (P.pos (M.head (M.σ.symm d)) - P.pos (M.tail d)) =
+          -(lam⁻¹) • N := by
+      simpa [edgeVec, htail_symm] using hcross
+    rw [hcross', real_inner_smul_left, real_inner_smul_left]
+    field_simp [hlam_ne, hnorm_ne]
+  · intro w
+    have hs := face_support_from_dart_tail P d w
+    rw [real_inner_smul_left]
+    have hnonneg : 0 ≤ (‖N‖)⁻¹ := inv_nonneg.mpr (norm_nonneg N)
+    nlinarith
+  · intro w
+    constructor
+    · intro hz
+      have hNzero :
+          inner ℝ N (P.pos w - P.pos (M.tail d)) = 0 := by
+        rw [real_inner_smul_left] at hz
+        exact (mul_eq_zero.mp hz).resolve_left (ne_of_gt (inv_pos.mpr hnorm_pos))
+      by_cases hgoal :
+          w = M.tail d ∨ w = M.head d ∨ w = M.head (M.σ.symm d)
+      · exact hgoal
+      · exfalso
+        push_neg at hgoal
+        have hnotFace : ∀ k, w ≠ P.faceVertex (M.dartFace d) k := by
+          intro k hw
+          have hcases :=
+            faceVertex_eq_tail_or_head_or_tail_phi2_of_dartFace_eq P (e := d) rfl k
+          rw [← hw] at hcases
+          rcases hcases with htail | hhead | hphi2
+          · exact hgoal.1 htail
+          · exact hgoal.2.1 hhead
+          · have htail_phi2 := tail_phi_phi_eq_head_sigma_symm_of_triangular_euclidean P d
+            exact hgoal.2.2 (hphi2.trans htail_phi2)
+        have hstrict0 := P.face_support_strict (M.dartFace d) w hnotFace
+        have htail_plane := face_plane_dart P d
+        have hstrict :
+            inner ℝ N (P.pos w - P.pos (M.tail d)) < 0 := by
+          have hrewrite :
+              inner ℝ N (P.pos w - P.pos (M.tail d)) =
+                inner ℝ N (P.pos w - P.face_point (M.dartFace d)) -
+                  inner ℝ N (P.pos (M.tail d) - P.face_point (M.dartFace d)) := by
+            calc
+              inner ℝ N (P.pos w - P.pos (M.tail d))
+                  = inner ℝ N
+                      ((P.pos w - P.face_point (M.dartFace d)) -
+                        (P.pos (M.tail d) - P.face_point (M.dartFace d))) := by
+                        congr 1
+                        module
+              _ = inner ℝ N (P.pos w - P.face_point (M.dartFace d)) -
+                    inner ℝ N (P.pos (M.tail d) - P.face_point (M.dartFace d)) := by
+                    rw [inner_sub_right]
+          rw [hrewrite, htail_plane, sub_zero]
+          exact hstrict0
+        nlinarith
+    · rintro (rfl | rfl | rfl)
+      · simp
+      · rw [real_inner_smul_left, face_plane_head_sub_tail P d, mul_zero]
+      · rw [real_inner_smul_left, face_plane_head_sigma_symm_sub_tail P d, mul_zero]
+
 /--
 Local vertex-link geometry in the outward-normal orientation, i.e. the reverse
 of the map's `σ` order at the vertex.  The determinant and hemisphere fields of
@@ -451,6 +1078,62 @@ structure VertexLinkGeometry (P : TriangulatedEuclideanPolyhedron M) (v : M.Vert
   nonincident :
     ∀ i j : Fin (n + 1), j ≠ i → j ≠ i + 1 →
       ¬(nbr j = v ∨ nbr j = nbr i ∨ nbr j = nbr (i + 1))
+
+noncomputable def vertexLinkGeometryOfEuclidean
+    (P : TriangulatedEuclideanPolyhedron M)
+    (hfaith : RotationFaithful P) (hsimple : M.IsSimpleGraph)
+    (v : M.Vertex) (hdeg : 3 ≤ vDeg P v) :
+    VertexLinkGeometry P v := by
+  classical
+  refine
+    { n := starN P v
+      hn := starN_ge_two P v hdeg
+      nbr := reverseLinkNbr P v hdeg
+      nbr_is_sigma := ?_
+      oriented := ?_
+      nbr_apex_ne := reverseLinkNbr_apex_ne P v hdeg
+      nonincident := reverseLink_nonincident_of_simple P hsimple v hdeg }
+  · refine ⟨hdeg, rfl, ?_⟩
+    intro i
+    rfl
+  · intro i
+    let hex := exists_fin_not_incident_edge (starN_ge_two P v hdeg) i
+    let j : Fin (starN P v + 1) := Classical.choose hex
+    have hji : j ≠ i := (Classical.choose_spec hex).1
+    have hjnext : j ≠ i + 1 := (Classical.choose_spec hex).2
+    let d := reverseLinkDart P v hdeg i
+    let e := reverseLinkDart P v hdeg j
+    have he_tail : M.tail e = M.tail d := by
+      simp [d, e, reverseLinkDart_tail P v hdeg j, reverseLinkDart_tail P v hdeg i]
+    have hnonincident :=
+      reverseLink_nonincident_of_simple P hsimple v hdeg i j hji hjnext
+    have hoff : ∀ k, M.head e ≠ P.faceVertex (M.dartFace d) k := by
+      intro k hk
+      have hcases :=
+        faceVertex_eq_tail_or_head_or_tail_phi2_of_dartFace_eq P (e := d) rfl k
+      apply hnonincident
+      rcases hcases with htail | hhead | hphi2
+      · left
+        change M.head e = v
+        calc
+          M.head e = P.faceVertex (M.dartFace d) k := hk
+          _ = M.tail d := htail
+          _ = v := by simpa [d] using reverseLinkDart_tail P v hdeg i
+      · right; left
+        change M.head e = M.head d
+        rw [hk, hhead]
+      · right; right
+        change M.head e = reverseLinkNbr P v hdeg (i + 1)
+        calc
+          M.head e = P.faceVertex (M.dartFace d) k := hk
+          _ = M.tail (M.φ (M.φ d)) := hphi2
+          _ = M.head (M.σ.symm d) :=
+              tail_phi_phi_eq_head_sigma_symm_of_triangular_euclidean P d
+          _ = reverseLinkNbr P v hdeg (i + 1) := by
+              simpa [d] using (reverseLinkNbr_add_one P v hdeg i).symm
+    have hsupp := orientedTriangleSupport_of_rotationFaithful P hfaith d e he_tail hoff
+    simpa [d, reverseLinkNbr, reverseLinkDart_tail P v hdeg i,
+      reverseLinkDart_add_one P v hdeg i] using hsupp
 
 namespace VertexLinkGeometry
 
@@ -567,9 +1250,11 @@ def toVertexStar : VertexStar where
 end VertexLinkGeometry
 
 /-- Public assembly name for the Euclidean vertex star bridge. -/
-def vertexStarOfEuclidean (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
-    (LG : VertexLinkGeometry P v) : VertexStar :=
-  LG.toVertexStar
+noncomputable def vertexStarOfEuclidean
+    (P : TriangulatedEuclideanPolyhedron M)
+    (hfaith : RotationFaithful P) (hsimple : M.IsSimpleGraph)
+    (v : M.Vertex) (hdeg : 3 ≤ vDeg P v) : VertexStar :=
+  (vertexLinkGeometryOfEuclidean P hfaith hsimple v hdeg).toVertexStar
 
 /-! ## Part 3: tetrahedron diagnostics -/
 
@@ -935,44 +1620,16 @@ theorem tetraRevNbr_reverse_incident (v : tetraMap.Vertex) (i : Fin 3) :
 
 /-- The tetrahedron vertex-link geometry, in the outward-normal (reverse-σ) order. -/
 def tetraVertexLinkGeometry (v : tetraMap.Vertex) :
-    VertexLinkGeometry tetraEuclideanPolyhedron v := by
-  let d : Fin 12 := Quotient.out v
-  have hv : tetraMap.tail d = v := Quotient.out_eq v
-  refine
-    { n := 2
-      hn := le_rfl
-      nbr := fun i => tetraRevNbr d i
-      nbr_is_sigma := ?_
-      oriented := ?_
-      nbr_apex_ne := ?_
-      nonincident := ?_ }
-  · refine ⟨tetra_vDeg_ge_three v, ?_, ?_⟩
-    · rw [starN, tetra_vDeg]
-    · intro i
-      exact tetraRevNbr_reverse_incident v i
-  · intro i
-    rw [← hv]
-    exact tetraOrientedSupportDart d i
-  · intro i h
-    rw [← hv] at h
-    have hnd := tetraEuclideanPolyhedron.edge_nondegenerate (tetraSigmaDart d (fin3Rev i))
-    exact hnd (by
-      change tetraEuclideanPolyhedron.pos (tetraMap.tail (tetraSigmaDart d (fin3Rev i))) =
-        tetraEuclideanPolyhedron.pos (tetraMap.head (tetraSigmaDart d (fin3Rev i)))
-      rw [tetraSigmaDart_tail_eq d i]
-      exact h.symm)
-  · intro i j hji hjnext hbad
-    rcases hbad with htail | heq | hnext
-    · have htail' : tetraRevNbr d j = tetraMap.tail d := by
-        rw [hv]
-        exact htail
-      exact tetraRevNbr_ne_tail d j htail'
-    · exact hji ((tetraRevNbr_injective d heq))
-    · exact hjnext ((tetraRevNbr_injective d hnext))
+    VertexLinkGeometry tetraEuclideanPolyhedron v :=
+  vertexLinkGeometryOfEuclidean tetraEuclideanPolyhedron tetra_rotationFaithful
+    ProofsInTheBook.Ch13ComponentClose.tetraMap_isSimpleGraph
+    v (tetra_vDeg_ge_three v)
 
 /-- The concrete tetrahedron vertex star obtained from Euclidean coordinates. -/
 def tetraVertexStar (v : tetraMap.Vertex) : VertexStar :=
-  vertexStarOfEuclidean tetraEuclideanPolyhedron v (tetraVertexLinkGeometry v)
+  vertexStarOfEuclidean tetraEuclideanPolyhedron tetra_rotationFaithful
+    ProofsInTheBook.Ch13ComponentClose.tetraMap_isSimpleGraph
+    v (tetra_vDeg_ge_three v)
 
 /-!
 ### General residual for the next geometry round
@@ -989,11 +1646,3 @@ It must prove the strict exposed-vertex open hemisphere and the oriented
 -/
 
 end ProofsInTheBook.Ch13EuclLink
-
-#print axioms ProofsInTheBook.Ch13EuclLink.vertexStarOfEuclidean
-#print axioms ProofsInTheBook.Ch13EuclLink.incidentDartOfStarIndex_reverseStarIndexOfDart
-#print axioms ProofsInTheBook.Ch13EuclLink.incidentDartOfStarIndex_reverseStarIndexOfDart_add_one
-#print axioms ProofsInTheBook.Ch13EuclLink.incidentDartOfStarIndex_reverseStarIndexOfDart_sub_one
-#print axioms ProofsInTheBook.Ch13EuclLink.tetra_vDeg
-#print axioms ProofsInTheBook.Ch13EuclLink.tetraVertexLinkGeometry
-#print axioms ProofsInTheBook.Ch13EuclLink.tetraVertexStar

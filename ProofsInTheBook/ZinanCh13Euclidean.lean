@@ -1,5 +1,6 @@
 import ProofsInTheBook.Ch13Realization
 import ProofsInTheBook.Ch13ComponentClose
+import ProofsInTheBook.SphericalRotation
 import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Geometry.Euclidean.Angle.Unoriented.Basic
 import Mathlib.LinearAlgebra.AffineSpace.Independent
@@ -19,6 +20,7 @@ noncomputable section
 open scoped Classical
 open ProofsInTheBook.PlanarMap ProofsInTheBook.PlanarMap.CombMap
 open ProofsInTheBook.Ch13MarkedSphere
+open ProofsInTheBook.SphericalRotation
 
 namespace ProofsInTheBook.Ch13Euclidean
 
@@ -81,6 +83,106 @@ structure TriangulatedEuclideanPolyhedron (M : CombMap D) where
     (∀ i, v ≠ faceVertex f i) →
       inner ℝ (outward_normal f) (pos v - face_point f) < 0
 
+/-- The Euclidean edge vector carried by an oriented dart. -/
+def edgeVec {M : CombMap D} (P : TriangulatedEuclideanPolyhedron M) (d : D) : E3 :=
+  P.pos (M.head d) - P.pos (M.tail d)
+
+/-- The supporting face used for the reverse-`σ` vertex-link side ending at `d`. -/
+def reverseFaceBetween (M : CombMap D) (d : D) : M.Face :=
+  M.dartFace d
+
+/--
+The stored map rotation is faithful to the outward orientation used by the
+existing Chapter 13 vertex-link convention.
+
+The current link builder reads neighbours in reverse `σ` order.  Thus the face
+of `d` is oriented by the two outgoing edge vectors
+`edgeVec (σ⁻¹ d), edgeVec d`, and the outward normal is a positive multiple of
+that reversed cross product.
+-/
+structure RotationFaithful {M : CombMap D}
+    (P : TriangulatedEuclideanPolyhedron M) : Prop where
+  outward_normal_eq_pos_smul_reverse_cross :
+    ∀ d : D,
+      ∃ lam : ℝ, 0 < lam ∧
+        P.outward_normal (reverseFaceBetween M d) =
+          lam • cross (edgeVec P (M.σ.symm d)) (edgeVec P d)
+
+private theorem faceDart_phi_ne_self {M : CombMap D}
+    (P : TriangulatedEuclideanPolyhedron M) (f : M.Face) :
+    M.φ (P.faceDart f) ≠ P.faceDart f := by
+  intro h
+  let p : Fin 3 → E3 :=
+    ![P.pos (M.tail (P.faceDart f)),
+      P.pos (M.tail (M.φ (P.faceDart f))),
+      P.pos (M.tail (M.φ (M.φ (P.faceDart f))))]
+  have hinj : Function.Injective p := (P.face_nondegenerate f).injective
+  have hpts : p 1 = p 0 := by
+    simp [p, h]
+  have h10 : (1 : Fin 3) = 0 := hinj hpts
+  norm_num at h10
+
+/-- A dart on a triangular Euclidean face is one of the three `φ`-successive
+darts from the stored representative of that face. -/
+theorem dart_eq_faceDart_or_phi_or_phi2_of_dartFace_eq {M : CombMap D}
+    (P : TriangulatedEuclideanPolyhedron M) {f : M.Face} {d : D}
+    (hd : M.dartFace d = f) :
+    d = P.faceDart f ∨
+      d = M.φ (P.faceDart f) ∨
+      d = M.φ (M.φ (P.faceDart f)) := by
+  let fd := P.faceDart f
+  have hφne : M.φ fd ≠ fd := by
+    simpa [fd] using faceDart_phi_ne_self P f
+  have hlen : M.faceLen f = 3 := by
+    simpa [CombMap.faceLen] using P.every_face_triangle f
+  have hcard : (M.φ.cycleOf fd).support.card = 3 := by
+    rw [← faceLen_dartFace_eq_card_support_cycleOf M hφne]
+    simpa [fd, P.faceDart_face f] using hlen
+  have hsame : M.φ.SameCycle fd d := by
+    have hq : M.dartFace d = M.dartFace fd := by
+      rw [hd, P.faceDart_face f]
+    exact (Quotient.exact hq).symm
+  have hsupp : fd ∈ M.φ.support := Equiv.Perm.mem_support.mpr hφne
+  obtain ⟨i, hi, hpow⟩ := hsame.exists_pow_eq_of_mem_support hsupp
+  rw [hcard] at hi
+  interval_cases i
+  · left
+    simpa [fd] using hpow.symm
+  · right
+    left
+    simpa [fd] using hpow.symm
+  · right
+    right
+    simpa [fd, pow_succ] using hpow.symm
+
+/-- Every dart tail is one of the three stored vertices of its dart face. -/
+theorem tail_mem_faceVertex {M : CombMap D}
+    (P : TriangulatedEuclideanPolyhedron M) (d : D) :
+    ∃ k : Fin 3, M.tail d = P.faceVertex (M.dartFace d) k := by
+  rcases dart_eq_faceDart_or_phi_or_phi2_of_dartFace_eq
+      P (f := M.dartFace d) (d := d) rfl with h | h | h
+  · refine ⟨0, ?_⟩
+    rw [h]
+    have hv := congrFun (P.face_vertices_match (M.dartFace d)) 0
+    simpa [P.faceDart_face (M.dartFace d)] using hv.symm
+  · refine ⟨1, ?_⟩
+    rw [h]
+    have hv := congrFun (P.face_vertices_match (M.dartFace d)) 1
+    simpa [P.faceDart_face (M.dartFace d)] using hv.symm
+  · refine ⟨2, ?_⟩
+    rw [h]
+    have hv := congrFun (P.face_vertices_match (M.dartFace d)) 2
+    simpa [P.faceDart_face (M.dartFace d)] using hv.symm
+
+/-- The selected face plane contains the tail of every dart on that face. -/
+theorem face_plane_dart {M : CombMap D}
+    (P : TriangulatedEuclideanPolyhedron M) (d : D) :
+    inner ℝ (P.outward_normal (M.dartFace d))
+      (P.pos (M.tail d) - P.face_point (M.dartFace d)) = 0 := by
+  obtain ⟨k, hk⟩ := tail_mem_faceVertex P d
+  rw [hk]
+  exact P.face_plane (M.dartFace d) k
+
 /-! ## The regular tetrahedron witness -/
 
 /-- The first tetrahedron vertex. -/
@@ -134,6 +236,13 @@ def tetraPos (v : tetraMap.Vertex) : E3 :=
       | 1 => 7 | 7 => 3 | 3 => 1
       | 2 => 11 | 11 => 6 | 6 => 2
       | 4 => 8 | 8 => 10 | _ => 4 := by
+  fin_cases d <;> decide
+
+@[simp] private theorem tetraSigma_symm_apply (d : Fin 12) :
+    tetraSigma.symm d =
+      match d with
+      | 0 => 2 | 1 => 0 | 2 => 1 | 3 => 4 | 4 => 5 | 5 => 3
+      | 6 => 8 | 7 => 6 | 8 => 7 | 9 => 10 | 10 => 11 | _ => 9 := by
   fin_cases d <;> decide
 
 /-- A canonical dart representative for each tetrahedron face. -/
@@ -343,6 +452,22 @@ def tetraEuclideanPolyhedron : TriangulatedEuclideanPolyhedron tetraMap where
   face_supporting_halfspace := tetra_supporting_halfspace
   face_support_strict := tetra_face_support_strict
 
+-- The regular tetrahedron satisfies the reverse-`σ` rotation-faithfulness convention.
+set_option maxHeartbeats 2000000 in
+theorem tetra_rotationFaithful : RotationFaithful tetraEuclideanPolyhedron where
+  outward_normal_eq_pos_smul_reverse_cross := by
+    intro d
+    refine ⟨(1 : ℝ) / 4, by norm_num, ?_⟩
+    fin_cases d <;>
+      apply ext_coord <;>
+      simp [reverseFaceBetween, edgeVec, cross, tetraEuclideanPolyhedron,
+        tetraOutwardNormal, tetraFaceDart, tetraFaceRepDart, tetraMap, tetraAlpha_apply,
+        tetraSigma_symm_apply, tetraPos, tetraDartPoint, CombMap.tail, CombMap.head, CombMap.dartFace,
+        tetraPoint₀, tetraPoint₁, tetraPoint₂, tetraPoint₃,
+        Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.cons_val_two, Matrix.head_cons,
+        Matrix.tail_cons] <;>
+      norm_num
+
 /-! ## Dihedral angles -/
 
 /-- The outward normal on the face to the left of a dart. -/
@@ -510,9 +635,5 @@ theorem tetra_dihedralCosAtDart (d : Fin 12) :
 theorem tetra_cos_dihedralAngleAtDart (d : Fin 12) :
     Real.cos (dihedralAngleAtDart tetraEuclideanPolyhedron d) = (1 : ℝ) / 3 := by
   rw [cos_dihedralAngleAtDart, tetra_dihedralCosAtDart]
-
-#print axioms tetraEuclideanPolyhedron
-#print axioms tetra_dihedralCosAtDart
-#print axioms tetra_cos_dihedralAngleAtDart
 
 end ProofsInTheBook.Ch13Euclidean

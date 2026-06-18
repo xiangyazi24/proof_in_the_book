@@ -1,61 +1,93 @@
-# Ch13 orientation audit: what exactly is irreducible?
+# Ch13 orientation audit: determined sign vs irreducible orientation agreement
 
 ## Executive answer
 
-The mirror argument is airtight only for hypotheses that are invariant under orientation reversal.  It does not mean that `RotationFaithful` is independent of the full realized object once that object includes actual coordinates in the fixed oriented space `EuclideanSpace ℝ (Fin 3)`, a concrete outward-normal field, and a concrete permutation `M.σ`.
+The fresh-angle challenge is valid: the strongest possible statement is **not** that `RotationFaithful` is independent of the full realized object.  For a fixed realization in the fixed oriented ambient space `EuclideanSpace ℝ (Fin 3)`, with fixed coordinates, fixed outward normals, and fixed `M.σ`, the sign in `RotationFaithful` is determined.
 
-For a fixed realization `P : TriangulatedEuclideanPolyhedron M`, the truth of `RotationFaithful P` is mathematically determined.  It is the concrete check that the stored predecessor `M.σ.symm d`, the current dart `d`, and the outward normal of `M.dartFace d` have the chosen handedness.
+The correct irreducibility statement is narrower and sharper:
 
-The sharp statement is therefore:
+> `RotationFaithful` is determined by the oriented data `(P.pos, P.outward_normal, M.σ)`, but it is not derivable from the mirror-invariant/unoriented convex support data.  The irreducible input for an externally supplied combinatorial map is the agreement that the supplied `M.σ` is the geometric angular rotation, rather than the reverse angular rotation.
 
-> `RotationFaithful` is determined by `(P.pos, P.outward_normal, M.σ)`, but it is not derivable from the mirror-invariant convex/support data.  The irreducible datum is the agreement that the supplied `M.σ` is the geometric angular rotation rather than its reverse.
+So there is no loophole in the mirror argument when it is used against derivability from **unoriented invariants**.  There is a loophole only if the claim is overstated as “independent of the object.”  It is not independent of the full object.
 
-So the sloppy statement “`RotationFaithful` is independent of the object” is false.  The precise statement “`RotationFaithful` is independent of the unoriented convex data” is true.
+## 1. For fixed `(coords + normal + σ)`, `RotationFaithful` is determined
 
-## 1. Fixed coordinates, fixed normals, fixed `σ`: the sign is determined
-
-For one dart `d`, write
+For one dart `d`, abbreviate
 
 ```text
-u = edgeVec P (M.σ.symm d)
-v = edgeVec P d
-n = P.outward_normal (M.dartFace d)
+u := edgeVec P (M.σ.symm d)
+v := edgeVec P d
+n := P.outward_normal (M.dartFace d)
 ```
 
-The current repo convention is
+The repo convention is
 
 ```text
-there exists λ > 0 such that n = λ • cross u v.
+∃ λ : ℝ, 0 < λ ∧ n = λ • cross u v.
 ```
 
-Under the usual triangular face nondegeneracy facts, `cross u v` is nonzero.  The face-plane facts say that both `n` and `cross u v` are normal to the same face plane, so they lie on the same one-dimensional line.  Thus the only remaining datum is the sign of the scalar.
+Under the existing triangular-face nondegeneracy hypotheses, `cross u v ≠ 0`.  The face-plane facts put both `n` and `cross u v` in the normal line to the same triangular face.  Thus there is a scalar `μ` with
 
-That sign is determined by the dot product
+```text
+n = μ • cross u v.
+```
+
+Then the sign of `μ` is read off from the oriented dot product
 
 ```text
 inner n (cross u v)
 ```
 
-or equivalently by the scalar triple product `det3 u v n`.  If `n = λ • cross u v`, then
+because
 
 ```text
-inner n (cross u v) = λ * ‖cross u v‖².
+inner n (cross u v) = μ * ‖cross u v‖².
 ```
 
-Since the squared norm is positive, `λ > 0` is equivalent to positivity of that dot product.
+Since `‖cross u v‖² > 0`, we have
 
-So for a fixed `P` and fixed `M.σ`, `RotationFaithful P` is not mysterious.  It is a concrete orientation check.  In Lean, for arbitrary real coordinates this is not automatically decidable by typeclass search, but it is a determined real proposition.  For concrete rational-coordinate witnesses like the tetrahedron, it can often be closed by finite case splits and arithmetic normalization, as the existing tetra proofs do.
+```text
+μ > 0  ↔  inner n (cross u v) > 0.
+```
 
-## 2. What the mirror argument proves
+Equivalently, with the repo’s `det3` convention, this is a scalar-triple-product sign check.  Therefore for a fixed `P` and fixed `M.σ`, the winding sign is a concrete proposition determined by the data.  In Lean, a fully general real-coordinate sign may not be computationally decidable without extra numeric certificates, but under classical logic it is a definite proposition; for concrete rational-coordinate examples, it can be proved by case splits and arithmetic normalization.
 
-Let `R` be an orientation-reversing linear isometry of `E3`, such as reflection in one coordinate.  Define a mirrored realization by transporting both coordinates and normals:
+A useful local lemma to add later is the sign equivalence:
+
+```lean
+-- Schematic statement only; names will depend on the final local API.
+theorem rotationFaithfulAt_iff_cross_dot_pos
+    (P : TriangulatedEuclideanPolyhedron M) (d : D)
+    (hcross : cross (edgeVec P (M.σ.symm d)) (edgeVec P d) ≠ 0)
+    (hline : ∃ μ : ℝ,
+      P.outward_normal (M.dartFace d) =
+        μ • cross (edgeVec P (M.σ.symm d)) (edgeVec P d)) :
+    (∃ λ : ℝ, 0 < λ ∧
+      P.outward_normal (M.dartFace d) =
+        λ • cross (edgeVec P (M.σ.symm d)) (edgeVec P d))
+    ↔
+    0 < inner ℝ (P.outward_normal (M.dartFace d))
+      (cross (edgeVec P (M.σ.symm d)) (edgeVec P d))
+```
+
+This lemma is deterministic algebra.  It is not where the irreducible orientation content lives.
+
+## 2. What the orientation-reversal argument really proves
+
+Let `R` be an orientation-reversing linear isometry of `ℝ³`, for example reflection in one coordinate.  Transport a realization by
 
 ```text
 pos' v = R (pos v)
-outward_normal' f = R (outward_normal f)
+outward_normal' f = R (outward_normal f).
 ```
 
-All inner products are preserved, so the mirror preserves the support and strict-support facts:
+Every inner product is preserved:
+
+```text
+inner (R x) (R y) = inner x y.
+```
+
+Therefore all support and strict-support facts that only mention inner products are preserved:
 
 ```text
 face_supporting_halfspace
@@ -65,67 +97,74 @@ face_nondegenerate
 positive cone inequalities such as 0 < inner a_v w_d
 ```
 
-But an orientation-reversing isometry changes the cross product sign:
+But the cross product changes sign under an orientation-reversing isometry:
 
 ```text
 cross (R u) (R v) = - R (cross u v).
 ```
 
-Therefore, if the original realization satisfies
+Thus if the original oriented object satisfies
 
 ```text
-n = λ cross u v with λ > 0,
+n = λ • cross u v,   λ > 0,
 ```
 
-then the mirrored realization satisfies
+then the transported object satisfies
 
 ```text
-R n = -λ cross (R u) (R v).
+R n = -λ • cross (R u) (R v).
 ```
 
-The same stored `M.σ` now gives the negative scalar.  The positive-λ form fails, assuming the face is nondegenerate.
+For the same stored `M.σ`, the scalar has the opposite sign.  Assuming nondegeneracy, the positive-λ `RotationFaithful` relation fails in the orientation-reversed realization.
 
-This proves exactly that no theorem using only mirror-invariant hypotheses can imply `RotationFaithful` for a supplied `M.σ`.  It does not prove that `RotationFaithful` is unknowable once the oriented coordinates and normals are part of the object.
+This proves:
 
-## 3. The outward normal field does not remove the orientation issue
+> No theorem whose hypotheses are all invariant under orientation reversal can imply `RotationFaithful` for an externally supplied `M.σ`.
 
-The current Euclidean structure stores an outward normal field.  This field chooses outside versus inside, but not clockwise versus counterclockwise around the face.
+It does **not** prove:
 
-The support condition says
+> `RotationFaithful` is unknowable or independent once the full oriented coordinates and normal field are included.
+
+The orientation-reversed realization is a different point configuration.  It is a counterexample to derivability from invariant hypotheses, not a proof that the fixed object has no determined sign.
+
+## 3. Role of the stored outward normal
+
+The stored outward normal chooses **outside versus inside** of a supporting plane.  That choice is still expressible by inner products:
 
 ```text
 inner (outward_normal f) (pos v - face_point f) ≤ 0
 ```
 
-and strict support says this is strict for off-face vertices.  These statements use only inner products.  They are preserved by mirror reflection if the normals are reflected too.
+and strict support makes this strict for off-face vertices.  These inequalities survive orientation reversal when normals are transported with the coordinates.
 
-Thus the stored outward normal lets us formulate the sign check concretely:
+What they do not determine is whether the ordered pair
 
 ```text
-0 < inner (outward_normal (dartFace d))
-    (cross (edgeVec (σ⁻¹ d)) (edgeVec d)).
+(edgeVec P (M.σ.symm d), edgeVec P d)
 ```
 
-But the support inequalities themselves do not force this sign.  They do not know whether the supplied cyclic order `σ` is the geometric order or the reverse geometric order.
+has its cross product pointing along the outward normal or against it.  That is exactly the missing agreement between the combinatorial rotation and the oriented embedding.
 
-## 4. Can normals be defined from coordinates?
+So the outward normal field reduces `RotationFaithful` to a sign check, but it does not make the sign follow from the unoriented support facts.
 
-Yes.  If a face is supplied as an ordered triple `p₀,p₁,p₂` and we have an interior point `c`, define
+## 4. Defining outward normals from coordinates
+
+Yes, the normal field can be defined from coordinates if the face is given as an ordered triangle and an interior point is available.
+
+Given face vertices `p₀,p₁,p₂`, set
 
 ```text
 rawNormal = cross (p₁ - p₀) (p₂ - p₀).
 ```
 
-Then choose the sign so that the interior point lies in the negative halfspace.  In prose:
+Given an interior point `c`, choose the sign by requiring the interior point to lie in the negative halfspace:
 
 ```text
-if inner rawNormal (c - p₀) < 0, use rawNormal;
-otherwise use -rawNormal.
+outwardNormal =
+  if inner rawNormal (c - p₀) < 0 then rawNormal else -rawNormal.
 ```
 
-This removes `outward_normal` as an independent field.  It does not remove the orientation problem.  The ordered face triple is itself orientation-sensitive, and an independently supplied `M.σ` still has to match the geometric angular order determined by the coordinates.
-
-After defining normals from coordinates, the remaining orientation statement is still one of these, depending on convention:
+This removes `outward_normal` as an independent stored vector field.  It does not remove the orientation issue, because the ordered triangle and the supplied vertex rotation still have to be compatible.  After normals are defined from coordinates, the remaining field is still one of the following, depending on the convention chosen for the angular order:
 
 ```text
 M.σ = globalAngularPermOutward P
@@ -137,25 +176,35 @@ or
 M.σ.symm = globalAngularPermPositive P.
 ```
 
-If `σ` is also defined from coordinates, then the orientation input disappears.  That is exactly the construct-`σ` route.
+If `σ` is constructed from the coordinates, then this field becomes true by definition.  That is the construct-`σ` route.
 
-## 5. Is the remaining datum only a Boolean?
+## 5. Is the residual orientation only one Boolean?
 
-After the unoriented embedded rotation system has already been proved correct up to global reversal, yes: on a connected orientable sphere embedding the remaining choice is essentially the global choice between `σ_geo` and `σ_geo.symm`.
+Only after a prior theorem has shown that the supplied map is already the correct embedded rotation system up to global reversal.
 
-But the current `M : CombMap D` stores an arbitrary permutation `σ`.  Before reducing the residue to one Boolean, one must know that the supplied vertex cycles are the correct geometric cycles at every vertex, merely read in one of the two directions.  That agreement is not part of the pure convex support fields.
-
-So the Boolean description is valid only after a substantial “unoriented agreement” theorem has already established that the supplied map is the right embedded map up to reversal.
-
-## 6. Can the Boolean be removed by defining `σ` from geometry?
-
-Yes.  Define the rotation by geometry:
+For a connected orientable sphere embedding, once the unoriented incidence and local cyclic orders are known up to reversal, the remaining coherent choice is essentially one global bit:
 
 ```text
-σ := globalAngularPermOutward P.
+σ_geo  versus  σ_geo.symm.
 ```
 
-Then the orientation agreement is true by definition.  The remaining work is no longer the winding sign; it is proving that the constructed map has the expected faces and sphere-map properties:
+But a general stored `M.σ` is an arbitrary permutation.  It could have the wrong local cyclic order at a vertex, not just the wrong global orientation.  Reducing to one Boolean therefore requires a nontrivial unoriented-agreement theorem first.
+
+So the hierarchy is:
+
+1. Arbitrary supplied `σ`: orientation agreement is a full equality `M.σ = σ_geo` or inverse variant.
+2. Supplied rotation known correct up to global reversal: remaining choice is one Boolean.
+3. `σ` defined as `σ_geo`: no orientation input remains.
+
+## 6. The construct-`σ` endpoint
+
+If the map is constructed from geometry by
+
+```text
+σ := globalAngularPermOutward P,
+```
+
+then the orientation field disappears.  The remaining obligations are structural:
 
 ```text
 φ = σ * α matches the triangular face list
@@ -164,54 +213,57 @@ IsSimpleGraph
 IsSphereMap
 ```
 
-This is the construct-`σ` route.  It is the only route that truly eliminates the orientation input rather than checking or assuming it.
+That is the only way to eliminate orientation input entirely.  Every route that keeps an externally supplied `M.σ` must carry or prove some agreement statement saying that this `σ` is the geometric angular rotation, not the reverse.
 
 ## 7. Answers to the questions
 
 ### Question 1
 
-The independence argument is airtight if stated as independence from mirror-invariant convex data.  There is no contradiction with the fact that `ℝ³` has a fixed standard orientation.  For a fixed coordinate realization with fixed normal field and fixed `σ`, the sign is determined by the scalar triple product.
+The independence is airtight when stated as independence from unoriented or mirror-invariant convex data.  There is no loophole there.
 
-So `RotationFaithful` is a deterministic property of the full oriented object.  It is not derivable from the unoriented support and strict-support hypotheses alone.
+But for a fixed oriented realization with fixed coordinates, fixed outward normals, and fixed `σ`, the sign is determined.  It is read off from
+
+```text
+inner (P.outward_normal (M.dartFace d))
+  (cross (edgeVec P (M.σ.symm d)) (edgeVec P d)).
+```
+
+Thus `RotationFaithful` is a concrete property of `(coords + normal + σ)`, not a separate unknowable structure.
 
 ### Question 2
 
-Yes, one can define `outward_normal` from coordinates, an ordered face, and an interior point.  That removes the normal field as separate data.  But the remaining content is exactly that the supplied `σ` is the correctly oriented rotation.  If `σ` is not constructed from coordinates, this remains an orientation agreement field.
+Yes, `outward_normal` can be defined from coordinates, an ordered face, and an interior point.  This removes one stored field.  It does not remove the need for the supplied `σ` to match the oriented embedding.
 
-If `σ` is constructed from coordinates, the field disappears, but the burden moves to proving that the constructed map agrees with the face list and is a sphere map.
+If the supplied `σ` is already known to be the geometric order up to reversal, the remaining choice is essentially a global Boolean.  If `σ` is constructed canonically from coordinates, even that Boolean disappears.
 
 ### Question 3
 
 The sharp true statement is:
 
-> `RotationFaithful` is determined by the oriented realization and the supplied combinatorial rotation.  It is not derivable from the unoriented convex data.  The irreducible input for an externally supplied map is the agreement that `M.σ` equals the outward geometric angular rotation, not the scalar equation itself.
+> `RotationFaithful` is determined by the oriented realization and the supplied combinatorial rotation.  It is not derivable from the unoriented convex data.  The irreducible input is the agreement that the supplied `M.σ` equals the outward geometric angular rotation, unless `σ` is constructed from the geometry.
 
-The best refactor is therefore to replace the large field
-
-```text
-RotationFaithful P
-```
-
-by the smaller and more honest orientation-agreement field
+Therefore, beyond construct-`σ`, the best reduction is not to keep the old large `RotationFaithful` field.  Replace it by the smaller and more honest field
 
 ```text
-M.σ = globalAngularPermOutward P
+hgeo : M.σ = globalAngularPermOutward P
 ```
 
-and then prove `RotationFaithful` from that equality plus deterministic cross/normal algebra.
-
-The non-vacuity guard remains the tetra theorem:
+with the convention fixed by the tetra non-vacuity theorem
 
 ```text
-tetraMap.σ = globalAngularPermOutward tetraEuclideanPolyhedron
+tetraMap.σ = globalAngularPermOutward tetraEuclideanPolyhedron.
 ```
 
-with the already-audited convention that `globalAngularPermOutward` is the outward-face-compatible angular successor.
+Then prove `RotationFaithful` from `hgeo` by deterministic cross/normal algebra.
 
 ## Bottom line
 
-Do not say “`RotationFaithful` is independent of the object.”  Say:
+Do not say:
 
-> For a fixed oriented realization and a fixed `σ`, `RotationFaithful` is determined and checkable.  But a supplied `σ` matching the oriented embedding is not forced by unoriented convexity.  Mirror reflection preserves the support data and flips exactly that match.
+> `RotationFaithful` is independent of the object.
 
-Therefore, beyond construct-`σ`, the orientation input can be reduced to a single clean agreement statement, but it cannot be eliminated for an externally supplied combinatorial rotation.
+Say:
+
+> For a fixed oriented object, `RotationFaithful` is determined and checkable.  What is not forced by the unoriented convex data is that an externally supplied `σ` is the oriented geometric rotation.  Mirror reflection preserves the support data and flips exactly that agreement.
+
+This is the architecture-relevant conclusion: the orientation input can be reduced to an equality with `σ_geo`, or to a global orientation bit after an up-to-reversal theorem, but it cannot be eliminated for an externally supplied `σ` without constructing `σ` from the coordinates.

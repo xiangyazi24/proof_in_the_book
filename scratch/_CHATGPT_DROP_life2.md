@@ -1,328 +1,383 @@
-# Ch13 §3.3 satisfiability audit for `hgeo`
+# Ch13 construct-`σ` and the ch35 `PlaneSimpleGraph → CombMap` bridge
 
-## Verdict
+## Executive answer
 
-`hgeo : M.σ = globalAngularPermOutward P` is satisfiable for the existing tetrahedron witness **if and only if** `globalAngularPermOutward` uses the same “outward face” convention as the current repo’s `RotationFaithful` theorem.
+Reusing ch35 helps, but it does **not** make Euler characteristic `2` free.
 
-For the current tetra data, the stored `tetraMap.σ` is the cycle order
-
-```lean
-0 ↦ 1 ↦ 2 ↦ 0
-```
-
-at the vertex carried by darts `0,1,2`.  With the **interior** cone axis `a_v`, this is the order for which
-
-```text
-det(a_v, edgeVec d, edgeVec (σ d)) < 0.
-```
-
-Equivalently, it is the order for which
+The current repo bridge
 
 ```lean
-outward_normal (dartFace (σ d))
-  = positive_scalar • cross (edgeVec d) (edgeVec (σ d))
+theorem PlaneSimpleGraph.toCombMap_isSphereMap
+    (P : PlaneSimpleGraph V D)
+    (hsphere : P.IsSphereMap)
+    (hincident : ∀ v : V, ∃ d : D, P.tail d = v) :
+    P.toCombMap.IsSphereMap
 ```
 
-or, in the repo’s existing reverse-predecessor form,
+is a **transport theorem**, not a theorem deriving sphere-ness from geometry or from the raw `PlaneSimpleGraph` fields.  It proves `P.toCombMap.Connected` from `P.connected`, then rewrites the `CombMap` Euler characteristic to `P.eulerChar`; the equality `P.eulerChar = 2` is exactly the input `hsphere`.
+
+So ch35 collapses some bookkeeping:
+
+* connectedness of the dart map from graph connectedness;
+* `V` quotient count from a vertex-incidence proof;
+* `E` from dart pairing;
+* `IsSimpleGraph` from `edge_darts` uniqueness;
+* transport from `PlaneSimpleGraph.eulerChar` to `CombMap.eulerChar`.
+
+But it does **not** prove the missing convex-polytope boundary Euler theorem.  The wall becomes:
 
 ```lean
-outward_normal (dartFace d)
-  = positive_scalar • cross (edgeVec (σ.symm d)) (edgeVec d)
+P.IsSphereMap  -- i.e. P.eulerChar = 2
 ```
 
-This is exactly the convention certified by the existing theorem
+rather than
 
 ```lean
-tetra_rotationFaithful : RotationFaithful tetraEuclideanPolyhedron
+P.toCombMap.IsSphereMap  -- Connected ∧ CombMap.eulerChar = 2
 ```
 
-which proves, for every tetra dart `d`,
+That is a useful reduction, not a full sidestep.
+
+## Exact repo facts
+
+`ProofsInTheBook/PlaneSimpleGraph.lean` defines:
 
 ```lean
-P.outward_normal (reverseFaceBetween tetraMap d)
-  = (1 / 4 : ℝ) • cross (edgeVec P (tetraMap.σ.symm d)) (edgeVec P d)
+structure PlaneSimpleGraph (V D : Type*) [Fintype V] [DecidableEq V]
+    [Fintype D] [DecidableEq D] where
+  G : SimpleGraph V
+  tail : D → V
+  head : D → V
+  α : Equiv.Perm D
+  σ : Equiv.Perm D
+  α_invol : α * α = 1
+  α_no_fixed : ∀ d, α d ≠ d
+  reverse_tail : ∀ d, tail (α d) = head d
+  reverse_head : ∀ d, head (α d) = tail d
+  dart_edge : ∀ d, G.Adj (tail d) (head d)
+  edge_darts : ∀ {u v : V}, G.Adj u v → ∃! d : D, tail d = u ∧ head d = v
+  σ_preserves_tail : ∀ d, tail (σ d) = tail d
+  σ_vertex_cycle : ∀ d e : D, tail d = tail e → σ.SameCycle d e
+  connected : G.Connected
 ```
 
-So: if `globalAngularPermOutward` is the angular successor in this outward-face-compatible direction, the tetra should satisfy the literal field
+Its own sphere predicate is just an Euler equation:
 
 ```lean
-hgeo_tetra : tetraMap.σ = globalAngularPermOutward tetraEuclideanPolyhedron
+def PlaneSimpleGraph.numVertices (M : PlaneSimpleGraph V D) : ℕ := Fintype.card V
+
+def PlaneSimpleGraph.numEdges (M : PlaneSimpleGraph V D) : ℕ := Fintype.card D / 2
+
+def PlaneSimpleGraph.numFaces (M : PlaneSimpleGraph V D) : ℕ := M.toCombMap.F
+
+def PlaneSimpleGraph.eulerChar (M : PlaneSimpleGraph V D) : ℤ :=
+  (M.numVertices : ℤ) - (M.numEdges : ℤ) + (M.numFaces : ℤ)
+
+def PlaneSimpleGraph.IsSphereMap (M : PlaneSimpleGraph V D) : Prop :=
+  M.eulerChar = 2
 ```
 
-If instead `globalAngularPermOutward` means the usual right-handed positive angular order around the **interior** axis, i.e. the successor with
-
-```text
-det(a_v, edgeVec d, edgeVec next) > 0,
-```
-
-then the tetra satisfies the inverse relation, not the literal one:
+The bridge file `ProofsInTheBook/PlaneSimpleGraphTriangulate.lean` proves the useful transports:
 
 ```lean
-tetraMap.σ.symm = globalAngularPermPositive tetraEuclideanPolyhedron
--- equivalently
-(tetraMap.σ = (globalAngularPermPositive tetraEuclideanPolyhedron).symm)
+theorem PlaneSimpleGraph.toCombMap_V_eq_card
+    (P : PlaneSimpleGraph V D)
+    (hincident : ∀ v : V, ∃ d : D, P.tail d = v) :
+    P.toCombMap.V = Fintype.card V
+
+theorem PlaneSimpleGraph.toCombMap_E_eq_numEdges
+    (P : PlaneSimpleGraph V D) :
+    P.toCombMap.E = P.numEdges
+
+theorem PlaneSimpleGraph.toCombMap_eulerChar_eq
+    (P : PlaneSimpleGraph V D)
+    (hincident : ∀ v : V, ∃ d : D, P.tail d = v) :
+    P.toCombMap.eulerChar = P.eulerChar
+
+theorem PlaneSimpleGraph.toCombMap_connected
+    (P : PlaneSimpleGraph V D) :
+    P.toCombMap.Connected
+
+theorem PlaneSimpleGraph.toCombMap_isSphereMap
+    (P : PlaneSimpleGraph V D)
+    (hsphere : P.IsSphereMap)
+    (hincident : ∀ v : V, ∃ d : D, P.tail d = v) :
+    P.toCombMap.IsSphereMap
+
+theorem PlaneSimpleGraph.toCombMap_isSimpleGraph
+    (P : PlaneSimpleGraph V D) :
+    P.toCombMap.IsSimpleGraph
 ```
 
-That convention distinction must be frozen before replacing `RotationFaithful` by `hgeo`.
-
-## Concrete tetra check at vertex `tetraPoint₀`
-
-The repo’s tetra coordinates are:
+The proof of `toCombMap_isSphereMap` is exactly:
 
 ```lean
-def tetraPoint₀ : E3 := !₂[(1 : ℝ), 1, 1]
-def tetraPoint₁ : E3 := !₂[(1 : ℝ), -1, -1]
-def tetraPoint₂ : E3 := !₂[(-1 : ℝ), 1, -1]
-def tetraPoint₃ : E3 := !₂[(-1 : ℝ), -1, 1]
+theorem toCombMap_isSphereMap (P : PlaneSimpleGraph V D)
+    (hsphere : P.IsSphereMap) (hincident : ∀ v : V, ∃ d : D, P.tail d = v) :
+    P.toCombMap.IsSphereMap := by
+  refine ⟨P.toCombMap_connected, ?_⟩
+  rw [P.toCombMap_eulerChar_eq hincident]
+  exact hsphere
 ```
 
-The dart-to-vertex assignment is constant on the stored `σ`-cycles:
+So the missing fact is visibly `hsphere`.
+
+## Does `PlaneSimpleGraph` beg the question?
+
+For the ch13 purpose, yes, if the goal is to avoid proving Euler characteristic `2`.
+
+The structure name says “plane,” but the fields do not include a topological embedding into `S²`, a Jordan curve certificate, or a theorem that faces are cells.  It stores a graph plus a rotation system and connectedness.  The actual planarity/sphere condition is the separate predicate:
 
 ```lean
-0, 1, 2     ↦ tetraPoint₀
-3, 4, 5     ↦ tetraPoint₁
-6, 7, 8     ↦ tetraPoint₂
-9, 10, 11   ↦ tetraPoint₃
+P.IsSphereMap : Prop := P.eulerChar = 2
 ```
 
-The edge involution begins:
+Therefore, exhibiting a convex polytope graph as a `PlaneSimpleGraph` gives a strong and useful rotation-system object, but it does not by itself produce `P.toCombMap.IsSphereMap`.  You still need either:
 
 ```lean
-α 0 = 3
-α 1 = 6
-α 2 = 9
+hsphere : P.IsSphereMap
 ```
 
-so the outgoing edge rays at `tetraPoint₀` are
+or enough face/count facts to prove it.
 
-```text
-w₀ = edgeVec 0 = tetraPoint₁ - tetraPoint₀ = ( 0, -2, -2)
-w₁ = edgeVec 1 = tetraPoint₂ - tetraPoint₀ = (-2,  0, -2)
-w₂ = edgeVec 2 = tetraPoint₃ - tetraPoint₀ = (-2, -2,  0)
-```
+## What ch35 really gives ch13
 
-The stored vertex rotation is, by `List.formPerm [0,1,2]`,
-
-```text
-σ 0 = 1,  σ 1 = 2,  σ 2 = 0,
-σ.symm 0 = 2,  σ.symm 1 = 0,  σ.symm 2 = 1.
-```
-
-A canonical interior cone axis is the positive sum of the outgoing rays:
-
-```text
-a₀ = w₀ + w₁ + w₂ = (-4,-4,-4),
-```
-
-or any positive scalar multiple of `(-1,-1,-1)`.  It is strictly inside the tangent cone because
-
-```text
-⟪a₀,w₀⟫ = 16,  ⟪a₀,w₁⟫ = 16,  ⟪a₀,w₂⟫ = 16.
-```
-
-More generally, if the Stiemke/Gordan construction returns
-
-```text
-a = β₀ w₀ + β₁ w₁ + β₂ w₂,   β₀, β₁, β₂ > 0,
-```
-
-then the cyclic signs are independent of the exact positive coefficients:
-
-```text
-det(a, w₀, w₁) = β₂ det(w₂,w₀,w₁) = -16 β₂ < 0
-det(a, w₁, w₂) = β₀ det(w₀,w₁,w₂) = -16 β₀ < 0
-det(a, w₂, w₀) = β₁ det(w₁,w₂,w₀) = -16 β₁ < 0.
-```
-
-Therefore the stored `σ` order `w₀ → w₁ → w₂ → w₀` is the **negative determinant** angular order around the interior axis.  The positive determinant order around the same interior axis is the reverse order:
-
-```text
-w₀ → w₂ → w₁ → w₀.
-```
-
-This is the whole satisfiability issue in one line:
-
-```text
-interior axis + det < 0  ==> stored tetra σ
-interior axis + det > 0  ==> stored tetra σ⁻¹
-```
-
-## Cross-product / outward-normal check
-
-The repo’s current `RotationFaithful` convention is not ambiguous.  At dart `0`, the predecessor in the stored cycle is `σ.symm 0 = 2`.  Compute:
-
-```text
-cross(w₂,w₀) = cross((-2,-2,0), (0,-2,-2)) = (4,-4,4)
-             = 4 · (1,-1,1)
-             = 4 · (-tetraPoint₂).
-```
-
-The face `dartFace 0` is the triangular face through `tetraPoint₀`, `tetraPoint₁`, and `tetraPoint₃`; the missing tetra vertex is `tetraPoint₂`, so the outward normal is `-tetraPoint₂ = (1,-1,1)`.  Thus
-
-```text
-outward_normal (dartFace 0) = (1/4) · cross(edgeVec (σ.symm 0), edgeVec 0).
-```
-
-Equivalently, using the successor dart `σ 0 = 1`,
-
-```text
-cross(w₀,w₁) = cross((0,-2,-2), (-2,0,-2)) = (4,4,-4)
-             = 4 · (1,1,-1)
-             = 4 · (-tetraPoint₃),
-```
-
-which is the outward normal of the face `dartFace 1`, the face through `tetraPoint₀`, `tetraPoint₂`, and `tetraPoint₁` whose missing vertex is `tetraPoint₃`.
-
-So the stored `σ` is exactly the successor that makes `cross(current,next)` point outward for the triangular face between the two rays.  That is the intended `globalAngularPermOutward` convention.
-
-## Exact satisfiable form of the field
-
-The safe definition is:
+For construct-`σ`, ch35 can replace a custom bridge layer by the following pattern:
 
 ```lean
-/-- Geometric angular successor with the repo's outward-face convention.
-For an interior cone axis `a_v`, this is the successor with negative determinant
-around `a_v`, equivalently positive determinant around `-a_v`. -/
-noncomputable def globalAngularPermOutward
-    {D : Type*} [Fintype D] [DecidableEq D]
-    {M : CombMap D} (P : TriangulatedEuclideanPolyhedron M) : Equiv.Perm D :=
-  -- per-vertex angular successor satisfying the outward-face convention
-  --   det3 (vertexConeAxis P v) (edgeVec P d) (edgeVec P next) < 0
-  -- or equivalently
-  --   0 < det3 (-vertexConeAxis P v) (edgeVec P d) (edgeVec P next)
-  -- for consecutive rays.
-  -- Implementation supplied by the Route-A angular-order layer.
-  by
-    classical
-    exact 1  -- placeholder in this note only; not intended as repo code
+import ProofsInTheBook.PlaneSimpleGraphTriangulate
+import ProofsInTheBook.ZinanCh13Euclidean
+
+noncomputable section
+
+open scoped Classical RealInnerProductSpace BigOperators
+open ProofsInTheBook.PlanarMap
+open ProofsInTheBook.PlanarMap.PlaneSimpleGraph
+
+namespace ProofsInTheBook.Ch13ConstructSigmaPlaneBridge
+
+variable {V D : Type*} [Fintype V] [DecidableEq V] [Fintype D] [DecidableEq D]
+
+/-- Once the geometric construction is packaged as a `PlaneSimpleGraph`, the
+existing ch35 bridge supplies the `CombMap` sphere proof, but only from the
+plane graph Euler certificate `hsphere`. -/
+theorem sphere_for_constructed_combMap
+    (P : PlaneSimpleGraph V D)
+    (hsphere : P.IsSphereMap)
+    (hincident : ∀ v : V, ∃ d : D, P.tail d = v) :
+    P.toCombMap.IsSphereMap :=
+  P.toCombMap_isSphereMap hsphere hincident
+
+/-- The simple-graph part is genuinely free from the `PlaneSimpleGraph` fields. -/
+theorem simple_for_constructed_combMap
+    (P : PlaneSimpleGraph V D) :
+    P.toCombMap.IsSimpleGraph :=
+  P.toCombMap_isSimpleGraph
+
+end ProofsInTheBook.Ch13ConstructSigmaPlaneBridge
 ```
 
-The field should then be literally:
+This is worth using.  It means ch13 does not need to reprove:
+
+* quotient vertices correspond to graph vertices;
+* graph connectivity gives dart-map connectivity;
+* unique oriented graph darts imply `CombMap.IsSimpleGraph`;
+* `CombMap.eulerChar` matches the plane-graph count.
+
+But the ch13 object must still provide or prove `P.IsSphereMap`.
+
+## Concrete reduction for a construct-`σ` convex boundary object
+
+If the ch13 construction is refactored through `PlaneSimpleGraph`, the data should look like this:
 
 ```lean
-hgeo : M.σ = globalAngularPermOutward P
+structure Ch13ConstructedPlaneBoundary
+    (V D : Type*) [Fintype V] [DecidableEq V] [Fintype D] [DecidableEq D] where
+  P : PlaneSimpleGraph V D
+
+  /-- Geometric coordinates and convex support data. -/
+  pos : V → EuclideanSpace ℝ (Fin 3)
+
+  /-- The constructed rotation agrees with the geometric angular rotation. -/
+  sigma_eq_geo : P.σ = globalAngularPermOutward pos   -- schematic name
+
+  /-- No isolated boundary vertex.  Needed to identify graph vertices with
+  `P.toCombMap` vertex orbits. -/
+  incident : ∀ v : V, ∃ d : D, P.tail d = v
+
+  /-- The still-required Euler/sphere certificate. -/
+  sphere : P.IsSphereMap
 ```
 
-provided the implementation of `globalAngularPermOutward` is tied to this sign convention by a theorem like:
+Then the final map obligations are short:
 
 ```lean
-/-- Characterization of the outward angular successor. -/
-theorem globalAngularPermOutward_spec
-    {D : Type*} [Fintype D] [DecidableEq D]
-    {M : CombMap D} (P : TriangulatedEuclideanPolyhedron M) (d : D) :
-    let e := globalAngularPermOutward P d
-    M.tail e = M.tail d ∧
-    IsOutwardAngularNext P d e := by
-  -- `IsOutwardAngularNext` should encode the negative-det / outward-cross convention.
-  -- This theorem is where the convention must be frozen.
-  -- Do not leave this as an informal property of the name.
-  skip
+namespace Ch13ConstructedPlaneBoundary
+
+variable {V D : Type*} [Fintype V] [DecidableEq V] [Fintype D] [DecidableEq D]
+variable (X : Ch13ConstructedPlaneBoundary V D)
+
+abbrev M : CombMap D := X.P.toCombMap
+
+theorem M_isSphereMap : X.M.IsSphereMap :=
+  X.P.toCombMap_isSphereMap X.sphere X.incident
+
+theorem M_isSimpleGraph : X.M.IsSimpleGraph :=
+  X.P.toCombMap_isSimpleGraph
+
+end Ch13ConstructedPlaneBoundary
 ```
 
-A more concrete convention-free predicate is:
+This is a good integration layer if `sphere` is accepted as a finite combinatorial input certificate.
+
+## Can `sphere : P.IsSphereMap` be proved from the oriented triangular face list?
+
+Yes, but that is not a ch35 theorem.  For a construct-`σ` object with explicit triangular face list `F`, edge pairing, and `σ = φ_face * α`, the proof of `P.IsSphereMap` reduces to finite counts:
 
 ```lean
-/-- Successor direction compatible with the existing reverse-`σ` normal formula. -/
-def IsOutwardAngularNext
-    {D : Type*} [Fintype D] [DecidableEq D]
-    {M : CombMap D} (P : TriangulatedEuclideanPolyhedron M) (d e : D) : Prop :=
-  M.tail e = M.tail d ∧
-  ∃ lam : ℝ, 0 < lam ∧
-    P.outward_normal (M.dartFace e) =
-      lam • cross (edgeVec P d) (edgeVec P e)
+P.eulerChar =
+  (Fintype.card V : ℤ) - (Fintype.card D / 2 : ℤ) + P.toCombMap.F
 ```
 
-Then the tetra satisfiability theorem should target:
+If the face-list proof gives
 
 ```lean
-/-- Expected finite satisfiability test once `globalAngularPermOutward` exists. -/
-theorem tetra_sigma_eq_globalAngularPermOutward :
-    tetraMap.σ = globalAngularPermOutward tetraEuclideanPolyhedron := by
-  -- Prove by `ext d`; each dart reduces to one of the four stored 3-cycles.
-  -- The local geometric sign checks are exactly the ones already normalized by
-  -- `tetra_rotationFaithful`, plus the successor/predecessor rewrite.
-  -- This theorem should be added as the non-vacuity guard for `hgeo`.
-  ext d
-  -- fin_cases d; close with the outward angular successor uniqueness API.
-  -- No proof term can be completed in this note because `globalAngularPermOutward`
-  -- is not present in the connected repo surface yet.
-  skip
+P.toCombMap.F = Fintype.card F
 ```
 
-If the implementation instead defines the angular order by the positive right-handed determinant around `vertexConeAxis`, then the correct satisfiable field is not `hgeo` but one of these:
+and the edge pairing gives `Fintype.card D = 2 * E`, then `P.IsSphereMap` becomes the finite cardinal equation
 
 ```lean
-hgeo_pos : M.σ.symm = globalAngularPermPositive P
--- or equivalently
-hgeo_pos' : M.σ = (globalAngularPermPositive P).symm
+(Fintype.card V : ℤ) - (E : ℤ) + (Fintype.card F : ℤ) = 2.
 ```
 
-Do not use a field whose truth for the tetra depends on remembering an informal convention.
-
-## Mirror test: `hgeo` is a genuine orientation datum
-
-`hgeo` is a real orientation field, not a tautology.
-
-Let `R : E3 ≃ₗᵢ[ℝ] E3` be an orientation-reversing isometry, for example reflection in one coordinate.  It preserves the unoriented metric and convex-support data, but reverses every scalar triple product:
-
-```text
-det(R a, R u, R v) = - det(a,u,v).
-```
-
-So if `globalAngularPermOutward P` gives the stored tetra order `σ`, then for the mirrored realization `R(P)` the same angular rule gives the inverse order:
-
-```text
-globalAngularPermOutward (R(P)) = σ⁻¹
-```
-
-at every degree-3 vertex.  Since the tetra vertex cycles are genuine 3-cycles, `σ ≠ σ⁻¹`.  Hence
+That is precisely the Euler wall in a smaller form.  You may choose to store that finite equation as a certificate:
 
 ```lean
-M.σ = globalAngularPermOutward P
+euler_cert :
+  (Fintype.card V : ℤ) - (edgeCount : ℤ) + (Fintype.card F : ℤ) = 2
 ```
 
-holds for one orientation and fails for its mirror.  This is exactly what we need: it is the irreducible orientation input isolated as one field.
+or prove it from a convex-polytope boundary theorem.  ch35 does not prove this theorem for convex polytopes.
 
-The field is therefore neither vacuously true nor vacuously false.  It is satisfiable by the correctly oriented tetra witness under the outward convention, and it is violated by the mirror realization with the same stored combinatorial map.
+## Does ch35 contain a hidden general producer of `P.IsSphereMap`?
 
-## Recommended guardrail before using `hgeo`
+No general producer appears in the current files.
 
-Before wiring
+The triangle witness proves a special finite example:
 
 ```lean
-rotationFaithful_of_sigma_eq_geo
+theorem triangle_plane_isSphere : trianglePlaneSimpleGraph.IsSphereMap := by
+  unfold PlaneSimpleGraph.IsSphereMap PlaneSimpleGraph.eulerChar PlaneSimpleGraph.numVertices
+    PlaneSimpleGraph.numEdges
+  rw [triangle_numFaces]
+  norm_num
+
+theorem triangle_toCombMap_isSphereMap : trianglePlaneSimpleGraph.toCombMap.IsSphereMap :=
+  trianglePlaneSimpleGraph.toCombMap_isSphereMap triangle_plane_isSphere triangle_incident
 ```
 
-into the ch13 spine, add a tetra non-vacuity theorem to the angular-order file:
+That is a direct finite count for the triangle, not a theorem deriving planarity from arbitrary geometry or arbitrary rotation systems.
+
+The five-color endpoint in the same file is also not a sphere producer:
 
 ```lean
-theorem tetra_hgeo_outward :
-    tetraMap.σ = globalAngularPermOutward tetraEuclideanPolyhedron := by
-  -- finite check + angular successor uniqueness
+structure PlaneTriangulationExtension (P : PlaneSimpleGraph V D) where
+  D' : Type u'
+  T : CombMap D'
+  hNT : T.NearTriangulation
+  ιV : V → T.Vertex
+  adj_embed : ∀ {u v : V}, P.G.Adj u v → T.toSimpleGraph.Adj (ιV u) (ιV v)
+
+theorem fiveColor_planeSimpleGraph_of_extension
+    (P : PlaneSimpleGraph V D)
+    (E : PlaneTriangulationExtension P) :
+    P.G.Colorable 5
 ```
 
-and add the negative test/documented convention lemma:
+This consumes a triangulation extension certificate; it is about coloring, not about proving `P.IsSphereMap` for the input plane graph.
+
+## Answer to the three questions
+
+### 1. Can ch13 obtain `IsSphereMap` for free by exhibiting a `PlaneSimpleGraph`?
+
+No.  It obtains `P.toCombMap.IsSphereMap` from `P.IsSphereMap`, not from `PlaneSimpleGraph` alone.
+
+What is free after constructing `P : PlaneSimpleGraph V D`:
 
 ```lean
-/-- Around the interior cone axis, the repo's outward order is the negative-det order. -/
-theorem globalAngularPermOutward_det_sign
-    {D : Type*} [Fintype D] [DecidableEq D]
-    {M : CombMap D} (P : TriangulatedEuclideanPolyhedron M) (d : D) :
-    det3 (vertexConeAxis P (M.tail d))
-      (edgeVec P d)
-      (edgeVec P (globalAngularPermOutward P d)) < 0 := by
-  -- This is the convention-free audit hook.
-  -- If the theorem proves with `> 0` instead, replace `hgeo` by the inverse form.
-  skip
+P.toCombMap.Connected
+P.toCombMap.IsSimpleGraph
+P.toCombMap.eulerChar = P.eulerChar       -- assuming every vertex is incident
 ```
 
-That one sign theorem is the best way to prevent a silent inverse-convention bug.
+What is not free:
 
-## Bottom line
+```lean
+P.eulerChar = 2
+```
 
-* For the existing tetra orientation, stored `tetraMap.σ` is `0→1→2` at `tetraPoint₀`.
-* With the interior cone axis, this is the negative determinant / outward-face order.
-* The existing `tetra_rotationFaithful` theorem confirms the same convention globally on all 12 darts.
-* Therefore `hgeo : M.σ = globalAngularPermOutward P` is satisfiable for the tetra **only if** `globalAngularPermOutward` is defined as the outward-face-compatible angular successor.
-* If `globalAngularPermOutward` was implemented as the positive right-handed angular order around the interior axis, then the correct field is the inverse form `M.σ.symm = globalAngularPermPositive P`.
-* Under the correct convention, `hgeo` is a genuine orientation field: the mirror realization violates it.
+### 2. Does `PlaneSimpleGraph` require a sphere/planarity certificate as input?
+
+The structure itself does not contain `P.IsSphereMap` as a field.  But every theorem that produces `CombMap.IsSphereMap` requires it as an input:
+
+```lean
+hsphere : P.IsSphereMap
+```
+
+There is no separate topological planarity axiom in the structure.  The effective sphere axiom is the Euler equation `P.eulerChar = 2`.
+
+For a convex polytope’s geometric `σ_geo`, you can construct the rotation-system fields constructively:
+
+```lean
+σ_preserves_tail : ∀ d, tail (σ_geo d) = tail d
+σ_vertex_cycle : ∀ d e, tail d = tail e → σ_geo.SameCycle d e
+```
+
+and the graph fields:
+
+```lean
+edge_darts : ∀ {u v}, G.Adj u v → ∃! d, tail d = u ∧ head d = v
+connected : G.Connected
+```
+
+But these still do not imply `P.IsSphereMap` in the repo API.
+
+### 3. Bottom line
+
+Reusing ch35 **relocates** the Euler wall; it does not remove it.
+
+The concrete reduction is:
+
+```lean
+-- construct from geometry/face list
+P : PlaneSimpleGraph V D
+hincident : ∀ v, ∃ d, P.tail d = v
+hsphere : P.IsSphereMap        -- still required
+
+-- get the ch13 map and its global hypotheses
+M := P.toCombMap
+M.IsSphereMap      := P.toCombMap_isSphereMap hsphere hincident
+M.IsSimpleGraph    := P.toCombMap_isSimpleGraph
+```
+
+This is still a worthwhile shortcut because it avoids duplicating the `PlaneSimpleGraph → CombMap` transport work.  But if the ch13 objective is truly “derive sphere from raw convex geometry,” the hard missing theorem remains:
+
+```lean
+convex_polytope_boundary_face_list_euler_two : P.IsSphereMap
+```
+
+or, in finite face-list form:
+
+```lean
+(Fintype.card V : ℤ) - (edgeCount : ℤ) + (Fintype.card F : ℤ) = 2.
+```
+
+So the recommended path is:
+
+1. Reuse `PlaneSimpleGraph` for the graph/rotation wrapper.
+2. Reuse `toCombMap_isSphereMap` and `toCombMap_isSimpleGraph` for the bridge.
+3. Treat `P.IsSphereMap` as a named ch13 input certificate initially.
+4. Later either prove that certificate from a finite convex-boundary Euler theorem or store it as part of the boundary face-list data.
+
+This turns the multi-month topology wall into a single explicit residue, but it does not eliminate it.

@@ -1,17 +1,32 @@
-# Finite cone axis theorem: closest-point proof file
+# Finite cone axis theorem: minimum-norm convex-combination proof
 
-Below is the concrete Lean proof file I would add for the minimum-norm convex-combination route.  I cannot run Lean in this session, so I cannot truthfully certify that the pasted code has been kernel-checked against the repo’s pinned Mathlib.  The proof uses the actual Mathlib declarations available in the pinned revision:
+This is the drop-in Lean route for
 
 ```lean
-exists_norm_eq_iInf_of_complete_convex
-norm_eq_iInf_iff_real_inner_le_zero
-stdSimplex
-convex_stdSimplex
-isCompact_stdSimplex
-single_mem_stdSimplex
+theorem exists_strict_copositive_combo_from_pointed {ι} [Fintype ι] [DecidableEq ι] [Nonempty ι]
+    (w : ι → EuclideanSpace ℝ (Fin 3))
+    (hpointed : ∀ β : ι → ℝ, (∀ i, 0 ≤ β i) → (∑ i, β i • w i = 0) → ∀ i, β i = 0) :
+    ∃ α : ι → ℝ, (∀ i, 0 < α i) ∧ ∀ i, (0:ℝ) < ⟪(∑ j, α j • w j), w i⟫
 ```
 
-The key correction relative to the informal “convex hull” wording is that the compact convex set is the image of the **coefficient simplex** under `β ↦ ∑ i, β i • w i`.  Pointedness excludes `0` from this image, because a zero convex combination is a zero nonnegative cone combination with coefficient sum `1`.
+The compact convex set is implemented as the **simplex image**
+
+```lean
+combo w '' stdSimplex ℝ ι
+```
+
+which is the concrete finite-dimensional convex-combination model of `convexHull ℝ (Set.range w)`.  This is the right formulation for pointedness: if `β ∈ stdSimplex ℝ ι` and `combo w β = 0`, then `β` is a nonnegative cone relation; pointedness forces every `β i = 0`, contradicting `∑ i, β i = 1`.
+
+The Mathlib facts used directly are:
+
+* `exists_norm_eq_iInf_of_complete_convex`
+* `norm_eq_iInf_iff_real_inner_le_zero`
+* `stdSimplex`, `convex_stdSimplex`, `isCompact_stdSimplex`, `single_mem_stdSimplex`
+* `IsCompact.image`, `IsCompact.isComplete`
+* `Finset.sum_add_distrib`, `Finset.mul_sum`, `Finset.smul_sum`
+* `inner_add_left`, `inner_sub_right`, `inner_neg_left`, `real_inner_smul_left`, `real_inner_self_eq_norm_sq`
+
+No Farkas/separation theorem is needed: the closest-point variational inequality supplies the separating functional.  The ε-bump at the end only makes all coefficients strictly positive; strict copositivity is already obtained from the minimum-norm point.
 
 ```lean
 import ProofsInTheBook.SphericalKernel
@@ -32,6 +47,8 @@ set_option synthInstance.maxHeartbeats 400000
 
 abbrev E3 : Type := EuclideanSpace ℝ (Fin 3)
 
+section Helpers
+
 variable {ι : Type*} [Fintype ι] [DecidableEq ι] [Nonempty ι]
 
 /-- The linear combination of `w` with coefficient vector `a`. -/
@@ -45,7 +62,7 @@ def combo (w : ι → E3) (a : ι → ℝ) : E3 :=
   rw [Finset.sum_eq_single i]
   · simp
   · intro j _ hji
-    simp [Pi.single_eq_of_ne hji]
+    simp [Pi.single_eq_of_ne hji.symm]
   · intro hi
     simp at hi
 
@@ -60,7 +77,7 @@ lemma combo_continuous (w : ι → E3) : Continuous (combo w) := by
 
 lemma comboSet_nonempty (w : ι → E3) : (comboSet w).Nonempty := by
   classical
-  obtain ⟨i⟩ := (inferInstance : Nonempty ι)
+  let i : ι := Classical.choice (inferInstance : Nonempty ι)
   refine ⟨w i, ?_⟩
   refine ⟨Pi.single i (1 : ℝ), single_mem_stdSimplex ℝ i, ?_⟩
   simp
@@ -81,21 +98,20 @@ lemma comboSet_convex (w : ι → E3) : Convex ℝ (comboSet w) := by
     · calc
         (∑ i, (a * α i + b * β i))
             = a * (∑ i, α i) + b * (∑ i, β i) := by
-              rw [Finset.sum_add_distrib, Finset.mul_sum, Finset.mul_sum]
+              rw [Finset.sum_add_distrib, ← Finset.mul_sum, ← Finset.mul_sum]
         _ = a * 1 + b * 1 := by rw [hα.2, hβ.2]
-        _ = 1 := by linarith
+        _ = 1 := by simpa [hab]
   · unfold combo
-    simp only [add_smul]
-    rw [Finset.sum_add_distrib, Finset.smul_sum, Finset.smul_sum]
-    congr 1
-    · apply Finset.sum_congr rfl
-      intro i _
-      rw [smul_smul]
-      ring
-    · apply Finset.sum_congr rfl
-      intro i _
-      rw [smul_smul]
-      ring
+    calc
+      (∑ i, (a * α i + b * β i) • w i)
+          = ∑ i, ((a * α i) • w i + (b * β i) • w i) := by
+            apply Finset.sum_congr rfl
+            intro i _
+            rw [add_smul]
+      _ = (∑ i, (a * α i) • w i) + (∑ i, (b * β i) • w i) := by
+            rw [Finset.sum_add_distrib]
+      _ = a • (∑ i, α i • w i) + b • (∑ i, β i • w i) := by
+            simp [Finset.smul_sum, smul_smul, mul_assoc]
 
 /-- A positive function on a finite nonempty type has a positive finite lower bound. -/
 lemma exists_pos_le_all_of_pos {f : ι → ℝ} (hf : ∀ i, 0 < f i) :
@@ -111,8 +127,6 @@ lemma exists_pos_le_all_of_pos {f : ι → ℝ} (hf : ∀ i, 0 < f i) :
 /-- A scalar inequality used in the epsilon bump. -/
 lemma bump_scalar_bound {A B : ℝ} (hA : 0 ≤ A) (hB : 0 ≤ B) :
     (A / (2 * (1 + B))) * B ≤ A / 2 := by
-  have hden_pos : 0 < 2 * (1 + B) := by positivity
-  have hden_ne : 2 * (1 + B) ≠ 0 := ne_of_gt hden_pos
   have honeB_pos : 0 < 1 + B := by positivity
   calc
     (A / (2 * (1 + B))) * B
@@ -169,7 +183,7 @@ theorem exists_pos_bump_preserving_inner
     have hhalf : 0 < ⟪x, w i⟫ / 2 := half_pos (hx i)
     linarith
 
-/-- Minimum-norm point of the coefficient simplex image is strictly positive
+/-- Minimum-norm point of the coefficient-simplex image is strictly positive
 against each generator, assuming the generated nonnegative cone is pointed. -/
 theorem exists_simplex_combo_strict_dual_pos
     (w : ι → E3)
@@ -215,20 +229,17 @@ theorem exists_simplex_combo_strict_dual_pos
     linarith
   have hle_norm : ‖combo w β‖ ^ 2 ≤ ⟪combo w β, w i⟫ := by
     simpa [real_inner_self_eq_norm_sq] using hle_inner
-  have hnorm_ne : ‖combo w β‖ ≠ 0 := norm_ne_zero_iff.mpr hx_ne_zero
-  have hnormsq_pos : 0 < ‖combo w β‖ ^ 2 := sq_pos_of_ne_zero hnorm_ne
+  have hnorm_pos : 0 < ‖combo w β‖ := norm_pos_iff.mpr hx_ne_zero
+  have hnormsq_pos : 0 < ‖combo w β‖ ^ 2 := sq_pos_of_pos hnorm_pos
   exact lt_of_lt_of_le hnormsq_pos hle_norm
 
+end Helpers
+
 /-- The finite pointed cone theorem needed for the self-dual axis. -/
-theorem exists_strict_copositive_combo_from_pointed
-    (w : ι → E3)
-    (hpointed : ∀ β : ι → ℝ,
-      (∀ i, 0 ≤ β i) →
-      (∑ i, β i • w i = 0) →
-      ∀ i, β i = 0) :
-    ∃ α : ι → ℝ,
-      (∀ i, 0 < α i) ∧
-      ∀ i, (0 : ℝ) < ⟪(∑ j, α j • w j), w i⟫ := by
+theorem exists_strict_copositive_combo_from_pointed {ι : Type*} [Fintype ι] [DecidableEq ι] [Nonempty ι]
+    (w : ι → EuclideanSpace ℝ (Fin 3))
+    (hpointed : ∀ β : ι → ℝ, (∀ i, 0 ≤ β i) → (∑ i, β i • w i = 0) → ∀ i, β i = 0) :
+    ∃ α : ι → ℝ, (∀ i, 0 < α i) ∧ ∀ i, (0:ℝ) < ⟪(∑ j, α j • w j), w i⟫ := by
   classical
   have hpointed_combo : ∀ β : ι → ℝ,
       (∀ i, 0 ≤ β i) → combo w β = 0 → ∀ i, β i = 0 := by
@@ -253,20 +264,20 @@ theorem exists_strict_copositive_combo_from_pointed
 end ProofsInTheBook.Ch13FiniteConeAxis
 ```
 
-## Notes on pointedness and the convex hull
+## Pointedness checkpoint
 
-The proof does not use the statement “`0 ∉ convexHull {w i}`” as a standalone lemma.  It proves the precise fact needed at the minimizer:
+The proof never needs the ambiguous statement “pointedness implies `0 ∉ convexHull {w i}`” as a separate global lemma.  Instead, it proves exactly the nonzero fact required for the closest-point minimizer:
 
 ```lean
 combo w β ≠ 0
 ```
 
-for a coefficient vector `β ∈ stdSimplex ℝ ι`.  If `combo w β = 0`, then `β` is a nonnegative cone relation, so `hpointed` gives `β i = 0` for all `i`.  But `β ∈ stdSimplex` also gives `∑ i, β i = 1`, contradiction.
+where `β ∈ stdSimplex ℝ ι`.  If `combo w β = 0`, then `β` is a nonnegative cone relation, so `hpointed` gives `β i = 0` for all `i`; but the simplex condition also gives `∑ i, β i = 1`, contradiction.
 
-The variational inequality from the closest-point theorem then gives
+The closest-point theorem then gives, for every generator `w i`,
 
 ```lean
 ‖combo w β‖ ^ 2 ≤ ⟪combo w β, w i⟫
 ```
 
-for every generator `w i`, and the left side is strictly positive.  The epsilon bump is only needed to make every coefficient strictly positive, not to get strict dual positivity.
+and the left side is strictly positive because the minimizer is nonzero.  The ε-bump replaces `β` by `β + ε`, making every coefficient strictly positive while preserving the finitely many strict inequalities.

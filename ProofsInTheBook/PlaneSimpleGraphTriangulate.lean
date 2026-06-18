@@ -1,5 +1,6 @@
 import ProofsInTheBook.PlaneSimpleGraph
 import ProofsInTheBook.PlanarMapSimple
+import ProofsInTheBook.ZinanCh35Final
 
 /-!
 # Bridges from `PlaneSimpleGraph` to `CombMap`
@@ -304,10 +305,53 @@ theorem triangle_toCombMap_isSimpleGraph : trianglePlaneSimpleGraph.toCombMap.Is
 
 end TriangleWitness
 
+/-! ## End-wiring through a triangulation extension certificate -/
+
+universe u'
+
+section Extension
+
+variable {V D : Type*} [Fintype V] [DecidableEq V] [Fintype D] [DecidableEq D]
+
+/-- A certificate that an embedded simple graph `P` is represented as a subgraph of a
+near-triangulation `T`.  This is the endpoint wiring interface: phases P2--P4 will produce
+such certificates, while this structure only records the data needed for color pullback. -/
+structure PlaneTriangulationExtension (P : PlaneSimpleGraph V D) where
+  D' : Type u'
+  fintypeD' : Fintype D'
+  decidableEqD' : DecidableEq D'
+  T : @CombMap D' fintypeD' decidableEqD'
+  hNT : T.NearTriangulation
+  ιV : V → T.Vertex
+  adj_embed : ∀ {u v : V}, P.G.Adj u v → T.toSimpleGraph.Adj (ιV u) (ιV v)
+
+/-- Pull a five-colouring of the triangulating near-triangulation back along the embedded
+vertex map. -/
+theorem colorable_of_triangulationExtension (P : PlaneSimpleGraph V D)
+    (E : PlaneTriangulationExtension P) :
+    P.G.Colorable 5 := by
+  letI := E.fintypeD'
+  letI := E.decidableEqD'
+  rcases ProofsInTheBook.ZinanCh35Final.fiveColor_planar_canonical E.hNT with ⟨C⟩
+  exact ⟨SimpleGraph.Coloring.mk (fun v => C (E.ιV v)) (by
+    intro u v huv
+    exact C.valid (E.adj_embed huv))⟩
+
+/-- Five-colourability of a plane simple graph from a triangulation-extension certificate.
+This is the P5a endpoint; later phases replace the certificate by a producer. -/
+theorem fiveColor_planeSimpleGraph_of_extension (P : PlaneSimpleGraph V D)
+    (E : PlaneTriangulationExtension P) :
+    P.G.Colorable 5 :=
+  colorable_of_triangulationExtension P E
+
+end Extension
+
 #print axioms ProofsInTheBook.PlanarMap.PlaneSimpleGraph.toCombMap_isSphereMap
 #print axioms ProofsInTheBook.PlanarMap.PlaneSimpleGraph.toCombMap_isSimpleGraph
 #print axioms ProofsInTheBook.PlanarMap.TriangleWitness.triangle_plane_isSphere
 #print axioms ProofsInTheBook.PlanarMap.TriangleWitness.triangle_toCombMap_isSphereMap
 #print axioms ProofsInTheBook.PlanarMap.TriangleWitness.triangle_toCombMap_isSimpleGraph
+#print axioms ProofsInTheBook.PlanarMap.colorable_of_triangulationExtension
+#print axioms ProofsInTheBook.PlanarMap.fiveColor_planeSimpleGraph_of_extension
 
 end ProofsInTheBook.PlanarMap

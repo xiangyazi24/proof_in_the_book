@@ -1,283 +1,328 @@
-# Finite cone axis theorem: minimum-norm convex-combination proof
+# Ch13 §3.3 satisfiability audit for `hgeo`
 
-This is the drop-in Lean route for
+## Verdict
 
-```lean
-theorem exists_strict_copositive_combo_from_pointed {ι} [Fintype ι] [DecidableEq ι] [Nonempty ι]
-    (w : ι → EuclideanSpace ℝ (Fin 3))
-    (hpointed : ∀ β : ι → ℝ, (∀ i, 0 ≤ β i) → (∑ i, β i • w i = 0) → ∀ i, β i = 0) :
-    ∃ α : ι → ℝ, (∀ i, 0 < α i) ∧ ∀ i, (0:ℝ) < ⟪(∑ j, α j • w j), w i⟫
-```
+`hgeo : M.σ = globalAngularPermOutward P` is satisfiable for the existing tetrahedron witness **if and only if** `globalAngularPermOutward` uses the same “outward face” convention as the current repo’s `RotationFaithful` theorem.
 
-The compact convex set is implemented as the **simplex image**
+For the current tetra data, the stored `tetraMap.σ` is the cycle order
 
 ```lean
-combo w '' stdSimplex ℝ ι
+0 ↦ 1 ↦ 2 ↦ 0
 ```
 
-which is the concrete finite-dimensional convex-combination model of `convexHull ℝ (Set.range w)`.  This is the right formulation for pointedness: if `β ∈ stdSimplex ℝ ι` and `combo w β = 0`, then `β` is a nonnegative cone relation; pointedness forces every `β i = 0`, contradicting `∑ i, β i = 1`.
+at the vertex carried by darts `0,1,2`.  With the **interior** cone axis `a_v`, this is the order for which
 
-The Mathlib facts used directly are:
+```text
+det(a_v, edgeVec d, edgeVec (σ d)) < 0.
+```
 
-* `exists_norm_eq_iInf_of_complete_convex`
-* `norm_eq_iInf_iff_real_inner_le_zero`
-* `stdSimplex`, `convex_stdSimplex`, `isCompact_stdSimplex`, `single_mem_stdSimplex`
-* `IsCompact.image`, `IsCompact.isComplete`
-* `Finset.sum_add_distrib`, `Finset.mul_sum`, `Finset.smul_sum`
-* `inner_add_left`, `inner_sub_right`, `inner_neg_left`, `real_inner_smul_left`, `real_inner_self_eq_norm_sq`
-
-No Farkas/separation theorem is needed: the closest-point variational inequality supplies the separating functional.  The ε-bump at the end only makes all coefficients strictly positive; strict copositivity is already obtained from the minimum-norm point.
+Equivalently, it is the order for which
 
 ```lean
-import ProofsInTheBook.SphericalKernel
-import Mathlib.Analysis.InnerProductSpace.Projection.Minimal
-import Mathlib.Analysis.Convex.StdSimplex
-import Mathlib.Analysis.Convex.Topology
-import Mathlib.Analysis.InnerProductSpace.PiL2
-
-noncomputable section
-
-open scoped Classical RealInnerProductSpace BigOperators
-open ProofsInTheBook.SphericalKernel
-
-namespace ProofsInTheBook.Ch13FiniteConeAxis
-
-set_option maxHeartbeats 1200000
-set_option synthInstance.maxHeartbeats 400000
-
-abbrev E3 : Type := EuclideanSpace ℝ (Fin 3)
-
-section Helpers
-
-variable {ι : Type*} [Fintype ι] [DecidableEq ι] [Nonempty ι]
-
-/-- The linear combination of `w` with coefficient vector `a`. -/
-def combo (w : ι → E3) (a : ι → ℝ) : E3 :=
-  ∑ i, a i • w i
-
-@[simp] lemma combo_single (w : ι → E3) (i : ι) :
-    combo w (Pi.single i (1 : ℝ)) = w i := by
-  classical
-  unfold combo
-  rw [Finset.sum_eq_single i]
-  · simp
-  · intro j _ hji
-    simp [Pi.single_eq_of_ne hji.symm]
-  · intro hi
-    simp at hi
-
-/-- The compact convex set of convex combinations of the generators. -/
-def comboSet (w : ι → E3) : Set E3 :=
-  combo w '' stdSimplex ℝ ι
-
-lemma combo_continuous (w : ι → E3) : Continuous (combo w) := by
-  classical
-  unfold combo
-  fun_prop
-
-lemma comboSet_nonempty (w : ι → E3) : (comboSet w).Nonempty := by
-  classical
-  let i : ι := Classical.choice (inferInstance : Nonempty ι)
-  refine ⟨w i, ?_⟩
-  refine ⟨Pi.single i (1 : ℝ), single_mem_stdSimplex ℝ i, ?_⟩
-  simp
-
-lemma comboSet_compact (w : ι → E3) : IsCompact (comboSet w) := by
-  classical
-  exact (isCompact_stdSimplex ℝ ι).image (combo_continuous w)
-
-lemma comboSet_convex (w : ι → E3) : Convex ℝ (comboSet w) := by
-  classical
-  intro x hx y hy a b ha hb hab
-  rcases hx with ⟨α, hα, rfl⟩
-  rcases hy with ⟨β, hβ, rfl⟩
-  refine ⟨fun i => a * α i + b * β i, ?_, ?_⟩
-  · constructor
-    · intro i
-      exact add_nonneg (mul_nonneg ha (hα.1 i)) (mul_nonneg hb (hβ.1 i))
-    · calc
-        (∑ i, (a * α i + b * β i))
-            = a * (∑ i, α i) + b * (∑ i, β i) := by
-              rw [Finset.sum_add_distrib, ← Finset.mul_sum, ← Finset.mul_sum]
-        _ = a * 1 + b * 1 := by rw [hα.2, hβ.2]
-        _ = 1 := by simpa [hab]
-  · unfold combo
-    calc
-      (∑ i, (a * α i + b * β i) • w i)
-          = ∑ i, ((a * α i) • w i + (b * β i) • w i) := by
-            apply Finset.sum_congr rfl
-            intro i _
-            rw [add_smul]
-      _ = (∑ i, (a * α i) • w i) + (∑ i, (b * β i) • w i) := by
-            rw [Finset.sum_add_distrib]
-      _ = a • (∑ i, α i • w i) + b • (∑ i, β i • w i) := by
-            simp [Finset.smul_sum, smul_smul, mul_assoc]
-
-/-- A positive function on a finite nonempty type has a positive finite lower bound. -/
-lemma exists_pos_le_all_of_pos {f : ι → ℝ} (hf : ∀ i, 0 < f i) :
-    ∃ δ : ℝ, 0 < δ ∧ ∀ i, δ ≤ f i := by
-  classical
-  let s : Finset ι := Finset.univ
-  have hs : s.Nonempty := Finset.univ_nonempty
-  refine ⟨s.inf' hs f, ?_, ?_⟩
-  · exact Finset.lt_inf'_iff.mpr (by intro i _; exact hf i)
-  · intro i
-    exact Finset.inf'_le s f (by simp [s])
-
-/-- A scalar inequality used in the epsilon bump. -/
-lemma bump_scalar_bound {A B : ℝ} (hA : 0 ≤ A) (hB : 0 ≤ B) :
-    (A / (2 * (1 + B))) * B ≤ A / 2 := by
-  have honeB_pos : 0 < 1 + B := by positivity
-  calc
-    (A / (2 * (1 + B))) * B
-        = (A / 2) * (B / (1 + B)) := by
-          field_simp [show (2 : ℝ) ≠ 0 by norm_num,
-            show 1 + B ≠ 0 by positivity]
-          ring
-    _ ≤ (A / 2) * 1 := by
-          have hA2 : 0 ≤ A / 2 := by positivity
-          have hratio : B / (1 + B) ≤ 1 := by
-            rw [div_le_one honeB_pos]
-            linarith
-          exact mul_le_mul_of_nonneg_left hratio hA2
-    _ = A / 2 := by ring
-
-/-- If a vector is strictly positive against each generator, then a small positive
-bump in the direction `∑ i, w i` preserves all strict inequalities. -/
-theorem exists_pos_bump_preserving_inner
-    (w : ι → E3) (x : E3)
-    (hx : ∀ i, 0 < ⟪x, w i⟫) :
-    ∃ ε : ℝ, 0 < ε ∧
-      ∀ i, 0 < ⟪x + ε • (∑ j, w j), w i⟫ := by
-  classical
-  let s : E3 := ∑ j, w j
-  let r : ι → ℝ := fun i =>
-    ⟪x, w i⟫ / (2 * (1 + |⟪s, w i⟫|))
-  have hrpos : ∀ i, 0 < r i := by
-    intro i
-    have hden : 0 < 2 * (1 + |⟪s, w i⟫|) := by positivity
-    exact div_pos (hx i) hden
-  rcases exists_pos_le_all_of_pos (f := r) hrpos with ⟨ε, hεpos, hεle⟩
-  refine ⟨ε, hεpos, ?_⟩
-  intro i
-  have hε_nonneg : 0 ≤ ε := le_of_lt hεpos
-  have hinner :
-      ⟪x + ε • s, w i⟫ = ⟪x, w i⟫ + ε * ⟪s, w i⟫ := by
-    rw [inner_add_left, real_inner_smul_left]
-  rw [hinner]
-  by_cases hb : 0 ≤ ⟪s, w i⟫
-  · have hterm : 0 ≤ ε * ⟪s, w i⟫ := mul_nonneg hε_nonneg hb
-    exact lt_of_lt_of_le (hx i) (by linarith)
-  · have hbneg : ⟪s, w i⟫ < 0 := lt_of_not_ge hb
-    have hbound : ε * |⟪s, w i⟫| ≤ ⟪x, w i⟫ / 2 := by
-      have hmul := mul_le_mul_of_nonneg_right (hεle i) (abs_nonneg (⟪s, w i⟫))
-      have hscalar :
-          (⟪x, w i⟫ / (2 * (1 + |⟪s, w i⟫|))) * |⟪s, w i⟫| ≤
-            ⟪x, w i⟫ / 2 :=
-        bump_scalar_bound (le_of_lt (hx i)) (abs_nonneg (⟪s, w i⟫))
-      exact le_trans hmul hscalar
-    have hnegmul : ε * ⟪s, w i⟫ = -(ε * |⟪s, w i⟫|) := by
-      rw [abs_of_neg hbneg]
-      ring
-    rw [hnegmul]
-    have hhalf : 0 < ⟪x, w i⟫ / 2 := half_pos (hx i)
-    linarith
-
-/-- Minimum-norm point of the coefficient-simplex image is strictly positive
-against each generator, assuming the generated nonnegative cone is pointed. -/
-theorem exists_simplex_combo_strict_dual_pos
-    (w : ι → E3)
-    (hpointed : ∀ β : ι → ℝ,
-      (∀ i, 0 ≤ β i) →
-      (combo w β = 0) →
-      ∀ i, β i = 0) :
-    ∃ β : ι → ℝ,
-      β ∈ stdSimplex ℝ ι ∧
-      ∀ i, 0 < ⟪combo w β, w i⟫ := by
-  classical
-  let K : Set E3 := comboSet w
-  have hKne : K.Nonempty := comboSet_nonempty w
-  have hKconv : Convex ℝ K := comboSet_convex w
-  have hKcompact : IsCompact K := comboSet_compact w
-  have hKcomplete : IsComplete K := hKcompact.isComplete
-
-  rcases exists_norm_eq_iInf_of_complete_convex hKne hKcomplete hKconv (0 : E3) with
-    ⟨x, hxK, hxMin⟩
-
-  have hvar : ∀ y ∈ K, inner ℝ ((0 : E3) - x) (y - x) ≤ 0 :=
-    (norm_eq_iInf_iff_real_inner_le_zero hKconv hxK).1 hxMin
-
-  rcases hxK with ⟨β, hβsimp, rfl⟩
-
-  have hx_ne_zero : combo w β ≠ 0 := by
-    intro hx0
-    have hzero : ∀ i, β i = 0 := hpointed β hβsimp.1 hx0
-    have hsum0 : (∑ i, β i) = 0 := by simp [hzero]
-    have hsum1 : (∑ i, β i) = 1 := hβsimp.2
-    linarith
-
-  refine ⟨β, hβsimp, ?_⟩
-  intro i
-
-  have hwiK : w i ∈ K := by
-    refine ⟨Pi.single i (1 : ℝ), single_mem_stdSimplex ℝ i, ?_⟩
-    simp
-
-  have hineq := hvar (w i) hwiK
-  have hle_inner : ⟪combo w β, combo w β⟫ ≤ ⟪combo w β, w i⟫ := by
-    rw [zero_sub, inner_neg_left, inner_sub_right] at hineq
-    linarith
-  have hle_norm : ‖combo w β‖ ^ 2 ≤ ⟪combo w β, w i⟫ := by
-    simpa [real_inner_self_eq_norm_sq] using hle_inner
-  have hnorm_pos : 0 < ‖combo w β‖ := norm_pos_iff.mpr hx_ne_zero
-  have hnormsq_pos : 0 < ‖combo w β‖ ^ 2 := sq_pos_of_pos hnorm_pos
-  exact lt_of_lt_of_le hnormsq_pos hle_norm
-
-end Helpers
-
-/-- The finite pointed cone theorem needed for the self-dual axis. -/
-theorem exists_strict_copositive_combo_from_pointed {ι : Type*} [Fintype ι] [DecidableEq ι] [Nonempty ι]
-    (w : ι → EuclideanSpace ℝ (Fin 3))
-    (hpointed : ∀ β : ι → ℝ, (∀ i, 0 ≤ β i) → (∑ i, β i • w i = 0) → ∀ i, β i = 0) :
-    ∃ α : ι → ℝ, (∀ i, 0 < α i) ∧ ∀ i, (0:ℝ) < ⟪(∑ j, α j • w j), w i⟫ := by
-  classical
-  have hpointed_combo : ∀ β : ι → ℝ,
-      (∀ i, 0 ≤ β i) → combo w β = 0 → ∀ i, β i = 0 := by
-    intro β hβ hcombo
-    exact hpointed β hβ (by simpa [combo] using hcombo)
-  rcases exists_simplex_combo_strict_dual_pos (w := w) hpointed_combo with
-    ⟨β, hβsimp, hβpos⟩
-  rcases exists_pos_bump_preserving_inner w (combo w β) hβpos with
-    ⟨ε, hεpos, hεinner⟩
-  refine ⟨fun i => β i + ε, ?_, ?_⟩
-  · intro i
-    exact add_pos_of_nonneg_of_pos (hβsimp.1 i) hεpos
-  · intro i
-    have hcombo :
-        (∑ j, (β j + ε) • w j) = combo w β + ε • (∑ j, w j) := by
-      unfold combo
-      simp only [add_smul]
-      rw [Finset.sum_add_distrib, Finset.smul_sum]
-    rw [hcombo]
-    exact hεinner i
-
-end ProofsInTheBook.Ch13FiniteConeAxis
+outward_normal (dartFace (σ d))
+  = positive_scalar • cross (edgeVec d) (edgeVec (σ d))
 ```
 
-## Pointedness checkpoint
-
-The proof never needs the ambiguous statement “pointedness implies `0 ∉ convexHull {w i}`” as a separate global lemma.  Instead, it proves exactly the nonzero fact required for the closest-point minimizer:
+or, in the repo’s existing reverse-predecessor form,
 
 ```lean
-combo w β ≠ 0
+outward_normal (dartFace d)
+  = positive_scalar • cross (edgeVec (σ.symm d)) (edgeVec d)
 ```
 
-where `β ∈ stdSimplex ℝ ι`.  If `combo w β = 0`, then `β` is a nonnegative cone relation, so `hpointed` gives `β i = 0` for all `i`; but the simplex condition also gives `∑ i, β i = 1`, contradiction.
-
-The closest-point theorem then gives, for every generator `w i`,
+This is exactly the convention certified by the existing theorem
 
 ```lean
-‖combo w β‖ ^ 2 ≤ ⟪combo w β, w i⟫
+tetra_rotationFaithful : RotationFaithful tetraEuclideanPolyhedron
 ```
 
-and the left side is strictly positive because the minimizer is nonzero.  The ε-bump replaces `β` by `β + ε`, making every coefficient strictly positive while preserving the finitely many strict inequalities.
+which proves, for every tetra dart `d`,
+
+```lean
+P.outward_normal (reverseFaceBetween tetraMap d)
+  = (1 / 4 : ℝ) • cross (edgeVec P (tetraMap.σ.symm d)) (edgeVec P d)
+```
+
+So: if `globalAngularPermOutward` is the angular successor in this outward-face-compatible direction, the tetra should satisfy the literal field
+
+```lean
+hgeo_tetra : tetraMap.σ = globalAngularPermOutward tetraEuclideanPolyhedron
+```
+
+If instead `globalAngularPermOutward` means the usual right-handed positive angular order around the **interior** axis, i.e. the successor with
+
+```text
+det(a_v, edgeVec d, edgeVec next) > 0,
+```
+
+then the tetra satisfies the inverse relation, not the literal one:
+
+```lean
+tetraMap.σ.symm = globalAngularPermPositive tetraEuclideanPolyhedron
+-- equivalently
+(tetraMap.σ = (globalAngularPermPositive tetraEuclideanPolyhedron).symm)
+```
+
+That convention distinction must be frozen before replacing `RotationFaithful` by `hgeo`.
+
+## Concrete tetra check at vertex `tetraPoint₀`
+
+The repo’s tetra coordinates are:
+
+```lean
+def tetraPoint₀ : E3 := !₂[(1 : ℝ), 1, 1]
+def tetraPoint₁ : E3 := !₂[(1 : ℝ), -1, -1]
+def tetraPoint₂ : E3 := !₂[(-1 : ℝ), 1, -1]
+def tetraPoint₃ : E3 := !₂[(-1 : ℝ), -1, 1]
+```
+
+The dart-to-vertex assignment is constant on the stored `σ`-cycles:
+
+```lean
+0, 1, 2     ↦ tetraPoint₀
+3, 4, 5     ↦ tetraPoint₁
+6, 7, 8     ↦ tetraPoint₂
+9, 10, 11   ↦ tetraPoint₃
+```
+
+The edge involution begins:
+
+```lean
+α 0 = 3
+α 1 = 6
+α 2 = 9
+```
+
+so the outgoing edge rays at `tetraPoint₀` are
+
+```text
+w₀ = edgeVec 0 = tetraPoint₁ - tetraPoint₀ = ( 0, -2, -2)
+w₁ = edgeVec 1 = tetraPoint₂ - tetraPoint₀ = (-2,  0, -2)
+w₂ = edgeVec 2 = tetraPoint₃ - tetraPoint₀ = (-2, -2,  0)
+```
+
+The stored vertex rotation is, by `List.formPerm [0,1,2]`,
+
+```text
+σ 0 = 1,  σ 1 = 2,  σ 2 = 0,
+σ.symm 0 = 2,  σ.symm 1 = 0,  σ.symm 2 = 1.
+```
+
+A canonical interior cone axis is the positive sum of the outgoing rays:
+
+```text
+a₀ = w₀ + w₁ + w₂ = (-4,-4,-4),
+```
+
+or any positive scalar multiple of `(-1,-1,-1)`.  It is strictly inside the tangent cone because
+
+```text
+⟪a₀,w₀⟫ = 16,  ⟪a₀,w₁⟫ = 16,  ⟪a₀,w₂⟫ = 16.
+```
+
+More generally, if the Stiemke/Gordan construction returns
+
+```text
+a = β₀ w₀ + β₁ w₁ + β₂ w₂,   β₀, β₁, β₂ > 0,
+```
+
+then the cyclic signs are independent of the exact positive coefficients:
+
+```text
+det(a, w₀, w₁) = β₂ det(w₂,w₀,w₁) = -16 β₂ < 0
+det(a, w₁, w₂) = β₀ det(w₀,w₁,w₂) = -16 β₀ < 0
+det(a, w₂, w₀) = β₁ det(w₁,w₂,w₀) = -16 β₁ < 0.
+```
+
+Therefore the stored `σ` order `w₀ → w₁ → w₂ → w₀` is the **negative determinant** angular order around the interior axis.  The positive determinant order around the same interior axis is the reverse order:
+
+```text
+w₀ → w₂ → w₁ → w₀.
+```
+
+This is the whole satisfiability issue in one line:
+
+```text
+interior axis + det < 0  ==> stored tetra σ
+interior axis + det > 0  ==> stored tetra σ⁻¹
+```
+
+## Cross-product / outward-normal check
+
+The repo’s current `RotationFaithful` convention is not ambiguous.  At dart `0`, the predecessor in the stored cycle is `σ.symm 0 = 2`.  Compute:
+
+```text
+cross(w₂,w₀) = cross((-2,-2,0), (0,-2,-2)) = (4,-4,4)
+             = 4 · (1,-1,1)
+             = 4 · (-tetraPoint₂).
+```
+
+The face `dartFace 0` is the triangular face through `tetraPoint₀`, `tetraPoint₁`, and `tetraPoint₃`; the missing tetra vertex is `tetraPoint₂`, so the outward normal is `-tetraPoint₂ = (1,-1,1)`.  Thus
+
+```text
+outward_normal (dartFace 0) = (1/4) · cross(edgeVec (σ.symm 0), edgeVec 0).
+```
+
+Equivalently, using the successor dart `σ 0 = 1`,
+
+```text
+cross(w₀,w₁) = cross((0,-2,-2), (-2,0,-2)) = (4,4,-4)
+             = 4 · (1,1,-1)
+             = 4 · (-tetraPoint₃),
+```
+
+which is the outward normal of the face `dartFace 1`, the face through `tetraPoint₀`, `tetraPoint₂`, and `tetraPoint₁` whose missing vertex is `tetraPoint₃`.
+
+So the stored `σ` is exactly the successor that makes `cross(current,next)` point outward for the triangular face between the two rays.  That is the intended `globalAngularPermOutward` convention.
+
+## Exact satisfiable form of the field
+
+The safe definition is:
+
+```lean
+/-- Geometric angular successor with the repo's outward-face convention.
+For an interior cone axis `a_v`, this is the successor with negative determinant
+around `a_v`, equivalently positive determinant around `-a_v`. -/
+noncomputable def globalAngularPermOutward
+    {D : Type*} [Fintype D] [DecidableEq D]
+    {M : CombMap D} (P : TriangulatedEuclideanPolyhedron M) : Equiv.Perm D :=
+  -- per-vertex angular successor satisfying the outward-face convention
+  --   det3 (vertexConeAxis P v) (edgeVec P d) (edgeVec P next) < 0
+  -- or equivalently
+  --   0 < det3 (-vertexConeAxis P v) (edgeVec P d) (edgeVec P next)
+  -- for consecutive rays.
+  -- Implementation supplied by the Route-A angular-order layer.
+  by
+    classical
+    exact 1  -- placeholder in this note only; not intended as repo code
+```
+
+The field should then be literally:
+
+```lean
+hgeo : M.σ = globalAngularPermOutward P
+```
+
+provided the implementation of `globalAngularPermOutward` is tied to this sign convention by a theorem like:
+
+```lean
+/-- Characterization of the outward angular successor. -/
+theorem globalAngularPermOutward_spec
+    {D : Type*} [Fintype D] [DecidableEq D]
+    {M : CombMap D} (P : TriangulatedEuclideanPolyhedron M) (d : D) :
+    let e := globalAngularPermOutward P d
+    M.tail e = M.tail d ∧
+    IsOutwardAngularNext P d e := by
+  -- `IsOutwardAngularNext` should encode the negative-det / outward-cross convention.
+  -- This theorem is where the convention must be frozen.
+  -- Do not leave this as an informal property of the name.
+  skip
+```
+
+A more concrete convention-free predicate is:
+
+```lean
+/-- Successor direction compatible with the existing reverse-`σ` normal formula. -/
+def IsOutwardAngularNext
+    {D : Type*} [Fintype D] [DecidableEq D]
+    {M : CombMap D} (P : TriangulatedEuclideanPolyhedron M) (d e : D) : Prop :=
+  M.tail e = M.tail d ∧
+  ∃ lam : ℝ, 0 < lam ∧
+    P.outward_normal (M.dartFace e) =
+      lam • cross (edgeVec P d) (edgeVec P e)
+```
+
+Then the tetra satisfiability theorem should target:
+
+```lean
+/-- Expected finite satisfiability test once `globalAngularPermOutward` exists. -/
+theorem tetra_sigma_eq_globalAngularPermOutward :
+    tetraMap.σ = globalAngularPermOutward tetraEuclideanPolyhedron := by
+  -- Prove by `ext d`; each dart reduces to one of the four stored 3-cycles.
+  -- The local geometric sign checks are exactly the ones already normalized by
+  -- `tetra_rotationFaithful`, plus the successor/predecessor rewrite.
+  -- This theorem should be added as the non-vacuity guard for `hgeo`.
+  ext d
+  -- fin_cases d; close with the outward angular successor uniqueness API.
+  -- No proof term can be completed in this note because `globalAngularPermOutward`
+  -- is not present in the connected repo surface yet.
+  skip
+```
+
+If the implementation instead defines the angular order by the positive right-handed determinant around `vertexConeAxis`, then the correct satisfiable field is not `hgeo` but one of these:
+
+```lean
+hgeo_pos : M.σ.symm = globalAngularPermPositive P
+-- or equivalently
+hgeo_pos' : M.σ = (globalAngularPermPositive P).symm
+```
+
+Do not use a field whose truth for the tetra depends on remembering an informal convention.
+
+## Mirror test: `hgeo` is a genuine orientation datum
+
+`hgeo` is a real orientation field, not a tautology.
+
+Let `R : E3 ≃ₗᵢ[ℝ] E3` be an orientation-reversing isometry, for example reflection in one coordinate.  It preserves the unoriented metric and convex-support data, but reverses every scalar triple product:
+
+```text
+det(R a, R u, R v) = - det(a,u,v).
+```
+
+So if `globalAngularPermOutward P` gives the stored tetra order `σ`, then for the mirrored realization `R(P)` the same angular rule gives the inverse order:
+
+```text
+globalAngularPermOutward (R(P)) = σ⁻¹
+```
+
+at every degree-3 vertex.  Since the tetra vertex cycles are genuine 3-cycles, `σ ≠ σ⁻¹`.  Hence
+
+```lean
+M.σ = globalAngularPermOutward P
+```
+
+holds for one orientation and fails for its mirror.  This is exactly what we need: it is the irreducible orientation input isolated as one field.
+
+The field is therefore neither vacuously true nor vacuously false.  It is satisfiable by the correctly oriented tetra witness under the outward convention, and it is violated by the mirror realization with the same stored combinatorial map.
+
+## Recommended guardrail before using `hgeo`
+
+Before wiring
+
+```lean
+rotationFaithful_of_sigma_eq_geo
+```
+
+into the ch13 spine, add a tetra non-vacuity theorem to the angular-order file:
+
+```lean
+theorem tetra_hgeo_outward :
+    tetraMap.σ = globalAngularPermOutward tetraEuclideanPolyhedron := by
+  -- finite check + angular successor uniqueness
+```
+
+and add the negative test/documented convention lemma:
+
+```lean
+/-- Around the interior cone axis, the repo's outward order is the negative-det order. -/
+theorem globalAngularPermOutward_det_sign
+    {D : Type*} [Fintype D] [DecidableEq D]
+    {M : CombMap D} (P : TriangulatedEuclideanPolyhedron M) (d : D) :
+    det3 (vertexConeAxis P (M.tail d))
+      (edgeVec P d)
+      (edgeVec P (globalAngularPermOutward P d)) < 0 := by
+  -- This is the convention-free audit hook.
+  -- If the theorem proves with `> 0` instead, replace `hgeo` by the inverse form.
+  skip
+```
+
+That one sign theorem is the best way to prevent a silent inverse-convention bug.
+
+## Bottom line
+
+* For the existing tetra orientation, stored `tetraMap.σ` is `0→1→2` at `tetraPoint₀`.
+* With the interior cone axis, this is the negative determinant / outward-face order.
+* The existing `tetra_rotationFaithful` theorem confirms the same convention globally on all 12 darts.
+* Therefore `hgeo : M.σ = globalAngularPermOutward P` is satisfiable for the tetra **only if** `globalAngularPermOutward` is defined as the outward-face-compatible angular successor.
+* If `globalAngularPermOutward` was implemented as the positive right-handed angular order around the interior axis, then the correct field is the inverse form `M.σ.symm = globalAngularPermPositive P`.
+* Under the correct convention, `hgeo` is a genuine orientation field: the mirror realization violates it.

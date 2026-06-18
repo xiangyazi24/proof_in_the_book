@@ -77,6 +77,12 @@ namespace ProofsInTheBook.Ch13Cauchy3D
 variable {D : Type*} [Fintype D] [DecidableEq D]
 variable {M : CombMap D}
 
+/-- Compatibility abbreviation for this assembly layer: it already carries the local link geometry. -/
+private abbrev vertexStarOfEuclidean
+    (P : TriangulatedEuclideanPolyhedron M) (v : M.Vertex)
+    (LG : VertexLinkGeometry P v) : VertexStar :=
+  LG.toVertexStar
+
 /--
 A convex Euclidean polyhedron is a triangulated Euclidean realization together
 with the local vertex-link convexity certificates needed to build `VertexStar`s.
@@ -1353,6 +1359,18 @@ theorem mem_nzIdx {m : ℕ} (d : Fin m → ℝ) (i : Fin m) :
     i ∈ nzIdx d ↔ d i ≠ 0 := by
   simp [nzIdx]
 
+private theorem finRange_pairwise_val (m : ℕ) :
+    (List.finRange m).Pairwise (fun x y : Fin m => x.val < y.val) := by
+  rw [List.pairwise_iff_get]
+  intro i j hij
+  rw [List.get_finRange, List.get_finRange]
+  simp
+  exact hij
+
+private theorem nzIdx_pairwise_val {m : ℕ} (d : Fin m → ℝ) :
+    (nzIdx d).Pairwise (fun x y : Fin m => x.val < y.val) := by
+  exact (finRange_pairwise_val m).filter _
+
 theorem mem_nzSignedIdx {m : ℕ} (d : Fin m → ℝ) (x : Fin m × Bool) :
     x ∈ nzSignedIdx d ↔ x.1 ∈ nzIdx d ∧ x.2 = decide (0 < d x.1) := by
   constructor
@@ -1364,6 +1382,462 @@ theorem mem_nzSignedIdx {m : ℕ} (d : Fin m → ℝ) (x : Fin m × Bool) :
     simp only [nzSignedIdx, List.mem_map]
     refine ⟨x.1, hi, ?_⟩
     ext <;> simp [hsign]
+
+private def signOf {n : ℕ} (d : Fin (n + 1) → ℝ) (i : Fin (n + 1)) : Bool :=
+  decide (0 < d i)
+
+private def predVal {n : ℕ} (i : Fin (n + 1)) : ℕ :=
+  if i.val = 0 then n else i.val - 1
+
+private def succVal {n : ℕ} (i : Fin (n + 1)) : ℕ :=
+  if i.val = n then 0 else i.val + 1
+
+private def cval (N start x : ℕ) : ℕ :=
+  if start ≤ x then x - start else N - start + x
+
+private lemma cval_same_branch_lt
+    {N start x y : ℕ} (hsx : start ≤ x) (hsy : start ≤ y) (hxy : x < y) :
+    cval N start x < cval N start y := by
+  unfold cval
+  simp [hsx, hsy]
+  omega
+
+private lemma cval_wrap_branch_lt
+    {N start x y : ℕ} (hsx : ¬ start ≤ x) (hsy : ¬ start ≤ y) (hxy : x < y) :
+    cval N start x < cval N start y := by
+  unfold cval
+  simp [hsx, hsy]
+  omega
+
+private lemma cval_cross_branch_lt
+    {N start x y : ℕ} (hstartN : start < N) (hxN : x < N) (hyN : y < N)
+    (hsx : start ≤ x) (hsy : ¬ start ≤ y) :
+    cval N start x < cval N start y := by
+  unfold cval
+  simp [hsx, hsy]
+  omega
+
+private lemma cval_lt_succ
+    {n start x : ℕ} (hstart : start < n + 1) (hx : x < n + 1) :
+    cval (n + 1) start x < n + 1 := by
+  unfold cval
+  split_ifs <;> omega
+
+namespace ListCyclicOrder
+
+variable {N : ℕ}
+
+private lemma getElem_mem_drop
+    {l : List (Fin N)} {j : ℕ} (hj : j < l.length) :
+    l[j] ∈ l.drop j := by
+  rw [List.drop_eq_getElem_cons hj]
+  exact List.mem_cons_self
+
+private lemma getElem_mem_take_succ
+    {l : List (Fin N)} {j : ℕ} (hj : j < l.length) :
+    l[j] ∈ l.take (j + 1) := by
+  rw [← List.take_append_getElem hj]
+  exact List.mem_append_right _ (by simp)
+
+private lemma getElem_val_le_of_mem_drop
+    {l : List (Fin N)}
+    (hpair : l.Pairwise (fun a b : Fin N => a.val < b.val))
+    {j : ℕ} (hj : j < l.length)
+    {a : Fin N} (ha : a ∈ l.drop j) :
+    l[j].val ≤ a.val := by
+  have hdrop : l.drop j = l[j] :: l.drop (j + 1) :=
+    List.drop_eq_getElem_cons hj
+  rw [hdrop] at ha
+  simp only [List.mem_cons] at ha
+  rcases ha with ha | ha
+  · subst a
+    exact le_rfl
+  · have hpivot : l[j] ∈ l.take (j + 1) :=
+      getElem_mem_take_succ hj
+    have hlt : l[j].val < a.val :=
+      hpair.rel_of_mem_take_of_mem_drop hpivot ha
+    exact le_of_lt hlt
+
+private lemma val_lt_getElem_val_of_mem_take
+    {l : List (Fin N)}
+    (hpair : l.Pairwise (fun a b : Fin N => a.val < b.val))
+    {j : ℕ} (hj : j < l.length)
+    {a : Fin N} (ha : a ∈ l.take j) :
+    a.val < l[j].val := by
+  have hpivot : l[j] ∈ l.drop j :=
+    getElem_mem_drop hj
+  exact hpair.rel_of_mem_take_of_mem_drop ha hpivot
+
+theorem pairwise_cval_drop_append_take
+    {l : List (Fin N)}
+    (hpair : l.Pairwise (fun a b : Fin N => a.val < b.val))
+    {j : ℕ} (hj : j < l.length) :
+    (l.drop j ++ l.take j).Pairwise
+      (fun a b : Fin N =>
+        cval N l[j].val a.val < cval N l[j].val b.val) := by
+  rw [List.pairwise_append]
+  constructor
+  · refine (List.Pairwise.drop (i := j) hpair).imp_of_mem ?_
+    intro a b ha hb hab
+    have hsa : l[j].val ≤ a.val :=
+      getElem_val_le_of_mem_drop hpair hj ha
+    have hsb : l[j].val ≤ b.val :=
+      getElem_val_le_of_mem_drop hpair hj hb
+    unfold cval
+    simp [hsa, hsb]
+    omega
+  constructor
+  · refine (List.Pairwise.take (i := j) hpair).imp_of_mem ?_
+    intro a b ha hb hab
+    have has : a.val < l[j].val :=
+      val_lt_getElem_val_of_mem_take hpair hj ha
+    have hbs : b.val < l[j].val :=
+      val_lt_getElem_val_of_mem_take hpair hj hb
+    have hna : ¬ l[j].val ≤ a.val := by omega
+    have hnb : ¬ l[j].val ≤ b.val := by omega
+    unfold cval
+    simp [hna, hnb]
+    omega
+  · intro a ha b hb
+    have hsa : l[j].val ≤ a.val :=
+      getElem_val_le_of_mem_drop hpair hj ha
+    have hbs : b.val < l[j].val :=
+      val_lt_getElem_val_of_mem_take hpair hj hb
+    have hnb : ¬ l[j].val ≤ b.val := by omega
+    unfold cval
+    simp [hsa, hnb]
+    omega
+
+private lemma head_drop_append_take_eq_getElem
+    {l : List (Fin N)}
+    {j : ℕ} (hj : j < l.length)
+    (hne : l.drop j ++ l.take j ≠ []) :
+    (l.drop j ++ l.take j).head hne = l[j] := by
+  rw [List.head_eq_getElem hne]
+  have hdropLen : 0 < (l.drop j).length := by
+    rw [List.length_drop]
+    omega
+  calc
+    (l.drop j ++ l.take j)[0]'(by
+        rw [List.length_append]
+        omega) = (l.drop j)[0]'hdropLen :=
+      List.getElem_append_left (as := l.drop j) (bs := l.take j) (i := 0) hdropLen
+    _ = l[j + 0]'(by omega) := List.getElem_drop
+    _ = l[j] := by simp
+
+theorem pairwise_cval_drop_append_take_head
+    {l : List (Fin N)}
+    (hpair : l.Pairwise (fun a b : Fin N => a.val < b.val))
+    {j : ℕ} (hj : j < l.length)
+    (hne : l.drop j ++ l.take j ≠ []) :
+    (l.drop j ++ l.take j).Pairwise
+      (fun a b : Fin N =>
+        cval N ((l.drop j ++ l.take j).head hne).val a.val
+          <
+        cval N ((l.drop j ++ l.take j).head hne).val b.val) := by
+  have hhead :
+      (l.drop j ++ l.take j).head hne = l[j] :=
+    head_drop_append_take_eq_getElem hj hne
+  simpa [hhead] using
+    pairwise_cval_drop_append_take (N := N) (l := l) hpair hj
+
+theorem pairwise_cval_of_eq_drop_append_take
+    {l r : List (Fin N)}
+    (hpair : l.Pairwise (fun a b : Fin N => a.val < b.val))
+    {j : ℕ} (hj : j < l.length)
+    (hrot : r = l.drop j ++ l.take j)
+    (hne : r ≠ []) :
+    r.Pairwise
+      (fun a b : Fin N =>
+        cval N (r.head hne).val a.val
+          <
+        cval N (r.head hne).val b.val) := by
+  subst r
+  exact pairwise_cval_drop_append_take_head (N := N) (l := l) hpair hj hne
+
+end ListCyclicOrder
+
+theorem nzIdx_rotate_pairwise_cval_of_rotate_eq
+    {n : ℕ} (d : Fin (n + 1) → ℝ)
+    (k j : ℕ)
+    (hj : j < (nzIdx d).length)
+    (hrot :
+      (nzIdx d).rotate k =
+        (nzIdx d).drop j ++ (nzIdx d).take j)
+    (hne : (nzIdx d).rotate k ≠ []) :
+    ((nzIdx d).rotate k).Pairwise
+      (fun a b : Fin (n + 1) =>
+        cval (n + 1) (((nzIdx d).rotate k).head hne).val a.val
+          <
+        cval (n + 1) (((nzIdx d).rotate k).head hne).val b.val) := by
+  exact
+    ListCyclicOrder.pairwise_cval_of_eq_drop_append_take
+      (N := n + 1)
+      (l := nzIdx d)
+      (r := (nzIdx d).rotate k)
+      (hpair := nzIdx_pairwise_val d)
+      (j := j)
+      hj
+      hrot
+      hne
+
+theorem nzIdx_rotate_pairwise_cval
+    {n : ℕ} (d : Fin (n + 1) → ℝ)
+    (k : ℕ)
+    (hne : (nzIdx d).rotate k ≠ []) :
+    ((nzIdx d).rotate k).Pairwise
+      (fun a b : Fin (n + 1) =>
+        cval (n + 1) (((nzIdx d).rotate k).head hne).val a.val
+          <
+        cval (n + 1) (((nzIdx d).rotate k).head hne).val b.val) := by
+  classical
+  let l : List (Fin (n + 1)) := nzIdx d
+  have hlen_pos : 0 < l.length := by
+    by_contra h
+    have hlen0 : l.length = 0 := by omega
+    have hl : l = [] := List.eq_nil_of_length_eq_zero hlen0
+    apply hne
+    simp [l] at hl
+    simp [hl]
+  let j : ℕ := k % l.length
+  have hj : j < l.length := Nat.mod_lt k hlen_pos
+  have hrot :
+      (nzIdx d).rotate k =
+        (nzIdx d).drop j ++ (nzIdx d).take j := by
+    simpa [l, j] using (List.rotate_eq_drop_append_take_mod (l := nzIdx d) (n := k))
+  exact nzIdx_rotate_pairwise_cval_of_rotate_eq (d := d) k j
+    (by simpa [l] using hj) hrot hne
+
+theorem nzIdx_rotate_pairwise_cval_get_zero
+    {n : ℕ} (d : Fin (n + 1) → ℝ)
+    (k : ℕ)
+    (hlen : 0 < ((nzIdx d).rotate k).length) :
+    ((nzIdx d).rotate k).Pairwise
+      (fun a b : Fin (n + 1) =>
+        cval (n + 1)
+            (((nzIdx d).rotate k).get ⟨0, hlen⟩).val
+            a.val
+          <
+        cval (n + 1)
+            (((nzIdx d).rotate k).get ⟨0, hlen⟩).val
+            b.val) := by
+  classical
+  have hne : (nzIdx d).rotate k ≠ [] := List.ne_nil_of_length_pos hlen
+  have hhead :
+      (((nzIdx d).rotate k).head hne)
+        =
+      ((nzIdx d).rotate k).get ⟨0, hlen⟩ := by
+    rw [List.head_eq_getElem hne]
+    simp [List.get_eq_getElem]
+  simpa [hhead] using nzIdx_rotate_pairwise_cval (d := d) k hne
+
+private def cdist (N l r : ℕ) : ℕ :=
+  if l ≤ r then r - l else N - l + r
+
+private def cycOpen (N l r x : ℕ) : Prop :=
+  if h : l < r then
+    l < x ∧ x < r
+  else
+    r < l ∧ (l < x ∨ x < r)
+
+private lemma cycOpen_pred_self_last_of_cval
+    {n : ℕ} (first last : Fin (n + 1))
+    (hpos : 0 < cval (n + 1) first.val last.val)
+    (hlt : cval (n + 1) first.val last.val < n) :
+    cycOpen (n + 1) (predVal first) last.val first.val := by
+  have hfirst : first.val < n + 1 := first.isLt
+  have hlast : last.val < n + 1 := last.isLt
+  unfold cycOpen predVal
+  unfold cval at hpos hlt
+  split_ifs at hpos hlt ⊢ <;> omega
+
+private lemma cycOpen_last_pred_of_cval
+    {n : ℕ} (first last x : Fin (n + 1))
+    (hlo : cval (n + 1) first.val last.val < cval (n + 1) first.val x.val)
+    (hxp : cval (n + 1) first.val x.val < n) :
+    cycOpen (n + 1) last.val (predVal first) x.val := by
+  have hfirst : first.val < n + 1 := first.isLt
+  have hlast : last.val < n + 1 := last.isLt
+  have hx : x.val < n + 1 := x.isLt
+  unfold cycOpen predVal
+  unfold cval at hlo hxp
+  split_ifs at hlo hxp ⊢ <;> omega
+
+private lemma predVal_le {n : ℕ} (i : Fin (n + 1)) :
+    predVal i ≤ n := by
+  unfold predVal
+  split_ifs <;> omega
+
+private lemma succVal_le {n : ℕ} (i : Fin (n + 1)) :
+    succVal i ≤ n := by
+  unfold succVal
+  split_ifs <;> omega
+
+private lemma cdist_of_lt {N l r : ℕ} (h : l < r) :
+    cdist N l r = r - l := by
+  unfold cdist
+  simp [le_of_lt h]
+
+private lemma cdist_of_gt {N l r : ℕ} (h : r < l) :
+    cdist N l r = N - l + r := by
+  unfold cdist
+  have hle : ¬ l ≤ r := by omega
+  simp [hle]
+
+private lemma two_le_cdist_of_cycOpen
+    {N l r x : ℕ} (hxN : x < N) (hlN : l < N) (hrN : r < N)
+    (h : cycOpen N l r x) :
+    2 ≤ cdist N l r := by
+  unfold cycOpen at h
+  unfold cdist
+  by_cases hlr : l < r
+  · simp [hlr, le_of_lt hlr] at h ⊢
+    omega
+  · simp [hlr] at h
+    have hrl : r < l := h.1
+    have hnle : ¬ l ≤ r := by omega
+    simp [hnle]
+    rcases h.2 with hx | hx <;> omega
+
+private lemma pred_succ_singleton_lengths
+    {n : ℕ} (hn : 3 ≤ n) (x : Fin (n + 1)) :
+    cdist (n + 1) (predVal x) (succVal x) = 2 ∧
+    cdist (n + 1) (succVal x) (predVal x) = n - 1 := by
+  unfold predVal succVal cdist
+  have hx : x.val ≤ n := by omega
+  split_ifs with h0 hnlast hle₁ hle₂ hle₃ hle₄ <;> omega
+
+private lemma singleton_forward_arc_eq
+    {n : ℕ} (hn : 3 ≤ n) (x : Fin (n + 1))
+    {y : Fin (n + 1)}
+    (hy : cycOpen (n + 1) (predVal x) (succVal x) y.val) :
+    y = x := by
+  apply Fin.ext
+  unfold cycOpen predVal succVal at hy
+  split_ifs at hy <;> omega
+
+private lemma singleton_reverse_arc_ne
+    {n : ℕ} (hn : 3 ≤ n) (x : Fin (n + 1))
+    {y : Fin (n + 1)}
+    (hy : cycOpen (n + 1) (succVal x) (predVal x) y.val) :
+    y ≠ x := by
+  intro h
+  subst h
+  unfold cycOpen predVal succVal at hy
+  split_ifs at hy <;> omega
+
+private lemma pos_of_sign_true
+    {n : ℕ} {d : Fin (n + 1) → ℝ} {i : Fin (n + 1)}
+    (h : signOf d i = true) :
+    0 < d i := by
+  simpa [signOf] using h
+
+private lemma neg_of_sign_false
+    {n : ℕ} {d : Fin (n + 1) → ℝ} {i : Fin (n + 1)}
+    (h0 : d i ≠ 0) (h : signOf d i = false) :
+    d i < 0 := by
+  have hnpos : ¬ 0 < d i := by
+    simpa [signOf] using h
+  have hle : d i ≤ 0 := le_of_not_gt hnpos
+  exact lt_of_le_of_ne hle h0
+
+private def nonwrapIdx
+    {n t s : ℕ} (hsn : s ≤ n)
+    (i : Fin (s - t - 1)) : Fin (n + 1) :=
+  ⟨t + i.val + 1, by
+    have hi := i.isLt
+    omega⟩
+
+private def wrapIdx
+    {n t s : ℕ} (hts : t < s) (hsn : s ≤ n)
+    (i : Fin (wrapLen n s t - 1)) : Fin (n + 1) :=
+  ((⟨i.val + 1, by
+      have hi := i.isLt
+      unfold wrapLen at hi
+      omega⟩ : Fin (n + 1)) + ⟨s, by omega⟩)
+
+private lemma nonwrapIdx_zero_eq_pred
+    {n r : ℕ} (first : Fin (n + 1)) (hr : r ≤ n)
+    (hlt : predVal first < r)
+    (h0 : 0 < r - predVal first - 1) :
+    nonwrapIdx (n := n) (t := predVal first) (s := r) hr
+        ⟨0, h0⟩ = first := by
+  apply Fin.ext
+  unfold nonwrapIdx
+  by_cases hz : first.val = 0
+  · have hpred : predVal first = n := by simp [predVal, hz]
+    have hbad : False := by
+      have hlt' : n < r := by simpa [hpred] using hlt
+      omega
+    exact False.elim hbad
+  · have hpred : predVal first = first.val - 1 := by simp [predVal, hz]
+    simp [hpred]
+    omega
+
+private lemma wrapIdx_zero_eq_pred
+    {n r : ℕ} (first : Fin (n + 1)) (hrlt : r < predVal first)
+    (hl : predVal first ≤ n)
+    (h0 : 0 < wrapLen n (predVal first) r - 1) :
+    wrapIdx (n := n) (t := r) (s := predVal first) hrlt hl
+        ⟨0, h0⟩ = first := by
+  apply Fin.ext
+  unfold wrapIdx
+  simp [Fin.val_add]
+  by_cases hz : first.val = 0
+  · have hpred : predVal first = n := by simp [predVal, hz]
+    simp [hpred, hz, show 1 + n = n + 1 by omega, Nat.mod_self]
+  · have hpred : predVal first = first.val - 1 := by simp [predVal, hz]
+    have hsum : 1 + (first.val - 1) = first.val := by omega
+    have hmod : (1 + (first.val - 1)) % (n + 1) = first.val := by
+      rw [hsum, Nat.mod_eq_of_lt first.isLt]
+    simp [hpred, hmod]
+
+private lemma nonwrapIdx_mem_cycOpen
+    {n t s : ℕ} (hts : t < s) (hsn : s ≤ n)
+    (i : Fin (s - t - 1)) :
+    cycOpen (n + 1) t s (nonwrapIdx hsn i).val := by
+  unfold nonwrapIdx cycOpen
+  simp [hts]
+  have hi := i.isLt
+  omega
+
+private lemma wrapIdx_mem_cycOpen
+    {n t s : ℕ} (hts : t < s) (hsn : s ≤ n)
+    (i : Fin (wrapLen n s t - 1)) :
+    cycOpen (n + 1) s t (wrapIdx hts hsn i).val := by
+  unfold wrapIdx cycOpen wrapLen
+  have hi := i.isLt
+  have hi' : i.val + 1 + s < n + 1 + t := by
+    unfold wrapLen at hi
+    omega
+  simp [Fin.val_add]
+  have hmod :
+      ((i.val + 1) + s) % (n + 1) =
+        if (i.val + 1) + s < n + 1
+        then (i.val + 1) + s
+        else (i.val + 1) + s - (n + 1) := by
+    by_cases h : (i.val + 1) + s < n + 1
+    · simp [h, Nat.mod_eq_of_lt h]
+    · have hge : n + 1 ≤ (i.val + 1) + s := by omega
+      have hsublt : (i.val + 1 + s) - (n + 1) < n + 1 := by
+        omega
+      rw [Nat.mod_eq_sub_mod hge]
+      rw [Nat.mod_eq_of_lt]
+      · simp [h]
+      · exact hsublt
+  rw [hmod]
+  have hsnot : ¬ s < t := by omega
+  by_cases hsmall : (i.val + 1) + s < n + 1
+  · simp [hsmall, hsnot, hts]
+  · simp [hsmall, hsnot, hts]
+    omega
+
+private lemma wrapLen_eq_cdist_of_lt
+    {n t s : ℕ} (hts : t < s) (_hsn : s ≤ n) :
+    wrapLen n s t = cdist (n + 1) s t := by
+  unfold wrapLen cdist
+  have hnle : ¬ s ≤ t := by omega
+  simp [hnle]
 
 lemma twoArcCut_mono2 {n : ℕ} (A B : Fin (n + 1) → S2)
     (cut : TwoArcCut (linkDiff A B)) :
@@ -1504,6 +1978,232 @@ noncomputable def twoArcSplitData_of_wrapCut {n : ℕ} (hn : 1 ≤ n)
     (twoArcCutWrap_mono1 A B cut)
     (twoArcCutWrap_strict1 A B cut)
     (twoArcCutWrap_mono2 A B cut)
+
+/-- The ambient parameters of `TwoArcSplitData` are only bookkeeping; the data fields themselves
+carry the four actual sub-arms. -/
+noncomputable def twoArcSplitData_reparam {n : ℕ}
+    {A B A' B' : Fin (n + 1) → S2} (D : TwoArcSplitData A B) :
+    TwoArcSplitData A' B' where
+  m₁ := D.m₁
+  m₂ := D.m₂
+  hm₁ := D.hm₁
+  hm₂ := D.hm₂
+  Arc1 := D.Arc1
+  Brc1 := D.Brc1
+  Arc2 := D.Arc2
+  Brc2 := D.Brc2
+  harc1A := D.harc1A
+  harc1B := D.harc1B
+  harc2A := D.harc2A
+  harc2B := D.harc2B
+  hsides1 := D.hsides1
+  hsides2 := D.hsides2
+  hshareA := D.hshareA
+  hshareB := D.hshareB
+  hmono1 := D.hmono1
+  hstrict1 := D.hstrict1
+  hmono2 := D.hmono2
+
+theorem linkDiff_swap {n : ℕ} (A B : Fin (n + 1) → S2) (i : Fin (n + 1)) :
+    linkDiff B A i = - linkDiff A B i := by
+  unfold linkDiff
+  ring
+
+/-- Orientation-complete sign-definite cut: the non-wrapping arc is nonnegative, the wrapping arc is
+nonpositive, and the strict witness may lie on either arc. -/
+structure TwoArcCutPlusMinus {n : ℕ} (d : Fin (n + 1) → ℝ) where
+  tIdx : ℕ
+  sIdx : ℕ
+  hts : tIdx < sIdx
+  hsn : sIdx ≤ n
+  hm1 : 2 ≤ sIdx - tIdx
+  hm2 : 2 ≤ wrapLen n sIdx tIdx
+  nonwrap_nonneg :
+    ∀ i : Fin (sIdx - tIdx - 1),
+      0 ≤ d ⟨tIdx + i.val + 1, by have := i.isLt; omega⟩
+  wrap_nonpos :
+    ∀ i : Fin (wrapLen n sIdx tIdx - 1),
+      d ((⟨i.val + 1, by
+            have := i.isLt
+            unfold wrapLen at this
+            omega⟩ : Fin (n + 1)) + ⟨sIdx, by omega⟩) ≤ 0
+  strictOnNonwrap : Bool
+  strict_nonwrap :
+    strictOnNonwrap = true →
+      ∃ i : Fin (sIdx - tIdx - 1),
+        0 < d ⟨tIdx + i.val + 1, by have := i.isLt; omega⟩
+  strict_wrap :
+    strictOnNonwrap = false →
+      ∃ i : Fin (wrapLen n sIdx tIdx - 1),
+        d ((⟨i.val + 1, by
+              have := i.isLt
+              unfold wrapLen at this
+              omega⟩ : Fin (n + 1)) + ⟨sIdx, by omega⟩) < 0
+
+noncomputable def twoArcSplitData_of_plusMinusCut {n : ℕ} (hn : 1 ≤ n)
+    (A B : Fin (n + 1) → S2)
+    (hA : StrictConvexSphArm A) (hB : StrictConvexSphArm B)
+    (hsides : ∀ i : Fin n, sideLen A i = sideLen B i)
+    (hclose : sDist (A 0) (A (Fin.last n)) = sDist (B 0) (B (Fin.last n)))
+    (cut : TwoArcCutPlusMinus (linkDiff A B)) :
+    TwoArcSplitData A B := by
+  cases hstrict : cut.strictOnNonwrap
+  · have hneg := cut.strict_wrap hstrict
+    refine twoArcSplitData_reparam
+      (twoArcSplitData_of_wrapCut hn B A hB hA (fun i => (hsides i).symm) hclose.symm ?_)
+    exact
+      { tIdx := cut.tIdx
+        sIdx := cut.sIdx
+        hts := cut.hts
+        hsn := cut.hsn
+        hm1 := cut.hm1
+        hm2 := cut.hm2
+        nonwrap_nonpos := by
+          intro i
+          rw [linkDiff_swap]
+          have h := cut.nonwrap_nonneg i
+          linarith
+        wrap_nonneg := by
+          intro i
+          rw [linkDiff_swap]
+          have h := cut.wrap_nonpos i
+          linarith
+        wrap_pos := by
+          rcases hneg with ⟨i, hi⟩
+          refine ⟨i, ?_⟩
+          rw [linkDiff_swap]
+          linarith }
+  · have hpos := cut.strict_nonwrap hstrict
+    exact twoArcSplitData_of_indices hn A B hA hB hsides hclose
+      cut.tIdx cut.sIdx cut.hts cut.hsn cut.hm1 cut.hm2
+      (twoArcCut_mono1 A B
+        { tIdx := cut.tIdx
+          sIdx := cut.sIdx
+          hts := cut.hts
+          hsn := cut.hsn
+          hm1 := cut.hm1
+          hm2 := cut.hm2
+          nonwrap_nonneg := cut.nonwrap_nonneg
+          nonwrap_pos := hpos
+          wrap_nonpos := cut.wrap_nonpos })
+      (twoArcCut_strict1 A B
+        { tIdx := cut.tIdx
+          sIdx := cut.sIdx
+          hts := cut.hts
+          hsn := cut.hsn
+          hm1 := cut.hm1
+          hm2 := cut.hm2
+          nonwrap_nonneg := cut.nonwrap_nonneg
+          nonwrap_pos := hpos
+          wrap_nonpos := cut.wrap_nonpos })
+      (twoArcCut_mono2 A B
+        { tIdx := cut.tIdx
+          sIdx := cut.sIdx
+          hts := cut.hts
+          hsn := cut.hsn
+          hm1 := cut.hm1
+          hm2 := cut.hm2
+          nonwrap_nonneg := cut.nonwrap_nonneg
+          nonwrap_pos := hpos
+          wrap_nonpos := cut.wrap_nonpos })
+
+/-- Mirror sign-definite cut: the non-wrapping arc is nonpositive and the wrapping arc is
+nonnegative, and the strict witness may lie on either arc. -/
+structure TwoArcCutMinusPlus {n : ℕ} (d : Fin (n + 1) → ℝ) where
+  tIdx : ℕ
+  sIdx : ℕ
+  hts : tIdx < sIdx
+  hsn : sIdx ≤ n
+  hm1 : 2 ≤ sIdx - tIdx
+  hm2 : 2 ≤ wrapLen n sIdx tIdx
+  nonwrap_nonpos :
+    ∀ i : Fin (sIdx - tIdx - 1),
+      d ⟨tIdx + i.val + 1, by have := i.isLt; omega⟩ ≤ 0
+  wrap_nonneg :
+    ∀ i : Fin (wrapLen n sIdx tIdx - 1),
+      0 ≤ d ((⟨i.val + 1, by
+            have := i.isLt
+            unfold wrapLen at this
+            omega⟩ : Fin (n + 1)) + ⟨sIdx, by omega⟩)
+  strictOnWrap : Bool
+  strict_nonwrap :
+    strictOnWrap = false →
+      ∃ i : Fin (sIdx - tIdx - 1),
+        d ⟨tIdx + i.val + 1, by have := i.isLt; omega⟩ < 0
+  strict_wrap :
+    strictOnWrap = true →
+      ∃ i : Fin (wrapLen n sIdx tIdx - 1),
+        0 < d ((⟨i.val + 1, by
+              have := i.isLt
+              unfold wrapLen at this
+              omega⟩ : Fin (n + 1)) + ⟨sIdx, by omega⟩)
+
+noncomputable def twoArcSplitData_of_minusPlusCut {n : ℕ} (hn : 1 ≤ n)
+    (A B : Fin (n + 1) → S2)
+    (hA : StrictConvexSphArm A) (hB : StrictConvexSphArm B)
+    (hsides : ∀ i : Fin n, sideLen A i = sideLen B i)
+    (hclose : sDist (A 0) (A (Fin.last n)) = sDist (B 0) (B (Fin.last n)))
+    (cut : TwoArcCutMinusPlus (linkDiff A B)) :
+    TwoArcSplitData A B := by
+  cases hstrict : cut.strictOnWrap
+  · have hneg := cut.strict_nonwrap hstrict
+    refine twoArcSplitData_reparam
+      (twoArcSplitData_of_plusMinusCut hn B A hB hA (fun i => (hsides i).symm) hclose.symm ?_)
+    exact
+      { tIdx := cut.tIdx
+        sIdx := cut.sIdx
+        hts := cut.hts
+        hsn := cut.hsn
+        hm1 := cut.hm1
+        hm2 := cut.hm2
+        nonwrap_nonneg := by
+          intro i
+          rw [linkDiff_swap]
+          have h := cut.nonwrap_nonpos i
+          linarith
+        wrap_nonpos := by
+          intro i
+          rw [linkDiff_swap]
+          have h := cut.wrap_nonneg i
+          linarith
+        strictOnNonwrap := true
+        strict_nonwrap := by
+          intro _
+          rcases hneg with ⟨i, hi⟩
+          refine ⟨i, ?_⟩
+          rw [linkDiff_swap]
+          linarith
+        strict_wrap := by
+          intro hfalse
+          simp at hfalse }
+  · have hpos := cut.strict_wrap hstrict
+    exact twoArcSplitData_of_wrapCut hn A B hA hB hsides hclose
+      { tIdx := cut.tIdx
+        sIdx := cut.sIdx
+        hts := cut.hts
+        hsn := cut.hsn
+        hm1 := cut.hm1
+        hm2 := cut.hm2
+        nonwrap_nonpos := cut.nonwrap_nonpos
+        wrap_nonneg := cut.wrap_nonneg
+        wrap_pos := hpos }
+
+/-- Orientation-complete cut, as data rather than a `Prop` disjunction, so it can dispatch to
+`TwoArcSplitData`. -/
+inductive OrientedTwoArcCut {n : ℕ} (d : Fin (n + 1) → ℝ) where
+  | plusMinus (cut : TwoArcCutPlusMinus d)
+  | minusPlus (cut : TwoArcCutMinusPlus d)
+
+noncomputable def twoArcSplitData_of_orientedCut {n : ℕ} (hn : 1 ≤ n)
+    (A B : Fin (n + 1) → S2)
+    (hA : StrictConvexSphArm A) (hB : StrictConvexSphArm B)
+    (hsides : ∀ i : Fin n, sideLen A i = sideLen B i)
+    (hclose : sDist (A 0) (A (Fin.last n)) = sDist (B 0) (B (Fin.last n)))
+    (cut : OrientedTwoArcCut (linkDiff A B)) :
+    TwoArcSplitData A B := by
+  cases cut with
+  | plusMinus cut => exact twoArcSplitData_of_plusMinusCut hn A B hA hB hsides hclose cut
+  | minusPlus cut => exact twoArcSplitData_of_minusPlusCut hn A B hA hB hsides hclose cut
 
 /-- At a triangular link (`n = 2`) the two nondegenerate complementary sub-arms required by
 `TwoArcCut` cannot both exist. -/
@@ -1735,6 +2435,945 @@ theorem cyclicFlips_two_blocks (L : List Bool) (h : cyclicFlips L = 2) :
           simpa [List.cons_append, List.append_assoc] using
             (List.isRotated_append (l := (false :: pre)) (l' := mid ++ post)).symm
 
+private theorem list_eq_replicate_of_forall_eq {α : Type*} (a : α) :
+    ∀ l : List α, (∀ x ∈ l, x = a) → l = List.replicate l.length a := by
+  intro l h
+  exact (List.eq_replicate_length (a := a) (l := l)).2 h
+
+theorem cyclicFlips_two_replicate_blocks (L : List Bool) (h : cyclicFlips L = 2) :
+    ∃ k a b : ℕ,
+      1 ≤ a ∧ 1 ≤ b ∧
+        L.rotate k = List.replicate a true ++ List.replicate b false := by
+  rcases cyclicFlips_two_blocks L h with
+    ⟨trueBlock, falseBlock, htrue_ne, hfalse_ne, htrue, hfalse, hrot⟩
+  have htf : L ~r trueBlock ++ falseBlock := List.isRotated_comm.mp hrot
+  rcases (List.isRotated_iff_mod.mp htf) with ⟨k, _hk, hk⟩
+  refine ⟨k, trueBlock.length, falseBlock.length, ?_, ?_, ?_⟩
+  · cases trueBlock with
+    | nil => simp at htrue_ne
+    | cons _ _ => simp
+  · cases falseBlock with
+    | nil => simp at hfalse_ne
+    | cons _ _ => simp
+  · calc
+      L.rotate k = trueBlock ++ falseBlock := hk
+      _ = List.replicate trueBlock.length true ++ List.replicate falseBlock.length false := by
+        have htb := list_eq_replicate_of_forall_eq true trueBlock htrue
+        have hfb := list_eq_replicate_of_forall_eq false falseBlock hfalse
+        rw [htb, hfb]
+        simp
+
+private lemma cval_lt_of_cycOpen_pred_last
+    {n : ℕ} {first last j : Fin (n + 1)}
+    (hj :
+      cycOpen (n + 1) (predVal first) last.val j.val) :
+    cval (n + 1) first.val j.val
+      <
+    cval (n + 1) first.val last.val := by
+  unfold cycOpen predVal at hj
+  unfold cval
+  split_ifs at hj ⊢ <;> omega
+
+private lemma cval_last_lt_of_cycOpen_last_pred
+    {n : ℕ} {first last j : Fin (n + 1)}
+    (hj :
+      cycOpen (n + 1) last.val (predVal first) j.val) :
+    cval (n + 1) first.val last.val
+      <
+    cval (n + 1) first.val j.val := by
+  unfold cycOpen predVal at hj
+  unfold cval
+  split_ifs at hj ⊢ <;> omega
+
+private theorem exists_get_of_mem {α : Type*} {xs : List α} {x : α}
+    (hx : x ∈ xs) :
+    ∃ q : Fin xs.length, xs.get q = x := by
+  exact List.get_of_mem hx
+
+private theorem pairwise_rel_get {α : Type*} {R : α → α → Prop} {l : List α}
+    (hpair : l.Pairwise R) {i j : Fin l.length} (hij : i.val < j.val) :
+    R (l.get i) (l.get j) := by
+  exact (List.pairwise_iff_get.mp hpair) i j hij
+
+structure RotTwoBlockCert {n : ℕ} (d : Fin (n + 1) → ℝ)
+    (σ : Bool) where
+  k : ℕ
+  a : ℕ
+  b : ℕ
+  ha : 1 ≤ a
+  hb : 1 ≤ b
+  hrot :
+    (nzSigns d).rotate k =
+      List.replicate a σ ++ List.replicate b (!σ)
+
+namespace RotTwoBlockCert
+
+variable {n : ℕ} {d : Fin (n + 1) → ℝ} {σ : Bool}
+variable (R : RotTwoBlockCert d σ)
+
+private abbrev rIdx : List (Fin (n + 1)) :=
+  (nzIdx d).rotate R.k
+
+private lemma rIdx_length :
+    R.rIdx.length = R.a + R.b := by
+  have h := congrArg List.length R.hrot
+  simpa [rIdx, nzIdx, nzSigns, signOf, List.length_rotate] using h
+
+private lemma rIdx_ne_nil : R.rIdx ≠ [] := by
+  have hlen := R.rIdx_length
+  intro hnil
+  have : R.rIdx.length = 0 := by simp [hnil]
+  have ha := R.ha
+  have hb := R.hb
+  omega
+
+private def getR (q : ℕ) (hq : q < R.a + R.b) : Fin (n + 1) :=
+  R.rIdx.get ⟨q, by
+    rw [R.rIdx_length]
+    exact hq⟩
+
+private lemma zero_lt_ab : 0 < R.a + R.b := by
+  have ha := R.ha
+  have hb := R.hb
+  omega
+
+private lemma sign_getR_left {q : ℕ} (hq : q < R.a) :
+    signOf d (R.getR q (by omega)) = σ := by
+  have hmap :
+      R.rIdx.map (signOf d) =
+        (nzSigns d).rotate R.k := by
+    rw [← nzSignedIdx_map_snd d]
+    simp [rIdx, nzSignedIdx, signOf, List.map_rotate]
+  have hmain :
+      R.rIdx.map (signOf d) =
+        List.replicate R.a σ ++ List.replicate R.b (!σ) := by
+    rw [hmap, R.hrot]
+  have hqIdx : q < R.rIdx.length := by
+    rw [R.rIdx_length]
+    omega
+  have hqMap : q < (R.rIdx.map (signOf d)).length := by
+    simpa using hqIdx
+  have hqRep : q < (List.replicate R.a σ ++ List.replicate R.b (!σ)).length := by
+    simp
+    omega
+  calc
+    signOf d (R.getR q (by omega))
+        = (R.rIdx.map (signOf d))[q]'hqMap := by
+          rw [List.getElem_map]
+          simp [getR]
+    _ = (List.replicate R.a σ ++ List.replicate R.b (!σ))[q]'(by
+          simpa [hmain] using hqMap) :=
+          List.getElem_of_eq hmain hqMap
+    _ = σ := by
+          rw [List.getElem_append_left (as := List.replicate R.a σ)
+            (bs := List.replicate R.b (!σ)) (i := q) (by simpa using hq)]
+          rw [List.getElem_replicate]
+
+private lemma sign_getR_right {q : ℕ} (hq₁ : R.a ≤ q) (hq₂ : q < R.a + R.b) :
+    signOf d (R.getR q hq₂) = !σ := by
+  have hmap :
+      R.rIdx.map (signOf d) =
+        (nzSigns d).rotate R.k := by
+    rw [← nzSignedIdx_map_snd d]
+    simp [rIdx, nzSignedIdx, signOf, List.map_rotate]
+  have hmain :
+      R.rIdx.map (signOf d) =
+        List.replicate R.a σ ++ List.replicate R.b (!σ) := by
+    rw [hmap, R.hrot]
+  have hqIdx : q < R.rIdx.length := by
+    rw [R.rIdx_length]
+    exact hq₂
+  have hqMap : q < (R.rIdx.map (signOf d)).length := by
+    simpa using hqIdx
+  have hqRep : q < (List.replicate R.a σ ++ List.replicate R.b (!σ)).length := by
+    simp
+    exact hq₂
+  calc
+    signOf d (R.getR q hq₂)
+        = (R.rIdx.map (signOf d))[q]'hqMap := by
+          rw [List.getElem_map]
+          simp [getR]
+    _ = (List.replicate R.a σ ++ List.replicate R.b (!σ))[q]'(by
+          simpa [hmain] using hqMap) :=
+          List.getElem_of_eq hmain hqMap
+    _ = !σ := by
+          rw [List.getElem_append_right (as := List.replicate R.a σ)
+            (bs := List.replicate R.b (!σ)) (i := q) (by simpa using hq₁)]
+          rw [List.getElem_replicate]
+
+private lemma rIdx_pairwise_from_first :
+    R.rIdx.Pairwise
+      (fun x y =>
+        cval (n + 1) (R.getR 0 R.zero_lt_ab).val x.val
+          <
+        cval (n + 1) (R.getR 0 R.zero_lt_ab).val y.val) := by
+  have hlen : 0 < R.rIdx.length := by
+    rw [R.rIdx_length]
+    have ha := R.ha
+    have hb := R.hb
+    omega
+  simpa [rIdx, getR, R.rIdx_length, R.zero_lt_ab] using
+    nzIdx_rotate_pairwise_cval_get_zero (d := d) (k := R.k) hlen
+
+private lemma sign_firstBlock_of_in_dropLast_arc
+    (ha2 : 2 ≤ R.a) (hb1 : 1 ≤ R.b)
+    {j : Fin (n + 1)}
+    (hj0 : d j ≠ 0)
+    (hjArc :
+      cycOpen (n + 1)
+        (predVal (R.getR 0 R.zero_lt_ab))
+        (R.getR (R.a - 1) (by omega)).val
+        j.val) :
+    signOf d j = σ := by
+  have hjmem0 : j ∈ nzIdx d :=
+    (mem_nzIdx (d := d) j).2 hj0
+  have hjmem : j ∈ R.rIdx := by
+    simpa [rIdx] using
+      (List.mem_rotate (l := nzIdx d) (a := j) (n := R.k)).2 hjmem0
+  obtain ⟨q, hqget⟩ := exists_get_of_mem hjmem
+  have hArcShift :
+      cval (n + 1) (R.getR 0 R.zero_lt_ab).val j.val
+        <
+      cval (n + 1) (R.getR 0 R.zero_lt_ab).val
+        (R.getR (R.a - 1) (by omega)).val := by
+    simpa using
+      cval_lt_of_cycOpen_pred_last
+        (n := n)
+        (first := R.getR 0 R.zero_lt_ab)
+        (last := R.getR (R.a - 1) (by omega))
+        (j := j)
+        hjArc
+  have hq_lt_a : q.val < R.a := by
+    by_contra hqa
+    have hqa' : R.a ≤ q.val := by omega
+    have hlt_index : (R.a - 1 : ℕ) < q.val := by omega
+    have hpair := pairwise_rel_get R.rIdx_pairwise_from_first
+      (i := ⟨R.a - 1, by
+        rw [R.rIdx_length]
+        omega⟩)
+      (j := q)
+      hlt_index
+    rw [← hqget] at hArcShift
+    exact not_lt_of_ge (le_of_lt hArcShift) hpair
+  rw [← hqget]
+  simpa [getR] using R.sign_getR_left hq_lt_a
+
+private lemma sign_secondBlock_of_in_complement_arc
+    (ha2 : 2 ≤ R.a) (hb2 : 2 ≤ R.b)
+    {j : Fin (n + 1)}
+    (hj0 : d j ≠ 0)
+    (hjArc :
+      cycOpen (n + 1)
+        (R.getR (R.a - 1) (by omega)).val
+        (predVal (R.getR 0 R.zero_lt_ab))
+        j.val) :
+    signOf d j = !σ := by
+  have hjmem0 : j ∈ nzIdx d :=
+    (mem_nzIdx (d := d) j).2 hj0
+  have hjmem : j ∈ R.rIdx := by
+    simpa [rIdx] using
+      (List.mem_rotate (l := nzIdx d) (a := j) (n := R.k)).2 hjmem0
+  obtain ⟨q, hqget⟩ := exists_get_of_mem hjmem
+  have hcompShift :
+      cval (n + 1) (R.getR 0 R.zero_lt_ab).val
+        (R.getR (R.a - 1) (by omega)).val
+        <
+      cval (n + 1) (R.getR 0 R.zero_lt_ab).val j.val := by
+    simpa using
+      cval_last_lt_of_cycOpen_last_pred
+        (n := n)
+        (first := R.getR 0 R.zero_lt_ab)
+        (last := R.getR (R.a - 1) (by omega))
+        (j := j)
+        hjArc
+  have hq_ge_a : R.a ≤ q.val := by
+    by_contra hqa
+    have hq_lt_a : q.val < R.a := by omega
+    have hq_le_last : q.val ≤ R.a - 1 := by omega
+    have hshift_le :
+        cval (n + 1) (R.getR 0 R.zero_lt_ab).val j.val
+          ≤
+        cval (n + 1) (R.getR 0 R.zero_lt_ab).val
+          (R.getR (R.a - 1) (by omega)).val := by
+      rcases lt_or_eq_of_le hq_le_last with hlt | heq
+      · have hpair := pairwise_rel_get R.rIdx_pairwise_from_first
+          (i := q)
+          (j := ⟨R.a - 1, by
+            rw [R.rIdx_length]
+            omega⟩)
+          hlt
+        rw [hqget] at hpair
+        exact le_of_lt hpair
+      · have : j = R.getR (R.a - 1) (by omega) := by
+          rw [← hqget]
+          apply congrArg R.rIdx.get
+          apply Fin.ext
+          exact heq
+        simp [this]
+    exact not_lt_of_ge hshift_le hcompShift
+  rw [← hqget]
+  exact R.sign_getR_right hq_ge_a (by
+    simpa [R.rIdx_length] using q.isLt)
+
+private lemma eq_singleton_firstBlock_of_sign
+    (ha1 : R.a = 1)
+    {j : Fin (n + 1)}
+    (hj0 : d j ≠ 0)
+    (hsgn : signOf d j = σ) :
+    j = R.getR 0 R.zero_lt_ab := by
+  have hjmem0 : j ∈ nzIdx d :=
+    (mem_nzIdx (d := d) j).2 hj0
+  have hjmem : j ∈ R.rIdx := by
+    simpa [rIdx] using
+      (List.mem_rotate (l := nzIdx d) (a := j) (n := R.k)).2 hjmem0
+  obtain ⟨q, hqget⟩ := exists_get_of_mem hjmem
+  have hq_lt_one : q.val < 1 := by
+    by_contra hq
+    have hqa : R.a ≤ q.val := by
+      have ha1' := ha1
+      omega
+    have hright := R.sign_getR_right
+      (q := q.val) hqa (by
+        simpa [R.rIdx_length] using q.isLt)
+    have hgetEq : R.getR q.val (by simpa [R.rIdx_length] using q.isLt) = j := by
+      simpa [getR] using hqget
+    rw [hgetEq] at hright
+    have hbad : σ = !σ := hsgn.symm.trans hright
+    cases σ <;> simp at hbad
+  apply Fin.ext
+  have hq0 : q.val = 0 := by omega
+  have : q = ⟨0, by
+      rw [R.rIdx_length]
+      omega⟩ := Fin.ext hq0
+  rw [← hqget, this]
+  rfl
+
+private lemma eq_singleton_secondBlock_of_sign
+    (hb1 : R.b = 1)
+    {j : Fin (n + 1)}
+    (hj0 : d j ≠ 0)
+    (hsgn : signOf d j = !σ) :
+    j = R.getR R.a (by omega) := by
+  have hjmem0 : j ∈ nzIdx d :=
+    (mem_nzIdx (d := d) j).2 hj0
+  have hjmem : j ∈ R.rIdx := by
+    simpa [rIdx] using
+      (List.mem_rotate (l := nzIdx d) (a := j) (n := R.k)).2 hjmem0
+  obtain ⟨q, hqget⟩ := exists_get_of_mem hjmem
+  have hq_ge_a : R.a ≤ q.val := by
+    by_contra hq
+    have hleft := R.sign_getR_left
+      (q := q.val) (by
+        have hq' := hq
+        omega)
+    have hgetEq : R.getR q.val (by omega) = j := by
+      simpa [getR] using hqget
+    rw [hgetEq] at hleft
+    have hbad : σ = !σ := hleft.symm.trans hsgn
+    cases σ <;> simp at hbad
+  have hq_eq_a : q.val = R.a := by
+    have hq_lt : q.val < R.a + R.b := by
+      simpa [R.rIdx_length] using q.isLt
+    omega
+  apply Fin.ext
+  have : q = ⟨R.a, by
+      rw [R.rIdx_length]
+      omega⟩ := Fin.ext hq_eq_a
+  rw [← hqget, this]
+  rfl
+
+end RotTwoBlockCert
+
+private lemma first_mem_dropLast_arc
+    {n : ℕ} {d : Fin (n + 1) → ℝ} {σ : Bool} {R : RotTwoBlockCert d σ}
+    (ha2 : 2 ≤ R.a) (hb1 : 1 ≤ R.b) :
+    cycOpen (n + 1)
+      (predVal (R.getR 0 R.zero_lt_ab))
+      (R.getR (R.a - 1) (by omega)).val
+      (R.getR 0 R.zero_lt_ab).val := by
+  have ha := R.ha
+  have hb := R.hb
+  have hpair := pairwise_rel_get R.rIdx_pairwise_from_first
+    (i := ⟨R.a - 1, by
+      rw [R.rIdx_length]
+      omega⟩)
+    (j := ⟨R.a, by
+      rw [R.rIdx_length]
+      omega⟩)
+    (by
+      show R.a - 1 < R.a
+      omega)
+  have hfirstLast := pairwise_rel_get R.rIdx_pairwise_from_first
+    (i := ⟨0, by
+      rw [R.rIdx_length]
+      omega⟩)
+    (j := ⟨R.a - 1, by
+      rw [R.rIdx_length]
+      omega⟩)
+    (by
+      show 0 < R.a - 1
+      omega)
+  have hpos :
+      0 < cval (n + 1) (R.getR 0 R.zero_lt_ab).val
+          (R.getR (R.a - 1) (by omega)).val := by
+    simpa [RotTwoBlockCert.getR, cval] using hfirstLast
+  have hpair' :
+      cval (n + 1) (R.getR 0 R.zero_lt_ab).val
+          (R.getR (R.a - 1) (by omega)).val <
+        cval (n + 1) (R.getR 0 R.zero_lt_ab).val
+          (R.getR R.a (by omega)).val := by
+    simpa [RotTwoBlockCert.getR] using hpair
+  have hoppN :
+      cval (n + 1) (R.getR 0 R.zero_lt_ab).val
+          (R.getR R.a (by omega)).val < n + 1 :=
+    cval_lt_succ (R.getR 0 R.zero_lt_ab).isLt (R.getR R.a (by omega)).isLt
+  have hlt :
+      cval (n + 1) (R.getR 0 R.zero_lt_ab).val
+          (R.getR (R.a - 1) (by omega)).val < n := by
+    omega
+  exact cycOpen_pred_self_last_of_cval
+    (R.getR 0 R.zero_lt_ab) (R.getR (R.a - 1) (by omega)) hpos hlt
+
+private lemma first_secondBlock_mem_complement_arc
+    {n : ℕ} {d : Fin (n + 1) → ℝ} {σ : Bool} {R : RotTwoBlockCert d σ}
+    (ha2 : 2 ≤ R.a) (hb2 : 2 ≤ R.b) :
+    cycOpen (n + 1)
+      (R.getR (R.a - 1) (by omega)).val
+      (predVal (R.getR 0 R.zero_lt_ab))
+      (R.getR R.a (by omega)).val := by
+  have ha := R.ha
+  have hb := R.hb
+  have hlast_lt_firstOpp := pairwise_rel_get R.rIdx_pairwise_from_first
+    (i := ⟨R.a - 1, by
+      rw [R.rIdx_length]
+      omega⟩)
+    (j := ⟨R.a, by
+      rw [R.rIdx_length]
+      omega⟩)
+    (by
+      show R.a - 1 < R.a
+      omega)
+  have hfirstOpp_lt_lastOpp := pairwise_rel_get R.rIdx_pairwise_from_first
+    (i := ⟨R.a, by
+      rw [R.rIdx_length]
+      omega⟩)
+    (j := ⟨R.a + 1, by
+      rw [R.rIdx_length]
+      omega⟩)
+    (by
+      show R.a < R.a + 1
+      omega)
+  have hfirstLast := pairwise_rel_get R.rIdx_pairwise_from_first
+    (i := ⟨0, by
+      rw [R.rIdx_length]
+      omega⟩)
+    (j := ⟨R.a - 1, by
+      rw [R.rIdx_length]
+      omega⟩)
+    (by
+      show 0 < R.a - 1
+      omega)
+  have hlastOppN :
+      cval (n + 1) (R.getR 0 R.zero_lt_ab).val
+          (R.getR (R.a + 1) (by omega)).val < n + 1 :=
+    cval_lt_succ (R.getR 0 R.zero_lt_ab).isLt (R.getR (R.a + 1) (by omega)).isLt
+  have hlast_firstOpp' :
+      cval (n + 1) (R.getR 0 R.zero_lt_ab).val
+          (R.getR (R.a - 1) (by omega)).val <
+        cval (n + 1) (R.getR 0 R.zero_lt_ab).val
+          (R.getR R.a (by omega)).val := by
+    simpa [RotTwoBlockCert.getR] using hlast_lt_firstOpp
+  have hfirstOpp_lastOpp' :
+      cval (n + 1) (R.getR 0 R.zero_lt_ab).val
+          (R.getR R.a (by omega)).val <
+        cval (n + 1) (R.getR 0 R.zero_lt_ab).val
+          (R.getR (R.a + 1) (by omega)).val := by
+    simpa [RotTwoBlockCert.getR] using hfirstOpp_lt_lastOpp
+  have hxp :
+      cval (n + 1) (R.getR 0 R.zero_lt_ab).val
+          (R.getR R.a (by omega)).val < n := by
+    omega
+  exact cycOpen_last_pred_of_cval
+    (R.getR 0 R.zero_lt_ab)
+    (R.getR (R.a - 1) (by omega))
+    (R.getR R.a (by omega))
+    hlast_firstOpp' hxp
+
+private def emitPosFromArc
+    {n : ℕ} (d : Fin (n + 1) → ℝ)
+    (l r : ℕ) (hl : l ≤ n) (hr : r ≤ n)
+    (hLen : 2 ≤ cdist (n + 1) l r)
+    (hComp : 2 ≤ cdist (n + 1) r l)
+    (hpos :
+      ∀ j : Fin (n + 1),
+        cycOpen (n + 1) l r j.val → 0 ≤ d j)
+    (hstrictNonwrap :
+      ∀ hlt : l < r,
+        ∃ i : Fin (r - l - 1),
+          0 < d (nonwrapIdx (n := n) (t := l) (s := r) hr i))
+    (hstrictWrap :
+      ∀ hgt : r < l,
+        ∃ i : Fin (wrapLen n l r - 1),
+          0 < d (wrapIdx (n := n) (t := r) (s := l) hgt hl i))
+    (hneg :
+      ∀ j : Fin (n + 1),
+        cycOpen (n + 1) r l j.val → d j ≤ 0) :
+    OrientedTwoArcCut d := by
+  by_cases hlr : l < r
+  · exact OrientedTwoArcCut.plusMinus
+      (
+      { tIdx := l
+        sIdx := r
+        hts := hlr
+        hsn := hr
+        hm1 := by simpa [cdist_of_lt hlr] using hLen
+        hm2 := by
+          have := hComp
+          rw [cdist_of_gt hlr] at this
+          simpa [wrapLen] using this
+        nonwrap_nonneg := by
+          intro i
+          exact hpos _ (nonwrapIdx_mem_cycOpen hlr hr i)
+        wrap_nonpos := by
+          intro i
+          exact hneg _ (wrapIdx_mem_cycOpen hlr hr i)
+        strictOnNonwrap := true
+        strict_nonwrap := by
+          intro _
+          exact hstrictNonwrap hlr
+        strict_wrap := by
+          intro hfalse
+          simp at hfalse } : TwoArcCutPlusMinus d)
+  · by_cases hrl : r < l
+    · exact OrientedTwoArcCut.minusPlus (
+      { tIdx := r
+        sIdx := l
+        hts := hrl
+        hsn := hl
+        hm1 := by simpa [cdist_of_lt hrl] using hComp
+        hm2 := by
+          have := hLen
+          rw [cdist_of_gt hrl] at this
+          simpa [wrapLen] using this
+        nonwrap_nonpos := by
+          intro i
+          exact hneg _ (nonwrapIdx_mem_cycOpen hrl hl i)
+        wrap_nonneg := by
+          intro i
+          exact hpos _ (wrapIdx_mem_cycOpen hrl hl i)
+        strictOnWrap := true
+        strict_nonwrap := by
+          intro hfalse
+          simp at hfalse
+        strict_wrap := by
+          intro _
+          exact hstrictWrap hrl } : TwoArcCutMinusPlus d)
+    · have heq : l = r := by omega
+      subst r
+      simp [cdist] at hLen
+
+private def emitNegFromArc
+    {n : ℕ} (d : Fin (n + 1) → ℝ)
+    (l r : ℕ) (hl : l ≤ n) (hr : r ≤ n)
+    (hLen : 2 ≤ cdist (n + 1) l r)
+    (hComp : 2 ≤ cdist (n + 1) r l)
+    (hneg :
+      ∀ j : Fin (n + 1),
+        cycOpen (n + 1) l r j.val → d j ≤ 0)
+    (hstrictNonwrap :
+      ∀ hlt : l < r,
+        ∃ i : Fin (r - l - 1),
+          d (nonwrapIdx (n := n) (t := l) (s := r) hr i) < 0)
+    (hstrictWrap :
+      ∀ hgt : r < l,
+        ∃ i : Fin (wrapLen n l r - 1),
+          d (wrapIdx (n := n) (t := r) (s := l) hgt hl i) < 0)
+    (hpos :
+      ∀ j : Fin (n + 1),
+        cycOpen (n + 1) r l j.val → 0 ≤ d j) :
+    OrientedTwoArcCut d := by
+  by_cases hlr : l < r
+  · exact OrientedTwoArcCut.minusPlus
+      (
+      { tIdx := l
+        sIdx := r
+        hts := hlr
+        hsn := hr
+        hm1 := by simpa [cdist_of_lt hlr] using hLen
+        hm2 := by
+          have := hComp
+          rw [cdist_of_gt hlr] at this
+          simpa [wrapLen] using this
+        nonwrap_nonpos := by
+          intro i
+          exact hneg _ (nonwrapIdx_mem_cycOpen hlr hr i)
+        wrap_nonneg := by
+          intro i
+          exact hpos _ (wrapIdx_mem_cycOpen hlr hr i)
+        strictOnWrap := false
+        strict_nonwrap := by
+          intro _
+          exact hstrictNonwrap hlr
+        strict_wrap := by
+          intro htrue
+          simp at htrue } : TwoArcCutMinusPlus d)
+  · by_cases hrl : r < l
+    · exact OrientedTwoArcCut.plusMinus (
+      { tIdx := r
+        sIdx := l
+        hts := hrl
+        hsn := hl
+        hm1 := by simpa [cdist_of_lt hrl] using hComp
+        hm2 := by
+          have := hLen
+          rw [cdist_of_gt hrl] at this
+          simpa [wrapLen] using this
+        nonwrap_nonneg := by
+          intro i
+          exact hpos _ (nonwrapIdx_mem_cycOpen hrl hl i)
+        wrap_nonpos := by
+          intro i
+          exact hneg _ (wrapIdx_mem_cycOpen hrl hl i)
+        strictOnNonwrap := false
+        strict_nonwrap := by
+          intro htrue
+          simp at htrue
+        strict_wrap := by
+          intro _
+          exact hstrictWrap hrl } : TwoArcCutPlusMinus d)
+    · have heq : l = r := by omega
+      subst r
+      simp [cdist] at hLen
+
+private def cut_singleton_pos
+    {n : ℕ} (d : Fin (n + 1) → ℝ) (hn : 3 ≤ n)
+    (x : Fin (n + 1))
+    (hxpos : 0 < d x)
+    (honly :
+      ∀ j : Fin (n + 1), d j ≠ 0 → signOf d j = true → j = x) :
+    OrientedTwoArcCut d := by
+  let l := predVal x
+  let r := succVal x
+  have hl : l ≤ n := predVal_le x
+  have hr : r ≤ n := succVal_le x
+  have hLens := pred_succ_singleton_lengths hn x
+  have hLen : 2 ≤ cdist (n + 1) l r := by
+    simpa [l, r, hLens.1] using (show 2 ≤ 2 by omega)
+  have hComp : 2 ≤ cdist (n + 1) r l := by
+    have hn' : 2 ≤ n - 1 := by omega
+    simpa [l, r, hLens.2] using hn'
+  refine emitPosFromArc d l r hl hr hLen hComp ?hpos ?hstrictNW ?hstrictW ?hneg
+  · intro j hjArc
+    have hj : j = x := singleton_forward_arc_eq hn x hjArc
+    rw [hj]
+    exact le_of_lt hxpos
+  · intro hlt
+    let i0 : Fin (r - l - 1) := ⟨0, by
+      have hcd := hLen
+      rw [cdist_of_lt hlt] at hcd
+      omega⟩
+    refine ⟨i0, ?_⟩
+    have hidx :
+        nonwrapIdx (n := n) (t := l) (s := r) hr i0 = x := by
+      exact singleton_forward_arc_eq hn x
+        (by simpa [l, r] using nonwrapIdx_mem_cycOpen hlt hr i0)
+    simpa [hidx] using hxpos
+  · intro hgt
+    let i0 : Fin (wrapLen n l r - 1) := ⟨0, by
+      have hcd := hLen
+      rw [cdist_of_gt hgt] at hcd
+      unfold wrapLen
+      omega⟩
+    refine ⟨i0, ?_⟩
+    have hidx :
+        wrapIdx (n := n) (t := r) (s := l) hgt hl i0 = x := by
+      exact singleton_forward_arc_eq hn x
+        (by simpa [l, r] using wrapIdx_mem_cycOpen hgt hl i0)
+    simpa [hidx] using hxpos
+  · intro j hjArc
+    by_cases hj0 : d j = 0
+    · simp [hj0]
+    · by_cases hsgn : signOf d j = true
+      · have hEq := honly j hj0 hsgn
+        have hne := singleton_reverse_arc_ne hn x hjArc
+        exact False.elim (hne hEq)
+      · have hfalse : signOf d j = false := by
+          cases h : signOf d j <;> simp [h] at hsgn ⊢
+        exact le_of_lt (neg_of_sign_false hj0 hfalse)
+
+private def cut_singleton_neg
+    {n : ℕ} (d : Fin (n + 1) → ℝ) (hn : 3 ≤ n)
+    (x : Fin (n + 1))
+    (hxneg : d x < 0)
+    (honly :
+      ∀ j : Fin (n + 1), d j ≠ 0 → signOf d j = false → j = x) :
+    OrientedTwoArcCut d := by
+  let l := predVal x
+  let r := succVal x
+  have hl : l ≤ n := predVal_le x
+  have hr : r ≤ n := succVal_le x
+  have hLens := pred_succ_singleton_lengths hn x
+  have hLen : 2 ≤ cdist (n + 1) l r := by
+    simpa [l, r, hLens.1] using (show 2 ≤ 2 by omega)
+  have hComp : 2 ≤ cdist (n + 1) r l := by
+    have hn' : 2 ≤ n - 1 := by omega
+    simpa [l, r, hLens.2] using hn'
+  refine emitNegFromArc d l r hl hr hLen hComp ?hneg ?hstrictNW ?hstrictW ?hpos
+  · intro j hjArc
+    have hj : j = x := singleton_forward_arc_eq hn x hjArc
+    rw [hj]
+    exact le_of_lt hxneg
+  · intro hlt
+    let i0 : Fin (r - l - 1) := ⟨0, by
+      have hcd := hLen
+      rw [cdist_of_lt hlt] at hcd
+      omega⟩
+    refine ⟨i0, ?_⟩
+    have hidx :
+        nonwrapIdx (n := n) (t := l) (s := r) hr i0 = x := by
+      exact singleton_forward_arc_eq hn x
+        (by simpa [l, r] using nonwrapIdx_mem_cycOpen hlt hr i0)
+    simpa [hidx] using hxneg
+  · intro hgt
+    let i0 : Fin (wrapLen n l r - 1) := ⟨0, by
+      have hcd := hLen
+      rw [cdist_of_gt hgt] at hcd
+      unfold wrapLen
+      omega⟩
+    refine ⟨i0, ?_⟩
+    have hidx :
+        wrapIdx (n := n) (t := r) (s := l) hgt hl i0 = x := by
+      exact singleton_forward_arc_eq hn x
+        (by simpa [l, r] using wrapIdx_mem_cycOpen hgt hl i0)
+    simpa [hidx] using hxneg
+  · intro j hjArc
+    by_cases hj0 : d j = 0
+    · simp [hj0]
+    · by_cases hsgn : signOf d j = false
+      · have hEq := honly j hj0 hsgn
+        have hne := singleton_reverse_arc_ne hn x hjArc
+        exact False.elim (hne hEq)
+      · have htrue : signOf d j = true := by
+          cases h : signOf d j <;> simp [h] at hsgn ⊢
+        exact le_of_lt (pos_of_sign_true htrue)
+
+private def cut_firstBlock_dropLast
+    {n : ℕ} {d : Fin (n + 1) → ℝ} {σ : Bool}
+    (hn : 3 ≤ n) (R : RotTwoBlockCert d σ)
+    (ha2 : 2 ≤ R.a) (hb2 : 2 ≤ R.b) :
+    OrientedTwoArcCut d := by
+  let first := R.getR 0 R.zero_lt_ab
+  let last := R.getR (R.a - 1) (by omega)
+  let l := predVal first
+  let r := last.val
+  have hl : l ≤ n := predVal_le first
+  have hr : r ≤ n := Nat.le_of_lt_succ last.isLt
+  have hfirstArc : cycOpen (n + 1) l r first.val := by
+    simpa [first, last, l, r] using first_mem_dropLast_arc (R := R) ha2 (by omega)
+  have hfirstOppArc : cycOpen (n + 1) r l (R.getR R.a (by omega)).val := by
+    simpa [first, last, l, r] using first_secondBlock_mem_complement_arc (R := R) ha2 hb2
+  have hLen : 2 ≤ cdist (n + 1) l r :=
+    two_le_cdist_of_cycOpen first.isLt (by omega) (by omega) hfirstArc
+  have hComp : 2 ≤ cdist (n + 1) r l :=
+    two_le_cdist_of_cycOpen (R.getR R.a (by omega)).isLt (by omega) (by omega) hfirstOppArc
+  have hfirstSign : signOf d first = σ := by
+    simpa [first] using R.sign_getR_left (q := 0) (by omega)
+  by_cases hσ : σ = true
+  · have hfirstPos : 0 < d first := pos_of_sign_true (by simpa [hσ] using hfirstSign)
+    refine emitPosFromArc d l r hl hr hLen hComp ?_ ?_ ?_ ?_
+    · intro j hjArc
+      by_cases hj0 : d j = 0
+      · simp [hj0]
+      · have hs := R.sign_firstBlock_of_in_dropLast_arc ha2 (by omega) hj0
+          (by simpa [first, last, l, r] using hjArc)
+        exact le_of_lt (pos_of_sign_true (by simpa [hσ] using hs))
+    · intro hlt
+      let i0 : Fin (r - l - 1) := ⟨0, by
+        have hcd := hLen
+        rw [cdist_of_lt hlt] at hcd
+        omega⟩
+      refine ⟨i0, ?_⟩
+      have hidx : nonwrapIdx (n := n) (t := l) (s := r) hr i0 = first := by
+        have h0idx : 0 < r - predVal first - 1 := by
+          have hcd := hLen
+          rw [cdist_of_lt hlt] at hcd
+          simp [l] at hcd
+          omega
+        simpa [first, l, r, i0] using
+          nonwrapIdx_zero_eq_pred first hr (by simpa [l, r] using hlt) h0idx
+      simpa [hidx] using hfirstPos
+    · intro hgt
+      let i0 : Fin (wrapLen n l r - 1) := ⟨0, by
+        have hcd := hLen
+        rw [cdist_of_gt hgt] at hcd
+        unfold wrapLen
+        omega⟩
+      refine ⟨i0, ?_⟩
+      have hidx : wrapIdx (n := n) (t := r) (s := l) hgt hl i0 = first := by
+        have h0idx : 0 < wrapLen n (predVal first) r - 1 := by
+          have hcd := hLen
+          rw [cdist_of_gt hgt] at hcd
+          simp [l] at hcd
+          unfold wrapLen
+          omega
+        simpa [first, l, r, i0] using
+          wrapIdx_zero_eq_pred first (by simpa [l, r] using hgt) hl h0idx
+      simpa [hidx] using hfirstPos
+    · intro j hjArc
+      by_cases hj0 : d j = 0
+      · simp [hj0]
+      · have hs := R.sign_secondBlock_of_in_complement_arc ha2 hb2 hj0
+          (by simpa [first, last, l, r] using hjArc)
+        exact le_of_lt (neg_of_sign_false hj0 (by simpa [hσ] using hs))
+  · have hσfalse : σ = false := by cases σ <;> simp at hσ ⊢
+    have hfirstNeg : d first < 0 := by
+      have hfalse : signOf d first = false := by simpa [hσfalse] using hfirstSign
+      have h0 : d first ≠ 0 := by
+        have hmemRot : first ∈ R.rIdx := by
+          exact List.get_mem R.rIdx ⟨0, by rw [R.rIdx_length]; omega⟩
+        have hmem : first ∈ nzIdx d := by
+          simpa [first, RotTwoBlockCert.rIdx] using
+            (List.mem_rotate (l := nzIdx d) (a := first) (n := R.k)).1 hmemRot
+        exact (mem_nzIdx (d := d) first).1 hmem
+      exact neg_of_sign_false h0 hfalse
+    refine emitNegFromArc d l r hl hr hLen hComp ?_ ?_ ?_ ?_
+    · intro j hjArc
+      by_cases hj0 : d j = 0
+      · simp [hj0]
+      · have hs := R.sign_firstBlock_of_in_dropLast_arc ha2 (by omega) hj0
+          (by simpa [first, last, l, r] using hjArc)
+        exact le_of_lt (neg_of_sign_false hj0 (by simpa [hσfalse] using hs))
+    · intro hlt
+      let i0 : Fin (r - l - 1) := ⟨0, by
+        have hcd := hLen
+        rw [cdist_of_lt hlt] at hcd
+        omega⟩
+      refine ⟨i0, ?_⟩
+      have hidx : nonwrapIdx (n := n) (t := l) (s := r) hr i0 = first := by
+        have h0idx : 0 < r - predVal first - 1 := by
+          have hcd := hLen
+          rw [cdist_of_lt hlt] at hcd
+          simp [l] at hcd
+          omega
+        simpa [first, l, r, i0] using
+          nonwrapIdx_zero_eq_pred first hr (by simpa [l, r] using hlt) h0idx
+      simpa [hidx] using hfirstNeg
+    · intro hgt
+      let i0 : Fin (wrapLen n l r - 1) := ⟨0, by
+        have hcd := hLen
+        rw [cdist_of_gt hgt] at hcd
+        unfold wrapLen
+        omega⟩
+      refine ⟨i0, ?_⟩
+      have hidx : wrapIdx (n := n) (t := r) (s := l) hgt hl i0 = first := by
+        have h0idx : 0 < wrapLen n (predVal first) r - 1 := by
+          have hcd := hLen
+          rw [cdist_of_gt hgt] at hcd
+          simp [l] at hcd
+          unfold wrapLen
+          omega
+        simpa [first, l, r, i0] using
+          wrapIdx_zero_eq_pred first (by simpa [l, r] using hgt) hl h0idx
+      simpa [hidx] using hfirstNeg
+    · intro j hjArc
+      by_cases hj0 : d j = 0
+      · simp [hj0]
+      · have hs := R.sign_secondBlock_of_in_complement_arc ha2 hb2 hj0
+          (by simpa [first, last, l, r] using hjArc)
+        exact le_of_lt (pos_of_sign_true (by simpa [hσfalse] using hs))
+
+private def cut_of_rot_two_block
+    {n : ℕ} {d : Fin (n + 1) → ℝ} {σ : Bool}
+    (hn : 3 ≤ n) (R : RotTwoBlockCert d σ) :
+    OrientedTwoArcCut d := by
+  by_cases ha1 : R.a = 1
+  · let x := R.getR 0 R.zero_lt_ab
+    have hxsign : signOf d x = σ := by simpa [x] using R.sign_getR_left (q := 0) (by omega)
+    cases hσ : σ
+    · have hxneg : d x < 0 := by
+        have hxfalse : signOf d x = false := by simpa [hσ] using hxsign
+        have hx0 : d x ≠ 0 := by
+          have hxmemRot : x ∈ R.rIdx := by
+            exact List.get_mem R.rIdx ⟨0, by rw [R.rIdx_length]; omega⟩
+          have hxmem : x ∈ nzIdx d := by
+            simpa [RotTwoBlockCert.rIdx] using
+              (List.mem_rotate (l := nzIdx d) (a := x) (n := R.k)).1 hxmemRot
+          exact (mem_nzIdx (d := d) x).1 hxmem
+        exact neg_of_sign_false hx0 hxfalse
+      exact cut_singleton_neg d hn x hxneg (fun j hj0 hsgn =>
+        R.eq_singleton_firstBlock_of_sign ha1 hj0 (by simpa [hσ] using hsgn))
+    · have hxpos : 0 < d x := pos_of_sign_true (by simpa [hσ] using hxsign)
+      exact cut_singleton_pos d hn x hxpos (fun j hj0 hsgn =>
+        R.eq_singleton_firstBlock_of_sign ha1 hj0 (by simpa [hσ] using hsgn))
+  · by_cases hb1 : R.b = 1
+    · let x := R.getR R.a (by omega)
+      have hxsign : signOf d x = !σ := by
+        simpa [x] using R.sign_getR_right (q := R.a) (by omega) (by omega)
+      cases hσ : σ
+      · have hxpos : 0 < d x := pos_of_sign_true (by simpa [hσ] using hxsign)
+        exact cut_singleton_pos d hn x hxpos (fun j hj0 hsgn =>
+          R.eq_singleton_secondBlock_of_sign hb1 hj0 (by simpa [hσ] using hsgn))
+      · have hxneg : d x < 0 := by
+          have hxfalse : signOf d x = false := by simpa [hσ] using hxsign
+          have hx0 : d x ≠ 0 := by
+            have hxmemRot : x ∈ R.rIdx := by
+              exact List.get_mem R.rIdx ⟨R.a, by rw [R.rIdx_length]; omega⟩
+            have hxmem : x ∈ nzIdx d := by
+              simpa [RotTwoBlockCert.rIdx] using
+                (List.mem_rotate (l := nzIdx d) (a := x) (n := R.k)).1 hxmemRot
+            exact (mem_nzIdx (d := d) x).1 hxmem
+          exact neg_of_sign_false hx0 hxfalse
+        exact cut_singleton_neg d hn x hxneg (fun j hj0 hsgn =>
+          R.eq_singleton_secondBlock_of_sign hb1 hj0 (by simpa [hσ] using hsgn))
+    · have ha2 : 2 ≤ R.a := by
+        have ha := R.ha
+        omega
+      have hb2 : 2 ≤ R.b := by
+        have hb := R.hb
+        omega
+      exact cut_firstBlock_dropLast hn R ha2 hb2
+
+noncomputable def oriented_cut_of_cyclicFlips_nzSigns_eq_two
+    {n : ℕ} (d : Fin (n + 1) → ℝ)
+    (hn : 3 ≤ n)
+    (h2 : cyclicFlips (nzSigns d) = 2) :
+    OrientedTwoArcCut d := by
+  classical
+  let ex0 := cyclicFlips_two_replicate_blocks (nzSigns d) h2
+  let k := Classical.choose ex0
+  let ex1 := Classical.choose_spec ex0
+  let a := Classical.choose ex1
+  let ex2 := Classical.choose_spec ex1
+  let b := Classical.choose ex2
+  let ex3 := Classical.choose_spec ex2
+  have ha : 1 ≤ a := ex3.1
+  have hb : 1 ≤ b := ex3.2.1
+  have hrot : (nzSigns d).rotate k =
+      List.replicate a true ++ List.replicate b false := ex3.2.2
+  exact cut_of_rot_two_block hn
+    ({ k := k
+       a := a
+       b := b
+       ha := ha
+       hb := hb
+       hrot := by simpa using hrot } : RotTwoBlockCert d true)
+
+noncomputable def orientedCutData_of_signChangesFull
+    {n : ℕ} (hn : 2 ≤ n) (A B : Fin (n + 1) → S2)
+    (hA : StrictConvexSphArm A) (hB : StrictConvexSphArm B)
+    (hsides : ∀ i : Fin n, sideLen A i = sideLen B i)
+    (hclose : sDist (A 0) (A (Fin.last n)) = sDist (B 0) (B (Fin.last n)))
+    (h2 : signChangesFull A B = 2) :
+    OrientedTwoArcCut (linkDiff A B) := by
+  classical
+  by_cases hn2 : n = 2
+  · subst n
+    exfalso
+    exact signChangesFull_ne_two_triangle A B hA hB hsides hclose h2
+  · have hn3 : 3 ≤ n := by omega
+    exact oriented_cut_of_cyclicFlips_nzSigns_eq_two (linkDiff A B) hn3
+      (by simpa [signChangesFull] using h2)
+
 noncomputable def twoArcSplitData_of_cut {n : ℕ} (hn : 1 ≤ n) (A B : Fin (n + 1) → S2)
     (hA : StrictConvexSphArm A) (hB : StrictConvexSphArm B)
     (hsides : ∀ i : Fin n, sideLen A i = sideLen B i)
@@ -1758,7 +3397,7 @@ structure EuclideanTwoArcCutData
           (fun w => vertexStarOfEuclidean P w (LGP w))
           (fun w => vertexStarOfEuclidean Q w (LGQ w))
           (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) = 2 →
-      TwoArcCut
+      OrientedTwoArcCut
         (linkDiff (vertexStarOfEuclidean P v (LGP v)).vertexLink
           (linkQcast M
             (fun w => vertexStarOfEuclidean P w (LGP w))
@@ -1811,7 +3450,7 @@ noncomputable def euclidean_twoArc_of_cutData
   have hn : 1 ≤ S.n := by
     have := S.hn
     omega
-  exact twoArcSplitData_of_cut hn S.vertexLink T S.vertexLink_strictArm
+  exact twoArcSplitData_of_orientedCut hn S.vertexLink T S.vertexLink_strictArm
     (linkQcast_strictArm M
       (fun w => vertexStarOfEuclidean P w (LGP w))
       (fun w => vertexStarOfEuclidean Q w (LGQ w))
@@ -2310,7 +3949,7 @@ structure EuclideanRerootedCutFieldData
           (rotatedStarP P LGP offset)
           (rotatedStarQ P Q LGP LGQ offset)
           (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) = 2 →
-      TwoArcCut
+      OrientedTwoArcCut
         (linkDiff (rotatedStarP P LGP offset v).vertexLink
           (linkQcast M
             (rotatedStarP P LGP offset)
@@ -2362,7 +4001,7 @@ structure EuclideanAdaptiveCutFieldData
           (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ))
           (rotatedStarQ P Q LGP LGQ (adaptiveOffset P Q LGP LGQ))
           (fun w => vertexLinkGeometry_n_eq P Q LGP LGQ w) v) = 2 →
-      TwoArcCut
+      OrientedTwoArcCut
         (linkDiff (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ) v).vertexLink
           (linkQcast M
             (rotatedStarP P LGP (adaptiveOffset P Q LGP LGQ))
@@ -2380,37 +4019,7 @@ structure EuclideanAdaptiveCutFieldData
 
 noncomputable def euclideanAdaptiveCutFieldData_of_congruent
     (P Q : ConvexEuclideanPolyhedron M)
-    (hcong : CongruentFaces P.toTri Q.toTri)
-    (htwoArcCut : ∀ (v : M.Vertex),
-      signChangesFull
-          (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
-            (adaptiveOffset P.toTri Q.toTri
-              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink
-          (linkQcast M
-            (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
-              (adaptiveOffset P.toTri Q.toTri
-                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
-            (rotatedStarQ P.toTri Q.toTri
-              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
-              (adaptiveOffset P.toTri Q.toTri
-                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
-            (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
-              (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v) = 2 →
-        TwoArcCut
-          (linkDiff
-            (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
-              (adaptiveOffset P.toTri Q.toTri
-                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink
-            (linkQcast M
-              (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
-                (adaptiveOffset P.toTri Q.toTri
-                  (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
-              (rotatedStarQ P.toTri Q.toTri
-                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
-                (adaptiveOffset P.toTri Q.toTri
-                  (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
-              (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
-                (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v))) :
+    (hcong : CongruentFaces P.toTri Q.toTri) :
     EuclideanAdaptiveCutFieldData P.toTri Q.toTri
       (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v) where
   isSphere := P.sphere
@@ -2427,7 +4036,49 @@ noncomputable def euclideanAdaptiveCutFieldData_of_congruent
       (adaptiveOffset P.toTri Q.toTri
         (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v))
       hcong
-  twoArcCutData := htwoArcCut
+  twoArcCutData := by
+    intro v h2
+    exact orientedCutData_of_signChangesFull
+      (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+        (adaptiveOffset P.toTri Q.toTri
+          (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).hn
+      (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+        (adaptiveOffset P.toTri Q.toTri
+          (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink
+      (linkQcast M
+        (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+          (adaptiveOffset P.toTri Q.toTri
+            (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+        (rotatedStarQ P.toTri Q.toTri
+          (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
+          (adaptiveOffset P.toTri Q.toTri
+            (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+        (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
+          (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v)
+      (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+        (adaptiveOffset P.toTri Q.toTri
+          (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink_strictArm
+      (linkQcast_strictArm M
+        (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+          (adaptiveOffset P.toTri Q.toTri
+            (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+        (rotatedStarQ P.toTri Q.toTri
+          (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
+          (adaptiveOffset P.toTri Q.toTri
+            (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+        (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
+          (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v)
+      (rotated_sides_eq P.toTri Q.toTri
+        (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
+        (adaptiveOffset P.toTri Q.toTri
+          (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w))
+        hcong v)
+      (rotated_close_eq P.toTri Q.toTri
+        (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
+        (adaptiveOffset P.toTri Q.toTri
+          (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w))
+        hcong v)
+      h2
   linkOrder :=
     rotated_linkOrder P.toTri Q.toTri
       (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v)
@@ -2479,7 +4130,7 @@ noncomputable def rotated_twoArc_of_cutData
   have hn : 1 ≤ S.n := by
     have := S.hn
     omega
-  exact twoArcSplitData_of_cut hn S.vertexLink T S.vertexLink_strictArm
+  exact twoArcSplitData_of_orientedCut hn S.vertexLink T S.vertexLink_strictArm
     (linkQcast_strictArm M
       (rotatedStarP P LGP F.offset)
       (rotatedStarQ P Q LGP LGQ F.offset)
@@ -2775,75 +4426,15 @@ theorem chapter13_euclidean_of_adaptive_cutFields
 
 def convexPolytopeRealization_of_convexEuclidean
     (P Q : ConvexEuclideanPolyhedron M)
-    (hcong : CongruentFaces P.toTri Q.toTri)
-    (htwoArcCut : ∀ (v : M.Vertex),
-      signChangesFull
-          (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
-            (adaptiveOffset P.toTri Q.toTri
-              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink
-          (linkQcast M
-            (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
-              (adaptiveOffset P.toTri Q.toTri
-                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
-            (rotatedStarQ P.toTri Q.toTri
-              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
-              (adaptiveOffset P.toTri Q.toTri
-                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
-            (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
-              (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v) = 2 →
-        TwoArcCut
-          (linkDiff
-            (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
-              (adaptiveOffset P.toTri Q.toTri
-                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink
-            (linkQcast M
-              (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
-                (adaptiveOffset P.toTri Q.toTri
-                  (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
-              (rotatedStarQ P.toTri Q.toTri
-                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
-                (adaptiveOffset P.toTri Q.toTri
-                  (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
-              (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
-                (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v))) :
+    (hcong : CongruentFaces P.toTri Q.toTri) :
     ConvexPolytopeRealization M :=
   convexPolytopeRealization_of_adaptive_cutFields P.toTri Q.toTri
     (fun v => P.linkGeomAt v) (fun v => Q.linkGeomAt v)
-    (euclideanAdaptiveCutFieldData_of_congruent P Q hcong htwoArcCut)
+    (euclideanAdaptiveCutFieldData_of_congruent P Q hcong)
 
 theorem chapter13_euclidean
     (P Q : ConvexEuclideanPolyhedron M)
     (hcong : CongruentFaces P.toTri Q.toTri)
-    (htwoArcCut : ∀ (v : M.Vertex),
-      signChangesFull
-          (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
-            (adaptiveOffset P.toTri Q.toTri
-              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink
-          (linkQcast M
-            (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
-              (adaptiveOffset P.toTri Q.toTri
-                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
-            (rotatedStarQ P.toTri Q.toTri
-              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
-              (adaptiveOffset P.toTri Q.toTri
-                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
-            (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
-              (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v) = 2 →
-        TwoArcCut
-          (linkDiff
-            (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
-              (adaptiveOffset P.toTri Q.toTri
-                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink
-            (linkQcast M
-              (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
-                (adaptiveOffset P.toTri Q.toTri
-                  (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
-              (rotatedStarQ P.toTri Q.toTri
-                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
-                (adaptiveOffset P.toTri Q.toTri
-                  (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
-              (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
-                (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v)))
     (v : M.Vertex)
     (i : Fin ((rotatedStarP P.toTri (fun w => P.linkGeomAt w)
       (adaptiveOffset P.toTri Q.toTri (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).n - 1)) :
@@ -2857,7 +4448,7 @@ theorem chapter13_euclidean
             (vertexLinkGeometry_n_eq P.toTri Q.toTri
               (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w) v).symm) i) := by
   simpa [convexPolytopeRealization_of_convexEuclidean] using
-    (convexPolytopeRealization_of_convexEuclidean P Q hcong htwoArcCut).realization_rigid v i
+    (convexPolytopeRealization_of_convexEuclidean P Q hcong).realization_rigid v i
 
 /--
 **Chapter 13 — Cauchy's rigidity theorem (canonical headline).**
@@ -2865,45 +4456,13 @@ theorem chapter13_euclidean
 Two congruent-faced `ℝ³` convex triangulated polyhedra have equal dihedral
 angles at every vertex.  Non-vacuous:
 `chapter13_cauchy_rigidity_tetra` actually instantiates this theorem for the
-regular tetrahedron.  The carried geometric residuals, namely the convex-link
-certificate in `ConvexEuclideanPolyhedron` and the `TwoArcCut` supplier, are
-honest convex-polytope facts rather than sign-counting certificates; they are
-tetrahedron-witnessed here because Mathlib does not provide the needed
-planar/spherical convexity API.
+regular tetrahedron.  The carried geometric residual is the convex-link
+certificate in `ConvexEuclideanPolyhedron`; the two-arc cut formerly carried as
+an external supplier is derived here from the sign-counting theorem.
 -/
 theorem chapter13_cauchy_rigidity
     (P Q : ConvexEuclideanPolyhedron M)
     (hcong : CongruentFaces P.toTri Q.toTri)
-    (htwoArcCut : ∀ (v : M.Vertex),
-      signChangesFull
-          (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
-            (adaptiveOffset P.toTri Q.toTri
-              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink
-          (linkQcast M
-            (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
-              (adaptiveOffset P.toTri Q.toTri
-                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
-            (rotatedStarQ P.toTri Q.toTri
-              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
-              (adaptiveOffset P.toTri Q.toTri
-                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
-            (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
-              (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v) = 2 →
-        TwoArcCut
-          (linkDiff
-            (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
-              (adaptiveOffset P.toTri Q.toTri
-                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink
-            (linkQcast M
-              (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
-                (adaptiveOffset P.toTri Q.toTri
-                  (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
-              (rotatedStarQ P.toTri Q.toTri
-                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
-                (adaptiveOffset P.toTri Q.toTri
-                  (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
-              (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
-                (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v)))
     (v : M.Vertex)
     (i : Fin ((rotatedStarP P.toTri (fun w => P.linkGeomAt w)
       (adaptiveOffset P.toTri Q.toTri (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).n - 1)) :
@@ -2916,7 +4475,7 @@ theorem chapter13_cauchy_rigidity
           exact congrArg (fun n => n - 1)
             (vertexLinkGeometry_n_eq P.toTri Q.toTri
               (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w) v).symm) i) :=
-  chapter13_euclidean P Q hcong htwoArcCut v i
+  chapter13_euclidean P Q hcong v i
 
 theorem CongruentFaces.refl (P : TriangulatedEuclideanPolyhedron M) :
     CongruentFaces P P := by
@@ -2984,20 +4543,8 @@ theorem chapter13_euclidean_tetra_genuine
           change (tetraConvexEuclideanPolyhedron.linkGeomAt v).n - 1 =
             (tetraConvexEuclideanPolyhedron.linkGeomAt v).n - 1
           rfl) i) := by
-  refine chapter13_euclidean tetraConvexEuclideanPolyhedron tetraConvexEuclideanPolyhedron
-    (CongruentFaces.refl tetraConvexEuclideanPolyhedron.toTri) ?_ v i
-  intro w h2
-  have h0 :
-      signChangesFull (tetraRotatedStarP w).vertexLink
-        (linkQcast tetraMap tetraRotatedStarP tetraRotatedStarQ
-          (fun w => vertexLinkGeometry_n_eq tetraConvexEuclideanPolyhedron.toTri
-            tetraConvexEuclideanPolyhedron.toTri
-            (fun x => tetraConvexEuclideanPolyhedron.linkGeomAt x)
-          (fun x => tetraConvexEuclideanPolyhedron.linkGeomAt x) w) w) = 0 := by
-    rw [tetra_rotated_linkQcast_self]
-    exact signChangesFull_self_local (tetraRotatedStarP w).vertexLink
-  rw [h0] at h2
-  omega
+  exact chapter13_euclidean tetraConvexEuclideanPolyhedron tetraConvexEuclideanPolyhedron
+    (CongruentFaces.refl tetraConvexEuclideanPolyhedron.toTri) v i
 
 theorem chapter13_cauchy_rigidity_tetra
     (v : tetraMap.Vertex)

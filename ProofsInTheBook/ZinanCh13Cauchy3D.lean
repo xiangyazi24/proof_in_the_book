@@ -1337,6 +1337,34 @@ lemma linkDiff_wrap_joint {n : ℕ} (A B : Fin (n + 1) → S2)
   unfold linkAngle
   rw [hkprev, hkcur, hknext]
 
+/-- Original indices where a real cyclic sequence is nonzero. -/
+noncomputable def nzIdx {m : ℕ} (d : Fin m → ℝ) : List (Fin m) :=
+  (List.finRange m).filter (fun i => decide (d i ≠ 0))
+
+/-- Original nonzero indices paired with their sign (`true` means positive). -/
+noncomputable def nzSignedIdx {m : ℕ} (d : Fin m → ℝ) : List (Fin m × Bool) :=
+  (nzIdx d).map (fun i => (i, decide (0 < d i)))
+
+theorem nzSignedIdx_map_snd {m : ℕ} (d : Fin m → ℝ) :
+    (nzSignedIdx d).map Prod.snd = nzSigns d := by
+  simp [nzSignedIdx, nzIdx, nzSigns]
+
+theorem mem_nzIdx {m : ℕ} (d : Fin m → ℝ) (i : Fin m) :
+    i ∈ nzIdx d ↔ d i ≠ 0 := by
+  simp [nzIdx]
+
+theorem mem_nzSignedIdx {m : ℕ} (d : Fin m → ℝ) (x : Fin m × Bool) :
+    x ∈ nzSignedIdx d ↔ x.1 ∈ nzIdx d ∧ x.2 = decide (0 < d x.1) := by
+  constructor
+  · intro hx
+    simp only [nzSignedIdx, List.mem_map] at hx
+    rcases hx with ⟨i, hi, rfl⟩
+    exact ⟨hi, rfl⟩
+  · rintro ⟨hi, hsign⟩
+    simp only [nzSignedIdx, List.mem_map]
+    refine ⟨x.1, hi, ?_⟩
+    ext <;> simp [hsign]
+
 lemma twoArcCut_mono2 {n : ℕ} (A B : Fin (n + 1) → S2)
     (cut : TwoArcCut (linkDiff A B)) :
     ∀ i : Fin (wrapLen n cut.sIdx cut.tIdx - 1),
@@ -1346,6 +1374,159 @@ lemma twoArcCut_mono2 {n : ℕ} (A B : Fin (n + 1) → S2)
   have h := cut.wrap_nonpos i
   rw [linkDiff_wrap_joint A B cut.hts cut.hsn i] at h
   linarith
+
+/-- Mirror orientation for a concrete two-arc cut: the wrapping arc is the opening arc
+(`A ≤ B`, strictly somewhere), and the non-wrapping arc is the closing arc (`B ≤ A`). -/
+structure TwoArcCutWrapOpens {n : ℕ} (d : Fin (n + 1) → ℝ) where
+  tIdx : ℕ
+  sIdx : ℕ
+  hts : tIdx < sIdx
+  hsn : sIdx ≤ n
+  hm1 : 2 ≤ sIdx - tIdx
+  hm2 : 2 ≤ wrapLen n sIdx tIdx
+  nonwrap_nonpos :
+    ∀ i : Fin (sIdx - tIdx - 1),
+      d ⟨tIdx + i.val + 1, by have := i.isLt; omega⟩ ≤ 0
+  wrap_nonneg :
+    ∀ i : Fin (wrapLen n sIdx tIdx - 1),
+      0 ≤ d ((⟨i.val + 1, by
+            have := i.isLt
+            unfold wrapLen at this
+            omega⟩ : Fin (n + 1)) + ⟨sIdx, by omega⟩)
+  wrap_pos :
+    ∃ i : Fin (wrapLen n sIdx tIdx - 1),
+      0 < d ((⟨i.val + 1, by
+            have := i.isLt
+            unfold wrapLen at this
+            omega⟩ : Fin (n + 1)) + ⟨sIdx, by omega⟩)
+
+lemma twoArcCutWrap_mono1 {n : ℕ} (A B : Fin (n + 1) → S2)
+    (cut : TwoArcCutWrapOpens (linkDiff A B)) :
+    ∀ i : Fin (wrapLen n cut.sIdx cut.tIdx - 1),
+      jointAngle (subArcWrap A cut.tIdx cut.sIdx cut.hts cut.hsn) i
+        ≤ jointAngle (subArcWrap B cut.tIdx cut.sIdx cut.hts cut.hsn) i := by
+  intro i
+  have h := cut.wrap_nonneg i
+  rw [linkDiff_wrap_joint A B cut.hts cut.hsn i] at h
+  linarith
+
+lemma twoArcCutWrap_strict1 {n : ℕ} (A B : Fin (n + 1) → S2)
+    (cut : TwoArcCutWrapOpens (linkDiff A B)) :
+    ∃ i : Fin (wrapLen n cut.sIdx cut.tIdx - 1),
+      jointAngle (subArcWrap A cut.tIdx cut.sIdx cut.hts cut.hsn) i
+        < jointAngle (subArcWrap B cut.tIdx cut.sIdx cut.hts cut.hsn) i := by
+  obtain ⟨i, hi⟩ := cut.wrap_pos
+  refine ⟨i, ?_⟩
+  rw [linkDiff_wrap_joint A B cut.hts cut.hsn i] at hi
+  linarith
+
+lemma twoArcCutWrap_mono2 {n : ℕ} (A B : Fin (n + 1) → S2)
+    (cut : TwoArcCutWrapOpens (linkDiff A B)) :
+    ∀ i : Fin (cut.sIdx - cut.tIdx - 1),
+      jointAngle (subArc B cut.tIdx cut.sIdx cut.hts cut.hsn) i
+        ≤ jointAngle (subArc A cut.tIdx cut.sIdx cut.hts cut.hsn) i := by
+  intro i
+  let j : Fin (n - 1) := ⟨cut.tIdx + i.val, by
+    have hi := i.isLt
+    have hsn := cut.hsn
+    omega⟩
+  have hidx :
+      (⟨cut.tIdx + i.val + 1, by
+        have hi := i.isLt
+        have hsn := cut.hsn
+        omega⟩ : Fin (n + 1))
+        =
+      (⟨j.val + 1, by have := j.isLt; omega⟩ : Fin (n + 1)) := by
+    ext
+    simp [j]
+  have hld : jointDiff A B j ≤ 0 := by
+    have h := cut.nonwrap_nonpos i
+    rw [hidx, linkDiff_interior] at h
+    exact h
+  rw [subArc_jointAngle, subArc_jointAngle]
+  unfold jointDiff at hld
+  linarith
+
+/-- Mirror assembler for the case where the wrapped arc is the opening arc. -/
+noncomputable def twoArcSplitData_of_indices_wrapOpens {n : ℕ} (hn : 1 ≤ n)
+    (A B : Fin (n + 1) → S2)
+    (hA : StrictConvexSphArm A) (hB : StrictConvexSphArm B)
+    (hsides : ∀ i : Fin n, sideLen A i = sideLen B i)
+    (hclose : sDist (A 0) (A (Fin.last n)) = sDist (B 0) (B (Fin.last n)))
+    (t s : ℕ) (hts : t < s) (hsn : s ≤ n)
+    (hm1 : 2 ≤ s - t) (hm2 : 2 ≤ wrapLen n s t)
+    -- the wrap arc opens (`A ≤ B` joints), strictly somewhere; the non-wrap arc closes (`B ≤ A`).
+    (hmono1 : ∀ i : Fin (wrapLen n s t - 1),
+        jointAngle (subArcWrap A t s hts hsn) i ≤ jointAngle (subArcWrap B t s hts hsn) i)
+    (hstrict1 : ∃ i : Fin (wrapLen n s t - 1),
+        jointAngle (subArcWrap A t s hts hsn) i < jointAngle (subArcWrap B t s hts hsn) i)
+    (hmono2 : ∀ i : Fin (s - t - 1),
+        jointAngle (subArc B t s hts hsn) i ≤ jointAngle (subArc A t s hts hsn) i) :
+    TwoArcSplitData A B where
+  m₁ := wrapLen n s t
+  m₂ := s - t
+  hm₁ := hm2
+  hm₂ := hm1
+  Arc1 := subArcWrap A t s hts hsn
+  Brc1 := subArcWrap B t s hts hsn
+  Arc2 := subArc A t s hts hsn
+  Brc2 := subArc B t s hts hsn
+  harc1A := subArcWrap_strictConvexArm A hA t s hts hsn hm2
+  harc1B := subArcWrap_strictConvexArm B hB t s hts hsn hm2
+  harc2A := subArc_strictConvexArm A hA t s hts hsn hm1
+  harc2B := subArc_strictConvexArm B hB t s hts hsn hm1
+  hsides1 := by
+    intro i
+    rw [subArcWrap_sideLen, subArcWrap_sideLen]
+    exact rotPoly_sideLen_eq hn A B hsides hclose ⟨s, by omega⟩ ⟨i.val, by
+      have := i.isLt; unfold wrapLen at this; omega⟩
+  hsides2 := by
+    intro i
+    rw [subArc_sideLen, subArc_sideLen]
+    exact hsides ⟨t + i.val, by have := i.isLt; omega⟩
+  hshareA := by
+    rw [subArcWrap_endpt, subArc_endpt]
+  hshareB := by
+    rw [subArcWrap_endpt, subArc_endpt]
+  hmono1 := hmono1
+  hstrict1 := hstrict1
+  hmono2 := hmono2
+
+noncomputable def twoArcSplitData_of_wrapCut {n : ℕ} (hn : 1 ≤ n)
+    (A B : Fin (n + 1) → S2)
+    (hA : StrictConvexSphArm A) (hB : StrictConvexSphArm B)
+    (hsides : ∀ i : Fin n, sideLen A i = sideLen B i)
+    (hclose : sDist (A 0) (A (Fin.last n)) = sDist (B 0) (B (Fin.last n)))
+    (cut : TwoArcCutWrapOpens (linkDiff A B)) :
+    TwoArcSplitData A B :=
+  twoArcSplitData_of_indices_wrapOpens hn A B hA hB hsides hclose
+    cut.tIdx cut.sIdx cut.hts cut.hsn cut.hm1 cut.hm2
+    (twoArcCutWrap_mono1 A B cut)
+    (twoArcCutWrap_strict1 A B cut)
+    (twoArcCutWrap_mono2 A B cut)
+
+/-- At a triangular link (`n = 2`) the two nondegenerate complementary sub-arms required by
+`TwoArcCut` cannot both exist. -/
+theorem no_twoArcCut_triangle (d : Fin (2 + 1) → ℝ) : TwoArcCut d → False := by
+  intro cut
+  have hm1 := cut.hm1
+  have hm2 := cut.hm2
+  have hts := cut.hts
+  have hsn := cut.hsn
+  unfold wrapLen at hm2
+  omega
+
+/-- At a triangular link (`n = 2`) the mirrored two nondegenerate complementary sub-arms also cannot
+both exist. -/
+theorem no_twoArcCutWrapOpens_triangle (d : Fin (2 + 1) → ℝ) :
+    TwoArcCutWrapOpens d → False := by
+  intro cut
+  have hm1 := cut.hm1
+  have hm2 := cut.hm2
+  have hts := cut.hts
+  have hsn := cut.hsn
+  unfold wrapLen at hm2
+  omega
 
 noncomputable def twoArcSplitData_of_cut {n : ℕ} (hn : 1 ≤ n) (A B : Fin (n + 1) → S2)
     (hA : StrictConvexSphArm A) (hB : StrictConvexSphArm B)

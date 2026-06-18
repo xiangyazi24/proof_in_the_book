@@ -57,6 +57,14 @@ namespace ProofsInTheBook.Ch13Realization
 
 variable {D : Type*} [Fintype D] [DecidableEq D]
 
+namespace List
+
+/-- Cyclic list agreement up to orientation reversal. -/
+def DihedralRotated {α : Type*} (l m : List α) : Prop :=
+  l ~r m ∨ l.reverse ~r m
+
+end List
+
 /-! ## Part 0 — the count-reconciliation identity (local, self-contained)
 
 The `signChangesFull` count is `cyclicFlips (nzSigns ·)` over real link-angle differences (a `List Bool`
@@ -272,6 +280,118 @@ theorem cyclicFlipCountSkipZeros_of_isRotated {l l' : List EdgeSign} (h : l ~r l
   unfold cyclicFlipCountSkipZeros
   exact cyclicFlipCount_of_isRotated (filterMap_isRotated EdgeSign.toStrict h)
 
+theorem filterMap_reverse {α β : Type*} (f : α → Option β) :
+    ∀ l : List α, l.reverse.filterMap f = (l.filterMap f).reverse
+  | [] => by simp
+  | a :: t => by
+      simp only [List.reverse_cons, List.filterMap_append, filterMap_reverse f t,
+        List.filterMap_cons, List.filterMap_nil]
+      cases f a <;> simp
+
+private theorem zipWith_append_eq {α β γ : Type*} (f : α → β → γ) :
+    ∀ {l₁ : List α} {l₂ : List β} (r₁ : List α) (r₂ : List β),
+      l₁.length = l₂.length →
+        List.zipWith f (l₁ ++ r₁) (l₂ ++ r₂) =
+          List.zipWith f l₁ l₂ ++ List.zipWith f r₁ r₂
+  | [], [], r₁, r₂, _ => by rfl
+  | [], _ :: _, _, _, h => by simp at h
+  | _ :: _, [], _, _, h => by simp at h
+  | a :: as, b :: bs, r₁, r₂, h => by
+      have ht : as.length = bs.length := Nat.succ.inj h
+      simp only [List.cons_append, List.zipWith_cons_cons, List.cons.injEq, true_and]
+      exact zipWith_append_eq f r₁ r₂ ht
+
+private theorem zipWith_reverse_eq {α β γ : Type*} (f : α → β → γ) :
+    ∀ {l₁ : List α} {l₂ : List β}, l₁.length = l₂.length →
+      (List.zipWith f l₁ l₂).reverse = List.zipWith f l₁.reverse l₂.reverse
+  | [], [], _ => by simp
+  | [], _ :: _, h => by simp at h
+  | _ :: _, [], h => by simp at h
+  | a :: as, b :: bs, h => by
+      have ht : as.length = bs.length := Nat.succ.inj h
+      simp only [List.zipWith_cons_cons, List.reverse_cons]
+      rw [zipWith_reverse_eq f ht]
+      rw [zipWith_append_eq f [a] [b] (by simpa [List.length_reverse] using ht)]
+      simp
+
+private theorem zipWith_comm_of_comm_eq {α γ : Type*} (f : α → α → γ)
+    (hf : ∀ a b, f a b = f b a) :
+    ∀ {l₁ l₂ : List α}, l₁.length = l₂.length →
+      List.zipWith f l₁ l₂ = List.zipWith f l₂ l₁
+  | [], [], _ => by simp
+  | [], _ :: _, h => by simp at h
+  | _ :: _, [], h => by simp at h
+  | a :: as, b :: bs, h => by
+      have ht : as.length = bs.length := Nat.succ.inj h
+      simp [hf a b, zipWith_comm_of_comm_eq f hf ht]
+
+theorem cyclicFlipCount_reverse {α : Type*} [DecidableEq α] (l : List α) :
+    cyclicFlipCount l.reverse = cyclicFlipCount l := by
+  rw [cyclicFlipCount_eq_cyclicSum, cyclicFlipCount_eq_cyclicSum]
+  unfold cyclicSum
+  let f : α → α → ℕ := fun a b => if a ≠ b then 1 else 0
+  have hfcomm : ∀ a b, f a b = f b a := by
+    intro a b
+    by_cases h : a = b
+    · simp [f, h]
+    · have hba : b ≠ a := fun hb => h hb.symm
+      simp [f, h, hba]
+  let k := l.length - 1 % l.length
+  rw [List.rotate_reverse]
+  change (List.zipWith f l.reverse ((l.rotate k).reverse)).sum =
+    (List.zipWith f l (l.rotate 1)).sum
+  rw [← zipWith_reverse_eq f (by rw [List.length_rotate]), List.sum_reverse,
+    zipWith_comm_of_comm_eq f hfcomm (by rw [List.length_rotate])]
+  have hlen : (l.rotate k).length = l.length := List.length_rotate l k
+  have hzip := List.zipWith_rotate_distrib f l (l.rotate 1) k
+    (by rw [List.length_rotate])
+  have hrot : (l.rotate 1).rotate k = l := by
+    by_cases hnil : l = []
+    · subst hnil
+      simp [k]
+    · have hlenpos : 0 < l.length := Nat.pos_of_ne_zero (by
+        intro hlen0
+        exact hnil (List.eq_nil_of_length_eq_zero hlen0))
+      rw [List.rotate_rotate]
+      unfold k
+      by_cases hlen1 : l.length = 1
+      · have hmod : 1 % l.length = 0 := by simp [hlen1]
+        rw [hmod]
+        have hsum : 1 + (l.length - 0) = l.length * 2 := by omega
+        rw [hsum, List.rotate_length_mul]
+      · have hlt : 1 < l.length := by omega
+        have hmod : 1 % l.length = 1 := Nat.mod_eq_of_lt hlt
+        rw [hmod]
+        have hsum : 1 + (l.length - 1) = l.length := by omega
+        rw [hsum, List.rotate_length]
+  calc
+    (List.zipWith f (l.rotate k) l).sum
+        = (List.zipWith f (l.rotate k) ((l.rotate 1).rotate k)).sum := by rw [hrot]
+    _ = ((List.zipWith f l (l.rotate 1)).rotate k).sum := by rw [hzip]
+    _ = (List.zipWith f l (l.rotate 1)).sum := sum_rotate _ _
+
+theorem cyclicFlipCountSkipZeros_reverse (l : List EdgeSign) :
+    cyclicFlipCountSkipZeros l.reverse = cyclicFlipCountSkipZeros l := by
+  unfold cyclicFlipCountSkipZeros
+  rw [filterMap_reverse]
+  exact cyclicFlipCount_reverse _
+
+theorem cyclicFlipCountSkipZeros_of_dihedralRotated {l m : List EdgeSign}
+    (h : List.DihedralRotated l m) :
+    cyclicFlipCountSkipZeros l = cyclicFlipCountSkipZeros m := by
+  rcases h with hrot | hrev
+  · exact cyclicFlipCountSkipZeros_of_isRotated hrot
+  · calc
+      cyclicFlipCountSkipZeros l
+          = cyclicFlipCountSkipZeros l.reverse := (cyclicFlipCountSkipZeros_reverse l).symm
+      _ = cyclicFlipCountSkipZeros m := cyclicFlipCountSkipZeros_of_isRotated hrev
+
+theorem perm_of_dihedralRotated {α : Type*} {l m : List α}
+    (h : List.DihedralRotated l m) : l.Perm m := by
+  rcases h with hrot | hrev
+  · exact hrot.perm
+  · exact (List.reverse_perm l).symm.trans hrev.perm
+
 /-- **σ-orbit invariance of the per-vertex flip count.**  Two darts in the same `σ`-orbit have the
 same `vertexFlipCountSkipZeros`, because their `σ`-`toList`s are rotations of each other. -/
 theorem vertexFlipCountSkipZeros_sameCycle (M : CombMap D) (es : D → EdgeSign) {d d' : D}
@@ -357,13 +477,14 @@ structure ConvexPolytopeRealization (M : CombMap D) where
       signChangesFull (starP Q).vertexLink (linkQcast M starP starQ hnn Q) = 2 →
         TwoArcSplitData (starP Q).vertexLink (linkQcast M starP starQ hnn Q)
   /-- **The order bridge (`linkOrder`).**  The `σ`-ordered list of edge signs around vertex `Q` (read
-  from `dartRep Q`) equals the link-ordered real-sign list of the dihedral differences.  This equation
-  says the geometric link rotational order is the combinatorial `σ` order — the load-bearing
-  non-vacuity field.  Positing `vertexArm_signChanges_eq` directly instead is the §3.3 trap. -/
+  from `dartRep Q`) agrees with the link-ordered real-sign list of the dihedral differences up to
+  cyclic rotation and reversal.  This is the honest unoriented cyclic-order bridge; positing
+  `vertexArm_signChanges_eq` directly instead is the §3.3 trap. -/
   linkOrder : ∀ (Q : M.Vertex),
-      (M.σ.toList (dartRep Q)).map edgeSign =
-        (List.ofFn
-          (linkDiff (starP Q).vertexLink (linkQcast M starP starQ hnn Q))).map realSignToEdgeSign
+      List.DihedralRotated
+        ((M.σ.toList (dartRep Q)).map edgeSign)
+        ((List.ofFn
+          (linkDiff (starP Q).vertexLink (linkQcast M starP starQ hnn Q))).map realSignToEdgeSign)
 
 /-! ## Part 3 — the cast transport lemmas
 
@@ -436,8 +557,7 @@ theorem signChangesFull_eq_vertexFlip_rep (Q : M.Vertex) :
       = vertexFlipCountSkipZeros M R.edgeSign (R.dartRep Q) := by
   unfold signChangesFull
   rw [cyclicFlips_nzSigns_eq_cyclicFlipCountSkipZeros]
-  rw [← R.linkOrder Q]
-  rfl
+  exact (cyclicFlipCountSkipZeros_of_dihedralRotated (R.linkOrder Q)).symm
 
 /-- **The crux bridge at an arbitrary active dart.**  By `σ`-orbit invariance of
 `vertexFlipCountSkipZeros`, the bridge at the representative transfers to every dart of the vertex. -/
@@ -507,18 +627,17 @@ real-sign list is the all-`zero` list (by `linkOrder` + `∀ d, edgeSign d = zer
 theorem linkDiff_zero_of_edgeSign_zero (hzero : ∀ d, R.edgeSign d = EdgeSign.zero)
     (Q : M.Vertex) (i : Fin ((R.starP Q).n + 1)) :
     linkDiff (R.starP Q).vertexLink (R.linkQ Q) i = 0 := by
-  -- the link-ordered real-sign list is all `zero` (it equals the σ-edge-sign list, all zero).
-  have hlist : (List.ofFn (linkDiff (R.starP Q).vertexLink (R.linkQ Q))).map realSignToEdgeSign
-      = (M.σ.toList (R.dartRep Q)).map R.edgeSign := (R.linkOrder Q).symm
-  -- membership: `realSignToEdgeSign (linkDiff i)` is in the LHS list.
-  have hmem : realSignToEdgeSign (linkDiff (R.starP Q).vertexLink (R.linkQ Q) i)
-      ∈ (List.ofFn (linkDiff (R.starP Q).vertexLink (R.linkQ Q))).map realSignToEdgeSign := by
+  let geom :=
+    (List.ofFn (linkDiff (R.starP Q).vertexLink (R.linkQ Q))).map realSignToEdgeSign
+  let comb := (M.σ.toList (R.dartRep Q)).map R.edgeSign
+  have hperm : geom.Perm comb := (perm_of_dihedralRotated (R.linkOrder Q)).symm
+  have hmem_geom : realSignToEdgeSign (linkDiff (R.starP Q).vertexLink (R.linkQ Q) i) ∈ geom := by
     apply List.mem_map.mpr
     exact ⟨linkDiff (R.starP Q).vertexLink (R.linkQ Q) i, List.mem_ofFn.mpr ⟨i, rfl⟩, rfl⟩
-  rw [hlist] at hmem
-  -- every element of the σ-edge-sign list is `zero`.
+  have hmem_comb : realSignToEdgeSign (linkDiff (R.starP Q).vertexLink (R.linkQ Q) i) ∈ comb :=
+    hperm.mem_iff.mp hmem_geom
   have hz : realSignToEdgeSign (linkDiff (R.starP Q).vertexLink (R.linkQ Q) i) = EdgeSign.zero := by
-    obtain ⟨a, _, ha⟩ := List.mem_map.mp hmem
+    obtain ⟨a, _, ha⟩ := List.mem_map.mp hmem_comb
     rw [← ha, hzero a]
   exact (realSignToEdgeSign_eq_zero_iff _).mp hz
 

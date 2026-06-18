@@ -76,6 +76,10 @@ structure TriangulatedEuclideanPolyhedron (M : CombMap D) where
   /-- Convexity as a supporting halfspace certificate for every face. -/
   face_supporting_halfspace : ∀ f v,
     inner ℝ (outward_normal f) (pos v - face_point f) ≤ 0
+  /-- Strict support: only the three vertices of the face lie on its supporting plane. -/
+  face_support_strict : ∀ (f : M.Face) (v : M.Vertex),
+    (∀ i, v ≠ faceVertex f i) →
+      inner ℝ (outward_normal f) (pos v - face_point f) < 0
 
 /-! ## The regular tetrahedron witness -/
 
@@ -308,6 +312,19 @@ private theorem tetra_supporting_halfspace :
       tetraPos, tetraDartPoint, tetraPhi_apply, CombMap.tail,
       tetraPoint₀, tetraPoint₁, tetraPoint₂, tetraPoint₃]
 
+set_option maxHeartbeats 2000000 in
+private theorem tetra_face_support_strict :
+    ∀ f v, (∀ i, v ≠ tetraFaceVertex f i) →
+      inner ℝ (tetraOutwardNormal f) (tetraPos v - tetraFacePoint f) < 0 := by
+  rintro ⟨d⟩ ⟨x⟩ hnot
+  fin_cases d <;> fin_cases x <;>
+    (rw [PiLp.inner_apply, Fin.sum_univ_three] <;>
+      simp [tetraOutwardNormal, tetraFacePoint, tetraFaceVertex, tetraFaceDart, tetraFaceRepDart,
+        tetraPos, tetraDartPoint, tetraPhi_apply, CombMap.tail,
+        tetraPoint₀, tetraPoint₁, tetraPoint₂, tetraPoint₃] at hnot ⊢ <;>
+      try contradiction <;>
+      norm_num)
+
 /-- The regular tetrahedron as a genuine Euclidean triangulated polyhedron. -/
 def tetraEuclideanPolyhedron : TriangulatedEuclideanPolyhedron tetraMap where
   pos := tetraPos
@@ -324,6 +341,7 @@ def tetraEuclideanPolyhedron : TriangulatedEuclideanPolyhedron tetraMap where
   outward_normal := tetraOutwardNormal
   face_plane := tetra_face_plane
   face_supporting_halfspace := tetra_supporting_halfspace
+  face_support_strict := tetra_face_support_strict
 
 /-! ## Dihedral angles -/
 

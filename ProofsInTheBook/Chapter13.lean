@@ -447,13 +447,14 @@ theorem euler_sign_change_bound {V E F : ℕ}
 end CauchyRigidityCertificate
 
 /--
-Chapter 13 (Cauchy's rigidity theorem, Tier 1 conditional):
-Given a CauchyRigidityCertificate, no nontrivial edge-sign perturbation can
-exist — the convex polyhedron is rigid.
+Combinatorial sign-counting contradiction at the core of Cauchy's proof.
 
-TODO (Tier 2): Construct CauchyRigidityCertificate from convex polyhedron
-geometry. Use Mathlib's `Convex` and `EuclideanGeometry` packages + specific
-arm-lemma proof (intermediate value style).
+This is **not** the canonical Chapter 13 headline about actual polyhedra:
+`CauchyRigidityCertificate` is an abstract sign-counting package, and the theorem
+only proves that such a package is contradictory.  The honest Euclidean
+polyhedron headline is `ProofsInTheBook.Ch13Cauchy3D.chapter13_cauchy_rigidity`;
+its tetrahedron witness is
+`ProofsInTheBook.Ch13Cauchy3D.chapter13_cauchy_rigidity_tetra`.
 -/
 theorem chapter13 {V E F : ℕ} {edgeSigns : Fin E → EdgeSign}
     (cert : CauchyRigidityCertificate (V := V) (F := F) edgeSigns) :

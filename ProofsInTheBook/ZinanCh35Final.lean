@@ -263,6 +263,15 @@ theorem fiveColor_planar_canonical
       (ULift.{u} (Fin 5)))
     (canonicalChordlessBranchSupplier (ULift.{u} (Fin 5)))
 
+/-- Any same-vertex subgraph of a near-triangulation's underlying graph inherits
+the canonical five-coloring. -/
+theorem fiveColor_nearTriangulation_subgraph
+    {D : Type u} [Fintype D] [DecidableEq D] {M : CombMap D}
+    (hNT : NearTriangulation M) (G : SimpleGraph M.Vertex)
+    (hG : G ≤ M.toSimpleGraph) :
+    G.Colorable 5 :=
+  SimpleGraph.Colorable.mono_left hG (fiveColor_planar_canonical hNT)
+
 end ProofsInTheBook.ZinanCh35Final
 
 /-! ## Axiom audit (expect clean-3: `propext`, `Classical.choice`, `Quot.sound`). -/
@@ -276,3 +285,4 @@ end ProofsInTheBook.ZinanCh35Final
 #print axioms ProofsInTheBook.ZinanCh35Final.planarInputs_of_residuals_recursiveDichotomy
 #print axioms ProofsInTheBook.ZinanCh35Final.canonicalChordlessBranchSupplier
 #print axioms ProofsInTheBook.ZinanCh35Final.fiveColor_planar_canonical
+#print axioms ProofsInTheBook.ZinanCh35Final.fiveColor_nearTriangulation_subgraph

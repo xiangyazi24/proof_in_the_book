@@ -9,8 +9,9 @@ import Mathlib.Geometry.Euclidean.Triangle
 # Chapter 13 Euclidean Cauchy assembly
 
 This file starts the final Euclidean assembly layer.  The fully automatic
-extraction of the local vertex-link geometry and the two-arc cut is not hidden:
-those are explicit inputs to the honest assembler below.
+extraction of the local vertex-link geometry and the two-arc cut is wired here:
+the remaining geometric payload in `ConvexEuclideanPolyhedron` is the faithful
+rotation/simple-map input from which the link geometry is derived.
 -/
 
 noncomputable section
@@ -85,7 +86,8 @@ private abbrev vertexStarOfEuclidean
 
 /--
 A convex Euclidean polyhedron is a triangulated Euclidean realization together
-with the local vertex-link convexity certificates needed to build `VertexStar`s.
+with the faithful rotation and simple-graph hypotheses from which the local
+vertex-link geometry is derived.
 
 The `isSimple` field is included because the downstream Cauchy realization
 interface requires a simple triangulated sphere.
@@ -94,9 +96,7 @@ structure ConvexEuclideanPolyhedron (M : CombMap D)
     extends TriangulatedEuclideanPolyhedron M where
   degree_ge_three :
     ∀ (v : M.Vertex), 3 ≤ vDeg toTriangulatedEuclideanPolyhedron v
-  vertexLinkGeom :
-    ∀ (v : M.Vertex), 3 ≤ vDeg toTriangulatedEuclideanPolyhedron v →
-      VertexLinkGeometry toTriangulatedEuclideanPolyhedron v
+  faithful : RotationFaithful toTriangulatedEuclideanPolyhedron
   sphere : M.IsSphereMap
   triangle : M.FaceRegular 3
   isSimple : M.IsSimpleGraph
@@ -107,15 +107,15 @@ namespace ConvexEuclideanPolyhedron
 abbrev toTri (P : ConvexEuclideanPolyhedron M) : TriangulatedEuclideanPolyhedron M :=
   P.toTriangulatedEuclideanPolyhedron
 
-/-- The stored local vertex-link geometry at a vertex. -/
+/-- The derived local vertex-link geometry at a vertex. -/
 def linkGeom (P : ConvexEuclideanPolyhedron M) (v : M.Vertex)
     (hdeg : 3 ≤ vDeg P.toTri v) : VertexLinkGeometry P.toTri v :=
-  P.vertexLinkGeom v hdeg
+  vertexLinkGeometryOfEuclidean P.toTri P.faithful P.isSimple v hdeg
 
-/-- The stored vertex-link geometry with the stored degree lower bound supplied. -/
+/-- The derived vertex-link geometry with the stored degree lower bound supplied. -/
 def linkGeomAt (P : ConvexEuclideanPolyhedron M) (v : M.Vertex) :
     VertexLinkGeometry P.toTri v :=
-  P.vertexLinkGeom v (P.degree_ge_three v)
+  P.linkGeom v (P.degree_ge_three v)
 
 /-- The Euclidean vertex star attached to a convex Euclidean polyhedron. -/
 def vertexStar (P : ConvexEuclideanPolyhedron M) (v : M.Vertex) : VertexStar :=
@@ -127,7 +127,7 @@ end ConvexEuclideanPolyhedron
 def tetraConvexEuclideanPolyhedron : ConvexEuclideanPolyhedron tetraMap where
   toTriangulatedEuclideanPolyhedron := tetraEuclideanPolyhedron
   degree_ge_three := tetra_vDeg_ge_three
-  vertexLinkGeom := fun v _ => tetraVertexLinkGeometry v
+  faithful := tetra_rotationFaithful
   sphere := tetraMap_isSphereMap
   triangle := tetraMap_faceRegular_three
   isSimple := ProofsInTheBook.Ch13ComponentClose.tetraMap_isSimpleGraph

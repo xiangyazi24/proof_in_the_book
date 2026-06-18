@@ -308,6 +308,34 @@ theorem spherical_cosine_rule (a b c : S2) :
   rw [show sDist b a = sDist a b from sDist_comm b a]
   ring
 
+/-- Solving the spherical cosine rule for the included angle. -/
+theorem cos_sphAngle_eq_of_short {u v w : S2}
+    (huv : ShortArc u v) (hvw : ShortArc v w) :
+    Real.cos (sphAngle u v w) =
+      (Real.cos (sDist u w) - Real.cos (sDist u v) * Real.cos (sDist v w)) /
+        (Real.sin (sDist u v) * Real.sin (sDist v w)) := by
+  have hcos := spherical_cosine_rule u v w
+  have hsin₁ : 0 < Real.sin (sDist u v) := huv.sin_sDist_pos
+  have hsin₂ : 0 < Real.sin (sDist v w) := hvw.sin_sDist_pos
+  have hden : Real.sin (sDist u v) * Real.sin (sDist v w) ≠ 0 :=
+    ne_of_gt (mul_pos hsin₁ hsin₂)
+  field_simp [hden]
+  nlinarith
+
+/-- A spherical triangle is determined at the angle level by its three side lengths. -/
+theorem sphAngle_eq_of_three_sDist_eq {u v w u' v' w' : S2}
+    (huv : ShortArc u v) (hvw : ShortArc v w)
+    (huv' : ShortArc u' v') (hvw' : ShortArc v' w')
+    (huw : sDist u w = sDist u' w')
+    (huv_eq : sDist u v = sDist u' v')
+    (hvw_eq : sDist v w = sDist v' w') :
+    sphAngle u v w = sphAngle u' v' w' := by
+  apply Real.injOn_cos
+    ⟨sphAngle_nonneg u v w, sphAngle_le_pi u v w⟩
+    ⟨sphAngle_nonneg u' v' w', sphAngle_le_pi u' v' w'⟩
+  rw [cos_sphAngle_eq_of_short huv hvw,
+    cos_sphAngle_eq_of_short huv' hvw', huw, huv_eq, hvw_eq]
+
 /-- **Law-of-cosines monotonicity (weak).**  With side lengths `a,b ∈ (0,π)` fixed, the opposite
 side `c` defined by the spherical cosine rule is monotone increasing in the included angle
 `γ ∈ [0,π]`.  This is the `n = 3` base of the spherical arm lemma.

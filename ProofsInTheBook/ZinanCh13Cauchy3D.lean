@@ -1528,6 +1528,213 @@ theorem no_twoArcCutWrapOpens_triangle (d : Fin (2 + 1) → ℝ) :
   unfold wrapLen at hm2
   omega
 
+theorem triangle_linkAngle_eq_of_sides
+    (A B : Fin (2 + 1) → S2)
+    (hA : StrictConvexSphArm A) (hB : StrictConvexSphArm B)
+    (hsides : ∀ i : Fin 2, sideLen A i = sideLen B i)
+    (hclose : sDist (A 0) (A (Fin.last 2)) = sDist (B 0) (B (Fin.last 2))) :
+    ∀ i : Fin (2 + 1), linkAngle A i = linkAngle B i := by
+  intro i
+  have hAedge := hA.closed_convex.edge_short
+  have hBedge := hB.closed_convex.edge_short
+  fin_cases i
+  · change linkAngle A (0 : Fin (2 + 1)) = linkAngle B (0 : Fin (2 + 1))
+    rw [linkAngle_zero, linkAngle_zero]
+    refine sphAngle_eq_of_three_sDist_eq
+      (hAedge (Fin.last 2)) (hAedge 0)
+      (hBedge (Fin.last 2)) (hBedge 0) ?_ ?_ ?_
+    · have h := hsides (⟨1, by omega⟩ : Fin 2)
+      simpa [sideLen, sDist_comm] using h
+    · simpa [sDist_comm] using hclose
+    · simpa [sideLen] using hsides (⟨0, by omega⟩ : Fin 2)
+  · rw [linkAngle_interior A (⟨0, by omega⟩ : Fin (2 - 1)),
+      linkAngle_interior B (⟨0, by omega⟩ : Fin (2 - 1))]
+    unfold jointAngle
+    refine sphAngle_eq_of_three_sDist_eq
+      (hAedge 0) (hAedge 1)
+      (hBedge 0) (hBedge 1) ?_ ?_ ?_
+    · simpa using hclose
+    · simpa [sideLen] using hsides (⟨0, by omega⟩ : Fin 2)
+    · simpa [sideLen] using hsides (⟨1, by omega⟩ : Fin 2)
+  · change linkAngle A (Fin.last 2) = linkAngle B (Fin.last 2)
+    rw [linkAngle_last, linkAngle_last]
+    refine sphAngle_eq_of_three_sDist_eq
+      (hAedge 1) (hAedge (Fin.last 2))
+      (hBedge 1) (hBedge (Fin.last 2)) ?_ ?_ ?_
+    · calc
+        sDist (A 1) (A 0)
+            = sDist (A 0) (A 1) := sDist_comm _ _
+        _ = sDist (B 0) (B 1) := by
+          simpa [sideLen] using hsides (⟨0, by omega⟩ : Fin 2)
+        _ = sDist (B 1) (B 0) := (sDist_comm _ _).symm
+    · simpa [sideLen] using hsides (⟨1, by omega⟩ : Fin 2)
+    · simpa [sDist_comm] using hclose
+
+theorem signChangesFull_ne_two_triangle
+    (A B : Fin (2 + 1) → S2)
+    (hA : StrictConvexSphArm A) (hB : StrictConvexSphArm B)
+    (hsides : ∀ i : Fin 2, sideLen A i = sideLen B i)
+    (hclose : sDist (A 0) (A (Fin.last 2)) = sDist (B 0) (B (Fin.last 2))) :
+    signChangesFull A B ≠ 2 := by
+  intro h2
+  have hlink := triangle_linkAngle_eq_of_sides A B hA hB hsides hclose
+  have hzero : signChangesFull A B = 0 := by
+    unfold signChangesFull
+    have hdiff : linkDiff A B = fun _ => (0 : ℝ) := by
+      funext i
+      unfold linkDiff
+      rw [hlink i]
+      ring
+    rw [hdiff]
+    simp [nzSigns, cyclicFlips]
+  omega
+
+/-- A cyclic Boolean list consists of exactly two nonempty sign blocks, up to rotation. -/
+def BoolTwoBlocks (L : List Bool) : Prop :=
+  ∃ trueBlock falseBlock : List Bool,
+    trueBlock ≠ [] ∧
+      falseBlock ≠ [] ∧
+      (∀ x ∈ trueBlock, x = true) ∧
+      (∀ x ∈ falseBlock, x = false) ∧
+      trueBlock ++ falseBlock ~r L
+
+private theorem bool_eq_not_of_ne {a b : Bool} (h : a ≠ b) : b = !a := by
+  cases a <;> cases b <;> simp at h ⊢
+
+private theorem bool_eq_of_ne_ne {a b c : Bool} (hab : a ≠ b) (hac : c ≠ a) : c = b := by
+  cases a <;> cases b <;> cases c <;> simp at hab hac ⊢
+
+private theorem flips_eq_one_open_blocks :
+    ∀ (a b : Bool) (l : List Bool), a ≠ b →
+      flips ((a :: l) ++ [b]) = 1 →
+      ∃ pre post : List Bool,
+        l = pre ++ post ∧
+          (∀ x ∈ pre, x = a) ∧
+          (∀ x ∈ post, x = b)
+  | a, b, [], hab, _ => by
+      refine ⟨[], [], by simp, ?_, ?_⟩ <;> simp
+  | a, b, c :: xs, hab, hflip => by
+      by_cases hca : c = a
+      · subst c
+        have hrest : flips ((a :: xs) ++ [b]) = 1 := by
+          simpa [flips, hab] using hflip
+        obtain ⟨pre, post, hxs, hpre, hpost⟩ :=
+          flips_eq_one_open_blocks a b xs hab hrest
+        refine ⟨a :: pre, post, ?_, ?_, hpost⟩
+        · rw [hxs]
+          simp [List.cons_append]
+        · intro x hx
+          simp only [List.mem_cons] at hx
+          rcases hx with rfl | hx
+          · rfl
+          · exact hpre x hx
+      · have hcb : c = b := bool_eq_of_ne_ne hab hca
+        have hrest : flips ((c :: xs) ++ [b]) = 0 := by
+          rw [show flips ((a :: c :: xs) ++ [b]) =
+              (if a ≠ c then 1 else 0) + flips ((c :: xs) ++ [b]) by rfl] at hflip
+          have hac : a ≠ c := by exact fun h => hca h.symm
+          have hsum : 1 + flips ((c :: xs) ++ [b]) = 1 := by
+            simpa [hac] using hflip
+          omega
+        refine ⟨[], c :: xs, by simp, by simp, ?_⟩
+        intro x hx
+        have hall := (flips_eq_zero_iff_all_eq ((c :: xs) ++ [b])).mp hrest
+        have hx' : x ∈ (c :: xs) ++ [b] := List.mem_append_left _ hx
+        have hb' : b ∈ (c :: xs) ++ [b] := List.mem_append_right _ (by simp)
+        exact hall x hx' b hb'
+
+private theorem flips_eq_two_closed_blocks :
+    ∀ (a : Bool) (l : List Bool),
+      flips ((a :: l) ++ [a]) = 2 →
+      ∃ pre mid post : List Bool,
+        l = pre ++ mid ++ post ∧
+          mid ≠ [] ∧
+          (∀ x ∈ pre, x = a) ∧
+          (∀ x ∈ mid, x = !a) ∧
+          (∀ x ∈ post, x = a)
+  | a, [], hflip => by
+      simp [flips] at hflip
+  | a, c :: xs, hflip => by
+      by_cases hca : c = a
+      · subst c
+        have hrest : flips ((a :: xs) ++ [a]) = 2 := by
+          simpa [flips] using hflip
+        obtain ⟨pre, mid, post, hxs, hmidne, hpre, hmid, hpost⟩ :=
+          flips_eq_two_closed_blocks a xs hrest
+        refine ⟨a :: pre, mid, post, ?_, hmidne, ?_, hmid, hpost⟩
+        · rw [hxs]
+          simp [List.cons_append, List.append_assoc]
+        · intro x hx
+          simp only [List.mem_cons] at hx
+          rcases hx with rfl | hx
+          · rfl
+          · exact hpre x hx
+      · have hac : a ≠ c := fun h => hca h.symm
+        have hrest : flips ((c :: xs) ++ [a]) = 1 := by
+          rw [show flips ((a :: c :: xs) ++ [a]) =
+              (if a ≠ c then 1 else 0) + flips ((c :: xs) ++ [a]) by rfl] at hflip
+          have hsum : 1 + flips ((c :: xs) ++ [a]) = 2 := by
+            simpa [hac] using hflip
+          omega
+        obtain ⟨midTail, post, hxs, hmidTail, hpost⟩ :=
+          flips_eq_one_open_blocks c a xs hca hrest
+        have hcnot : c = !a := bool_eq_not_of_ne hac
+        refine ⟨[], c :: midTail, post, ?_, by simp, by simp, ?_, hpost⟩
+        · rw [hxs]
+          simp [List.cons_append, List.append_assoc]
+        · intro x hx
+          simp only [List.mem_cons] at hx
+          rcases hx with rfl | hx
+          · exact hcnot
+          · rw [← hcnot]
+            exact hmidTail x hx
+
+/-- If a cyclic Boolean list has exactly two flips, then up to rotation it is one nonempty
+`true` block followed by one nonempty `false` block. -/
+theorem cyclicFlips_two_blocks (L : List Bool) (h : cyclicFlips L = 2) :
+    BoolTwoBlocks L := by
+  cases L with
+  | nil =>
+      simp [cyclicFlips] at h
+  | cons a l =>
+      have hclosed : flips ((a :: l) ++ [a]) = 2 := by
+        simpa [cyclicFlips] using h
+      obtain ⟨pre, mid, post, hl, hmidne, hpre, hmid, hpost⟩ :=
+        flips_eq_two_closed_blocks a l hclosed
+      have hL : a :: l = (a :: pre) ++ mid ++ post := by
+        rw [hl]
+        simp [List.cons_append, List.append_assoc]
+      by_cases ha : a = true
+      · subst a
+        refine ⟨post ++ (true :: pre), mid, by simp, hmidne, ?_, ?_, ?_⟩
+        · intro x hx
+          rcases List.mem_append.mp hx with hx | hx
+          · exact hpost x hx
+          · simp only [List.mem_cons] at hx
+            rcases hx with rfl | hx
+            · rfl
+            · exact hpre x hx
+        · intro x hx
+          simpa using hmid x hx
+        · rw [hL]
+          simpa [List.cons_append, List.append_assoc] using
+            (List.isRotated_append (l := (true :: pre) ++ mid) (l' := post)).symm
+      · have ha' : a = false := by cases a <;> simp at ha ⊢
+        subst a
+        refine ⟨mid, post ++ (false :: pre), hmidne, by simp, ?_, ?_, ?_⟩
+        · intro x hx
+          simpa using hmid x hx
+        · intro x hx
+          rcases List.mem_append.mp hx with hx | hx
+          · exact hpost x hx
+          · simp only [List.mem_cons] at hx
+            rcases hx with rfl | hx
+            · rfl
+            · exact hpre x hx
+        · rw [hL]
+          simpa [List.cons_append, List.append_assoc] using
+            (List.isRotated_append (l := (false :: pre)) (l' := mid ++ post)).symm
+
 noncomputable def twoArcSplitData_of_cut {n : ℕ} (hn : 1 ≤ n) (A B : Fin (n + 1) → S2)
     (hA : StrictConvexSphArm A) (hB : StrictConvexSphArm B)
     (hsides : ∀ i : Fin n, sideLen A i = sideLen B i)

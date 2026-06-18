@@ -1,383 +1,217 @@
-# Ch13 construct-`σ` and the ch35 `PlaneSimpleGraph → CombMap` bridge
+# Ch13 orientation audit: what exactly is irreducible?
 
 ## Executive answer
 
-Reusing ch35 helps, but it does **not** make Euler characteristic `2` free.
+The mirror argument is airtight only for hypotheses that are invariant under orientation reversal.  It does not mean that `RotationFaithful` is independent of the full realized object once that object includes actual coordinates in the fixed oriented space `EuclideanSpace ℝ (Fin 3)`, a concrete outward-normal field, and a concrete permutation `M.σ`.
 
-The current repo bridge
+For a fixed realization `P : TriangulatedEuclideanPolyhedron M`, the truth of `RotationFaithful P` is mathematically determined.  It is the concrete check that the stored predecessor `M.σ.symm d`, the current dart `d`, and the outward normal of `M.dartFace d` have the chosen handedness.
 
-```lean
-theorem PlaneSimpleGraph.toCombMap_isSphereMap
-    (P : PlaneSimpleGraph V D)
-    (hsphere : P.IsSphereMap)
-    (hincident : ∀ v : V, ∃ d : D, P.tail d = v) :
-    P.toCombMap.IsSphereMap
+The sharp statement is therefore:
+
+> `RotationFaithful` is determined by `(P.pos, P.outward_normal, M.σ)`, but it is not derivable from the mirror-invariant convex/support data.  The irreducible datum is the agreement that the supplied `M.σ` is the geometric angular rotation rather than its reverse.
+
+So the sloppy statement “`RotationFaithful` is independent of the object” is false.  The precise statement “`RotationFaithful` is independent of the unoriented convex data” is true.
+
+## 1. Fixed coordinates, fixed normals, fixed `σ`: the sign is determined
+
+For one dart `d`, write
+
+```text
+u = edgeVec P (M.σ.symm d)
+v = edgeVec P d
+n = P.outward_normal (M.dartFace d)
 ```
 
-is a **transport theorem**, not a theorem deriving sphere-ness from geometry or from the raw `PlaneSimpleGraph` fields.  It proves `P.toCombMap.Connected` from `P.connected`, then rewrites the `CombMap` Euler characteristic to `P.eulerChar`; the equality `P.eulerChar = 2` is exactly the input `hsphere`.
+The current repo convention is
 
-So ch35 collapses some bookkeeping:
-
-* connectedness of the dart map from graph connectedness;
-* `V` quotient count from a vertex-incidence proof;
-* `E` from dart pairing;
-* `IsSimpleGraph` from `edge_darts` uniqueness;
-* transport from `PlaneSimpleGraph.eulerChar` to `CombMap.eulerChar`.
-
-But it does **not** prove the missing convex-polytope boundary Euler theorem.  The wall becomes:
-
-```lean
-P.IsSphereMap  -- i.e. P.eulerChar = 2
+```text
+there exists λ > 0 such that n = λ • cross u v.
 ```
 
-rather than
+Under the usual triangular face nondegeneracy facts, `cross u v` is nonzero.  The face-plane facts say that both `n` and `cross u v` are normal to the same face plane, so they lie on the same one-dimensional line.  Thus the only remaining datum is the sign of the scalar.
 
-```lean
-P.toCombMap.IsSphereMap  -- Connected ∧ CombMap.eulerChar = 2
+That sign is determined by the dot product
+
+```text
+inner n (cross u v)
 ```
 
-That is a useful reduction, not a full sidestep.
+or equivalently by the scalar triple product `det3 u v n`.  If `n = λ • cross u v`, then
 
-## Exact repo facts
-
-`ProofsInTheBook/PlaneSimpleGraph.lean` defines:
-
-```lean
-structure PlaneSimpleGraph (V D : Type*) [Fintype V] [DecidableEq V]
-    [Fintype D] [DecidableEq D] where
-  G : SimpleGraph V
-  tail : D → V
-  head : D → V
-  α : Equiv.Perm D
-  σ : Equiv.Perm D
-  α_invol : α * α = 1
-  α_no_fixed : ∀ d, α d ≠ d
-  reverse_tail : ∀ d, tail (α d) = head d
-  reverse_head : ∀ d, head (α d) = tail d
-  dart_edge : ∀ d, G.Adj (tail d) (head d)
-  edge_darts : ∀ {u v : V}, G.Adj u v → ∃! d : D, tail d = u ∧ head d = v
-  σ_preserves_tail : ∀ d, tail (σ d) = tail d
-  σ_vertex_cycle : ∀ d e : D, tail d = tail e → σ.SameCycle d e
-  connected : G.Connected
+```text
+inner n (cross u v) = λ * ‖cross u v‖².
 ```
 
-Its own sphere predicate is just an Euler equation:
+Since the squared norm is positive, `λ > 0` is equivalent to positivity of that dot product.
 
-```lean
-def PlaneSimpleGraph.numVertices (M : PlaneSimpleGraph V D) : ℕ := Fintype.card V
+So for a fixed `P` and fixed `M.σ`, `RotationFaithful P` is not mysterious.  It is a concrete orientation check.  In Lean, for arbitrary real coordinates this is not automatically decidable by typeclass search, but it is a determined real proposition.  For concrete rational-coordinate witnesses like the tetrahedron, it can often be closed by finite case splits and arithmetic normalization, as the existing tetra proofs do.
 
-def PlaneSimpleGraph.numEdges (M : PlaneSimpleGraph V D) : ℕ := Fintype.card D / 2
+## 2. What the mirror argument proves
 
-def PlaneSimpleGraph.numFaces (M : PlaneSimpleGraph V D) : ℕ := M.toCombMap.F
+Let `R` be an orientation-reversing linear isometry of `E3`, such as reflection in one coordinate.  Define a mirrored realization by transporting both coordinates and normals:
 
-def PlaneSimpleGraph.eulerChar (M : PlaneSimpleGraph V D) : ℤ :=
-  (M.numVertices : ℤ) - (M.numEdges : ℤ) + (M.numFaces : ℤ)
-
-def PlaneSimpleGraph.IsSphereMap (M : PlaneSimpleGraph V D) : Prop :=
-  M.eulerChar = 2
+```text
+pos' v = R (pos v)
+outward_normal' f = R (outward_normal f)
 ```
 
-The bridge file `ProofsInTheBook/PlaneSimpleGraphTriangulate.lean` proves the useful transports:
+All inner products are preserved, so the mirror preserves the support and strict-support facts:
 
-```lean
-theorem PlaneSimpleGraph.toCombMap_V_eq_card
-    (P : PlaneSimpleGraph V D)
-    (hincident : ∀ v : V, ∃ d : D, P.tail d = v) :
-    P.toCombMap.V = Fintype.card V
-
-theorem PlaneSimpleGraph.toCombMap_E_eq_numEdges
-    (P : PlaneSimpleGraph V D) :
-    P.toCombMap.E = P.numEdges
-
-theorem PlaneSimpleGraph.toCombMap_eulerChar_eq
-    (P : PlaneSimpleGraph V D)
-    (hincident : ∀ v : V, ∃ d : D, P.tail d = v) :
-    P.toCombMap.eulerChar = P.eulerChar
-
-theorem PlaneSimpleGraph.toCombMap_connected
-    (P : PlaneSimpleGraph V D) :
-    P.toCombMap.Connected
-
-theorem PlaneSimpleGraph.toCombMap_isSphereMap
-    (P : PlaneSimpleGraph V D)
-    (hsphere : P.IsSphereMap)
-    (hincident : ∀ v : V, ∃ d : D, P.tail d = v) :
-    P.toCombMap.IsSphereMap
-
-theorem PlaneSimpleGraph.toCombMap_isSimpleGraph
-    (P : PlaneSimpleGraph V D) :
-    P.toCombMap.IsSimpleGraph
+```text
+face_supporting_halfspace
+face_support_strict
+edge_nondegenerate
+face_nondegenerate
+positive cone inequalities such as 0 < inner a_v w_d
 ```
 
-The proof of `toCombMap_isSphereMap` is exactly:
+But an orientation-reversing isometry changes the cross product sign:
 
-```lean
-theorem toCombMap_isSphereMap (P : PlaneSimpleGraph V D)
-    (hsphere : P.IsSphereMap) (hincident : ∀ v : V, ∃ d : D, P.tail d = v) :
-    P.toCombMap.IsSphereMap := by
-  refine ⟨P.toCombMap_connected, ?_⟩
-  rw [P.toCombMap_eulerChar_eq hincident]
-  exact hsphere
+```text
+cross (R u) (R v) = - R (cross u v).
 ```
 
-So the missing fact is visibly `hsphere`.
+Therefore, if the original realization satisfies
 
-## Does `PlaneSimpleGraph` beg the question?
-
-For the ch13 purpose, yes, if the goal is to avoid proving Euler characteristic `2`.
-
-The structure name says “plane,” but the fields do not include a topological embedding into `S²`, a Jordan curve certificate, or a theorem that faces are cells.  It stores a graph plus a rotation system and connectedness.  The actual planarity/sphere condition is the separate predicate:
-
-```lean
-P.IsSphereMap : Prop := P.eulerChar = 2
+```text
+n = λ cross u v with λ > 0,
 ```
 
-Therefore, exhibiting a convex polytope graph as a `PlaneSimpleGraph` gives a strong and useful rotation-system object, but it does not by itself produce `P.toCombMap.IsSphereMap`.  You still need either:
+then the mirrored realization satisfies
 
-```lean
-hsphere : P.IsSphereMap
+```text
+R n = -λ cross (R u) (R v).
 ```
 
-or enough face/count facts to prove it.
+The same stored `M.σ` now gives the negative scalar.  The positive-λ form fails, assuming the face is nondegenerate.
 
-## What ch35 really gives ch13
+This proves exactly that no theorem using only mirror-invariant hypotheses can imply `RotationFaithful` for a supplied `M.σ`.  It does not prove that `RotationFaithful` is unknowable once the oriented coordinates and normals are part of the object.
 
-For construct-`σ`, ch35 can replace a custom bridge layer by the following pattern:
+## 3. The outward normal field does not remove the orientation issue
 
-```lean
-import ProofsInTheBook.PlaneSimpleGraphTriangulate
-import ProofsInTheBook.ZinanCh13Euclidean
+The current Euclidean structure stores an outward normal field.  This field chooses outside versus inside, but not clockwise versus counterclockwise around the face.
 
-noncomputable section
+The support condition says
 
-open scoped Classical RealInnerProductSpace BigOperators
-open ProofsInTheBook.PlanarMap
-open ProofsInTheBook.PlanarMap.PlaneSimpleGraph
-
-namespace ProofsInTheBook.Ch13ConstructSigmaPlaneBridge
-
-variable {V D : Type*} [Fintype V] [DecidableEq V] [Fintype D] [DecidableEq D]
-
-/-- Once the geometric construction is packaged as a `PlaneSimpleGraph`, the
-existing ch35 bridge supplies the `CombMap` sphere proof, but only from the
-plane graph Euler certificate `hsphere`. -/
-theorem sphere_for_constructed_combMap
-    (P : PlaneSimpleGraph V D)
-    (hsphere : P.IsSphereMap)
-    (hincident : ∀ v : V, ∃ d : D, P.tail d = v) :
-    P.toCombMap.IsSphereMap :=
-  P.toCombMap_isSphereMap hsphere hincident
-
-/-- The simple-graph part is genuinely free from the `PlaneSimpleGraph` fields. -/
-theorem simple_for_constructed_combMap
-    (P : PlaneSimpleGraph V D) :
-    P.toCombMap.IsSimpleGraph :=
-  P.toCombMap_isSimpleGraph
-
-end ProofsInTheBook.Ch13ConstructSigmaPlaneBridge
+```text
+inner (outward_normal f) (pos v - face_point f) ≤ 0
 ```
 
-This is worth using.  It means ch13 does not need to reprove:
+and strict support says this is strict for off-face vertices.  These statements use only inner products.  They are preserved by mirror reflection if the normals are reflected too.
 
-* quotient vertices correspond to graph vertices;
-* graph connectivity gives dart-map connectivity;
-* unique oriented graph darts imply `CombMap.IsSimpleGraph`;
-* `CombMap.eulerChar` matches the plane-graph count.
+Thus the stored outward normal lets us formulate the sign check concretely:
 
-But the ch13 object must still provide or prove `P.IsSphereMap`.
-
-## Concrete reduction for a construct-`σ` convex boundary object
-
-If the ch13 construction is refactored through `PlaneSimpleGraph`, the data should look like this:
-
-```lean
-structure Ch13ConstructedPlaneBoundary
-    (V D : Type*) [Fintype V] [DecidableEq V] [Fintype D] [DecidableEq D] where
-  P : PlaneSimpleGraph V D
-
-  /-- Geometric coordinates and convex support data. -/
-  pos : V → EuclideanSpace ℝ (Fin 3)
-
-  /-- The constructed rotation agrees with the geometric angular rotation. -/
-  sigma_eq_geo : P.σ = globalAngularPermOutward pos   -- schematic name
-
-  /-- No isolated boundary vertex.  Needed to identify graph vertices with
-  `P.toCombMap` vertex orbits. -/
-  incident : ∀ v : V, ∃ d : D, P.tail d = v
-
-  /-- The still-required Euler/sphere certificate. -/
-  sphere : P.IsSphereMap
+```text
+0 < inner (outward_normal (dartFace d))
+    (cross (edgeVec (σ⁻¹ d)) (edgeVec d)).
 ```
 
-Then the final map obligations are short:
+But the support inequalities themselves do not force this sign.  They do not know whether the supplied cyclic order `σ` is the geometric order or the reverse geometric order.
 
-```lean
-namespace Ch13ConstructedPlaneBoundary
+## 4. Can normals be defined from coordinates?
 
-variable {V D : Type*} [Fintype V] [DecidableEq V] [Fintype D] [DecidableEq D]
-variable (X : Ch13ConstructedPlaneBoundary V D)
+Yes.  If a face is supplied as an ordered triple `p₀,p₁,p₂` and we have an interior point `c`, define
 
-abbrev M : CombMap D := X.P.toCombMap
-
-theorem M_isSphereMap : X.M.IsSphereMap :=
-  X.P.toCombMap_isSphereMap X.sphere X.incident
-
-theorem M_isSimpleGraph : X.M.IsSimpleGraph :=
-  X.P.toCombMap_isSimpleGraph
-
-end Ch13ConstructedPlaneBoundary
+```text
+rawNormal = cross (p₁ - p₀) (p₂ - p₀).
 ```
 
-This is a good integration layer if `sphere` is accepted as a finite combinatorial input certificate.
+Then choose the sign so that the interior point lies in the negative halfspace.  In prose:
 
-## Can `sphere : P.IsSphereMap` be proved from the oriented triangular face list?
-
-Yes, but that is not a ch35 theorem.  For a construct-`σ` object with explicit triangular face list `F`, edge pairing, and `σ = φ_face * α`, the proof of `P.IsSphereMap` reduces to finite counts:
-
-```lean
-P.eulerChar =
-  (Fintype.card V : ℤ) - (Fintype.card D / 2 : ℤ) + P.toCombMap.F
+```text
+if inner rawNormal (c - p₀) < 0, use rawNormal;
+otherwise use -rawNormal.
 ```
 
-If the face-list proof gives
+This removes `outward_normal` as an independent field.  It does not remove the orientation problem.  The ordered face triple is itself orientation-sensitive, and an independently supplied `M.σ` still has to match the geometric angular order determined by the coordinates.
 
-```lean
-P.toCombMap.F = Fintype.card F
+After defining normals from coordinates, the remaining orientation statement is still one of these, depending on convention:
+
+```text
+M.σ = globalAngularPermOutward P
 ```
 
-and the edge pairing gives `Fintype.card D = 2 * E`, then `P.IsSphereMap` becomes the finite cardinal equation
+or
 
-```lean
-(Fintype.card V : ℤ) - (E : ℤ) + (Fintype.card F : ℤ) = 2.
+```text
+M.σ.symm = globalAngularPermPositive P.
 ```
 
-That is precisely the Euler wall in a smaller form.  You may choose to store that finite equation as a certificate:
+If `σ` is also defined from coordinates, then the orientation input disappears.  That is exactly the construct-`σ` route.
 
-```lean
-euler_cert :
-  (Fintype.card V : ℤ) - (edgeCount : ℤ) + (Fintype.card F : ℤ) = 2
+## 5. Is the remaining datum only a Boolean?
+
+After the unoriented embedded rotation system has already been proved correct up to global reversal, yes: on a connected orientable sphere embedding the remaining choice is essentially the global choice between `σ_geo` and `σ_geo.symm`.
+
+But the current `M : CombMap D` stores an arbitrary permutation `σ`.  Before reducing the residue to one Boolean, one must know that the supplied vertex cycles are the correct geometric cycles at every vertex, merely read in one of the two directions.  That agreement is not part of the pure convex support fields.
+
+So the Boolean description is valid only after a substantial “unoriented agreement” theorem has already established that the supplied map is the right embedded map up to reversal.
+
+## 6. Can the Boolean be removed by defining `σ` from geometry?
+
+Yes.  Define the rotation by geometry:
+
+```text
+σ := globalAngularPermOutward P.
 ```
 
-or prove it from a convex-polytope boundary theorem.  ch35 does not prove this theorem for convex polytopes.
+Then the orientation agreement is true by definition.  The remaining work is no longer the winding sign; it is proving that the constructed map has the expected faces and sphere-map properties:
 
-## Does ch35 contain a hidden general producer of `P.IsSphereMap`?
-
-No general producer appears in the current files.
-
-The triangle witness proves a special finite example:
-
-```lean
-theorem triangle_plane_isSphere : trianglePlaneSimpleGraph.IsSphereMap := by
-  unfold PlaneSimpleGraph.IsSphereMap PlaneSimpleGraph.eulerChar PlaneSimpleGraph.numVertices
-    PlaneSimpleGraph.numEdges
-  rw [triangle_numFaces]
-  norm_num
-
-theorem triangle_toCombMap_isSphereMap : trianglePlaneSimpleGraph.toCombMap.IsSphereMap :=
-  trianglePlaneSimpleGraph.toCombMap_isSphereMap triangle_plane_isSphere triangle_incident
+```text
+φ = σ * α matches the triangular face list
+FaceRegular 3
+IsSimpleGraph
+IsSphereMap
 ```
 
-That is a direct finite count for the triangle, not a theorem deriving planarity from arbitrary geometry or arbitrary rotation systems.
+This is the construct-`σ` route.  It is the only route that truly eliminates the orientation input rather than checking or assuming it.
 
-The five-color endpoint in the same file is also not a sphere producer:
+## 7. Answers to the questions
 
-```lean
-structure PlaneTriangulationExtension (P : PlaneSimpleGraph V D) where
-  D' : Type u'
-  T : CombMap D'
-  hNT : T.NearTriangulation
-  ιV : V → T.Vertex
-  adj_embed : ∀ {u v : V}, P.G.Adj u v → T.toSimpleGraph.Adj (ιV u) (ιV v)
+### Question 1
 
-theorem fiveColor_planeSimpleGraph_of_extension
-    (P : PlaneSimpleGraph V D)
-    (E : PlaneTriangulationExtension P) :
-    P.G.Colorable 5
+The independence argument is airtight if stated as independence from mirror-invariant convex data.  There is no contradiction with the fact that `ℝ³` has a fixed standard orientation.  For a fixed coordinate realization with fixed normal field and fixed `σ`, the sign is determined by the scalar triple product.
+
+So `RotationFaithful` is a deterministic property of the full oriented object.  It is not derivable from the unoriented support and strict-support hypotheses alone.
+
+### Question 2
+
+Yes, one can define `outward_normal` from coordinates, an ordered face, and an interior point.  That removes the normal field as separate data.  But the remaining content is exactly that the supplied `σ` is the correctly oriented rotation.  If `σ` is not constructed from coordinates, this remains an orientation agreement field.
+
+If `σ` is constructed from coordinates, the field disappears, but the burden moves to proving that the constructed map agrees with the face list and is a sphere map.
+
+### Question 3
+
+The sharp true statement is:
+
+> `RotationFaithful` is determined by the oriented realization and the supplied combinatorial rotation.  It is not derivable from the unoriented convex data.  The irreducible input for an externally supplied map is the agreement that `M.σ` equals the outward geometric angular rotation, not the scalar equation itself.
+
+The best refactor is therefore to replace the large field
+
+```text
+RotationFaithful P
 ```
 
-This consumes a triangulation extension certificate; it is about coloring, not about proving `P.IsSphereMap` for the input plane graph.
+by the smaller and more honest orientation-agreement field
 
-## Answer to the three questions
-
-### 1. Can ch13 obtain `IsSphereMap` for free by exhibiting a `PlaneSimpleGraph`?
-
-No.  It obtains `P.toCombMap.IsSphereMap` from `P.IsSphereMap`, not from `PlaneSimpleGraph` alone.
-
-What is free after constructing `P : PlaneSimpleGraph V D`:
-
-```lean
-P.toCombMap.Connected
-P.toCombMap.IsSimpleGraph
-P.toCombMap.eulerChar = P.eulerChar       -- assuming every vertex is incident
+```text
+M.σ = globalAngularPermOutward P
 ```
 
-What is not free:
+and then prove `RotationFaithful` from that equality plus deterministic cross/normal algebra.
 
-```lean
-P.eulerChar = 2
+The non-vacuity guard remains the tetra theorem:
+
+```text
+tetraMap.σ = globalAngularPermOutward tetraEuclideanPolyhedron
 ```
 
-### 2. Does `PlaneSimpleGraph` require a sphere/planarity certificate as input?
+with the already-audited convention that `globalAngularPermOutward` is the outward-face-compatible angular successor.
 
-The structure itself does not contain `P.IsSphereMap` as a field.  But every theorem that produces `CombMap.IsSphereMap` requires it as an input:
+## Bottom line
 
-```lean
-hsphere : P.IsSphereMap
-```
+Do not say “`RotationFaithful` is independent of the object.”  Say:
 
-There is no separate topological planarity axiom in the structure.  The effective sphere axiom is the Euler equation `P.eulerChar = 2`.
+> For a fixed oriented realization and a fixed `σ`, `RotationFaithful` is determined and checkable.  But a supplied `σ` matching the oriented embedding is not forced by unoriented convexity.  Mirror reflection preserves the support data and flips exactly that match.
 
-For a convex polytope’s geometric `σ_geo`, you can construct the rotation-system fields constructively:
-
-```lean
-σ_preserves_tail : ∀ d, tail (σ_geo d) = tail d
-σ_vertex_cycle : ∀ d e, tail d = tail e → σ_geo.SameCycle d e
-```
-
-and the graph fields:
-
-```lean
-edge_darts : ∀ {u v}, G.Adj u v → ∃! d, tail d = u ∧ head d = v
-connected : G.Connected
-```
-
-But these still do not imply `P.IsSphereMap` in the repo API.
-
-### 3. Bottom line
-
-Reusing ch35 **relocates** the Euler wall; it does not remove it.
-
-The concrete reduction is:
-
-```lean
--- construct from geometry/face list
-P : PlaneSimpleGraph V D
-hincident : ∀ v, ∃ d, P.tail d = v
-hsphere : P.IsSphereMap        -- still required
-
--- get the ch13 map and its global hypotheses
-M := P.toCombMap
-M.IsSphereMap      := P.toCombMap_isSphereMap hsphere hincident
-M.IsSimpleGraph    := P.toCombMap_isSimpleGraph
-```
-
-This is still a worthwhile shortcut because it avoids duplicating the `PlaneSimpleGraph → CombMap` transport work.  But if the ch13 objective is truly “derive sphere from raw convex geometry,” the hard missing theorem remains:
-
-```lean
-convex_polytope_boundary_face_list_euler_two : P.IsSphereMap
-```
-
-or, in finite face-list form:
-
-```lean
-(Fintype.card V : ℤ) - (edgeCount : ℤ) + (Fintype.card F : ℤ) = 2.
-```
-
-So the recommended path is:
-
-1. Reuse `PlaneSimpleGraph` for the graph/rotation wrapper.
-2. Reuse `toCombMap_isSphereMap` and `toCombMap_isSimpleGraph` for the bridge.
-3. Treat `P.IsSphereMap` as a named ch13 input certificate initially.
-4. Later either prove that certificate from a finite convex-boundary Euler theorem or store it as part of the boundary face-list data.
-
-This turns the multi-month topology wall into a single explicit residue, but it does not eliminate it.
+Therefore, beyond construct-`σ`, the orientation input can be reduced to a single clean agreement statement, but it cannot be eliminated for an externally supplied combinatorial rotation.

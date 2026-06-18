@@ -1,136 +1,82 @@
-# Finite cone axis theorem: Stiemke/Gordan status and the shortest Lean route
+# Finite cone axis theorem: closest-point route and compile boundary
 
-This note answers the request for the finite theorem needed to construct the self-dual/interior edge-cone axis.
-
-I cannot honestly claim that the raw theorem below has a drop-in, already-tested, no-`sorry` proof in the repo as it stands.  The pinned environment is not available in this session, so I cannot run Lean.  What I can pin down concretely is:
-
-1. Mathlib does **not** expose a named `Stiemke`/`Gordan` theorem with the exact matrix alternative shape.
-2. Mathlib **does** have the cone/Farkas infrastructure, but using it directly for this small finite theorem is heavier than necessary.
-3. The best Lean route is not the Gram-matrix alternative.  It is a compactness/minimum-norm argument on the finite convex hull.  This avoids closedness of finitely generated cones and avoids constructing a `ProperCone` around the image of the nonnegative orthant.
-
-The rest of this note gives the exact theorem surfaces and the proof skeleton at the level I would implement.  The only nontrivial local lemma is the compact minimizer/KKT lemma for the convex hull; after that the target theorem is finite algebra plus an epsilon bump.
-
-## 1. Mathlib status: no direct Stiemke/Gordan, but Farkas exists
-
-The relevant Mathlib file is:
+This note responds to the request for a complete Lean proof of
 
 ```lean
-import Mathlib.Analysis.Convex.Cone.Dual
+theorem exists_strict_copositive_combo_from_pointed
+    {ι : Type*} [Fintype ι] [DecidableEq ι] [Nonempty ι]
+    (w : ι → EuclideanSpace ℝ (Fin 3))
+    (hpointed : ∀ β : ι → ℝ,
+      (∀ i, 0 ≤ β i) →
+      (∑ i, β i • w i = 0) →
+      ∀ i, β i = 0) :
+    ∃ α : ι → ℝ,
+      (∀ i, 0 < α i) ∧
+      ∀ i, (0 : ℝ) < ⟪(∑ j, α j • w j), w i⟫
 ```
 
-The docs say this file develops “the topological dual of a cone and Farkas’ lemma”.  The exact public names are:
+I cannot honestly claim a no-`sorry`, compiling Lean proof here: the session has no Lean executable or checked checkout, and this theorem is API-sensitive.  The closest-point route is mathematically correct and the needed Mathlib lemmas exist, but turning it into a compiling file requires checking exact simp normal forms for `stdSimplex`, `convexHull`, `ContinuousLinearMap`, and `iInf` minimizer statements.  I am therefore recording the exact Mathlib names, the proof obligations, and the Lean target structure rather than fabricating an untested proof.
+
+## 1. Exact Mathlib APIs to use
+
+The closest-point/minimizer APIs are in:
 
 ```lean
-ProperCone.hyperplane_separation
-ProperCone.hyperplane_separation_point
-ProperCone.dual_dual_flip
-ProperCone.dual_flip_dual
-ProperCone.dual
-ProperCone.mem_dual
+import Mathlib.Analysis.InnerProductSpace.Projection.Minimal
 ```
 
-The key statements are, schematically:
+The documented theorem names are:
 
 ```lean
-ProperCone.hyperplane_separation
-  (C : ProperCone ℝ E)
-  (hKconv : Convex ℝ K)
-  (hKcomp : IsCompact K)
-  (hKC : Disjoint K ↑C) :
-  ∃ f : StrongDual ℝ E, (∀ x ∈ C, 0 ≤ f x) ∧ ∀ x ∈ K, f x < 0
-
-ProperCone.hyperplane_separation_point
-  (C : ProperCone ℝ E)
-  (hx₀ : x₀ ∉ C) :
-  ∃ f : StrongDual ℝ E, (∀ x ∈ C, 0 ≤ f x) ∧ f x₀ < 0
+exists_norm_eq_iInf_of_complete_convex
+norm_eq_iInf_iff_real_inner_le_zero
 ```
 
-`ProperCone` itself is a closed pointed cone.  The relevant helper names in `Mathlib.Analysis.Convex.Cone.Basic` are:
+Their relevant shapes are:
 
 ```lean
-ProperCone.map
-ProperCone.comap
-ProperCone.positive
-ProperCone.mem_positive
-ProperCone.isClosed
-ProperCone.convex
-ProperCone.smul_mem
+exists_norm_eq_iInf_of_complete_convex
+  {K : Set F} (ne : K.Nonempty) (h₁ : IsComplete K) (h₂ : Convex ℝ K) (u : F) :
+  ∃ v ∈ K, ‖u - v‖ = ⨅ (w : K), ‖u - (w : F)‖
+
+norm_eq_iInf_iff_real_inner_le_zero
+  {K : Set F} (h : Convex ℝ K) {u v : F} (hv : v ∈ K) :
+  ‖u - v‖ = ⨅ (w : K), ‖u - (w : F)‖ ↔
+    ∀ w ∈ K, inner ℝ (u - v) (w - v) ≤ 0
 ```
 
-So Mathlib has a geometric Farkas theorem, but not the exact finite Stiemke alternative:
-
-```text
-∃ α ≥ 0, Gα > 0     OR     ∃ β ≥ 0, β ≠ 0, Gβ ≤ 0.
-```
-
-You can build that theorem from `ProperCone.hyperplane_separation_point`, but for this ch13 use it is overkill: you must package the image/closure of the nonnegative orthant under `G`, transport the `StrongDual` back to coordinates, and then prove the strict-coordinate conclusion.  The compact convex-hull proof below is shorter.
-
-## 2. Replace Stiemke by the minimum-norm convex-combination lemma
-
-Let
+The finite simplex APIs are in:
 
 ```lean
-W β := ∑ i, β i • w i
+import Mathlib.Analysis.Convex.StdSimplex
+import Mathlib.Analysis.Convex.Topology
 ```
 
-and let the simplex be
-
-```text
-Δ = {β : ι → ℝ | (∀ i, 0 ≤ β i) ∧ ∑ i, β i = 1 }.
-```
-
-Pointedness implies `0 ∉ W '' Δ`: if `W β = 0`, then `hpointed β hβ Wβ` forces every `β i = 0`, contradicting `∑ β i = 1`.
-
-Since `Δ` is compact and nonempty when `ι` is nonempty, `‖W β‖²` has a minimizer `β₀`.  Let
+The documented names are:
 
 ```lean
-x₀ := W β₀
+stdSimplex
+convex_stdSimplex
+isClosed_stdSimplex
+isCompact_stdSimplex
+stdSimplex.zero_le
+stdSimplex.sum_eq_one
+single_mem_stdSimplex
+Set.Finite.convexHull_eq_image
+Set.Finite.isCompact_convexHull
+Set.Finite.isClosed_convexHull
 ```
 
-Then `x₀ ≠ 0`.  For every generator `w i`, the segment
+For the theorem below, the cleanest route is to avoid extracting from `convexHull` and instead define the compact convex set directly as the image of the standard simplex under the coefficient-combination map.
 
-```text
-(1 - t) x₀ + t w_i
-```
-
-lies in the convex hull for `t ∈ [0,1]`, so minimality of `x₀` gives
-
-```text
-‖x₀‖² ≤ ‖(1-t)x₀ + t w_i‖².
-```
-
-Expanding the quadratic and dividing by `t>0`, then letting `t → 0+`, yields
-
-```text
-⟪x₀, w_i⟫ ≥ ‖x₀‖² > 0.
-```
-
-Thus the minimizer coefficients `β₀ ≥ 0` already give coordinatewise strict positivity:
-
-```lean
-∀ i, 0 < ⟪(∑ j, β₀ j • w j), w i⟫
-```
-
-The only defect is that some `β₀ i` may be zero.  The final theorem wants all coefficients strictly positive.  Bump by a small positive constant:
-
-```lean
-α i := β₀ i + ε
-```
-
-Since all inner products are strictly positive and the index set is finite, choose `ε > 0` small enough that every coordinate remains positive after adding `ε * ∑ j w j`.
-
-This proof gives the desired conclusion and never invokes Stiemke/Gordan.
-
-## 3. Lean theorem surfaces
-
-The clean implementation should split the proof into three lemmas.
+## 2. Core definitions
 
 ```lean
 import ProofsInTheBook.SphericalKernel
-import Mathlib.Analysis.Convex.Topology
+import Mathlib.Analysis.InnerProductSpace.Projection.Minimal
 import Mathlib.Analysis.Convex.StdSimplex
+import Mathlib.Analysis.Convex.Topology
 import Mathlib.Analysis.Convex.Cone.Dual
-import Mathlib.Topology.Algebra.Order.Compact
 
 noncomputable section
 open scoped Classical RealInnerProductSpace BigOperators
@@ -138,101 +84,230 @@ open ProofsInTheBook.SphericalKernel
 
 namespace ProofsInTheBook.Ch13FiniteConeAxis
 
-variable {ι : Type*} [Fintype ι] [DecidableEq ι]
+abbrev E3 : Type := EuclideanSpace ℝ (Fin 3)
 
-/-- The linear combination of the generators with coefficient function `a`. -/
+variable {ι : Type*} [Fintype ι] [DecidableEq ι] [Nonempty ι]
+
+/-- The linear combination of `w` with coefficient vector `a`. -/
 def combo (w : ι → E3) (a : ι → ℝ) : E3 :=
   ∑ i, a i • w i
 
-/-- The coefficient simplex.  I recommend keeping this as an explicit predicate
-rather than importing all of `StdSimplex` into the local theorem. -/
-def coeffSimplex (ι : Type*) [Fintype ι] (a : ι → ℝ) : Prop :=
-  (∀ i, 0 ≤ a i) ∧ ∑ i, a i = 1
+/-- The coefficient-combination map as a linear map.  If a local proof has trouble
+with `map_add'`/`map_smul'`, define this first as `combo` and use `linear_combination`
+for the few algebraic identities instead. -/
+noncomputable def comboLinear (w : ι → E3) : (ι → ℝ) →ₗ[ℝ] E3 where
+  toFun := combo w
+  map_add' := by
+    intro a b
+    unfold combo
+    simp only [Pi.add_apply, add_smul]
+    rw [Finset.sum_add_distrib]
+  map_smul' := by
+    intro c a
+    unfold combo
+    simp only [Pi.smul_apply, smul_eq_mul]
+    rw [Finset.smul_sum]
+    apply Finset.sum_congr rfl
+    intro i _
+    simp [smul_smul, mul_comm, mul_left_comm, mul_assoc]
 
-/-- The compact-minimizer lemma that replaces Stiemke/Gordan.
+/-- The compact convex hull image of the coefficient simplex. -/
+def comboSet (w : ι → E3) : Set E3 :=
+  (comboLinear w) '' stdSimplex ℝ ι
 
-This is the only topological lemma needed.  Its proof is:
+end ProofsInTheBook.Ch13FiniteConeAxis
+```
 
-* compactness of the finite-dimensional simplex;
-* continuity of `a ↦ ‖combo w a‖^2`;
-* existence of a minimizer;
-* pointedness excludes `combo w a₀ = 0`;
-* first-variation along the segment from `combo w a₀` to each generator.
--/
+## 3. Closest-point lemma to prove locally
+
+The key local theorem should be this.  It is the exact replacement for Stiemke/Gordan.
+
+```lean
+namespace ProofsInTheBook.Ch13FiniteConeAxis
+
+/-- Minimum-norm point of the convex hull of the generators is strictly positive
+against every generator, assuming the generated cone is pointed. -/
 theorem exists_simplex_combo_strict_dual_pos
     (w : ι → E3)
     (hpointed : ∀ β : ι → ℝ,
       (∀ i, 0 ≤ β i) →
       (combo w β = 0) →
-      ∀ i, β i = 0)
-    [Nonempty ι] :
+      ∀ i, β i = 0) :
     ∃ β : ι → ℝ,
-      coeffSimplex ι β ∧
+      β ∈ stdSimplex ℝ ι ∧
       ∀ i, 0 < ⟪combo w β, w i⟫ := by
   classical
-  -- Implementation notes:
-  --
-  -- Let `S : Set (ι → ℝ) := {β | coeffSimplex ι β}`.
-  -- Use compactness of the standard simplex.  The likely API route is one of:
-  --   * `StdSimplex.isCompact` from `Mathlib.Analysis.Convex.StdSimplex`, or
-  --   * closed-and-bounded in finite dimension, or
-  --   * identify `S` with `convexHull ℝ (Set.range fun i => Pi.single i 1)` and use
-  --     `Set.Finite.isCompact_convexHull`.
-  --
-  -- The finite convex hull route is attractive because `Analysis.Convex.Topology`
-  -- exposes:
-  --   * `Set.Finite.isCompact_convexHull`
-  --   * `Set.Finite.isClosed_convexHull`
-  --
-  -- Let `F β := ‖combo w β‖^2`.  Use compactness to choose `β₀ ∈ S`
-  -- minimizing `F`.
-  --
-  -- Pointedness gives `combo w β₀ ≠ 0`; otherwise every coefficient is zero,
-  -- contradicting `∑ β₀ i = 1`.
-  --
-  -- For each `i`, let `e_i` be the simplex vertex with coefficient `1` at `i`.
-  -- Since `S` is convex, `(1-t) • β₀ + t • e_i ∈ S` for `0 ≤ t ≤ 1`.
-  -- Minimality gives
-  --   `‖x‖^2 ≤ ‖x + t • (w i - x)‖^2`.
-  -- Expanding:
-  --   `0 ≤ 2*t*⟪x,w i - x⟫ + t^2*‖w i - x‖^2`.
-  -- Divide by `t>0`, then take `t = 1/(n+1)` and let `n → ∞`, or avoid limits by
-  -- choosing arbitrarily small `t` and using Archimedean order.
-  -- Conclude `0 ≤ ⟪x,w i - x⟫`, hence `‖x‖^2 ≤ ⟪x,w i⟫`.
-  -- Since `x ≠ 0`, `0 < ‖x‖^2`, so `0 < ⟪x,w i⟫`.
-  --
-  -- This lemma is the precise place where a compiling implementation must spend
-  -- effort.  It is independent of ch13 geometry.
-  sorry
+  -- Let `K = comboSet w`.
+  let K : Set E3 := comboSet w
 
-/-- Finite epsilon bump.  This is completely elementary: if `x` is strictly
-positive against each generator, then `x + ε * ∑ w_i` remains strictly positive
-for sufficiently small `ε > 0`. -/
+  -- Nonempty: choose any simplex vertex.
+  have hKne : K.Nonempty := by
+    classical
+    obtain ⟨i0⟩ := (inferInstance : Nonempty ι)
+    refine ⟨combo w (Pi.single i0 1), ?_⟩
+    refine ⟨Pi.single i0 1, single_mem_stdSimplex ℝ i0, ?_⟩
+    rfl
+
+  -- Convex: image of the convex standard simplex under a linear map.
+  have hKconv : Convex ℝ K := by
+    -- Expected proof:
+    --   exact (convex_stdSimplex ℝ ι).image (comboLinear w)
+    -- Depending on the pinned Mathlib, the theorem may be named `Convex.image`.
+    exact (convex_stdSimplex ℝ ι).image (comboLinear w)
+
+  -- Compact image of compact simplex, hence complete.
+  have hKcompact : IsCompact K := by
+    -- Expected proof:
+    --   exact (isCompact_stdSimplex ℝ ι).image (comboLinear w).continuous
+    exact (isCompact_stdSimplex ℝ ι).image (comboLinear w).continuous
+
+  have hKcomplete : IsComplete K := by
+    -- In current Mathlib this is usually available as `hKcompact.isComplete`.
+    exact hKcompact.isComplete
+
+  -- Pick the closest point to `0` in `K`.
+  rcases exists_norm_eq_iInf_of_complete_convex hKne hKcomplete hKconv (0 : E3) with
+    ⟨x, hxK, hxMin⟩
+
+  -- Variational inequality for the closest point.
+  have hvar : ∀ y ∈ K, inner ℝ ((0 : E3) - x) (y - x) ≤ 0 :=
+    (norm_eq_iInf_iff_real_inner_le_zero hKconv hxK).1 hxMin
+
+  -- Extract simplex coefficients for `x`.
+  rcases hxK with ⟨β, hβsimp, rfl⟩
+
+  -- `x ≠ 0`, otherwise pointedness contradicts `∑ β_i = 1`.
+  have hx_ne_zero : combo w β ≠ 0 := by
+    intro hx0
+    have hzero : ∀ i, β i = 0 := hpointed β (fun i => (stdSimplex.zero_le ⟨β, hβsimp⟩ i)) hx0
+    have hsum0 : (∑ i, β i) = 0 := by
+      simp [hzero]
+    have hsum1 : (∑ i, β i) = 1 := stdSimplex.sum_eq_one ⟨β, hβsimp⟩
+    linarith
+
+  refine ⟨β, hβsimp, ?_⟩
+  intro i
+
+  -- The generator `w i` belongs to `K`, using the `i`-th simplex vertex.
+  have hwiK : w i ∈ K := by
+    refine ⟨Pi.single i 1, single_mem_stdSimplex ℝ i, ?_⟩
+    -- `combo w (Pi.single i 1) = w i`.
+    unfold combo comboLinear
+    simp
+
+  have hineq := hvar (w i) hwiK
+  -- hineq : inner ℝ (0 - combo w β) (w i - combo w β) ≤ 0
+  have hle : ‖combo w β‖ ^ 2 ≤ ⟪combo w β, w i⟫ := by
+    -- Expand the variational inequality.
+    -- This is pure inner-product algebra.
+    -- One robust script is:
+    --   rw [zero_sub, inner_neg_left, inner_sub_right, neg_nonpos] at hineq
+    --   rw [real_inner_self_eq_norm_sq] at hineq
+    --   exact hineq
+    rw [zero_sub, inner_neg_left, inner_sub_right] at hineq
+    have hineq' : 0 ≤ ⟪combo w β, w i⟫ - ⟪combo w β, combo w β⟫ := by
+      linarith
+    rw [real_inner_self_eq_norm_sq] at hineq'
+    linarith
+  have hnormsq_pos : 0 < ‖combo w β‖ ^ 2 := by
+    exact sq_pos_of_ne_zero (by simpa using hx_ne_zero)
+  exact lt_of_lt_of_le hnormsq_pos hle
+
+end ProofsInTheBook.Ch13FiniteConeAxis
+```
+
+The proof above is close to compiling, and the named APIs are real Mathlib declarations.  The most likely compile adjustments are:
+
+* `Convex.image` may require the argument order `(convex_stdSimplex ℝ ι).image (comboLinear w)` exactly as written, or a continuous-linear-map coercion.
+* `hKcompact.isComplete` may be named through a namespace instance in the pinned revision; if it fails, replace the Hilbert-projection minimizer by compact-continuous minimization over `K`.
+* The `single_mem_stdSimplex` simp of `combo w (Pi.single i 1)` may need a helper lemma using `Finset.sum_eq_single`.
+
+## 4. Epsilon bump lemma
+
+This part is finite algebra.  It is less API-sensitive than the closest-point step.
+
+```lean
+namespace ProofsInTheBook.Ch13FiniteConeAxis
+
+/-- Finite positive lower bound for a positive function on a finite nonempty type. -/
+lemma exists_pos_le_all_of_pos {f : ι → ℝ} (hf : ∀ i, 0 < f i) :
+    ∃ δ : ℝ, 0 < δ ∧ ∀ i, δ ≤ f i := by
+  classical
+  let s : Finset ι := Finset.univ
+  have hsne : s.Nonempty := Finset.univ_nonempty
+  refine ⟨s.inf' hsne f, ?_, ?_⟩
+  · exact Finset.lt_inf'_iff.mpr (by intro i _; exact hf i)
+  · intro i
+    exact Finset.inf'_le _ _ (by simp [s])
+
+/-- If `x` is strictly positive against every generator, then a small positive
+bump in the direction `∑ w_i` preserves all strict inequalities. -/
 theorem exists_pos_bump_preserving_inner
     (w : ι → E3) (x : E3)
     (hx : ∀ i, 0 < ⟪x, w i⟫) :
     ∃ ε : ℝ, 0 < ε ∧
       ∀ i, 0 < ⟪x + ε • (∑ j, w j), w i⟫ := by
   classical
-  -- A robust explicit choice is
-  --   ε ≤ min_i (⟪x,w_i⟫ / (2 * (1 + |⟪∑j w_j,w_i⟫|)))
-  -- with ε > 0.
-  -- This avoids a sign split on `⟪∑j w_j,w_i⟫`.
-  --
-  -- For each i define
-  --   b i := ⟪∑j w_j, w i⟫
-  --   r i := ⟪x,w i⟫ / (2 * (1 + |b i|))
-  -- Each `r i > 0`.  Since `ι` is finite, choose `ε > 0` with `ε ≤ r i`
-  -- for all i.  If `b i ≥ 0`, positivity is immediate.  If `b i < 0`, then
-  --   ε * |b i| ≤ ⟪x,w_i⟫ / 2
-  -- so
-  --   ⟪x,w_i⟫ + ε*b_i ≥ ⟪x,w_i⟫/2 > 0.
-  --
-  -- Useful Mathlib tools are `Finset.min'`/`Finset.inf'`, or prove the finite
-  -- existence by induction on `Finset.univ`.
-  sorry
+  let s : E3 := ∑ j, w j
+  let r : ι → ℝ := fun i =>
+    ⟪x, w i⟫ / (2 * (1 + |⟪s, w i⟫|))
+  have hrpos : ∀ i, 0 < r i := by
+    intro i
+    have hden : 0 < 2 * (1 + |⟪s, w i⟫|) := by positivity
+    exact div_pos (hx i) hden
+  rcases exists_pos_le_all_of_pos (f := r) hrpos with ⟨δ, hδpos, hδle⟩
+  refine ⟨δ / 2, half_pos hδpos, ?_⟩
+  intro i
+  have hδle_i : δ / 2 ≤ r i := by linarith [hδle i]
+  have hnonneg : 0 ≤ δ / 2 := le_of_lt (half_pos hδpos)
+  have hinner :
+      ⟪x + (δ / 2) • s, w i⟫ = ⟪x, w i⟫ + (δ / 2) * ⟪s, w i⟫ := by
+    rw [inner_add_left, real_inner_smul_left]
+  rw [hinner]
+  by_cases hb : 0 ≤ ⟪s, w i⟫
+  · have : 0 ≤ (δ / 2) * ⟪s, w i⟫ := mul_nonneg hnonneg hb
+    linarith [hx i]
+  · have hbneg : ⟪s, w i⟫ < 0 := lt_of_not_ge hb
+    have habs_pos : 0 < |⟪s, w i⟫| := abs_pos.mpr (ne_of_lt hbneg)
+    have hbound : (δ / 2) * |⟪s, w i⟫| ≤ ⟪x, w i⟫ / 2 := by
+      have hmul := mul_le_mul_of_nonneg_right hδle_i (abs_nonneg _)
+      dsimp [r] at hmul
+      have hfrac :
+          (⟪x, w i⟫ / (2 * (1 + |⟪s, w i⟫|))) * |⟪s, w i⟫| ≤
+            ⟪x, w i⟫ / 2 := by
+        have hxpos := hx i
+        have hdenpos : 0 < 2 * (1 + |⟪s, w i⟫|) := by positivity
+        -- Since `|b|/(1+|b|) ≤ 1`.
+        have hratio : |⟪s, w i⟫| / (1 + |⟪s, w i⟫|) ≤ 1 := by
+          have hden : 0 < 1 + |⟪s, w i⟫| := by positivity
+          rw [div_le_one hden]
+          linarith [abs_nonneg (⟪s, w i⟫)]
+        field_simp [show (2 : ℝ) ≠ 0 by norm_num,
+          show 1 + |⟪s, w i⟫| ≠ 0 by positivity]
+        nlinarith [mul_nonneg (le_of_lt hxpos) hratio]
+      exact le_trans hmul hfrac
+    have hrewrite_neg : (δ / 2) * ⟪s, w i⟫ = -((δ / 2) * |⟪s, w i⟫|) := by
+      rw [abs_of_neg hbneg]
+      ring
+    rw [hrewrite_neg]
+    have hxhalf : 0 < ⟪x, w i⟫ / 2 := half_pos (hx i)
+    linarith
 
-/-- The requested finite theorem. -/
+end ProofsInTheBook.Ch13FiniteConeAxis
+```
+
+The epsilon proof is also close to compiling.  The highest-risk line is the `field_simp`/`nlinarith` proof of `hfrac`; if it fails, replace it with a separate lemma:
+
+```lean
+lemma mul_abs_div_one_add_abs_le_half {A b : ℝ} (hA : 0 ≤ A) :
+    (A / (2 * (1 + |b|))) * |b| ≤ A / 2 := by ...
+```
+
+## 5. Final theorem assembly
+
+```lean
+namespace ProofsInTheBook.Ch13FiniteConeAxis
+
 theorem exists_strict_copositive_combo_from_pointed
     (w : ι → E3)
     (hpointed : ∀ β : ι → ℝ,
@@ -243,115 +318,45 @@ theorem exists_strict_copositive_combo_from_pointed
       (∀ i, 0 < α i) ∧
       ∀ i, (0 : ℝ) < ⟪(∑ j, α j • w j), w i⟫ := by
   classical
-  by_cases hne : Nonempty ι
-  · letI : Nonempty ι := hne
-    have hpointed' : ∀ β : ι → ℝ,
-        (∀ i, 0 ≤ β i) → combo w β = 0 → ∀ i, β i = 0 := by
-      intro β hβ hsum
-      exact hpointed β hβ (by simpa [combo] using hsum)
-    rcases exists_simplex_combo_strict_dual_pos (w := w) hpointed' with
-      ⟨β, hβsimp, hβinner⟩
-    rcases exists_pos_bump_preserving_inner w (combo w β) hβinner with
-      ⟨ε, hεpos, hεinner⟩
-    refine ⟨fun i => β i + ε, ?_, ?_⟩
-    · intro i
-      exact add_pos_of_nonneg_of_pos hβsimp.1.1 hεpos
-    · intro i
-      have hcombo :
-          (∑ j, (β j + ε) • w j) = combo w β + ε • (∑ j, w j) := by
-        simp [combo, add_smul, Finset.sum_add_distrib, Finset.smul_sum]
-      rw [hcombo]
-      exact hεinner i
-  · -- Empty index type: the conclusion is vacuous.
-    refine ⟨fun i => False.elim (hne ⟨i⟩), ?_, ?_⟩
-    · intro i
-      exact False.elim (hne ⟨i⟩)
-    · intro i
-      exact False.elim (hne ⟨i⟩)
+  have hpointed_combo : ∀ β : ι → ℝ,
+      (∀ i, 0 ≤ β i) → combo w β = 0 → ∀ i, β i = 0 := by
+    intro β hβ hcombo
+    exact hpointed β hβ (by simpa [combo] using hcombo)
+  rcases exists_simplex_combo_strict_dual_pos (w := w) hpointed_combo with
+    ⟨β, hβsimp, hβpos⟩
+  rcases exists_pos_bump_preserving_inner w (combo w β) hβpos with
+    ⟨ε, hεpos, hεinner⟩
+  refine ⟨fun i => β i + ε, ?_, ?_⟩
+  · intro i
+    exact add_pos_of_nonneg_of_pos (stdSimplex.zero_le ⟨β, hβsimp⟩ i) hεpos
+  · intro i
+    have hcombo :
+        (∑ j, (β j + ε) • w j) = combo w β + ε • (∑ j, w j) := by
+      unfold combo
+      simp only [add_smul]
+      rw [Finset.sum_add_distrib, Finset.smul_sum]
+    rw [hcombo]
+    exact hεinner i
 
 end ProofsInTheBook.Ch13FiniteConeAxis
 ```
 
-The top-level theorem body above is the right shape.  The two local lemmas marked by `sorry` are the parts to formalise.  I am leaving them explicit rather than pretending the entire file has been checked; they are also much better proof obligations than a generic Stiemke theorem.
+## 6. What must be checked in Lean
 
-## 4. Why this route is better than formalising Stiemke directly
+The projection/simplex APIs cited above are real documented Mathlib declarations.  The remaining compile-risk is not mathematical; it is Lean-normal-form work around:
 
-The Gram/Stiemke route requires a theorem of alternatives for an arbitrary finite matrix.  Even with `ProperCone.hyperplane_separation_point`, the Lean work is substantial:
+* `Convex.image` for the linear image of `stdSimplex`;
+* `IsCompact.isComplete` for passing compactness to completeness;
+* simplifying `combo w (Pi.single i 1)`;
+* the small `field_simp`/`nlinarith` inequality in the bump lemma.
 
-* build the nonnegative orthant as `ProperCone.positive ℝ (ι → ℝ)`;
-* build the continuous linear map `G : (ι → ℝ) →L[ℝ] (ι → ℝ)`;
-* reason about `ProperCone.map G (ProperCone.positive ...)`, whose carrier is the **closure** of the image cone, not definitionally the image cone;
-* prove the bad alternative `β ≥ 0`, `β ≠ 0`, `Gβ ≤ 0` impossible;
-* extract strict positivity from separation.
-
-For the ch13 axis theorem, all of that is unnecessary.  The minimum-norm convex-combination lemma uses exactly the geometric content of pointedness, and the strict dual positivity drops out from the variational inequality.
-
-## 5. The epsilon bump, in detail
-
-Once you have `β₀ ≥ 0` and
+If this were being committed as a proof file, I would first add and compile these four helper lemmas independently:
 
 ```lean
-hβinner : ∀ i, 0 < ⟪combo w β₀, w i⟫
+lemma combo_single (w : ι → E3) (i : ι) : combo w (Pi.single i 1) = w i := by ...
+lemma comboSet_convex (w : ι → E3) : Convex ℝ (comboSet w) := by ...
+lemma comboSet_compact (w : ι → E3) : IsCompact (comboSet w) := by ...
+lemma small_bump_bound ... := by ...
 ```
 
-let
-
-```lean
-x := combo w β₀
-s := ∑ j, w j
-b i := ⟪s, w i⟫
-r i := ⟪x, w i⟫ / (2 * (1 + |b i|))
-```
-
-Each `r i` is positive.  Choose `ε > 0` with `ε ≤ r i` for all `i`; for example `ε = min_i r_i / 2` when `ι` is nonempty.
-
-Then for each `i`:
-
-```text
-⟪x + ε • s, w_i⟫ = ⟪x,w_i⟫ + ε * b_i.
-```
-
-If `b_i ≥ 0`, this is `> 0`.  If `b_i < 0`, then
-
-```text
-ε * |b_i| ≤ (⟪x,w_i⟫ / (2 * (1 + |b_i|))) * |b_i|
-            ≤ ⟪x,w_i⟫ / 2,
-```
-
-so
-
-```text
-⟪x,w_i⟫ + ε*b_i = ⟪x,w_i⟫ - ε*|b_i| ≥ ⟪x,w_i⟫/2 > 0.
-```
-
-This is the whole bump step; no topology remains.
-
-## 6. Recommendation for the repo
-
-Do not spend the next round proving a general Stiemke theorem.  Add the compact minimizer lemma in a small file, e.g.
-
-```lean
-ProofsInTheBook/Ch13FiniteConeAxis.lean
-```
-
-with public theorem:
-
-```lean
-theorem exists_strict_copositive_combo_from_pointed
-    (w : ι → E3)
-    (hpointed : ∀ β : ι → ℝ,
-      (∀ i, 0 ≤ β i) →
-      (∑ i, β i • w i = 0) →
-      ∀ i, β i = 0) :
-    ∃ α : ι → ℝ,
-      (∀ i, 0 < α i) ∧
-      ∀ i, (0 : ℝ) < ⟪(∑ j, α j • w j), w i⟫
-```
-
-The proof obligations reduce to:
-
-1. compactness/minimum over the finite coefficient simplex;
-2. first variation of squared norm on a segment;
-3. finite epsilon bump.
-
-This is a smaller and more maintainable Lean task than instantiating `ProperCone.hyperplane_separation_point` into a finite matrix alternative.
+Then the final theorem is a short assembly.  Without a Lean executable in this session, I cannot truthfully label the code above as compiled, but it is the concrete closest-point proof with the exact Mathlib lemmas that should be used.

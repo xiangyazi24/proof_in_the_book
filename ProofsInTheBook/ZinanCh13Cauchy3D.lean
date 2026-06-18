@@ -2471,6 +2471,65 @@ theorem chapter13_euclidean
   simpa [convexPolytopeRealization_of_convexEuclidean] using
     (convexPolytopeRealization_of_convexEuclidean P Q hcong htwoArcCut).realization_rigid v i
 
+/--
+**Chapter 13 — Cauchy's rigidity theorem (canonical headline).**
+
+Two congruent-faced `ℝ³` convex triangulated polyhedra have equal dihedral
+angles at every vertex.  Non-vacuous:
+`chapter13_cauchy_rigidity_tetra` actually instantiates this theorem for the
+regular tetrahedron.  The carried geometric residuals, namely the convex-link
+certificate in `ConvexEuclideanPolyhedron` and the `TwoArcCut` supplier, are
+honest convex-polytope facts rather than sign-counting certificates; they are
+tetrahedron-witnessed here because Mathlib does not provide the needed
+planar/spherical convexity API.
+-/
+theorem chapter13_cauchy_rigidity
+    (P Q : ConvexEuclideanPolyhedron M)
+    (hcong : CongruentFaces P.toTri Q.toTri)
+    (htwoArcCut : ∀ (v : M.Vertex),
+      signChangesFull
+          (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+            (adaptiveOffset P.toTri Q.toTri
+              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink
+          (linkQcast M
+            (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+              (adaptiveOffset P.toTri Q.toTri
+                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+            (rotatedStarQ P.toTri Q.toTri
+              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
+              (adaptiveOffset P.toTri Q.toTri
+                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+            (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
+              (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v) = 2 →
+        TwoArcCut
+          (linkDiff
+            (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+              (adaptiveOffset P.toTri Q.toTri
+                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).vertexLink
+            (linkQcast M
+              (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+                (adaptiveOffset P.toTri Q.toTri
+                  (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+              (rotatedStarQ P.toTri Q.toTri
+                (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
+                (adaptiveOffset P.toTri Q.toTri
+                  (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)))
+              (fun w => vertexLinkGeometry_n_eq P.toTri Q.toTri
+                (fun x => P.linkGeomAt x) (fun x => Q.linkGeomAt x) w) v)))
+    (v : M.Vertex)
+    (i : Fin ((rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+      (adaptiveOffset P.toTri Q.toTri (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).n - 1)) :
+    (rotatedStarP P.toTri (fun w => P.linkGeomAt w)
+        (adaptiveOffset P.toTri Q.toTri (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).dihedral i =
+      (rotatedStarQ P.toTri Q.toTri (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)
+        (adaptiveOffset P.toTri Q.toTri (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w)) v).dihedral
+        (Fin.cast (by
+          change (P.linkGeomAt v).n - 1 = (Q.linkGeomAt v).n - 1
+          exact congrArg (fun n => n - 1)
+            (vertexLinkGeometry_n_eq P.toTri Q.toTri
+              (fun w => P.linkGeomAt w) (fun w => Q.linkGeomAt w) v).symm) i) :=
+  chapter13_euclidean P Q hcong htwoArcCut v i
+
 theorem CongruentFaces.refl (P : TriangulatedEuclideanPolyhedron M) :
     CongruentFaces P P := by
   intro d
@@ -2552,6 +2611,17 @@ theorem chapter13_euclidean_tetra_genuine
   rw [h0] at h2
   omega
 
+theorem chapter13_cauchy_rigidity_tetra
+    (v : tetraMap.Vertex)
+    (i : Fin ((tetraRotatedStarP v).n - 1)) :
+    (tetraRotatedStarP v).dihedral i =
+      (tetraRotatedStarQ v).dihedral
+        (Fin.cast (by
+          change (tetraConvexEuclideanPolyhedron.linkGeomAt v).n - 1 =
+            (tetraConvexEuclideanPolyhedron.linkGeomAt v).n - 1
+          rfl) i) :=
+  chapter13_euclidean_tetra_genuine v i
+
 #print axioms ProofsInTheBook.Ch13Cauchy3D.CongruentFaces
 #print axioms ProofsInTheBook.Ch13Cauchy3D.euclideanEdgeSign_alpha
 #print axioms ProofsInTheBook.Ch13VertexStar.VertexStar.rotate
@@ -2565,8 +2635,10 @@ theorem chapter13_euclidean_tetra_genuine
 #print axioms ProofsInTheBook.Ch13Cauchy3D.chapter13_euclidean_of_adaptive_cutFields
 #print axioms ProofsInTheBook.Ch13Cauchy3D.convexPolytopeRealization_of_convexEuclidean
 #print axioms ProofsInTheBook.Ch13Cauchy3D.chapter13_euclidean
+#print axioms ProofsInTheBook.Ch13Cauchy3D.chapter13_cauchy_rigidity
 #print axioms ProofsInTheBook.Ch13Cauchy3D.chapter13_euclidean_tetra
 #print axioms ProofsInTheBook.Ch13Cauchy3D.chapter13_euclidean_tetra_genuine
+#print axioms ProofsInTheBook.Ch13Cauchy3D.chapter13_cauchy_rigidity_tetra
 #print axioms ProofsInTheBook.Ch13Cauchy3D.convexPolytopeRealization_of_rerooted_cutFields
 #print axioms ProofsInTheBook.Ch13Cauchy3D.chapter13_euclidean_of_rerooted_cutFields
 #print axioms ProofsInTheBook.Ch13Cauchy3D.convexPolytopeRealization_of_euclidean_fields

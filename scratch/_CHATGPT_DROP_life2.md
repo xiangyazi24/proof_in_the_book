@@ -1,65 +1,71 @@
 # Finite Bool cyclic-flip extraction: `> 2` flips gives four alternating indices
 
-This is a self-contained Lean module for the pure combinatorial extraction needed downstream.  I state it on `ZMod n`; the cyclic order conclusion is given by natural representatives
+This is the requested pure combinatorial extraction lemma for Chapter 13 Route B.  It is list-facing: the main theorem assumes exactly
 
 ```lean
-k0 < k1 < k2 < k3 < n
+2 < ProofsInTheBook.Ch13ArmVertex.cyclicFlips (List.ofFn p)
 ```
 
-and the indices are `(kᵣ : ZMod n)`.  This is the most convenient form for a cyclic vertex link.  A `Fin n` wrapper is included at the end.
+for `p : Fin n → Bool`, and returns four strictly ordered `Fin n` indices whose values alternate.
 
-The proof avoids sorted-list plumbing.  It defines a scanner `flipBlocksFrom p pos len` that walks the cyclic sequence through `len` consecutive edges starting at `pos`; whenever it sees a flip, it records the pre-flip position together with the pre-flip Bool value.  The scanner proves three facts by induction:
+The proof uses the landed list API in `ProofsInTheBook.Ch13ArmVertex`:
 
-1. recorded positions are strictly increasing and bounded;
-2. recorded Bool values alternate;
-3. the number of recorded flips is even for a full cycle.
+* `flips : List Bool → ℕ`, the linear adjacent flip count;
+* `cyclicFlips : List Bool → ℕ`, defined by closing a nonempty list with its head;
+* `cyclicFlips_even`, the already landed parity theorem.
 
-Then `cyclicFlips p > 2`, plus evenness, gives at least four recorded flips.  The first four recorded positions are the required cyclically ordered alternating indices.
+No geometry, no cyclic order topology, and no turning-number argument appears.  The only extraction structure added below is a small list scanner `flipRecordsFrom`: while walking the closed list, it records every flip position together with the value immediately before the flip.  These records are strictly ordered, their stored values alternate, and their length is exactly the landed `cyclicFlips` count.  Since `cyclicFlips` is even, `2 < cyclicFlips` gives at least four records; the first four are the desired alternating indices.
 
 ```lean
 import Mathlib
+import ProofsInTheBook.Ch13ArmVertex
 
 noncomputable section
 
 namespace ProofsInTheBook.Ch13BoolCyclicExtraction
 
-/-- Encode a Bool in `ZMod 2` for the parity telescope. -/
-def boolZ : Bool → ZMod 2
-  | false => 0
-  | true => 1
+open ProofsInTheBook.Ch13ArmVertex
 
-@[simp] lemma boolZ_false : boolZ false = 0 := rfl
-@[simp] lemma boolZ_true : boolZ true = 1 := rfl
-
-lemma boolZ_self_add (b : Bool) : boolZ b + boolZ b = 0 := by
-  cases b <;> decide
-
-/-- The mod-2 indicator of a Bool flip is the sum of the two endpoint values. -/
-lemma flipIndicator_cast (a b : Bool) :
-    ((if a ≠ b then 1 else 0 : ℕ) : ZMod 2) = boolZ a + boolZ b := by
-  cases a <;> cases b <;> decide
-
-/-- Scan `len` cyclic adjacent edges starting at natural position `pos`.
-When the edge `pos+t → pos+t+1` flips, record the pre-flip natural position
-and the pre-flip Bool value. -/
-def flipBlocksFrom {n : ℕ} [NeZero n]
-    (p : ZMod n → Bool) (pos : ℕ) : ℕ → List (ℕ × Bool)
-  | 0 => []
-  | len + 1 =>
-      let rest := flipBlocksFrom p (pos + 1) len
-      if p (pos : ZMod n) ≠ p ((pos + 1 : ℕ) : ZMod n) then
-        (pos, p (pos : ZMod n)) :: rest
+/-- `flipRecordsFrom k xs` scans the linear list `xs`, starting with absolute
+position `k`.  For every adjacent pair `a,b` with `a ≠ b`, it records the
+pre-flip position and the pre-flip value `(k,a)`. -/
+def flipRecordsFrom : ℕ → List Bool → List (ℕ × Bool)
+  | _, [] => []
+  | _, [_] => []
+  | k, a :: b :: xs =>
+      if a ≠ b then
+        (k, a) :: flipRecordsFrom (k + 1) (b :: xs)
       else
-        rest
+        flipRecordsFrom (k + 1) (b :: xs)
 
-/-- The cyclic flip count of a Bool-labelled `ZMod n` cycle.  This is exactly
-the number of cyclic adjacent positions `i → i+1` where `p` changes value. -/
-def cyclicFlips {n : ℕ} [NeZero n] (p : ZMod n → Bool) : ℕ :=
-  (flipBlocksFrom p 0 n).length
+/-- The record scanner has exactly the same length as the landed linear flip
+count `Ch13ArmVertex.flips`. -/
+theorem flipRecordsFrom_length :
+    ∀ (k : ℕ) (xs : List Bool), (flipRecordsFrom k xs).length = flips xs
+  | k, [] => by simp [flipRecordsFrom, flips]
+  | k, [a] => by simp [flipRecordsFrom, flips]
+  | k, a :: b :: xs => by
+      by_cases h : a ≠ b
+      · simp [flipRecordsFrom, flips, h, flipRecordsFrom_length (k + 1) (b :: xs)]
+      · simp [flipRecordsFrom, flips, h, flipRecordsFrom_length (k + 1) (b :: xs)]
 
-/-- Strictly increasing/bounded position chain.  `PosChain N lo xs` says every
-recorded position in `xs` is at least `lo`, below `N`, and later positions are
-strictly after earlier positions. -/
+/-- Records for the cyclic flip count: close a nonempty list by appending its head,
+then record the linear flips of that closed list. -/
+def cyclicFlipRecords : List Bool → List (ℕ × Bool)
+  | [] => []
+  | h :: t => flipRecordsFrom 0 ((h :: t) ++ [h])
+
+/-- The scanner records exactly the landed cyclic flip count. -/
+theorem cyclicFlipRecords_length (l : List Bool) :
+    (cyclicFlipRecords l).length = cyclicFlips l := by
+  cases l with
+  | nil => simp [cyclicFlipRecords, cyclicFlips]
+  | cons h t =>
+      simp [cyclicFlipRecords, cyclicFlips, flipRecordsFrom_length]
+
+/-- A strict increasing/bounded chain of recorded natural positions.  `PosChain N lo xs`
+says: every record in `xs` has position at least `lo`, below `N`, and later records
+are strictly after earlier records. -/
 def PosChain (N lo : ℕ) : List (ℕ × Bool) → Prop
   | [] => True
   | x :: xs => lo ≤ x.1 ∧ x.1 < N ∧ PosChain N (x.1 + 1) xs
@@ -73,203 +79,198 @@ lemma PosChain.mono_left {N lo lo' : ℕ} {xs : List (ℕ × Bool)}
       rcases h with ⟨hlo', hxN, htail⟩
       exact ⟨le_trans hlo hlo', hxN, htail⟩
 
-/-- The scanner records positions in increasing order and below the supplied
-upper bound. -/
-theorem flipBlocksFrom_posChain {n : ℕ} [NeZero n]
-    (p : ZMod n → Bool) (N pos len : ℕ)
-    (hN : pos + len ≤ N) :
-    PosChain N pos (flipBlocksFrom p pos len) := by
-  induction len generalizing pos with
-  | zero =>
-      simp [flipBlocksFrom, PosChain]
-  | succ len ih =>
-      by_cases hflip : p (pos : ZMod n) ≠ p ((pos + 1 : ℕ) : ZMod n)
-      · have hposN : pos < N := by omega
-        have htail : PosChain N (pos + 1) (flipBlocksFrom p (pos + 1) len) := by
-          exact ih (pos + 1) (by omega)
-        simp [flipBlocksFrom, hflip, PosChain, hposN, htail]
-      · have htail : PosChain N (pos + 1) (flipBlocksFrom p (pos + 1) len) := by
-          exact ih (pos + 1) (by omega)
-        exact PosChain.mono_left (Nat.le_succ pos) (by
-          simpa [flipBlocksFrom, hflip] using htail)
+/-- The linear record scanner produces increasing positions below `N`, provided the
+scanned edge positions fit below `N`. -/
+theorem flipRecordsFrom_posChain (N : ℕ) :
+    ∀ (k : ℕ) (xs : List Bool), k + xs.length ≤ N + 1 →
+      PosChain N k (flipRecordsFrom k xs)
+  | k, [], _ => by simp [flipRecordsFrom, PosChain]
+  | k, [a], _ => by simp [flipRecordsFrom, PosChain]
+  | k, a :: b :: xs, hbound => by
+      have htail : PosChain N (k + 1) (flipRecordsFrom (k + 1) (b :: xs)) := by
+        exact flipRecordsFrom_posChain N (k + 1) (b :: xs) (by omega)
+      by_cases h : a ≠ b
+      · have hkN : k < N := by omega
+        simp [flipRecordsFrom, h, PosChain, hkN, htail]
+      · exact PosChain.mono_left (Nat.le_succ k) (by
+          simpa [flipRecordsFrom, h] using htail)
 
-/-- Every recorded pair stores the actual Bool value at its recorded natural
-position. -/
-theorem flipBlocksFrom_sound {n : ℕ} [NeZero n]
-    (p : ZMod n → Bool) :
-    ∀ pos len x, x ∈ flipBlocksFrom p pos len → x.2 = p (x.1 : ZMod n) := by
-  intro pos len
-  induction len generalizing pos with
-  | zero =>
-      intro x hx
-      simp [flipBlocksFrom] at hx
-  | succ len ih =>
-      intro x hx
-      by_cases hflip : p (pos : ZMod n) ≠ p ((pos + 1 : ℕ) : ZMod n)
-      · simp [flipBlocksFrom, hflip] at hx
-        rcases hx with hx | hx
-        · rcases hx with rfl
-          rfl
-        · exact ih (pos + 1) x hx
-      · have hx' : x ∈ flipBlocksFrom p (pos + 1) len := by
-          simpa [flipBlocksFrom, hflip] using hx
-        exact ih (pos + 1) x hx'
+/-- The cyclic record scanner produces positions strictly below the original list length. -/
+theorem cyclicFlipRecords_posChain (l : List Bool) :
+    PosChain l.length 0 (cyclicFlipRecords l) := by
+  cases l with
+  | nil => simp [cyclicFlipRecords, PosChain]
+  | cons h t =>
+      have hbound : 0 + ((h :: t) ++ [h]).length ≤ (h :: t).length + 1 := by simp
+      simpa [cyclicFlipRecords] using
+        flipRecordsFrom_posChain (h :: t).length 0 ((h :: t) ++ [h]) hbound
 
-/-- If the scanner output is nonempty, its first stored Bool is the value at
-`pos`.  This is the key invariant saying that no unrecorded flip occurred before
-the first recorded one. -/
-theorem flipBlocksFrom_head_value {n : ℕ} [NeZero n]
-    (p : ZMod n → Bool) :
-    ∀ pos len x xs,
-      flipBlocksFrom p pos len = x :: xs → x.2 = p (pos : ZMod n) := by
-  intro pos len
-  induction len generalizing pos with
-  | zero =>
-      intro x xs h
-      simp [flipBlocksFrom] at h
-  | succ len ih =>
-      intro x xs h
-      by_cases hflip : p (pos : ZMod n) ≠ p ((pos + 1 : ℕ) : ZMod n)
-      · simp [flipBlocksFrom, hflip] at h
-        rcases h with ⟨rfl, rfl⟩
+/-- If the linear record scanner is nonempty, the first stored value is the first
+value of the scanned list.  If there was no flip at the current edge, the proof
+moves to the tail, using that the current and next values are equal. -/
+theorem flipRecordsFrom_head_value :
+    ∀ (k : ℕ) (a : Bool) (xs : List Bool) (x : ℕ × Bool) (rest : List (ℕ × Bool)),
+      flipRecordsFrom k (a :: xs) = x :: rest → x.2 = a
+  | k, a, [], x, rest, h => by simp [flipRecordsFrom] at h
+  | k, a, b :: xs, x, rest, hrec => by
+      by_cases h : a ≠ b
+      · simp [flipRecordsFrom, h] at hrec
+        rcases hrec with ⟨rfl, rfl⟩
         rfl
-      · have hEq : p (pos : ZMod n) = p ((pos + 1 : ℕ) : ZMod n) := not_ne.mp hflip
-        have hrest : flipBlocksFrom p (pos + 1) len = x :: xs := by
-          simpa [flipBlocksFrom, hflip] using h
-        have hx := ih (pos + 1) x xs hrest
-        simpa [hEq] using hx
+      · have hab : a = b := not_ne.mp h
+        have htail : flipRecordsFrom (k + 1) (b :: xs) = x :: rest := by
+          simpa [flipRecordsFrom, h] using hrec
+        have hx := flipRecordsFrom_head_value (k + 1) b xs x rest htail
+        simpa [hab] using hx
 
-/-- Adjacent stored Bool values alternate. -/
+/-- Stored Bool values alternate along the record list. -/
 def AlternatingValues : List (ℕ × Bool) → Prop
   | [] => True
   | [_] => True
   | x :: y :: xs => x.2 ≠ y.2 ∧ AlternatingValues (y :: xs)
 
-/-- The scanner output alternates in Bool value.  Consecutive records are
-consecutive maximal constant blocks. -/
-theorem flipBlocksFrom_alternatingValues {n : ℕ} [NeZero n]
-    (p : ZMod n → Bool) :
-    ∀ pos len, AlternatingValues (flipBlocksFrom p pos len) := by
-  intro pos len
-  induction len generalizing pos with
-  | zero =>
-      simp [flipBlocksFrom, AlternatingValues]
-  | succ len ih =>
-      by_cases hflip : p (pos : ZMod n) ≠ p ((pos + 1 : ℕ) : ZMod n)
-      · cases hrest : flipBlocksFrom p (pos + 1) len with
+/-- Consecutive records are consecutive constant blocks, hence their stored Bool values alternate. -/
+theorem flipRecordsFrom_alternatingValues :
+    ∀ (k : ℕ) (xs : List Bool), AlternatingValues (flipRecordsFrom k xs)
+  | k, [] => by simp [flipRecordsFrom, AlternatingValues]
+  | k, [a] => by simp [flipRecordsFrom, AlternatingValues]
+  | k, a :: b :: xs => by
+      by_cases h : a ≠ b
+      · cases htail : flipRecordsFrom (k + 1) (b :: xs) with
         | nil =>
-            simp [flipBlocksFrom, hflip, hrest, AlternatingValues]
+            simp [flipRecordsFrom, h, htail, AlternatingValues]
         | cons y ys =>
-            have hy : y.2 = p ((pos + 1 : ℕ) : ZMod n) := by
-              exact flipBlocksFrom_head_value p (pos + 1) len y ys hrest
-            have htail : AlternatingValues (y :: ys) := by
-              simpa [hrest] using ih (pos + 1)
-            have hne : p (pos : ZMod n) ≠ y.2 := by
-              simpa [hy] using hflip
-            simp [flipBlocksFrom, hflip, hrest, AlternatingValues, hne, htail]
-      · simpa [flipBlocksFrom, hflip] using ih (pos + 1)
+            have hy : y.2 = b := flipRecordsFrom_head_value (k + 1) b xs y ys htail
+            have halt : AlternatingValues (y :: ys) := by
+              simpa [htail] using flipRecordsFrom_alternatingValues (k + 1) (b :: xs)
+            have hay : a ≠ y.2 := by simpa [hy] using h
+            simp [flipRecordsFrom, h, htail, AlternatingValues, hay, halt]
+      · simpa [flipRecordsFrom, h] using flipRecordsFrom_alternatingValues (k + 1) (b :: xs)
 
-/-- Mod-2 telescope for an arbitrary scanned segment: the parity of the number
-of flips from `pos` through `len` edges is the mod-2 sum of the endpoint Bool
-values. -/
-theorem flipBlocksFrom_length_mod_two {n : ℕ} [NeZero n]
-    (p : ZMod n → Bool) :
-    ∀ pos len,
-      (((flipBlocksFrom p pos len).length : ℕ) : ZMod 2)
-        = boolZ (p (pos : ZMod n)) + boolZ (p ((pos + len : ℕ) : ZMod n)) := by
-  intro pos len
-  induction len generalizing pos with
-  | zero =>
-      simpa [flipBlocksFrom, boolZ_self_add]
-        using (boolZ_self_add (p (pos : ZMod n))).symm
-  | succ len ih =>
-      have hNat : pos + 1 + len = pos + (len + 1) := by omega
-      have ih' := ih (pos + 1)
-      rw [hNat] at ih'
-      by_cases hflip : p (pos : ZMod n) ≠ p ((pos + 1 : ℕ) : ZMod n)
-      · have hInd := flipIndicator_cast (p (pos : ZMod n))
-          (p ((pos + 1 : ℕ) : ZMod n))
-        have hOne : ((1 : ℕ) : ZMod 2)
-            = boolZ (p (pos : ZMod n)) + boolZ (p ((pos + 1 : ℕ) : ZMod n)) := by
-          simpa [hflip] using hInd
-        calc
-          (((flipBlocksFrom p pos (len + 1)).length : ℕ) : ZMod 2)
-              = ((1 : ℕ) : ZMod 2)
-                  + (((flipBlocksFrom p (pos + 1) len).length : ℕ) : ZMod 2) := by
-                    simp [flipBlocksFrom, hflip, Nat.cast_add]
-          _ = (boolZ (p (pos : ZMod n)) + boolZ (p ((pos + 1 : ℕ) : ZMod n)))
-                + (boolZ (p ((pos + 1 : ℕ) : ZMod n))
-                    + boolZ (p ((pos + (len + 1) : ℕ) : ZMod n))) := by
-                    rw [hOne, ih']
-          _ = boolZ (p (pos : ZMod n))
-                + boolZ (p ((pos + (len + 1) : ℕ) : ZMod n)) := by
-                    cases p (pos : ZMod n) <;>
-                    cases p ((pos + 1 : ℕ) : ZMod n) <;>
-                    cases p ((pos + (len + 1) : ℕ) : ZMod n) <;>
-                    decide
-      · have hEq : p (pos : ZMod n) = p ((pos + 1 : ℕ) : ZMod n) := not_ne.mp hflip
-        calc
-          (((flipBlocksFrom p pos (len + 1)).length : ℕ) : ZMod 2)
-              = (((flipBlocksFrom p (pos + 1) len).length : ℕ) : ZMod 2) := by
-                    simp [flipBlocksFrom, hflip]
-          _ = boolZ (p ((pos + 1 : ℕ) : ZMod n))
-                + boolZ (p ((pos + (len + 1) : ℕ) : ZMod n)) := ih'
-          _ = boolZ (p (pos : ZMod n))
-                + boolZ (p ((pos + (len + 1) : ℕ) : ZMod n)) := by
-                    rw [hEq]
-
-/-- The cyclic Bool flip count is even. -/
-theorem cyclicFlips_even {n : ℕ} [NeZero n] (p : ZMod n → Bool) :
-    Even (cyclicFlips p) := by
-  have hmod := flipBlocksFrom_length_mod_two p 0 n
-  have hzero : (((cyclicFlips p : ℕ) : ZMod 2) = 0) := by
-    simpa [cyclicFlips, Nat.zero_add, ZMod.natCast_self, boolZ_self_add]
-      using hmod
-  exact ZMod.natCast_eq_zero_iff_even.mp hzero
+/-- The cyclic record list has alternating stored values. -/
+theorem cyclicFlipRecords_alternatingValues (l : List Bool) :
+    AlternatingValues (cyclicFlipRecords l) := by
+  cases l with
+  | nil => simp [cyclicFlipRecords, AlternatingValues]
+  | cons h t =>
+      simpa [cyclicFlipRecords] using
+        flipRecordsFrom_alternatingValues 0 ((h :: t) ++ [h])
 
 lemma bool_eq_of_ne_ne {a b c : Bool} (hab : a ≠ b) (hbc : b ≠ c) : a = c := by
   cases a <;> cases b <;> cases c <;> simp_all
 
-/-- Main extraction theorem, in natural cyclic representatives.
+/-- Getting from the left side of an append agrees with getting from the original list.
+This local lemma avoids relying on a particular Mathlib name for the same fact. -/
+theorem get_append_left' {α : Type*} (l r : List α) {i : ℕ}
+    (hi : i < l.length) (hi' : i < (l ++ r).length) :
+    (l ++ r).get ⟨i, hi'⟩ = l.get ⟨i, hi⟩ := by
+  induction l generalizing i with
+  | nil => cases hi
+  | cons a l ih =>
+      cases i with
+      | zero => rfl
+      | succ i =>
+          have hi_l : i < l.length := by simpa using hi
+          have hi_app : i < (l ++ r).length := by
+            simpa [List.cons_append] using hi'
+          simpa [List.cons_append] using ih r hi_l hi_app
 
-If the cyclic Bool sequence has more than two flips, then, since the flip count
-is even, it has at least four flips.  The first four recorded flip-block
-representatives are cyclically ordered and alternate in value. -/
-theorem exists_four_ordered_alternating_of_two_lt_cyclicFlips
-    {n : ℕ} [NeZero n] (p : ZMod n → Bool)
-    (hgt : 2 < cyclicFlips p) :
+/-- A record stores the actual value of the scanned list at its recorded position. -/
+theorem flipRecordsFrom_sound_get :
+    ∀ (k : ℕ) (xs : List Bool) (x : ℕ × Bool),
+      x ∈ flipRecordsFrom k xs →
+        k ≤ x.1 ∧ ∃ hx : x.1 - k < xs.length,
+          x.2 = xs.get ⟨x.1 - k, hx⟩
+  | k, [], x, hx => by simp [flipRecordsFrom] at hx
+  | k, [a], x, hx => by simp [flipRecordsFrom] at hx
+  | k, a :: b :: xs, x, hx => by
+      by_cases h : a ≠ b
+      · simp [flipRecordsFrom, h] at hx
+        rcases hx with hx | hx
+        · rcases hx with rfl
+          refine ⟨by omega, ?_⟩
+          refine ⟨by simp, ?_⟩
+          simp
+        · obtain ⟨hge, hlt, hval⟩ := flipRecordsFrom_sound_get (k + 1) (b :: xs) x hx
+          refine ⟨by omega, ?_⟩
+          have hlt' : x.1 - k < (a :: b :: xs).length := by omega
+          refine ⟨hlt', ?_⟩
+          have hsub : x.1 - k = (x.1 - (k + 1)) + 1 := by omega
+          calc
+            x.2 = (b :: xs).get ⟨x.1 - (k + 1), hlt⟩ := hval
+            _ = (a :: b :: xs).get ⟨x.1 - k, hlt'⟩ := by
+                simpa [hsub]
+      · have hxTail : x ∈ flipRecordsFrom (k + 1) (b :: xs) := by
+          simpa [flipRecordsFrom, h] using hx
+        obtain ⟨hge, hlt, hval⟩ := flipRecordsFrom_sound_get (k + 1) (b :: xs) x hxTail
+        refine ⟨by omega, ?_⟩
+        have hlt' : x.1 - k < (a :: b :: xs).length := by omega
+        refine ⟨hlt', ?_⟩
+        have hsub : x.1 - k = (x.1 - (k + 1)) + 1 := by omega
+        calc
+          x.2 = (b :: xs).get ⟨x.1 - (k + 1), hlt⟩ := hval
+          _ = (a :: b :: xs).get ⟨x.1 - k, hlt'⟩ := by
+              simpa [hsub]
+
+/-- A cyclic record stores the actual value of the original, unclosed list at its
+recorded position.  The extra final head appended for the cyclic close is never a
+record position, because `cyclicFlipRecords_posChain` gives positions `< l.length`. -/
+theorem cyclicFlipRecords_value_get (l : List Bool) {x : ℕ × Bool}
+    (hx : x ∈ cyclicFlipRecords l) (hk : x.1 < l.length) :
+    x.2 = l.get ⟨x.1, hk⟩ := by
+  cases l with
+  | nil => simp [cyclicFlipRecords] at hx
+  | cons h t =>
+      obtain ⟨_hge, hlt, hval⟩ :=
+        flipRecordsFrom_sound_get 0 ((h :: t) ++ [h]) x (by
+          simpa [cyclicFlipRecords] using hx)
+      have hlt' : x.1 < ((h :: t) ++ [h]).length := by simpa using hlt
+      have hget := get_append_left' (h :: t) [h] hk hlt'
+      calc
+        x.2 = ((h :: t) ++ [h]).get ⟨x.1, hlt'⟩ := by simpa using hval
+        _ = (h :: t).get ⟨x.1, hk⟩ := hget
+
+/-- List-level extraction.  If a Bool list has more than two cyclic flips, then four
+strictly ordered positions carry alternating values. -/
+theorem exists_four_ordered_alternating_get_of_two_lt_cyclicFlips
+    {l : List Bool} (hgt : 2 < cyclicFlips l) :
     ∃ k0 k1 k2 k3 : ℕ,
-      k0 < k1 ∧ k1 < k2 ∧ k2 < k3 ∧ k3 < n ∧
-      p (k0 : ZMod n) = p (k2 : ZMod n) ∧
-      p (k1 : ZMod n) = p (k3 : ZMod n) ∧
-      p (k0 : ZMod n) ≠ p (k1 : ZMod n) := by
+    ∃ hk0 : k0 < l.length, ∃ hk1 : k1 < l.length,
+    ∃ hk2 : k2 < l.length, ∃ hk3 : k3 < l.length,
+      k0 < k1 ∧ k1 < k2 ∧ k2 < k3 ∧
+      l.get ⟨k0, hk0⟩ = l.get ⟨k2, hk2⟩ ∧
+      l.get ⟨k1, hk1⟩ = l.get ⟨k3, hk3⟩ ∧
+      l.get ⟨k0, hk0⟩ ≠ l.get ⟨k1, hk1⟩ := by
   classical
-  let L : List (ℕ × Bool) := flipBlocksFrom p 0 n
-  have hLenEven : Even L.length := by
-    simpa [L, cyclicFlips] using cyclicFlips_even p
-  have hLenGt : 2 < L.length := by
-    simpa [L, cyclicFlips] using hgt
-  have hLen4 : 4 ≤ L.length := by
+  let R : List (ℕ × Bool) := cyclicFlipRecords l
+  have hLenEq : R.length = cyclicFlips l := by
+    simpa [R] using cyclicFlipRecords_length l
+  have hLenEven : Even R.length := by
+    rw [hLenEq]
+    exact cyclicFlips_even l
+  have hLenGt : 2 < R.length := by
+    rwa [hLenEq]
+  have hLen4 : 4 ≤ R.length := by
     rcases hLenEven with ⟨r, hr⟩
     omega
-  have hchain : PosChain n 0 L := by
-    simpa [L] using flipBlocksFrom_posChain p n 0 n (by omega)
-  have halt : AlternatingValues L := by
-    simpa [L] using flipBlocksFrom_alternatingValues p 0 n
-  have hsound : ∀ x ∈ L, x.2 = p (x.1 : ZMod n) := by
-    intro x hx
-    exact flipBlocksFrom_sound p 0 n x (by simpa [L] using hx)
+  have hchain : PosChain l.length 0 R := by
+    simpa [R] using cyclicFlipRecords_posChain l
+  have halt : AlternatingValues R := by
+    simpa [R] using cyclicFlipRecords_alternatingValues l
+  have hvalue : ∀ x ∈ R, ∀ hk : x.1 < l.length, x.2 = l.get ⟨x.1, hk⟩ := by
+    intro x hx hk
+    exact cyclicFlipRecords_value_get l (by simpa [R] using hx) hk
 
-  rcases L with _ | x0 L1
+  rcases R with _ | x0 R1
   · simp at hLen4
-  rcases L1 with _ | x1 L2
+  rcases R1 with _ | x1 R2
   · simp at hLen4
-  rcases L2 with _ | x2 L3
+  rcases R2 with _ | x2 R3
   · simp at hLen4
-  rcases L3 with _ | x3 rest
+  rcases R3 with _ | x3 rest
   · simp at hLen4
 
-  -- Position order and bound.
+  -- Positional order and bounds.
   rcases hchain with ⟨_, hx0N, hchain⟩
   rcases hchain with ⟨hx01, hx1N, hchain⟩
   rcases hchain with ⟨hx12, hx2N, hchain⟩
@@ -284,92 +285,102 @@ theorem exists_four_ordered_alternating_of_two_lt_cyclicFlips
   have h02val : x0.2 = x2.2 := bool_eq_of_ne_ne h01 h12
   have h13val : x1.2 = x3.2 := bool_eq_of_ne_ne h12 h23
 
-  -- Stored values are actual values of `p` at the stored natural positions.
-  have hs0 : x0.2 = p (x0.1 : ZMod n) := hsound x0 (by simp)
-  have hs1 : x1.2 = p (x1.1 : ZMod n) := hsound x1 (by simp)
-  have hs2 : x2.2 = p (x2.1 : ZMod n) := hsound x2 (by simp)
-  have hs3 : x3.2 = p (x3.1 : ZMod n) := hsound x3 (by simp)
+  -- Stored values are actual list values at the stored positions.
+  have hv0 := hvalue x0 (by simp) hx0N
+  have hv1 := hvalue x1 (by simp) hx1N
+  have hv2 := hvalue x2 (by simp) hx2N
+  have hv3 := hvalue x3 (by simp) hx3N
 
-  refine ⟨x0.1, x1.1, x2.1, x3.1, hk01, hk12, hk23, hx3N, ?_, ?_, ?_⟩
-  · rw [← hs0, ← hs2]
+  refine ⟨x0.1, x1.1, x2.1, x3.1, hx0N, hx1N, hx2N, hx3N,
+    hk01, hk12, hk23, ?_, ?_, ?_⟩
+  · rw [← hv0, ← hv2]
     exact h02val
-  · rw [← hs1, ← hs3]
+  · rw [← hv1, ← hv3]
     exact h13val
-  · rw [← hs0, ← hs1]
+  · rw [← hv0, ← hv1]
     exact h01
 
-/-- A `Fin n` wrapper.  It uses `ZMod.val` to read a `ZMod n` index as the
-corresponding `Fin n` index. -/
-def cyclicFlipsFin {n : ℕ} [NeZero n] (p : Fin n → Bool) : ℕ :=
-  cyclicFlips (fun z : ZMod n => p ⟨z.val, z.val_lt⟩)
-
-/-- The same extraction theorem for `p : Fin n → Bool`. -/
-theorem exists_four_ordered_alternating_of_two_lt_cyclicFlipsFin
-    {n : ℕ} [NeZero n] (p : Fin n → Bool)
-    (hgt : 2 < cyclicFlipsFin p) :
-    ∃ k0 k1 k2 k3 : ℕ,
-      k0 < k1 ∧ k1 < k2 ∧ k2 < k3 ∧ k3 < n ∧
-      p ⟨k0, by omega⟩ = p ⟨k2, by omega⟩ ∧
-      p ⟨k1, by omega⟩ = p ⟨k3, by omega⟩ ∧
-      p ⟨k0, by omega⟩ ≠ p ⟨k1, by omega⟩ := by
+/-- Main `Fin n` / `List.ofFn` extraction theorem.  This is the requested statement:
+`cyclicFlips (List.ofFn p) > 2` gives four strictly ordered cyclic indices whose
+Bool values alternate. -/
+theorem exists_four_ordered_alternating_of_two_lt_cyclicFlips_ofFn
+    {n : ℕ} (p : Fin n → Bool)
+    (hgt : 2 < cyclicFlips (List.ofFn p)) :
+    ∃ i0 i1 i2 i3 : Fin n,
+      i0 < i1 ∧ i1 < i2 ∧ i2 < i3 ∧
+      p i0 = p i2 ∧ p i1 = p i3 ∧ p i0 ≠ p i1 := by
   classical
-  let q : ZMod n → Bool := fun z => p ⟨z.val, z.val_lt⟩
-  obtain ⟨k0, k1, k2, k3, hk01, hk12, hk23, hk3n, h02, h13, h01⟩ :=
-    exists_four_ordered_alternating_of_two_lt_cyclicFlips q (by
-      simpa [cyclicFlipsFin, q] using hgt)
-  have hk0n : k0 < n := by omega
-  have hk1n : k1 < n := by omega
-  have hk2n : k2 < n := by omega
-  have hv0 : ((k0 : ZMod n).val) = k0 := by
-    exact ZMod.val_natCast_of_lt hk0n
-  have hv1 : ((k1 : ZMod n).val) = k1 := by
-    exact ZMod.val_natCast_of_lt hk1n
-  have hv2 : ((k2 : ZMod n).val) = k2 := by
-    exact ZMod.val_natCast_of_lt hk2n
-  have hv3 : ((k3 : ZMod n).val) = k3 := by
-    exact ZMod.val_natCast_of_lt hk3n
-  refine ⟨k0, k1, k2, k3, hk01, hk12, hk23, hk3n, ?_, ?_, ?_⟩
-  · simpa [q, hv0, hv2] using h02
-  · simpa [q, hv1, hv3] using h13
-  · simpa [q, hv0, hv1] using h01
+  obtain ⟨k0, k1, k2, k3, hk0, hk1, hk2, hk3,
+    hk01, hk12, hk23, h02, h13, h01⟩ :=
+      exists_four_ordered_alternating_get_of_two_lt_cyclicFlips
+        (l := List.ofFn p) hgt
+  let i0 : Fin n := ⟨k0, by simpa using hk0⟩
+  let i1 : Fin n := ⟨k1, by simpa using hk1⟩
+  let i2 : Fin n := ⟨k2, by simpa using hk2⟩
+  let i3 : Fin n := ⟨k3, by simpa using hk3⟩
+  have hi01 : i0 < i1 := by simpa [i0, i1] using hk01
+  have hi12 : i1 < i2 := by simpa [i1, i2] using hk12
+  have hi23 : i2 < i3 := by simpa [i2, i3] using hk23
+  have hv0 : (List.ofFn p).get ⟨k0, hk0⟩ = p i0 := by simp [i0]
+  have hv1 : (List.ofFn p).get ⟨k1, hk1⟩ = p i1 := by simp [i1]
+  have hv2 : (List.ofFn p).get ⟨k2, hk2⟩ = p i2 := by simp [i2]
+  have hv3 : (List.ofFn p).get ⟨k3, hk3⟩ = p i3 := by simp [i3]
+  refine ⟨i0, i1, i2, i3, hi01, hi12, hi23, ?_, ?_, ?_⟩
+  · rw [← hv0, ← hv2]
+    exact h02
+  · rw [← hv1, ← hv3]
+    exact h13
+  · rw [← hv0, ← hv1]
+    exact h01
+
+/-- Same theorem with the two explicit Bool patterns exposed. -/
+theorem exists_four_ordered_alternating_bool_cases_of_two_lt_cyclicFlips_ofFn
+    {n : ℕ} (p : Fin n → Bool)
+    (hgt : 2 < cyclicFlips (List.ofFn p)) :
+    ∃ i0 i1 i2 i3 : Fin n,
+      i0 < i1 ∧ i1 < i2 ∧ i2 < i3 ∧
+      ((p i0 = true ∧ p i1 = false ∧ p i2 = true ∧ p i3 = false) ∨
+       (p i0 = false ∧ p i1 = true ∧ p i2 = false ∧ p i3 = true)) := by
+  obtain ⟨i0, i1, i2, i3, hi01, hi12, hi23, h02, h13, h01⟩ :=
+    exists_four_ordered_alternating_of_two_lt_cyclicFlips_ofFn p hgt
+  refine ⟨i0, i1, i2, i3, hi01, hi12, hi23, ?_⟩
+  cases h0 : p i0
+  · right
+    have h2 : p i2 = false := by rw [← h02, h0]
+    have h1 : p i1 = true := by
+      cases h1' : p i1 <;> simp_all
+    have h3 : p i3 = true := by rw [← h13, h1]
+    exact ⟨h0, h1, h2, h3⟩
+  · left
+    have h2 : p i2 = true := by rw [← h02, h0]
+    have h1 : p i1 = false := by
+      cases h1' : p i1 <;> simp_all
+    have h3 : p i3 = false := by rw [← h13, h1]
+    exact ⟨h0, h1, h2, h3⟩
 
 end ProofsInTheBook.Ch13BoolCyclicExtraction
 ```
 
-## Notes for integrating with the repo’s list-facing API
+## Integration note
 
-The theorem above defines `cyclicFlips` by a scanner over `ZMod n`, rather than by `cyclicFlips (List.ofFn p)`.  It counts the same cyclic adjacent changes: for every natural `k < n`, it inspects the edge
-
-```lean
-(k : ZMod n) → (k + 1 : ZMod n)
-```
-
-exactly once.  If the repo already has a list-level definition in `ZinanCh13LinkInterval.lean`, add only a compatibility theorem:
+The theorem above is intentionally phrased against the landed list count:
 
 ```lean
--- schematic adapter; names depend on the landed file
- theorem cyclicFlips_listOfFn_eq_cyclicFlipsFin
-    {n : ℕ} [NeZero n] (p : Fin n → Bool) :
-    ZinanCh13LinkInterval.cyclicFlips (List.ofFn p) = cyclicFlipsFin p := by
-  -- unfold both definitions; both are a fold over the same cyclic edges.
-  -- Use `List.ofFn_get`, `List.length_ofFn`, `Fin.val_add`, and
-  -- `ZMod.val_natCast_of_lt` for the wrap case.
-  ...
+ProofsInTheBook.Ch13ArmVertex.cyclicFlips (List.ofFn p)
 ```
 
-Once that adapter is in place, the repo-facing theorem is just:
+so the Route B caller does not need any adapter theorem.  Apply
 
 ```lean
- theorem exists_four_ordered_alternating_of_two_lt_list_cyclicFlips
-    {n : ℕ} [NeZero n] (p : Fin n → Bool)
-    (hgt : 2 < ZinanCh13LinkInterval.cyclicFlips (List.ofFn p)) :
-    ∃ k0 k1 k2 k3 : ℕ,
-      k0 < k1 ∧ k1 < k2 ∧ k2 < k3 ∧ k3 < n ∧
-      p ⟨k0, by omega⟩ = p ⟨k2, by omega⟩ ∧
-      p ⟨k1, by omega⟩ = p ⟨k3, by omega⟩ ∧
-      p ⟨k0, by omega⟩ ≠ p ⟨k1, by omega⟩ := by
-  apply exists_four_ordered_alternating_of_two_lt_cyclicFlipsFin
-  rwa [← cyclicFlips_listOfFn_eq_cyclicFlipsFin]
+ProofsInTheBook.Ch13BoolCyclicExtraction
+  .exists_four_ordered_alternating_of_two_lt_cyclicFlips_ofFn p hgt
 ```
 
-Mathlib/API items used in the self-contained proof: `ZMod`, `ZMod.natCast_self`, `ZMod.natCast_eq_zero_iff_even`, `ZMod.val_natCast_of_lt`, `Nat.le_induction`-style induction through `omega`, ordinary `List` pattern matching, and `simp` over recursively defined list scanners.
+or, if the downstream contradiction wants the explicit `true/false/true/false` disjunction, apply
+
+```lean
+ProofsInTheBook.Ch13BoolCyclicExtraction
+  .exists_four_ordered_alternating_bool_cases_of_two_lt_cyclicFlips_ofFn p hgt
+```
+
+The only Mathlib/list ingredients used are ordinary recursive `List` pattern matching, `List.get`, `List.ofFn` simp lemmas (`length_ofFn` and `get_ofFn`), `Fin` order, Bool case splits, and `omega`.  The parity input is the repo theorem `ProofsInTheBook.Ch13ArmVertex.cyclicFlips_even`.

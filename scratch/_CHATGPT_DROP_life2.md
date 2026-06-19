@@ -379,18 +379,6 @@ theorem vertex_min_on_convexHull_from_edgeCone
   rw [hrange] at hx
   exact linear_ge_on_convexHull_of_ge_on_finset S ℓ (pos v) hVert x hx
 
-/-- The same result in displacement form for an arbitrary linear functional. -/
-theorem linear_nonneg_displacement_on_convexHull_from_edgeCone
-    {ι : Type*} [Fintype ι] [DecidableEq E]
-    (pos : ι → E) (D : Finset E) (v : ι) (ℓ : E →ₗ[ℝ] ℝ)
-    (hT : ∀ u : ι, pos u - pos v ∈ coneSpanFinset D)
-    (hD : ∀ e ∈ D, 0 ≤ ℓ e) :
-    ∀ x ∈ convexHull ℝ (Set.range pos), 0 ≤ ℓ (x - pos v) := by
-  intro x hx
-  have hxle := vertex_min_on_convexHull_from_edgeCone pos D v ℓ hT hD x hx
-  have hdiff : 0 ≤ ℓ x - ℓ (pos v) := sub_nonneg.mpr hxle
-  simpa using hdiff
-
 end Linear
 
 section Inner
@@ -429,9 +417,10 @@ theorem inner_nonneg_displacement_on_convexHull_from_edgeCone
     (hT : ∀ u : ι, pos u - pos v ∈ coneSpanFinset D)
     (hD : ∀ e ∈ D, 0 ≤ ⟪g, e⟫) :
     ∀ x ∈ convexHull ℝ (Set.range pos), 0 ≤ ⟪g, x - pos v⟫ := by
-  simpa using
-    (linear_nonneg_displacement_on_convexHull_from_edgeCone
-      (pos := pos) (D := D) (v := v) (ℓ := innerLinear g) hT hD)
+  intro x hx
+  have hxle := inner_vertex_min_on_convexHull_from_edgeCone pos D v g hT hD x hx
+  have hdiff : 0 ≤ ⟪g, x⟫ - ⟪g, pos v⟫ := sub_nonneg.mpr hxle
+  simpa [inner_sub_right] using hdiff
 
 end Inner
 

@@ -1,331 +1,288 @@
-# Ch13 Route B finite convex-position lemma: four cyclic points give a positive Radon relation
+# Ch13 Route B — LP optimality at a convex polytope vertex
 
-This file is the requested drop for the finite four-point convex-position residue feeding the cyclic-flips four-point proof.  The proof is deliberately **pure affine/determinant algebra**.  It uses no turning number, no Umlaufsatz, no Jordan curve theorem, and no topology.
+This drop gives the clean finite Lean route for the HeightMorseData local-to-global field:
 
-The clean Lean route is to state the lemma in an oriented affine chart `P2 := Fin 2 → ℝ`.  The caller obtains the four hypotheses
+* **(A)** no lower outgoing neighbour at `v` iff `v` is the global minimum of the height functional;
+* **(B)** all outgoing neighbours lower iff `v` is the global maximum.
 
-```lean
-0 < orient2 qa qb qc
-0 < orient2 qb qc qd
-0 < orient2 qc qd qa
-0 < orient2 qd qa qb
-```
-
-from the landed `det3`/`cyclicTriple` positivity after choosing the link plane coordinates.  In the current repo vocabulary, the relevant upstream objects are:
-
-* `ProofsInTheBook.SphericalCyclicTriple.CyclicTriplePos` for cyclic-triple positivity of spherical/link triples;
-* `ProofsInTheBook.SphericalGnomonic.gproj` and the gnomonic sign-correspondence layer for transporting `sOrient`/`det3` signs to a planar chart;
-* `ProofsInTheBook.PlanarConvexDiag.planarConvexDiagPos_holds` when the four facts are obtained from a strict planar convex-position polygon.
-
-The algebraic engine is the four-point Grassmann/Radon identity
+The proof is deliberately affine/linear-algebraic.  It uses no turning number, no Umlaufsatz, and no planar winding theorem.  The only convex-geometric input is the vertex cone theorem:
 
 ```text
-[BCD] A + [DAB] C = [CDA] B + [ABC] D,
+pos u - pos v ∈ cone { pos (head d) - pos v | d is an outgoing dart at v }.
 ```
 
-where `[XYZ]` means the oriented doubled area `orient2 X Y Z`.  In strict cyclic order all four coefficients `[ABC]`, `[BCD]`, `[CDA]`, `[DAB]` are positive.  The matching mass identity
+In Lean, the best route is to make this theorem the finite certificate `edgeConeCovers`.  The LP optimality implications are then short and robust.  From the oriented-face/supporting-halfspace data, the certificate is produced by the tangent-cone equality
 
 ```text
-[BCD] + [DAB] = [CDA] + [ABC]
+{ x | ∀ active face F at v, ⟪normal F, x⟫ ≤ 0 }
+  = cone(outgoing edge directions at v),
 ```
 
-lets us divide by the common positive mass and get the normalized diagonal-intersection statement: the open segment `AC` meets the open segment `BD`.
+together with the fact that every vertex satisfies every supporting halfspace.  Mathlib has the general convex-cone vocabulary (`ConvexCone`, `PointedCone`, `Convex.toCone`, `convexHull_toCone_isLeast`, `Convex.linear_image`), but I did not find a ready-made LP-vertex-optimality theorem that states this exact finite polytope result.  The code below therefore keeps the generated cone as a finite coefficient certificate, which is better suited to the HeightMorseData field anyway.
+
+Important strictness convention: the minimum statement uses “no lower neighbour” as the non-strict condition `0 ≤ ⟪g,e_d⟫`.  For the maximum statement, the unconditional theorem is the weak version `⟪g,e_d⟫ ≤ 0`.  If “all outgoing neighbours lower” means strict `< 0`, the reverse implication from global maximum needs the generic/no-edge-tie hypothesis `EdgeGeneric`; otherwise a global maximum could have a flat outgoing edge.
 
 ```lean
 import Mathlib
+import ProofsInTheBook.SphericalKernel
 
 noncomputable section
 
-namespace ProofsInTheBook.Ch13FiniteConvexPosition
+open scoped BigOperators RealInnerProductSpace
+open ProofsInTheBook.SphericalKernel
 
-/-- A concrete planar affine chart.  This avoids any dependency on affine-space API;
-all determinant identities below are coordinate `ring` proofs. -/
-abbrev P2 : Type := Fin 2 → ℝ
+namespace ProofsInTheBook.Ch13RouteB.LPVertex
 
-/-- The planar determinant / signed doubled area form on displacement vectors. -/
-def det2 (u v : P2) : ℝ :=
-  u 0 * v 1 - u 1 * v 0
+variable {V : Type*} [Fintype V] [DecidableEq V]
+variable {D : V → Type*} [∀ v : V, Fintype (D v)]
 
-/-- Oriented doubled area of the triangle `(a,b,c)`. -/
-def orient2 (a b c : P2) : ℝ :=
-  det2 (b - a) (c - a)
+/--
+Local vertex-star data sufficient for LP optimality.
 
-/-- A concrete dot product, used only for the halfspace corollary. -/
-def dot2 (u v : P2) : ℝ :=
-  u 0 * v 0 + u 1 * v 1
+`D v` is the finite type of outgoing darts at `v`; `head v d` is the neighbouring vertex.
+The convex-geometric content is `edgeConeCovers`: every vertex displacement from `v` is a
+nonnegative linear combination of the outgoing edge directions at `v`.
+-/
+structure VertexStar (V : Type*) [Fintype V] [DecidableEq V]
+    (D : V → Type*) [∀ v : V, Fintype (D v)] where
+  pos : V → E3
+  head : ∀ v : V, D v → V
+  edgeConeCovers : ∀ v u : V,
+    ∃ a : D v → ℝ,
+      (∀ d : D v, 0 ≤ a d) ∧
+      (∑ d : D v, a d • (pos (head v d) - pos v)) = pos u - pos v
 
-/-- The linear functional `x ↦ dot2 g x`.  The generic contradiction theorem below is
-stated for an arbitrary linear map; this is the immediate specialization for halfspaces. -/
-def dot2Lin (g : P2) : P2 →ₗ[ℝ] ℝ where
-  toFun x := dot2 g x
-  map_add' := by
-    intro x y
-    simp [dot2]
-    ring
-  map_smul' := by
-    intro r x
-    simp [dot2]
-    ring
+namespace VertexStar
 
-@[simp] theorem dot2Lin_apply (g x : P2) : dot2Lin g x = dot2 g x := rfl
+variable (P : VertexStar V D)
 
-/-- The affine Grassmann/Radon identity for four planar points.
+/-- The outgoing edge direction attached to a dart. -/
+def edgeDir (v : V) (d : D v) : E3 :=
+  P.pos (P.head v d) - P.pos v
 
-Written with cyclic labels `a,b,c,d`, this says
-`[BCD] A + [DAB] C = [CDA] B + [ABC] D`.
-No convexity is used here; it is a coordinate identity. -/
-theorem radon_identity_orient2 (a b c d : P2) :
-    orient2 b c d • a + orient2 d a b • c =
-      orient2 c d a • b + orient2 a b c • d := by
-  ext i
-  fin_cases i
-  · simp [orient2, det2]
-    ring
-  · simp [orient2, det2]
-    ring
+/-- Height of a vertex under the linear functional with gradient `g`. -/
+def height (g : E3) (u : V) : ℝ :=
+  (⟪g, P.pos u⟫ : ℝ)
 
-/-- The matching mass identity for the same four coefficients:
-`[BCD] + [DAB] = [CDA] + [ABC]`.
+/-- No outgoing dart goes to a strictly lower vertex. -/
+def LowerEmpty (g : E3) (v : V) : Prop :=
+  ∀ d : D v, 0 ≤ (⟪g, P.edgeDir v d⟫ : ℝ)
 
-This is what makes the Radon relation affine; after division by this positive common
-mass, both sides have total coefficient `1`. -/
-theorem radon_mass_identity_orient2 (a b c d : P2) :
-    orient2 b c d + orient2 d a b = orient2 c d a + orient2 a b c := by
-  simp [orient2, det2]
-  ring
+/-- Weak form of “all outgoing neighbours are lower”: every outgoing neighbour is no higher. -/
+def LowerFullWeak (g : E3) (v : V) : Prop :=
+  ∀ d : D v, (⟪g, P.edgeDir v d⟫ : ℝ) ≤ 0
 
-/-- Strict cyclic convex position of four points, in the minimal form needed here:
-each cyclic triple has positive oriented area. -/
-def StrictCyclicFour (a b c d : P2) : Prop :=
-  0 < orient2 a b c ∧
-  0 < orient2 b c d ∧
-  0 < orient2 c d a ∧
-  0 < orient2 d a b
+/-- Strict form of “all outgoing neighbours are lower”.  This is equivalent to max only generically. -/
+def LowerFullStrict (g : E3) (v : V) : Prop :=
+  ∀ d : D v, (⟪g, P.edgeDir v d⟫ : ℝ) < 0
 
-/-- Four points in strict cyclic convex order have a positive **unnormalized** Radon
-relation between the two diagonals.
+/-- Genericity at `v`: no outgoing edge has height tie. -/
+def EdgeGeneric (g : E3) (v : V) : Prop :=
+  ∀ d : D v, (⟪g, P.edgeDir v d⟫ : ℝ) ≠ 0
 
-The coefficients are explicitly
+/-- `v` is a global minimum of the height functional. -/
+def GlobalMin (g : E3) (v : V) : Prop :=
+  ∀ u : V, P.height g v ≤ P.height g u
 
-```text
-λa = [BCD],  λc = [DAB],  λb = [CDA],  λd = [ABC].
+/-- `v` is a global maximum of the height functional. -/
+def GlobalMax (g : E3) (v : V) : Prop :=
+  ∀ u : V, P.height g u ≤ P.height g v
+
+@[simp] theorem inner_edgeDir_eq_height_sub (g : E3) (v : V) (d : D v) :
+    (⟪g, P.edgeDir v d⟫ : ℝ) = P.height g (P.head v d) - P.height g v := by
+  simp [edgeDir, height, inner_sub_right]
+
+@[simp] theorem inner_displacement_eq_height_sub (g : E3) (v u : V) :
+    (⟪g, P.pos u - P.pos v⟫ : ℝ) = P.height g u - P.height g v := by
+  simp [height, inner_sub_right]
+
+/-- Global minimum implies no lower outgoing neighbour. -/
+theorem lower_empty_of_global_min {g : E3} {v : V}
+    (hmin : P.GlobalMin g v) : P.LowerEmpty g v := by
+  intro d
+  have hdiff : 0 ≤ P.height g (P.head v d) - P.height g v :=
+    sub_nonneg.mpr (hmin (P.head v d))
+  simpa using hdiff
+
+/--
+Hard direction of (A): local nonnegativity on all outgoing edge directions propagates globally
+because every vertex displacement lies in the nonnegative cone generated by those directions.
+-/
+theorem global_min_of_lower_empty {g : E3} {v : V}
+    (hlocal : P.LowerEmpty g v) : P.GlobalMin g v := by
+  intro u
+  rcases P.edgeConeCovers v u with ⟨a, ha_nonneg, hsum⟩
+  have hinner_nonneg : 0 ≤ (⟪g, P.pos u - P.pos v⟫ : ℝ) := by
+    rw [← hsum]
+    simpa only [inner_sum] using
+      (Finset.sum_nonneg fun d _ => by
+        have hd : 0 ≤ (⟪g, P.pos (P.head v d) - P.pos v⟫ : ℝ) := by
+          simpa [edgeDir] using hlocal d
+        simpa [real_inner_smul_right] using mul_nonneg (ha_nonneg d) hd)
+  have hdiff : 0 ≤ P.height g u - P.height g v := by
+    simpa using hinner_nonneg
+  exact sub_nonneg.mp hdiff
+
+/-- **Goal (A).** No lower outgoing neighbour iff global minimum. -/
+theorem lower_empty_iff_min (g : E3) (v : V) :
+    P.LowerEmpty g v ↔ P.GlobalMin g v := by
+  constructor
+  · exact P.global_min_of_lower_empty
+  · exact P.lower_empty_of_global_min
+
+/-- Global maximum implies every outgoing neighbour is no higher. -/
+theorem lower_full_weak_of_global_max {g : E3} {v : V}
+    (hmax : P.GlobalMax g v) : P.LowerFullWeak g v := by
+  intro d
+  have hdiff : P.height g (P.head v d) - P.height g v ≤ 0 :=
+    sub_nonpos.mpr (hmax (P.head v d))
+  simpa using hdiff
+
+/--
+Hard direction of the weak max statement: if every outgoing edge direction has nonpositive
+height derivative, the whole polytope lies no higher than `v`.
+-/
+theorem global_max_of_lower_full_weak {g : E3} {v : V}
+    (hlocal : P.LowerFullWeak g v) : P.GlobalMax g v := by
+  intro u
+  rcases P.edgeConeCovers v u with ⟨a, ha_nonneg, hsum⟩
+  have hinner_nonpos : (⟪g, P.pos u - P.pos v⟫ : ℝ) ≤ 0 := by
+    rw [← hsum]
+    simpa only [inner_sum] using
+      (Finset.sum_nonpos fun d _ => by
+        have hd : (⟪g, P.pos (P.head v d) - P.pos v⟫ : ℝ) ≤ 0 := by
+          simpa [edgeDir] using hlocal d
+        simpa [real_inner_smul_right] using
+          mul_nonpos_of_nonneg_of_nonpos (ha_nonneg d) hd)
+  have hdiff : P.height g u - P.height g v ≤ 0 := by
+    simpa using hinner_nonpos
+  exact sub_nonpos.mp hdiff
+
+/-- Weak form of **Goal (B)**: all outgoing neighbours no higher iff global maximum. -/
+theorem lower_full_weak_iff_max (g : E3) (v : V) :
+    P.LowerFullWeak g v ↔ P.GlobalMax g v := by
+  constructor
+  · exact P.global_max_of_lower_full_weak
+  · exact P.lower_full_weak_of_global_max
+
+/--
+Strict/generic form of **Goal (B)**: all outgoing neighbours are strictly lower iff global maximum,
+provided the functional has no outgoing edge tie at `v`.
+-/
+theorem lower_full_iff_max (g : E3) (v : V) (hgen : P.EdgeGeneric g v) :
+    P.LowerFullStrict g v ↔ P.GlobalMax g v := by
+  constructor
+  · intro hstrict
+    exact P.global_max_of_lower_full_weak (fun d => le_of_lt (hstrict d))
+  · intro hmax d
+    have hle : (⟪g, P.edgeDir v d⟫ : ℝ) ≤ 0 :=
+      P.lower_full_weak_of_global_max hmax d
+    exact lt_of_le_of_ne hle (hgen d)
+
+end VertexStar
+
+/-!
+## Producing `edgeConeCovers` from supporting halfspaces
+
+The actual convex triangulated-polytope data should instantiate the following local fan certificate.
+`Face v` is the finite set of active faces at `v`.  `normal v F` is the outward normal of such a
+face and `offset v F` is its supporting level.
+
+The field `tangentCone_eq_edgeCone` is the standard 3D convex-polytope vertex theorem:
+the translated active-face tangent cone is generated by the outgoing edge rays.  This is the only
+polytope-specific convex-geometry lemma needed by the LP optimality proof above.
+-/
+
+variable {Face : V → Type*} [∀ v : V, Fintype (Face v)]
+
+structure PolytopeLocalConeData (V : Type*) [Fintype V] [DecidableEq V]
+    (D : V → Type*) [∀ v : V, Fintype (D v)]
+    (Face : V → Type*) [∀ v : V, Fintype (Face v)] where
+  pos : V → E3
+  head : ∀ v : V, D v → V
+  normal : ∀ v : V, Face v → E3
+  offset : ∀ v : V, Face v → ℝ
+  active_at_vertex : ∀ v : V, ∀ F : Face v,
+    (⟪normal v F, pos v⟫ : ℝ) = offset v F
+  supports_vertices : ∀ v : V, ∀ F : Face v, ∀ u : V,
+    (⟪normal v F, pos u⟫ : ℝ) ≤ offset v F
+  tangentCone_eq_edgeCone : ∀ v : V, ∀ x : E3,
+    (∀ F : Face v, (⟪normal v F, x⟫ : ℝ) ≤ 0) →
+      ∃ a : D v → ℝ,
+        (∀ d : D v, 0 ≤ a d) ∧
+        (∑ d : D v, a d • (pos (head v d) - pos v)) = x
+
+namespace PolytopeLocalConeData
+
+variable (Q : PolytopeLocalConeData V D Face)
+
+/--
+Supporting halfspaces place every vertex displacement in the active-face tangent cone; the local
+fan theorem then converts that tangent-cone membership into the outgoing-edge cone certificate.
+-/
+def toVertexStar : VertexStar V D where
+  pos := Q.pos
+  head := Q.head
+  edgeConeCovers := by
+    intro v u
+    refine Q.tangentCone_eq_edgeCone v (Q.pos u - Q.pos v) ?_
+    intro F
+    have hu : (⟪Q.normal v F, Q.pos u⟫ : ℝ) ≤ Q.offset v F :=
+      Q.supports_vertices v F u
+    have hv : (⟪Q.normal v F, Q.pos v⟫ : ℝ) = Q.offset v F :=
+      Q.active_at_vertex v F
+    rw [inner_sub_right, hv]
+    exact sub_nonpos.mpr hu
+
+/-- Goal (A), directly from supporting-halfspace data plus the tangent-cone/edge-cone theorem. -/
+theorem lower_empty_iff_min (g : E3) (v : V) :
+    (Q.toVertexStar).LowerEmpty g v ↔ (Q.toVertexStar).GlobalMin g v :=
+  (Q.toVertexStar).lower_empty_iff_min g v
+
+/-- Weak Goal (B), directly from supporting-halfspace data plus the tangent-cone/edge-cone theorem. -/
+theorem lower_full_weak_iff_max (g : E3) (v : V) :
+    (Q.toVertexStar).LowerFullWeak g v ↔ (Q.toVertexStar).GlobalMax g v :=
+  (Q.toVertexStar).lower_full_weak_iff_max g v
+
+/-- Strict/generic Goal (B), directly from supporting-halfspace data plus genericity. -/
+theorem lower_full_iff_max (g : E3) (v : V)
+    (hgen : (Q.toVertexStar).EdgeGeneric g v) :
+    (Q.toVertexStar).LowerFullStrict g v ↔ (Q.toVertexStar).GlobalMax g v :=
+  (Q.toVertexStar).lower_full_iff_max g v hgen
+
+end PolytopeLocalConeData
+
+end ProofsInTheBook.Ch13RouteB.LPVertex
 ```
 
-They are all strictly positive under the cyclic-triple hypotheses, and their left/right
-sums are equal. -/
-theorem positive_radon_relation_of_strictCyclicFour
-    {a b c d : P2} (h : StrictCyclicFour a b c d) :
-    ∃ λa λc λb λd : ℝ,
-      0 < λa ∧ 0 < λc ∧ 0 < λb ∧ 0 < λd ∧
-      λa + λc = λb + λd ∧
-      λa • a + λc • c = λb • b + λd • d := by
-  rcases h with ⟨hABC, hBCD, hCDA, hDAB⟩
-  refine ⟨orient2 b c d, orient2 d a b, orient2 c d a, orient2 a b c,
-    hBCD, hDAB, hCDA, hABC, ?_, ?_⟩
-  · exact radon_mass_identity_orient2 a b c d
-  · exact radon_identity_orient2 a b c d
+## Where this plugs into HeightMorseData
 
-/-- Same positive unnormalized Radon relation, with the four cyclic positivity facts
-exposed separately.  This is the shape most convenient when the caller has landed
-`cyclicTriple`/`det3` positivity facts. -/
-theorem positive_radon_relation_of_cyclic_orient2_pos
-    {a b c d : P2}
-    (hABC : 0 < orient2 a b c)
-    (hBCD : 0 < orient2 b c d)
-    (hCDA : 0 < orient2 c d a)
-    (hDAB : 0 < orient2 d a b) :
-    ∃ λa λc λb λd : ℝ,
-      0 < λa ∧ 0 < λc ∧ 0 < λb ∧ 0 < λd ∧
-      λa + λc = λb + λd ∧
-      λa • a + λc • c = λb • b + λd • d := by
-  exact positive_radon_relation_of_strictCyclicFour
-    ⟨hABC, hBCD, hCDA, hDAB⟩
-
-/-- Four points in strict cyclic convex order have a positive **normalized** Radon
-relation.  Equivalently, the diagonal segment `AC` meets the diagonal segment `BD`
-at an interior point.
-
-This is the exact normalized form:
-
-```text
-λa A + λc C = λb B + λd D,
-λa + λc = 1,
-λb + λd = 1,
-λa, λc, λb, λd > 0.
-``` -/
-theorem crossing_diagonals_of_cyclic_orient2_pos
-    {a b c d : P2}
-    (hABC : 0 < orient2 a b c)
-    (hBCD : 0 < orient2 b c d)
-    (hCDA : 0 < orient2 c d a)
-    (hDAB : 0 < orient2 d a b) :
-    ∃ λa λc λb λd : ℝ,
-      0 < λa ∧ 0 < λc ∧ 0 < λb ∧ 0 < λd ∧
-      λa + λc = 1 ∧ λb + λd = 1 ∧
-      λa • a + λc • c = λb • b + λd • d := by
-  obtain ⟨λa, λc, λb, λd, hλa, hλc, hλb, hλd, hmass, hrel⟩ :=
-    positive_radon_relation_of_cyclic_orient2_pos hABC hBCD hCDA hDAB
-  let m : ℝ := λa + λc
-  have hm_pos : 0 < m := by
-    dsimp [m]
-    exact add_pos hλa hλc
-  have hm_ne : m ≠ 0 := ne_of_gt hm_pos
-  refine ⟨λa / m, λc / m, λb / m, λd / m,
-    ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · exact div_pos hλa hm_pos
-  · exact div_pos hλc hm_pos
-  · exact div_pos hλb hm_pos
-  · exact div_pos hλd hm_pos
-  · dsimp [m]
-    rw [← add_div]
-    exact div_self hm_ne
-  · rw [← add_div]
-    have hright : λb + λd = m := by
-      dsimp [m]
-      exact hmass.symm
-    rw [hright]
-    exact div_self hm_ne
-  · have hscaled := congrArg (fun x : P2 => (m⁻¹) • x) hrel
-    simpa [div_eq_mul_inv, smul_add, smul_smul,
-      mul_comm, mul_left_comm, mul_assoc] using hscaled
-
-/-- Wrapper using the bundled strict-cyclic predicate. -/
-theorem crossing_diagonals_of_strictCyclicFour
-    {a b c d : P2} (h : StrictCyclicFour a b c d) :
-    ∃ λa λc λb λd : ℝ,
-      0 < λa ∧ 0 < λc ∧ 0 < λb ∧ 0 < λd ∧
-      λa + λc = 1 ∧ λb + λd = 1 ∧
-      λa • a + λc • c = λb • b + λd • d := by
-  rcases h with ⟨hABC, hBCD, hCDA, hDAB⟩
-  exact crossing_diagonals_of_cyclic_orient2_pos hABC hBCD hCDA hDAB
-
-/-- Alternating halfspace pattern I is impossible for any linear functional:
-`a,c` are strictly negative while `b,d` are nonnegative. -/
-theorem no_alternating_linear_neg_nonneg_of_cyclic_orient2_pos
-    {a b c d : P2} (ℓ : P2 →ₗ[ℝ] ℝ)
-    (hABC : 0 < orient2 a b c)
-    (hBCD : 0 < orient2 b c d)
-    (hCDA : 0 < orient2 c d a)
-    (hDAB : 0 < orient2 d a b)
-    (ha : ℓ a < 0) (hb : 0 ≤ ℓ b)
-    (hc : ℓ c < 0) (hd : 0 ≤ ℓ d) :
-    False := by
-  obtain ⟨λa, λc, λb, λd, hλa, hλc, hλb, hλd, _hmass, hrel⟩ :=
-    positive_radon_relation_of_cyclic_orient2_pos hABC hBCD hCDA hDAB
-  have hlineq :
-      λa * ℓ a + λc * ℓ c =
-        λb * ℓ b + λd * ℓ d := by
-    have hlin := congrArg (fun x : P2 => ℓ x) hrel
-    simpa using hlin
-  have hleft_neg : λa * ℓ a + λc * ℓ c < 0 := by
-    exact add_neg (mul_neg_of_pos_of_neg hλa ha)
-      (mul_neg_of_pos_of_neg hλc hc)
-  have hright_nonneg : 0 ≤ λb * ℓ b + λd * ℓ d := by
-    exact add_nonneg (mul_nonneg (le_of_lt hλb) hb)
-      (mul_nonneg (le_of_lt hλd) hd)
-  have hright_neg : λb * ℓ b + λd * ℓ d < 0 := by
-    rwa [hlineq] at hleft_neg
-  exact not_lt_of_ge hright_nonneg hright_neg
-
-/-- Alternating halfspace pattern II is impossible for any linear functional:
-`a,c` are nonnegative while `b,d` are strictly negative.  This is the same argument
-with the two color classes swapped. -/
-theorem no_alternating_linear_nonneg_neg_of_cyclic_orient2_pos
-    {a b c d : P2} (ℓ : P2 →ₗ[ℝ] ℝ)
-    (hABC : 0 < orient2 a b c)
-    (hBCD : 0 < orient2 b c d)
-    (hCDA : 0 < orient2 c d a)
-    (hDAB : 0 < orient2 d a b)
-    (ha : 0 ≤ ℓ a) (hb : ℓ b < 0)
-    (hc : 0 ≤ ℓ c) (hd : ℓ d < 0) :
-    False := by
-  obtain ⟨λa, λc, λb, λd, hλa, hλc, hλb, hλd, _hmass, hrel⟩ :=
-    positive_radon_relation_of_cyclic_orient2_pos hABC hBCD hCDA hDAB
-  have hlineq :
-      λa * ℓ a + λc * ℓ c =
-        λb * ℓ b + λd * ℓ d := by
-    have hlin := congrArg (fun x : P2 => ℓ x) hrel
-    simpa using hlin
-  have hleft_nonneg : 0 ≤ λa * ℓ a + λc * ℓ c := by
-    exact add_nonneg (mul_nonneg (le_of_lt hλa) ha)
-      (mul_nonneg (le_of_lt hλc) hc)
-  have hright_neg : λb * ℓ b + λd * ℓ d < 0 := by
-    exact add_neg (mul_neg_of_pos_of_neg hλb hb)
-      (mul_neg_of_pos_of_neg hλd hd)
-  have hleft_neg : λa * ℓ a + λc * ℓ c < 0 := by
-    rwa [← hlineq] at hright_neg
-  exact not_lt_of_ge hleft_nonneg hleft_neg
-
-/-- Dot-product specialization of alternating pattern I. -/
-theorem no_alternating_halfspace_neg_nonneg_of_cyclic_orient2_pos
-    {a b c d g : P2}
-    (hABC : 0 < orient2 a b c)
-    (hBCD : 0 < orient2 b c d)
-    (hCDA : 0 < orient2 c d a)
-    (hDAB : 0 < orient2 d a b)
-    (ha : dot2 g a < 0) (hb : 0 ≤ dot2 g b)
-    (hc : dot2 g c < 0) (hd : 0 ≤ dot2 g d) :
-    False := by
-  exact no_alternating_linear_neg_nonneg_of_cyclic_orient2_pos (dot2Lin g)
-    hABC hBCD hCDA hDAB ha hb hc hd
-
-/-- Dot-product specialization of alternating pattern II. -/
-theorem no_alternating_halfspace_nonneg_neg_of_cyclic_orient2_pos
-    {a b c d g : P2}
-    (hABC : 0 < orient2 a b c)
-    (hBCD : 0 < orient2 b c d)
-    (hCDA : 0 < orient2 c d a)
-    (hDAB : 0 < orient2 d a b)
-    (ha : 0 ≤ dot2 g a) (hb : dot2 g b < 0)
-    (hc : 0 ≤ dot2 g c) (hd : dot2 g d < 0) :
-    False := by
-  exact no_alternating_linear_nonneg_neg_of_cyclic_orient2_pos (dot2Lin g)
-    hABC hBCD hCDA hDAB ha hb hc hd
-
-end ProofsInTheBook.Ch13FiniteConvexPosition
-```
-
-## Caller hook for Route B / cyclic-flips≤2
-
-In the landed link plane, instantiate the theorem with the affine coordinate chart already used by the gnomonic/landed development:
+For the eventual convex triangulated polytope structure, instantiate:
 
 ```lean
--- Schematic only: `toP2` is the chosen oriented coordinate frame in the landed plane.
-def toP2 : E3 → ProofsInTheBook.Ch13FiniteConvexPosition.P2 := ...
+D v      := { d // tail d = v }
+head v d := head d
+pos      := existing vertex coordinate map
+Face v   := { F // v lies on F }
+normal   := outward normal of the oriented face
+offset   := supporting level of that face
 ```
 
-For cyclically ordered vertices `a,b,c,d`, prove the four hypotheses by transporting the repo's positive orientation facts:
+Then prove the single local fan theorem:
 
 ```lean
-have hABC : 0 < orient2 (toP2 qa) (toP2 qb) (toP2 qc) := by
-  -- from `CyclicTriplePos` / `sOrient` / `det3` positivity and the orientation-transport lemma
-  ...
-have hBCD : 0 < orient2 (toP2 qb) (toP2 qc) (toP2 qd) := by ...
-have hCDA : 0 < orient2 (toP2 qc) (toP2 qd) (toP2 qa) := by ...
-have hDAB : 0 < orient2 (toP2 qd) (toP2 qa) (toP2 qb) := by ...
+tangentCone_eq_edgeCone :
+  ∀ v x,
+    (∀ F : Face v, ⟪normal v F, x⟫ ≤ 0) →
+      ∃ a : D v → ℝ,
+        (∀ d, 0 ≤ a d) ∧
+        ∑ d, a d • (pos (head v d) - pos v) = x
 ```
 
-Then the alternating sign contradiction is one line.  For an arbitrary landed linear functional, package it as a linear map on the chart:
+This is the precise finite convex-geometry crux.  The supporting-halfspace half of the proof is already formalized in `PolytopeLocalConeData.toVertexStar`: for every vertex `u`,
 
 ```lean
-let ℓ : ProofsInTheBook.Ch13FiniteConvexPosition.P2 →ₗ[ℝ] ℝ := ...
-exact
-  ProofsInTheBook.Ch13FiniteConvexPosition
-    .no_alternating_linear_neg_nonneg_of_cyclic_orient2_pos
-      ℓ hABC hBCD hCDA hDAB ha hb hc hd
+⟪normal v F, pos u - pos v⟫ ≤ 0
 ```
 
-where `ha hb hc hd` are the transported sign assumptions
-
-```lean
-ha : ℓ (toP2 qa) < 0
-hb : 0 ≤ ℓ (toP2 qb)
-hc : ℓ (toP2 qc) < 0
-hd : 0 ≤ ℓ (toP2 qd)
-```
-
-If the chart is chosen so that `ℓ (toP2 q) = ⟪g, q⟫`, this is exactly the contradiction to the alternating halfspace pattern
-
-```text
-⟪g,qa⟫ < 0,  0 ≤ ⟪g,qb⟫,  ⟪g,qc⟫ < 0,  0 ≤ ⟪g,qd⟫.
-```
+is just `supports_vertices v F u` minus `active_at_vertex v F`.  After that, the LP optimality proofs are exactly the nonnegative-sum arguments above.

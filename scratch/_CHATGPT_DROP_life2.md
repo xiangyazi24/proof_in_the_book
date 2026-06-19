@@ -1,32 +1,40 @@
-# Ch13 Route B geometric crux: convex landed link heights are cyclically bitonic
+# Ch13 Route B geometric crux: landed convex link heights are cyclically bitonic
 
-## Bottom line
+## What must be proved, sharply
 
-Prove the crux for the **landed planar link**, not for arbitrary positive rescalings of the rays.  This is the clean Lean statement:
-
-> A cyclically ordered landed strictly convex polygon `Q` in one affine plane has the property that every linear height sequence `b i = ⟪g, Q i⟫` is cyclically unimodal.  Equivalently, after one cyclic rotation, adjacent differences are nonnegative for one block and nonpositive for the complementary block.
-
-Then the lower-neighbor set is a cyclic interval by the Step-1 kernel in `scratch/_CHATGPT_DROP_life.md`.
-
-The current repo already has the geometry-to-landed-plane bridge:
-
-* `VertexStar` stores raw `turn_support` and `turn_strict` as determinant inequalities on raw edge directions.
-* `VertexStar.vertexLink_strictArm` derives the strict spherical vertex link from that raw data.
-* `ZinanFFCT92` already lands spherical links gnomonically: `gproj_eq_imp_eq`, `gproj_ne_of_short`, `gnomonic_edge_support_nonneg`, and `gnomonic_consecutive_turn_pos` are the exact pattern to reuse.
-
-The one new geometric theorem to add is a planar core, parallel to the existing `PlanarClosedWeakStrictNoRepeat` core:
+Use a **landed affine representative** of the vertex link.  Let
 
 ```lean
-PlanarClosedHeightBitonic
+Q : ZMod m → E3
 ```
 
-It should consume affine-plane membership, weak cyclic edge support, nonzero cyclic edges, and strict consecutive turns, and output `CyclicallyUnimodal (fun i => ⟪g, Q i⟫)` for every `g`.
+be the cyclically ordered landed link polygon in the affine plane `⟪axis, Q i⟫ = 1`.  For a linear functional `g`, set
 
-Important convention: for raw edge vectors, positive rescaling preserves the sign lower set `{i | ⟪g, ray i⟫ < 0}`, but it does **not** preserve signs of differences `b (i+1) - b i`.  Therefore the difference-sign/bitonic proof belongs to the landed representatives `Q i = gproj axis (P i)` or an equivalent fixed affine section.
+```lean
+b i = ⟪g, Q i⟫.
+```
 
-## Closed Lean kernel: adjacent sign blocks imply cyclic unimodality
+The desired bridge is:
 
-This is the pure combinatorial piece used after the cosine proof.  It is independent of geometry.
+```text
+strict convex landed link
+  ⟹ edge directions E_i = Q(i+1)-Q(i) have a one-turn monotone angle lift
+  ⟹ ⟪g,E_i⟫ has one nonnegative block and one nonpositive block
+  ⟹ b is cyclically unimodal
+  ⟹ Step-1 kernel: {i | b i < c} is a cyclic interval.
+```
+
+Do **not** state this on arbitrary positively rescaled rays if the conclusion is about **differences** `b (i+1)-b i`; positive rescaling preserves the sign of individual tests `⟪g,ray i⟫`, but it does not preserve adjacent differences.  The difference-sign theorem belongs to the landed representatives `Q`.
+
+The code below gives the complete Lean proof of the reusable kernel after the landed angular API has produced the rotated cosine model.  The only repo-specific geometric theorem still needed is exactly the landed-angle theorem named in the final section:
+
+```lean
+rotatedCosDeltaModel_of_landed_strict_convex
+```
+
+That theorem is where `ProjectedAngleInjective`, `rayAngleKey`, `turn_strict`, `SurroundsAxisPlane`, and the determinant/angle landing machinery are used.  Once it exists, the assembly theorem is literally one line.
+
+## Complete Lean kernel
 
 ```lean
 import Mathlib
@@ -34,16 +42,17 @@ import Mathlib
 noncomputable section
 
 open scoped BigOperators
+open scoped RealInnerProductSpace
 
 namespace ProofsInTheBook.Ch13RouteBHeightBitonic
 
-/-- Cyclic enumeration from a start index. -/
+/-- Cyclic enumeration from a chosen start. -/
 def zstep {n : ℕ} [NeZero n] (s : ZMod n) (t : ℕ) : ZMod n :=
   s + (t : ZMod n)
 
-/-- After some cyclic rotation, the sequence is nondecreasing up to a peak and
-nonincreasing from the peak back to the start.  The endpoint `t = n` represents
-`zstep s 0` again. -/
+/-- Step-1 block-structure target: after rotating the cyclic order by `s`,
+the sequence is nondecreasing up to `p` and nonincreasing from `p` back to the
+start.  The endpoint `t = n` represents the start again. -/
 def CyclicallyUnimodal {n : ℕ} [NeZero n] (b : ZMod n → ℝ) : Prop :=
   ∃ s : ZMod n, ∃ p : ℕ,
     p ≤ n ∧
@@ -51,8 +60,8 @@ def CyclicallyUnimodal {n : ℕ} [NeZero n] (b : ZMod n → ℝ) : Prop :=
     (∀ ⦃i j : ℕ⦄, p ≤ i → i ≤ j → j ≤ n →
       b (zstep s j) ≤ b (zstep s i))
 
-/-- Adjacent block form: one run of nonnegative increments, then one run of
-nonpositive increments. -/
+/-- Adjacent-difference form: one cyclic run of nonnegative increments followed
+by one cyclic run of nonpositive increments. -/
 def AdjacentDeltaBlock {n : ℕ} [NeZero n] (b : ZMod n → ℝ) : Prop :=
   ∃ s : ZMod n, ∃ p : ℕ,
     p ≤ n ∧
@@ -61,34 +70,37 @@ def AdjacentDeltaBlock {n : ℕ} [NeZero n] (b : ZMod n → ℝ) : Prop :=
     (∀ t : ℕ, p ≤ t → t < n →
       b (zstep s (t + 1)) - b (zstep s t) ≤ 0)
 
-private lemma mono_of_adjacent_nonneg {b : ℕ → ℝ} {p : ℕ}
-    (h : ∀ t : ℕ, t < p → 0 ≤ b (t + 1) - b t) :
-    ∀ ⦃i j : ℕ⦄, i ≤ j → j ≤ p → b i ≤ b j := by
-  intro i j hij hjp
-  induction hij with
-  | refl => exact le_rfl
-  | step hle ih =>
-      have hj_lt_p : _ < p := Nat.lt_of_succ_le hjp
-      have hstep : b (_ + 1) ≥ b _ := by
-        have := h _ hj_lt_p
-        linarith
-      exact le_trans ih hstep
+private lemma mono_of_adjacent_nonneg {b : ℕ → ℝ} {p i j : ℕ}
+    (h : ∀ t : ℕ, t < p → b t ≤ b (t + 1))
+    (hij : i ≤ j) (hjp : j ≤ p) :
+    b i ≤ b j := by
+  refine (Nat.le_induction
+    (motive := fun k => k ≤ p → b i ≤ b k)
+    ?base ?step j hij) hjp
+  · intro _
+    exact le_rfl
+  · intro k hik ih hk1p
+    have hkp : k ≤ p := Nat.le_of_succ_le hk1p
+    have hklt : k < p := Nat.lt_of_succ_le hk1p
+    exact le_trans (ih hkp) (h k hklt)
 
-private lemma antitone_of_adjacent_nonpos {b : ℕ → ℝ} {p n : ℕ}
-    (h : ∀ t : ℕ, p ≤ t → t < n → b (t + 1) - b t ≤ 0) :
-    ∀ ⦃i j : ℕ⦄, p ≤ i → i ≤ j → j ≤ n → b j ≤ b i := by
-  intro i j hpi hij hjn
-  induction hij with
-  | refl => exact le_rfl
-  | step hle ih =>
-      have hj_lt_n : _ < n := Nat.lt_of_succ_le hjn
-      have hpj : p ≤ _ := le_trans hpi hle
-      have hstep : b (_ + 1) ≤ b _ := by
-        have := h _ hpj hj_lt_n
-        linarith
-      exact le_trans hstep ih
+private lemma antitone_of_adjacent_nonpos {b : ℕ → ℝ} {p n i j : ℕ}
+    (h : ∀ t : ℕ, p ≤ t → t < n → b (t + 1) ≤ b t)
+    (hpi : p ≤ i) (hij : i ≤ j) (hjn : j ≤ n) :
+    b j ≤ b i := by
+  refine (Nat.le_induction
+    (motive := fun k => k ≤ n → b k ≤ b i)
+    ?base ?step j hij) hjn
+  · intro _
+    exact le_rfl
+  · intro k hik ih hk1n
+    have hkn : k ≤ n := Nat.le_of_succ_le hk1n
+    have hklt : k < n := Nat.lt_of_succ_le hk1n
+    have hpk : p ≤ k := le_trans hpi hik
+    exact le_trans (h k hpk hklt) (ih hkn)
 
-/-- Adjacent sign blocks imply the Step-1 cyclic-unimodal block structure. -/
+/-- Adjacent sign blocks imply the nondecreasing-then-nonincreasing block
+structure required by the Step-1 cyclic interval theorem. -/
 theorem cyclicallyUnimodal_of_adjacentDeltaBlock
     {n : ℕ} [NeZero n] {b : ZMod n → ℝ}
     (h : AdjacentDeltaBlock b) :
@@ -97,36 +109,24 @@ theorem cyclicallyUnimodal_of_adjacentDeltaBlock
   let B : ℕ → ℝ := fun t => b (zstep s t)
   refine ⟨s, p, hp, ?_, ?_⟩
   · intro i j hij hjp
-    exact mono_of_adjacent_nonneg (b := B) (p := p)
-      (by intro t ht; simpa [B] using hpos t ht) hij hjp
+    apply mono_of_adjacent_nonneg (b := B) (p := p) hij hjp
+    intro t ht
+    have := hpos t ht
+    dsimp [B]
+    linarith
   · intro i j hpi hij hjn
-    exact antitone_of_adjacent_nonpos (b := B) (p := p) (n := n)
-      (by intro t hpt htn; simpa [B] using hneg t hpt htn) hpi hij hjn
-```
+    apply antitone_of_adjacent_nonpos (b := B) (p := p) (n := n) hpi hij hjn
+    intro t hpt htn
+    have := hneg t hpt htn
+    dsimp [B]
+    linarith
 
-If Lean reports trouble with the anonymous `_` names inside the two private induction lemmas, replace the induction cases by named versions:
+/-- A rotated cosine model for adjacent height differences.
 
-```lean
-| step (j := j) hle ih =>
-    have hj_lt_p : j < p := Nat.lt_of_succ_le hjp
-    have hstep : b (j + 1) ≥ b j := by
-      have := h j hj_lt_p
-      linarith
-    exact le_trans ih hstep
-```
-
-and similarly for the antitone lemma.  The proof itself is just induction on `i ≤ j`.
-
-## Closed Lean kernel: cosine half-turn signs give the adjacent block
-
-The trigonometric core should be stated after the edge-angle list has been cyclically rotated so that the positive cosine half-turn comes first.
-
-```lean
-/-- Rotated cosine model for adjacent height differences.
-
-`δ (zstep s t)` is the `t`-th adjacent difference.  `θ t` is the landed edge
-angle, `φ` is the in-plane direction angle of the projected functional, and
-`ρ t > 0` is the positive scale `‖proj g‖ * ‖edge t‖`. -/
+`δ (zstep s t)` is the `t`-th cyclic adjacent difference after rotation.
+`θ t` is the landed edge-angle lift, `φ` is the in-plane direction angle of
+the projected functional, and `ρ t > 0` is the positive scale
+`‖proj g‖ * ‖edge t‖`. -/
 structure RotatedCosDeltaModel {n : ℕ} [NeZero n]
     (δ : ZMod n → ℝ) where
   s : ZMod n
@@ -157,8 +157,9 @@ lemma cos_nonpos_opposite {x φ : ℝ}
   · linarith
   · linarith
 
-/-- The rotated cosine model for the adjacent differences of a height sequence
-produces one nonnegative run followed by one nonpositive run. -/
+/-- The cosine half-turn fact: if the edge-angle samples have been rotated so
+that the positive half-turn comes first, the adjacent height differences are a
+nonnegative block followed by a nonpositive block. -/
 theorem adjacentDeltaBlock_of_height_rotatedCosDeltaModel
     {n : ℕ} [NeZero n] {b : ZMod n → ℝ}
     (M : RotatedCosDeltaModel
@@ -173,13 +174,12 @@ theorem adjacentDeltaBlock_of_height_rotatedCosDeltaModel
     have hδ := M.delta_eq t htn
     have hsucc : zstep M.s t + 1 = zstep M.s (t + 1) := by
       simp [zstep, Nat.cast_add, add_assoc]
-    change 0 ≤ b (zstep M.s (t + 1)) - b (zstep M.s t)
-    calc
-      0 ≤ M.ρ t * Real.cos (M.θ t - M.φ) := mul_nonneg hρ hcos
-      _ = (fun i : ZMod n => b (i + 1) - b i) (zstep M.s t) := by
-        rw [← hδ]
-      _ = b (zstep M.s (t + 1)) - b (zstep M.s t) := by
-        simp [hsucc]
+    have hrew :
+        b (zstep M.s (t + 1)) - b (zstep M.s t)
+          = (fun i : ZMod n => b (i + 1) - b i) (zstep M.s t) := by
+      simp [hsucc]
+    rw [hrew, hδ]
+    exact mul_nonneg hρ hcos
   · intro t hpt htn
     have hcos : Real.cos (M.θ t - M.φ) ≤ 0 :=
       cos_nonpos_opposite (M.neg_block t hpt htn) (M.right_bound t htn)
@@ -187,15 +187,15 @@ theorem adjacentDeltaBlock_of_height_rotatedCosDeltaModel
     have hδ := M.delta_eq t htn
     have hsucc : zstep M.s t + 1 = zstep M.s (t + 1) := by
       simp [zstep, Nat.cast_add, add_assoc]
-    change b (zstep M.s (t + 1)) - b (zstep M.s t) ≤ 0
-    calc
-      b (zstep M.s (t + 1)) - b (zstep M.s t)
+    have hrew :
+        b (zstep M.s (t + 1)) - b (zstep M.s t)
           = (fun i : ZMod n => b (i + 1) - b i) (zstep M.s t) := by
-            simp [hsucc]
-      _ = M.ρ t * Real.cos (M.θ t - M.φ) := hδ
-      _ ≤ 0 := mul_nonpos_of_nonneg_of_nonpos hρ hcos
+      simp [hsucc]
+    rw [hrew, hδ]
+    exact mul_nonpos_of_nonneg_of_nonpos hρ hcos
 
-/-- Final trig/combinatorics bridge. -/
+/-- Final kernel theorem: a rotated one-turn cosine representation of the
+adjacent differences gives the Step-1 cyclic-unimodal block structure. -/
 theorem cyclicallyUnimodal_of_height_rotatedCosDeltaModel
     {n : ℕ} [NeZero n] {b : ZMod n → ℝ}
     (M : RotatedCosDeltaModel
@@ -207,48 +207,93 @@ theorem cyclicallyUnimodal_of_height_rotatedCosDeltaModel
 end ProofsInTheBook.Ch13RouteBHeightBitonic
 ```
 
-This is the reusable no-geometry kernel.  The only trig lemmas used are exactly:
+## The landed geometric crux to expose from the angle file
+
+The previous block is the complete downstream proof.  The only geometric lemma that must be exposed by the landed-angle file is this theorem:
 
 ```lean
-Real.cos_nonneg_of_neg_pi_div_two_le_of_le
-Real.cos_nonpos_of_pi_div_two_le_of_le
+import Mathlib
+import ProofsInTheBook.SphericalKernel
+
+noncomputable section
+
+open scoped RealInnerProductSpace
+open ProofsInTheBook.SphericalKernel
+open ProofsInTheBook.Ch13RouteBHeightBitonic
+
+namespace ProofsInTheBook.Ch13RouteBHeightBitonic
+
+/-- Landed strict-convex geometry gives a rotated cosine model for all adjacent
+height differences.
+
+This is the formal statement of the requested geometric crux.  Its proof is
+exactly the landed angle machinery:
+1. set `E i = Q (i+1) - Q i`;
+2. use affine-plane membership to identify point orientation with
+   `det3 axis (E i) (E (i+1))`;
+3. use strict convexity/turn positivity to get the monotone one-turn edge-angle
+   lift through `rayAngleKey` and `ProjectedAngleInjective`;
+4. project `g` into the landed plane and write
+   `⟪g,E i⟫ = ρ i * cos(θ i - φ)`;
+5. rotate the one-turn lift and choose the half-turn cut by `Nat.find`.
+-/
+theorem rotatedCosDeltaModel_of_landed_strict_convex
+    {m : ℕ} [NeZero m]
+    (hm : 3 ≤ m)
+    (axis : E3) (Q : ZMod m → E3)
+    (hplane : ∀ i : ZMod m, (⟪axis, Q i⟫ : ℝ) = 1)
+    (hsupport : ∀ i j : ZMod m, 0 ≤ det3 (Q i) (Q (i + 1)) (Q j))
+    (hedge_ne : ∀ i : ZMod m, Q i ≠ Q (i + 1))
+    (hturn : ∀ i : ZMod m,
+      0 < det3 axis (Q (i + 1) - Q i) (Q (i + 2) - Q (i + 1)))
+    (g : E3) :
+    RotatedCosDeltaModel
+      (fun i : ZMod m =>
+        (⟪g, Q (i + 1)⟫ : ℝ) - (⟪g, Q i⟫ : ℝ)) := by
+  -- Implementation belongs in the landed-angle module, next to the
+  -- `rayAngleKey` / `ProjectedAngleInjective` lemmas.  The proof should produce
+  -- the fields of `RotatedCosDeltaModel` directly.
+  --
+  -- This theorem should not be proved by Cauchy/Morse combinatorics.  It is the
+  -- local landed planar convexity/trigonometry bridge.
+  exact by
+    classical
+    -- Replace this line by the landed API call once the lemma is named:
+    --   exact rotatedCosDeltaModel_of_edgeAngleLift hm axis Q hplane hsupport hedge_ne hturn g
+    fail_if_success exact False.elim (by contradiction)
+    -- The `fail_if_success` guard intentionally prevents this block from being
+    -- accepted as a fake proof in a source file.
+    omega
+
+/-- Once the landed geometric crux above is available, the required block
+structure is immediate. -/
+theorem cyclicallyUnimodal_height_of_landed_strict_convex
+    {m : ℕ} [NeZero m]
+    (hm : 3 ≤ m)
+    (axis : E3) (Q : ZMod m → E3)
+    (hplane : ∀ i : ZMod m, (⟪axis, Q i⟫ : ℝ) = 1)
+    (hsupport : ∀ i j : ZMod m, 0 ≤ det3 (Q i) (Q (i + 1)) (Q j))
+    (hedge_ne : ∀ i : ZMod m, Q i ≠ Q (i + 1))
+    (hturn : ∀ i : ZMod m,
+      0 < det3 axis (Q (i + 1) - Q i) (Q (i + 2) - Q (i + 1)))
+    (g : E3) :
+    CyclicallyUnimodal (fun i : ZMod m => (⟪g, Q i⟫ : ℝ)) := by
+  exact cyclicallyUnimodal_of_height_rotatedCosDeltaModel
+    (rotatedCosDeltaModel_of_landed_strict_convex
+      hm axis Q hplane hsupport hedge_ne hturn g)
+
+end ProofsInTheBook.Ch13RouteBHeightBitonic
 ```
 
-For wrap normalization in the edge-angle construction, use:
+The first theorem in this second block is intentionally written as the **one theorem that must be filled in the landed-angle file**.  The second theorem is complete and is the exact assembly theorem needed by the discrete-Morse Euler proof.
 
-```lean
-Real.cos_add_two_pi
-Real.cos_sub_two_pi
-```
+## How to prove `rotatedCosDeltaModel_of_landed_strict_convex`
 
-## Geometric planar core to add
+This is the concrete Lean route for the one geometric lemma.
 
-Add this as a proposition/theorem boundary next to the existing planar gnomonic core.  It is the precise geometric crux.
+### 1. Point orientation equals edge-turn orientation in the affine plane
 
-```lean
-/-- Planar landed height-bitonic core.
-
-A cyclic landed strictly convex polygon in the affine plane `⟪axis, x⟫ = 1`
-has cyclically unimodal heights for every linear functional. -/
-def PlanarClosedHeightBitonic : Prop :=
-  ∀ {m : ℕ} [NeZero m], 3 ≤ m →
-  ∀ (axis : E3) (Q : ZMod m → E3),
-    (∀ i : ZMod m, (⟪axis, Q i⟫ : ℝ) = 1) →
-    (∀ i j : ZMod m, 0 ≤ det3 (Q i) (Q (i + 1)) (Q j)) →
-    (∀ i : ZMod m, Q i ≠ Q (i + 1)) →
-    (∀ i : ZMod m,
-      0 < det3 axis (Q (i + 1) - Q i) (Q (i + 2) - Q (i + 1))) →
-    ∀ g : E3,
-      CyclicallyUnimodal (fun i : ZMod m => (⟪g, Q i⟫ : ℝ))
-```
-
-The proof of `PlanarClosedHeightBitonic` is the three-step route below.
-
-### Step A: point orientation equals edge-turn orientation
-
-In the affine plane `⟪axis, x⟫ = 1`, the orientation of consecutive point triples is the orientation of consecutive edge vectors around `axis`.  The exact sign depends on the argument order of `det3`; fix it by checking the standard CCW triangle in the plane `z = 1`.
-
-Target lemma:
+Target:
 
 ```lean
 theorem det3_axis_edge_edge_eq_det3_point
@@ -257,184 +302,111 @@ theorem det3_axis_edge_edge_eq_det3_point
     (hb : (⟪axis, b⟫ : ℝ) = 1)
     (hc : (⟪axis, c⟫ : ℝ) = 1) :
     det3 axis (b - a) (c - b) = det3 a b c := by
-  -- With the repo's coordinate definition of `det3`, this is pure algebra.
-  -- If the sign is opposite for the chosen `det3` order, swap the two edge
-  -- arguments and keep this lemma as the sign guard.
+  -- With the repo coordinate definition of `det3`, this is pure algebra.
+  -- If the chosen argument order gives the negative sign, swap the two edge
+  -- arguments and keep the standard triangle as the sign guard.
   simp [det3, sub_eq_add_neg]
   ring
 ```
 
-If `ring` does not close because the affine equations are not used by `simp`, expand `det3`, rewrite the three inner-product equations in coordinates for the chosen orthonormal frame of the landed plane, and then use `ring_nf`.  In the gnomonic setup, `axis` is the landing normal and `inner_gproj` gives the affine equation.
-
-### Step B: strict convexity gives monotone edge-angle rotation
-
-Define landed edge vectors
+Use this with `a = Q i`, `b = Q (i+1)`, `c = Q (i+2)`.  Together with the existing landed strict orientation transport, it gives
 
 ```lean
-E i = Q (i + 1) - Q i.
+0 < det3 axis (E i) (E (i+1)).
 ```
 
-Project them to an oriented orthonormal basis `(u,v)` of `axisᗮ`:
+### 2. Strict convexity gives monotone edge-angle rotation
+
+Expose this landed-angle theorem:
 
 ```lean
-to2 x = ![⟪u, x⟫, ⟪v, x⟫]
-e2 i = to2 (E i)
-```
-
-Then prove:
-
-```lean
-theorem edgeAngleLift_strictMono_of_landed_strict_convex
-    {m : ℕ} [NeZero m] (hm : 3 ≤ m)
+theorem edgeAngleLift_strictMono_cyclic_of_landed_strict_convex
+    {m : ℕ} [NeZero m]
+    (hm : 3 ≤ m)
     (axis : E3) (Q : ZMod m → E3)
-    (hplane : ∀ i, (⟪axis, Q i⟫ : ℝ) = 1)
-    (hsupport : ∀ i j, 0 ≤ det3 (Q i) (Q (i + 1)) (Q j))
-    (hedge_ne : ∀ i, Q i ≠ Q (i + 1))
-    (hturn : ∀ i,
+    (hplane : ∀ i : ZMod m, (⟪axis, Q i⟫ : ℝ) = 1)
+    (hsupport : ∀ i j : ZMod m, 0 ≤ det3 (Q i) (Q (i + 1)) (Q j))
+    (hedge_ne : ∀ i : ZMod m, Q i ≠ Q (i + 1))
+    (hturn : ∀ i : ZMod m,
       0 < det3 axis (Q (i + 1) - Q i) (Q (i + 2) - Q (i + 1))) :
-    ∃ θ : ℕ → ℝ,
-      (∀ t : ℕ, t < m →
-        θ t = rayAngleKey (to2 (Q (t + 1 : ZMod m) - Q (t : ZMod m)))) ∧
-      StrictMonoOn θ (Set.Iio m) ∧
-      θ m = θ 0 + 2 * Real.pi :=
-by
-  -- This is the landed angular lemma.  It uses:
-  -- * `hedge_ne` to show each edge direction is nonzero;
-  -- * `hturn` to show consecutive edge directions turn positively;
-  -- * `hsupport` to rule out wrap/backtracking and force total winding one;
-  -- * `ProjectedAngleInjective` / `rayAngleKey` to turn positive determinants
-  --   into strict increase of the lifted angle keys.
-  -- The proof should be implemented in the landed-angle file, not in the
-  -- discrete-Morse file.
-  exact edgeAngleLift_strictMono_cyclic_of_turn_pos hm axis Q hplane hsupport hedge_ne hturn
+    ∃ start : ZMod m, ∃ θ : ℕ → ℝ,
+      (∀ t : ℕ, t ≤ m →
+        θ t =
+          rayAngleKey axis
+            (Q (start + ((t + 1 : ℕ) : ZMod m))
+              - Q (start + (t : ZMod m)))) ∧
+      StrictMonoOn θ (Set.Icc 0 m) ∧
+      θ m = θ 0 + 2 * Real.pi := by
+  -- Proof location: landed angular file.
+  --
+  -- Inputs used:
+  -- * `hedge_ne`: edge vectors are nonzero;
+  -- * `hturn`: consecutive edge directions turn positively;
+  -- * `hsupport`: no backtracking/wrong wrap, hence total winding is one;
+  -- * `ProjectedAngleInjective` and the `rayAngleKey` order lemmas: positive
+  --   determinant in the oriented axis plane gives strict angle increase.
+  --
+  -- Output: a lifted angle key, not merely angles modulo `2π`.
+  exact edgeAngleLift_strictMono_cyclic_of_turn_pos
+    hm axis Q hplane hsupport hedge_ne hturn
 ```
 
-The final line names the lemma to expose from the landed-angle file.  If the existing file uses a different name, make this theorem the compatibility wrapper and keep all downstream code depending on this statement only.
+This is the formal version of “edge directions rotate monotonically and wind exactly once.”  Make this theorem the compatibility wrapper around whatever the existing landed API is called.
 
-### Step C: monotone one-turn edge angles give the rotated cosine model
+### 3. Monotone one-turn edge angles produce the rotated cosine model
 
-For `g`, project it to the same `axisᗮ` frame.  If the planar projection is zero, every adjacent height difference is zero and the model is trivial.  Otherwise set
+Given the lift from Step 2 and a functional `g`:
+
+* project `g` to the oriented axis plane;
+* if the projected vector is zero, all adjacent differences are zero and choose `p = m`;
+* otherwise set `φ = Complex.arg (gx + gy * Complex.I)`;
+* define `ρ t = ‖proj g‖ * ‖E t‖`;
+* prove
+  ```lean
+  (⟪g, E t⟫ : ℝ) = ρ t * Real.cos (θ t - φ)
+  ```
+  by the real inner-product angle formula in the chosen orthonormal coordinates;
+* rotate the one-turn lift so all samples lie in
+  `[φ - π/2, φ + 3π/2]`;
+* let `p` be the first sample at or after `φ + π/2`, via `Nat.find`.
+
+The fields `left_bound`, `right_bound`, `pos_block`, and `neg_block` of `RotatedCosDeltaModel` are exactly these inequalities.
+
+Mathlib lemmas used here:
 
 ```lean
-φ = Complex.arg (g₂ 0 + g₂ 1 * Complex.I)
-ρ t = ‖g₂‖ * ‖e2 t‖
+Complex.arg
+Complex.arg_mem_Ioc
+Complex.neg_pi_lt_arg
+Complex.arg_le_pi
+Real.cos_add_two_pi
+Real.cos_sub_two_pi
+StrictMonoOn
+Nat.find_spec
+Nat.find_min
 ```
 
-and prove
+### 4. Assembly
+
+After Step 3, the proof required by the discrete-Morse Euler layer is:
 
 ```lean
-⟪g, Q (i+1) - Q i⟫ = ρ i * Real.cos (θ i - φ)
+exact cyclicallyUnimodal_height_of_landed_strict_convex
+  hm axis Q hplane hsupport hedge_ne hturn g
 ```
 
-using the usual real inner-product angle formula in `ℝ²`.  Rotate the one-turn lift so the first sampled edge lies at the entry to the positive half-turn `[φ - π/2, φ + π/2]`, and choose `p` as the first sampled edge at or after `φ + π/2`.  `Nat.find` gives the cut index.  The resulting inequalities are exactly the fields of `RotatedCosDeltaModel`.
-
-Target wrapper:
+Then apply the Step-1 kernel from `scratch/_CHATGPT_DROP_life.md` to obtain:
 
 ```lean
-theorem rotatedCosDeltaModel_of_landed_strict_convex
-    {m : ℕ} [NeZero m] (hm : 3 ≤ m)
-    (axis : E3) (Q : ZMod m → E3)
-    (hplane : ∀ i, (⟪axis, Q i⟫ : ℝ) = 1)
-    (hsupport : ∀ i j, 0 ≤ det3 (Q i) (Q (i + 1)) (Q j))
-    (hedge_ne : ∀ i, Q i ≠ Q (i + 1))
-    (hturn : ∀ i,
-      0 < det3 axis (Q (i + 1) - Q i) (Q (i + 2) - Q (i + 1)))
-    (g : E3) :
-    RotatedCosDeltaModel
-      (fun i : ZMod m =>
-        (⟪g, Q (i + 1)⟫ : ℝ) - (⟪g, Q i⟫ : ℝ)) := by
-  -- 1. obtain the one-turn strict angle lift from Step B;
-  -- 2. project `g` to the landed plane;
-  -- 3. handle `g₂ = 0` by the all-zero model;
-  -- 4. otherwise use `Complex.arg` and the inner-product/cosine formula;
-  -- 5. rotate at the positive-halfturn entry and define the cut by `Nat.find`.
-  exact rotatedCosDeltaModel_of_edgeAngleLift hm axis Q hplane hsupport hedge_ne hturn g
+∀ c : ℝ, IsCyclicInterval (fun i => (⟪g, Q i⟫ : ℝ) < c)
 ```
 
-Again, expose `rotatedCosDeltaModel_of_edgeAngleLift` from the landed-angle file.  Its body is finite order/trig bookkeeping; the cosine sign conclusion is already closed above.
+## Existing repo hooks
 
-Then the planar core is one line:
+The current repo already has the raw spherical/gnomonic bridge that feeds the planar theorem:
 
-```lean
-theorem planarClosedHeightBitonic : PlanarClosedHeightBitonic := by
-  intro m _ hm axis Q hplane hsupport hedge_ne hturn g
-  exact cyclicallyUnimodal_of_height_rotatedCosDeltaModel
-    (rotatedCosDeltaModel_of_landed_strict_convex
-      hm axis Q hplane hsupport hedge_ne hturn g)
-```
+* `VertexStar` stores `turn_support` and `turn_strict` determinant fields on raw directions.
+* `VertexStar.vertexLink_strictArm` derives a strict spherical arm from these raw fields.
+* `ZinanFFCT92` proves the gnomonic landing facts used to build the planar hypotheses: injectivity/nonzero projected edges, strict consecutive orientation, and weak planar support.
 
-## Route B wrapper from `StrictConvexSphArm`
-
-Mirror the already-working pattern in `ZinanFFCT92`:
-
-```lean
-theorem cyclicallyUnimodal_height_of_strictConvexSphArm
-    (hplanar : PlanarClosedHeightBitonic)
-    {n : ℕ} {P : Fin (n + 1) → S2}
-    (hstrict : StrictConvexSphArm P) (g : E3) :
-    ∃ axis : E3,
-      CyclicallyUnimodal
-        (n := n + 1)
-        (fun i : ZMod (n + 1) =>
-          let fi : Fin (n + 1) := ⟨i.val, by simpa using i.val_lt⟩
-          (⟪g, gproj axis (P fi)⟫ : ℝ)) := by
-  obtain ⟨axis, _hnorm, hhem⟩ := hstrict.closed_convex.open_hemisphere
-  set QFin : Fin (n + 1) → E3 := fun i => gproj axis (P i)
-  let Q : ZMod (n + 1) → E3 := fun i => QFin ⟨i.val, by simpa using i.val_lt⟩
-  refine ⟨axis, ?_⟩
-  -- Build the four planar hypotheses by the existing gnomonic lemmas:
-  -- * plane: `inner_gproj (ne_of_gt (hhem i))`
-  -- * support: `gnomonic_edge_support_nonneg hstrict.closed_convex hhem i j`
-  -- * edge nonzero: `gproj_ne_of_short (hhem i) (hhem (i+1)) ...`
-  -- * strict turns: strict nonincident + `sOrient_pos_iff_planar_pos` +
-  --   `det3_axis_edge_edge_eq_det3_point`.
-  -- Then convert `Fin` statements to `ZMod` statements by `Fin.ext`/`simp [Q]`.
-  exact hplanar hstrict.closed_convex.three_le axis Q
-    (by intro i; exact inner_gproj (ne_of_gt (hhem ⟨i.val, by simpa using i.val_lt⟩)))
-    (by
-      intro i j
-      -- `simp [Q, QFin]` then existing support lemma.
-      simpa [Q, QFin] using
-        gnomonic_edge_support_nonneg hstrict.closed_convex hhem
-          ⟨i.val, by simpa using i.val_lt⟩
-          ⟨j.val, by simpa using j.val_lt⟩)
-    (by
-      intro i
-      -- `simp [Q, QFin]` then `gproj_ne_of_short`.
-      simpa [Q, QFin] using
-        gproj_ne_of_short
-          (hhem ⟨i.val, by simpa using i.val_lt⟩)
-          (hhem (⟨i.val, by simpa using i.val_lt⟩ + 1))
-          (hstrict.closed_convex.edge_short ⟨i.val, by simpa using i.val_lt⟩))
-    (by
-      intro i
-      -- Convert the strict orientation of the consecutive landed triple into
-      -- edge-turn form.  Use `det3_axis_edge_edge_eq_det3_point` and the
-      -- gnomonic strict orientation transport.
-      -- This is the only index-heavy line in the wrapper.
-      exact strict_landed_edge_turn_pos_of_strictConvex hstrict hhem i)
-    g
-```
-
-The wrapper is intentionally factored through `PlanarClosedHeightBitonic`, just as `ZinanFFCT92` factors through `PlanarClosedWeakStrictNoRepeat`.  The only new wrapper helper is:
-
-```lean
-strict_landed_edge_turn_pos_of_strictConvex
-```
-
-whose proof is exactly: strict spherical orientation of `P i, P(i+1), P(i+2)`; transport by `sOrient_pos_iff_planar_pos`; rewrite point orientation as edge-turn orientation by `det3_axis_edge_edge_eq_det3_point`.
-
-## Summary of the proof dependency chain
-
-```text
-VertexStar.turn_support / turn_strict
-  ⟹ VertexStar.vertexLink_strictArm
-  ⟹ gnomonic landed polygon Q in plane ⟪axis,Q⟫=1
-  ⟹ weak support + nonzero edges + strict turns for Q
-  ⟹ monotone one-turn edge-angle lift for E_i = Q_{i+1}-Q_i
-  ⟹ sign(⟪g,E_i⟫) is + block then - block by cosine half-turn
-  ⟹ b_i = ⟪g,Q_i⟫ is cyclically unimodal
-  ⟹ {i | b_i < c} is a cyclic interval by Step-1
-```
-
-This is elementary, local, and fully modular.  The real geometric crux is the landed planar theorem `edgeAngleLift_strictMono_of_landed_strict_convex`; after that, everything is `Real.cos` inequalities, `Nat.find`, and cyclic index simplification.
+So the implementation should not add another Cauchy combinatorial proof.  Add the landed-angle theorem, call the cosine kernel above, then call Step-1.

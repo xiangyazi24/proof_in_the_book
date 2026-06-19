@@ -1,412 +1,375 @@
-# Ch13 Route B geometric crux: landed convex link heights are cyclically bitonic
+# Finite Bool cyclic-flip extraction: `> 2` flips gives four alternating indices
 
-## What must be proved, sharply
-
-Use a **landed affine representative** of the vertex link.  Let
+This is a self-contained Lean module for the pure combinatorial extraction needed downstream.  I state it on `ZMod n`; the cyclic order conclusion is given by natural representatives
 
 ```lean
-Q : ZMod m → E3
+k0 < k1 < k2 < k3 < n
 ```
 
-be the cyclically ordered landed link polygon in the affine plane `⟪axis, Q i⟫ = 1`.  For a linear functional `g`, set
+and the indices are `(kᵣ : ZMod n)`.  This is the most convenient form for a cyclic vertex link.  A `Fin n` wrapper is included at the end.
 
-```lean
-b i = ⟪g, Q i⟫.
-```
+The proof avoids sorted-list plumbing.  It defines a scanner `flipBlocksFrom p pos len` that walks the cyclic sequence through `len` consecutive edges starting at `pos`; whenever it sees a flip, it records the pre-flip position together with the pre-flip Bool value.  The scanner proves three facts by induction:
 
-The desired bridge is:
+1. recorded positions are strictly increasing and bounded;
+2. recorded Bool values alternate;
+3. the number of recorded flips is even for a full cycle.
 
-```text
-strict convex landed link
-  ⟹ edge directions E_i = Q(i+1)-Q(i) have a one-turn monotone angle lift
-  ⟹ ⟪g,E_i⟫ has one nonnegative block and one nonpositive block
-  ⟹ b is cyclically unimodal
-  ⟹ Step-1 kernel: {i | b i < c} is a cyclic interval.
-```
-
-Do **not** state this on arbitrary positively rescaled rays if the conclusion is about **differences** `b (i+1)-b i`; positive rescaling preserves the sign of individual tests `⟪g,ray i⟫`, but it does not preserve adjacent differences.  The difference-sign theorem belongs to the landed representatives `Q`.
-
-The code below gives the complete Lean proof of the reusable kernel after the landed angular API has produced the rotated cosine model.  The only repo-specific geometric theorem still needed is exactly the landed-angle theorem named in the final section:
-
-```lean
-rotatedCosDeltaModel_of_landed_strict_convex
-```
-
-That theorem is where `ProjectedAngleInjective`, `rayAngleKey`, `turn_strict`, `SurroundsAxisPlane`, and the determinant/angle landing machinery are used.  Once it exists, the assembly theorem is literally one line.
-
-## Complete Lean kernel
+Then `cyclicFlips p > 2`, plus evenness, gives at least four recorded flips.  The first four recorded positions are the required cyclically ordered alternating indices.
 
 ```lean
 import Mathlib
 
 noncomputable section
 
-open scoped BigOperators
-open scoped RealInnerProductSpace
+namespace ProofsInTheBook.Ch13BoolCyclicExtraction
 
-namespace ProofsInTheBook.Ch13RouteBHeightBitonic
+/-- Encode a Bool in `ZMod 2` for the parity telescope. -/
+def boolZ : Bool → ZMod 2
+  | false => 0
+  | true => 1
 
-/-- Cyclic enumeration from a chosen start. -/
-def zstep {n : ℕ} [NeZero n] (s : ZMod n) (t : ℕ) : ZMod n :=
-  s + (t : ZMod n)
+@[simp] lemma boolZ_false : boolZ false = 0 := rfl
+@[simp] lemma boolZ_true : boolZ true = 1 := rfl
 
-/-- Step-1 block-structure target: after rotating the cyclic order by `s`,
-the sequence is nondecreasing up to `p` and nonincreasing from `p` back to the
-start.  The endpoint `t = n` represents the start again. -/
-def CyclicallyUnimodal {n : ℕ} [NeZero n] (b : ZMod n → ℝ) : Prop :=
-  ∃ s : ZMod n, ∃ p : ℕ,
-    p ≤ n ∧
-    (∀ ⦃i j : ℕ⦄, i ≤ j → j ≤ p → b (zstep s i) ≤ b (zstep s j)) ∧
-    (∀ ⦃i j : ℕ⦄, p ≤ i → i ≤ j → j ≤ n →
-      b (zstep s j) ≤ b (zstep s i))
+lemma boolZ_self_add (b : Bool) : boolZ b + boolZ b = 0 := by
+  cases b <;> decide
 
-/-- Adjacent-difference form: one cyclic run of nonnegative increments followed
-by one cyclic run of nonpositive increments. -/
-def AdjacentDeltaBlock {n : ℕ} [NeZero n] (b : ZMod n → ℝ) : Prop :=
-  ∃ s : ZMod n, ∃ p : ℕ,
-    p ≤ n ∧
-    (∀ t : ℕ, t < p →
-      0 ≤ b (zstep s (t + 1)) - b (zstep s t)) ∧
-    (∀ t : ℕ, p ≤ t → t < n →
-      b (zstep s (t + 1)) - b (zstep s t) ≤ 0)
+/-- The mod-2 indicator of a Bool flip is the sum of the two endpoint values. -/
+lemma flipIndicator_cast (a b : Bool) :
+    ((if a ≠ b then 1 else 0 : ℕ) : ZMod 2) = boolZ a + boolZ b := by
+  cases a <;> cases b <;> decide
 
-private lemma mono_of_adjacent_nonneg {b : ℕ → ℝ} {p i j : ℕ}
-    (h : ∀ t : ℕ, t < p → b t ≤ b (t + 1))
-    (hij : i ≤ j) (hjp : j ≤ p) :
-    b i ≤ b j := by
-  refine (Nat.le_induction
-    (motive := fun k => k ≤ p → b i ≤ b k)
-    ?base ?step j hij) hjp
-  · intro _
-    exact le_rfl
-  · intro k hik ih hk1p
-    have hkp : k ≤ p := Nat.le_of_succ_le hk1p
-    have hklt : k < p := Nat.lt_of_succ_le hk1p
-    exact le_trans (ih hkp) (h k hklt)
+/-- Scan `len` cyclic adjacent edges starting at natural position `pos`.
+When the edge `pos+t → pos+t+1` flips, record the pre-flip natural position
+and the pre-flip Bool value. -/
+def flipBlocksFrom {n : ℕ} [NeZero n]
+    (p : ZMod n → Bool) (pos : ℕ) : ℕ → List (ℕ × Bool)
+  | 0 => []
+  | len + 1 =>
+      let rest := flipBlocksFrom p (pos + 1) len
+      if p (pos : ZMod n) ≠ p ((pos + 1 : ℕ) : ZMod n) then
+        (pos, p (pos : ZMod n)) :: rest
+      else
+        rest
 
-private lemma antitone_of_adjacent_nonpos {b : ℕ → ℝ} {p n i j : ℕ}
-    (h : ∀ t : ℕ, p ≤ t → t < n → b (t + 1) ≤ b t)
-    (hpi : p ≤ i) (hij : i ≤ j) (hjn : j ≤ n) :
-    b j ≤ b i := by
-  refine (Nat.le_induction
-    (motive := fun k => k ≤ n → b k ≤ b i)
-    ?base ?step j hij) hjn
-  · intro _
-    exact le_rfl
-  · intro k hik ih hk1n
-    have hkn : k ≤ n := Nat.le_of_succ_le hk1n
-    have hklt : k < n := Nat.lt_of_succ_le hk1n
-    have hpk : p ≤ k := le_trans hpi hik
-    exact le_trans (h k hpk hklt) (ih hkn)
+/-- The cyclic flip count of a Bool-labelled `ZMod n` cycle.  This is exactly
+the number of cyclic adjacent positions `i → i+1` where `p` changes value. -/
+def cyclicFlips {n : ℕ} [NeZero n] (p : ZMod n → Bool) : ℕ :=
+  (flipBlocksFrom p 0 n).length
 
-/-- Adjacent sign blocks imply the nondecreasing-then-nonincreasing block
-structure required by the Step-1 cyclic interval theorem. -/
-theorem cyclicallyUnimodal_of_adjacentDeltaBlock
-    {n : ℕ} [NeZero n] {b : ZMod n → ℝ}
-    (h : AdjacentDeltaBlock b) :
-    CyclicallyUnimodal b := by
-  rcases h with ⟨s, p, hp, hpos, hneg⟩
-  let B : ℕ → ℝ := fun t => b (zstep s t)
-  refine ⟨s, p, hp, ?_, ?_⟩
-  · intro i j hij hjp
-    apply mono_of_adjacent_nonneg (b := B) (p := p) hij hjp
-    intro t ht
-    have := hpos t ht
-    dsimp [B]
-    linarith
-  · intro i j hpi hij hjn
-    apply antitone_of_adjacent_nonpos (b := B) (p := p) (n := n) hpi hij hjn
-    intro t hpt htn
-    have := hneg t hpt htn
-    dsimp [B]
-    linarith
+/-- Strictly increasing/bounded position chain.  `PosChain N lo xs` says every
+recorded position in `xs` is at least `lo`, below `N`, and later positions are
+strictly after earlier positions. -/
+def PosChain (N lo : ℕ) : List (ℕ × Bool) → Prop
+  | [] => True
+  | x :: xs => lo ≤ x.1 ∧ x.1 < N ∧ PosChain N (x.1 + 1) xs
 
-/-- A rotated cosine model for adjacent height differences.
+lemma PosChain.mono_left {N lo lo' : ℕ} {xs : List (ℕ × Bool)}
+    (hlo : lo ≤ lo') : PosChain N lo' xs → PosChain N lo xs := by
+  cases xs with
+  | nil => simp [PosChain]
+  | cons x xs =>
+      intro h
+      rcases h with ⟨hlo', hxN, htail⟩
+      exact ⟨le_trans hlo hlo', hxN, htail⟩
 
-`δ (zstep s t)` is the `t`-th cyclic adjacent difference after rotation.
-`θ t` is the landed edge-angle lift, `φ` is the in-plane direction angle of
-the projected functional, and `ρ t > 0` is the positive scale
-`‖proj g‖ * ‖edge t‖`. -/
-structure RotatedCosDeltaModel {n : ℕ} [NeZero n]
-    (δ : ZMod n → ℝ) where
-  s : ZMod n
-  p : ℕ
-  hp : p ≤ n
-  θ : ℕ → ℝ
-  φ : ℝ
-  ρ : ℕ → ℝ
-  rho_pos : ∀ t : ℕ, t < n → 0 < ρ t
-  delta_eq : ∀ t : ℕ, t < n →
-    δ (zstep s t) = ρ t * Real.cos (θ t - φ)
-  left_bound : ∀ t : ℕ, t < n → φ - Real.pi / 2 ≤ θ t
-  right_bound : ∀ t : ℕ, t < n → θ t ≤ φ + 3 * Real.pi / 2
-  pos_block : ∀ t : ℕ, t < p → θ t ≤ φ + Real.pi / 2
-  neg_block : ∀ t : ℕ, p ≤ t → t < n → φ + Real.pi / 2 ≤ θ t
+/-- The scanner records positions in increasing order and below the supplied
+upper bound. -/
+theorem flipBlocksFrom_posChain {n : ℕ} [NeZero n]
+    (p : ZMod n → Bool) (N pos len : ℕ)
+    (hN : pos + len ≤ N) :
+    PosChain N pos (flipBlocksFrom p pos len) := by
+  induction len generalizing pos with
+  | zero =>
+      simp [flipBlocksFrom, PosChain]
+  | succ len ih =>
+      by_cases hflip : p (pos : ZMod n) ≠ p ((pos + 1 : ℕ) : ZMod n)
+      · have hposN : pos < N := by omega
+        have htail : PosChain N (pos + 1) (flipBlocksFrom p (pos + 1) len) := by
+          exact ih (pos + 1) (by omega)
+        simp [flipBlocksFrom, hflip, PosChain, hposN, htail]
+      · have htail : PosChain N (pos + 1) (flipBlocksFrom p (pos + 1) len) := by
+          exact ih (pos + 1) (by omega)
+        exact PosChain.mono_left (Nat.le_succ pos) (by
+          simpa [flipBlocksFrom, hflip] using htail)
 
-lemma cos_nonneg_centered {x φ : ℝ}
-    (hlo : φ - Real.pi / 2 ≤ x) (hhi : x ≤ φ + Real.pi / 2) :
-    0 ≤ Real.cos (x - φ) := by
-  apply Real.cos_nonneg_of_neg_pi_div_two_le_of_le
-  · linarith
-  · linarith
+/-- Every recorded pair stores the actual Bool value at its recorded natural
+position. -/
+theorem flipBlocksFrom_sound {n : ℕ} [NeZero n]
+    (p : ZMod n → Bool) :
+    ∀ pos len x, x ∈ flipBlocksFrom p pos len → x.2 = p (x.1 : ZMod n) := by
+  intro pos len
+  induction len generalizing pos with
+  | zero =>
+      intro x hx
+      simp [flipBlocksFrom] at hx
+  | succ len ih =>
+      intro x hx
+      by_cases hflip : p (pos : ZMod n) ≠ p ((pos + 1 : ℕ) : ZMod n)
+      · simp [flipBlocksFrom, hflip] at hx
+        rcases hx with hx | hx
+        · rcases hx with rfl
+          rfl
+        · exact ih (pos + 1) x hx
+      · have hx' : x ∈ flipBlocksFrom p (pos + 1) len := by
+          simpa [flipBlocksFrom, hflip] using hx
+        exact ih (pos + 1) x hx'
 
-lemma cos_nonpos_opposite {x φ : ℝ}
-    (hlo : φ + Real.pi / 2 ≤ x) (hhi : x ≤ φ + 3 * Real.pi / 2) :
-    Real.cos (x - φ) ≤ 0 := by
-  apply Real.cos_nonpos_of_pi_div_two_le_of_le
-  · linarith
-  · linarith
+/-- If the scanner output is nonempty, its first stored Bool is the value at
+`pos`.  This is the key invariant saying that no unrecorded flip occurred before
+the first recorded one. -/
+theorem flipBlocksFrom_head_value {n : ℕ} [NeZero n]
+    (p : ZMod n → Bool) :
+    ∀ pos len x xs,
+      flipBlocksFrom p pos len = x :: xs → x.2 = p (pos : ZMod n) := by
+  intro pos len
+  induction len generalizing pos with
+  | zero =>
+      intro x xs h
+      simp [flipBlocksFrom] at h
+  | succ len ih =>
+      intro x xs h
+      by_cases hflip : p (pos : ZMod n) ≠ p ((pos + 1 : ℕ) : ZMod n)
+      · simp [flipBlocksFrom, hflip] at h
+        rcases h with ⟨rfl, rfl⟩
+        rfl
+      · have hEq : p (pos : ZMod n) = p ((pos + 1 : ℕ) : ZMod n) := not_ne.mp hflip
+        have hrest : flipBlocksFrom p (pos + 1) len = x :: xs := by
+          simpa [flipBlocksFrom, hflip] using h
+        have hx := ih (pos + 1) x xs hrest
+        simpa [hEq] using hx
 
-/-- The cosine half-turn fact: if the edge-angle samples have been rotated so
-that the positive half-turn comes first, the adjacent height differences are a
-nonnegative block followed by a nonpositive block. -/
-theorem adjacentDeltaBlock_of_height_rotatedCosDeltaModel
-    {n : ℕ} [NeZero n] {b : ZMod n → ℝ}
-    (M : RotatedCosDeltaModel
-      (fun i : ZMod n => b (i + 1) - b i)) :
-    AdjacentDeltaBlock b := by
-  refine ⟨M.s, M.p, M.hp, ?_, ?_⟩
-  · intro t ht
-    have htn : t < n := lt_of_lt_of_le ht M.hp
-    have hcos : 0 ≤ Real.cos (M.θ t - M.φ) :=
-      cos_nonneg_centered (M.left_bound t htn) (M.pos_block t ht)
-    have hρ : 0 ≤ M.ρ t := le_of_lt (M.rho_pos t htn)
-    have hδ := M.delta_eq t htn
-    have hsucc : zstep M.s t + 1 = zstep M.s (t + 1) := by
-      simp [zstep, Nat.cast_add, add_assoc]
-    have hrew :
-        b (zstep M.s (t + 1)) - b (zstep M.s t)
-          = (fun i : ZMod n => b (i + 1) - b i) (zstep M.s t) := by
-      simp [hsucc]
-    rw [hrew, hδ]
-    exact mul_nonneg hρ hcos
-  · intro t hpt htn
-    have hcos : Real.cos (M.θ t - M.φ) ≤ 0 :=
-      cos_nonpos_opposite (M.neg_block t hpt htn) (M.right_bound t htn)
-    have hρ : 0 ≤ M.ρ t := le_of_lt (M.rho_pos t htn)
-    have hδ := M.delta_eq t htn
-    have hsucc : zstep M.s t + 1 = zstep M.s (t + 1) := by
-      simp [zstep, Nat.cast_add, add_assoc]
-    have hrew :
-        b (zstep M.s (t + 1)) - b (zstep M.s t)
-          = (fun i : ZMod n => b (i + 1) - b i) (zstep M.s t) := by
-      simp [hsucc]
-    rw [hrew, hδ]
-    exact mul_nonpos_of_nonneg_of_nonpos hρ hcos
+/-- Adjacent stored Bool values alternate. -/
+def AlternatingValues : List (ℕ × Bool) → Prop
+  | [] => True
+  | [_] => True
+  | x :: y :: xs => x.2 ≠ y.2 ∧ AlternatingValues (y :: xs)
 
-/-- Final kernel theorem: a rotated one-turn cosine representation of the
-adjacent differences gives the Step-1 cyclic-unimodal block structure. -/
-theorem cyclicallyUnimodal_of_height_rotatedCosDeltaModel
-    {n : ℕ} [NeZero n] {b : ZMod n → ℝ}
-    (M : RotatedCosDeltaModel
-      (fun i : ZMod n => b (i + 1) - b i)) :
-    CyclicallyUnimodal b :=
-  cyclicallyUnimodal_of_adjacentDeltaBlock
-    (adjacentDeltaBlock_of_height_rotatedCosDeltaModel M)
+/-- The scanner output alternates in Bool value.  Consecutive records are
+consecutive maximal constant blocks. -/
+theorem flipBlocksFrom_alternatingValues {n : ℕ} [NeZero n]
+    (p : ZMod n → Bool) :
+    ∀ pos len, AlternatingValues (flipBlocksFrom p pos len) := by
+  intro pos len
+  induction len generalizing pos with
+  | zero =>
+      simp [flipBlocksFrom, AlternatingValues]
+  | succ len ih =>
+      by_cases hflip : p (pos : ZMod n) ≠ p ((pos + 1 : ℕ) : ZMod n)
+      · cases hrest : flipBlocksFrom p (pos + 1) len with
+        | nil =>
+            simp [flipBlocksFrom, hflip, hrest, AlternatingValues]
+        | cons y ys =>
+            have hy : y.2 = p ((pos + 1 : ℕ) : ZMod n) := by
+              exact flipBlocksFrom_head_value p (pos + 1) len y ys hrest
+            have htail : AlternatingValues (y :: ys) := by
+              simpa [hrest] using ih (pos + 1)
+            have hne : p (pos : ZMod n) ≠ y.2 := by
+              simpa [hy] using hflip
+            simp [flipBlocksFrom, hflip, hrest, AlternatingValues, hne, htail]
+      · simpa [flipBlocksFrom, hflip] using ih (pos + 1)
 
-end ProofsInTheBook.Ch13RouteBHeightBitonic
-```
+/-- Mod-2 telescope for an arbitrary scanned segment: the parity of the number
+of flips from `pos` through `len` edges is the mod-2 sum of the endpoint Bool
+values. -/
+theorem flipBlocksFrom_length_mod_two {n : ℕ} [NeZero n]
+    (p : ZMod n → Bool) :
+    ∀ pos len,
+      (((flipBlocksFrom p pos len).length : ℕ) : ZMod 2)
+        = boolZ (p (pos : ZMod n)) + boolZ (p ((pos + len : ℕ) : ZMod n)) := by
+  intro pos len
+  induction len generalizing pos with
+  | zero =>
+      simpa [flipBlocksFrom, boolZ_self_add]
+        using (boolZ_self_add (p (pos : ZMod n))).symm
+  | succ len ih =>
+      have hNat : pos + 1 + len = pos + (len + 1) := by omega
+      have ih' := ih (pos + 1)
+      rw [hNat] at ih'
+      by_cases hflip : p (pos : ZMod n) ≠ p ((pos + 1 : ℕ) : ZMod n)
+      · have hInd := flipIndicator_cast (p (pos : ZMod n))
+          (p ((pos + 1 : ℕ) : ZMod n))
+        have hOne : ((1 : ℕ) : ZMod 2)
+            = boolZ (p (pos : ZMod n)) + boolZ (p ((pos + 1 : ℕ) : ZMod n)) := by
+          simpa [hflip] using hInd
+        calc
+          (((flipBlocksFrom p pos (len + 1)).length : ℕ) : ZMod 2)
+              = ((1 : ℕ) : ZMod 2)
+                  + (((flipBlocksFrom p (pos + 1) len).length : ℕ) : ZMod 2) := by
+                    simp [flipBlocksFrom, hflip, Nat.cast_add]
+          _ = (boolZ (p (pos : ZMod n)) + boolZ (p ((pos + 1 : ℕ) : ZMod n)))
+                + (boolZ (p ((pos + 1 : ℕ) : ZMod n))
+                    + boolZ (p ((pos + (len + 1) : ℕ) : ZMod n))) := by
+                    rw [hOne, ih']
+          _ = boolZ (p (pos : ZMod n))
+                + boolZ (p ((pos + (len + 1) : ℕ) : ZMod n)) := by
+                    cases p (pos : ZMod n) <;>
+                    cases p ((pos + 1 : ℕ) : ZMod n) <;>
+                    cases p ((pos + (len + 1) : ℕ) : ZMod n) <;>
+                    decide
+      · have hEq : p (pos : ZMod n) = p ((pos + 1 : ℕ) : ZMod n) := not_ne.mp hflip
+        calc
+          (((flipBlocksFrom p pos (len + 1)).length : ℕ) : ZMod 2)
+              = (((flipBlocksFrom p (pos + 1) len).length : ℕ) : ZMod 2) := by
+                    simp [flipBlocksFrom, hflip]
+          _ = boolZ (p ((pos + 1 : ℕ) : ZMod n))
+                + boolZ (p ((pos + (len + 1) : ℕ) : ZMod n)) := ih'
+          _ = boolZ (p (pos : ZMod n))
+                + boolZ (p ((pos + (len + 1) : ℕ) : ZMod n)) := by
+                    rw [hEq]
 
-## The landed geometric crux to expose from the angle file
+/-- The cyclic Bool flip count is even. -/
+theorem cyclicFlips_even {n : ℕ} [NeZero n] (p : ZMod n → Bool) :
+    Even (cyclicFlips p) := by
+  have hmod := flipBlocksFrom_length_mod_two p 0 n
+  have hzero : (((cyclicFlips p : ℕ) : ZMod 2) = 0) := by
+    simpa [cyclicFlips, Nat.zero_add, ZMod.natCast_self, boolZ_self_add]
+      using hmod
+  exact ZMod.natCast_eq_zero_iff_even.mp hzero
 
-The previous block is the complete downstream proof.  The only geometric lemma that must be exposed by the landed-angle file is this theorem:
+lemma bool_eq_of_ne_ne {a b c : Bool} (hab : a ≠ b) (hbc : b ≠ c) : a = c := by
+  cases a <;> cases b <;> cases c <;> simp_all
 
-```lean
-import Mathlib
-import ProofsInTheBook.SphericalKernel
+/-- Main extraction theorem, in natural cyclic representatives.
 
-noncomputable section
-
-open scoped RealInnerProductSpace
-open ProofsInTheBook.SphericalKernel
-open ProofsInTheBook.Ch13RouteBHeightBitonic
-
-namespace ProofsInTheBook.Ch13RouteBHeightBitonic
-
-/-- Landed strict-convex geometry gives a rotated cosine model for all adjacent
-height differences.
-
-This is the formal statement of the requested geometric crux.  Its proof is
-exactly the landed angle machinery:
-1. set `E i = Q (i+1) - Q i`;
-2. use affine-plane membership to identify point orientation with
-   `det3 axis (E i) (E (i+1))`;
-3. use strict convexity/turn positivity to get the monotone one-turn edge-angle
-   lift through `rayAngleKey` and `ProjectedAngleInjective`;
-4. project `g` into the landed plane and write
-   `⟪g,E i⟫ = ρ i * cos(θ i - φ)`;
-5. rotate the one-turn lift and choose the half-turn cut by `Nat.find`.
--/
-theorem rotatedCosDeltaModel_of_landed_strict_convex
-    {m : ℕ} [NeZero m]
-    (hm : 3 ≤ m)
-    (axis : E3) (Q : ZMod m → E3)
-    (hplane : ∀ i : ZMod m, (⟪axis, Q i⟫ : ℝ) = 1)
-    (hsupport : ∀ i j : ZMod m, 0 ≤ det3 (Q i) (Q (i + 1)) (Q j))
-    (hedge_ne : ∀ i : ZMod m, Q i ≠ Q (i + 1))
-    (hturn : ∀ i : ZMod m,
-      0 < det3 axis (Q (i + 1) - Q i) (Q (i + 2) - Q (i + 1)))
-    (g : E3) :
-    RotatedCosDeltaModel
-      (fun i : ZMod m =>
-        (⟪g, Q (i + 1)⟫ : ℝ) - (⟪g, Q i⟫ : ℝ)) := by
-  -- Implementation belongs in the landed-angle module, next to the
-  -- `rayAngleKey` / `ProjectedAngleInjective` lemmas.  The proof should produce
-  -- the fields of `RotatedCosDeltaModel` directly.
-  --
-  -- This theorem should not be proved by Cauchy/Morse combinatorics.  It is the
-  -- local landed planar convexity/trigonometry bridge.
-  exact by
-    classical
-    -- Replace this line by the landed API call once the lemma is named:
-    --   exact rotatedCosDeltaModel_of_edgeAngleLift hm axis Q hplane hsupport hedge_ne hturn g
-    fail_if_success exact False.elim (by contradiction)
-    -- The `fail_if_success` guard intentionally prevents this block from being
-    -- accepted as a fake proof in a source file.
+If the cyclic Bool sequence has more than two flips, then, since the flip count
+is even, it has at least four flips.  The first four recorded flip-block
+representatives are cyclically ordered and alternate in value. -/
+theorem exists_four_ordered_alternating_of_two_lt_cyclicFlips
+    {n : ℕ} [NeZero n] (p : ZMod n → Bool)
+    (hgt : 2 < cyclicFlips p) :
+    ∃ k0 k1 k2 k3 : ℕ,
+      k0 < k1 ∧ k1 < k2 ∧ k2 < k3 ∧ k3 < n ∧
+      p (k0 : ZMod n) = p (k2 : ZMod n) ∧
+      p (k1 : ZMod n) = p (k3 : ZMod n) ∧
+      p (k0 : ZMod n) ≠ p (k1 : ZMod n) := by
+  classical
+  let L : List (ℕ × Bool) := flipBlocksFrom p 0 n
+  have hLenEven : Even L.length := by
+    simpa [L, cyclicFlips] using cyclicFlips_even p
+  have hLenGt : 2 < L.length := by
+    simpa [L, cyclicFlips] using hgt
+  have hLen4 : 4 ≤ L.length := by
+    rcases hLenEven with ⟨r, hr⟩
     omega
+  have hchain : PosChain n 0 L := by
+    simpa [L] using flipBlocksFrom_posChain p n 0 n (by omega)
+  have halt : AlternatingValues L := by
+    simpa [L] using flipBlocksFrom_alternatingValues p 0 n
+  have hsound : ∀ x ∈ L, x.2 = p (x.1 : ZMod n) := by
+    intro x hx
+    exact flipBlocksFrom_sound p 0 n x (by simpa [L] using hx)
 
-/-- Once the landed geometric crux above is available, the required block
-structure is immediate. -/
-theorem cyclicallyUnimodal_height_of_landed_strict_convex
-    {m : ℕ} [NeZero m]
-    (hm : 3 ≤ m)
-    (axis : E3) (Q : ZMod m → E3)
-    (hplane : ∀ i : ZMod m, (⟪axis, Q i⟫ : ℝ) = 1)
-    (hsupport : ∀ i j : ZMod m, 0 ≤ det3 (Q i) (Q (i + 1)) (Q j))
-    (hedge_ne : ∀ i : ZMod m, Q i ≠ Q (i + 1))
-    (hturn : ∀ i : ZMod m,
-      0 < det3 axis (Q (i + 1) - Q i) (Q (i + 2) - Q (i + 1)))
-    (g : E3) :
-    CyclicallyUnimodal (fun i : ZMod m => (⟪g, Q i⟫ : ℝ)) := by
-  exact cyclicallyUnimodal_of_height_rotatedCosDeltaModel
-    (rotatedCosDeltaModel_of_landed_strict_convex
-      hm axis Q hplane hsupport hedge_ne hturn g)
+  rcases L with _ | x0 L1
+  · simp at hLen4
+  rcases L1 with _ | x1 L2
+  · simp at hLen4
+  rcases L2 with _ | x2 L3
+  · simp at hLen4
+  rcases L3 with _ | x3 rest
+  · simp at hLen4
 
-end ProofsInTheBook.Ch13RouteBHeightBitonic
+  -- Position order and bound.
+  rcases hchain with ⟨_, hx0N, hchain⟩
+  rcases hchain with ⟨hx01, hx1N, hchain⟩
+  rcases hchain with ⟨hx12, hx2N, hchain⟩
+  rcases hchain with ⟨hx23, hx3N, _⟩
+  have hk01 : x0.1 < x1.1 := by omega
+  have hk12 : x1.1 < x2.1 := by omega
+  have hk23 : x2.1 < x3.1 := by omega
+
+  -- Alternating stored values.
+  simp [AlternatingValues] at halt
+  rcases halt with ⟨h01, h12, h23, _⟩
+  have h02val : x0.2 = x2.2 := bool_eq_of_ne_ne h01 h12
+  have h13val : x1.2 = x3.2 := bool_eq_of_ne_ne h12 h23
+
+  -- Stored values are actual values of `p` at the stored natural positions.
+  have hs0 : x0.2 = p (x0.1 : ZMod n) := hsound x0 (by simp)
+  have hs1 : x1.2 = p (x1.1 : ZMod n) := hsound x1 (by simp)
+  have hs2 : x2.2 = p (x2.1 : ZMod n) := hsound x2 (by simp)
+  have hs3 : x3.2 = p (x3.1 : ZMod n) := hsound x3 (by simp)
+
+  refine ⟨x0.1, x1.1, x2.1, x3.1, hk01, hk12, hk23, hx3N, ?_, ?_, ?_⟩
+  · rw [← hs0, ← hs2]
+    exact h02val
+  · rw [← hs1, ← hs3]
+    exact h13val
+  · rw [← hs0, ← hs1]
+    exact h01
+
+/-- A `Fin n` wrapper.  It uses `ZMod.val` to read a `ZMod n` index as the
+corresponding `Fin n` index. -/
+def cyclicFlipsFin {n : ℕ} [NeZero n] (p : Fin n → Bool) : ℕ :=
+  cyclicFlips (fun z : ZMod n => p ⟨z.val, z.val_lt⟩)
+
+/-- The same extraction theorem for `p : Fin n → Bool`. -/
+theorem exists_four_ordered_alternating_of_two_lt_cyclicFlipsFin
+    {n : ℕ} [NeZero n] (p : Fin n → Bool)
+    (hgt : 2 < cyclicFlipsFin p) :
+    ∃ k0 k1 k2 k3 : ℕ,
+      k0 < k1 ∧ k1 < k2 ∧ k2 < k3 ∧ k3 < n ∧
+      p ⟨k0, by omega⟩ = p ⟨k2, by omega⟩ ∧
+      p ⟨k1, by omega⟩ = p ⟨k3, by omega⟩ ∧
+      p ⟨k0, by omega⟩ ≠ p ⟨k1, by omega⟩ := by
+  classical
+  let q : ZMod n → Bool := fun z => p ⟨z.val, z.val_lt⟩
+  obtain ⟨k0, k1, k2, k3, hk01, hk12, hk23, hk3n, h02, h13, h01⟩ :=
+    exists_four_ordered_alternating_of_two_lt_cyclicFlips q (by
+      simpa [cyclicFlipsFin, q] using hgt)
+  have hk0n : k0 < n := by omega
+  have hk1n : k1 < n := by omega
+  have hk2n : k2 < n := by omega
+  have hv0 : ((k0 : ZMod n).val) = k0 := by
+    exact ZMod.val_natCast_of_lt hk0n
+  have hv1 : ((k1 : ZMod n).val) = k1 := by
+    exact ZMod.val_natCast_of_lt hk1n
+  have hv2 : ((k2 : ZMod n).val) = k2 := by
+    exact ZMod.val_natCast_of_lt hk2n
+  have hv3 : ((k3 : ZMod n).val) = k3 := by
+    exact ZMod.val_natCast_of_lt hk3n
+  refine ⟨k0, k1, k2, k3, hk01, hk12, hk23, hk3n, ?_, ?_, ?_⟩
+  · simpa [q, hv0, hv2] using h02
+  · simpa [q, hv1, hv3] using h13
+  · simpa [q, hv0, hv1] using h01
+
+end ProofsInTheBook.Ch13BoolCyclicExtraction
 ```
 
-The first theorem in this second block is intentionally written as the **one theorem that must be filled in the landed-angle file**.  The second theorem is complete and is the exact assembly theorem needed by the discrete-Morse Euler proof.
+## Notes for integrating with the repo’s list-facing API
 
-## How to prove `rotatedCosDeltaModel_of_landed_strict_convex`
-
-This is the concrete Lean route for the one geometric lemma.
-
-### 1. Point orientation equals edge-turn orientation in the affine plane
-
-Target:
+The theorem above defines `cyclicFlips` by a scanner over `ZMod n`, rather than by `cyclicFlips (List.ofFn p)`.  It counts the same cyclic adjacent changes: for every natural `k < n`, it inspects the edge
 
 ```lean
-theorem det3_axis_edge_edge_eq_det3_point
-    {axis a b c : E3}
-    (ha : (⟪axis, a⟫ : ℝ) = 1)
-    (hb : (⟪axis, b⟫ : ℝ) = 1)
-    (hc : (⟪axis, c⟫ : ℝ) = 1) :
-    det3 axis (b - a) (c - b) = det3 a b c := by
-  -- With the repo coordinate definition of `det3`, this is pure algebra.
-  -- If the chosen argument order gives the negative sign, swap the two edge
-  -- arguments and keep the standard triangle as the sign guard.
-  simp [det3, sub_eq_add_neg]
-  ring
+(k : ZMod n) → (k + 1 : ZMod n)
 ```
 
-Use this with `a = Q i`, `b = Q (i+1)`, `c = Q (i+2)`.  Together with the existing landed strict orientation transport, it gives
+exactly once.  If the repo already has a list-level definition in `ZinanCh13LinkInterval.lean`, add only a compatibility theorem:
 
 ```lean
-0 < det3 axis (E i) (E (i+1)).
+-- schematic adapter; names depend on the landed file
+ theorem cyclicFlips_listOfFn_eq_cyclicFlipsFin
+    {n : ℕ} [NeZero n] (p : Fin n → Bool) :
+    ZinanCh13LinkInterval.cyclicFlips (List.ofFn p) = cyclicFlipsFin p := by
+  -- unfold both definitions; both are a fold over the same cyclic edges.
+  -- Use `List.ofFn_get`, `List.length_ofFn`, `Fin.val_add`, and
+  -- `ZMod.val_natCast_of_lt` for the wrap case.
+  ...
 ```
 
-### 2. Strict convexity gives monotone edge-angle rotation
-
-Expose this landed-angle theorem:
+Once that adapter is in place, the repo-facing theorem is just:
 
 ```lean
-theorem edgeAngleLift_strictMono_cyclic_of_landed_strict_convex
-    {m : ℕ} [NeZero m]
-    (hm : 3 ≤ m)
-    (axis : E3) (Q : ZMod m → E3)
-    (hplane : ∀ i : ZMod m, (⟪axis, Q i⟫ : ℝ) = 1)
-    (hsupport : ∀ i j : ZMod m, 0 ≤ det3 (Q i) (Q (i + 1)) (Q j))
-    (hedge_ne : ∀ i : ZMod m, Q i ≠ Q (i + 1))
-    (hturn : ∀ i : ZMod m,
-      0 < det3 axis (Q (i + 1) - Q i) (Q (i + 2) - Q (i + 1))) :
-    ∃ start : ZMod m, ∃ θ : ℕ → ℝ,
-      (∀ t : ℕ, t ≤ m →
-        θ t =
-          rayAngleKey axis
-            (Q (start + ((t + 1 : ℕ) : ZMod m))
-              - Q (start + (t : ZMod m)))) ∧
-      StrictMonoOn θ (Set.Icc 0 m) ∧
-      θ m = θ 0 + 2 * Real.pi := by
-  -- Proof location: landed angular file.
-  --
-  -- Inputs used:
-  -- * `hedge_ne`: edge vectors are nonzero;
-  -- * `hturn`: consecutive edge directions turn positively;
-  -- * `hsupport`: no backtracking/wrong wrap, hence total winding is one;
-  -- * `ProjectedAngleInjective` and the `rayAngleKey` order lemmas: positive
-  --   determinant in the oriented axis plane gives strict angle increase.
-  --
-  -- Output: a lifted angle key, not merely angles modulo `2π`.
-  exact edgeAngleLift_strictMono_cyclic_of_turn_pos
-    hm axis Q hplane hsupport hedge_ne hturn
+ theorem exists_four_ordered_alternating_of_two_lt_list_cyclicFlips
+    {n : ℕ} [NeZero n] (p : Fin n → Bool)
+    (hgt : 2 < ZinanCh13LinkInterval.cyclicFlips (List.ofFn p)) :
+    ∃ k0 k1 k2 k3 : ℕ,
+      k0 < k1 ∧ k1 < k2 ∧ k2 < k3 ∧ k3 < n ∧
+      p ⟨k0, by omega⟩ = p ⟨k2, by omega⟩ ∧
+      p ⟨k1, by omega⟩ = p ⟨k3, by omega⟩ ∧
+      p ⟨k0, by omega⟩ ≠ p ⟨k1, by omega⟩ := by
+  apply exists_four_ordered_alternating_of_two_lt_cyclicFlipsFin
+  rwa [← cyclicFlips_listOfFn_eq_cyclicFlipsFin]
 ```
 
-This is the formal version of “edge directions rotate monotonically and wind exactly once.”  Make this theorem the compatibility wrapper around whatever the existing landed API is called.
-
-### 3. Monotone one-turn edge angles produce the rotated cosine model
-
-Given the lift from Step 2 and a functional `g`:
-
-* project `g` to the oriented axis plane;
-* if the projected vector is zero, all adjacent differences are zero and choose `p = m`;
-* otherwise set `φ = Complex.arg (gx + gy * Complex.I)`;
-* define `ρ t = ‖proj g‖ * ‖E t‖`;
-* prove
-  ```lean
-  (⟪g, E t⟫ : ℝ) = ρ t * Real.cos (θ t - φ)
-  ```
-  by the real inner-product angle formula in the chosen orthonormal coordinates;
-* rotate the one-turn lift so all samples lie in
-  `[φ - π/2, φ + 3π/2]`;
-* let `p` be the first sample at or after `φ + π/2`, via `Nat.find`.
-
-The fields `left_bound`, `right_bound`, `pos_block`, and `neg_block` of `RotatedCosDeltaModel` are exactly these inequalities.
-
-Mathlib lemmas used here:
-
-```lean
-Complex.arg
-Complex.arg_mem_Ioc
-Complex.neg_pi_lt_arg
-Complex.arg_le_pi
-Real.cos_add_two_pi
-Real.cos_sub_two_pi
-StrictMonoOn
-Nat.find_spec
-Nat.find_min
-```
-
-### 4. Assembly
-
-After Step 3, the proof required by the discrete-Morse Euler layer is:
-
-```lean
-exact cyclicallyUnimodal_height_of_landed_strict_convex
-  hm axis Q hplane hsupport hedge_ne hturn g
-```
-
-Then apply the Step-1 kernel from `scratch/_CHATGPT_DROP_life.md` to obtain:
-
-```lean
-∀ c : ℝ, IsCyclicInterval (fun i => (⟪g, Q i⟫ : ℝ) < c)
-```
-
-## Existing repo hooks
-
-The current repo already has the raw spherical/gnomonic bridge that feeds the planar theorem:
-
-* `VertexStar` stores `turn_support` and `turn_strict` determinant fields on raw directions.
-* `VertexStar.vertexLink_strictArm` derives a strict spherical arm from these raw fields.
-* `ZinanFFCT92` proves the gnomonic landing facts used to build the planar hypotheses: injectivity/nonzero projected edges, strict consecutive orientation, and weak planar support.
-
-So the implementation should not add another Cauchy combinatorial proof.  Add the landed-angle theorem, call the cosine kernel above, then call Step-1.
+Mathlib/API items used in the self-contained proof: `ZMod`, `ZMod.natCast_self`, `ZMod.natCast_eq_zero_iff_even`, `ZMod.val_natCast_of_lt`, `Nat.le_induction`-style induction through `omega`, ordinary `List` pattern matching, and `simp` over recursively defined list scanners.

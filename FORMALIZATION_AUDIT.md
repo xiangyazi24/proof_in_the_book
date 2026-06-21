@@ -8,6 +8,27 @@ the book has been formalized.  A chapter remains semantically open if its main
 statement has been weakened, if it only contains a local core component, or if
 the proof bypasses the book argument.
 
+## 2026-06-21 RE-VERIFICATION (supersedes the 2026-05-31 split below)
+
+Re-verified on canonical main: `lake build` 8886 jobs green; whole-repo
+dirty-axiom scan across all `#print axioms` = empty (every theorem clean-3
+`[propext, Classical.choice, Quot.sound]`; 0 sorry / admit / native_decide /
+custom axiom).
+
+Two chapters moved from open to UNCONDITIONAL since 2026-05-31:
+- **Ch13 Cauchy rigidity**: `chapter13_cauchy_rigidity` takes raw inputs (two
+  `ConvexEuclideanPolyhedron P Q` + `CongruentFaces` -> equal dihedral angles),
+  clean-3, with concrete tetrahedron witness `chapter13_euclidean_tetra`. The
+  `chapter13` alias on `CauchyRigidityCertificate` is the combinatorial
+  abstraction layer; the R^3 content is unconditional.
+- **Ch39 Kneser/Lovasz**: `chapter39_unconditional` (side-conditions `1<=k`,
+  `2k<=n` only) discharges the Tucker hypothesis of `chapter39` via the proved
+  `tuckerLemma_pos`; both clean-3.
+
+**Unconditional end-to-end: 39 / 40 chapters.**
+**Sole genuinely-open chapter: Ch20 (Monsky)** -- `chapter20 (cert : MonskyCertificate n)`,
+blocked on a 2-adic valuation on R absent from Mathlib.
+
 ## Current Evidence
 
 - `bash scripts/goal check all` reports syntactic completion.

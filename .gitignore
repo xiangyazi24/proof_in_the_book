@@ -1,3 +1,15 @@
 .lake/
 .claude/
 check_*.lean
+# scratch / design / handoff / dated-audit notes — kept in workspace, not the release repo
+HANDOFF/
+DESIGN-*.md
+DOCTRINE-*.md
+AUDIT-*.md
+scratch_*.lean
+test_*.lean
+temp_*.lean
+CheckMod.lean
+ScratchSigmaGeo.lean
+check_*.lean
+*.bak

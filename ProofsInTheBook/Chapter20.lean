@@ -28,21 +28,14 @@ with an explicit finite list of unit-square boundary point-edges, constructs
 contradiction for a trichromatic triangle of ordinary real area `1 / n` with
 `n` odd.
 
-Gap to the full book theorem: the remaining work is geometric triangulation
-infrastructure.  One needs a finite real triangulation model for the unit
-square and an extraction theorem producing:
-1. a finite vertex type `α`, a point map `vertices : α → ℝ × ℝ`, and triangles
-   `triangles : Fin n → α × α × α`;
-2. four side subdivision lists `bottom right top left : List ℝ`, or equivalently
-   the explicit point-edge chain `realTwoAdicSquareBoundaryPointEdgeList`;
-3. the boundary-incidence theorem that the odd-multiplicity triangle edges are
-   exactly that square boundary chain after mapping boundary points to the
-   finite vertex type;
-4. the ordinary equal-area fact
-   `∀ i, realTriangleArea ... = (1 / n : ℚ)`.
-Mathlib has `Analysis.Convex.SimplicialComplex` and `Geometry.Polygon.Basic`,
-but not this assembled theorem extracting boundary chains and equal-area facts
-from a triangulation of the unit square.
+Update (2026-06-21): the geometric layer is complete.  `Chapter20DissectionEngine`
+defines a genuine `SquareDissection` (finite triangles, injective corners,
+nondegenerate, covering the closed unit square, pairwise-disjoint interiors,
+equal area `1/n`) and `Chapter20DissectionFinal` proves
+`monsky_dissection (hn : Odd D.n) : False` -- Monsky's theorem in faithful
+dissection form, unconditional and clean-3, with witness `diagonalSquareDissection`
+(the n = 2 split) showing the structure is inhabited.  The `MonskyCertificate`-based
+`chapter20` below is the Sperner/parity core that the faithful theorem builds on.
 -/
 
 namespace ProofsInTheBook.Chapter20

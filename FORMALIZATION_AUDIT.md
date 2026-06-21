@@ -25,9 +25,14 @@ Two chapters moved from open to UNCONDITIONAL since 2026-05-31:
   `2k<=n` only) discharges the Tucker hypothesis of `chapter39` via the proved
   `tuckerLemma_pos`; both clean-3.
 
-**Unconditional end-to-end: 39 / 40 chapters.**
-**Sole genuinely-open chapter: Ch20 (Monsky)** -- `chapter20 (cert : MonskyCertificate n)`,
-blocked on a 2-adic valuation on R absent from Mathlib.
+**Unconditional end-to-end: 40 / 40 chapters.**
+Ch20 (Monsky) is also unconditional: `monsky_dissection` (Chapter20DissectionFinal)
+proves `Odd D.n -> False` for a genuine `SquareDissection` (finite triangles covering
+the closed unit square, pairwise-disjoint interiors, equal area 1/n); clean-3, with
+witness `diagonalSquareDissection` (n = 2). The 2-adic valuation it needs is built
+in-repo (`exists_real_twoAdic_extension`) from Mathlib Zorn/local-subring; the
+geometric extraction is complete. The `chapter20 (cert : MonskyCertificate n)` form
+is the Sperner/parity core. No open chapters remain.
 
 ## Current Evidence
 

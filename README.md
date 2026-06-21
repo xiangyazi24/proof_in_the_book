@@ -8,11 +8,13 @@ proof structure in Lean, with key arguments formally verified against Mathlib.
 
 | Metric | Value |
 |--------|-------|
-| Chapters | 40/40 |
+| Chapters | 40/40 (all unconditional end-to-end) |
 | `sorry` | 0 |
 | `axiom` | 0 |
+| `native_decide` | 0 |
+| Axiom basis | `propext`, `Classical.choice`, `Quot.sound` only |
 | Build | remote `lake build` passes |
-| Lines | ~5300 |
+| Lines | ~254,000 |
 | Lean | v4.30.0-rc2 |
 | Mathlib | latest |
 
@@ -21,11 +23,12 @@ proof structure in Lean, with key arguments formally verified against Mathlib.
 Chapters with substantial original proofs (not just Mathlib wrappers):
 
 - **Ch04** (612 lines): Zagier's one-sentence proof of Fermat's two-squares theorem — full involution construction, fixed-point analysis, and parity argument
-- **Ch20**: Monsky's theorem via Sperner parity — complete proof chain from per-triangle parity atom to global odd-boundary contradiction
+- **Ch13**: Cauchy's rigidity theorem for convex polyhedra in ℝ³ — the closed-surface seam conditions (two facets per edge, single-cycle vertex links) are *derived* from convexity plus hull-facet completeness (a shadow-slope argument and a potential-descent argument), and orientation is reduced to the cyclic vertex order; `chapter13_cauchy_rigidity` takes raw geometric inputs (two `ConvexEuclideanPolyhedron` with congruent faces) and has a concrete tetrahedron witness
+- **Ch20**: Monsky's theorem — faithful dissection form `monsky_dissection` (no dissection of the unit square into an odd number of equal-area triangles), built on a 2-adic valuation extended from ℚ to ℝ in-repo (Zorn/local-subring), Monsky's 3-coloring, and the Sperner parity contradiction
 - **Ch24**: Herglotz trick — cotangent symmetries, dyadic averaging identity (by induction), and uniqueness via max/min + sequence convergence
 - **Ch25**: Buffon's needle — rotational symmetry integral `∫₀^π sin θ = 2` proved via Mathlib's `integral_sin`
 - **Ch34**: Galvin's theorem (Dinitz conjecture) — full greedy chain induction from kernel-perfect extension step
-- **Ch35**: Five-color theorem Kempe chain — `swapColor` injectivity, boundary separation, full properness proof by case analysis
+- **Ch35**: General five-color theorem for plane graphs (`fiveColor_planeSimpleGraph`) — Kempe-chain recoloring, `swapColor` injectivity, boundary separation, full case analysis
 - **Ch39**: Kneser graph chromatic number — upper bound via min-element coloring with pigeonhole, base case `n = 2k` via complementary subset construction
 
 ## Structure
@@ -67,7 +70,7 @@ Do not run Lean locally on the Mac mini; the remote script syncs the repo to
 
 - **Formalize the proof, not just the theorem.** The goal is to capture the book's *argument structure* in Lean, not to find the shortest proof.
 - **Mathlib as foundation, not shortcut.** Standard facts (prime factorization, continuity, etc.) come from Mathlib. But the chapter's central argument should be visible, not hidden behind a single library call.
-- **Meaningful premises over `sorry`.** Where a deep result is needed (e.g., Borsuk-Ulam for Kneser's theorem), it appears as an explicit premise — documenting exactly what the book assumes.
+- **Unconditional end-to-end.** Every chapter's main theorem is proved with raw inputs and no escape hypotheses. Intermediate `Certificate`/premise formulations that once isolated a deep step have all been discharged — e.g. Kneser via a proved Tucker lemma, Cauchy rigidity via convex-hull facet completeness, Monsky via a faithful `SquareDissection`.
 - **No axioms, no sorry.** The entire codebase compiles with zero `sorry` and zero custom `axiom` declarations.
 
 ## Acknowledgments

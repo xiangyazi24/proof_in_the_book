@@ -704,3 +704,132 @@ x([n]Q) = φ_n(Q) / ψ_n(Q)^2.
 It does not, by itself, prove that the pullback pole order of `x` along `[n]` is exactly `2`.  That exact pole-order statement is separability/unramifiedness of `[n]` at `P`, or equivalently the squarefreeness of the relevant division polynomial away from the excluded factors.
 
 For this curve and `n = 3`, the CAS proves squarefreeness directly by `gcd(ψ₃, ψ₃') = 1`, so the derivative test succeeds without invoking formal groups.
+
+---
+
+# Q389: additive formal group as a first-order tangent model
+
+Request: use the additive formal group as `W.formalGroup` and prove the tangent bridge.
+
+## Verdict
+
+The useful kernel of the idea is correct:
+
+```text
+Every one-dimensional formal group law has F(X,Y) = X + Y + terms of total degree ≥ 2,
+so its n-series has linear coefficient n.
+```
+
+For tangent-space calculations, the higher-order terms are invisible.  Therefore one may use the additive formal group as a **model for the tangent line**.
+
+However, it is not sound to replace the actual Weierstrass formal group law by the additive formal group if later statements use the full formal group law, not just its first-order truncation.  The Weierstrass formal group and the additive formal group have the same tangent law, but they are not definitionally the same formal group.
+
+So the safe refactor is:
+
+```text
+W.actualFormalGroup       -- the true Weierstrass formal group, if needed for higher order facts
+TangentO(W) ≃+ K          -- the first-order tangent model via t = -X/Y at O
+FormalGroup.𝔾ₐ           -- an abstract model whose n-series has linear coefficient n
+```
+
+The missing bridge is not an additive formal group axiom.  It is the geometric statement that the curve's chosen local parameter `t = -X/Y` identifies dual-number deformations at `O` with the coefficient field `K`.
+
+Current mathlib already provides the additive formal group as `FormalGroup.𝔾ₐ`; its definition is `X₀ + X₁`, with the associativity proof done by substitution simplification.  Thus a Lean development should normally alias it rather than rebuild it.
+
+## Complete Lean file for the first-order model
+
+This is the complete Lean-side skeleton for the part that really is formal-group-free.  It deliberately models only the tangent line after the local parameter has already been chosen.  The final geometric lemma tying this model to actual projective dual points is stated below as the remaining project-specific obligation.
+
+```lean
+import Mathlib.RingTheory.FormalGroup.Basic
+
+noncomputable section
+
+namespace Q389
+
+/-- The additive formal group.  Mathlib already proves the formal-group axioms. -/
+abbrev additiveFormalGroup (K : Type*) [CommRing K] : FormalGroup K :=
+  FormalGroup.𝔾ₐ (R := K)
+
+variable (K : Type*) [Field K]
+
+/--
+The tangent line at `O` after choosing the local coordinate `t = -X/Y`.
+This is not the full curve, only its first-order model.
+-/
+abbrev TangentO : Type _ := K
+
+/--
+The bridge from the curve tangent coordinate to the scalar coefficient.
+After choosing `t`, this is just the identity additive equivalence.
+-/
+def tangentBridge (W : Type*) : TangentO K ≃+ K :=
+  AddEquiv.refl K
+
+@[simp]
+theorem tangentBridge_apply (W : Type*) (τ : TangentO K) :
+    tangentBridge (K := K) W τ = τ :=
+  rfl
+
+/-- The additive tangent model has scalar `n` as the differential of `[n]`. -/
+theorem tangentBridge_nsmul (W : Type*) (n : ℕ) (τ : TangentO K) :
+    tangentBridge (K := K) W (n • τ) =
+      (n : K) * tangentBridge (K := K) W τ := by
+  simp [tangentBridge, TangentO, nsmul_eq_mul]
+
+end Q389
+```
+
+If the project has the theorem named exactly as in the prompt, the additive-formal-group coefficient statement should be a one-line wrapper:
+
+```lean
+-- project-local theorem, schematic because this name is not in current Mathlib.Basic
+example (K : Type*) [Field K] (n : ℕ) :
+    formalNsmul_coeff_one (additiveFormalGroup K) n = (n : K) := by
+  simpa [additiveFormalGroup] using
+    formalNsmul_coeff_one (F := additiveFormalGroup K) n
+```
+
+In current mathlib's `FormalGroup.Basic`, `FormalGroup.𝔾ₐ` exists, but the file only gives the basic formal group structure and an additive operation on `FormalGroup.Point`; it even has a TODO for `Zero`, `SMul`, and `Inv` instances on points.  So the exact theorem `formalNsmul_coeff_one` must be project-local or from a later file, not from this basic API.
+
+## The missing project-specific bridge
+
+The actual curve bridge should be isolated as a theorem about the projective local parameter, not about formal groups:
+
+```lean
+-- schematic: names depend on the project's curve and dual-number API
+lemma tangentCoeff_eq_t_coeff_at_O
+    (W : WeierstrassCurve K)
+    (Pε : DualPointAtO W K)
+    (τ : K)
+    (hτ : coeffε ((-Pε.X) / Pε.Y) = τ) :
+    Q389.tangentBridge (K := K) W τ = τ := by
+  rfl
+```
+
+Or, for the multiplication map:
+
+```lean
+-- schematic: this is the real tangent bridge to prove from projective formulas
+lemma coeff_t_nsmul_at_O
+    (W : WeierstrassCurve K) (n : ℕ) (τ : K)
+    (hn : (n : K) ≠ 0) :
+    coeffε (t ([n] (O + τ ε))) = (n : K) * τ := by
+  -- prove by expanding the projective addition/multiplication formula to first order
+  -- after this lemma, no full Weierstrass formal group law is needed
+  sorry
+```
+
+That final `sorry` is the real mathematical content.  It cannot be obtained by merely declaring `W.formalGroup = FormalGroup.𝔾ₐ`; it must say that the curve's group law, expressed in the chosen local parameter `t`, has first-order addition law.
+
+## Bottom line
+
+Use `FormalGroup.𝔾ₐ` as the first-order tangent model, not as the actual Weierstrass formal group.
+
+The 50-line Lean file above gives the additive model and the identity tangent bridge once the local coordinate has been chosen.  The remaining theorem is exactly the coordinate-compatibility lemma:
+
+```text
+dual deformation at O with t-coefficient τ  ↔  tangent scalar τ.
+```
+
+Once that lemma is proved from the projective formulas, the differential of multiplication is multiplication by `(n : K)`, without needing the full Weierstrass formal group law.

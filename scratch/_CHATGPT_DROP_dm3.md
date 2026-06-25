@@ -521,3 +521,186 @@ This is non-circular if the first line is proved independently of bridge-2.  It 
 The reformulation is viable, but only after replacing the false/missing “simple pole” step with an explicit independent separability or squarefreeness input.
 
 Projective formula plus `φ_n(P) ≠ 0` proves only “no cancellation.”  The fact that the zero of `ψ_n` has order exactly `1` is the separability of multiplication by `n` at `P`, equivalently the nonzero differential of `[n]`.  Avoiding `FormalGroup` is possible, but the proof still has to pay for that fact somewhere.
+
+---
+
+# Q384: CAS check — simple zeros of `ψ₃` on `y² = x³ + 1`
+
+Request: test whether, in the concrete `n = 3` case, a point with
+
+```text
+ψ₃(P) = 0,   φ₃(P) ≠ 0
+```
+
+indeed has `ψ₃` vanishing simply at `P`, equivalently whether `preΨ'_3 = Ψ₃` has a simple root at `x(P)`.
+
+## Setup
+
+Use the short Weierstrass curve
+
+```text
+E : y² = x³ + 1
+```
+
+over characteristic `0`.  For this curve,
+
+```text
+ψ₂ = 2y
+ψ₃ = 3x⁴ + 12x = 3x(x³ + 4)
+preΨ'_3 = Ψ₃ = ψ₃.
+```
+
+The roots of `ψ₃` are
+
+```text
+x = 0,
+```
+
+and the three roots satisfying
+
+```text
+x³ = -4.
+```
+
+At these roots, the curve has
+
+```text
+x = 0       ⇒ y² = 1,
+x³ = -4    ⇒ y² = -3.
+```
+
+Thus `y ≠ 0` at every such point over an algebraic closure, so `ψ₂(P) = 2y ≠ 0`.  Therefore `x - x(P)` is a local parameter at `P`, and the order of vanishing of `ψ₃` as a function on the curve equals the multiplicity of `x(P)` as a root of the univariate polynomial `ψ₃(x)`.
+
+## Exact Sympy check
+
+Here `φ₃` is computed using
+
+```text
+φ₃ = x ψ₃² - ψ₄ ψ₂,
+ψ₄ = 4y(x⁶ + 20x³ - 8),
+ψ₂ = 2y,
+y² = x³ + 1.
+```
+
+So on the affine curve,
+
+```text
+φ₃ = x ψ₃² - 8(x³ + 1)(x⁶ + 20x³ - 8).
+```
+
+```python
+import sympy as sp
+
+x = sp.symbols('x')
+f = x**3 + 1
+psi3 = 3*x**4 + 12*x
+dpsi3 = sp.diff(psi3, x)
+
+psi4_factor = x**6 + 20*x**3 - 8
+phi3 = sp.expand(x*psi3**2 - 8*f*psi4_factor)
+
+def monic_gcd(a, b):
+    return sp.Poly(a, x, domain=sp.QQ).gcd(
+        sp.Poly(b, x, domain=sp.QQ)
+    ).monic().as_expr()
+
+print('psi3 factor =', sp.factor(psi3))
+print('dpsi3 factor =', sp.factor(dpsi3))
+print('gcd(psi3,dpsi3) monic =', monic_gcd(psi3, dpsi3))
+print('gcd(psi3,f) monic =', monic_gcd(psi3, f))
+print('phi3 =', sp.factor(phi3))
+print('gcd(psi3,phi3) monic =', monic_gcd(psi3, phi3))
+print('phi3 mod psi3 =', sp.factor(sp.rem(sp.Poly(phi3,x), sp.Poly(psi3,x)).as_expr()))
+print('dpsi3 at x=0 =', dpsi3.subs(x, 0))
+print('dpsi3 at x^3=-4 =', sp.expand(dpsi3.subs(x**3, -4)))
+print('phi3 at x=0 =', phi3.subs(x, 0))
+print('phi3 at x^3=-4 =', sp.rem(sp.Poly(phi3,x), sp.Poly(x**3+4,x)).as_expr())
+print('f at x=0 =', f.subs(x, 0))
+print('f at x^3=-4 =', sp.rem(sp.Poly(f,x), sp.Poly(x**3+4,x)).as_expr())
+```
+
+Output:
+
+```text
+psi3 factor = 3*x*(x**3 + 4)
+dpsi3 factor = 12*(x + 1)*(x**2 - x + 1)
+gcd(psi3,dpsi3) monic = 1
+gcd(psi3,f) monic = 1
+phi3 = x**9 - 96*x**6 + 48*x**3 + 64
+gcd(psi3,phi3) monic = 1
+phi3 mod psi3 = 64*(7*x**3 + 1)
+dpsi3 at x=0 = 12
+dpsi3 at x^3=-4 = -36
+phi3 at x=0 = 64
+phi3 at x^3=-4 = -1728
+f at x=0 = 1
+f at x^3=-4 = -3
+```
+
+## Interpretation
+
+The CAS check verifies three separate facts in this example.
+
+First,
+
+```text
+gcd(ψ₃, ψ₃') = 1.
+```
+
+So every root of `ψ₃` is a simple root of the univariate polynomial.  Explicitly,
+
+```text
+ψ₃'(0) = 12 ≠ 0,
+ψ₃'(α) = -36 ≠ 0  when α³ = -4.
+```
+
+Second,
+
+```text
+gcd(ψ₃, x³ + 1) = 1.
+```
+
+So no root of `ψ₃` is a 2-torsion `x`-coordinate.  Equivalently, at every point above a root of `ψ₃`, `ψ₂ = 2y` is nonzero, and `x` is a valid local coordinate.
+
+Third,
+
+```text
+gcd(ψ₃, φ₃) = 1.
+```
+
+So `φ₃(P) ≠ 0` at all points with `ψ₃(P)=0`.  More explicitly,
+
+```text
+φ₃(0) = 64,
+φ₃(α) = -1728  when α³ = -4.
+```
+
+Therefore, for every 3-torsion point `P` on `y² = x³ + 1` with `P ≠ O`,
+
+```text
+ord_P(ψ₃) = 1,
+mult_{x(P)}(preΨ'_3) = 1,
+(preΨ'_3)'(x(P)) ≠ 0.
+```
+
+Because `ψ₂(P) ≠ 0`, this order on the curve is exactly the univariate root multiplicity in `x`.
+
+## What this does and does not prove
+
+This is a successful numerical/exact CAS verification of the desired tangent-bridge behavior for `n = 3` on the concrete curve `y² = x³ + 1`.
+
+It does **not** prove the general implication
+
+```text
+ψ_n(P)=0 and φ_n(P)≠0  ⇒  ord_P(ψ_n)=1.
+```
+
+The reason is the same as in Q378: `φ_n(P)≠0` only proves no numerator cancellation in
+
+```text
+x([n]Q) = φ_n(Q) / ψ_n(Q)^2.
+```
+
+It does not, by itself, prove that the pullback pole order of `x` along `[n]` is exactly `2`.  That exact pole-order statement is separability/unramifiedness of `[n]` at `P`, or equivalently the squarefreeness of the relevant division polynomial away from the excluded factors.
+
+For this curve and `n = 3`, the CAS proves squarefreeness directly by `gcd(ψ₃, ψ₃') = 1`, so the derivative test succeeds without invoking formal groups.

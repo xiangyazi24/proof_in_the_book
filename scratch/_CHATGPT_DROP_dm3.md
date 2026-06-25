@@ -1,453 +1,572 @@
-# Q397 sub-agent prompt — build `W.formalGroup : FormalGroup K`
+# Q401 — separability of `preΨ'_n` from the invariant-differential identity
 
-Use this as a self-contained prompt for a Lean 4 sub-agent.
+Task: verify the proposed identity
+
+```text
+-2 · Φ_n(x₀) · (preΨ'_n)'(x₀) · polY(x₀,y₀)
+  = n · ψTwoMulQuot(n)(x₀,y₀)
+```
+
+at roots of `preΨ'_n`, and assess whether it can close bridge-2 without building `W.formalGroup`.
+
+## Verdict
+
+The proposed identity is **correct in the odd case** with
+
+```text
+polY = ψ₂ = 2y + a₁x + a₃.
+```
+
+For the even case, the identity as written is missing one extra `ψ₂` factor.  With the usual normalization
+
+```text
+preΨ'_n = ψ_n                    if n is odd,
+preΨ'_n = ψ_n / ψ₂               if n is even,
+```
+
+the corrected root identity is
+
+```text
+-2 · Φ_n(x₀) · (preΨ'_n)'(x₀) · ψ₂(P)^(1 + [n even])
+  = n · (ψ_{2n} / ψ_n)(P).                         (★)
+```
+
+Equivalently:
+
+```text
+n odd:
+  -2 · Φ_n(x₀) · (preΨ'_n)'(x₀) · ψ₂(P)
+    = n · ψTwoMulQuot(n)(P),
+
+n even:
+  -2 · Φ_n(x₀) · (preΨ'_n)'(x₀) · ψ₂(P)^2
+    = n · ψTwoMulQuot(n)(P).
+```
+
+This parity correction is not cosmetic.  For even `n`, `ψTwoMulQuot(n)=ψ_{2n}/ψ_n` is `x`-only on a short Weierstrass curve, while a single factor `ψ₂=2y` changes sign under `y ↦ -y`.  Thus the one-`ψ₂` formula cannot hold for even `n` unless both sides vanish, which is not the torsion case we want.
+
+The corrected identity was CAS-verified exactly for `n=4` and `n=5` on
+
+```text
+E : y² = x³ + x + 1.
+```
+
+The result is promising: if `(★)` is formalized and if `ψTwoMulQuot(n)(P) ≠ 0`, then `(preΨ'_n)'(x₀) ≠ 0` follows from already-proved adjacent/non-2/nonzero facts.  This gives bridge-2 by the dual-number derivative test, without constructing `W.formalGroup`.
+
+However, `(★)` is itself the invariant-differential/tangent content in algebraic form.  It is not free from `addX/addY/Z` alone unless the projective formula infrastructure is extended to prove the invariant-differential identity for the multiplication formula.
 
 ---
 
-## Mission
+## Normalizations used in the CAS check
 
-You are working in a Lean 4/mathlib formalization of the FLT/Mazur torsion route.  The current blocker is the tangent bridge, which needs the first-order fact
+For a short Weierstrass curve
 
 ```text
-d[n]|_O = (n : K)
+y² = x³ + A x + B,
+ψ₂ = 2y,
+Ψ₂Sq = ψ₂² = 4(x³ + A x + B).
 ```
 
-for a Weierstrass elliptic curve.  One canonical way to supply this is to build the actual Weierstrass formal group
+Use the standard division polynomials:
 
-```lean
-W.formalGroup : FormalGroup K
+```text
+ψ₁ = 1,
+ψ₂ = 2y,
+ψ₃ = 3x⁴ + 6Ax² + 12Bx - A²,
+ψ₄ = 4y(x⁶ + 5Ax⁴ + 20Bx³ - 5A²x² - 4ABx - 8B² - A³).
 ```
 
-with the same local parameter used by the projective tangent computation, then use the formal-group theorem that the `n`-series has linear coefficient `(n : K)`.
+Define the `x`-polynomial part:
 
-Your task is to investigate and implement the shortest Lean-feasible construction of `W.formalGroup : FormalGroup K`, or, if the full construction is too large, to leave the project with the smallest compiling intermediate file and a precise list of remaining lemmas.
+```text
+P_n := preΨ'_n := ψ_n              if n odd,
+P_n := ψ_n / ψ₂                   if n even.
+```
 
-Do not write prose only.  Produce Lean code, theorem statements, and exact API notes.
+Let
+
+```text
+h_n := 1       if n odd,
+h_n := ψ₂      if n even,
+```
+
+so that
+
+```text
+ψ_n = h_n · P_n.
+```
+
+The full `φ_n` is
+
+```text
+φ_n = x · ψ_n² - ψ_{n+1}ψ_{n-1}.
+```
+
+At a root `P_n(x₀)=0`, the value of `φ_n` is the adjacent-product value:
+
+```text
+n odd:   φ_n(P) = -ψ₂(P)^2 · P_{n+1}(x₀) · P_{n-1}(x₀),
+n even:  φ_n(P) = -P_{n+1}(x₀) · P_{n-1}(x₀).
+```
+
+This is the value called `Φ_n(x₀)` below.  If the project defines
+
+```text
+Φ_n = x·P_n² - P_{n+1}P_{n-1}·parity,
+```
+
+then the parity factor should satisfy:
+
+```text
+parity = Ψ₂Sq  for odd n,
+parity = 1     for even n.
+```
+
+For even `n`, whether the first term is `x·P_n²` or `x·Ψ₂Sq·P_n²` is irrelevant after evaluation at `P_n(x₀)=0`; the full `φ_n` uses `x·Ψ₂Sq·P_n²`.
 
 ---
 
-## Mathematical context
+## Why the parity factor appears
 
-Work with a generalized Weierstrass equation over a field or commutative ring `K`:
-
-```text
-E : y² + a₁xy + a₃y = x³ + a₂x² + a₄x + a₆.
-```
-
-In homogeneous coordinates:
+The invariant differential is
 
 ```text
-Y²Z + a₁XYZ + a₃YZ² = X³ + a₂X²Z + a₄XZ² + a₆Z³.
+ω_inv = dx / ψ₂.
 ```
 
-The point at infinity is
+The multiplication formula gives
 
 ```text
-O = [0 : 1 : 0].
+x([n]Q) = φ_n(Q) / ψ_n(Q)^2.
 ```
 
-Use the standard local parameters at `O`:
+Let
 
 ```text
-t = -x/y,
-w = -1/y.
+q_n := ψ_n = h_n · P_n,
+Q_n := ψ_{2n}/ψ_n.
 ```
 
-Then
+The identity `ψ_{2n} = ψ₂([n]Q) · ψ_n(Q)^4` gives
 
 ```text
-x = t / w,
-y = -1 / w.
+ψ₂([n]Q) = ψ_{2n} / q_n^4.
 ```
 
-Substituting into the affine Weierstrass equation and multiplying by `w³` gives the fixed-point equation
+Differentiating `x([n]Q)=φ_n/q_n²` and using `[n]^*ω_inv = n·ω_inv` yields the algebraic identity
 
 ```text
-w = t³ + a₁ t w + a₂ t² w + a₃ w² + a₄ t w² + a₆ w³.        (★)
+ψ₂ · (Dφ_n · q_n - 2φ_n · Dq_n) = n · (ψ_{2n}/q_n),          (ID)
 ```
 
-The unique solution in `K⟦t⟧` has leading expansion
+where `D` is differentiation along the curve.  On a short curve and on the `x`-polynomial part this is ordinary `d/dx`; for a generalized Weierstrass curve, `D(y)` introduces the denominator `ψ₂`, so the final identity should be stated in the project’s cleared-denominator form.
+
+At a root `P_n(x₀)=0`, the term `Dφ_n · q_n` vanishes.  Also
 
 ```text
-w(t) = t³ + a₁ t⁴ + (a₁² + a₂) t⁵ + (a₁³ + 2a₁a₂ + a₃) t⁶ + O(t⁷).
+Dq_n(P) = h_n(P) · P_n'(x₀),
 ```
 
-For the tangent bridge, the crucial local parameter is `t`.  Any formal group law constructed here must use this same `t`.
+because the derivative of `h_n` is multiplied by `P_n(x₀)=0`.  Therefore `(ID)` becomes
+
+```text
+-2 · ψ₂(P) · φ_n(P) · h_n(P) · P_n'(x₀)
+  = n · (ψ_{2n}/ψ_n)(P).
+```
+
+Since `h_n=1` for odd `n` and `h_n=ψ₂` for even `n`, this is exactly `(★)`.
 
 ---
 
-## Current mathlib facts to use/check
+## CAS verification on `E : y² = x³ + x + 1`
 
-Mathlib has a formal group structure in:
+The following script verifies the corrected root identity for `n=4,5`.  It works modulo the curve equation and modulo `P_n(x)=0`.
 
-```lean
-import Mathlib.RingTheory.FormalGroup.Basic
+```python
+import sympy as sp
+
+x, y = sp.symbols('x y')
+A = sp.Integer(1)
+B = sp.Integer(1)
+f = x**3 + A*x + B
+psi2 = 2*y
+psi2sq = 4*f
+
+psi = {
+    0: sp.Integer(0),
+    1: sp.Integer(1),
+    2: 2*y,
+    3: 3*x**4 + 6*A*x**2 + 12*B*x - A**2,
+    4: 4*y*(x**6 + 5*A*x**4 + 20*B*x**3
+             - 5*A**2*x**2 - 4*A*B*x - 8*B**2 - A**3),
+}
+
+def reduce_curve(expr):
+    expr = sp.expand(expr)
+    p = sp.Poly(expr, y, domain=sp.QQ[x])
+    return sp.factor(sp.rem(p, sp.Poly(y**2 - f, y, domain=sp.QQ[x])).as_expr())
+
+def get_psi(n):
+    if n in psi:
+        return psi[n]
+    if n % 2 == 1:
+        m = (n - 1)//2
+        expr = get_psi(m+2)*get_psi(m)**3 - get_psi(m-1)*get_psi(m+1)**3
+    else:
+        m = n//2
+        expr = get_psi(m)*(get_psi(m+2)*get_psi(m-1)**2
+                           - get_psi(m-2)*get_psi(m+1)**2)/(2*y)
+    psi[n] = reduce_curve(expr)
+    return psi[n]
+
+def pre(n):
+    if n % 2 == 0:
+        return reduce_curve(get_psi(n) / psi2)
+    return get_psi(n)
+
+def phi_full(n):
+    return reduce_curve(x*get_psi(n)**2 - get_psi(n+1)*get_psi(n-1))
+
+def quotient(n):
+    return reduce_curve(get_psi(2*n) / get_psi(n))
+
+def rem_mod_pre(expr, n):
+    expr = reduce_curve(expr)
+    pn = pre(n)
+    poly_y = sp.Poly(expr, y, domain=sp.QQ[x])
+    out = 0
+    for (k,), coeff in poly_y.terms():
+        out += sp.rem(sp.Poly(coeff, x), sp.Poly(pn, x)).as_expr() * y**k
+    return sp.factor(sp.expand(out))
+
+for n in [4, 5]:
+    pn = pre(n)
+    dpn = sp.diff(pn, x)
+    Phi = phi_full(n)
+    pol_factor = psi2sq if n % 2 == 0 else psi2
+    diff = -2*Phi*dpn*pol_factor - n*quotient(n)
+    print('n =', n)
+    print('pre factor =', sp.factor(pn))
+    print('corrected identity remainder =', rem_mod_pre(diff, n))
+
+    # Nonvanishing checks: remove the visible y factor from odd quotient.
+    q = quotient(n)
+    q_poly = sp.factor(q/y) if q.has(y) else q
+    print('gcd(pre, quotient-part) =', sp.Poly(pn, x).gcd(sp.Poly(q_poly, x)).monic().as_expr())
+    print('gcd(pre, Phi) =', sp.Poly(pn, x).gcd(sp.Poly(Phi, x)).monic().as_expr())
+    print('gcd(pre, psi2sq) =', sp.Poly(pn, x).gcd(sp.Poly(psi2sq, x)).monic().as_expr())
 ```
 
-The structure currently has this shape:
+Output:
 
-```lean
-structure FormalGroup (R : Type*) [CommRing R] where
-  toPowerSeries : MvPowerSeries (Fin 2) R
-  zero_constantCoeff : toPowerSeries.constantCoeff = 0
-  lin_coeff_X : toPowerSeries.coeff (Finsupp.single 0 1) = 1
-  lin_coeff_Y : toPowerSeries.coeff (Finsupp.single 1 1) = 1
-  assoc :
-    toPowerSeries.subst ![toPowerSeries.subst ![Y₀, Y₁], Y₂]
-      = toPowerSeries.subst ![Y₀, toPowerSeries.subst ![Y₁, Y₂]]
+```text
+n = 4
+pre factor = 2*(x**6 + 5*x**4 + 20*x**3 - 5*x**2 - 4*x - 9)
+corrected identity remainder = 0
+gcd(pre, quotient-part) = 1
+gcd(pre, Phi) = 1
+gcd(pre, psi2sq) = 1
+
+n = 5
+pre factor = 5*x**12 + 62*x**10 + 380*x**9 - 105*x**8 + 240*x**7 - 540*x**6 - 696*x**5 - 2045*x**4 - 1680*x**3 - 290*x**2 - 740*x - 287
+corrected identity remainder = 0
+gcd(pre, quotient-part) = 1
+gcd(pre, Phi) = 1
+gcd(pre, psi2sq) = 1
 ```
 
-Mathlib also has the additive formal group:
+Interpretation:
 
-```lean
-FormalGroup.𝔾ₐ (R := K)
-```
-
-Do **not** solve this task by setting `W.formalGroup := FormalGroup.𝔾ₐ`.  That is only a first-order tangent model.  The task here is to build or scaffold the actual Weierstrass formal group compatible with `t = -x/y`.
-
-Power series inverse APIs to inspect:
-
-```lean
-import Mathlib.RingTheory.PowerSeries.Inverse
-import Mathlib.RingTheory.MvPowerSeries.Inverse
-```
-
-Important warning: `PowerSeries.invOfUnit` applies only to unit power series with nonzero constant term.  It cannot invert `w(t)`, because `w(0)=0` and `w(t)` has order `3`.
+* For `n=4`, the identity holds with `ψ₂²`, not with a single `ψ₂`.
+* For `n=5`, the identity holds with a single `ψ₂`.
+* In both cases, the quotient side is nonzero at roots of `P_n`, at least on this concrete curve.
+* In both cases, `Φ_n` and `ψ₂` are nonzero at roots of `P_n`, matching the bridge-1 expectations.
 
 ---
 
-## Main difficulty
+## Consequence for separability
 
-Step 3 of the naive construction is not directly available in `PowerSeries`:
+Assume the corrected identity `(★)` is formalized at a non-2-torsion root of `P_n = preΨ'_n`.
 
-```text
-x(t) = t · w(t)⁻¹,
-y(t) = -w(t)⁻¹.
-```
-
-Since
+Hypotheses:
 
 ```text
-w(t) = t³ + O(t⁴),
+P_n(x₀) = 0,
+ψ₂(P) ≠ 0,
+Φ_n(x₀) ≠ 0,
+(n : K) ≠ 0,
+ψTwoMulQuot(n)(P) ≠ 0.
 ```
 
-`w(t)⁻¹` has a pole of order `3`.  It is not an ordinary power series.  It belongs to a formal Laurent series ring or to a localization/completion where `t` is invertible.
-
-The unit workaround is:
+Then `(★)` gives
 
 ```text
-g(t) := w(t) / t³ = 1 + a₁t + ...,
+(preΨ'_n)'(x₀) ≠ 0.
 ```
 
-or equivalently
+Reason: all factors except `(preΨ'_n)'(x₀)` on the left are nonzero, and the right side is nonzero.
+
+Then bridge-2 follows by the dual-number derivative identity:
 
 ```text
-u(t) := t³ / w(t) = g(t)⁻¹.
+P_n(x₀ + δ ε) = P_n(x₀) + δ · P_n'(x₀) ε.
 ```
 
-Both `g` and `u` are unit power series.  But then
+If `P_n(x₀+δ ε)=0`, `P_n(x₀)=0`, and `P_n'(x₀)≠0`, then `δ=0`.  Since at a non-2-torsion affine point
 
 ```text
-x(t) = t / w(t) = t⁻² · g(t)⁻¹,
-y(t) = -1 / w(t) = -t⁻³ · g(t)⁻¹,
+δ = ψ₂(P) · τ,
+ψ₂(P) ≠ 0,
 ```
 
-so negative powers still appear.  Do not try to force these into `PowerSeries K`.
+we get `τ=0`.
+
+This is a clean formal route:
+
+```text
+corrected invariant-differential identity
+        ↓
+separability/simple-root of preΨ'_n
+        ↓
+dual-number derivative test
+        ↓
+bridge-2.
+```
 
 ---
 
-## Which approach is shortest?
+## Is `ψTwoMulQuot(n)(P)` necessarily nonzero?
 
-The shortest Lean-feasible route is probably **not** to build a full formal Laurent series library just to define `x(t)` and `y(t)`.
+Not from `Φ_n(P)≠0` alone.
 
-Preferred route:
-
-```text
-Use ordinary `PowerSeries`/`MvPowerSeries` as long as possible.
-Define `w(t)` from (★).
-Then define the formal group law `F(t₁,t₂)` by cleared-denominator / implicit polynomial identities in the `t,w` coordinates, not by globally constructing Laurent series `x(t), y(t)`.
-```
-
-Concretely, avoid ever needing a term of type
-
-```lean
-PowerSeries K
-```
-
-for `x(t)` or `y(t)`.  Instead, express the addition formula after multiplying by sufficient powers of `w₁`, `w₂`, and `w₃` so that every identity lives in ordinary bivariate/trivariate power series.
-
-Fallback route if the cleared-denominator construction is too large:
+But it should be exactly the same nonvanishing as the projective Y/ω component.  On a short Weierstrass curve,
 
 ```text
-Implement `w(t)` and prove its leading coefficients.
-Define the desired theorem statements for `F` and the cleared-denominator identities.
-Record exactly which Mathlib API is missing.
+ψ_{2n} = ψ₂([n]P) · ψ_n(P)^4
+       = 2ω_n(P) · ψ_n(P),
 ```
 
-Do not spend time implementing a general Laurent series theory unless Mathlib already has the necessary localization API ready to use.
-
----
-
-## Required subtasks
-
-### Subtask 0 — repository/API reconnaissance
-
-Before coding, locate the project’s actual names for:
+so
 
 ```text
-Weierstrass curve structure,
-coefficients a₁ a₂ a₃ a₄ a₆,
-projective point type,
-point at infinity O,
-existing formal group or tangent files,
-existing PowerSeries helper files.
+ψTwoMulQuot(n)(P) = ψ_{2n}(P)/ψ_n(P) = 2ω_n(P)
 ```
 
-Search for names like:
+as the finite quotient at `ψ_n(P)=0`.
+
+Thus `ψTwoMulQuot(n)(P) ≠ 0` is essentially:
 
 ```text
-WeierstrassCurve
-EllipticCurve
-Jacobian
-FormalGroup
-PowerSeries
-TangentO
-formalNsmul_coeff_one
+ω_n(P) ≠ 0.
 ```
 
-If the project already has a local `formalNsmul_coeff_one`, use its exact type.  If not, write the theorem you need as a project-local target.
+This should be supplied by the already-proved adjacent nonvanishing plus the Y-coordinate/ω normalization infrastructure.  If the Y-coordinate projective formula is still `6/7` complete, then the missing `1/7` may be exactly what is needed to expose this quotient nonvanishing in Lean.
 
-### Subtask 1 — define the `w(t)` series
-
-Define the unique power series `w : K⟦t⟧` satisfying
-
-```text
-w = t³ + a₁ t w + a₂ t² w + a₃ w² + a₄ t w² + a₆ w³.
-```
-
-Lean implementation options, in preferred order:
-
-1. Use an existing contraction/fixed-point theorem for `PowerSeries` if Mathlib has one.
-2. If not, define coefficients recursively and build the series by extensionality.
-3. If coefficient recursion is too heavy, define the first finite approximation and state the full fixed-point theorem as the next lemma.
-
-The coefficient recursion should use the fact that the coefficient of `w` at degree `n` depends only on coefficients of `w` at lower degrees.  The leading terms should be proved:
-
-```lean
--- schematic names/types
-lemma coeff_w_0 : coeff K 0 w = 0 := ...
-lemma coeff_w_1 : coeff K 1 w = 0 := ...
-lemma coeff_w_2 : coeff K 2 w = 0 := ...
-lemma coeff_w_3 : coeff K 3 w = 1 := ...
-lemma coeff_w_4 : coeff K 4 w = a₁ := ...
-lemma coeff_w_5 : coeff K 5 w = a₁^2 + a₂ := ...
-```
-
-Also prove or state:
-
-```text
-w(t) = t³ · g(t)
-```
-
-where `g(0)=1`, hence `g` is a unit power series.
-
-### Subtask 2 — avoid direct inversion of `w`
-
-Do not write:
-
-```lean
-(w)⁻¹
-```
-
-as an ordinary power series unless you have moved to a formal Laurent series/localized ring.
-
-Instead, define one of:
-
-```text
-g(t) = w(t)/t³,        g(0)=1,
-u(t) = g(t)⁻¹ = t³/w(t),   u(0)=1.
-```
-
-Use `PowerSeries.invOfUnit` only for `g` or `u`, never for `w`.
-
-Expected theorem statements:
+So the proof should not assume quotient nonzero magically.  It should prove it from the projective Y formula:
 
 ```lean
 -- schematic
-lemma constantCoeff_g : PowerSeries.constantCoeff g = 1 := ...
-noncomputable def gUnit : Units (PowerSeries K) := ...
-noncomputable def u : PowerSeries K := ↑(gUnit⁻¹)
-lemma constantCoeff_u : PowerSeries.constantCoeff u = 1 := ...
+lemma psiTwoMulQuot_ne_zero_at_prePsi_root
+    (hroot : prePsiPrime n x = 0)
+    (hnot2 : psi2 P ≠ 0)
+    (hadj : adjacent_nonvanishing n P)
+    (hY : projective_Y_formula_or_omega_normalization n P) :
+    psiTwoMulQuot n P ≠ 0 := by
+  -- identify psiTwoMulQuot with the finite Y/ω component and use adjacent nonvanishing
 ```
 
-### Subtask 3 — define `F(t₁,t₂)` without Laurent series
+---
 
-The formal group law must be a bivariate power series:
+## Lean-facing corrected theorem statements
+
+The exact names must be adapted to the repository, but the theorem should be parity-aware.
+
+### Root identity
 
 ```lean
-noncomputable def W.formalGroupLaw : MvPowerSeries (Fin 2) K := ...
-```
-
-The desired mathematical meaning is:
-
-```text
-F(t₁,t₂) = t(P(t₁) + P(t₂)),
+-- schematic
+lemma invariantDifferential_root_identity_prePsi
+    (W : WeierstrassCurve K) (n : ℕ) (P : AffinePoint W K)
+    (hroot : prePsiPrime W n P.x = 0)
+    (hnot2 : psi2 W P ≠ 0) :
+    -2 * PhiPre W n P.x
+        * (Polynomial.derivative (prePsiPrimePoly W n)).eval P.x
+        * parityPsi2Factor W n P
+      = (n : K) * psiTwoMulQuot W n P := by
+  -- derive from the cleared invariant-differential identity
 ```
 
 where
 
-```text
-P(t) = (x(t), y(t)) = (t/w(t), -1/w(t)).
+```lean
+-- schematic
+parityPsi2Factor W n P =
+  if n % 2 = 0 then (psi2 W P)^2 else psi2 W P
 ```
 
-But because `x(t)` and `y(t)` are Laurent series, define `F` through **cleared-denominator equations** in `t,w` coordinates.
-
-Use variables:
+or, if the project uses an `x`-only square:
 
 ```text
-t₁, t₂, t₃
-w₁ = w(t₁), w₂ = w(t₂), w₃ = w(t₃).
+if n even: Ψ₂Sq(P.x)
+if n odd:  ψ₂(P).
 ```
 
-Then the graph of addition should be expressed by projective or affine addition formulas after clearing denominators.  The target is to construct a power series `F` such that `t₃ = F(t₁,t₂)` and `w₃ = w(F(t₁,t₂))` satisfy the cleared addition equations.
-
-If this is too ambitious, produce the exact theorem statement:
+### Quotient nonvanishing
 
 ```lean
 -- schematic
-noncomputable def formalGroupLawCandidate
-    (W : WeierstrassCurve K) : MvPowerSeries (Fin 2) K := ...
-
-lemma formalGroupLawCandidate_zero_constantCoeff :
-    formalGroupLawCandidate W |>.constantCoeff = 0 := ...
-
-lemma formalGroupLawCandidate_lin_coeff_X :
-    (formalGroupLawCandidate W).coeff (Finsupp.single 0 1) = 1 := ...
-
-lemma formalGroupLawCandidate_lin_coeff_Y :
-    (formalGroupLawCandidate W).coeff (Finsupp.single 1 1) = 1 := ...
+lemma psiTwoMulQuot_ne_zero_at_prePsi_root
+    (W : WeierstrassCurve K) (n : ℕ) (P : AffinePoint W K)
+    (hroot : prePsiPrime W n P.x = 0)
+    (hnot2 : psi2 W P ≠ 0)
+    (hadj : no_adjacent_prePsi_zero W n P)
+    (hY : omega_normalization_or_projectiveY W n P) :
+    psiTwoMulQuot W n P ≠ 0 := by
+  -- identify quotient with the finite Y/ω component
 ```
 
-At minimum, prove the first-order expansion:
-
-```text
-F(t₁,t₂) = t₁ + t₂ + terms of total degree ≥ 2.
-```
-
-This is enough for the tangent bridge, but not enough for the full `FormalGroup` structure unless associativity is also proved.
-
-### Subtask 4 — construct `FormalGroup K`
-
-Once `F : MvPowerSeries (Fin 2) K` is defined, package it as:
-
-```lean
-noncomputable def W.formalGroup : FormalGroup K where
-  toPowerSeries := F
-  zero_constantCoeff := ...
-  lin_coeff_X := ...
-  lin_coeff_Y := ...
-  assoc := ...
-```
-
-Associativity should come from one of these routes:
-
-1. Reduce to associativity of the elliptic-curve group law, if the project already has a group law theorem in projective coordinates.
-2. Prove equality by coefficient extensionality using the uniqueness of the formal addition solution in `t,w` coordinates.
-3. If neither is feasible, state the associativity theorem exactly and leave it as the only remaining major lemma.
-
-Do not try to prove associativity by expanding raw addition formulas indefinitely.
-
-### Subtask 5 — connect to `formalNsmul_coeff_one`
-
-After `W.formalGroup` exists, prove or instantiate the theorem used by the tangent bridge:
-
-```lean
--- schematic, adapt to the project-local name/type
-lemma W.formalGroup_nsmul_coeff_one (n : ℕ) :
-    formalNsmul_coeff_one W.formalGroup n = (n : K) := by
-  simpa using formalNsmul_coeff_one (F := W.formalGroup) n
-```
-
-If `formalNsmul_coeff_one` is not in the project, define the intended theorem statement precisely.  The desired mathematical content is:
-
-```text
-[n]_F(T) = (n : K) T + O(T²).
-```
-
-For the tangent bridge, also state the required parameter-compatibility theorem:
+### Separability from the identity
 
 ```lean
 -- schematic
-lemma W.tangent_parameter_matches_formalGroup
-    (Pε : DualPointAtO W K) (τ : K)
-    (hτ : coeffε (t Pε) = τ) :
-    formalGroupParameter W Pε = τ := by
-  ...
+lemma prePsiPrime_derivative_ne_zero_at_root
+    (W : WeierstrassCurve K) (n : ℕ) (P : AffinePoint W K)
+    (hroot : prePsiPrime W n P.x = 0)
+    (hnot2 : psi2 W P ≠ 0)
+    (hPhi : PhiPre W n P.x ≠ 0)
+    (hn : (n : K) ≠ 0)
+    (hquot : psiTwoMulQuot W n P ≠ 0)
+    (hid : invariantDifferentialRootIdentity W n P) :
+    (Polynomial.derivative (prePsiPrimePoly W n)).eval P.x ≠ 0 := by
+  intro hder
+  -- substitute hder into the identity: LHS = 0
+  -- RHS nonzero by hn and hquot
+  -- contradiction
 ```
 
-This lemma is mandatory.  A formal group law that uses the wrong parameter does not prove the bridge.
-
----
-
-## Expected deliverable
-
-Return one of the following.
-
-### Best outcome
-
-A compiling Lean file that defines:
+### Bridge-2 from separability
 
 ```lean
-W.formalGroup : FormalGroup K
+-- schematic
+lemma bridge2_from_prePsiPrime_separable
+    (W : WeierstrassCurve K) (n : ℕ) (P : AffinePoint W K)
+    (δ τ : K)
+    (hdual : evalDual (prePsiPrimePoly W n) (P.x + δ * ε) = 0)
+    (hroot : prePsiPrime W n P.x = 0)
+    (hder : (Polynomial.derivative (prePsiPrimePoly W n)).eval P.x ≠ 0)
+    (hδ : δ = psi2 W P * τ)
+    (hnot2 : psi2 W P ≠ 0) :
+    τ = 0 := by
+  -- coefficient of ε in hdual gives δ * derivative = 0
+  -- hder gives δ=0
+  -- hδ and hnot2 give τ=0
 ```
-
-and proves:
-
-```lean
-W.formalGroup_nsmul_coeff_one
-W.tangent_parameter_matches_formalGroup
-```
-
-or the project’s exact equivalents.
-
-### Acceptable intermediate outcome
-
-A compiling Lean file that defines `w(t)`, proves the fixed-point equation and leading coefficients, defines the unit `g=w/t³` or `u=t³/w`, and states the formal group law construction/associativity lemmas with exact theorem statements.
-
-### Minimum acceptable outcome
-
-A precise report containing:
-
-1. exact Mathlib APIs found for `PowerSeries`, `MvPowerSeries`, inverse/unit, substitution, and coefficient extensionality;
-2. the shortest viable route among:
-   * full Laurent/localization construction;
-   * cleared-denominator implicit construction;
-   * coefficient-recursive universal formal group law;
-3. the next 3 Lean theorem statements that should be implemented;
-4. the single biggest blocker and why.
 
 ---
 
-## Do not do these things
+## How to prove the identity from existing projective formula infrastructure
 
-* Do not set `W.formalGroup := FormalGroup.𝔾ₐ` and call the task done.
-* Do not invert `w(t)` using `PowerSeries.invOfUnit`; `w` is not a unit.
-* Do not introduce a general Laurent series library unless Mathlib already has a ready API.
-* Do not prove only `lin_coeff_X=1` and `lin_coeff_Y=1` while ignoring associativity, unless you explicitly label the result as a tangent-model lemma rather than `FormalGroup K`.
-* Do not use the tangent bridge itself to prove associativity or parameter compatibility; that would be circular.
+The projective formula infrastructure should be used to prove the algebraic identity, but the proof must include a differential/invariant step.  The following is the clean route.
 
----
+### Step 1: define full objects
 
-## Final recommendation
-
-The shortest likely route is:
+Use full `ψ_n`, not only `preΨ'_n`, for the differential identity.
 
 ```text
-1. Build `w(t)` and `g(t)=w(t)/t³` in ordinary `PowerSeries`.
-2. Avoid ordinary definitions of `x(t)` and `y(t)` because they are Laurent series.
-3. Define the formal group law by cleared-denominator identities in `t,w` coordinates.
-4. Use uniqueness of the cleared-denominator solution to prove associativity.
-5. Package the resulting bivariate power series as `FormalGroup K`.
+q_n = ψ_n = h_n · preΨ'_n,
+φ_n = x q_n² - ψ_{n+1}ψ_{n-1},
+Q_n = ψ_{2n}/q_n.
 ```
 
-If step 3 or 4 is too large, stop after step 1–2 with a compiling file and exact theorem statements.  That would still materially advance the project because it isolates the only real obstruction: constructing the actual addition power series without a Laurent-series detour.
+### Step 2: prove the cleared invariant-differential identity
+
+Target:
+
+```text
+ψ₂ · (Dφ_n · q_n - 2φ_n · Dq_n) = n · Q_n.       (ID)
+```
+
+Here `D` is the curve derivation compatible with `dx/ψ₂`.  In generalized Weierstrass form, use the relation
+
+```text
+D(y) = (3x² + 2a₂x + a₄ - a₁y) / ψ₂
+```
+
+and clear denominators if necessary.
+
+Possible proof sources:
+
+1. Differentiate the projective multiplication formulas `X_n=φ_n`, `Z_n=ψ_n`, and `Y_n=ω_n`, then compare `dx/ψ₂` before and after multiplication.
+2. Prove the identity by induction on `n` using the projective addition formulas and the invariance of `dx/ψ₂` under the addition law.
+3. If the project already has `addX`, `addY`, and `Z` identities for the multiplication formula, use them to rewrite the derivative of `x([n]P)` and the finite quotient `Q_n`.
+
+Important: this is the tangent bridge in algebraic form.  It avoids `W.formalGroup`, but it does not avoid proving the differential behavior of multiplication.
+
+### Step 3: specialize `(ID)` at `preΨ'_n=0`
+
+At a root of `P_n=preΨ'_n`, use:
+
+```text
+q_n = h_n · P_n = 0,
+Dq_n = h_n · P_n'
+```
+
+because the derivative of `h_n` is multiplied by `P_n=0`.
+
+This gives:
+
+```text
+-2 · ψ₂ · φ_n · h_n · P_n' = n · Q_n.
+```
+
+Then rewrite `ψ₂ · h_n` as:
+
+```text
+ψ₂       if n odd,
+ψ₂²      if n even.
+```
+
+Finally rewrite `φ_n(P)` as `Φ_n(P)` using the adjacent/parity formula.
+
+### Step 4: separability and bridge-2
+
+Use nonvanishing:
+
+```text
+Φ_n(P) ≠ 0             -- adjacent nonvanishing / no_adjacent_preΨ_zero
+ψ₂(P) ≠ 0             -- non-2-torsion
+(n : K) ≠ 0           -- hypothesis
+Q_n(P) ≠ 0            -- Y/ω quotient nonvanishing
+```
+
+to conclude
+
+```text
+P_n'(x₀) ≠ 0.
+```
+
+Then close bridge-2 by the dual-number derivative test.
+
+---
+
+## Bottom line
+
+The proposed route is viable after a parity correction.
+
+Corrected core identity:
+
+```text
+-2 · Φ_n(x₀) · (preΨ'_n)'(x₀) · ψ₂(P)^(1 + [n even])
+  = n · ψTwoMulQuot(n)(P).
+```
+
+CAS verification:
+
+```text
+n=4: verified with ψ₂²; single ψ₂ is wrong.
+n=5: verified with ψ₂.
+```
+
+If Lean can prove this invariant-differential identity from the projective formula infrastructure and prove `ψTwoMulQuot(n)(P)≠0` from the Y/ω component, then bridge-2 can be closed without constructing `W.formalGroup`.
+
+But this is not a free shortcut: the invariant-differential identity is the tangent bridge encoded as a polynomial identity.  It may be the shortest formal route, especially because it reuses `addX`, `addY`, and `Z`, but it still contains the irreducible first-order content `d[n]| = n`.

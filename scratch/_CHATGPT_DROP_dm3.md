@@ -1,324 +1,410 @@
-# Q420 — CAS verification of `dblXYZ` near `O`
+# Q434 — `addXYZ` normalization for the formal group law
 
-Question: over `K[ε]/(ε²)`, does Mathlib's raw Jacobian `dblXYZ` at a first-order representative near `O` give `d[2]=2`, or does it degenerate to the zero representative?
+Question: for
+
+```text
+P(t) = [u(t), -u(t)^2, t · u(t)]
+```
+
+in Mathlib Jacobian `(2,3,1)` coordinates, with `u(t) ∈ K⟦t⟧` and `u(0)=1`, does
+
+```text
+addXYZ(P(t₁), P(t₂)) = [A,B,C]
+```
+
+directly give a formal group law by
+
+```text
+F = -A·C/B,
+```
+
+or does the same `Z=0` degeneracy force a normalization/factorization step?  Also: does Mathlib `addXYZ` compute `P+Q` or `P-Q`?
 
 ## Verdict
 
-The CAS check **does not confirm** the proposed zero-representative conclusion as stated.
+Mathlib `Jacobian.addXYZ` computes **`P + Q`**, not `P - Q`.
 
-The computation reveals a coordinate mismatch:
+The factor `t₂ - t₁` in `addZ(P(t₁), P(t₂))` is not evidence for `P-Q`.  It is the diagonal/slope-denominator factor of the projective addition formula: raw `addXYZ` is the distinct-points addition formula, and Mathlib explicitly says it returns `![0,0,0]` when the two representatives are equal.
 
-* Mathlib's `Jacobian` coordinates are weighted `(2,3,1)` coordinates with affine interpretation
-
-  ```text
-  x_aff = X/Z²,
-  y_aff = Y/Z³.
-  ```
-
-* The `(2,3,1)`-homogeneous equation is
-
-  ```text
-  Y² + a₁XYZ + a₃YZ³ = X³ + a₂X²Z² + a₄XZ⁴ + a₆Z⁶.
-  ```
-
-* At `Z=0`, this gives
-
-  ```text
-  Y² = X³.
-  ```
-
-  Therefore the Mathlib point at infinity is represented by `[1:1:0]` up to weighted scaling, not by `[0:1:0]`.
-
-Consequences:
+The raw triple `[A,B,C]` does **not** directly give a power-series ratio `F = -A·C/B`, because `B` is not a unit.  At `(t₁,t₂)=(0,0)`, all coordinates vanish.  The correct construction is the **saturated / normalized** one:
 
 ```text
-[εa : 1 : 0]
+D := t₁ - t₂,
+A = D² · A',
+B = D³ · B',
+C = D · C',
+F := -A' · C' / B'.
 ```
 
-is not a valid first-order Jacobian point near `O` in Mathlib's coordinate system: it violates `Y²=X³` at `Z=0` because `1 ≠ (εa)³ = 0` in dual numbers.
-
-Using the exact Mathlib formulas anyway, the raw output is not `[0:0:0]`; it is
+Then `B'` is a unit.  In the leading model `u=1`,
 
 ```text
-dblXYZ([εa, 1, 0]) = [-8εa, -8, 0].
+A' = 1,
+B' = 1,
+C' = -(t₁+t₂),
+F = t₁+t₂.
 ```
 
-Likewise,
+So the expected formal group linear term is recovered after weighted saturation.
 
-```text
-dblXYZ([εa, -1, 0]) = [-8εa, -8, 0].
+The right Lean target is not raw `F=-A*C/B`; it is:
+
+```lean
+-- schematic
+D := X₀ - X₁
+A' := A / D^2
+B' := B / D^3
+C' := C / D
+F  := -A' * C' * (B')⁻¹
 ```
 
-These are not meaningful tangent computations because the inputs are not on the Mathlib Jacobian curve.
-
-With the correct first-order Mathlib Jacobian chart near `O`, namely
-
-```text
-Pε = [1 + Aε : 1 + Bε : βε],
-```
-
-subject to the curve equation to first order
-
-```text
-2B + a₁β - 3A = 0,
-```
-
-Mathlib's `dblXYZ` gives
-
-```text
-dblZ(Pε) = 2βε,
-```
-
-and the Jacobian local parameter
-
-```text
-t = -X·Z/Y
-```
-
-satisfies
-
-```text
-t(Pε)       = -βε,
-t(dblXYZ Pε) = -2βε = 2 · t(Pε).
-```
-
-So raw `dblXYZ` **does** see `d[2]=2` in the correct Mathlib Jacobian chart, at least for the doubling map at `O`.
-
-The broader design warning remains valid: raw homogeneous/Jacobian formulas are dangerous over dual numbers if the representative is in the wrong chart or if the formula has a nilpotent common factor.  But the specific claim that Mathlib `dblXYZ([εa:1:0])` gives the zero representative is false.
+with proofs that the divisions are valid in `K⟦t₁,t₂⟧` and that `B'` is a unit.
 
 ---
 
-## Mathlib formulas used
+## Mathlib convention: `addXYZ` is `P + Q`
 
-Mathlib defines
-
-```lean
-def negY (P : Fin 3 → R) : R :=
-  -P y - W'.a₁ * P x * P z - W'.a₃ * P z ^ 3
-
-def dblZ (P : Fin 3 → R) : R :=
-  P z * (P y - W'.negY P)
-```
-
-and
+Mathlib's documentation for Jacobian coordinates says the addition formulae are for representatives of `P + Q`, and `addXYZ` is defined as:
 
 ```lean
-noncomputable def dblX (P : Fin 3 → R) : R :=
-  W'.dblU P ^ 2
-    - W'.a₁ * W'.dblU P * P z * (P y - W'.negY P)
-    - W'.a₂ * P z ^ 2 * (P y - W'.negY P) ^ 2
-    - 2 * P x * (P y - W'.negY P) ^ 2
+noncomputable def addXYZ (P Q : Fin 3 → R) : Fin 3 → R :=
+  ![W'.addX P Q, W'.addY P Q, addZ P Q]
 ```
 
-where
-
-```lean
-noncomputable def dblU (P : Fin 3 → R) : R :=
-  eval P W'.polynomialX
-```
-
-and
-
-```lean
-noncomputable def dblY (P : Fin 3 → R) : R :=
-  W'.negY ![W'.dblX P, W'.negDblY P, W'.dblZ P]
-
-noncomputable def dblXYZ (P : Fin 3 → R) : Fin 3 → R :=
-  ![W'.dblX P, W'.dblY P, W'.dblZ P]
-```
-
-The key exact formula for `Z` is therefore:
+with the docstring:
 
 ```text
-dblZ(P) = P[2] · (P[1] - negY(P)).
+The coordinates of a representative of P + Q for two distinct Jacobian point
+representatives P and Q on a Weierstrass curve.
+If the representatives of P and Q are equal, then this returns ![0, 0, 0].
 ```
+
+The `Z` coordinate is exactly:
+
+```lean
+def addZ (P Q : Fin 3 → R) : R :=
+  P x * Q z ^ 2 - Q x * P z ^ 2
+```
+
+Mathlib also proves, when `Z` is nonzero and `x(P)≠x(Q)`, that
+
+```lean
+W.addXYZ P Q = addZ P Q • ![affine_addX, affine_addY, 1]
+```
+
+where the affine formula uses the usual secant slope.  This is the addition formula, not subtraction.
 
 ---
 
-## CAS script
+## Direct computation of `addZ`
 
-This script works in `K[ε]/(ε²)`, implements the Mathlib formulas above, and reduces all expressions modulo `ε²=0`.
+Let
+
+```text
+P₁ = P(t₁) = [u₁, -u₁², t₁u₁],
+P₂ = P(t₂) = [u₂, -u₂², t₂u₂].
+```
+
+Then Mathlib's `addZ` gives:
+
+```text
+C = addZ(P₁,P₂)
+  = u₁ · (t₂u₂)² - u₂ · (t₁u₁)²
+  = u₁u₂ · (t₂²u₂ - t₁²u₁).
+```
+
+Since `u(t)` is a one-variable power series, the two-variable series
+
+```text
+g(t₂) - g(t₁),   where g(t) := t²u(t),
+```
+
+is divisible by `t₂-t₁` or equivalently by `D=t₁-t₂`.  Its quotient has leading term `-(t₁+t₂)` for `D=t₁-t₂`:
+
+```text
+t₂²u₂ - t₁²u₁ = -(t₁-t₂) · (t₁+t₂+O(2)).
+```
+
+Therefore:
+
+```text
+C = D · C',
+C' = -u₁u₂ · (t₁+t₂+O(2)).
+```
+
+The residual factor `C'` has the correct leading behavior for the output `Z` coordinate near `O`: it is order `1` and begins with `-(t₁+t₂)` in the `D=t₁-t₂` normalization.
+
+---
+
+## Why the raw denominator `B` is not a unit
+
+At `t₁=t₂=0`,
+
+```text
+P(0) = [1,-1,0],
+```
+
+which is the Mathlib point at infinity up to weighted scaling by `-1` from `[1,1,0]`.
+
+The raw distinct-points formula is not meant to handle `P=Q`.  Mathlib has:
+
+```lean
+lemma addXYZ_self {P : Fin 3 → R} (hP : W'.Equation P) :
+    W'.addXYZ P P = ![0, 0, 0]
+```
+
+So at `(t₁,t₂)=(0,0)`, raw `addXYZ(P(t₁),P(t₂))` specializes to the zero tuple, and hence
+
+```text
+A(0,0)=B(0,0)=C(0,0)=0.
+```
+
+In particular:
+
+```text
+B is not a unit in K⟦t₁,t₂⟧.
+```
+
+Thus the naive expression
+
+```text
+F = -A·C/B
+```
+
+is not directly a valid `PowerSeries` expression.
+
+The fix is to divide out the common weighted diagonal factor first:
+
+```text
+A = D² A',
+B = D³ B',
+C = D C'.
+```
+
+Then
+
+```text
+F = -A' C' / B'
+```
+
+is valid because `B'` is a unit.
+
+---
+
+## CAS sanity check: leading model `u=1`
+
+To verify the normalization, ignore higher-order terms of `u` and set all curve coefficients to zero in the leading homogeneous part.  This computes the leading term of Mathlib's raw `addXYZ` at `O`.
+
+Use
+
+```text
+P₁ = [1, -1, t₁],
+P₂ = [1, -1, t₂].
+```
+
+Then Mathlib's exact `addX`, `addY`, `addZ` formulas reduce to:
+
+```text
+A = (t₁ - t₂)²,
+B = (t₁ - t₂)³,
+C = -(t₁ - t₂)(t₁ + t₂).
+```
+
+So with
+
+```text
+D = t₁ - t₂,
+```
+
+the saturated coordinates are
+
+```text
+A' = A/D² = 1,
+B' = B/D³ = 1,
+C' = C/D  = -(t₁+t₂).
+```
+
+Then the local parameter is
+
+```text
+F = -A' C' / B' = t₁ + t₂.
+```
+
+This proves the leading term is correct.  The appearance of `t₁-t₂` was the diagonal factor of the raw addition formula; after saturating, the output parameter begins with `t₁+t₂` as required.
+
+A minimal CAS script for this leading check:
 
 ```python
 import sympy as sp
 
-ε, A, B, β, a = sp.symbols('e A B beta a')
-a1, a2, a3, a4, a6 = sp.symbols('a1 a2 a3 a4 a6')
+t1, t2 = sp.symbols('t1 t2')
 
-mod = sp.Poly(ε**2, ε)
+# leading model: u=1 and a_i=0
+P = (1, -1, t1)
+Q = (1, -1, t2)
 
-def red(expr):
-    return sp.rem(sp.Poly(sp.expand(expr), ε), mod).as_expr()
+def addZ(P,Q):
+    X,Y,Z = P
+    U,V,T = Q
+    return X*T**2 - U*Z**2
 
-def negY(X, Y, Z):
-    return -Y - a1*X*Z - a3*Z**3
+def addX(P,Q):
+    X,Y,Z = P
+    U,V,T = Q
+    return X*U**2*Z**2 - 2*Y*V*Z*T + X**2*U*T**2
 
-def dblU(X, Y, Z):
-    return a1*Y*Z - (3*X**2 + 2*a2*X*Z**2 + a4*Z**4)
+def negAddY(P,Q):
+    X,Y,Z = P
+    U,V,T = Q
+    return (-Y*U**3*Z**3 + 2*Y*V**2*Z**3
+            - 3*X**2*U*V*Z**2*T
+            + 3*X*Y*U**2*Z*T**2
+            + X**3*V*T**3 - 2*Y**2*V*T**3)
 
-def dblZ(X, Y, Z):
-    return Z*(Y - negY(X, Y, Z))
+def negY(X,Y,Z):
+    return -Y
 
-def dblX(X, Y, Z):
-    U = dblU(X, Y, Z)
-    D = Y - negY(X, Y, Z)
-    return U**2 - a1*U*Z*D - a2*Z**2*D**2 - 2*X*D**2
+def addY(P,Q):
+    return negY(addX(P,Q), negAddY(P,Q), addZ(P,Q))
 
-def negDblY(X, Y, Z):
-    U = dblU(X, Y, Z)
-    D = Y - negY(X, Y, Z)
-    X2 = dblX(X, Y, Z)
-    return -U*(X2 - X*D**2) + Y*D**3
-
-def dblY(X, Y, Z):
-    return negY(dblX(X, Y, Z), negDblY(X, Y, Z), dblZ(X, Y, Z))
-
-def dblXYZ(X, Y, Z):
-    return tuple(red(c) for c in (dblX(X,Y,Z), dblY(X,Y,Z), dblZ(X,Y,Z)))
-
-def dual_series(expr):
-    return sp.series(expr, ε, 0, 2).removeO()
-
-# The two proposed Z=0 representatives.
-print('dblXYZ([εa, 1, 0])  =', dblXYZ(ε*a, 1, 0))
-print('dblXYZ([εa,-1, 0])  =', dblXYZ(ε*a, -1, 0))
-
-# Correct Mathlib Jacobian near-O chart.
-P = (1 + A*ε, 1 + B*ε, β*ε)
-X2, Y2, Z2 = dblXYZ(*P)
-print('dblXYZ([1+Aε,1+Bε,βε]) =', (X2, Y2, Z2))
-
-# Local parameter in Mathlib Jacobian coordinates.
-tP = red(dual_series(-(1 + A*ε)*(β*ε)/(1 + B*ε)))
-t2P = red(dual_series(-X2*Z2/Y2))
-print('t(P)      =', tP)
-print('t(dbl P)  =', t2P)
-print('t(dbl P) - 2*t(P) =', red(t2P - 2*tP))
-
-# First-order curve equation for P=[1+Aε,1+Bε,βε].
-curve_eq = (1+B*ε)**2 + a1*(1+A*ε)*(1+B*ε)*(β*ε) + a3*(1+B*ε)*(β*ε)**3 \
-    - ((1+A*ε)**3 + a2*(1+A*ε)**2*(β*ε)**2 + a4*(1+A*ε)*(β*ε)**4 + a6*(β*ε)**6)
-print('curve equation remainder =', red(curve_eq))
+A = sp.factor(addX(P,Q))
+B = sp.factor(addY(P,Q))
+C = sp.factor(addZ(P,Q))
+print(A, B, C)
+print(sp.factor(- (A/(t1-t2)**2) * (C/(t1-t2)) / (B/(t1-t2)**3)))
 ```
 
 Output:
 
 ```text
-dblXYZ([εa, 1, 0])  = (-8*a*e, -8, 0)
-dblXYZ([εa,-1, 0])  = (-8*a*e, -8, 0)
-dblXYZ([1+Aε,1+Bε,βε]) =
-  (1 + e*(28*A - 8*a1*beta - 16*B),
-   1 + e*(-54*A + 19*a1*beta + 40*B),
-   2*beta*e)
-t(P)      = -beta*e
-t(dbl P)  = -2*beta*e
-t(dbl P) - 2*t(P) = 0
-curve equation remainder = e*(-3*A + a1*beta + 2*B)
+(t1 - t2)**2, (t1 - t2)**3, -(t1 - t2)*(t1 + t2)
+t1 + t2
 ```
 
 ---
 
-## Interpretation
+## What exactly must be proved in Lean
 
-### 1. `[εa:1:0]` is not the right test point
+The formal group construction from `addXYZ` should be organized around saturated coordinates.
 
-The proposed representative `[εa:1:0]` reduces to `[0:1:0]`, which is the ordinary homogeneous point at infinity, but not the Mathlib Jacobian point at infinity.  In Mathlib Jacobian coordinates, the `Z=0` locus on the curve satisfies `Y²=X³`; the nonsingular point at infinity is represented by `[1:1:0]`.
-
-Therefore the expression
+Let
 
 ```text
-dblXYZ([εa,1,0])
+D := t₁ - t₂,
+[A,B,C] := addXYZ(P(t₁), P(t₂)).
 ```
 
-is only a raw polynomial evaluation at a non-curve triple.  It does not test the differential of doubling on the curve.
+Prove divisibility in `MvPowerSeries (Fin 2) K`:
 
-### 2. Raw `dblXYZ` does not return the zero representative on this input
-
-Even as a raw polynomial evaluation, it gives
-
-```text
-[-8εa, -8, 0],
+```lean
+-- schematic
+lemma addX_divisible_by_D_sq : ∃ A', A = D^2 * A' := ...
+lemma addY_divisible_by_D_cu : ∃ B', B = D^3 * B' := ...
+lemma addZ_divisible_by_D    : ∃ C', C = D   * C' := ...
 ```
 
-not `[0,0,0]`.
+Then choose the quotients:
 
-The earlier calculation that used only
-
-```text
-dblZ = Z·(Y-negY)
+```lean
+noncomputable def A' : MvPowerSeries (Fin 2) K := ...
+noncomputable def B' : MvPowerSeries (Fin 2) K := ...
+noncomputable def C' : MvPowerSeries (Fin 2) K := ...
 ```
 
-correctly found `dblZ=0`, but `dblX` and `dblY` are not zero unless `X=0` in a stronger sense.  Over dual numbers, `X=εa` still contributes linearly to `dblX`.
+Prove the unit/linear facts:
 
-### 3. The correct Mathlib Jacobian near-`O` chart verifies `d[2]=2`
-
-Using
-
-```text
-Pε = [1+Aε : 1+Bε : βε],
+```lean
+lemma B'_constantCoeff : constantCoeff B' = 1 := ...   -- or -1 if D=t₂-t₁
+lemma B'_isUnit : IsUnit B' := ...
+lemma C'_linear : C' = -(X₀ + X₁) + terms_total_degree_ge_2 := ...
 ```
 
-and the local parameter
+Then define:
 
-```text
-t = -X·Z/Y,
+```lean
+noncomputable def F : MvPowerSeries (Fin 2) K :=
+  -A' * C' * (B'_unit⁻¹ : MvPowerSeries (Fin 2) K)
 ```
 
-the raw Mathlib doubling formulas give
+and prove:
 
-```text
-t(dblXYZ(Pε)) = 2 · t(Pε)
+```lean
+lemma F_zero_constantCoeff : F.constantCoeff = 0 := ...
+lemma F_lin_coeff_X : F.coeff (Finsupp.single 0 1) = 1 := ...
+lemma F_lin_coeff_Y : F.coeff (Finsupp.single 1 1) = 1 := ...
 ```
 
-modulo `ε²`.  This calculation is independent of the curve-equation linear constraint
+The associativity proof still needs either:
 
-```text
--3A + a₁β + 2B = 0.
-```
+1. the uniqueness of the saturated local addition solution; or
+2. a reduction to the group law on nonsingular Jacobian points; or
+3. a separate formal-group associativity argument in `(t,w)` coordinates.
 
-Thus the direct doubling calculation **does** prove the expected first-order `d[2]=2` behavior in the correct chart.
-
-### 4. This does not solve general `d[n]=n`
-
-The doubling calculation alone can plausibly prove powers of two by repeated normalized doubling.  It does not prove arbitrary `n`, because one still needs a reliable first-order addition formula for two near-`O` points:
-
-```text
-coeffε(t(A ⊕ B)) = coeffε(t(A)) + coeffε(t(B)).
-```
-
-Raw `addXYZ` may still suffer from a saturation/common-factor problem over dual numbers when both inputs are near `O`.  That issue is distinct from the corrected `dblXYZ` calculation.
+But the immediate normalization issue is exactly the `D`-weighted saturation above.
 
 ---
 
-## Design conclusion
+## Answer to the specific questions
 
-The conclusion should be revised as follows.
+### 1. Is raw `B` a unit?
 
-Incorrect:
+No.
 
-```text
-Mathlib dblXYZ at O necessarily degenerates and cannot see d[2]=2.
-```
-
-Correct:
+Raw `B = addY(P(t₁),P(t₂))` has constant term zero.  In fact the leading model shows
 
 ```text
-Mathlib dblXYZ sees d[2]=2 in the correct Jacobian near-O chart [1+O(ε):1+O(ε):O(ε)].
+B = (t₁-t₂)^3 · unit.
 ```
 
-Still correct:
+So `B` is not invertible in `K⟦t₁,t₂⟧`.
+
+The saturated denominator
 
 ```text
-The full formal group law should not be built by naively evaluating raw homogeneous addXYZ/dblXYZ on arbitrary O-representatives over dual numbers.
+B' := B / (t₁-t₂)^3
 ```
 
-For the full tangent bridge, the project still needs one of:
+is a unit.  Its constant term is `1` if `D=t₁-t₂`, and `-1` if `D=t₂-t₁`.
+
+### 2. What is `B`'s constant term?
 
 ```text
-1. a normalized local (t,w)-coordinate addition proof;
-2. a saturated/renormalized addXYZ-near-O lemma;
-3. the invariant-differential/projective identity from Q401;
-4. the full W.formalGroup construction.
+B.constantCoeff = 0.
 ```
 
-The `w(t)` power-series construction is still the safest canonical route for the full formal group law, but Q420 shows it is **not** necessary merely to verify `d[2]=2` for `dblXYZ`.
+This is because raw `addXYZ(P(0),P(0))` is the self-addition case for the distinct-points formula, and Mathlib explicitly returns `![0,0,0]` in that case.
+
+After saturation,
+
+```text
+(B / D^3).constantCoeff = ±1,
+```
+
+so the normalized denominator is a unit.
+
+### 3. Does `addXYZ` give `P+Q` or `P-Q`?
+
+It gives `P+Q`.
+
+The apparent `t₂-t₁` factor is the diagonal/slope-denominator factor.  It vanishes when `P(t₁)=P(t₂)`, where the distinct-points addition formula must be replaced by doubling.  It is not the formal group output parameter.
+
+After removing the weighted diagonal factor, the local parameter of the saturated sum is
+
+```text
+F(t₁,t₂) = t₁ + t₂ + higher-order terms.
+```
+
+---
+
+## Bottom line
+
+`addXYZ(P(t₁),P(t₂))` does not directly define the formal group law by `-A*C/B`; raw `B` is not a unit.
+
+But `addXYZ` is still usable after saturation:
+
+```text
+[A,B,C] = [D²A', D³B', DC'],   D=t₁-t₂,
+F = -A'C'/B'.
+```
+
+The exact factor `D=t₁-t₂` is the diagonal factor of the distinct-points addition formula.  Once divided out with weights `(2,3,1)`, the normalized output has the correct formal group linear term `t₁+t₂`.

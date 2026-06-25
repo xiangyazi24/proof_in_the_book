@@ -280,3 +280,244 @@ curve_equation(P), ψ₃(x(P)) = 0, ψ₂(P) ≠ 0
 ```
 
 Equivalently, in the general odd-`n` bridge, the proof obligation should be set up so that the difference between the output tangent coefficient and `n / ψ₂(P)` is represented by a numerator containing `preΨ'_n`; for `n = 3`, `preΨ'_3 = Ψ₃`, and the CAS check above confirms the expected identity on a concrete nonsingular short curve.
+
+---
+
+# Q378: reformulating bridge-2 without a `FormalGroup` instance
+
+Request: decide whether bridge-2 can be reformulated so that it does not use
+
+```text
+TangentO.nsmul₁ = (n : K)
+```
+
+from `formalNsmul_coeff_one`.
+
+The proposed replacement is an order-of-vanishing argument:
+
+```text
+preΨ'_n(x) = 0,
+φ_n(P) ≠ 0,
+[n]P = [φ : ω : 0], ω ≠ 0,
+x([n]Q) = φ_n(Q) / ψ_n(Q)^2,
+```
+
+then infer that `ψ_n` has a simple zero at `P`, hence that `preΨ'_n` has a simple zero at `x(P)`.
+
+## Verdict
+
+This is a good reformulation target, but the proposed chain is not correct as written.
+
+The corrected statement is:
+
+```text
+If [n] is unramified at P, [n]P = O, φ_n(P) ≠ 0, and ψ₂(P) ≠ 0,
+then preΨ'_n has a simple root at x(P).
+```
+
+Then bridge-2 follows by a purely dual-number calculation:
+
+```text
+preΨ'_n(x + δ ε) = preΨ'_n(x) + δ * (preΨ'_n)'(x) ε.
+```
+
+If `preΨ'_n(x + δ ε) = 0` and `(preΨ'_n)'(x) ≠ 0`, then `δ = 0`.  Since at a non-2-torsion affine point
+
+```text
+δ = ψ₂(P) * τ
+```
+
+where `τ` is the invariant tangent coefficient of `Pε`, and `ψ₂(P) ≠ 0`, this gives `τ = 0`.
+
+So yes: bridge-2 can be refactored to avoid mentioning `TangentO.nsmul₁` directly, provided the replacement input is a simple-root/separability lemma for `preΨ'_n`.  But no: the projective nonvanishing facts alone do not prove that simple-root lemma.
+
+## Where the proposed argument breaks
+
+The problematic step is this one:
+
+```text
+x([n]P) = φ / ψ² has a SIMPLE pole at P.
+```
+
+On an elliptic curve, `x` has a double pole at `O`, not a simple pole.  More importantly, from the formula
+
+```text
+x([n]Q) = φ_n(Q) / ψ_n(Q)^2
+```
+
+and `φ_n(P) ≠ 0`, all we get is
+
+```text
+ord_P(x ∘ [n]) = -2 * ord_P(ψ_n).
+```
+
+The nonvanishing of `φ_n(P)` only rules out numerator cancellation.  It does not determine `ord_P(ψ_n)`.
+
+To conclude `ord_P(ψ_n) = 1`, one also needs
+
+```text
+ord_P(x ∘ [n]) = -2.
+```
+
+That equality is exactly the assertion that `[n]` is unramified at `P`: since `x` has pole order `2` at `O`, pullback by an unramified map keeps the pole order `2`.
+
+Equivalently, using the local parameter
+
+```text
+t = -X Z / Y,
+```
+
+the projective formula gives near `P`
+
+```text
+t([n]Q) = -φ_n(Q) ψ_n(Q) / ω_n(Q),
+```
+
+so if `φ_n(P)` and `ω_n(P)` are nonzero, then
+
+```text
+ord_P(t ∘ [n]) = ord_P(ψ_n).
+```
+
+But to know this order is `1`, one again needs `[n]` to be unramified at `P`.  In the old setup, this is supplied by the formal-group coefficient
+
+```text
+coeff₁([n]) = (n : K) ≠ 0.
+```
+
+Thus the order argument does not eliminate the mathematical content of `formalNsmul_coeff_one`; it only moves that content into a separability or unramifiedness lemma.
+
+## The part that is correct: translating `ψ_n` order to `preΨ'_n` root multiplicity
+
+The proposed step 5→6 is essentially correct under the stated non-2-torsion hypothesis.
+
+At an affine point,
+
+```text
+ω_inv = dx / ψ₂,
+```
+
+so if `ψ₂(P) ≠ 0`, then `dx` is nonzero at `P`.  Therefore `x - x(P)` is a local parameter at `P`.  Consequently, for any polynomial `F(X)`,
+
+```text
+ord_P(F(x)) = multiplicity of x(P) as a root of F.
+```
+
+For odd `n`, `ψ_n` is already a polynomial in `x`, so this applies directly with `F = preΨ'_n = Ψ_n`.
+
+For even `n`, the removed `ψ₂` factor is a unit at a non-2-torsion point, so it does not affect the order:
+
+```text
+ord_P(ψ_n) = ord_P(preΨ'_n(x)).
+```
+
+Hence
+
+```text
+ord_P(ψ_n) = 1
+  ↔ multiplicity_x(P)(preΨ'_n) = 1
+  ↔ (preΨ'_n)'(x(P)) ≠ 0.
+```
+
+This is the clean bridge from geometry on the curve to the derivative test in the `x`-polynomial.
+
+## Non-circular replacement theorem
+
+A non-circular refactor should isolate the real replacement for the formal-group input as one of the following.
+
+### Option A: separability/unramifiedness of multiplication
+
+Use a theorem with content like:
+
+```lean
+-- schematic, not current mathlib syntax
+lemma nsmul_unramified_at_torsion
+    (hn : (n : K) ≠ 0) (hP : IsNonsingular P) :
+    UnramifiedAt (fun Q => n • Q) P := by
+  -- prove independently of bridge-2
+```
+
+Then prove the simple-root theorem:
+
+```lean
+-- schematic
+lemma prePsiPrime_simple_root_of_non2_torsion
+    (hn : (n : K) ≠ 0)
+    (hψ : ψ_n(P) = 0)
+    (hψ₂ : ψ₂(P) ≠ 0)
+    (hφ : φ_n(P) ≠ 0)
+    (hunram : UnramifiedAt (fun Q => n • Q) P) :
+    (Polynomial.derivative (prePsiPrime n)).eval x(P) ≠ 0 := by
+  -- 1. projective formula gives ord_P(x ∘ [n]) = -2 * ord_P(ψ_n)
+  -- 2. unramified pullback of the double pole of x at O gives ord_P(x ∘ [n]) = -2
+  -- 3. conclude ord_P(ψ_n) = 1
+  -- 4. non-2-torsion makes x a local coordinate, so preΨ'_n has root multiplicity 1
+```
+
+Then bridge-2 is short:
+
+```lean
+-- schematic
+lemma bridge2_from_simple_prePsiPrime
+    (hdual : evalDual (prePsiPrime n) (x + δ * ε) = 0)
+    (hsimple : (Polynomial.derivative (prePsiPrime n)).eval x ≠ 0)
+    (hψ₂ : ψ₂(P) ≠ 0)
+    (hτ : δ = ψ₂(P) * τ) :
+    τ = 0 := by
+  -- coeffε of hdual gives δ * (preΨ'_n)'(x) = 0
+  -- hsimple gives δ = 0
+  -- hψ₂ and hτ give τ = 0
+```
+
+This avoids any direct reference to `TangentO.nsmul₁`, but it still uses the equivalent separability fact for `[n]`.
+
+### Option B: an algebraic squarefreeness theorem for division polynomials
+
+Instead of proving unramifiedness of `[n]`, prove directly that `preΨ'_n` is squarefree away from the 2-torsion and discriminant factors:
+
+```lean
+-- schematic
+lemma prePsiPrime_derivative_nonzero_at_root
+    (hn : (n : K) ≠ 0)
+    (hroot : (prePsiPrime n).eval x = 0)
+    (hnot2 : Ψ₂Sq.eval x ≠ 0)
+    (hdisc : Δ ≠ 0) :
+    (Polynomial.derivative (prePsiPrime n)).eval x ≠ 0 := by
+  -- purely polynomial / gcd / Bezout proof, if available
+```
+
+This would genuinely avoid formal groups and even avoid local divisor theory, but it is a substantial algebraic theorem.  It is not a consequence of `φ_n(P) ≠ 0` alone.
+
+## Recommended Lean refactor
+
+The cleanest bridge-2 statement should not mention `coeffε(t([n]Pε))` at all.  It should consume a simple-root lemma:
+
+```text
+simple_root_preΨ'_n_at_non2_n_torsion
+```
+
+and then use only the dual-number identity
+
+```text
+F(x + δ ε) = F(x) + δ F'(x) ε.
+```
+
+That makes bridge-2 independent of the projective tangent computation.  The dependency graph becomes:
+
+```text
+separability of [n] or squarefreeness of preΨ'_n
+        ↓
+(preΨ'_n)'(x(P)) ≠ 0
+        ↓
+preΨ'_n(x + δ ε) = 0 ⇒ δ = 0
+        ↓
+tangent coefficient τ = δ / ψ₂(P) = 0.
+```
+
+This is non-circular if the first line is proved independently of bridge-2.  It is circular if the first line is proved by reusing the desired tangent bridge or by silently asserting that `t ∘ [n]` has nonzero linear coefficient.
+
+## Bottom line
+
+The reformulation is viable, but only after replacing the false/missing “simple pole” step with an explicit independent separability or squarefreeness input.
+
+Projective formula plus `φ_n(P) ≠ 0` proves only “no cancellation.”  The fact that the zero of `ψ_n` has order exactly `1` is the separability of multiplication by `n` at `P`, equivalently the nonzero differential of `[n]`.  Avoiding `FormalGroup` is possible, but the proof still has to pay for that fact somewhere.

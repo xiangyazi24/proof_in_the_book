@@ -20,59 +20,19 @@ jobs:
         run: |
           curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
-      - name: Apply remaining repairs
+      - name: Resolve final sum proof
         run: |
           file=q6098/check/Agafonov/Kamae1973/FiniteStagePrefixEstimate.lean
-          grep -q 'import Mathlib.Data.Fintype.BigOperators' "$file" || \
-            sed -i '/import Mathlib.Algebra.BigOperators.Group.Finset.Sigma/a import Mathlib.Data.Fintype.BigOperators' "$file"
-          perl -0pi -e 's/rw \[internalOccurrenceCount_cast_sum_private\]\n      rfl/rw [internalOccurrenceCount_cast_sum_private]\n      simp only [prefixInternalHit]/' "$file"
-          perl -0pi -e 's/prefixInternalStartSet param\.macroLength param\.blockLength/prefixInternalStartSet (Q := param.blocksPerMacro) param.macroLength param.blockLength/g' "$file"
-          if grep -q 'exact mul_le_mul_of_nonneg_right htyp (Nat.cast_nonneg L)' "$file"; then
-            awk '
-              BEGIN { replacing = 0 }
-              !replacing && $0 == "  have hid :" {
-                print "  have hid :"
-                print "      (internalFrequency u w - P.wordMass (List.ofFn w)) * (L : ℝ) ="
-                print "        (internalOccurrenceCount u w : ℝ) -"
-                print "          (L : ℝ) * P.wordMass (List.ofFn w) := by"
-                print "    unfold internalFrequency"
-                print "    field_simp [hLne]"
-                print "  have hLnonneg : (0 : ℝ) ≤ (L : ℝ) := Nat.cast_nonneg L"
-                print "  calc"
-                print "    |(internalOccurrenceCount u w : ℝ) -"
-                print "        (L : ℝ) * P.wordMass (List.ofFn w)| ="
-                print "      |(internalFrequency u w - P.wordMass (List.ofFn w)) * (L : ℝ)| :="
-                print "        congrArg abs hid.symm"
-                print "    _ = |internalFrequency u w - P.wordMass (List.ofFn w)| * |(L : ℝ)| :="
-                print "      abs_mul _ _"
-                print "    _ = |internalFrequency u w - P.wordMass (List.ofFn w)| * (L : ℝ) := by"
-                print "      rw [abs_of_nonneg hLnonneg]"
-                print "    _ ≤ β * (L : ℝ) :="
-                print "      mul_le_mul_of_nonneg_right htyp hLnonneg"
-                replacing = 1
-                next
-              }
-              replacing {
-                if ($0 == "  exact mul_le_mul_of_nonneg_right htyp (Nat.cast_nonneg L)") replacing = 0
-                next
-              }
-              { print }
-            ' "$file" > "$file.tmp"
-            mv "$file.tmp" "$file"
-          fi
-          perl -0pi -e 's/add_le_add_right hblockLengthBound _/add_le_add_left hblockLengthBound _/' "$file"
-          grep -q 'import Mathlib.Data.Fintype.BigOperators' "$file"
-          grep -q 'simp only \[prefixInternalHit\]' "$file"
-          grep -q 'have hLnonneg' "$file"
-          ! grep -q 'add_le_add_right hblockLengthBound' "$file"
-          ! grep -q 'prefixInternalStartSet param.macroLength param.blockLength' "$file"
+          perl -0pi -e 's/      simp only \[prefixInternalHit\]/      apply Finset.sum_congr rfl\n      intro c _\n      unfold prefixInternalHit\n      by_cases h : ((List.ofFn (label (prefixBlockLift hKH j))).drop c.val).take r = List.ofFn w\n      · rw [if_pos h, if_pos h]\n      · rw [if_neg h, if_neg h]/' "$file"
+          grep -q 'by_cases h : ((List.ofFn (label (prefixBlockLift hKH j))).drop c.val).take r' "$file"
+          ! grep -q 'simp only \[prefixInternalHit\]' "$file"
       - name: Preserve repaired candidate
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add q6098/check/Agafonov/Kamae1973/FiniteStagePrefixEstimate.lean
           if ! git diff --cached --quiet; then
-            git commit -m '[skip ci] Complete FiniteStagePrefixEstimate repair'
+            git commit -m '[skip ci] Finish FiniteStagePrefixEstimate sum proof'
             git push origin HEAD:q6098-check
           fi
       - name: Resolve pinned dependencies

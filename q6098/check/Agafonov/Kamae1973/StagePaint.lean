@@ -1,5 +1,7 @@
 import Agafonov.Kamae1973.TypicalWordExpectation
+import Mathlib.Data.Fintype.Prod
 import Mathlib.Logic.Function.Basic
+import Mathlib.Tactic.DeriveFintype
 
 namespace Agafonov.Kamae1973
 

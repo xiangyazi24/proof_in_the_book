@@ -122,7 +122,7 @@ theorem compactNormal_quantize
         atTop
         (𝓝 ((Measure.pi (fun _ : Fin r => P)
           (quantizationCylinder q r u)).toReal)) :=
-    Tendsto.congr (fun N => by rw [hcount N]) hfreq
+    Tendsto.congr (fun N => (hcount N).symm) hfreq
   have hmass :
       (Measure.pi (fun _ : Fin r => P)
         (quantizationCylinder q r u)).toReal =

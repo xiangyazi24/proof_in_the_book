@@ -91,7 +91,7 @@ theorem empiricalFrequency_tendsto_of_null_frontier
     have h := (hy f f.continuous).comp (tendsto_add_atTop_nat 1)
     convert h using 1
     · funext N
-      exact (empiricalPointMeasure_integral y (N + 1) f).symm
+      exact (empiricalPointMeasure_integral y (N := N + 1) f).symm
     · simp
   have hport :=
     ProbabilityMeasure.tendsto_measure_of_null_frontier_of_tendsto'

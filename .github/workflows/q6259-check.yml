@@ -1,0 +1,28 @@
+name: Q6259 empirical-frequency Lean check
+
+on:
+  push:
+    branches: [q6259-check]
+    paths:
+      - 'q6259/**'
+      - '.github/workflows/q6259-check.yml'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lean toolchain
+        run: |
+          curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Resolve pinned dependencies
+        run: |
+          cd q6259/check
+          lake update
+          lake exe cache get || true
+      - name: Build empirical frequency module
+        run: |
+          cd q6259/check
+          lake build Agafonov.Kamae1973.CompactEmpiricalFrequency

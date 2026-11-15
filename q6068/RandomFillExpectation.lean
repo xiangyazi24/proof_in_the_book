@@ -191,6 +191,7 @@ private theorem freeFillCylinder_real {b q : ℕ}
   simp only [ENNReal.toReal_ofReal (P.nonneg _)]
   apply Finset.prod_congr rfl
   intro r _
+  change P.prob (fillCylinderTarget y i w (i + r.val)) = P.prob (w r)
   rw [fillCylinderTarget_shiftedOffset]
 
 private theorem fillWindowExpectation_eq_unselectedProduct {b q : ℕ}

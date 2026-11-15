@@ -38,7 +38,7 @@ partial centered count in Kamae (1973), statement (4.9), pp. 142–147. -/
 noncomputable def centeredFillSum {b q : ℕ}
     (P : LetterDistribution b) (τ : ℕ → ℕ) (y : ℕ → Fin b)
     (N : ℕ) (w : Fin q → Fin b) (z : ℕ → Fin b) : ℝ :=
-  ∑ i in Finset.range N, centeredFillHit P τ y i w z
+  ∑ i ∈ Finset.range N, centeredFillHit P τ y i w z
 
 private instance randomFillRangeMembershipDecidable
     (τ : ℕ → ℕ) (k : ℕ) : Decidable (k ∈ Set.range τ) :=
@@ -64,7 +64,7 @@ private def shiftedOffsetEmbedding {q : ℕ} (i : ℕ) : Fin q ↪ ℕ where
   inj' := by
     intro r s hrs
     apply Fin.ext
-    omega
+    exact Nat.add_left_cancel hrs
 
 private noncomputable def unselectedCoordinates
     (τ : ℕ → ℕ) (i q : ℕ) : Finset ℕ :=
@@ -92,7 +92,7 @@ private theorem fillCylinderTarget_shiftedOffset {b q : ℕ}
   rw [dif_pos hbounds]
   apply congrArg w
   apply Fin.ext
-  omega
+  simp
 
 private theorem measurable_randomFillCoordinate {b : ℕ}
     (τ : ℕ → ℕ) (y : ℕ → Fin b) (k : ℕ) :
@@ -135,7 +135,9 @@ private theorem randomFillHit_eq_indicator {b q : ℕ}
     randomFillHit τ y i w = (fillHitEvent τ y i w).indicator 1 := by
   classical
   funext z
-  simp [randomFillHit, fillHitEvent]
+  by_cases hz : ∀ r : Fin q, randomFill τ y z (i + r.val) = w r
+  · simp [randomFillHit, fillHitEvent, Set.indicator_apply, hz]
+  · simp [randomFillHit, fillHitEvent, Set.indicator_apply, hz]
 
 private theorem fillHitEvent_eq_freeFillCylinder {b q : ℕ}
     (τ : ℕ → ℕ) (y : ℕ → Fin b) (i : ℕ)
@@ -185,9 +187,11 @@ private theorem freeFillCylinder_real {b q : ℕ}
     randomFillMeasure_cylinder P (unselectedCoordinates τ i q)
       (fillCylinderTarget y i w)]
   unfold unselectedCoordinates
-  rw [Finset.prod_map]
-  simp only [fillCylinderTarget_shiftedOffset, ENNReal.toReal_prod,
-    ENNReal.toReal_ofReal (P.nonneg _)]
+  rw [Finset.prod_map, ENNReal.toReal_prod]
+  simp only [ENNReal.toReal_ofReal (P.nonneg _)]
+  apply Finset.prod_congr rfl
+  intro r _
+  rw [fillCylinderTarget_shiftedOffset]
 
 private theorem fillWindowExpectation_eq_unselectedProduct {b q : ℕ}
     (P : LetterDistribution b) (τ : ℕ → ℕ)
@@ -207,9 +211,13 @@ private theorem fillWindowExpectation_eq_unselectedProduct {b q : ℕ}
       apply Finset.prod_congr rfl
       intro r _
       by_cases hrsel : i + r.val ∈ Set.range τ
-      · have hrmatch := hmatch r hrsel
-        simp [unselectedOffsets, hrsel, hrmatch]
-      · simp [unselectedOffsets, hrsel]
+      · have hrnot : r ∉ unselectedOffsets τ i q := by
+          intro hr
+          exact (Finset.mem_filter.mp hr).2 hrsel
+        rw [dif_pos hrsel, if_pos (hmatch r hrsel), if_neg hrnot]
+      · have hrmem : r ∈ unselectedOffsets τ i q :=
+          Finset.mem_filter.mpr ⟨Finset.mem_univ _, hrsel⟩
+        rw [dif_neg hrsel, if_pos hrmem]
     _ = ∏ r ∈ unselectedOffsets τ i q, P.prob (w r) := by
       exact Finset.prod_ite_mem_eq
         (unselectedOffsets τ i q) (fun r => P.prob (w r))
@@ -316,16 +324,6 @@ private theorem wordCount_ofFn_succ {C : Type*} [DecidableEq C]
   simp [wordCount, List.range_succ, profileHitNat, profileWindow,
     prefixList, eq_comm] <;> rfl
 
-private theorem wordCount_ofFn_eq_sum_profileHit
-    {C : Type*} [DecidableEq C]
-    (x : ℕ → C) {q : ℕ} (w : Fin q → C) (N : ℕ) :
-    wordCount x (List.ofFn w) N =
-      ∑ i in Finset.range N, profileHitNat x w i := by
-  induction N with
-  | zero => simp [wordCount]
-  | succ N ih =>
-      rw [wordCount_ofFn_succ, Finset.sum_range_succ, ih]
-
 private theorem cast_profileHitNat_eq_randomFillHit
     {b q : ℕ} (τ : ℕ → ℕ) (y z : ℕ → Fin b)
     (i : ℕ) (w : Fin q → Fin b) :
@@ -351,15 +349,27 @@ private theorem cast_profileHitNat_eq_randomFillHit
     rw [if_neg hnot]
     simp
 
+private theorem cast_wordCount_ofFn_eq_sum_hit
+    {b q : ℕ} (τ : ℕ → ℕ) (y z : ℕ → Fin b)
+    (N : ℕ) (w : Fin q → Fin b) :
+    (wordCount (randomFill τ y z) (List.ofFn w) N : ℝ) =
+      ∑ i ∈ Finset.range N, randomFillHit τ y i w z := by
+  induction N with
+  | zero =>
+      simp [wordCount]
+  | succ N ih =>
+      rw [wordCount_ofFn_succ, Nat.cast_add, Finset.sum_range_succ, ih]
+      rw [cast_profileHitNat_eq_randomFillHit]
+
 /-- A finite-window random-fill indicator is measurable.  This is the cylinder
 measurability assertion used in Kamae (1973), statement (4.9), pp. 142–147. -/
 theorem measurable_randomFillHit
     {b q : ℕ} (τ : ℕ → ℕ) (y : ℕ → Fin b)
     (i : ℕ) (w : Fin q → Fin b) :
     Measurable (randomFillHit τ y i w) := by
-  simpa [randomFillHit, fillHitEvent] using
-    (Measurable.ite (measurableSet_fillHitEvent τ y i w)
-      measurable_const measurable_const)
+  unfold randomFillHit
+  exact Measurable.ite (measurableSet_fillHitEvent τ y i w)
+    measurable_const measurable_const
 
 /-- The expectation of one random-fill word indicator is the deterministic
 conditional fill product.  This is the one-window expectation calculation in
@@ -419,12 +429,8 @@ theorem wordCount_randomFill_eq_sum_hit
     {b q : ℕ} (τ : ℕ → ℕ) (y z : ℕ → Fin b)
     (N : ℕ) (w : Fin q → Fin b) :
     (wordCount (randomFill τ y z) (List.ofFn w) N : ℝ) =
-      ∑ i in Finset.range N, randomFillHit τ y i w z := by
-  rw [wordCount_ofFn_eq_sum_profileHit]
-  rw [Nat.cast_sum]
-  apply Finset.sum_congr rfl
-  intro i _
-  exact cast_profileHitNat_eq_randomFillHit τ y z i w
+      ∑ i ∈ Finset.range N, randomFillHit τ y i w z := by
+  exact cast_wordCount_ofFn_eq_sum_hit τ y z N w
 
 end
 

@@ -56,13 +56,20 @@ private theorem empiricalPointMeasure_apply {Y : Type*} [MeasurableSpace Y]
   rw [hsum, Measure.sum_apply_of_countable]
   simp only [tsum_fintype, Measure.dirac_apply, Set.indicator_apply, Pi.one_apply]
   rw [Finset.sum_boole]
-  have hfilter :
-      (Finset.range N).attach.filter
-          (fun i : {i // i ∈ Finset.range N} => y i ∈ E) =
-        ((Finset.range N).filter (fun i => y i ∈ E)).attach := by
-    ext i
-    simp
-  rw [hfilter, Finset.card_attach]
+  have hcard :
+      ((Finset.range N).attach.filter
+          (fun i : {i // i ∈ Finset.range N} => y i ∈ E)).card =
+        ((Finset.range N).filter (fun i => y i ∈ E)).card := by
+    change Fintype.card {i : {i // i ∈ Finset.range N} // y i ∈ E} =
+      Fintype.card {i : ℕ // i ∈ Finset.range N ∧ y i ∈ E}
+    let e : {i : {i // i ∈ Finset.range N} // y i ∈ E} ≃
+        {i : ℕ // i ∈ Finset.range N ∧ y i ∈ E} where
+      toFun i := ⟨i.val.val, ⟨i.val.property, i.property⟩⟩
+      invFun i := ⟨⟨i.val, i.property.1⟩, i.property.2⟩
+      left_inv := by intro i; cases i; rfl
+      right_inv := by intro i; cases i; rfl
+    exact Fintype.card_congr e
+  rw [hcard]
 
 
 /-- Continuous-test convergence gives convergence of empirical frequencies on every
@@ -93,7 +100,7 @@ theorem empiricalFrequency_tendsto_of_null_frontier
     convert h using 1
     · funext N
       exact (empiricalPointMeasure_integral y (N := N + 1) f).symm
-    · simp
+    · simp [μlim]
   have hport :=
     ProbabilityMeasure.tendsto_measure_of_null_frontier_of_tendsto'
       hweak hE

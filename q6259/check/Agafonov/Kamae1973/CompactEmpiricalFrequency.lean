@@ -39,7 +39,7 @@ private theorem empiricalPointMeasure_integral {Y : Type*} [MeasurableSpace Y]
   rw [empiricalPointMeasure, integral_smul_measure, integral_finsetSum_measure]
   · simp [integral_dirac, div_eq_mul_inv, ENNReal.toReal_inv, hN]
   · intro i hi
-    exact (integrable_dirac (hF.aestronglyMeasurable)).integrable
+    exact integrable_dirac (hF.aestronglyMeasurable)
 
 private theorem empiricalPointMeasure_apply {Y : Type*} [MeasurableSpace Y]
     (y : ℕ → Y) {N : ℕ} (hN : N ≠ 0)

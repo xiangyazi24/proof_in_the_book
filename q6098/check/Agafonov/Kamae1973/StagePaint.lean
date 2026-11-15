@@ -1,7 +1,6 @@
 import Agafonov.Kamae1973.TypicalWordExpectation
 import Mathlib.Data.Fintype.Prod
 import Mathlib.Logic.Function.Basic
-import Mathlib.Tactic.DeriveFintype
 
 namespace Agafonov.Kamae1973
 
@@ -34,7 +33,21 @@ structure SelectedCell (H Q L : ℕ) where
   «macro» : Fin H
   slot : Fin (Q - 1)
   cell : Fin L
-deriving DecidableEq, Fintype
+deriving DecidableEq
+
+private def selectedCellEquiv (H Q L : ℕ) :
+    SelectedCell H Q L ≃ (Fin H × Fin (Q - 1) × Fin L) where
+  toFun z := (z.«macro», z.slot, z.cell)
+  invFun z := ⟨z.1, z.2.1, z.2.2⟩
+  left_inv z := by cases z; rfl
+  right_inv z := by
+    rcases z with ⟨m, s, c⟩
+    rfl
+
+private instance selectedCellFintype (H Q L : ℕ) :
+    Fintype (SelectedCell H Q L) :=
+  Fintype.ofEquiv (Fin H × Fin (Q - 1) × Fin L)
+    (selectedCellEquiv H Q L).symm
 
 /-- Projection from a selected cell to its block. -/
 def SelectedCell.toBlock {H Q L : ℕ}

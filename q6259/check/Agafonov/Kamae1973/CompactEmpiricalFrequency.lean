@@ -18,11 +18,6 @@ namespace Agafonov.Kamae1973
 open scoped ENNReal Topology
 open MeasureTheory Filter Classical
 
-noncomputable local instance probabilityMeasureWeakTopology {Y : Type*} [MeasurableSpace Y]
-    [TopologicalSpace Y] [OpensMeasurableSpace Y] :
-    TopologicalSpace (ProbabilityMeasure Y) :=
-  TopologicalSpace.induced ProbabilityMeasure.toFiniteMeasure inferInstance
-
 /-- The empirical probability measure of the first N points of a sequence. -/
 noncomputable def empiricalPointMeasure {Y : Type*} [MeasurableSpace Y]
     (y : ℕ → Y) (N : ℕ) : Measure Y :=
@@ -59,30 +54,15 @@ private theorem empiricalPointMeasure_apply {Y : Type*} [MeasurableSpace Y]
         Measure.sum (fun i : {i // i ∈ Finset.range N} => Measure.dirac (y i)) := by
     rw [← Finset.sum_attach, Finset.attach_eq_univ, ← Measure.sum_fintype]
   rw [hsum, Measure.sum_apply_of_countable]
-  simp [Measure.dirac_apply, Set.indicator_apply, tsum_fintype, Finset.sum_boole]
+  simp only [tsum_fintype, Measure.dirac_apply, Set.indicator_apply, Pi.one_apply]
+  rw [Finset.sum_boole]
+  have hfilter :
+      (Finset.univ.filter (fun i : {i // i ∈ Finset.range N} => y i ∈ E)) =
+        ((Finset.range N).filter (fun i => y i ∈ E)).attach := by
+    ext i
+    simp
+  rw [hfilter, Finset.card_attach]
 
-private theorem empiricalProbabilityMeasures_tendsto
-    {Y : Type*} [MeasurableSpace Y] [MeasurableSingletonClass Y] [TopologicalSpace Y]
-    [OpensMeasurableSpace Y] [BorelSpace Y] [HasOuterApproxClosed Y]
-    [TopologicalSpace (ProbabilityMeasure Y)]
-    (μ : Measure Y) [IsProbabilityMeasure μ] (y : ℕ → Y)
-    (hy : ∀ F : Y → ℝ, Continuous F →
-      Tendsto (fun N : ℕ =>
-        (∑ i ∈ Finset.range N, F (y i)) / (N : ℝ)
-        ) atTop (𝓝 (∫ x, F x ∂μ))) :
-    Tendsto
-      (fun N : ℕ =>
-        (⟨empiricalPointMeasure y (N + 1),
-          empiricalPointMeasure_isProbabilityMeasure y (Nat.succ_ne_zero N)⟩ :
-          ProbabilityMeasure Y))
-      atTop (𝓝 (⟨μ, inferInstance⟩ : ProbabilityMeasure Y)) := by
-  apply ProbabilityMeasure.tendsto_iff_forall_integral_tendsto.mpr
-  intro f
-  have h := (hy f f.continuous).comp (tendsto_add_atTop_nat 1)
-  convert h using 1
-  · funext N
-    exact (empiricalPointMeasure_integral y (N + 1) f).symm
-  · simp
 
 /-- Continuous-test convergence gives convergence of empirical frequencies on every
 set whose frontier is null. This is the portmanteau theorem for empirical point
@@ -106,7 +86,13 @@ theorem empiricalFrequency_tendsto_of_null_frontier
     ⟨empiricalPointMeasure y (N + 1),
       empiricalPointMeasure_isProbabilityMeasure y (Nat.succ_ne_zero N)⟩
   have hweak : Tendsto μseq atTop (𝓝 μlim) := by
-    exact empiricalProbabilityMeasures_tendsto μ y hy
+    apply ProbabilityMeasure.tendsto_iff_forall_integral_tendsto.mpr
+    intro f
+    have h := (hy f f.continuous).comp (tendsto_add_atTop_nat 1)
+    convert h using 1
+    · funext N
+      exact (empiricalPointMeasure_integral y (N + 1) f).symm
+    · simp
   have hport :=
     ProbabilityMeasure.tendsto_measure_of_null_frontier_of_tendsto'
       hweak hE

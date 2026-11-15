@@ -2,6 +2,7 @@ import Mathlib.Algebra.BigOperators.Group.Finset.Piecewise
 import Mathlib.Data.Fin.Tuple.Basic
 import Mathlib.Data.Finset.Interval
 import Mathlib.Data.List.OfFn
+import Mathlib.Data.Real.Basic
 
 namespace Agafonov.Kamae1973
 

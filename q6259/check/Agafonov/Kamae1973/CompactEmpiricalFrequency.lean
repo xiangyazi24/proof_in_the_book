@@ -17,7 +17,7 @@ namespace Agafonov.Kamae1973
 open scoped ENNReal Topology
 open MeasureTheory Filter Classical
 
-local instance probabilityMeasureWeakTopology {Y : Type*} [MeasurableSpace Y]
+noncomputable local instance probabilityMeasureWeakTopology {Y : Type*} [MeasurableSpace Y]
     [TopologicalSpace Y] [OpensMeasurableSpace Y] :
     TopologicalSpace (ProbabilityMeasure Y) :=
   TopologicalSpace.induced ProbabilityMeasure.toFiniteMeasure inferInstance
@@ -38,8 +38,7 @@ theorem empiricalPointMeasure_isProbabilityMeasure {Y : Type*} [MeasurableSpace 
   simp [hcast, ENNReal.inv_mul_cancel]
 
 private theorem empiricalPointMeasure_integral {Y : Type*} [MeasurableSpace Y]
-    [MeasurableSingletonClass Y] (y : ℕ → Y) {N : ℕ} (hN : N ≠ 0)
-    (F : Y → ℝ) (hF : Measurable F) :
+    [MeasurableSingletonClass Y] (y : ℕ → Y) (F : Y → ℝ) :
     (∫ x, F x ∂empiricalPointMeasure y N) =
       (∑ i ∈ Finset.range N, F (y i)) / (N : ℝ) := by
   rw [empiricalPointMeasure, integral_smul_measure, integral_finsetSum_measure]
@@ -49,8 +48,7 @@ private theorem empiricalPointMeasure_integral {Y : Type*} [MeasurableSpace Y]
     exact integrable_dirac (by simp)
 
 private theorem empiricalPointMeasure_apply {Y : Type*} [MeasurableSpace Y]
-    [MeasurableSingletonClass Y] (y : ℕ → Y) {N : ℕ} (hN : N ≠ 0)
-    (E : Set Y) :
+    [MeasurableSingletonClass Y] (y : ℕ → Y) (N : ℕ) (E : Set Y) :
     (empiricalPointMeasure y N) E =
       ((N : ℝ≥0∞)⁻¹) * (((Finset.range N).filter (fun i => y i ∈ E)).card : ℝ≥0∞) := by
   classical
@@ -77,8 +75,7 @@ private theorem empiricalProbabilityMeasures_tendsto
   have h := (hy f f.continuous).comp (tendsto_add_atTop_nat 1)
   convert h using 1
   · funext N
-    exact empiricalPointMeasure_integral y (Nat.succ_ne_zero N)
-      f f.continuous.measurable
+    exact empiricalPointMeasure_integral y f
   · simp
 
 /-- Continuous-test convergence gives convergence of empirical frequencies on every
@@ -119,9 +116,8 @@ theorem empiricalFrequency_tendsto_of_null_frontier
       (((Finset.range (N + 1)).filter (fun i => y i ∈ E)).card : ℝ) /
         ((N + 1 : ℕ) : ℝ)
     simp only [μseq, ProbabilityMeasure.coe_mk]
-    rw [empiricalPointMeasure_apply y (Nat.succ_ne_zero N) E]
-    push_cast
-    simp [ENNReal.toReal_mul, ENNReal.toReal_inv]
+    rw [empiricalPointMeasure_apply y (N + 1) E]
+    simp [ENNReal.toReal_mul, ENNReal.toReal_inv, ENNReal.toReal_natCast]
     ring
   exact (tendsto_add_atTop_iff_nat 1).1 hshift
 

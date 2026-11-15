@@ -24,6 +24,10 @@ private instance fillSelectedOffsetDecidable {q : ℕ}
   unfold isLocalSelectedOffset
   infer_instance
 
+private instance fillRangeMembershipDecidable
+    (τ : ℕ → ℕ) (n : ℕ) : Decidable (n ∈ Set.range τ) :=
+  Classical.propDecidable _
+
 /-- The conditional probability that one filled input window equals `w`.
 Selected coordinates are fixed by `y`, while all other coordinates retain their
 letter probabilities.  This is the one-window expectation in Kamae (1973),
@@ -166,9 +170,37 @@ private theorem physicalMatch_product_eq_indexMatch_product
     (∏ ell : Fin q, physicalMatchFactor y k w hq a γ ell) =
       ∏ r : Fin q, indexMatchFactor y k w hq a γ r := by
   classical
-  unfold physicalMatchFactor indexMatchFactor
-  rw [Finset.prod_ite, Finset.prod_ite]
-  simp only [Finset.prod_const_one, mul_one]
+  have hleft :
+      (∏ ell : Fin q, physicalMatchFactor y k w hq a γ ell) =
+        ∏ ell ∈ (Finset.univ.filter fun ell : Fin q =>
+          isLocalSelectedOffset a γ ell),
+            if y (k + (localIndexForOffset hq a γ ell).val) = w ell
+            then (1 : ℝ) else 0 := by
+    unfold physicalMatchFactor
+    change
+      (∏ ell : Fin q,
+        if isLocalSelectedOffset a γ ell then
+          (if y (k + (localIndexForOffset hq a γ ell).val) = w ell
+            then (1 : ℝ) else 0)
+        else (1 : ℝ)) = _
+    rw [Finset.prod_ite]
+    simp
+  have hright :
+      (∏ r : Fin q, indexMatchFactor y k w hq a γ r) =
+        ∏ r ∈ (Finset.univ.filter fun r : Fin q =>
+          localSelectedOffset a γ r < q),
+            if y (k + r.val) = w (localOffsetIndex hq a γ r)
+            then (1 : ℝ) else 0 := by
+    unfold indexMatchFactor
+    change
+      (∏ r : Fin q,
+        if localSelectedOffset a γ r < q then
+          (if y (k + r.val) = w (localOffsetIndex hq a γ r)
+            then (1 : ℝ) else 0)
+        else (1 : ℝ)) = _
+    rw [Finset.prod_ite]
+    simp
+  rw [hleft, hright]
   refine Finset.prod_bij
     (fun ell _ => localIndexForOffset hq a γ ell) ?_ ?_ ?_ ?_
   · intro ell hell
@@ -274,12 +306,18 @@ private theorem anchoredFactor_eq_mul
         _ = τ (k + r.val) := hreturn
     have hchoose : Classical.choose hmem = k + r.val :=
       hτ.injective ((Classical.choose_spec hmem).trans hphysical)
-    simp [physicalMatchFactor, physicalFreeFactor, hsel, hmem,
-      hchoose, r]
+    rw [dif_pos hmem]
+    unfold physicalMatchFactor physicalFreeFactor
+    rw [if_pos hsel, if_pos hsel, mul_one]
+    simpa [r] using
+      congrArg
+        (fun n : ℕ => if y n = w ell then (1 : ℝ) else 0)
+        hchoose
   · have hnotmem : τ k - a.val + ell.val ∉ Set.range τ := by
       intro hmem
       exact hsel (hmemiff.mp hmem)
-    simp [physicalMatchFactor, physicalFreeFactor, hsel, hnotmem]
+    rw [dif_neg hnotmem]
+    simp [physicalMatchFactor, physicalFreeFactor, hsel]
 
 private theorem fillWindowExpectation_eq_factorProducts
     {b q : ℕ} (P : LetterDistribution b)
@@ -301,14 +339,6 @@ private theorem fillWindowExpectation_eq_factorProducts
   apply Finset.prod_congr rfl
   intro ell _
   exact anchoredFactor_eq_mul P τ hτ y hq hk a hstart hfirst w ell
-
-private theorem selectedPair_anchor_fst
-    {b q : ℕ} (τ : ℕ → ℕ) (y : ℕ → Fin b)
-    {k : ℕ} (hk : 0 < k) (r : Fin q) :
-    (selectedPair τ q y (k - 1 + r.val)).1 = y (k + r.val) := by
-  unfold selectedPair
-  congr 1
-  omega
 
 private theorem localFillWeight_selectedPair_eq_factorProducts
     {b q : ℕ} (P : LetterDistribution b)
@@ -338,7 +368,14 @@ private theorem localFillWeight_selectedPair_eq_factorProducts
       unfold indexMatchFactor
       rw [if_pos hvis]
       unfold localOffsetIndex
-      rw [dif_pos hvis, hindex]
+      rw [dif_pos hvis]
+      exact congrArg
+        (fun n : ℕ =>
+          if y n =
+              w ⟨localSelectedOffset a
+                (fun s => cappedGap τ q (k - 1 + s.val)) r, hvis⟩
+          then (1 : ℝ) else 0)
+        hindex
     · rw [dif_neg hvis]
       simp [indexMatchFactor, hvis]
   · unfold physicalFreeFactor

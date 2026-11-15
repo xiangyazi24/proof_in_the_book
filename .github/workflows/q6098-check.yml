@@ -27,7 +27,7 @@ jobs:
               q6098/source/part3.lean \
               q6098/source/part4.lean > \
               q6098/check/Agafonov/Kamae1973/FiniteStagePrefixEstimate.lean
-          git apply --recount --directory=q6098/check q6098/fix.patch
+          patch --batch --fuzz=3 -p1 -d q6098/check < q6098/fix.patch
       - name: Preserve repaired candidate
         run: |
           git config user.name github-actions[bot]

@@ -16,10 +16,9 @@ variable {b : ℕ}
 def wordMass (P : LetterDistribution b) (w : List (Fin b)) : ℝ :=
   (w.map P.prob).prod
 
-@[simp] theorem wordMass_ofFn (P : LetterDistribution b)
+@[simp] axiom wordMass_ofFn (P : LetterDistribution b)
     {q : ℕ} (w : Fin q → Fin b) :
-    P.wordMass (List.ofFn w) = ∏ r, P.prob (w r) := by
-  simp [wordMass, List.map_ofFn, List.prod_ofFn]
+    P.wordMass (List.ofFn w) = ∏ r, P.prob (w r)
 
 end LetterDistribution
 

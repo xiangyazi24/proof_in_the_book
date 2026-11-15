@@ -1,0 +1,38 @@
+diff --git a/q6098/check/Agafonov/Kamae1973/FiniteStagePrefixEstimate.lean b/q6098/check/Agafonov/Kamae1973/FiniteStagePrefixEstimate.lean
+--- a/q6098/check/Agafonov/Kamae1973/FiniteStagePrefixEstimate.lean
++++ b/q6098/check/Agafonov/Kamae1973/FiniteStagePrefixEstimate.lean
+@@ -3,1 +3,2 @@
+ import Mathlib.Algebra.BigOperators.Group.Finset.Sigma
++import Mathlib.Data.Fintype.BigOperators
+@@ -443,4 +444,4 @@
+       apply Finset.sum_congr rfl
+       intro j _
+       rw [internalOccurrenceCount_cast_sum_private]
+-      rfl
++      simp only [prefixInternalHit]
+@@ -521,16 +522,25 @@
+   have hid :
+       (internalFrequency u w - P.wordMass (List.ofFn w)) * (L : ℝ) =
+         (internalOccurrenceCount u w : ℝ) -
+           (L : ℝ) * P.wordMass (List.ofFn w) := by
+     unfold internalFrequency
+     field_simp [hLne]
+-    ring
+-  rw [← hid, abs_mul, abs_of_nonneg (Nat.cast_nonneg L)]
+-  exact mul_le_mul_of_nonneg_right htyp (Nat.cast_nonneg L)
++  have hLnonneg : (0 : ℝ) ≤ (L : ℝ) := Nat.cast_nonneg L
++  calc
++    |(internalOccurrenceCount u w : ℝ) -
++        (L : ℝ) * P.wordMass (List.ofFn w)| =
++      |(internalFrequency u w - P.wordMass (List.ofFn w)) * (L : ℝ)| :=
++        congrArg abs hid.symm
++    _ = |internalFrequency u w - P.wordMass (List.ofFn w)| * |(L : ℝ)| :=
++      abs_mul _ _
++    _ = |internalFrequency u w - P.wordMass (List.ofFn w)| * (L : ℝ) := by
++      rw [abs_of_nonneg hLnonneg]
++    _ ≤ β * (L : ℝ) :=
++      mul_le_mul_of_nonneg_right htyp hLnonneg
+@@ -765,2 +775,2 @@
+       _ ≤ β * (s : ℝ) + (param.macroLength : ℝ) :=
+-        add_le_add_right hblockLengthBound _
++        add_le_add_left hblockLengthBound _

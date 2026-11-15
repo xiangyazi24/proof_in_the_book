@@ -29,7 +29,8 @@ theorem empiricalPointMeasure_isProbabilityMeasure {Y : Type*} [MeasurableSpace 
     IsProbabilityMeasure (empiricalPointMeasure y N) := by
   constructor
   rw [empiricalPointMeasure, Measure.smul_apply]
-  simp [hN, Nat.cast_ne_zero.mpr hN, ENNReal.inv_mul_cancel]
+  have hcast : (N : ℝ≥0∞) ≠ 0 := by exact_mod_cast hN
+  simp [hcast, ENNReal.inv_mul_cancel]
 
 private theorem empiricalPointMeasure_integral {Y : Type*} [MeasurableSpace Y]
     [MeasurableSingletonClass Y] (y : ℕ → Y) {N : ℕ} (hN : N ≠ 0)
@@ -37,43 +38,23 @@ private theorem empiricalPointMeasure_integral {Y : Type*} [MeasurableSpace Y]
     (∫ x, F x ∂empiricalPointMeasure y N) =
       (∑ i ∈ Finset.range N, F (y i)) / (N : ℝ) := by
   rw [empiricalPointMeasure, integral_smul_measure, integral_finsetSum_measure]
-  · simp [integral_dirac, div_eq_mul_inv, ENNReal.toReal_inv, hN]
+  · simp [integral_dirac, div_eq_mul_inv]
+    ring
   · intro i hi
     exact integrable_dirac (by simp)
 
 private theorem empiricalPointMeasure_apply {Y : Type*} [MeasurableSpace Y]
-    (y : ℕ → Y) {N : ℕ} (hN : N ≠ 0)
-    (E : Set Y) (hE : MeasurableSet E) :
+    [MeasurableSingletonClass Y] (y : ℕ → Y) {N : ℕ} (hN : N ≠ 0)
+    (E : Set Y) :
     (empiricalPointMeasure y N) E =
       ((N : ℝ≥0∞)⁻¹) * (((Finset.range N).filter (fun i => y i ∈ E)).card : ℝ≥0∞) := by
   classical
   rw [empiricalPointMeasure, Measure.smul_apply]
-  simp [Measure.dirac_apply', hE, Finset.sum_boole]
-
-private theorem measurableSet_of_measurable_frontier
-    {Y : Type*} [TopologicalSpace Y] [MeasurableSpace Y]
-    [OpensMeasurableSpace Y] (E : Set Y)
-    (hfront : MeasurableSet (frontier E)) : MeasurableSet E := by
-  have hdiff : MeasurableSet (E \ interior E) :=
-    hfront.mono (by
-      intro x hx
-      exact ⟨subset_closure hx.1, hx.2⟩)
-  have hdecomp : interior E ∪ (E \ interior E) = E := by
-    ext x
-    constructor
-    · intro hx
-      rcases hx with hi | ⟨hx, _⟩
-      · exact interior_subset hi
-      · exact hx
-    · intro hx
-      by_cases hi : x ∈ interior E
-      · exact Or.inl hi
-      · exact Or.inr ⟨hx, hi⟩
-  rw [← hdecomp]
-  exact isOpen_interior.measurableSet.union hdiff
+  simp only [Measure.dirac_apply, Set.indicator_apply, Pi.one_apply]
+  rw [Finset.sum_boole]
 
 private theorem empiricalProbabilityMeasures_tendsto
-    {Y : Type*} [MeasurableSpace Y] [TopologicalSpace Y]
+    {Y : Type*} [MeasurableSpace Y] [MeasurableSingletonClass Y] [TopologicalSpace Y]
     [OpensMeasurableSpace Y] [BorelSpace Y] [HasOuterApproxClosed Y]
     (μ : Measure Y) [IsProbabilityMeasure μ] (y : ℕ → Y)
     (hy : ∀ F : Y → ℝ, Continuous F →
@@ -91,8 +72,9 @@ private theorem empiricalProbabilityMeasures_tendsto
   have h := (hy f f.continuous).comp (tendsto_add_atTop_nat 1)
   convert h using 1
   · funext N
-    exact (empiricalPointMeasure_integral y (Nat.succ_ne_zero N)
-      f f.continuous.measurable).symm
+    exact empiricalPointMeasure_integral y (Nat.succ_ne_zero N)
+      f f.continuous.measurable
+  · simp
 
 /-- Continuous-test convergence gives convergence of empirical frequencies on every
 set whose frontier is null. This is the portmanteau theorem for empirical point
@@ -109,8 +91,6 @@ theorem empiricalFrequency_tendsto_of_null_frontier
       (fun N : ℕ =>
         (((Finset.range N).filter (fun i => y i ∈ E)).card : ℝ) / (N : ℝ))
       atTop (𝓝 (μ E).toReal) := by
-  have hmeas : MeasurableSet E :=
-    measurableSet_of_measurable_frontier E isClosed_frontier.measurableSet
   let μlim : ProbabilityMeasure Y := ⟨μ, inferInstance⟩
   let μseq : ℕ → ProbabilityMeasure Y := fun N =>
     ⟨empiricalPointMeasure y (N + 1),
@@ -135,8 +115,9 @@ theorem empiricalFrequency_tendsto_of_null_frontier
         ((N + 1 : ℕ) : ℝ)
     simp only [μseq, ProbabilityMeasure.coe_mk]
     rw [empiricalPointMeasure_apply y (Nat.succ_ne_zero N) E hmeas]
-    simp [ENNReal.toReal_mul, ENNReal.toReal_inv,
-      Nat.cast_ne_zero.mpr (Nat.succ_ne_zero N)]
+    push_cast
+    simp [ENNReal.toReal_mul, ENNReal.toReal_inv]
+    ring
   exact (tendsto_add_atTop_iff_nat 1).1 hshift
 
 /-- Compact-window frequencies converge to their Bernoulli product probabilities.

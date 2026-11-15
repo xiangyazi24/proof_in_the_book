@@ -54,11 +54,11 @@ private theorem measurableSet_of_measurable_frontier
     {Y : Type*} [TopologicalSpace Y] [MeasurableSpace Y]
     [OpensMeasurableSpace Y] (E : Set Y)
     (hfront : MeasurableSet (frontier E)) : MeasurableSet E := by
-  have hdiff : MeasurableSet (E \\ interior E) :=
+  have hdiff : MeasurableSet (E \ interior E) :=
     hfront.mono (by
       intro x hx
       exact ⟨subset_closure hx.1, hx.2⟩)
-  have hdecomp : interior E ∪ (E \\ interior E) = E := by
+  have hdecomp : interior E ∪ (E \ interior E) = E := by
     ext x
     constructor
     · intro hx

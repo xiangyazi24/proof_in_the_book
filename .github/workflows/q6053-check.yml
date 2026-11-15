@@ -22,6 +22,10 @@ jobs:
           cd q6053/check
           lake update
           lake exe cache get
+      - name: Apply proof repair
+        run: |
+          cd q6053/check
+          git apply fix.patch
       - name: Check Packet 24
         run: |
           cd q6053/check

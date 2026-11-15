@@ -145,7 +145,6 @@ theorem compactNormal_windowFrequency_tendsto
 
 /-- Selected-coordinate frequencies converge to their one-coordinate marginal.
 This is the length-one portmanteau consequence of Kamae (1973), Section 1. -/
-open Classical in
 theorem compactCollective_frequency_tendsto
     {X : Type*} [MetricSpace X] [CompactSpace X] [MeasurableSpace X] [BorelSpace X]
     (P : Measure X) [IsProbabilityMeasure P] (ξ : ℕ → X) (τ : ℕ → ℕ)

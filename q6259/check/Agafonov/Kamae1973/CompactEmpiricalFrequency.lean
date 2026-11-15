@@ -1,6 +1,5 @@
 import Agafonov.Kamae1973.CompactBernoulliNormality
 import Mathlib.MeasureTheory.Measure.Portmanteau
-import Mathlib.MeasureTheory.Measure.Sum
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.Topology.MetricSpace.ProperSpace

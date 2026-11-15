@@ -60,15 +60,28 @@ private theorem empiricalPointMeasure_apply {Y : Type*} [MeasurableSpace Y]
       ((Finset.range N).attach.filter
           (fun i : {i // i ∈ Finset.range N} => y i ∈ E)).card =
         ((Finset.range N).filter (fun i => y i ∈ E)).card := by
-    let e : {i : {i // i ∈ Finset.range N} // y i ∈ E} ≃
-        ↥((Finset.range N).filter (fun i => y i ∈ E)) :=
+    let e :
+        ↥((Finset.range N).attach.filter (fun i => y i ∈ E)) ≃
+          ↥((Finset.range N).filter (fun i => y i ∈ E)) :=
       { toFun := fun i =>
-          ⟨i.val.val, Finset.mem_filter.mpr ⟨i.val.property, i.property⟩⟩
+          ⟨i.val.val,
+            Finset.mem_filter.mpr
+              ⟨i.val.property, (Finset.mem_filter.mp i.property).2⟩⟩
         invFun := fun i =>
           ⟨⟨i.val, (Finset.mem_filter.mp i.property).1⟩,
-            (Finset.mem_filter.mp i.property).2⟩
-        left_inv := by intro i; cases i; rfl
-        right_inv := by intro i; cases i; rfl }
+            Finset.mem_filter.mpr
+              ⟨Finset.mem_attach _ _, (Finset.mem_filter.mp i.property).2⟩⟩
+        left_inv := by
+          intro i
+          apply Subtype.ext
+          apply Subtype.ext
+          rfl
+        right_inv := by
+          intro i
+          apply Subtype.ext
+          rfl }
+    change Fintype.card ↥((Finset.range N).attach.filter (fun i => y i ∈ E)) =
+      Fintype.card ↥((Finset.range N).filter (fun i => y i ∈ E))
     exact Fintype.card_congr e
   rw [hcard]
   simp only [smul_eq_mul]

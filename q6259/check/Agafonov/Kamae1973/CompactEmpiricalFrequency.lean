@@ -38,7 +38,7 @@ theorem empiricalPointMeasure_isProbabilityMeasure {Y : Type*} [MeasurableSpace 
   simp [hcast, ENNReal.inv_mul_cancel]
 
 private theorem empiricalPointMeasure_integral {Y : Type*} [MeasurableSpace Y]
-    [MeasurableSingletonClass Y] (y : ℕ → Y) (F : Y → ℝ) :
+    [MeasurableSingletonClass Y] (y : ℕ → Y) {N : ℕ} (F : Y → ℝ) :
     (∫ x, F x ∂empiricalPointMeasure y N) =
       (∑ i ∈ Finset.range N, F (y i)) / (N : ℝ) := by
   rw [empiricalPointMeasure, integral_smul_measure, integral_finsetSum_measure]
@@ -75,7 +75,7 @@ private theorem empiricalProbabilityMeasures_tendsto
   have h := (hy f f.continuous).comp (tendsto_add_atTop_nat 1)
   convert h using 1
   · funext N
-    exact empiricalPointMeasure_integral y f
+    exact (empiricalPointMeasure_integral y (N + 1) f).symm
   · simp
 
 /-- Continuous-test convergence gives convergence of empirical frequencies on every

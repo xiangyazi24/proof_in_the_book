@@ -60,8 +60,6 @@ private theorem empiricalPointMeasure_apply {Y : Type*} [MeasurableSpace Y]
       ((Finset.range N).attach.filter
           (fun i : {i // i ∈ Finset.range N} => y i ∈ E)).card =
         ((Finset.range N).filter (fun i => y i ∈ E)).card := by
-    change Fintype.card {i : {i // i ∈ Finset.range N} // y i ∈ E} =
-      Fintype.card ↥((Finset.range N).filter (fun i => y i ∈ E))
     let e : {i : {i // i ∈ Finset.range N} // y i ∈ E} ≃
         ↥((Finset.range N).filter (fun i => y i ∈ E)) :=
       { toFun := fun i =>
@@ -105,7 +103,6 @@ theorem empiricalFrequency_tendsto_of_null_frontier
     · funext N
       exact @empiricalPointMeasure_integral Y _ _ y (N + 1) f
     · congr 1
-      rfl
   have hport :=
     ProbabilityMeasure.tendsto_measure_of_null_frontier_of_tendsto'
       hweak hE

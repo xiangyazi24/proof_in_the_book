@@ -80,7 +80,7 @@ theorem compactNormal_quantize
   have hword : List.ofFn u = w := by
     simp [u, r, List.ofFn_get]
   let z : ℕ → Fin q.size := quantizeSequence q ξ
-  have hlist :
+  have hlist (i : ℕ) :
       List.ofFn (fun j : Fin r => z (i + j.val)) = List.ofFn u ↔
         (fun j : Fin r => z (i + j.val)) = u := by
     constructor
@@ -94,7 +94,7 @@ theorem compactNormal_quantize
       prefixList (fun j => z (i + j)) r = w ↔
         compactWindow ξ i r ∈ quantizationCylinder q r u := by
     change List.ofFn (fun j : Fin r => z (i + j.val)) = w ↔ _
-    rw [← hword, hlist]
+    rw [← hword, hlist i]
     change (fun j : Fin r => z (i + j.val)) = u ↔
       quantizeWindow q (compactWindow ξ i r) = u
     rw [quantizeWindow_compactWindow]

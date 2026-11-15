@@ -25,7 +25,7 @@ private theorem listRange_countP_eq_filter_card
       ((Finset.range N).filter (fun i => p i = true)).card := by
   classical
   have hnodup : ((List.range N).filter p).Nodup :=
-    List.nodup_filter.mpr List.nodup_range
+    (List.filter_sublist p).nodup List.nodup_range
   calc
     (List.range N).countP p =
         ((List.range N).filter p).length := List.countP_eq_length_filter

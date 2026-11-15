@@ -1,0 +1,147 @@
+diff --git a/Agafonov/Kamae1973/FiniteStagePrefixEstimate.lean b/Agafonov/Kamae1973/FiniteStagePrefixEstimate.lean
+--- a/Agafonov/Kamae1973/FiniteStagePrefixEstimate.lean
++++ b/Agafonov/Kamae1973/FiniteStagePrefixEstimate.lean
+@@ -35,6 +35,13 @@ private def stageHit {b r : ℕ} (x : ℕ → Fin b) (a : ℕ)
+   prefixList (fun j => x (a + (i + j))) r = List.ofFn w
+ 
++private instance stageHitDecidable {b r : ℕ}
++    (x : ℕ → Fin b) (a : ℕ) (w : Fin r → Fin b) :
++    DecidablePred (stageHit x a w) := by
++  intro i
++  unfold stageHit
++  infer_instance
++
+ private theorem intervalWordCount_eq_filter_card
+     {b r : ℕ} (x : ℕ → Fin b) (a s : ℕ) (w : Fin r → Fin b) :
+     intervalWordCount x a s (List.ofFn w) =
+@@ -83,7 +90,10 @@ private theorem filtered_card_bounds_real
+       _ = (small.filter p).card + (large.card - small.card) := by
+         rw [Finset.card_sdiff_of_subset hsub]
+-  exact ⟨Nat.cast_le.mpr hlowerNat, Nat.cast_le.mpr hupperNat⟩
++  constructor
++  · exact Nat.cast_le.mpr hlowerNat
++  · rw [← Nat.cast_add]
++    exact Nat.cast_le.mpr hupperNat
+@@ -157,6 +167,15 @@ private def prefixInternalHit
+   ((List.ofFn (label (prefixBlockLift hKH z.1))).drop z.2.val).take r =
+     List.ofFn w
+ 
++private instance prefixInternalHitDecidable
++    {b K H Q L r : ℕ}
++    (label : SelectedBlock H Q → Fin L → Fin b)
++    (hKH : K ≤ H) (w : Fin r → Fin b) :
++    DecidablePred (prefixInternalHit label hKH w) := by
++  intro z
++  unfold prefixInternalHit
++  infer_instance
++
+ private def prefixInternalStartSet
+     (M L : ℕ) {K H Q r : ℕ}
+     (offset : Fin H → Fin L) (hKH : K ≤ H) (hr : 1 ≤ r) :
+@@ -212,6 +231,16 @@ private theorem prefixShiftCell_toBlock
+     (prefixShiftCell hKH z k).toBlock = prefixBlockLift hKH z.1 := by
+   rfl
+ 
++private theorem finApply_eq_of_val_eq
++    {A : Type*} {n i j : ℕ} (f : Fin n → A)
++    (hi : i < n) (hj : j < n) (hij : i = j) :
++    f ⟨i, hi⟩ = f ⟨j, hj⟩ := by
++  apply congrArg f
++  apply Fin.ext
++  exact hij
++
+ private theorem selectedCellRemainder_lt_for_prefix
+     (L Q H : ℕ) (hQ : 2 ≤ Q)
+     (offset : Fin H → Fin L) (z : SelectedCell H Q L) :
+@@ -249,7 +278,7 @@ private theorem prefixInternalStartSet_subset_range
+     (offset : Fin H → Fin L) (hKH : K ≤ H) (hr : 1 ≤ r)
+     (hKM : K * M ≤ s) :
+-    prefixInternalStartSet M L offset hKH hr ⊆ Finset.range s := by
++    prefixInternalStartSet (Q := Q) M L offset hKH hr ⊆ Finset.range s := by
+   classical
+   intro i hi
+   rcases Finset.mem_image.mp hi with ⟨z, _hz, rfl⟩
+@@ -263,7 +292,7 @@ private theorem prefixInternalStartSet_card
+     (hM : M = Q * L) (offset : Fin H → Fin L)
+     (hKH : K ≤ H) (hr : 1 ≤ r) :
+-    (prefixInternalStartSet M L offset hKH hr).card =
++    (prefixInternalStartSet (Q := Q) M L offset hKH hr).card =
+       K * (Q - 1) * (L + 1 - r) := by
+   classical
+   unfold prefixInternalStartSet
+@@ -294,15 +323,31 @@ private theorem stage_window_eq_label_slice
+             have hz := z.2.isLt
+             have hk := k.isLt
+             omega⟩ := by
+-    have hstage :=
+-      (hx ⟨
+-        selectedCellOffset param.macroLength param.blockLength
+-          data.offsets (prefixShiftCell hKH z k),
+-        selectedCellOffset_lt_stage data (prefixShiftCell hKH z k)⟩).trans
+-        (data.stageWord_selected filler (prefixShiftCell hKH z k))
+-    rw [prefixShiftCell_offset param.macroLength param.blockLength
+-      data.offsets hKH hr z k] at hstage
++    have hsumlt :
++        prefixInternalOffset param.macroLength param.blockLength
++            data.offsets hKH hr z + k.val < T := by
++      rw [← prefixShiftCell_offset param.macroLength param.blockLength
++        data.offsets hKH hr z k]
++      exact selectedCellOffset_lt_stage data (prefixShiftCell hKH z k)
++    have hpainted :
++        data.stageWord filler
++            ⟨prefixInternalOffset param.macroLength param.blockLength
++                data.offsets hKH hr z + k.val, hsumlt⟩ =
++          data.labels (prefixShiftCell hKH z k).toBlock
++            (prefixShiftCell hKH z k).cell := by
++      calc
++        data.stageWord filler
++            ⟨prefixInternalOffset param.macroLength param.blockLength
++                data.offsets hKH hr z + k.val, hsumlt⟩ =
++          data.stageWord filler
++            ⟨selectedCellOffset param.macroLength param.blockLength
++                data.offsets (prefixShiftCell hKH z k),
++              selectedCellOffset_lt_stage data (prefixShiftCell hKH z k)⟩ := by
++            exact finApply_eq_of_val_eq (data.stageWord filler) hsumlt
++              (selectedCellOffset_lt_stage data (prefixShiftCell hKH z k))
++              (prefixShiftCell_offset param.macroLength param.blockLength
++                data.offsets hKH hr z k).symm
++        _ = data.labels (prefixShiftCell hKH z k).toBlock
++              (prefixShiftCell hKH z k).cell :=
++          data.stageWord_selected filler (prefixShiftCell hKH z k)
++    have hstage :=
++      (hx ⟨prefixInternalOffset param.macroLength param.blockLength
++        data.offsets hKH hr z + k.val, hsumlt⟩).trans hpainted
+     simpa [prefixShiftCell, prefixBlockLift, prefixMacroLift,
+       SelectedCell.toBlock] using hstage
+@@ -480,11 +525,18 @@ private theorem typical_internalOccurrence_abs
+           (L : ℝ) * P.wordMass (List.ofFn w) := by
+     unfold internalFrequency
+     field_simp [hLne]
+-    ring
+-  rw [← hid, abs_mul, abs_of_nonneg (Nat.cast_nonneg L)]
+-  exact mul_le_mul_of_nonneg_right htyp (Nat.cast_nonneg L)
++  have hLnonneg : (0 : ℝ) ≤ (L : ℝ) := Nat.cast_nonneg L
++  calc
++    |(internalOccurrenceCount u w : ℝ) -
++        (L : ℝ) * P.wordMass (List.ofFn w)| =
++      |(internalFrequency u w - P.wordMass (List.ofFn w)) * (L : ℝ)| :=
++        congrArg abs hid.symm
++    _ = |internalFrequency u w - P.wordMass (List.ofFn w)| * |(L : ℝ)| :=
++      abs_mul _ _
++    _ = |internalFrequency u w - P.wordMass (List.ofFn w)| * (L : ℝ) := by
++      rw [abs_of_nonneg hLnonneg]
++    _ ≤ β * (L : ℝ) :=
++      mul_le_mul_of_nonneg_right htyp hLnonneg
+@@ -603,7 +655,8 @@ theorem StageAssignmentData.prefix_count_le {b : ℕ}
+   have hLpos : 0 < param.blockLength :=
+     lt_of_lt_of_le Nat.zero_lt_one param.one_le_blockLength
+   have hQpos : 0 < param.blocksPerMacro := by
++    have htwo := param.two_le_blocksPerMacro
+     omega
+@@ -715,7 +768,7 @@ theorem StageAssignmentData.prefix_count_le {b : ℕ}
+       _ = ((K * param.blockLength : ℕ) : ℝ) +
+           (param.macroLength : ℝ) := by
+         rw [Nat.cast_add]
+       _ ≤ β * (s : ℝ) + (param.macroLength : ℝ) :=
+-        add_le_add_right hblockLengthBound _
++        add_le_add_left hblockLengthBound _

@@ -1,5 +1,6 @@
 import Agafonov.Kamae1973.CompactBernoulliNormality
 import Mathlib.MeasureTheory.Measure.Portmanteau
+import Mathlib.MeasureTheory.Measure.Sum
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.Topology.MetricSpace.ProperSpace
@@ -53,12 +54,17 @@ private theorem empiricalPointMeasure_apply {Y : Type*} [MeasurableSpace Y]
       ((N : ℝ≥0∞)⁻¹) * (((Finset.range N).filter (fun i => y i ∈ E)).card : ℝ≥0∞) := by
   classical
   rw [empiricalPointMeasure, Measure.smul_apply]
-  simp only [Measure.dirac_apply, Set.indicator_apply, Pi.one_apply]
-  rw [Finset.sum_boole]
+  have hsum :
+      (∑ i ∈ Finset.range N, Measure.dirac (y i)) =
+        Measure.sum (fun i : {i // i ∈ Finset.range N} => Measure.dirac (y i)) := by
+    rw [← Finset.sum_attach, Finset.attach_eq_univ, ← Measure.sum_fintype]
+  rw [hsum, Measure.sum_apply_of_countable]
+  simp [Measure.dirac_apply, Set.indicator_apply, tsum_fintype, Finset.sum_boole]
 
 private theorem empiricalProbabilityMeasures_tendsto
     {Y : Type*} [MeasurableSpace Y] [MeasurableSingletonClass Y] [TopologicalSpace Y]
     [OpensMeasurableSpace Y] [BorelSpace Y] [HasOuterApproxClosed Y]
+    [TopologicalSpace (ProbabilityMeasure Y)]
     (μ : Measure Y) [IsProbabilityMeasure μ] (y : ℕ → Y)
     (hy : ∀ F : Y → ℝ, Continuous F →
       Tendsto (fun N : ℕ =>
@@ -93,6 +99,8 @@ theorem empiricalFrequency_tendsto_of_null_frontier
       (fun N : ℕ =>
         (((Finset.range N).filter (fun i => y i ∈ E)).card : ℝ) / (N : ℝ))
       atTop (𝓝 (μ E).toReal) := by
+  letI : TopologicalSpace (ProbabilityMeasure Y) :=
+    TopologicalSpace.induced ProbabilityMeasure.toFiniteMeasure inferInstance
   let μlim : ProbabilityMeasure Y := ⟨μ, inferInstance⟩
   let μseq : ℕ → ProbabilityMeasure Y := fun N =>
     ⟨empiricalPointMeasure y (N + 1),
@@ -117,7 +125,7 @@ theorem empiricalFrequency_tendsto_of_null_frontier
         ((N + 1 : ℕ) : ℝ)
     simp only [μseq, ProbabilityMeasure.coe_mk]
     rw [empiricalPointMeasure_apply y (N + 1) E]
-    simp [ENNReal.toReal_mul, ENNReal.toReal_inv, ENNReal.toReal_natCast]
+    simp only [ENNReal.toReal_mul, ENNReal.toReal_inv, ENNReal.toReal_natCast]
     ring
   exact (tendsto_add_atTop_iff_nat 1).1 hshift
 

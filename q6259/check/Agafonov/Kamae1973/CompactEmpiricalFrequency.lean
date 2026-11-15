@@ -17,6 +17,11 @@ namespace Agafonov.Kamae1973
 open scoped ENNReal Topology
 open MeasureTheory Filter Classical
 
+local instance probabilityMeasureWeakTopology {Y : Type*} [MeasurableSpace Y]
+    [TopologicalSpace Y] [OpensMeasurableSpace Y] :
+    TopologicalSpace (ProbabilityMeasure Y) :=
+  TopologicalSpace.induced ProbabilityMeasure.toFiniteMeasure inferInstance
+
 /-- The empirical probability measure of the first N points of a sequence. -/
 noncomputable def empiricalPointMeasure {Y : Type*} [MeasurableSpace Y]
     (y : ℕ → Y) (N : ℕ) : Measure Y :=
@@ -114,7 +119,7 @@ theorem empiricalFrequency_tendsto_of_null_frontier
       (((Finset.range (N + 1)).filter (fun i => y i ∈ E)).card : ℝ) /
         ((N + 1 : ℕ) : ℝ)
     simp only [μseq, ProbabilityMeasure.coe_mk]
-    rw [empiricalPointMeasure_apply y (Nat.succ_ne_zero N) E hmeas]
+    rw [empiricalPointMeasure_apply y (Nat.succ_ne_zero N) E]
     push_cast
     simp [ENNReal.toReal_mul, ENNReal.toReal_inv]
     ring
@@ -122,7 +127,6 @@ theorem empiricalFrequency_tendsto_of_null_frontier
 
 /-- Compact-window frequencies converge to their Bernoulli product probabilities.
 This is the finite-window portmanteau consequence of Kamae (1973), Section 1. -/
-open Classical in
 theorem compactNormal_windowFrequency_tendsto
     {X : Type*} [MetricSpace X] [CompactSpace X] [MeasurableSpace X] [BorelSpace X]
     (P : Measure X) [IsProbabilityMeasure P] (ξ : ℕ → X)

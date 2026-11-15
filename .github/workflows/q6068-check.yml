@@ -17,18 +17,16 @@ jobs:
         run: |
           curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
-      - name: Prepare pinned source tree
+      - name: Install candidate module
         run: |
-          git clone https://github.com/xiangyazi24/agafonov.git source
-          cd source
-          git checkout 1b07efd
-          cp ../q6068/FillExpectation.lean Agafonov/Kamae1973/FillExpectation.lean
-          cp ../q6068/RandomFillExpectation.lean Agafonov/Kamae1973/RandomFillExpectation.lean
+          cp q6068/RandomFillExpectation.lean \
+            q6068/check/Agafonov/Kamae1973/RandomFillExpectation.lean
       - name: Resolve pinned dependencies
         run: |
-          cd source
+          cd q6068/check
+          lake update
           lake exe cache get
       - name: Check Packet 30
         run: |
-          cd source
+          cd q6068/check
           lake build Agafonov.Kamae1973.RandomFillExpectation

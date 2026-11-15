@@ -65,16 +65,15 @@ private theorem empiricalPointMeasure_apply {Y : Type*} [MeasurableSpace Y]
         ↥(Finset.filter p (Finset.range N).attach) ≃
           ↥(Finset.filter (fun i : ℕ => y i ∈ E) (Finset.range N)) :=
       { toFun := fun i =>
-          ⟨i.val.val.val,
+          ⟨i.val.val,
             Finset.mem_filter.mpr
-              ⟨i.val.val.property, (Finset.mem_filter.mp i.property).2⟩⟩
+              ⟨i.val.property, (Finset.mem_filter.mp i.property).2⟩⟩
         invFun := fun i =>
           ⟨⟨i.val, (Finset.mem_filter.mp i.property).1⟩,
             Finset.mem_filter.mpr
               ⟨Finset.mem_attach _ _, (Finset.mem_filter.mp i.property).2⟩⟩
         left_inv := by
           intro i
-          apply Subtype.ext
           apply Subtype.ext
           apply Subtype.ext
           rfl

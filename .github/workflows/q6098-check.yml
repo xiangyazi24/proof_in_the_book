@@ -28,7 +28,7 @@ jobs:
               q6098/source/part4.lean > \
               q6098/check/Agafonov/Kamae1973/FiniteStagePrefixEstimate.lean
           cd q6098/check
-          git apply ../fix.patch
+          git apply --recount ../fix.patch
       - name: Resolve pinned dependencies
         run: |
           cd q6098/check

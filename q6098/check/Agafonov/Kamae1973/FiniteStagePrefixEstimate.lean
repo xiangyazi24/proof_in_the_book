@@ -444,7 +444,12 @@ private theorem prefixInternalHitSet_cast_card_eq_sum
       apply Finset.sum_congr rfl
       intro j _
       rw [internalOccurrenceCount_cast_sum_private]
-      simp only [prefixInternalHit]
+      apply Finset.sum_congr rfl
+      intro c _
+      unfold prefixInternalHit
+      by_cases h : ((List.ofFn (label (prefixBlockLift hKH j))).drop c.val).take r = List.ofFn w
+      · rw [if_pos h, if_pos h]
+      · rw [if_neg h, if_neg h]
 
 private theorem card_filter_image_of_injective
     {D E : Type*} [Fintype D] [DecidableEq D] [DecidableEq E]

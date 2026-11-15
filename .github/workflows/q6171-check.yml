@@ -21,7 +21,7 @@ jobs:
         run: |
           cd q6171/check
           lake update
-          lake exe cache get
+          lake exe cache get || true
       - name: Build Packet X
         run: |
           cd q6171/check

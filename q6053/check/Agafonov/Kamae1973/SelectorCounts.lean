@@ -1,4 +1,6 @@
+import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Algebra.BigOperators.Group.Finset.Piecewise
+import Mathlib.Algebra.Order.BigOperators.Group.Finset
 import Mathlib.Data.Fin.Tuple.Basic
 import Mathlib.Data.Finset.Interval
 import Mathlib.Data.List.OfFn

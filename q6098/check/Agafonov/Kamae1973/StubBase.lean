@@ -1,4 +1,5 @@
 import Mathlib.Algebra.BigOperators.Group.Finset.Sigma
+import Mathlib.Algebra.Order.BigOperators.Group.Finset
 import Mathlib.Data.Fin.Tuple.Basic
 import Mathlib.Data.Fintype.Pi
 import Mathlib.Data.List.OfFn

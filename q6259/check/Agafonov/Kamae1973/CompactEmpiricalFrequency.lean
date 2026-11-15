@@ -57,7 +57,8 @@ private theorem empiricalPointMeasure_apply {Y : Type*} [MeasurableSpace Y]
   simp only [tsum_fintype, Measure.dirac_apply, Set.indicator_apply, Pi.one_apply]
   rw [Finset.sum_boole]
   have hfilter :
-      (Finset.univ.filter (fun i : {i // i ∈ Finset.range N} => y i ∈ E)) =
+      (Finset.range N).attach.filter
+          (fun i : {i // i ∈ Finset.range N} => y i ∈ E) =
         ((Finset.range N).filter (fun i => y i ∈ E)).attach := by
     ext i
     simp

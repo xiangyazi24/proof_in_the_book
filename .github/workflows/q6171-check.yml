@@ -1,0 +1,28 @@
+name: Q6171 Packet X check
+
+on:
+  push:
+    branches: [q6171-check]
+    paths:
+      - 'q6171/**'
+      - '.github/workflows/q6171-check.yml'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lean toolchain
+        run: |
+          curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Resolve pinned dependencies
+        run: |
+          cd q6171/check
+          lake update
+          lake exe cache get
+      - name: Build Packet X
+        run: |
+          cd q6171/check
+          lake build Agafonov.Kamae1973.SectionFiveAffineSelector

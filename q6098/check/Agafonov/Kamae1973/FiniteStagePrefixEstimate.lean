@@ -1,6 +1,7 @@
 import Agafonov.Kamae1973.StagePaint
 import Agafonov.Kamae1973.TypicalWordExpectation
 import Mathlib.Algebra.BigOperators.Group.Finset.Sigma
+import Mathlib.Data.Fintype.BigOperators
 import Mathlib.Data.Finset.Card
 import Mathlib.Data.List.TakeDrop
 import Mathlib.Tactic.FieldSimp
@@ -443,7 +444,7 @@ private theorem prefixInternalHitSet_cast_card_eq_sum
       apply Finset.sum_congr rfl
       intro j _
       rw [internalOccurrenceCount_cast_sum_private]
-      rfl
+      simp only [prefixInternalHit]
 
 private theorem card_filter_image_of_injective
     {D E : Type*} [Fintype D] [DecidableEq D] [DecidableEq E]
@@ -483,7 +484,7 @@ private theorem prefixInternalHitCount_eq
     (hx : ExtendsInterval a (data.stageWord filler) x)
     {K r : ℕ} (hKH : K ≤ data.macroblocks) (hr : 1 ≤ r)
     (w : Fin r → Fin b) :
-    ((((prefixInternalStartSet param.macroLength param.blockLength
+    ((((prefixInternalStartSet (Q := param.blocksPerMacro) param.macroLength param.blockLength
         data.offsets hKH hr).filter (stageHit x a w)).card : ℕ) : ℝ) =
       ∑ j : PrefixBlockIndex K param.blocksPerMacro,
         (internalOccurrenceCount
@@ -531,9 +532,18 @@ private theorem typical_internalOccurrence_abs
           (L : ℝ) * P.wordMass (List.ofFn w) := by
     unfold internalFrequency
     field_simp [hLne]
-    ring
-  rw [← hid, abs_mul, abs_of_nonneg (Nat.cast_nonneg L)]
-  exact mul_le_mul_of_nonneg_right htyp (Nat.cast_nonneg L)
+  have hLnonneg : (0 : ℝ) ≤ (L : ℝ) := Nat.cast_nonneg L
+  calc
+    |(internalOccurrenceCount u w : ℝ) -
+        (L : ℝ) * P.wordMass (List.ofFn w)| =
+      |(internalFrequency u w - P.wordMass (List.ofFn w)) * (L : ℝ)| :=
+        congrArg abs hid.symm
+    _ = |internalFrequency u w - P.wordMass (List.ofFn w)| * |(L : ℝ)| :=
+      abs_mul _ _
+    _ = |internalFrequency u w - P.wordMass (List.ofFn w)| * (L : ℝ) := by
+      rw [abs_of_nonneg hLnonneg]
+    _ ≤ β * (L : ℝ) :=
+      mul_le_mul_of_nonneg_right htyp hLnonneg
 
 private theorem prefixTypicalSum_abs
     {b : ℕ}
@@ -765,7 +775,7 @@ theorem StageAssignmentData.prefix_count_le {b : ℕ}
           (param.macroLength : ℝ) := by
         rw [Nat.cast_add]
       _ ≤ β * (s : ℝ) + (param.macroLength : ℝ) :=
-        add_le_add_right hblockLengthBound _
+        add_le_add_left hblockLengthBound _
   have hrSub : r - 1 ≤ R - 1 :=
     Nat.sub_le_sub_right hrR 1
   have hedgeUnit :
@@ -795,14 +805,14 @@ theorem StageAssignmentData.prefix_count_le {b : ℕ}
       (missing : ℝ) = (deficit : ℝ) + (edge : ℝ) := by
     rw [hmissingEq, Nat.cast_add]
   have hsmallSub :
-      prefixInternalStartSet param.macroLength param.blockLength
+      prefixInternalStartSet (Q := param.blocksPerMacro) param.macroLength param.blockLength
           data.offsets hKH hr ⊆ Finset.range s :=
     prefixInternalStartSet_subset_range
       param.macroLength param.blockLength param.blocksPerMacro
       K data.macroblocks r s param.two_le_blocksPerMacro
       param.macro_eq data.offsets hKH hr hKM
   have hsmallCard :
-      (prefixInternalStartSet param.macroLength param.blockLength
+      (prefixInternalStartSet (Q := param.blocksPerMacro) param.macroLength param.blockLength
         data.offsets hKH hr).card = good := by
     have hcard :=
       prefixInternalStartSet_card
@@ -811,7 +821,7 @@ theorem StageAssignmentData.prefix_count_le {b : ℕ}
         param.macro_eq data.offsets hKH hr
     simpa [good, blocks, Nat.mul_assoc] using hcard
   have hgoodCount :
-      ((((prefixInternalStartSet param.macroLength param.blockLength
+      ((((prefixInternalStartSet (Q := param.blocksPerMacro) param.macroLength param.blockLength
           data.offsets hKH hr).filter (stageHit x a w)).card : ℕ) : ℝ) = A := by
     have hcount :=
       prefixInternalHitCount_eq data filler x hx hKH hr w
@@ -823,12 +833,12 @@ theorem StageAssignmentData.prefix_count_le {b : ℕ}
       (intervalWordCount_eq_filter_card x a s w)
   have hfilters :=
     filtered_card_bounds_real
-      (prefixInternalStartSet param.macroLength param.blockLength
+      (prefixInternalStartSet (Q := param.blocksPerMacro) param.macroLength param.blockLength
         data.offsets hKH hr)
       (Finset.range s) hsmallSub (stageHit x a w)
   have hA_le_C : A ≤ C := by
     calc
-      A = ((((prefixInternalStartSet param.macroLength param.blockLength
+      A = ((((prefixInternalStartSet (Q := param.blocksPerMacro) param.macroLength param.blockLength
           data.offsets hKH hr).filter (stageHit x a w)).card : ℕ) : ℝ) :=
         hgoodCount.symm
       _ ≤ ((((Finset.range s).filter (stageHit x a w)).card : ℕ) : ℝ) :=
@@ -838,10 +848,10 @@ theorem StageAssignmentData.prefix_count_le {b : ℕ}
     calc
       C = ((((Finset.range s).filter (stageHit x a w)).card : ℕ) : ℝ) :=
         htotalCount
-      _ ≤ ((((prefixInternalStartSet param.macroLength param.blockLength
+      _ ≤ ((((prefixInternalStartSet (Q := param.blocksPerMacro) param.macroLength param.blockLength
           data.offsets hKH hr).filter (stageHit x a w)).card : ℕ) : ℝ) +
           ((((Finset.range s).card -
-            (prefixInternalStartSet param.macroLength param.blockLength
+            (prefixInternalStartSet (Q := param.blocksPerMacro) param.macroLength param.blockLength
               data.offsets hKH hr).card : ℕ) : ℕ) : ℝ) :=
         hfilters.2
       _ = A + (missing : ℝ) := by

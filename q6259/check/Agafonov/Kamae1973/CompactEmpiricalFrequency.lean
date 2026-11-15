@@ -74,6 +74,7 @@ private theorem empiricalPointMeasure_apply {Y : Type*} [MeasurableSpace Y]
         right_inv := by intro i; cases i; rfl }
     exact Fintype.card_congr e
   rw [hcard]
+  simp only [smul_eq_mul]
 
 
 /-- Continuous-test convergence gives convergence of empirical frequencies on every

@@ -60,14 +60,18 @@ private theorem empiricalPointMeasure_apply {Y : Type*} [MeasurableSpace Y]
       ((Finset.range N).attach.filter
           (fun i : {i // i ∈ Finset.range N} => y i ∈ E)).card =
         ((Finset.range N).filter (fun i => y i ∈ E)).card := by
+    letI : Fintype {i : ℕ // i ∈ Finset.range N ∧ y i ∈ E} :=
+      Fintype.ofFinset ((Finset.range N).filter (fun i => y i ∈ E)) (by
+        intro i
+        simp)
     change Fintype.card {i : {i // i ∈ Finset.range N} // y i ∈ E} =
       Fintype.card {i : ℕ // i ∈ Finset.range N ∧ y i ∈ E}
     let e : {i : {i // i ∈ Finset.range N} // y i ∈ E} ≃
-        {i : ℕ // i ∈ Finset.range N ∧ y i ∈ E} where
-      toFun i := ⟨i.val.val, ⟨i.val.property, i.property⟩⟩
-      invFun i := ⟨⟨i.val, i.property.1⟩, i.property.2⟩
-      left_inv := by intro i; cases i; rfl
-      right_inv := by intro i; cases i; rfl
+        {i : ℕ // i ∈ Finset.range N ∧ y i ∈ E} :=
+      { toFun := fun i => ⟨i.val.val, ⟨i.val.property, i.property⟩⟩
+        invFun := fun i => ⟨⟨i.val, i.property.1⟩, i.property.2⟩
+        left_inv := by intro i; cases i; rfl
+        right_inv := by intro i; cases i; rfl }
     exact Fintype.card_congr e
   rw [hcard]
 

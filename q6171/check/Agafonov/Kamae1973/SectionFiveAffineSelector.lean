@@ -33,7 +33,7 @@ private theorem affineFloorArgument_succ
       b * ((k + 1 : ℕ) : ℝ) + c := by
   calc
     b * (k : ℝ) + c + 1 ≤ b * (k : ℝ) + c + b :=
-      add_le_add_left hb (b * (k : ℝ) + c)
+      add_le_add_right hb (b * (k : ℝ) + c)
     _ = b * ((k + 1 : ℕ) : ℝ) + c := by
       simp only [Nat.cast_add, Nat.cast_one, mul_add, mul_one]
       ac_rfl
@@ -76,7 +76,7 @@ theorem affineFloorSelector_hasLinearGrowth
     ((Nat.floor (b * (n : ℝ) + c) : ℕ) : ℝ) ≤
         b * (n : ℝ) + c := Nat.floor_le harg
     _ ≤ b * (n : ℝ) + c * (n : ℝ) :=
-      add_le_add_left hcScale (b * (n : ℝ))
+      add_le_add_right hcScale (b * (n : ℝ))
     _ = (b + c) * (n : ℝ) := by
       rw [add_mul]
 

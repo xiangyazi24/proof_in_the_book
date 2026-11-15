@@ -60,16 +60,15 @@ private theorem empiricalPointMeasure_apply {Y : Type*} [MeasurableSpace Y]
       ((Finset.range N).attach.filter
           (fun i : {i // i ∈ Finset.range N} => y i ∈ E)).card =
         ((Finset.range N).filter (fun i => y i ∈ E)).card := by
-    letI : Fintype {i : ℕ // i ∈ Finset.range N ∧ y i ∈ E} :=
-      Fintype.ofFinset ((Finset.range N).filter (fun i => y i ∈ E)) (by
-        intro i
-        simp)
     change Fintype.card {i : {i // i ∈ Finset.range N} // y i ∈ E} =
-      Fintype.card {i : ℕ // i ∈ Finset.range N ∧ y i ∈ E}
+      Fintype.card ↥((Finset.range N).filter (fun i => y i ∈ E))
     let e : {i : {i // i ∈ Finset.range N} // y i ∈ E} ≃
-        {i : ℕ // i ∈ Finset.range N ∧ y i ∈ E} :=
-      { toFun := fun i => ⟨i.val.val, ⟨i.val.property, i.property⟩⟩
-        invFun := fun i => ⟨⟨i.val, i.property.1⟩, i.property.2⟩
+        ↥((Finset.range N).filter (fun i => y i ∈ E)) :=
+      { toFun := fun i =>
+          ⟨i.val.val, Finset.mem_filter.mpr ⟨i.val.property, i.property⟩⟩
+        invFun := fun i =>
+          ⟨⟨i.val, (Finset.mem_filter.mp i.property).1⟩,
+            (Finset.mem_filter.mp i.property).2⟩
         left_inv := by intro i; cases i; rfl
         right_inv := by intro i; cases i; rfl }
     exact Fintype.card_congr e
@@ -105,7 +104,8 @@ theorem empiricalFrequency_tendsto_of_null_frontier
     convert h using 1
     · funext N
       exact @empiricalPointMeasure_integral Y _ _ y (N + 1) f
-    · simp [μlim, ProbabilityMeasure.coe_mk]
+    · congr 1
+      rfl
   have hport :=
     ProbabilityMeasure.tendsto_measure_of_null_frontier_of_tendsto'
       hweak hE

@@ -104,8 +104,7 @@ theorem empiricalFrequency_tendsto_of_null_frontier
     convert h using 1
     · funext N
       exact @empiricalPointMeasure_integral Y _ _ y (N + 1) f
-    · change (∫ x, f x ∂μ) = ∫ x, f x ∂μ
-      rfl
+    · simp [μlim, ProbabilityMeasure.coe_mk]
   have hport :=
     ProbabilityMeasure.tendsto_measure_of_null_frontier_of_tendsto'
       hweak hE

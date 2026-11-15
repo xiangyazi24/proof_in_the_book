@@ -101,9 +101,8 @@ theorem empiricalFrequency_tendsto_of_null_frontier
       (fun N : ℕ =>
         (((Finset.range N).filter (fun i => y i ∈ E)).card : ℝ) / (N : ℝ))
       atTop (𝓝 (μ E).toReal) := by
-  have hmeas : MeasurableSet E := by
-    apply measurableSet_of_null_frontier E
-    exact measure_ne_top μ _ ▸ hE ▸ (by simp : μ (frontier E) = 0)
+  have hmeas : MeasurableSet E :=
+    measurableSet_of_measurable_frontier E isClosed_frontier.measurableSet
   let μlim : ProbabilityMeasure Y := ⟨μ, inferInstance⟩
   let μseq : ℕ → ProbabilityMeasure Y := fun N =>
     ⟨empiricalPointMeasure y (N + 1),

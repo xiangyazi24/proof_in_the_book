@@ -56,13 +56,14 @@ private theorem empiricalPointMeasure_apply {Y : Type*} [MeasurableSpace Y]
   rw [hsum, Measure.sum_apply_of_countable]
   simp only [tsum_fintype, Measure.dirac_apply, Set.indicator_apply, Pi.one_apply]
   rw [Finset.sum_boole]
+  let p : {i : ℕ // i ∈ Finset.range N} → Prop :=
+    fun i => y i.val ∈ E
   have hcard :
-      ((Finset.range N).attach.filter
-          (fun i : {i // i ∈ Finset.range N} => y i ∈ E)).card =
-        ((Finset.range N).filter (fun i => y i ∈ E)).card := by
+      (Finset.filter p (Finset.range N).attach).card =
+        (Finset.filter (fun i : ℕ => y i ∈ E) (Finset.range N)).card := by
     let e :
-        ↥((Finset.range N).attach.filter (fun i => y i ∈ E)) ≃
-          ↥((Finset.range N).filter (fun i => y i ∈ E)) :=
+        ↥(Finset.filter p (Finset.range N).attach) ≃
+          ↥(Finset.filter (fun i : ℕ => y i ∈ E) (Finset.range N)) :=
       { toFun := fun i =>
           ⟨i.val.val.val,
             Finset.mem_filter.mpr
@@ -81,8 +82,6 @@ private theorem empiricalPointMeasure_apply {Y : Type*} [MeasurableSpace Y]
           intro i
           apply Subtype.ext
           rfl }
-    change Fintype.card ↥((Finset.range N).attach.filter (fun i => y i ∈ E)) =
-      Fintype.card ↥((Finset.range N).filter (fun i => y i ∈ E))
     exact Fintype.card_congr e
   rw [hcard]
   simp only [smul_eq_mul]

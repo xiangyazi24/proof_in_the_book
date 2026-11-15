@@ -1,0 +1,28 @@
+name: Q6160 Packet F public check
+
+on:
+  push:
+    branches: [q6160-check]
+    paths:
+      - 'q6160/**'
+      - '.github/workflows/q6160-check.yml'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lean toolchain
+        run: |
+          curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Resolve pinned dependencies
+        run: |
+          cd q6160/check
+          lake update
+          lake exe cache get
+      - name: Build Packet F
+        run: |
+          cd q6160/check
+          lake build Agafonov.Kamae1973.SectionFiveNormalityAlgebra

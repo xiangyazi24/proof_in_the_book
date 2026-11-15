@@ -1,5 +1,6 @@
 import Agafonov.Kamae1973.CompactBernoulliNormality
 import Mathlib.MeasureTheory.Measure.Portmanteau
+import Mathlib.MeasureTheory.Measure.MeasureSpace
 import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.Topology.MetricSpace.ProperSpace
@@ -125,7 +126,7 @@ theorem empiricalFrequency_tendsto_of_null_frontier
     simp only [μseq, ProbabilityMeasure.coe_mk]
     rw [empiricalPointMeasure_apply y (N + 1) E]
     simp only [ENNReal.toReal_mul, ENNReal.toReal_inv, ENNReal.toReal_natCast]
-    ring
+    ring_nf
   exact (tendsto_add_atTop_iff_nat 1).1 hshift
 
 /-- Compact-window frequencies converge to their Bernoulli product probabilities.

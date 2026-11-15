@@ -22,12 +22,23 @@ jobs:
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
       - name: Assemble repaired packet
         run: |
+          file=q6098/check/Agafonov/Kamae1973/FiniteStagePrefixEstimate.lean
           cat q6098/source/part1.lean \
               q6098/source/part2.lean \
               q6098/source/part3.lean \
-              q6098/source/part4.lean > \
-              q6098/check/Agafonov/Kamae1973/FiniteStagePrefixEstimate.lean
-          patch --batch --fuzz=3 -p1 -d q6098/check < q6098/fix.patch
+              q6098/source/part4.lean > "$file"
+          set +e
+          git apply --recount --reject --directory=q6098/check q6098/fix.patch
+          status=$?
+          set -e
+          test "$status" -eq 0 -o "$status" -eq 1
+          perl -0pi -e 's/  exact ⟨Nat\.cast_le\.mpr hlowerNat, Nat\.cast_le\.mpr hupperNat⟩/  constructor\n  · exact Nat.cast_le.mpr hlowerNat\n  · rw [← Nat.cast_add]\n    exact Nat.cast_le.mpr hupperNat/' "$file"
+          perl -0pi -e 's/unfold stageHit\n  infer_instance/unfold stageHit\n  exact Classical.propDecidable _/' "$file"
+          perl -0pi -e 's/unfold prefixInternalHit\n  infer_instance/unfold prefixInternalHit\n  exact Classical.propDecidable _/' "$file"
+          rm -f "$file.rej"
+          grep -q 'private theorem finApply_eq_of_val_eq' "$file"
+          grep -q 'prefixInternalStartSet (Q := Q)' "$file"
+          ! grep -q 'exact ⟨Nat.cast_le.mpr hlowerNat' "$file"
       - name: Preserve repaired candidate
         run: |
           git config user.name github-actions[bot]

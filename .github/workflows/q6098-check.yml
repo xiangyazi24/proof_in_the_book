@@ -1,0 +1,49 @@
+name: Q6098 standalone Lean check
+
+on:
+  push:
+    branches: [q6098-check]
+    paths:
+      - 'q6098/**'
+      - '.github/workflows/q6098-check.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lean toolchain
+        run: |
+          curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Assemble repaired packet
+        run: |
+          cat q6098/source/part1.lean \
+              q6098/source/part2.lean \
+              q6098/source/part3.lean \
+              q6098/source/part4.lean > \
+              q6098/check/Agafonov/Kamae1973/FiniteStagePrefixEstimate.lean
+          cd q6098/check
+          git apply ../fix.patch
+      - name: Resolve pinned dependencies
+        run: |
+          cd q6098/check
+          lake update
+          lake exe cache get
+      - name: Check repaired packet
+        run: |
+          cd q6098/check
+          lake build Agafonov.Kamae1973.FiniteStagePrefixEstimate
+      - name: Preserve compiled source
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add q6098/check/Agafonov/Kamae1973/FiniteStagePrefixEstimate.lean
+          if ! git diff --cached --quiet; then
+            git commit -m 'Materialize compiled FiniteStagePrefixEstimate'
+            git push origin HEAD:q6098-check
+          fi
